@@ -13,7 +13,7 @@ dependencies {
 
     api 'org.jasig.cas.client:cas-client-core:3.6.4'
 
-    api 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+    api 'org.bouncycastle:bcprov-jdk18on:1.79'
 
     api "com.nimbusds:nimbus-jose-jwt:9.41.2"
     api 'commons-codec:commons-codec:1.17.1'
