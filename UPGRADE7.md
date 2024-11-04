@@ -8,3 +8,5 @@ Experienced while upgrading modules for Grails 7
   - Primitive booleans will no longer generate the form of isProperty & getProperty.  They will only generate isProperty()
 - GROOVY-5169
   - Fields with a public modifier were not considered a property in groovy 3, but are now. 
+- Jar artifacts produced by Grails Plugins will no longer have the suffix `-plain`
+  - https://github.com/grails/grails-gradle-plugin/pull/347
