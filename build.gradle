@@ -7,14 +7,12 @@ buildscript {
     }
     dependencies {
         classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
-        classpath "io.github.gradle-nexus:publish-plugin:$gradlePublishPlugin"
         classpath 'com.adarshr:gradle-test-logger-plugin:4.0.0'
     }
 }
 
 plugins {
     id 'idea'
-    id 'io.github.gradle-nexus.publish-plugin' version "$gradlePublishPlugin"
     id "com.github.ben-manes.versions" version "0.39.0"
 }
 
@@ -29,7 +27,7 @@ def publishedProjects = pluginProjects + profileProjects
 version projectVersion
 
 subprojects { Project project ->
-    group projectGroup
+    group "org.grails.plugins"
     version projectVersion
 
     ext {
@@ -93,7 +91,21 @@ subprojects { Project project ->
     }
 
     if (project.name in publishedProjects) {
-        apply from: rootProject.file("gradle/publishing.gradle")
+        if(project.name in profileProjects) {
+            apply plugin:"org.grails.internal.grails-profile-publish"
+        }
+        else {
+            apply plugin:"org.grails.internal.grails-plugin-publish"
+        }
+
+        grailsPublish {
+            userOrg = 'grails'
+            githubSlug = 'grails/grails-spring-security-rest'
+            license = 'Apache-2.0'
+            title = "Spring Security REST plugin"
+            desc = "Grails plugin to implement token-based, RESTful authentication using Spring Security"
+            developers = [alvarosanchez:"Alvaro Sanchez-Mariscal", jameskleeh:"James Kleeh", jdaugherty:"James Daugherty"]
+        }
     }
 }
 
