@@ -1,3 +1,5 @@
+import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
+
 buildscript {
     repositories {
         mavenCentral()
@@ -24,6 +26,23 @@ allprojects {
 def pluginProjects = ['spring-security-rest', 'spring-security-rest-memcached', 'spring-security-rest-redis', 'spring-security-rest-grailscache', 'spring-security-rest-gorm']
 def profileProjects = ['spring-security-rest-testapp-profile']
 def publishedProjects = pluginProjects + profileProjects
+
+if (!version.endsWith('SNAPSHOT')) {
+    nexusPublishing {
+        String nexusUser = findProperty('sonatypeUsername')
+        String nexusPass = findProperty('sonatypePassword')
+        String nexusStagingProfileId = findProperty('sonatypeStagingProfileId')
+        String nexusUrl = findProperty('sonatypeNexusUrl') ?: 'https://s01.oss.sonatype.org/service/local/'
+        repositories {
+            sonatype {
+                nexusUrl = uri(nexusUrl)
+                username = nexusUser
+                password = nexusPass
+                stagingProfileId = nexusStagingProfileId
+            }
+        }
+    }
+}
 
 version projectVersion
 
@@ -93,22 +112,13 @@ subprojects { Project project ->
     }
 
     if (project.name in publishedProjects) {
-        if(project.name in profileProjects) {
-            apply plugin:"org.grails.internal.grails-profile-publish"
-        }
-        else {
-            apply plugin:"org.grails.internal.grails-plugin-publish"
-        }
-
-        grailsPublish {
-            userOrg = 'grails'
-            githubSlug = 'grails/grails-spring-security-rest'
-            license = 'Apache-2.0'
-            title = "Spring Security REST plugin"
-            desc = "Grails plugin to implement token-based, RESTful authentication using Spring Security"
-            developers = [alvarosanchez:"Alvaro Sanchez-Mariscal", jameskleeh:"James Kleeh", jdaugherty:"James Daugherty"]
-        }
+        apply from: rootProject.file("gradle/publishing.gradle")
     }
 }
 
 apply from: rootProject.file("gradle/docs.gradle")
+
+//do not generate extra load on Nexus with new staging repository if signing fails
+tasks.withType(InitializeNexusStagingRepository).configureEach {
+    shouldRunAfter(tasks.withType(Sign))
+}
