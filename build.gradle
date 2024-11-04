@@ -8,6 +8,7 @@ buildscript {
     dependencies {
         classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
         classpath 'com.adarshr:gradle-test-logger-plugin:4.0.0'
+        classpath 'io.spring.gradle:dependency-management-plugin'
     }
 }
 
@@ -88,6 +89,7 @@ subprojects { Project project ->
 
     if (project.name in profileProjects) {
         apply plugin: "org.grails.grails-profile"
+        apply plugin: "io.spring.dependency-management"
     }
 
     if (project.name in publishedProjects) {
