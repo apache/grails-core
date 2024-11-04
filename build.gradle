@@ -27,7 +27,12 @@ def pluginProjects = ['spring-security-rest', 'spring-security-rest-memcached', 
 def profileProjects = ['spring-security-rest-testapp-profile']
 def publishedProjects = pluginProjects + profileProjects
 
-if (!projectVersion.endsWith('SNAPSHOT')) {
+version projectVersion
+
+ext.set('isSnapshot', projectVersion.endsWith('-SNAPSHOT'))
+ext.set('isReleaseVersion', !isSnapshot)
+
+if (isReleaseVersion) {
     nexusPublishing {
         String nexusUser = findProperty('sonatypeUsername')
         String nexusPass = findProperty('sonatypePassword')
@@ -44,18 +49,12 @@ if (!projectVersion.endsWith('SNAPSHOT')) {
     }
 }
 
-version projectVersion
-
 subprojects { Project project ->
     group "org.grails.plugins"
     version projectVersion
 
-    ext {
-        grailsVersion = project.grailsVersion
-        isSnapshot = version.endsWith('SNAPSHOT')
-        isReleaseVersion = !ext.isSnapshot
-        isProfile = project.name.endsWith('-profile')
-    }
+    ext.set('grailsVersion', project.grailsVersion)
+    ext.set('isProfile', project.name.endsWith('-profile'))
 
     repositories {
         mavenCentral()
