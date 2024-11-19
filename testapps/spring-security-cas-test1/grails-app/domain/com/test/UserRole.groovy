@@ -3,7 +3,7 @@ package com.test
 import grails.gorm.DetachedCriteria
 import groovy.transform.ToString
 
-import org.apache.commons.lang.builder.HashCodeBuilder
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 @ToString(cache=true, includeNames=true, includePackage=false)
 class UserRole implements Serializable {
