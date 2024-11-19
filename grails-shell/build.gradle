@@ -29,7 +29,7 @@ dependencies {
     }
 
     implementation("org.apache.maven.resolver:maven-resolver-connector-basic:1.9.16")
-    implementation("org.apache.maven.resolver:maven-resolver-impl:1.9.16")
+    implementation("org.apache.maven.resolver:maven-resolver-impl:2.0.4")
     implementation("org.apache.maven.resolver:maven-resolver-transport-file:1.9.16")
     implementation("org.apache.maven.resolver:maven-resolver-transport-http:1.9.16") {
         exclude group: "org.slf4j", module:"jcl-over-slf4j"
