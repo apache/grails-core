@@ -246,6 +246,10 @@ allprojects {
                     if (details.requested.group == "org.spockframework") {
                         details.useVersion(spockVersion)
                     }
+                    def forcedSpringLibraryUpgrades = ['spring-core', 'spring-jcl', 'spring.orm']
+                    if (details.requested.group == 'org.springframework' && details.requested.name in forcedSpringLibraryUpgrades) {
+                        details.useVersion(springVersion)
+                    }
                 }
             }
         }
