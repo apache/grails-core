@@ -251,11 +251,9 @@ allprojects {
                 if (details.requested.group == 'org.springframework' && details.requested.name in forcedSpringLibraryUpgrades) {
                     details.useVersion(springVersion)
                 }
-/*
                 if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
                     details.useVersion(snakeyamlVersion)
                 }
-*/
                 if (details.requested.group == 'org.apache.tomcat' && details.requested.name in forcedTomcatLibraryUpgrades) {
                     details.useVersion(tomcatVersion)
                 }
