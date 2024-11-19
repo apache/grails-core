@@ -250,6 +250,9 @@ allprojects {
                     if (details.requested.group == 'org.springframework' && details.requested.name in forcedSpringLibraryUpgrades) {
                         details.useVersion(springVersion)
                     }
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion(snakeyamlVersion)
+                    }
                 }
             }
         }
