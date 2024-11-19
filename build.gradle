@@ -232,32 +232,32 @@ allprojects {
         }
     }
 
-    configurations {
-        all {
-            resolutionStrategy {
-                def cacheHours = isCiBuild ? 0 : 24
-                cacheDynamicVersionsFor cacheHours, 'hours'
-                cacheChangingModulesFor cacheHours, 'hours'
+    configurations.configureEach {
+        resolutionStrategy {
+            def cacheHours = isCiBuild ? 0 : 24
+            cacheDynamicVersionsFor cacheHours, 'hours'
+            cacheChangingModulesFor cacheHours, 'hours'
 
-                // Align versions of transitive dependencies with the version we are using
-                eachDependency { DependencyResolveDetails details ->
-                    if (details.requested.group == 'org.codehaus.groovy') {
-                        details.useVersion groovyVersion
-                    }
-                    if (details.requested.group == "org.spockframework") {
-                        details.useVersion(spockVersion)
-                    }
-                    def forcedSpringLibraryUpgrades = ['spring-core', 'spring-jcl', 'spring.orm']
-                    if (details.requested.group == 'org.springframework' && details.requested.name in forcedSpringLibraryUpgrades) {
-                        details.useVersion(springVersion)
-                    }
-                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
-                        details.useVersion(snakeyamlVersion)
-                    }
-                    def forcedTomcatLibraryUpgrades = ['tomcat-jdbc', 'tomcat-juli']
-                    if (details.requested.group == 'org.apache.tomcat' && details.requested.name in forcedTomcatLibraryUpgrades) {
-                        details.useVersion(tomcatVersion)
-                    }
+            // Align versions of transitive dependencies with the version we are using
+            eachDependency { DependencyResolveDetails details ->
+                def forcedSpringLibraryUpgrades = ['spring-core', 'spring-jcl', 'spring.orm']
+                def forcedTomcatLibraryUpgrades = ['tomcat-jdbc', 'tomcat-juli']
+                if (details.requested.group == 'org.codehaus.groovy') {
+                    details.useVersion(groovyVersion)
+                }
+                if (details.requested.group == 'org.spockframework') {
+                    details.useVersion(spockVersion)
+                }
+                if (details.requested.group == 'org.springframework' && details.requested.name in forcedSpringLibraryUpgrades) {
+                    details.useVersion(springVersion)
+                }
+/*
+                if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                    details.useVersion(snakeyamlVersion)
+                }
+*/
+                if (details.requested.group == 'org.apache.tomcat' && details.requested.name in forcedTomcatLibraryUpgrades) {
+                    details.useVersion(tomcatVersion)
                 }
             }
         }
