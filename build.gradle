@@ -4,7 +4,7 @@ buildscript {
         maven { url "https://repo.grails.org/grails/core" }
     }
     dependencies {
-        classpath "commons-io:commons-io:2.16.1"
+        classpath "commons-io:commons-io:2.18.0"
         classpath "io.github.gradle-nexus:publish-plugin:1.3.0"
         classpath "com.netflix.nebula:gradle-extra-configurations-plugin:9.0.0"
         classpath "com.bmuschko:gradle-nexus-plugin:$gradleNexusPluginVersion"
