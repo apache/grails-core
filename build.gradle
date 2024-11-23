@@ -414,6 +414,14 @@ subprojects { project ->
                                 email = 'behlp@objectcomputing.com'
                             }
                         }
+
+                        // Specify the minimum supported java version so that the grails-forge cli can pull this value
+                        // out of the pom.xml instead of defaulting the version of java that the cli uses
+                        withXml {
+                            asNode().appendNode('properties').with {
+                                appendNode('maven.compiler.release', project.findProperty('minimumJavaVersion'))
+                            }
+                        }
                     }
 
                     from components.java
@@ -441,8 +449,8 @@ subprojects { project ->
     if (project.name == 'grails-dependencies') return
     if (project.name == 'grails-bom') return
 
-    sourceCompatibility = "1.11"
-    targetCompatibility = "1.11"
+    sourceCompatibility = project.findProperty('minimumJavaVersion')
+    targetCompatibility = project.findProperty('minimumJavaVersion')
 
     if (project.name =~ /^(grails-web|grails-plugin-|grails-test-suite|grails-test)/) {
         dependencies {
