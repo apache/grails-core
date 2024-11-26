@@ -10,7 +10,7 @@ dependencies {
 
     api "org.apache.tomcat:tomcat-jdbc:$tomcatVersion"
 
-    testRuntimeOnly 'javax.servlet.jsp:jsp-api:2.2'
+    testRuntimeOnly 'javax.servlet.jsp:jsp-api:2.2.1'
     testRuntimeOnly 'jstl:jstl:1.2'
     testRuntimeOnly 'javax.el:el-api:2.2'
     testRuntimeOnly "com.h2database:h2:$h2Version"

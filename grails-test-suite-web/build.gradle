@@ -10,7 +10,7 @@ configurations.testCompileClasspath {
 
 dependencies {
 
-    testImplementation 'javax.servlet.jsp:jsp-api:2.2'
+    testImplementation 'javax.servlet.jsp:jsp-api:2.2.1'
     testImplementation 'jstl:jstl:1.2'
     testImplementation 'javax.el:el-api:2.2'
     testImplementation project(':grails-test-suite-base'),
