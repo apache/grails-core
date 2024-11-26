@@ -12,7 +12,7 @@ dependencies {
             'org.yaml:snakeyaml:2.2',
             "org.codehaus.groovy:groovy-ant:$groovyVersion"
 
-    api 'org.asciidoctor:asciidoctorj:2.5.12'
+    api 'org.asciidoctor:asciidoctorj:3.0.0'
     api('org.xhtmlrenderer:core-renderer:8.0') {
         exclude group: 'bouncycastle', module:'bcprov-jdk14'
     }
