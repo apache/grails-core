@@ -19,7 +19,7 @@ dependencies {
 
     runtimeOnly "org.slf4j:slf4j-api:$slf4jVersion"
 
-    runtimeOnly('com.lowagie:itext:2.0.8')
+    runtimeOnly('com.lowagie:itext:4.2.2')
 
     api 'org.jsoup:jsoup:1.17.2'
     testImplementation("org.spockframework:spock-core:${spockVersion}") { transitive = false }
