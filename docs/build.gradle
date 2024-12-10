@@ -1,45 +1,47 @@
+import org.asciidoctor.gradle.jvm.AbstractAsciidoctorTask
+
 buildscript {
     repositories {
-        maven { url 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repo.grails.org/grails/core' }
     }
     dependencies {
         classpath 'org.asciidoctor:asciidoctor-gradle-jvm:4.0.3'
-        classpath "org.asciidoctor:asciidoctor-gradle-jvm-epub:4.0.3"
-        classpath "org.asciidoctor:asciidoctor-gradle-jvm-pdf:4.0.3"
-        classpath "org.asciidoctor:asciidoctor-gradle-jvm-gems:4.0.3"
+        classpath 'org.asciidoctor:asciidoctor-gradle-jvm-epub:4.0.3'
+        classpath 'org.asciidoctor:asciidoctor-gradle-jvm-pdf:4.0.3'
+        classpath 'org.asciidoctor:asciidoctor-gradle-jvm-gems:4.0.3'
     }
 }
 
-apply plugin: "org.asciidoctor.jvm.gems"
+apply plugin: 'org.asciidoctor.jvm.gems'
 apply plugin: 'org.asciidoctor.jvm.convert'
-apply plugin: "org.asciidoctor.jvm.pdf"
-apply plugin: "org.asciidoctor.jvm.epub"
+apply plugin: 'org.asciidoctor.jvm.pdf'
+apply plugin: 'org.asciidoctor.jvm.epub'
 
 def asciidoctorAttributes = [
-        copyright           : 'Apache License, Version 2.0',
-        docinfo1            : 'true',
-        doctype             : 'book',
-        encoding            : 'utf-8',
-        icons               : 'font',
-        id                  : project.name + ':' + project.version,
-        idprefix            : '',
-        idseparator         : '-',
-        lang                : 'en',
-        linkattrs           : true,
-        numbered            : '',
-        producer            : 'Asciidoctor',
-        revnumber           : project.projectVersion,
-        setanchors          : true,
+        copyright            : 'Apache License, Version 2.0',
+        docinfo1             : 'true',
+        doctype              : 'book',
+        encoding             : 'utf-8',
+        icons                : 'font',
+        id                   : project.name + ':' + project.version.toString(),
+        idprefix             : '',
+        idseparator          : '-',
+        lang                 : 'en',
+        linkattrs            : true,
+        numbered             : '',
+        producer             : 'Asciidoctor',
+        revnumber            : project.projectVersion,
+        setanchors           : true,
         'source-highlighter' : 'prettify',
-        toc                 : 'left',
-        toc2                : '',
-        toclevels           : '2',
-        projectVersion      : project.projectVersion,
+        toc                  : 'left',
+        toc2                 : '',
+        toclevels            : '2',
+        projectVersion       : project.projectVersion,
 ]
 
 repositories {
     mavenCentral()
-    maven { url 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repo.grails.org/grails/core' }
     ruby.gems()
 }
 
@@ -48,30 +50,24 @@ dependencies {
 }
 
 asciidoctor {
-    sourceDir file('src/docs')
+    dependsOn 'asciidoctorPdf', 'asciidoctorEpub'
+    sourceDir layout.projectDirectory.dir('src/docs')
     sources {
         include 'index.adoc'
     }
-    outputDir = new File(buildDir, 'docs')
+    outputDir = layout.buildDirectory.dir('docs')
     attributes asciidoctorAttributes
     executionMode = 'JAVA_EXEC'
-    forkOptions {
-        jvmArgs "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED"
-    }
 }
 
 asciidoctorPdf {
-    dependsOn asciidoctorGemsPrepare
-    sourceDir = file('src/docs')
+    dependsOn 'asciidoctorGemsPrepare'
+    sourceDir = layout.projectDirectory.dir('src/docs')
     sources {
         include 'index.adoc'
     }
-    outputDir = new File(buildDir, 'docs')
+    outputDir = layout.buildDirectory.dir('docs')
     executionMode = 'JAVA_EXEC'
-    forkOptions {
-        jvmArgs "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED"
-    }
-
     asciidoctorj {
         requires 'rouge'
         attributes asciidoctorAttributes
@@ -79,47 +75,49 @@ asciidoctorPdf {
 }
 
 asciidoctorEpub {
-    dependsOn asciidoctorGemsPrepare
-    sourceDir = file('src/docs')
+    dependsOn 'asciidoctorGemsPrepare'
+    sourceDir = layout.projectDirectory.dir('src/docs')
     sources {
         include 'index.adoc'
     }
-    outputDir = new File(buildDir, 'docs')
+    outputDir = layout.buildDirectory.dir('docs')
     executionMode = 'JAVA_EXEC'
-    forkOptions {
-        jvmArgs "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED"
-    }
 
     asciidoctorj {
         requires 'rouge'
         attributes asciidoctorAttributes
     }
 
-    ebookFormats = ["EPUB3"]
+    ebookFormats = ['EPUB3']
 }
 
-tasks.named("asciidoctor").configure {
-    dependsOn = ['asciidoctorPdf', 'asciidoctorEpub']
-}
-
-tasks.register("docs") {
-    group = "documentation"
-    dependsOn = ["asciidoctor"]
+tasks.register('docs') {
+    group = 'documentation'
+    dependsOn 'asciidoctor'
     doLast {
-        File dir = new File(buildDir, 'docs')
+        File docsOutputDir = layout.buildDirectory.dir('docs').get().asFile
         ['epub', 'pdf'].each { String ext ->
-            File f = new File(dir, 'index.' + ext)
-            if (f.exists()) {
-                f.renameTo new File(dir, project.name + '.' + ext)
+            File indexFile = new File(docsOutputDir, "index.$ext")
+            if (indexFile.exists()) {
+                indexFile.renameTo(new File(docsOutputDir, "${project.name}.$ext"))
             }
         }
 
-        new File(buildDir, 'docs/ghpages.html') << file('src/docs/index.tmpl').text.replaceAll('@VERSION@', project.version)
+        File templateFile = layout.projectDirectory.file('src/docs/index.tmpl').asFile
+        File ghPagesFile = layout.buildDirectory.file('docs/ghpages.html').get().asFile
+        ghPagesFile << templateFile.text.replaceAll('@VERSION@', project.version.toString())
 
         copy {
-            from 'src/docs'
-            into new File(buildDir, 'docs').path
+            from layout.projectDirectory.dir('src/docs')
+            into layout.buildDirectory.dir('docs')
             include '**/*.png'
         }
+    }
+}
+
+tasks.withType(AbstractAsciidoctorTask).configureEach {
+    jvm {
+        /* asciidoctorGemsPrepare is still issuing a warning: https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/666 */
+        jvmArgs '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED'
     }
 }
