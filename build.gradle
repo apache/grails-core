@@ -1,3 +1,5 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
 buildscript {
     repositories {
         maven { url "https://plugins.gradle.org/m2/" }
@@ -8,7 +10,7 @@ buildscript {
     }
 }
 plugins {
-    id 'org.asciidoctor.jvm.convert' version '3.3.2'
+    id 'org.asciidoctor.jvm.convert' version '4.0.3'
     id 'java-library'
 }
 
@@ -18,9 +20,9 @@ group 'org.grails.plugins'
 apply plugin: 'org.grails.grails-plugin'
 apply plugin: 'org.grails.grails-gsp'
 apply plugin: "org.grails.grails-doc"
-apply plugin: "org.grails.internal.grails-plugin-publish"
+apply plugin: "org.grails.grails-publish"
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+compileJava.options.release = 17
 
 repositories {
     mavenCentral()
@@ -55,17 +57,20 @@ tasks.withType(Test).configureEach {
 }
 
 grailsPublish {
-    userOrg = "grails"
     githubSlug = 'gpc/fields'
     license {
         name = 'Apache-2.0'
     }
     title = "Grails Fields Plugin"
-    desc = "Fields integration for Grails"
+    desc = "Customizable form-field rendering based on overrideable GSP template"
     developers = [robfletcher: 'Rob Fletcher', graemerocher: "Graeme Rocher", sdelamo: "Sergio del Amo", sbglasius: 'Søren Berg Glasius']
 }
 
-asciidoctor {
+tasks.named('asciidoctor', AsciidoctorTask) { it ->
+    it.jvm {
+        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
+    }
+
     resources {
         from('src/docs/images')
         into "./images"

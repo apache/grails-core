@@ -51,9 +51,9 @@ Since version 2.1.4 you can specify the theme to be used.
 <f:field bean="person" property="name" templates="maskedInput"/>
 ----
 
-See link:{guide}/customizingFieldRendering.html[Customizing Field Rendering] for details of the parameters passed to the tag body.
+See link:#customizingFieldRendering[Customizing Field Rendering] for details of the parameters passed to the tag body.
 
-The `f:field` tag handles embedded domain properties in a special way. See link:{guide}/embeddedProperties.html[Embedded Properties] for details.
+The `f:field` tag handles embedded domain properties in a special way. See link:#embeddedProperties[Embedded Properties] for details.
 
 
 ===== Attributes

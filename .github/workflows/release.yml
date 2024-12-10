@@ -3,73 +3,128 @@ on:
   release:
     types: [published]
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: ['17']
+    outputs:
+      release_version: ${{ steps.release_version.outputs.value }}
     env:
       GIT_USER_NAME: grails-build
       GIT_USER_EMAIL: grails-build@users.noreply.github.com
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
-      - name: Set up JDK
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: 'liberica'
-          java-version: ${{ matrix.java }}
-      - name: Set the current release version
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+      - name: "📝Set the current release version"
         id: release_version
-        run: echo ::set-output name=release_version::${GITHUB_REF:11}
-      - name: Run pre-release
+        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
+      - name: "⚙️ Run pre-release"
         uses: micronaut-projects/github-actions/pre-release@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate secring file
+      - name: "🧩 Run Assemble"
+        if: success()
+        id: assemble
+        run: ./gradlew assemble
+      - name: "🔐 Generate secring file"
         env:
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
         run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
-      - name: Publish to Sonatype OSSRH
+      - name: "🚀 Publish to Sonatype OSSRH"
         id: publish
-        uses: gradle/gradle-build-action@v3
         env:
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_NEXUS_URL: ${{ secrets.SONATYPE_NEXUS_URL }}
-          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY_ID }}
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
+          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        working-directory: ./plugin
+        run: >
+          ../gradlew
+          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
+          publishToSonatype 
+          closeSonatypeStagingRepository
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
         with:
-          arguments: -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg publishToSonatype closeAndReleaseSonatypeStagingRepository --stacktrace
-      - name: Run Assemble
-        id: assemble
-        if: steps.publish.outcome == 'success'
-        uses: gradle/gradle-build-action@v3
+          distribution: liberica
+          java-version: 17
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
         with:
-          arguments: assemble
-      - name: Export Gradle Properties
-        uses: micronaut-projects/github-actions/export-gradle-properties@master
-      - name: Publish to Github Pages
-        if: steps.assemble.outcome == 'success'
-        uses: micronaut-projects/github-pages-deploy-action@master
+          token: ${{ secrets.GH_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+      - name: "🏆Nexus Staging Close And Release"
         env:
-          BETA: ${{ contains(steps.release_version.outputs.release_version, 'M') || contains(steps.release_version.outputs.release_version, 'RC') }}
-          TARGET_REPOSITORY: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: build/docs
-          DOC_FOLDER: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          VERSION: ${{ steps.release_version.outputs.release_version }}
-      - name: Run post-release
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
+          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
+        working-directory: ./plugin
+        run: >
+          ../gradlew
+          findSonatypeStagingRepository
+          releaseSonatypeStagingRepository
+      - name: "⚙️Run post-release"
         if: success()
         uses: micronaut-projects/github-actions/post-release@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
           SNAPSHOT_SUFFIX: -SNAPSHOT
+  docs:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+      - name: "📦 Export Gradle Properties"
+        uses: micronaut-projects/github-actions/export-gradle-properties@master
+      - name: "📜 Generate User Guide Documentation"
+        id: docs
+        run: ./gradlew asciidoctor
+      - name: "🚀 Publish to Github Pages"
+        id: docs
+        if: success()
+        uses: grails/github-pages-deploy-action@v2
+        env:
+          BETA: ${{ contains(steps.release_version.outputs.release_version, 'M') || contains(steps.release_version.outputs.release_version, 'RC') }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: build/asciidoc
+          DOC_FOLDER: gh-pages
+          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
+          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          VERSION: ${{ steps.release_version.outputs.release_version }}

@@ -13,36 +13,54 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      WORKSPACE: ${{ github.workspace }}
       GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
-      SIGNING_KEYRING: ${{ secrets.SECRING_FILE }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: 'liberica'
           java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
       - name: Run Build
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: build -Dgeb.env=chromeHeadless
+        run: ./gradlew build
   publish:
     if: github.event_name == 'push'
     needs: ['build']
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: 'liberica'
           java-version: '17'
-      - name: Publish Artifacts (repo.grails.org)
+      - name: "🐘 Setup Gradle"
+        uses:
+          gradle/actions/setup-gradle@v4
+      - name: "📤 Publish to Snapshot (repo.grails.org)"
         id: publish
-        uses: gradle/gradle-build-action@v3
         env:
-          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
-          ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
-        with:
-          arguments: -Dorg.gradle.internal.publish.checksums.insecure=true publish
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
+          MAVEN_PUBLISH_URL: ${{ secrets.MAVEN_PUBLISH_SNAPSHOT_URL }}
+        run: ./gradlew publish
+      - name: "📜 Generate Documentation"
+        if: success()
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+        working-directory: ${{ github.workspace }}
+        run: ./gradlew docs
+      - name: "🚀 Publish to Github Pages"
+        if: success()
+        uses: micronaut-projects/github-pages-deploy-action@grails
+        env:
+          SKIP_SNAPSHOT: ${{ contains(needs.publish.outputs.release_version, 'M') }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: build/asciidoc
+          DOC_FOLDER: gh-pages
