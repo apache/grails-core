@@ -1804,7 +1804,7 @@ class Widget {
     }
 }
 
-// Since Groovy 4, parent domain classes cannot be annotated with @Entity (https://issues.apache.org/jira/browse/GROOVY-5106)
+@Entity
 @Sortable(includes = ['isBindable', 'isNotBindable'])
 @SuppressWarnings('unused')
 class ParentWidget implements Validateable {
