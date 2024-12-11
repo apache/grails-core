@@ -16,10 +16,10 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     Class[] getDomainClassesToMock() {
         [
-            BoolMethodPropertiesDomain, DomainWithTransients, InheritedBoolMethodPropertiesDomain,
-            InheritedDomainWithTransients, InheritedMethodPropertiesDomain, InheritedPropertiesDomain,
-            MethodPropertiesDomain, SimplePropertiesDomain, TraitBoolMethodPropertiesDomain, TraitDomainWithTransients,
-            TraitMethodPropertiesDomain, TraitPropertiesDomain
+            BoolMethodPropertiesDomain, DomainPrimitiveBooleanWithTransients, DomainWithTransients,
+            InheritedBoolMethodPropertiesDomain, InheritedDomainWithTransients, InheritedMethodPropertiesDomain,
+            InheritedPropertiesDomain, MethodPropertiesDomain, SimplePropertiesDomain, TraitBoolMethodPropertiesDomain,
+            TraitDomainWithTransients, TraitMethodPropertiesDomain, TraitPropertiesDomain
         ]
     }
 
@@ -269,10 +269,31 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 0
     }
 
+    void 'ensure transient properties and methods are not validated - little boolean'() {
+
+        given:
+        def domain = new DomainPrimitiveBooleanWithTransients()
+
+        when: 'domain with transient methods and properties is validated'
+        domain.validate()
+
+        then: 'nothing should fail'
+        domain.errors.getErrorCount() == 0
+    }
+
     void 'ensure transient methods and properties are not constrained'() {
 
         when: 'constrained properties map is get'
         def constrainedProperties = DomainWithTransients.getConstrainedProperties()
+
+        then: 'nothing is constrained'
+        constrainedProperties.size() == 0
+    }
+
+    void 'ensure transient methods and properties are not constrained - little boolean'() {
+
+        when: 'constrained properties map is get'
+        def constrainedProperties = DomainPrimitiveBooleanWithTransients.getConstrainedProperties()
 
         then: 'nothing is constrained'
         constrainedProperties.size() == 0
@@ -589,6 +610,21 @@ class DomainWithTransients {
 
     Boolean getBoolMethodProperty() { null }
     void setBoolMethodProperty(Boolean value) {}
+}
+
+@Entity
+@SuppressWarnings(['unused', 'GrMethodMayBeStatic'])
+class DomainPrimitiveBooleanWithTransients {
+
+    static transients = ['simpleProperty', 'methodProperty', 'boolMethodProperty']
+
+    String simpleProperty
+
+    String getMethodProperty() { null }
+    void setMethodProperty(String value) {}
+
+    boolean isBoolMethodProperty() { false }
+    void setBoolMethodProperty(boolean value) {}
 }
 
 @SuppressWarnings(['unused', 'GrMethodMayBeStatic'])
