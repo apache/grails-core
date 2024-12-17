@@ -25,6 +25,8 @@ if (isReleaseVersion) {
     }
 }
 subprojects {
+    apply plugin: 'groovy'
+
     version = rootProject.version
     repositories {
         mavenCentral()
@@ -35,6 +37,9 @@ subprojects {
                 url = 'https://groovy.jfrog.io/artifactory/libs-snapshot-local'
             }
         }
+    }
+    dependencies {
+        implementation platform(libs.grails.bom)
     }
 }
 

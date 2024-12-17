@@ -17,6 +17,7 @@ dependencies {
 	api libs.grails.events.transform // API because used in templates
 	api libs.grails.mimetypes
 	api libs.grails.plugin.async // AsyncGrailsWebRequest is used in public API
+	implementation libs.grails.plugin.events // Events Plugin is required to implement EventBus
 	api libs.grails.web.common
 	api libs.grails.web.urlmappings
 	api libs.spring.beans

@@ -1,5 +1,6 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.LoginPage
 import pages.role.CreateRolePage
 import pages.role.ListRolePage
@@ -9,6 +10,7 @@ import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'basic' })
 class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 
@@ -172,7 +174,6 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		401 == connection.responseCode
 	}
 
-	@IgnoreIf({ !System.getProperty('geb.env') })
 	void 'check allowed for admin1'() {
 
 		// Check with admin1 auth, some @Secure actions are accessible
@@ -244,7 +245,6 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		assertContentContains 'Error 403 Forbidden'
 	}
 
-	@IgnoreIf({ System.getProperty('geb.env') == "htmlUnit" })
 	void 'check allowed for admin2'() {
 
 		// Check that with admin2 auth, some @Secure actions are accessible
@@ -329,8 +329,6 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 	}
 
 	private void getWithoutAuth(String uri) {
-		def url = new URI(getBaseUrlRequired()).resolve(new URI(uri)).toURL()
-		connection = url.openConnection()
-		connection.instanceFollowRedirects = false
+		connection = download("/${uri}")
 	}
 }

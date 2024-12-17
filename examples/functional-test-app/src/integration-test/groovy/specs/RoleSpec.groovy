@@ -1,11 +1,13 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.role.CreateRolePage
 import pages.role.EditRolePage
 import pages.role.ListRolePage
 import pages.role.ShowRolePage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ !(
 		System.getProperty('TESTCONFIG') == 'annotation' ||
         System.getProperty('TESTCONFIG') == 'basic' ||
@@ -80,7 +82,6 @@ class RoleSpec extends AbstractSecuritySpec {
 		at ShowRolePage
 	}
 
-	@IgnoreIf({ !System.getProperty('geb.env') })
 	void 'delete role'() {
 		when:
 		to ListRolePage

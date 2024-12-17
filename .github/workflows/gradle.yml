@@ -15,7 +15,6 @@ env:
 
 jobs:
   core-tests:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,12 +29,12 @@ jobs:
           arguments: |
             check 
             --refresh-dependencies
-            -Dgeb.env=chromeHeadless
+            --continue
 
   functional-test:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503' ]
     steps:
@@ -49,7 +48,6 @@ jobs:
         with:
           arguments: |
             examples-functional-test-app:check 
-            -Dgeb.env=chromeHeadless 
             -DTESTCONFIG=${{ matrix.test-config }}
 
   build:
@@ -69,7 +67,6 @@ jobs:
           arguments: |
             spring-security-core:build 
             --refresh-dependencies
-            -Dgeb.env=chromeHeadless
             -x javadoc
 
       - name: Publish Snapshot artifacts to Artifactory (repo.grails.org)

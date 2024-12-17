@@ -8,12 +8,6 @@ plugins {
 
 group = 'examples.test'
 
-configurations {
-    all {
-        exclude group: 'io.micronaut', module:'micronaut-inject-groovy'
-    }
-}
-
 dependencies {
 
     implementation project(':spring-security-core')

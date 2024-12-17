@@ -1,11 +1,13 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.user.CreateUserPage
 import pages.user.EditUserPage
 import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ !(
 		System.getProperty('TESTCONFIG') == 'annotation' ||
 				System.getProperty('TESTCONFIG') == 'basic' ||
@@ -87,7 +89,6 @@ class UserSpec extends AbstractSecuritySpec {
 		at ShowUserPage
 	}
 
-	@IgnoreIf({ !System.getProperty('geb.env') })
 	void 'delete user'() {
 		when:
 		to ListUserPage

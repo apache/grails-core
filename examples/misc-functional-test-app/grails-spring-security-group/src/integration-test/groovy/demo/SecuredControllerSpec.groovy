@@ -1,15 +1,14 @@
 package demo
 
-import geb.spock.GebSpec
+import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import grails.gorm.transactions.Rollback
 
 @Rollback
 @Integration(applicationClass = Application)
-class SecuredControllerSpec extends GebSpec {
+class SecuredControllerSpec extends ContainerGebSpec {
 
     def setup() {
-        browser.baseUrl = "http://localhost:${serverPort}/"
         if ( !User.findByUsername('sherlock') ) {
             final boolean flush = true
             final boolean failOnError = true
@@ -34,6 +33,7 @@ class SecuredControllerSpec extends GebSpec {
     }
 
     def "test login as sherlock, sherlock belongs to detective groups. All detectives have the role ADMIN"() {
+
         when:
         to SecuredPage
 
@@ -51,6 +51,7 @@ class SecuredControllerSpec extends GebSpec {
     }
 
     def "test login as watson, watson belongs to detective groups. All detectives have the role ADMIN"() {
+
         when:
         to SecuredPage
 

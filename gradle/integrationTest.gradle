@@ -1,18 +1,15 @@
-apply plugin: 'com.github.erdi.webdriver-binaries'
-
 dependencies {
     add('testImplementation', libs.micronaut.httpclient)
-    add('testImplementation', libs.micronaut.inject.groovy)
     add('testImplementation', libs.bundles.grails.testing.support)
-    add('integrationTestImplementation', libs.bundles.geb)
-    add('integrationTestRuntimeOnly', libs.bundles.selenium)
+
+    integrationTestImplementation testFixtures(libs.geb.plugin)
 }
 
 tasks.named('integrationTest', Test) {
     systemProperty 'geb.build.reportsDir', reporting.file("$project.projectDir/build/geb-reports")
     systemProperties System.properties
     doFirst {
-        logger.quiet "\n - Running tests for configuration: ${System.getProperty('TESTCONFIG') ?: 'N/S'} with GEB env: ${System.getProperty('geb.env') ?: 'N/S'} and Grails: $grailsVersion"
+        logger.quiet "\n - Running tests for configuration: ${System.getProperty('TESTCONFIG') ?: 'N/S'} and Grails: $grailsVersion"
     }
     beforeTest { descriptor -> logger.quiet " -- $descriptor" }
 }

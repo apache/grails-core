@@ -1,11 +1,13 @@
 package specs
 
 import geb.module.TextInput
+import grails.testing.mixin.integration.Integration
 import org.springframework.security.crypto.password.PasswordEncoder
 import pages.IndexPage
 import spock.lang.IgnoreIf
 import spock.lang.Issue
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'misc' })
 class MiscSpec extends AbstractHyphenatedSecuritySpec {
 

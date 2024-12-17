@@ -20,7 +20,6 @@ package grails.plugin.springsecurity;
  * Equivalent to <code>org.springframework.security.config.http.SecurityFilters</code> which
  * unfortunately is package-default.
  *
- * @author Burt Beckwith
  */
 public enum SecurityFilterPosition {
 
@@ -67,6 +66,8 @@ public enum SecurityFilterPosition {
 	SAML2_AUTHENTICATION_FILTER,
 
 	FORM_LOGIN_FILTER,
+
+	DEFAULT_RESOURCES_FILTER,
 
 	LOGIN_PAGE_FILTER,
 

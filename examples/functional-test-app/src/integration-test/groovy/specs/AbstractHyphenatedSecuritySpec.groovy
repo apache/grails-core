@@ -1,5 +1,8 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
+
+@Integration
 abstract class AbstractHyphenatedSecuritySpec extends AbstractSecuritySpec {
 
 	protected void resetDatabase() {
@@ -9,10 +12,6 @@ abstract class AbstractHyphenatedSecuritySpec extends AbstractSecuritySpec {
 
 	protected String getSessionValue(String name) {
 		getContent 'hack/get-session-value?name=' + name
-	}
-
-	protected void login(String username) {
-		super.login username, 'password'
 	}
 
 	protected String getUserProperty(String user, String propertyName) {

@@ -1,13 +1,11 @@
 [versions]
 asciidoctorj = '4.0.3'
-asset-pipeline-gradle = '5.0.1'
+asset-pipeline-gradle = '5.0.4'
 grails-gradle-plugin = '7.0.0-SNAPSHOT'
-webdriver-binaries = '3.2'
 spock = '2.3-groovy-3.0'
 
 [libraries]
 asciidoctorj = { module = 'org.asciidoctor:asciidoctor-gradle-jvm', version.ref = 'asciidoctorj' }
 asset-pipeline-gradle = { module = 'com.bertramlabs.plugins:asset-pipeline-gradle', version.ref = 'asset-pipeline-gradle' }
 grails-gradle-plugin = { module = 'org.grails:grails-gradle-plugin', version.ref = 'grails-gradle-plugin' }
-webdriver-binaries-gradle-plugin = { module = 'com.github.erdi:webdriver-binaries-gradle-plugin', version.ref = 'webdriver-binaries' }
 spock-core = { module = 'org.spockframework:spock-core', version.ref = 'spock' }

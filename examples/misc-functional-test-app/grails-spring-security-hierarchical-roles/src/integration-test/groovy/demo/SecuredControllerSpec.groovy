@@ -1,14 +1,10 @@
 package demo
 
-import geb.spock.GebSpec
+import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
 @Integration(applicationClass = Application)
-class SecuredControllerSpec extends GebSpec {
-
-    def setup() {
-        browser.baseUrl = "http://localhost:${serverPort}/"
-    }
+class SecuredControllerSpec extends ContainerGebSpec {
 
     def "test RoleHierarchyEntry lifecycle"() {
         when:

@@ -1,5 +1,6 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import org.springframework.security.core.userdetails.UserCache
 import pages.LoginPage
 import pages.role.CreateRolePage
@@ -10,6 +11,7 @@ import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'basicCacheUsers' })
 class BasicAuthCacheUsersSecuritySpec extends AbstractSecuritySpec {
 
@@ -115,7 +117,6 @@ class BasicAuthCacheUsersSecuritySpec extends AbstractSecuritySpec {
 		userRows.size() == 2
 	}
 
-	@IgnoreIf({ !System.getProperty('geb.env') })
 	void 'check userDetails caching'() {
 
 		when:

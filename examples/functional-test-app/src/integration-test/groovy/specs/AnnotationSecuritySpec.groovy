@@ -1,5 +1,6 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.IndexPage
 import pages.LoginPage
 import pages.role.CreateRolePage
@@ -10,6 +11,7 @@ import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'annotation' })
 class AnnotationSecuritySpec extends AbstractSecuritySpec {
 
@@ -354,7 +356,6 @@ class AnnotationSecuritySpec extends AbstractSecuritySpec {
 		action << ['thing', 'thing/index', 'thing/show/1', 'thing/create', 'thing/edit', 'thing/delete']
 	}
 
-	@IgnoreIf({ !System.getProperty('geb.env') })
 	void 'authenticated user can access secured restful domain'() {
 		given:
 		login 'admin1', 'password1'
@@ -366,7 +367,6 @@ class AnnotationSecuritySpec extends AbstractSecuritySpec {
 		$().text() == '[]'
 	}
 
-	@IgnoreIf({ !System.getProperty('geb.env') })
 	void 'generated Resource controllers can have inherited secured actions'() {
 		when:
 		go 'customer/index'

@@ -1,10 +1,12 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.user.CreateUserPage
 import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'bcrypt' })
 class BCryptSpec extends AbstractSecuritySpec {
 

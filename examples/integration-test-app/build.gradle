@@ -32,15 +32,12 @@ dependencies {
     runtimeOnly libs.springboot.starter.tomcat
     runtimeOnly libs.tomcat.jdbc
 
-    compileOnly libs.micronaut.inject.groovy
     compileOnly libs.jakarta.servlet.api
     compileOnly libs.slf4j.nop
 
     testImplementation libs.spock.core
     testImplementation libs.spring.tx
     testImplementation libs.bundles.grails.testing.support
-
-    testCompileOnly libs.micronaut.inject.groovy
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

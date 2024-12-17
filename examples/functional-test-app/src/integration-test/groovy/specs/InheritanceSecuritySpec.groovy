@@ -1,9 +1,11 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.IndexPage
 import pages.LoginPage
 import spock.lang.IgnoreIf
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'annotation' })
 class InheritanceSecuritySpec extends AbstractSecuritySpec {
 

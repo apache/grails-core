@@ -1,11 +1,13 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import groovy.json.JsonSlurper
 import pages.IndexPage
 import pages.LoginPage
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'annotation' })
 class NamespaceSecuritySpec extends AbstractSecuritySpec {
 

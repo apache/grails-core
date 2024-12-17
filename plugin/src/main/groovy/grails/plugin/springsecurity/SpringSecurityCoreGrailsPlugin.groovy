@@ -668,7 +668,7 @@ to default to 'Annotation'; setting value to 'Annotation'
 		// if sitemesh 3 is installed, the filter should be applied a second time
 		// as part of the security filter chain so that pages are decorated using the security context
 		if (applicationContext.containsBean('sitemesh')) {
-			filterNames[SecurityFilterPosition.EXCEPTION_TRANSLATION_FILTER.order - 10] = 'sitemesh'
+			filterNames[SecurityFilterPosition.EXCEPTION_TRANSLATION_FILTER.order - 5] = 'sitemesh'
 		}
 
 		SpringSecurityUtils.buildFilterChains filterNames, conf.filterChain.chainMap ?: [], securityFilterChains, applicationContext

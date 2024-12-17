@@ -12,8 +12,6 @@ dependencies {
         // which is causes a version conflict for Gradle
         exclude group: 'org.apache.groovy', module: 'groovy-xml'
     }
-    implementation buildsrcLibs.webdriver.binaries.gradle.plugin
-
     testImplementation buildsrcLibs.spock.core
 }
 

@@ -1,5 +1,6 @@
+compileJava.options.release = 17
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
     withJavadocJar()
     withSourcesJar()
 }

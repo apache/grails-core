@@ -1,8 +1,11 @@
 package specs
 
+import grails.testing.mixin.integration.Integration
 import pages.IndexPage
 import spock.lang.IgnoreIf
 
+
+@Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'misc' })
 class DisableSpec extends AbstractHyphenatedSecuritySpec {
 
