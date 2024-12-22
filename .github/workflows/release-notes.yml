@@ -30,8 +30,8 @@ jobs:
       # Otherwise:
       - name: Export Gradle Properties
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
-        uses: micronaut-projects/github-actions/export-gradle-properties@master
-      - uses: micronaut-projects/github-actions/release-notes@master
+        uses: grails/github-actions/export-gradle-properties@main
+      - uses: grails/github-actions/release-notes@main
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
         id: release_notes
         with:
