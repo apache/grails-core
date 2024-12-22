@@ -24,7 +24,7 @@ jobs:
         id: release_version
         run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: Run pre-release
-        uses: micronaut-projects/github-actions/pre-release@master
+        uses: grails/github-actions/pre-release@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run Assemble
@@ -92,7 +92,7 @@ jobs:
             releaseSonatypeStagingRepository
       - name: Run post-release
         if: success()
-        uses: micronaut-projects/github-actions/post-release@master
+        uses: grails/github-actions/post-release@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
