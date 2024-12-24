@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v2
       - uses: actions/setup-java@v4
-        with: { java-version: 17, distribution: temurin }
+        with: { java-version: 17, distribution: liberica }
       - name: Run Tests
         uses: gradle/actions/setup-gradle@v3
         env:
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
-        with: { java-version: 17, distribution: temurin }
+        with: { java-version: 17, distribution: liberica }
       - name: Run Tests
         uses: gradle/actions/setup-gradle@v3
         env:
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v2
       - uses: actions/setup-java@v4
-        with: { java-version: 17, distribution: temurin }
+        with: { java-version: 17, distribution: liberica }
       - name: Run Build
         id: build
         uses: gradle/actions/setup-gradle@v3
