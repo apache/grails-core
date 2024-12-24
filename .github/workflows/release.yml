@@ -119,10 +119,8 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
       - name: "📜 Generate User Guide Documentation"
-        id: docs
         run: ./gradlew docs
       - name: "🚀 Publish to Github Pages"
-        id: docs
         if: success()
         uses: grails/github-pages-deploy-action@v2
         env:
