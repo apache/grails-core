@@ -68,10 +68,40 @@ class GrailsDependencyVersions implements DependencyManagement {
 
     @CompileDynamic
     void addDependencyManagement(GPathResult pom) {
-        pom.dependencyManagement.dependencies.dependency.each { dep ->
-            addDependency(dep.groupId.text(), dep.artifactId.text(), dep.version.text())
-        }
         versionProperties = pom.properties.'*'.collectEntries { [(it.name()): it.text()] }
+        pom.dependencyManagement.dependencies.dependency.each { dep ->
+            addDependency(dep.groupId.text(), dep.artifactId.text(), versionLookup(dep.version.text()))
+        }
+    }
+
+    /**
+     * Handles properties version lookup in grails-bom
+     *
+     *   <properties>
+     *    <ant.version>1.10.15</ant.version>
+     *   </properties>
+     *
+     *   <dependencyManagement>
+     *    <dependencies>
+     *     <dependency>
+     *      <groupId>org.apache.ant</groupId>
+     *      <artifactId>ant</artifactId>
+     *      <version>${ant.version}</version>
+     *     </dependency>
+     *    </dependencies>
+     *   </dependencyManagement>
+     *
+     * @param version
+     *            either the version or the version to lookup
+     *
+     * @return the version with lookup from properties when required
+     */
+    String versionLookup(String version){
+        if (version?.startsWith('${') && version?.endsWith('}')) {
+            return versionProperties.get(version.substring(2, version.length()-1))
+        }
+
+        return version
     }
 
     protected void addDependency(String group, String artifactId, String version) {
