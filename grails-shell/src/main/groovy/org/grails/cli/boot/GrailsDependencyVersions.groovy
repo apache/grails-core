@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 original authors
+ * Copyright 2014-2024 original authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,12 +96,9 @@ class GrailsDependencyVersions implements DependencyManagement {
      *
      * @return the version with lookup from properties when required
      */
-    String versionLookup(String version){
-        if (version?.startsWith('${') && version?.endsWith('}')) {
-            return versionProperties.get(version.substring(2, version.length()-1))
-        }
-
-        return version
+    String versionLookup(String version) {
+        version?.startsWith('${') && version?.endsWith('}') ?
+                versionProperties[version[2..-2]] : version
     }
 
     protected void addDependency(String group, String artifactId, String version) {
