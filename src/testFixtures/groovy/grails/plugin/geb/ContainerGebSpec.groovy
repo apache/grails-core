@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 original author or authors
+ * Copyright 2024-2025 original author or authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ import geb.report.PageSourceReporter
 import geb.report.Reporter
 import geb.test.GebTestManager
 import geb.transform.DynamicallyDispatchesToBrowser
+import grails.plugin.geb.support.ContainerGebFileInputSource
 import org.testcontainers.containers.BrowserWebDriverContainer
+import org.testcontainers.images.builder.Transferable
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -77,5 +79,19 @@ abstract class ContainerGebSpec extends Specification implements ContainerAwareD
      */
     Reporter createReporter() {
         new CompositeReporter(new PageSourceReporter())
+    }
+
+    /**
+     * Copies a file from the host to the container for assignment to a Geb FileInput module.
+     * This method is useful when you need to upload a file to a form in a Geb test and will work cross-platform.
+     *
+     * @param hostPath relative path to the file on the host
+     * @param containerPath absolute path to where to put the file in the container
+     * @return the file object to assign to the FileInput module
+     * @since 4.2
+     */
+    File createFileInputSource(String hostPath, String containerPath) {
+        container.copyFileToContainer(Transferable.of(new File(hostPath).bytes), containerPath)
+        return new ContainerGebFileInputSource(containerPath)
     }
 }
