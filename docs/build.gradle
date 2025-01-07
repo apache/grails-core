@@ -69,7 +69,7 @@ tasks.register('docs') {
     dependsOn('asciidoctor')
     doLast {
         delete file('build/docs/ghpages.html')
-        file('build/docs/ghpages.html') << file('src/docs/index.tmpl').text.replaceAll('@VERSION@', project.version.toString())
+        file('build/docs/ghpages.html') << file('src/docs/index.tmpl').text.replaceAll('@VERSION@', projectVersion)
         copy {
             from 'src/docs'
             into 'build/docs'

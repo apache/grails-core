@@ -1,7 +1,7 @@
 [[persistentCookie]]
 == Persistent Cookie Management
 
-Persistent cookies aren't enabled by default - you must enable them by running the `s2-create-persistent-token` script. See https://grails-plugins.github.io/grails-spring-security-core/@VERSION@/index.html#rememberMeCookie[the Spring Security Core plugin documentation] for details about this feature.
+Persistent cookies aren't enabled by default - you must enable them by running the `s2-create-persistent-token` script. See the https://grails.github.io/grails-spring-security-core/latest/index.html#rememberMeCookie[Spring Security Core Plugin documentation] for details about this feature.
 
 The Persistent Logins menu is only shown if this feature is enabled.
 

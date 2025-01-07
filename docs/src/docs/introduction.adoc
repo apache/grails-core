@@ -3,10 +3,16 @@
 
 The Spring Security UI plugin provides CRUD screens and other user management workflows.
 
-The CRUD screens are protected from cross-site request forgery (CSRF) attacks through the use of the `useToken` attribute in forms. More information is available at http://docs.grails.org/latest/guide/theWebLayer.html#formtokens.
+The CRUD screens are protected from cross-site request forgery (CSRF) attacks through the use of the `useToken` attribute
+in forms. For more details, refer to the
+https://docs.grails.org/latest/guide/theWebLayer.html#formtokens[Handling Duplicate Form Submissions] section in the
+https://docs.grails.org/latest/guide[Grails Core documentation].
 
-Non-default functionality is available only if the feature is available; this includes the ACL controllers and views which are enabled if the http://grails.org/plugin/spring-security-acl[ACL plugin] is installed, Requestmaps support which is available if `grails.plugin.springsecurity.securityConfigType` is set to `"Requestmap"` or `SecurityConfigType.Requestmap` in `application.groovy`, and persistent cookies support which is enabled if it has been configured with the `s2-create-persistent-token` script.
+Non-default functionality is available only if the feature is available. This includes:
 
+* ACL Controllers and Views, which are enabled if the https://github.com/grails/grails-spring-security-acl[ACL Plugin] is installed.
+* Requestmaps support, which is available if `grails.plugin.springsecurity.securityConfigType` is set to `"Requestmap"` or `SecurityConfigType.Requestmap` in `application.groovy`.
+* Persistent cookies support, which is enabled if it has been configured with the `s2-create-persistent-token` script.
 
 === Installation
 
@@ -16,32 +22,14 @@ Add an entry in the `dependencies` block of your `build.gradle` file, changing t
 [subs="attributes"]
 .`build.gradle`
 ----
-dependencies {
-   ...
-   compile 'org.grails.plugins:spring-security-ui:{projectVersion}'
-   ...
+implementation 'org.grails.plugins:spring-security-ui:{projectVersion}'
 ----
 
-NOTE: Master branch is for Grails 4, which uses Spring Security 5 and Spring 5
-See the spring-security-core plugin for details such as how password encodings have changed (salts).
-
-NOTE: Version 3.1.x is only compatible with Grails 3.3.x or higher.
-
-For previous Grails 3 versions ( 3.0.x, 3.1.x and 3.2.x ) use:
-
-[source,groovy]
-[subs="attributes"]
-.`build.gradle`
-----
-dependencies {
-   ...
-   compile 'org.grails.plugins:spring-security-ui:3.0.2'
-   ...
-----
-
-Also be sure to update the versions when new releases are available.
+Also be sure to update the version when new releases are available.
 
 === Release History
+
+For later releases - see the https://github.com/grails/grails-spring-security-ui/releases[GitHub release page].
 
 * Apr 9, 2019
 ** 4.0.0.M1 release
