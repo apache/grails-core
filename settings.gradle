@@ -24,10 +24,10 @@ buildCache {
 include 'docs'
 
 include 'examples-simple'
-project(":examples-simple").projectDir = new File(settingsDir, "examples/simple")
+project(':examples-simple').projectDir = new File(settingsDir, 'examples/simple')
 
 include 'examples-extended'
-project (':examples-extended').projectDir = new File(settingsDir, "examples/extended")
+project (':examples-extended').projectDir = new File(settingsDir, 'examples/extended')
 
 include 'plugin'
 findProject(':plugin').name = 'spring-security-ui'

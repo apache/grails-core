@@ -1,207 +1,79 @@
 buildscript {
-    repositories {
-        maven { url 'https://repo.grails.org/grails/core' }
+    configurations.classpath {
+        resolutionStrategy.eachDependency {
+            if (requested.group == 'com.burgstaller' && requested.name == 'okhttp-digest' && requested.version == '1.10') {
+                useTarget('io.github.rburgst:okhttp-digest:1.21')
+                because('Dependency was on Bintray which is no longer available')
+            }
+        }
     }
-    dependencies {
-        classpath 'org.asciidoctor:asciidoctor-gradle-plugin:1.6.1'
-        classpath 'org.asciidoctor:asciidoctorj-epub3:2.1.3'
-        classpath 'org.asciidoctor:asciidoctorj-pdf:2.3.18'
+    repositories {
+        mavenCentral()
     }
 }
 
-import org.apache.tools.ant.taskdefs.condition.Os
-apply plugin: 'org.asciidoctor.convert'
+plugins {
+    id 'org.asciidoctor.jvm.convert' version '4.0.2'
+    id 'org.asciidoctor.jvm.gems' version '4.0.2'
+}
+
+repositories {
+    mavenCentral()
+    ruby {
+        gems()
+    }
+}
 
 def asciidoctorAttributes = [
-        copyright           : 'Apache License, Version 2.0',
-        docinfo1            : 'true',
-        doctype             : 'book',
-        encoding            : 'utf-8',
-        'front-cover-image'  : 'image:cover.png[Front Cover,800,600]',
-        icons               : 'font',
-        id                  : project.name + ':' + project.version,
-        idprefix            : '',
-        idseparator         : '-',
-        lang                : 'en',
-        linkattrs           : true,
-        numbered            : '',
-        producer            : 'Asciidoctor',
-        revnumber           : project.version,
-        setanchors          : true,
-        'source-highlighter' : 'prettify',
-        toc                 : 'left',
-        toc2                : '',
-        toclevels           : '2',
-        projectVersion      : project.projectVersion
+    copyright            : 'Apache License, Version 2.0',
+    docinfo1             : 'true',
+    doctype              : 'book',
+    encoding             : 'utf-8',
+    'front-cover-image'  : 'image:cover.png[Front Cover,800,600]',
+    icons                : 'font',
+    id                   : "$rootProject.name:$projectVersion",
+    idprefix             : '',
+    idseparator          : '-',
+    lang                 : 'en',
+    linkattrs            : true,
+    numbered             : '',
+    producer             : 'Asciidoctor',
+    revnumber            : projectVersion,
+    setanchors           : true,
+    'source-highlighter' : 'prettify',
+    toc                  : 'left',
+    toc2                 : '',
+    toclevels            : '2',
+    projectVersion       : projectVersion
 ]
 
 
-import org.apache.tools.ant.taskdefs.condition.Os
-import org.asciidoctor.gradle.AsciidoctorTask
-
-tasks.withType(AsciidoctorTask) {
-    attributes asciidoctorAttributes
-    outputDir new File(buildDir, 'docs')
-    separateOutputDirs = false
+asciidoctor {
+    attributes = asciidoctorAttributes
+    baseDir = file('src/docs')
     sourceDir = file('src/docs')
+    outputDir = file('build/docs')
     sources {
         include 'index.adoc'
     }
+    jvm {
+        jvmArgs += [
+            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED'
+        ]
+    }
 }
 
-task getKindlegen {
-    group 'documentation'
-    ext {
-        kindlegenfolder = "${rootProject.projectDir}/kindlegen"
-        kindlegenFilename = "${kindlegenfolder}/kindlegen"
-
-
-    }
-
+tasks.register('docs') {
+    group = 'documentation'
+    dependsOn('asciidoctor')
     doLast {
-        if (Os.isFamily(Os.FAMILY_MAC)) {
-
-        } else {
-            File tgz = file(kindlegenGz)
-            if (!tgz.exists()) {
-                tgz.parentFile.mkdirs()
-                def url = kindlegenLinuxUrl
-                println "Downloading Kindlegen from $url"
-                ant.get(src: url, dest: tgz)
-            }
-            File kindlegenFile = file(kindlegenFilename)
-            if (!kindlegenFile.exists()) {
-
-                ant.chmod(file: kindlegenFile, perm: '+x')
-            }
-        }
-    }
-}
-
-task cleanKindlegen {
-    group 'documentation'
-    ext {
-        kindlegenfolder = "${rootProject.projectDir}/kindlegen"
-    }
-    doLast {
-        delete kindlegenfolder
-    }
-}
-
-task downloadKindlegenMac {
-    group 'documentation'
-    ext {
-        kindlegenUrl = 'http://kindlegen.s3.amazonaws.com/KindleGen_Mac_i386_v2_9.zip'
-        kindlegenZip = "${cleanKindlegen.ext.kindlegenfolder}/kindlegen.zip"
-    }
-    doLast {
-        if (Os.isFamily(Os.FAMILY_MAC)) {
-            File zipFile = file(kindlegenZip)
-            if (!zipFile.exists()) {
-                zipFile.parentFile.mkdirs()
-            }
-            def url = kindlegenUrl
-            println "Downloading Kindlegen from $url"
-            ant.get(src: url, dest: zipFile)
-        }
-    }
-}
-
-task downloadKindlegenLinux {
-    group 'documentation'
-    ext {
-        kindlegenUrl = 'http://kindlegen.s3.amazonaws.com/kindlegen_linux_2.6_i386_v2_9.tar.gz'
-        kindlegenGz = "${cleanKindlegen.ext.kindlegenfolder}/kindlegen.tar.gz"
-    }
-    doLast {
-        if (!Os.isFamily(Os.FAMILY_MAC) && !Os.isFamily(Os.FAMILY_WINDOWS)) {
-            File tgz = file(kindlegenGz)
-            if (!tgz.exists()) {
-                tgz.parentFile.mkdirs()
-            }
-            def url = kindlegenUrl
-            println "Downloading Kindlegen from $url"
-            ant.get(src: url, dest: tgz)
-        }
-    }
-}
-
-
-task unzipKidlengen {
-    group 'documentation'
-    dependsOn 'downloadKindlegenMac'
-    doLast {
-        File zipFile = file(downloadKindlegenMac.ext.kindlegenZip)
-        if ( zipFile.exists() ) {
-            copy {
-                from zipTree(zipFile)
-                into file(cleanKindlegen.ext.kindlegenfolder)
-            }
-        }
-    }
-
-}
-
-task untarKidlengen(dependsOn: downloadKindlegenLinux) {
-    group 'documentation'
-    doLast {
-        File tgz = file(downloadKindlegenLinux.ext.kindlegenGz)
-        if ( tgz.exists() ) {
-            ant.untar(src: tgz, dest: cleanKindlegen.ext.kindlegenfolder, compression: 'gzip')
-        }
-    }
-}
-
-
-task chmodXKindlegen {
-    group 'documentation'
-    dependsOn 'untarKidlengen'
-    dependsOn 'unzipKidlengen'
-    ext {
-        kindlegenFile = "${cleanKindlegen.ext.kindlegenfolder}/kindlegen"
-    }
-    doLast {
-        ant.chmod(file: kindlegenFile, perm: '+x')
-    }
-
-}
-
-clean.dependsOn cleanKindlegen
-
-task asciidoc(type: AsciidoctorTask, description: 'Generates single-page HTML, PDF, and EPUB3') {
-    group 'documentation'
-    backends 'html5', 'pdf', 'epub3'
-}
-
-task asciidocMobi(type: AsciidoctorTask, description: 'Generates MOBI for Kindle', dependsOn: chmodXKindlegen) {
-    group 'documentation'
-    backends 'epub3'
-    attributes(['ebook-format': 'kf8'] + asciidoctorAttributes)
-    mustRunAfter asciidoc
-}
-
-task docs(dependsOn: [asciidoc]) {
-    group 'documentation'
-    doLast {
-        File dir = new File(buildDir, 'docs')
-        ['epub', 'mobi', 'pdf'].each { String ext ->
-            File f = new File(dir, 'index.' + ext)
-            if (f.exists()) {
-                f.renameTo new File(dir, project.name + '.' + ext)
-            }
-        }
-
-        new File(buildDir, 'docs/ghpages.html') << file('src/docs/index.tmpl').text.replaceAll('@VERSION@', project.version)
-
+        delete file('build/docs/ghpages.html')
+        file('build/docs/ghpages.html') << file('src/docs/index.tmpl').text.replaceAll('@VERSION@', project.version.toString())
         copy {
             from 'src/docs'
-            into new File(buildDir, 'docs').path
+            into 'build/docs'
             include '**/*.png'
         }
     }
-}
-
-task docsMobi(dependsOn: [asciidoc, asciidocMobi]) {
-    group 'documentation'
-    finalizedBy docs
 }
