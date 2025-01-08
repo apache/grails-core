@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: ['17']
+        java: ['17', '21']
     env:
       WORKSPACE: ${{ github.workspace }}
       GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
@@ -36,35 +36,28 @@ jobs:
       - name: "🏃 Run Tests"
         if: github.event_name == 'pull_request'
         id: tests
-        run: ./gradlew check
+        run: ./gradlew check --continue
       - name: "🔨 Build project"
         if: github.event_name == 'push'
         id: build
-        run: ./gradlew build
-      - name: "📄 Publish Test Report"
-        if: steps.build.outcome == 'failure' || steps.tests.outcome == 'failure'
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          report_paths: '**/build/test-results/test/TEST-*.xml'
+        run: ./gradlew build --continue
       - name: "📤 Publish Snapshot"
-        if: steps.build.outcome == 'success' && github.event_name == 'push' && matrix.java == '17'
+        if: github.event_name == 'push' && steps.build.outcome == 'success' && matrix.java == '17'
         env:
           ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
           ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
-        run: publish
+        run: ./gradlew publish
       - name: "✍️ Generate Documentation"
         id: docs
         if: success() && github.event_name == 'push' && matrix.java == '17'
         run: ./gradlew docs
       - name: "📤 Publish to Github Pages"
-        if: steps.publish.outcome == 'success' && github.event_name == 'push' && matrix.java == '17'
+        if: github.event_name == 'push' && steps.publish.outcome == 'success' && matrix.java == '17'
         uses: grails/github-pages-deploy-action@grails
         env:
-          TARGET_REPOSITORY: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: build/docs
-          DOC_FOLDER: gh-pages
           COMMIT_EMAIL: grails-build@users.noreply.github.com
           COMMIT_NAME: grails-build
+          DOC_FOLDER: gh-pages
+          FOLDER: build/docs
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

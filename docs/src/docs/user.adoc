@@ -21,7 +21,7 @@ image::user_edit.png[]
 
 You can update any of the attributes or delete the User. You can see that there's a "Login as user" button here - that is only shown if you're authenticated with a User who is granted `ROLE_SWITCH_USER` (this role name can be configured in `application.groovy`):
 
-This allows you to temporarily assume the identity of another User (see https://grails-plugins.github.io/grails-spring-security-core/@VERSION@/index.html#switchUser[the Spring Security Core plugin documentation] for more information about switch-user). The "Logged in as ..." information in the top right of the screen will change to show that you're running as another User and provide a link to switch back. The role name `ROLE_SWITCH_USER` is the default but you can change the value with the `grails.plugin.springsecurity.ui.switchUserRoleName` setting in application.groovy.
+This allows you to temporarily assume the identity of another User (see https://grails-plugins.github.io/grails-spring-security-core/latest/index.html#switchUser[the Grails Spring Security Core Plugin documentation] for more information about switch-user). The "Logged in as ..." information in the top right of the screen will change to show that you're running as another User and provide a link to switch back. The role name `ROLE_SWITCH_USER` is the default but you can change the value with the `grails.plugin.springsecurity.ui.switchUserRoleName` setting in application.groovy.
 
 If you click the Roles tab you can see the roles granted to this User and can click through to its edit page:
 

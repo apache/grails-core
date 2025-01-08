@@ -1,184 +1,86 @@
 buildscript {
     repositories {
-        maven { url "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
     }
     dependencies {
+        classpath "org.grails:grails-bom:$grailsVersion"
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
         classpath "org.grails:grails-gradle-plugin:$grailsVersion"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:$assetPipelineVersion"
     }
 }
 
 version = projectVersion
 group = 'org.grails.plugins'
 
-apply plugin: "eclipse"
-apply plugin: "idea"
-apply plugin: "org.grails.grails-plugin"
-apply plugin: "com.bertramlabs.asset-pipeline"
-apply plugin: "org.grails.grails-gsp"
-apply plugin: 'maven-publish'
-apply plugin: 'signing'
+apply plugin: 'com.bertramlabs.asset-pipeline'
 apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+apply plugin: 'org.grails.grails-gsp'
+apply plugin: 'org.grails.grails-plugin'
+apply plugin: 'org.grails.grails-publish'
+apply plugin: 'signing'
 
-ext."signing.keyId" = project.hasProperty("signing.keyId") ? project.getProperty('signing.keyId') : System.getenv('SIGNING_KEY')
-ext."signing.secretKeyRingFile" = project.hasProperty("signing.secretKeyRingFile") ? project.getProperty('signing.secretKeyRingFile') : "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
-ext."signing.password" = project.hasProperty("signing.password") ? project.getProperty('signing.password') : System.getenv('SIGNING_PASSPHRASE')
-ext.pomInfo = {
-    delegate.name "Grails Spring Security UI"
-    delegate.description 'The Spring Security UI plugin provides CRUD screens and other user management workflows.'
-    delegate.url project.hasProperty('vcsUrl') ? project.vcsUrl : "https://github.com/grails/$project.name"
-
-    delegate.licenses {
-        delegate.license {
-            delegate.name 'The Apache Software License, Version 2.0'
-            delegate.url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-            delegate.distribution 'repo'
-        }
-    }
-
-    delegate.scm {
-        delegate.url "scm:git@github.com:${githubSlug}.git"
-        delegate.connection "scm:git@github.com:${githubSlug}.git"
-        delegate.developerConnection "scm:git@github.com:${githubSlug}.git"
-    }
-
-    if (developers) {
-        delegate.developers {
-            delegate.developer {
-                delegate.id "puneetbehl"
-                delegate.name "Puneet Behl"
+repositories {
+    maven { url = 'https://repo.grails.org/grails/core' }
+    mavenCentral()
+    if (System.getenv('GITHUB_MAVEN_PASSWORD') && !grailsVersion.endsWith('-SNAPSHOT')) {
+        logger.lifecycle('Adding Milestone Grails Core Repo for project {}', project.name)
+        maven {
+            url = 'https://maven.pkg.github.com/grails/grails-core'
+            credentials {
+                username = 'DOES_NOT_MATTER'
+                password = System.getenv('GITHUB_MAVEN_PASSWORD')
             }
         }
     }
 }
 
-repositories {
-    maven { url "https://repo.grails.org/grails/core" }
+compileJava.options.release = javaVersion.toInteger()
+
+grailsPublish {
+    githubSlug = 'grails/grails-spring-security-ui'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Grails Spring Security UI'
+    desc = 'The Spring Security UI plugin provides CRUD screens and other user management workflows.'
+    developers = [burtbeckwith: 'Burt Beckwith']
 }
 
 dependencies {
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.grails:grails-core"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.grails:grails-web-boot"
-    implementation "org.grails:grails-logging"
-    implementation "org.grails:grails-plugin-rest"
-    implementation "org.grails:grails-plugin-databinding"
-    implementation "org.grails:grails-plugin-i18n"
-    implementation "org.grails:grails-plugin-services"
-    implementation "org.grails:grails-plugin-url-mappings"
-    implementation "org.grails:grails-plugin-interceptors"
-    implementation "org.grails.plugins:gsp"
-    console "org.grails:grails-console"
-    profile "org.grails.profiles:web-plugin"
-    compileOnly "org.grails:grails-plugin-services"
-    compileOnly "org.grails:grails-plugin-domain-class"
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:$assetPipelineVersion"
-    api "org.grails.plugins:spring-security-core:$springSecurityCoreVersion"
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.spockframework:spock-core"
-    implementation "org.springframework.security:spring-security-core", {
-        ['spring-aop', 'spring-beans', 'spring-context', 'spring-core', 'spring-expression'].each {
-            exclude module: it
-        }
-    }
+
+    // Needed to compile subclasses of AbstractS2UiDomainController in consuming applications
+    compileOnlyApi 'org.grails.plugins:converters'
+
+    implementation 'org.grails:grails-plugin-controllers'
+    implementation 'org.grails.plugins:converters'
+    implementation 'org.grails.plugins:gsp'
+    implementation "org.grails.plugins:spring-security-core:$grailsSpringSecurityCoreVersion"
+    implementation 'org.springframework.security:spring-security-core'
+    implementation 'org.springframework.security:spring-security-web'
+
+    compileOnly 'org.grails:grails-core' // Provided, as this is a Grails plugin
+    compileOnly 'org.grails:grails-plugin-services'
+    compileOnly 'org.grails:grails-plugin-domain-class'
+
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'org.grails:grails-plugin-i18n'
+
+    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.spockframework:spock-core'
 }
+
+tasks.register('copyGspIntoTemplates', Copy) {
+    from "${layout.projectDirectory}/grails-app/views"
+    into "${layout.projectDirectory}/src/main/templates/views"
+    dependsOn 'copyTemplates', 'processResources'
+}
+
+tasks.register('removeGspFromTemplates', Delete) {
+    delete "${layout.projectDirectory}/src/main/templates/views"
+}
+
+assets.packagePlugin = true
+compileAstJava.dependsOn('copyGspIntoTemplates')
 
 apply from: "${rootProject.projectDir}/gradle/testVerbose.gradle"
-
-assets {
-    packagePlugin = true
-}
-
-task copyGspIntoTemplates {
-    ext.inputFolders = ['aclClass',
-                            'aclEntry',
-                            'aclObjectIdentity',
-                            'aclSid',
-                            'includes',
-                            'layouts',
-                            'login',
-                            'persistentLogin',
-                            'register',
-                            'registrationCode',
-                            'requestmap',
-                            'role',
-                            'securityInfo',
-                            'user']
-    doLast {
-        mkdir "${project.projectDir}/src/main/templates/views"
-        for ( String folder : inputFolders ) {
-            mkdir "${project.projectDir}/src/main/templates/views/${folder}"
-        }
-        for ( int i = 0; i < inputFolders.size(); i++ ) {
-            copy {
-                from(fileTree("${project.projectDir}/grails-app/views/${inputFolders[i]}")) {
-                    include '*.gsp'
-                }
-                into "${project.projectDir}/src/main/templates/views/${inputFolders[i]}"
-            }
-        }
-    }
-}
-
-task removeGspFromTemplates {
-    doLast {
-        for ( String folder : copyGspIntoTemplates.inputFolders ) {
-            delete "${project.projectDir}/src/main/templates/views/${folder}"
-        }
-        delete "${project.projectDir}/src/main/templates/views"
-    }
-
-}
-
-compileAstJava.dependsOn copyGspIntoTemplates
-
-publishing {
-    if (isSnapshot) {
-        repositories {
-            maven {
-                credentials {
-                    def u = System.getenv("ARTIFACTORY_USERNAME") ?: project.hasProperty("artifactoryPublishUsername") ? project.artifactoryPublishUsername : ''
-                    def p = System.getenv("ARTIFACTORY_PASSWORD") ?: project.hasProperty("artifactoryPublishPassword") ? project.artifactoryPublishPassword : ''
-                    username = u
-                    password = p
-                }
-                url "https://repo.grails.org/grails/plugins3-snapshots-local"
-            }
-        }
-    }
-
-    publications {
-        maven(MavenPublication) {
-            artifactId project.name
-            from components.java
-
-            artifact sourcesJar
-            artifact javadocJar
-            artifact source: "${buildDir}/classes/groovy/main/META-INF/grails-plugin.xml",
-                    classifier: "plugin",
-                    extension: 'xml'
-            pom.withXml {
-                def xml = asNode()
-
-                xml.children().last() + pomInfo
-                // dependency management shouldn't be included
-                def n = xml.get("dependencyManagement")
-                if (n)
-                    xml.remove(n)
-            }
-
-        }
-    }
-}
-
-signing {
-    sign publishing.publications.maven
-}
-
-tasks.withType(Sign) {
-    onlyIf { isReleaseVersion }
-}
