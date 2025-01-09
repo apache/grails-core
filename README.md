@@ -1,13 +1,11 @@
 # Grails Mail Plugin
 
 [![Maven Central](https://img.shields.io/maven-central/v/org.grails.plugins/mail.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails.plugins/mail)
-[![Java CI](https://github.com/grails/grails-mail/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/grails/grails-mail/actions/workflows/gradle.yml)
+[![Java CI](https://github.com/gpc/grails-mail/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/gpc/grails-mail/actions/workflows/gradle.yml)
 
-## About
+The Grails Mail Plugin provides a convenient Domain-Specific Language (DSL) for _sending_ email, supporting features such as plain text, HTML, attachments, inline resources and i18n (internationalization), among others.
 
-The Grails mail plugin provides a convenient DSL for _sending_ email. It supports plain text, html, attachments, inline resources and i18n among other features.
-
-Mail can be sent using the `mailService.sendMail` method. Here is an example…
+Email can be sent using the `mailService.sendMail` method. Here's an example:
 ```groovy
 mailService.sendMail {
    to 'fred@gmail.com', 'ginger@gmail.com'
@@ -21,7 +19,8 @@ mailService.sendMail {
 
 ## Documentation
 
-[Latest documentation](https://grails.github.io/grails-mail/latest/) and [snapshots](https://grails.github.io/grails-mail/snapshot/) are available.
+- [Latest Release](https://gpc.github.io/grails-mail/latest/)
+- [Development Snapshot](https://gpc.github.io/grails-mail/snapshot/)
 
 ## Versions
 
@@ -35,10 +34,10 @@ mailService.sendMail {
 
 ## Issues
 
-Issues can be raised via [GitHub Issues](https://github.com/grails/grails-mail/issues).
+Issues can be raised via [GitHub Issues](https://github.com/gpc/grails-mail/issues).
 
 ## Contributing
 
-Pull requests are the preferred method for submitting contributions. Please open an issue via that issue tracker link above and create an issue describing what your contribution addresses.
+Pull requests are the preferred way to submit contributions. Before submitting, please create an issue using the [issue tracker](https://github.com/gpc/grails-mail/issues), outlining the problem your contribution addresses.
 
-If you are contributing documentation, raising an issue is not necessary.
+For documentation contributions, creating an issue is not required.
