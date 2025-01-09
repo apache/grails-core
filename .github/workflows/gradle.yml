@@ -54,7 +54,7 @@ jobs:
         if: success() && github.event_name == 'push' && matrix.java == '17'
         run: ./gradlew docs
       - name: "📤 Publish to Github Pages"
-        if: github.event_name == 'push' && steps.publish.outcome == 'success' && matrix.java == '17'
+        if: success() && github.event_name == 'push' && matrix.java == '17'
         uses: grails/github-pages-deploy-action@grails
         env:
           BRANCH: gh-pages
