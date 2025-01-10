@@ -496,9 +496,14 @@ class DocPublisher {
             varsCopy.sponsorLogo = injectPath(sponsorLogo, varsCopy.path)
         }
 
-        new File("${targetDir}/${section.name}.html").withWriter(encoding) { writer ->
-            varsCopy.content = accumulatedContent.toString()
-            layoutTemplate.make(varsCopy).writeTo(writer)
+        try {
+            new File("${targetDir}/${section.name}.html").withWriter(encoding) { writer ->
+                varsCopy.content = accumulatedContent.toString()
+                layoutTemplate.make(varsCopy).writeTo(writer)
+            }
+        }
+        catch(e) {
+            throw new IllegalStateException("Unable to generate section ${targetDir}/${section.name}.html", e)
         }
 
         return varsCopy.content
