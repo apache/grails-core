@@ -1,6 +1,8 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.annotation.AutoTimestamp
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
+
 import static grails.gorm.annotation.AutoTimestamp.EventType.*;
 import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
@@ -30,6 +32,65 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
             r.modified != null && previousModified < r.modified
             previousCreated == r.created
     }
+
+    void "Test when the auto timestamp properties are already set, they are overwritten"() {
+        when:"An entity is persisted"
+        def r = new RecordCustom(name: "Test")
+        def now = new Date()
+        r.created = new Date()
+        r.modified = r.created
+        r.save(flush:true, failOnError:true)
+        session.clear()
+        r = RecordCustom.get(r.id)
+
+        then:"the custom lastUpdated and dateCreated are set"
+        now < r.modified
+        now < r.created
+
+        when:"An entity is modified"
+        Date previousCreated = r.created
+        Date previousModified = r.modified
+        r.name = "Test 2"
+        r.save(flush:true)
+        session.clear()
+        r = RecordCustom.get(r.id)
+
+        then:"the custom lastUpdated property is updated and dateCreated is not"
+        r.modified != null && previousModified < r.modified
+        previousCreated == r.created
+    }
+
+    void "Test when the auto timestamp properties are already set, they are not overwritten if config is set"() {
+        when:"An entity is persisted and insertOverwrite is false"
+        AutoTimestampEventListener autoTimestampEventListener =
+                RecordCustom.gormPersistentEntity.mappingContext.eventListeners.find { it.class == AutoTimestampEventListener}
+        autoTimestampEventListener.insertOverwrite = false
+
+        def r = new RecordCustom(name: "Test")
+        def now = new Date()
+        r.created = new Date()
+        r.modified = r.created
+        r.save(flush:true, failOnError:true)
+        session.clear()
+        r = RecordCustom.get(r.id)
+
+        then:"the custom lastUpdated and dateCreated are not overwritten"
+        now == r.modified
+        now == r.created
+
+        when:"An entity is modified"
+        Date previousCreated = r.created
+        Date previousModified = r.modified
+        r.name = "Test 2"
+        r.save(flush:true)
+        session.clear()
+        r = RecordCustom.get(r.id)
+
+        then:"the custom lastUpdated property is updated and dateCreated is not"
+        r.modified != null && previousModified < r.modified
+        previousCreated == r.created
+    }
+
     @Override
     List getDomainClasses() {
         [RecordCustom]
