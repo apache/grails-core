@@ -47,6 +47,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
+    compileOnly 'org.grails:grails-web-taglib'
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'

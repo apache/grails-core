@@ -27,6 +27,7 @@ dependencies {
 
     testImplementation "org.grails.plugins:converters"
     testImplementation "org.grails:grails-datastore-gorm-hibernate5"
+    testImplementation "org.grails:grails-web-taglib"
     testImplementation "org.grails:grails-web-testing-support"
     testImplementation "org.grails.plugins:gsp"
     testImplementation project(':grails-async-plugin')
