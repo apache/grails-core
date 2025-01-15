@@ -43,9 +43,8 @@ class RxPromiseSpec extends Specification {
 
     void 'Test promise null handling'() {
 
-        when: 'a promise map is created'
+        when: 'a null promise result is created'
         def promise = Promises.createPromise {
-            sleep 1000
             return null
         }
         def result = promise.get()
