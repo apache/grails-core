@@ -41,7 +41,7 @@ class RxPromise<T>  implements Promise<T> {
     RxPromise(RxPromiseFactory promiseFactory, Closure callable, Scheduler scheduler) {
         this(promiseFactory, Single.create( { SingleEmitter<? super T> singleSubscriber ->
             try {
-                singleSubscriber.onSuccess((T)callable.call())
+                singleSubscriber.onSuccess((T)runCallable(callable))
             } catch (Throwable t) {
                 singleSubscriber.onError(t)
             }
@@ -154,6 +154,15 @@ class RxPromise<T>  implements Promise<T> {
             else {
                 throw e
             }
+        }
+    }
+
+    static Object runCallable(Closure callable) {
+        Object rtn = callable.call()
+        if(rtn == null) {
+            return Void
+        } else {
+            return rtn
         }
     }
 }
