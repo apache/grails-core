@@ -23,6 +23,7 @@ import grails.gorm.annotation.AutoTimestamp;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.gorm.timestamp.TimestampProvider;
 import org.grails.datastore.mapping.config.Entity;
+import org.grails.datastore.mapping.config.Settings;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
@@ -34,6 +35,7 @@ import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -43,6 +45,10 @@ import org.springframework.context.ApplicationEvent;
  * @since 1.0
  */
 public class AutoTimestampEventListener extends AbstractPersistenceEventListener implements MappingContext.Listener {
+
+    // if false, will not set timestamp on insert event if value is not null
+    @Value("${" + Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE + ":true}")
+    boolean insertOverwrite = true;
 
     public static final String DATE_CREATED_PROPERTY = "dateCreated";
     public static final String LAST_UPDATED_PROPERTY = "lastUpdated";
@@ -98,19 +104,23 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         Set<String> props = getDateCreatedPropertyNames(name);
         if (props != null) {
             for (String prop : props) {
-                dateCreatedType = ea.getPropertyType(prop);
-                timestamp = timestampProvider.createTimestamp(dateCreatedType);
-                ea.setProperty(prop, timestamp);
+                if (insertOverwrite || ea.getPropertyValue(prop) == null) {
+                    dateCreatedType = ea.getPropertyType(prop);
+                    timestamp = timestampProvider.createTimestamp(dateCreatedType);
+                    ea.setProperty(prop, timestamp);
+                }
             }
         }
         props = getLastUpdatedPropertyNames(name);
         if (props != null) {
             for (String prop : props) {
-                Class<?> lastUpdateType = ea.getPropertyType(prop);
-                if (dateCreatedType == null || !lastUpdateType.isAssignableFrom(dateCreatedType)) {
-                    timestamp = timestampProvider.createTimestamp(lastUpdateType);
+                if (insertOverwrite || ea.getPropertyValue(prop) == null) {
+                    Class<?> lastUpdateType = ea.getPropertyType(prop);
+                    if (dateCreatedType == null || !lastUpdateType.isAssignableFrom(dateCreatedType)) {
+                        timestamp = timestampProvider.createTimestamp(lastUpdateType);
+                    }
+                    ea.setProperty(prop, timestamp);
                 }
-                ea.setProperty(prop, timestamp);
             }
         }
         return true;

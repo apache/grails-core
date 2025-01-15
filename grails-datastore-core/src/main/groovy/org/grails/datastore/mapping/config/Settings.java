@@ -70,4 +70,6 @@ public interface Settings {
      */
     String SETTING_DB_CREATE = SETTING_DATASOURCE + ".dbCreate";
 
+    String SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE = PREFIX + '.' + "events.autoTimestampInsertOverwrite";
+
 }
