@@ -17,7 +17,7 @@ dependencies {
 reporting {
     reports {
         testAggregateTestReport(AggregateTestReport) {
-            testType = TestSuiteType. UNIT_TEST
+            testType = TestSuiteType.UNIT_TEST
         }
     }
 }
