@@ -60,4 +60,3 @@ if (isReleaseVersion) {
     }
 }
 
-apply from: "gradle/idea.gradle"
