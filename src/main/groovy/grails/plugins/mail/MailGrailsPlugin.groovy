@@ -1,11 +1,11 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@ import grails.plugins.Plugin
 
 class MailGrailsPlugin extends Plugin {
     
-    def grailsVersion = '6.0.0 > *'
+    def grailsVersion = '7.0.0 > *'
     def author = 'The Grails team'
     def authorEmail = 'info@grails.org'
     def title = 'Provides Mail support to a running Grails application'
@@ -38,10 +38,10 @@ sendMail {
     text "this is some text"
 }
 '''
-    def documentation = 'https://grails.github.io/grails-mail/'
+    def documentation = 'https://gpc.github.io/grails-mail/'
 
     def license = 'Apache 2.0 License'
-    def organization = [name: 'Grails', url: 'https://grails.org']
+    def organization = [name: 'Grails Plugin Collective', url: 'https://github.com/gpc']
     def developers = [
         [name: 'Craig Andrews', email: 'candrews@integralblue.com'],
         [name: 'Luke Daley', email: 'ld@ldaley.com'],
@@ -53,8 +53,8 @@ sendMail {
         [name: 'Mattias Reichel', email: 'mattias.reichel@gmail.com']
     ]
 
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/grails/grails-mail/issues']
-    def scm = [url: 'https://github.com/grails/grails-mail']
+    def issueManagement = [system: 'GitHub', url: 'https://github.com/gpc/grails-mail/issues']
+    def scm = [url: 'https://github.com/gpc/grails-mail']
 
     def observe = ['controllers', 'services']
 
