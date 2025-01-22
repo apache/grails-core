@@ -9,17 +9,19 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  packages: read
 jobs:
   build_groovy:
-    runs-on: ubuntu-latest
+    name: "Build Groovy"
+    runs-on: ubuntu-24.04
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: liberica
           java-version: 17
+          distribution: liberica
       - name: "🗄️ Cache local Maven repository"
         uses: actions/cache@v4
         with:
@@ -45,8 +47,8 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-      - name: "📝 Store Groovy version to use when building this project"
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "📝 Store Groovy version to use when building Grails Views"
         id: groovy-version
         run: |
           cd groovy
@@ -68,27 +70,20 @@ jobs:
         run: |
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
           echo "def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null" >> $GITHUB_OUTPUT
-          echo "def isBuildCacheAuthenticated =" >> $GITHUB_OUTPUT
-          echo "        System.getenv('DEVELOCITY_BUILD_CACHE_NODE_USER') != null &&" >> $GITHUB_OUTPUT
-          echo "        System.getenv('DEVELOCITY_BUILD_CACHE_NODE_KEY') != null" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
           echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
+          echo "        tag('groovy')" >> $GITHUB_OUTPUT
+          echo "        tag('grails-datamapping')" >> $GITHUB_OUTPUT
           echo "        publishing.onlyIf { isAuthenticated }" >> $GITHUB_OUTPUT
           echo "        uploadInBackground = false" >> $GITHUB_OUTPUT
           echo "    }" >> $GITHUB_OUTPUT
           echo "}" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
           echo "buildCache {" >> $GITHUB_OUTPUT
           echo "    local { enabled = false }" >> $GITHUB_OUTPUT
           echo "    remote(develocity.buildCache) {" >> $GITHUB_OUTPUT
-          echo "        push = isBuildCacheAuthenticated" >> $GITHUB_OUTPUT
+          echo "        push = isAuthenticated" >> $GITHUB_OUTPUT
           echo "        enabled = true" >> $GITHUB_OUTPUT
-          echo "        usernameAndPassword(" >> $GITHUB_OUTPUT
-          echo "            System.getenv('DEVELOCITY_BUILD_CACHE_NODE_USER') ?: ''," >> $GITHUB_OUTPUT
-          echo "            System.getenv('DEVELOCITY_BUILD_CACHE_NODE_KEY') ?: ''" >> $GITHUB_OUTPUT
-          echo "        )" >> $GITHUB_OUTPUT
           echo "    }" >> $GITHUB_OUTPUT
           echo "}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
@@ -105,16 +100,13 @@ jobs:
           # Add Develocity setup related configuration after line no 22 in gradle/build-scans.gradle
           echo "${{ steps.develocity-conf-2.outputs.value }}" | sed -i -e "22r /dev/stdin" gradle/build-scans.gradle
       - name: "🔨 Publish Groovy to local maven repository (no docs)"
-        env:
-          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd groovy
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK
 
   build_project:
-    needs: [build_groovy]
+    name: "Build Project"
+    needs: build_groovy
     runs-on: ubuntu-latest
     steps:
       - name: "📥 Checkout project"
@@ -122,12 +114,12 @@ jobs:
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: liberica
           java-version: 17
+          distribution: liberica
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v4
         with:
@@ -135,12 +127,10 @@ jobs:
           key: cache-local-maven-${{ github.sha }}
       - name: "🪶 Add mavenLocal repository to build"
         run: sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' build.gradle
-      - name: "🔨 Build and test project using the locally built Groovy snapshot"
+      - name: "🔨 Build and test the project using the locally built Groovy snapshot"
         env:
-          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew build
+          ./gradlew build --continue
           -PgroovyVersion=${{needs.build_groovy.outputs.groovyVersion}}
           -x groovydoc
