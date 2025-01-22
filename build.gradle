@@ -16,8 +16,8 @@ ext.set('isSnapshot', !isReleaseVersion)
 apply plugin: 'org.grails.grails-plugin' // Needs to be applied after grailsVersion has been set
 
 repositories {
-    mavenCentral()
     maven { url = 'https://repo.grails.org/grails/core' }
+    mavenCentral()
 }
 
 dependencies {
