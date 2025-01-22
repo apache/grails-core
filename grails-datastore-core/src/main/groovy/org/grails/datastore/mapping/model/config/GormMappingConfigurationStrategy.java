@@ -15,7 +15,6 @@
 package org.grails.datastore.mapping.model.config;
 
 import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
 
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
@@ -24,7 +23,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +33,6 @@ import java.util.Set;
 
 import jakarta.persistence.Entity;
 
-import groovy.lang.MetaBeanProperty;
 import groovy.lang.MetaProperty;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
 import org.grails.datastore.mapping.model.ClassMapping;

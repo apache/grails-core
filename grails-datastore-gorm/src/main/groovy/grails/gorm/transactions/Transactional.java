@@ -16,9 +16,7 @@
 package grails.gorm.transactions;
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
-import org.grails.datastore.gorm.transactions.transform.TransactionalTransform;
 import org.grails.datastore.gorm.transform.GormASTTransformationClass;
-import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.springframework.transaction.TransactionDefinition;

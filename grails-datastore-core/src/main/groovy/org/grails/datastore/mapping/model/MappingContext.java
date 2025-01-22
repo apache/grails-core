@@ -25,7 +25,6 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
-import org.springframework.core.env.PropertyResolver;
 import org.springframework.validation.Validator;
 
 /**

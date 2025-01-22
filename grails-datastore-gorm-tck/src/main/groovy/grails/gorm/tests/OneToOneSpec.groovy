@@ -2,7 +2,6 @@ package grails.gorm.tests
 
 import grails.persistence.Entity
 import org.grails.datastore.mapping.model.types.OneToOne
-import org.grails.datastore.mapping.proxy.EntityProxy
 
 class OneToOneSpec extends GormDatastoreSpec {
 

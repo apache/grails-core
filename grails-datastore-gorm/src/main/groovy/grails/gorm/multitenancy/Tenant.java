@@ -15,7 +15,6 @@
  */
 package grails.gorm.multitenancy;
 
-import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;

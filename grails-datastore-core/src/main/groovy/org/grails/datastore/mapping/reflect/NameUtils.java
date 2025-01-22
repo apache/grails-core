@@ -22,7 +22,6 @@ import java.util.Set;
 
 import org.codehaus.groovy.runtime.MetaClassHelper;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.springframework.util.CollectionUtils;
 
 /**
  * @author Graeme Rocher

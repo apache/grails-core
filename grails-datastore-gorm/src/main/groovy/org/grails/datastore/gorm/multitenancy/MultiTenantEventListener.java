@@ -10,9 +10,7 @@ import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.event.PostQueryEvent;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.springframework.context.ApplicationEvent;
 
 import java.io.Serializable;

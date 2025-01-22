@@ -19,7 +19,6 @@ import groovy.lang.Closure;
 import groovy.lang.MissingMethodException;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,7 +56,6 @@ import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.springframework.core.convert.ConversionException;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 /**
  * Abstract base class for dynamic finders.

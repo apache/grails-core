@@ -4,8 +4,6 @@ import grails.gorm.DetachedCriteria
 import grails.persistence.Entity;
 import spock.lang.Issue
 
-import org.grails.datastore.mapping.core.Session
-
 import spock.lang.Ignore
 
 /**

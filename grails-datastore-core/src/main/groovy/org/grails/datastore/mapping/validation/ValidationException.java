@@ -18,7 +18,6 @@ package org.grails.datastore.mapping.validation;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.Errors;
 import org.springframework.validation.ObjectError;
 

@@ -15,7 +15,6 @@
 package org.grails.datastore.mapping.collection;
 
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationIndexer;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;

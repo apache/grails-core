@@ -1,6 +1,5 @@
 package grails.gorm.tests
 
-import grails.gorm.tests.GormDatastoreSpec
 import spock.lang.Issue
 
 class ReadOnlyCriteriaSpec extends GormDatastoreSpec {

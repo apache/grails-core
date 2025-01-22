@@ -16,8 +16,6 @@ package org.grails.datastore.mapping.engine;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 
 import org.grails.datastore.mapping.model.PersistentProperty;

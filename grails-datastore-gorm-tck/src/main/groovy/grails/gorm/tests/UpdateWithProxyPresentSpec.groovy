@@ -5,7 +5,6 @@ import grails.gorm.async.AsyncEntity
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
 import groovy.transform.EqualsAndHashCode
-import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
 /**

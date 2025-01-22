@@ -1,7 +1,5 @@
 package org.grails.datastore.mapping.core.connections;
 
-import org.springframework.core.env.PropertyResolver;
-
 import java.io.Closeable;
 import java.io.IOException;
 
