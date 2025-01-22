@@ -5,7 +5,7 @@ tasks.named('compileTestGroovy', GroovyCompile) {
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     testLogging {
-        exceptionFormat ='full'
+        events 'passed', 'skipped', 'failed'
         exceptionFormat = 'full'
     }
     if (isCiBuild) {
