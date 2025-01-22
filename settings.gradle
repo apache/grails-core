@@ -10,6 +10,8 @@ def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 develocity {
     server = 'https://ge.grails.org'
     buildScan {
+        tag('gpc')
+        tag('grails-mail')
         publishing.onlyIf { isAuthenticated }
         uploadInBackground = isLocal
     }
