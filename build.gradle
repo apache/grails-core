@@ -3,7 +3,7 @@ plugins {
     id 'java-library'
     id 'io.github.gradle-nexus.publish-plugin'
     id 'maven-publish'
-    id 'org.asciidoctor.jvm.convert' version '4.0.2'
+    id 'org.asciidoctor.jvm.convert' version '4.0.4'
     id 'signing'
 }
 
