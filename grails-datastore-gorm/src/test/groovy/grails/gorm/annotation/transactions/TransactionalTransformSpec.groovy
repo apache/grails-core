@@ -19,7 +19,6 @@ import org.springframework.util.ReflectionUtils
 import spock.lang.Issue
 import spock.lang.Specification
 
-import jakarta.annotation.PostConstruct
 import javax.sql.DataSource
 /**
  */
@@ -1045,11 +1044,6 @@ class TransactionalTransformSpecService implements InitializingBean {
     @NotTransactional
     public boolean isActualTransactionActive() {
         return TransactionSynchronizationManager.isActualTransactionActive()
-    }
-
-    @PostConstruct
-    public void init() {
-
     }
 
     @Override
