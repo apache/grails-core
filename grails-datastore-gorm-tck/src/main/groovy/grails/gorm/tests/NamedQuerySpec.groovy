@@ -3,6 +3,7 @@ package grails.gorm.tests
 import grails.persistence.Entity
 
 import spock.lang.PendingFeature
+import spock.lang.PendingFeatureIf
 
 /**
  * @author graemerocher
@@ -701,7 +702,13 @@ class NamedQuerySpec extends GormDatastoreSpec {
             publications[1].title == 'Some Book'
     }
 
-    @PendingFeature(reason = 'findby boolean queries not yet supported')
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'findby boolean queries not yet supported'
+    )
     void "Test named query with find by boolean property"() {
 
         given:
@@ -739,7 +746,13 @@ class NamedQuerySpec extends GormDatastoreSpec {
             3 == numberOfNewBooksNamedSomeBook
     }
 
-    @PendingFeature(reason = 'list order by not yet supported')
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'list order by not yet supported'
+    )
     void "Test named query with listOrderBy*() dynamic finder"() {
 
         given:
@@ -823,7 +836,13 @@ class NamedQuerySpec extends GormDatastoreSpec {
             publication == null
     }
 
-    @PendingFeature(reason = 'Was previously @Ignore')
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'Was previously @Ignore'
+    )
     void "Test count method following named criteria"() {
 
         given:
