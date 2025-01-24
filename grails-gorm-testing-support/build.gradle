@@ -9,10 +9,7 @@ group = 'org.grails'
 ext {
     pomTitle = 'Grails Web Testing Support'
     pomDescription = 'Support for writing concise expressive tests for Grails Web Artifacts'
-    pomDevelopers = [
-            [id: 'jeffscottbrown', name: 'Jeff Brown'],
-            [id: 'jameskleeh', name: 'James Kleeh']
-    ]
+    pomDevelopers = ['jeffscottbrown': 'Jeff Brown', 'jameskleeh': 'James Kleeh']
 }
 
 dependencies {

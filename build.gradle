@@ -1,21 +1,5 @@
-io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
-
-buildscript {
-    repositories {
-        maven { url = 'https://repo.grails.org/grails/core' }
-    }
-    dependencies {
-        classpath 'io.github.gradle-nexus:publish-plugin:2.0.0'
-    }
-}
-
-group = 'org.grails'
-version = project.projectVersion
-
 ext {
     isCiBuild = System.getenv('CI')
-    isSnapshot = projectVersion.endsWith('-SNAPSHOT')
-    isReleaseVersion = !isSnapshot
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 }
 
@@ -59,24 +43,6 @@ allprojects {
                 }
             }
         }
-    }
-}
-
-if (isReleaseVersion) {
-    apply plugin: 'io.github.gradle-nexus.publish-plugin'
-    nexusPublishing {
-        repositories {
-            sonatype {
-                nexusUrl = uri('https://s01.oss.sonatype.org/service/local')
-                username = System.getenv('SONATYPE_USERNAME') ?: ''
-                password = System.getenv('SONATYPE_PASSWORD') ?: ''
-                stagingProfileId = System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: ''
-            }
-        }
-    }
-    //do not generate extra load on Nexus with new staging repository if signing fails
-    tasks.withType(InitializeNexusStagingRepository).configureEach {
-        shouldRunAfter = tasks.withType(Sign)
     }
 }
 
