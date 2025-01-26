@@ -80,8 +80,8 @@ class GparsPromiseSpec extends Specification {
             promiseList.onComplete { List v -> result = v }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [2, 4]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [2, 4]
             }
 
         when: 'a promise list is created from two closures'
@@ -90,8 +90,8 @@ class GparsPromiseSpec extends Specification {
             promiseList.onComplete { List v -> result = v }
 
         then: 'The result is correct'
-            new PollingConditions(timeout: 5) {
-                result == [2,4]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [2,4]
             }
     }
 
@@ -105,9 +105,9 @@ class GparsPromiseSpec extends Specification {
             promise.onError { hasError = true }
 
         then: 'the onComplete handler is invoked and the onError handler is ignored'
-            new PollingConditions(timeout: 5).eventually {
-                result == 2
-                hasError == false
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == 2
+                assert hasError == false
             }
     }
 
@@ -121,10 +121,10 @@ class GparsPromiseSpec extends Specification {
             promise.onError { error = it }
 
         then: 'the onError handler is invoked and the onComplete handler is ignored'
-            new PollingConditions(timeout: 5).eventually {
-                !result
-                error
-                error.message == 'bad'
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !result
+                assert error
+                assert error.message == 'bad'
             }
     }
 

@@ -35,22 +35,22 @@ class PublishSubscribeSpringSpec extends Specification {
             publisher.sum(1, 2)
 
         then: 'the subscriber is notified'
-            new PollingConditions(timeout: 5).eventually {
-                !subscriber.error
-                subscriber.total == 3
-                subscriber.events.size() == 1
-                subscriber.events[0].parameters == [a:1,b:2]
-                subscriber.transactionalInvoked
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !subscriber.error
+                assert subscriber.total == 3
+                assert subscriber.events.size() == 1
+                assert subscriber.events[0].parameters == [a:1,b:2]
+                assert subscriber.transactionalInvoked
             }
 
         when: 'we invoke a method on the publisher with the wrong type for the subscriber'
             publisher.wrongType()
 
         then: 'the subscriber is not notified'
-            new PollingConditions(timeout: 5).eventually {
-                !subscriber.error
-                subscriber.total == 3
-                subscriber.events.size() == 2
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !subscriber.error
+                assert subscriber.total == 3
+                assert subscriber.events.size() == 2
             }
 
         when: 'we invoke a method on the publisher that throws an exception'
@@ -59,10 +59,10 @@ class PublishSubscribeSpringSpec extends Specification {
         then: 'an exception is thrown'
             def e = thrown(RuntimeException)
             e.message == 'bad'
-            new PollingConditions(timeout: 5).eventually {
-                subscriber.error == e
-                subscriber.events.size() == 3
-                subscriber.total == 3
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert subscriber.error == e
+                assert subscriber.events.size() == 3
+                assert subscriber.total == 3
             }
     }
 }

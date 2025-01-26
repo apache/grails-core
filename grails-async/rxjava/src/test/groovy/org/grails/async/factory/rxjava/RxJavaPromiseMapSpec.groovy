@@ -18,11 +18,11 @@ class RxJavaPromiseMapSpec extends Specification{
             map.onComplete { result = it }
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            new PollingConditions(timeout: 5).eventually {
-                result
-                result['one'] == 1
-                result['four'] == 4
-                result['eight'] == 8
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result
+                assert result['one'] == 1
+                assert result['four'] == 4
+                assert result['eight'] == 8
             }
     }
 
@@ -37,11 +37,11 @@ class RxJavaPromiseMapSpec extends Specification{
             map.onComplete { result = it }
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            new PollingConditions(timeout: 5).eventually {
-                result
-                result['one'] == 1
-                result['four'] == 4
-                result['eight'] == 8
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result
+                assert result['one'] == 1
+                assert result['four'] == 4
+                assert result['eight'] == 8
             }
     }
 
@@ -56,11 +56,11 @@ class RxJavaPromiseMapSpec extends Specification{
             map.onComplete { result = it }
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            new PollingConditions(timeout: 5).eventually {
-                result
-                result['one'] == 1
-                result['four'] == 4
-                result['eight'] == 8
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result
+                assert result['one'] == 1
+                assert result['four'] == 4
+                assert result['eight'] == 8
             }
     }
 
@@ -79,10 +79,10 @@ class RxJavaPromiseMapSpec extends Specification{
         map.onError { error = it }
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            new PollingConditions(timeout: 5).eventually {
-                !result
-                error
-                error.message == 'bad'
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !result
+                assert error
+                assert error.message == 'bad'
             }
     }
 

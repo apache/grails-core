@@ -62,8 +62,8 @@ class RxJavaPromiseSpec extends Specification {
             list.onComplete { result = it }
 
         then: 'The result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [2,4]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [2,4]
             }
 
         when: 'a promise list is created from two closures'
@@ -71,8 +71,8 @@ class RxJavaPromiseSpec extends Specification {
             list.onComplete { result = it }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [4,8]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [4,8]
             }
     }
 
@@ -86,9 +86,9 @@ class RxJavaPromiseSpec extends Specification {
             promise.onError { hasError = true }
 
         then: 'the onComplete handler is invoked and the onError handler is ignored'
-            new PollingConditions(timeout: 5).eventually {
-                result == 2
-                hasError == false
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == 2
+                assert hasError == false
             }
     }
 
@@ -102,10 +102,10 @@ class RxJavaPromiseSpec extends Specification {
             promise.onError { error = it }
 
         then: 'the onComplete handler is invoked and the onError handler is ignored'
-            new PollingConditions(timeout: 5).eventually {
-                !result
-                error
-                error.message == 'bad'
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !result
+                assert error
+                assert error.message == 'bad'
             }
     }
 

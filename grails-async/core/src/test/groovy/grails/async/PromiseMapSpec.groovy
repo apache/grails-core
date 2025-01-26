@@ -33,11 +33,11 @@ class PromiseMapSpec extends Specification {
             map.onComplete { result = it }
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            new PollingConditions(timeout: 5).eventually {
-                result
-                result['one'] == 1
-                result['four'] == 4
-                result['eight'] == 8
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result
+                assert result['one'] == 1
+                assert result['four'] == 4
+                assert result['eight'] == 8
             }
     }
     
@@ -52,11 +52,11 @@ class PromiseMapSpec extends Specification {
             map.onComplete { result = it }
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            new PollingConditions(timeout: 5).eventually {
-                result
-                result['one'] == 1
-                result['four'] == 4
-                result['eight'] == 8
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result
+                assert result['one'] == 1
+                assert result['four'] == 4
+                assert result['eight'] == 8
             }
     }
 
@@ -69,13 +69,14 @@ class PromiseMapSpec extends Specification {
             map['eight'] = { 4 * 2 }
             def result = null
             map.onComplete { result = it }
-            sleep 300
 
         then: 'an appropriately populated map is returned to the onComplete event'
-            result
-            result['one'] == 1
-            result['four'] == 4
-            result['eight'] == 8
+            new PollingConditions(timeout: 5, delay: 0.2, initialDelay: 0.3).eventually {
+                assert result
+                assert result['one'] == 1
+                assert result['four'] == 4
+                assert result['eight'] == 8
+            }
     }
 
     void 'Test that a PromiseMap triggers onError for an exception and ignores onComplete'() {
@@ -89,12 +90,13 @@ class PromiseMapSpec extends Specification {
             Throwable err = null
             map.onComplete { result = it }
             map.onError { err = it }
-            sleep 300
 
         then: 'An appropriately populated map is returned to the onComplete event'
-            !result
-            err
-            err.message == 'java.lang.RuntimeException: bad'
+            new PollingConditions(timeout: 5, delay: 0.2, initialDelay: 0.3).eventually {
+                assert !result
+                assert err
+                assert err.message == 'java.lang.RuntimeException: bad'
+            }
     }
 
     @PendingFeature(reason = '''

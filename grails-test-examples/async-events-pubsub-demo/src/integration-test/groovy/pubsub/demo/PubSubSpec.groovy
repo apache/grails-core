@@ -24,8 +24,8 @@ class PubSubSpec extends Specification {
             sumService.sum(1, 2)
 
         then: 'the subscriber should receive the events'
-            new PollingConditions(timeout: 5).eventually {
-                totalService.accumulatedTotal == 6
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert totalService.accumulatedTotal == 6
             }
     }
 
@@ -36,9 +36,9 @@ class PubSubSpec extends Specification {
             bookService.saveBook('The Stand')
 
         then: 'no event is fired'
-            new PollingConditions(initialDelay: 0.5).eventually {
-                bookSubscriber.newBooks == []
-                bookSubscriber.insertEvents.empty
+            new PollingConditions(initialDelay: 0.5, timeout: 5, delay: 0.2).eventually {
+                assert bookSubscriber.newBooks == []
+                assert bookSubscriber.insertEvents.empty
             }
     }
 
@@ -48,9 +48,9 @@ class PubSubSpec extends Specification {
             bookService.saveBook('The Stand')
 
         then: 'the event is fired and received'
-            new PollingConditions(timeout: 5).eventually {
-                bookSubscriber.newBooks == ['The Stand']
-                bookSubscriber.insertEvents.size() == 1
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert bookSubscriber.newBooks == ['The Stand']
+                assert bookSubscriber.insertEvents.size() == 1
             }
     }
 

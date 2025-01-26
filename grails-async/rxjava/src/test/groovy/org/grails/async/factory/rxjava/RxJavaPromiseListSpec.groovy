@@ -21,8 +21,8 @@ class RxJavaPromiseListSpec extends Specification{
             list.onComplete { result = it }
 
         then: 'then the result from onComplete is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [1,2,3]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [1,2,3]
             }
     }
 
@@ -37,8 +37,8 @@ class RxJavaPromiseListSpec extends Specification{
             list.onComplete { result = it }
 
         then: 'then the result from onComplete is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [1,2,3]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [1,2,3]
             }
     }
 

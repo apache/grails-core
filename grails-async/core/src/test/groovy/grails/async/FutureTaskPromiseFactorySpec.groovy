@@ -52,9 +52,9 @@ class FutureTaskPromiseFactorySpec extends Specification {
             list.onComplete { List l -> result = l }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result
-                result == [2, 4]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result
+                assert result == [2, 4]
             }
 
         when: 'a promise list is created from two closures'
@@ -62,8 +62,8 @@ class FutureTaskPromiseFactorySpec extends Specification {
             list.onComplete { result = it }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [4, 8]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [4, 8]
             }
     }
 
@@ -92,9 +92,9 @@ class FutureTaskPromiseFactorySpec extends Specification {
 
         then: 'the onComplete handler is invoked and the onError handler is ignored'
             thrown(ExecutionException)
-            new PollingConditions(timeout: 5).eventually {
-                !result
-                error
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !result
+                assert error
             }
     }
 

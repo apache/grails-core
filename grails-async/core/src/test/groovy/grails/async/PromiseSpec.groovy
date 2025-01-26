@@ -68,11 +68,11 @@ class PromiseSpec extends Specification {
 
         when: 'a promise list is created from two promises'
             def p1 = Promises.createPromise {
-                sleep 200
+                sleep 200 // simulate long running task
                 1 + 1
             }
             def p2 = Promises.createPromise {
-                sleep 200
+                sleep 200 // simulate long running task
                 2 + 2
             }
             def list = Promises.createPromise(p1, p2)
@@ -80,8 +80,8 @@ class PromiseSpec extends Specification {
             list.onComplete { result = it }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [2, 4]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [2, 4]
             }
     }
 
@@ -95,8 +95,8 @@ class PromiseSpec extends Specification {
             list.onComplete { result = it }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [2, 4]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [2, 4]
             }
 
         when: 'a promise list is created from two closures'
@@ -104,8 +104,8 @@ class PromiseSpec extends Specification {
             list.onComplete { result = it }
 
         then: 'the result is correct'
-            new PollingConditions(timeout: 5).eventually {
-                result == [6, 8]
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == [6, 8]
             }
     }
 
@@ -119,9 +119,9 @@ class PromiseSpec extends Specification {
             promise.onError { hasError = true }
 
         then: 'the onComplete handler is invoked and the onError handler is ignored'
-            new PollingConditions(timeout: 5).eventually {
-                result == 2
-                hasError == false
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert result == 2
+                assert hasError == false
             }
     }
 
@@ -135,10 +135,10 @@ class PromiseSpec extends Specification {
             promise.onError { error = it }
 
         then: 'the onComplete handler is invoked and the onError handler is ignored'
-            new PollingConditions(timeout: 5).eventually {
-                !result
-                error
-                error.message.contains('bad')
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert !result
+                assert error
+                assert error.message.contains('bad')
             }
     }
 
