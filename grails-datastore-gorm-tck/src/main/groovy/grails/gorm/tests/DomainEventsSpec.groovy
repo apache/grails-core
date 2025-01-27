@@ -4,9 +4,7 @@ import grails.gorm.DetachedCriteria
 import grails.persistence.Entity;
 import spock.lang.Issue
 
-import org.grails.datastore.mapping.core.Session
-
-import spock.lang.Ignore
+import spock.lang.PendingFeature
 
 /**
  * @author graemerocher
@@ -267,7 +265,7 @@ class DomainEventsSpec extends GormDatastoreSpec {
             3 == PersonEvent.STORE.afterLoad
     }
 
-    @Ignore
+    @PendingFeature(reason = 'Was previously @Ignore')
     void "Test bean autowiring"() {
         given:
             def personService = new Object()

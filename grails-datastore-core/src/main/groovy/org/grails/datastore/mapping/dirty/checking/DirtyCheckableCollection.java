@@ -1,7 +1,6 @@
 package org.grails.datastore.mapping.dirty.checking;
 
 import java.io.Serializable;
-import java.util.Collection;
 
 /**
  * @author Graeme Rocher

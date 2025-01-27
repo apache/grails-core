@@ -1,10 +1,10 @@
-/* Copyright (C) 2010 SpringSource
+/* Copyright (C) 2010-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,16 @@ package org.grails.datastore.mapping.core;
 
 import groovy.lang.Closure;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
@@ -27,7 +36,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.convert.ConversionException;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.core.env.*;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataAccessResourceFailureException;

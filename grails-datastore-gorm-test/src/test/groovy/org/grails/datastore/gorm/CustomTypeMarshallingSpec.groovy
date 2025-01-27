@@ -2,8 +2,8 @@ package org.grails.datastore.gorm
 
 import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-import spock.lang.Ignore
 import spock.lang.Issue
+import spock.lang.PendingFeature
 import spock.lang.Shared
 
 class CustomTypeMarshallingSpec extends GormDatastoreSpec {
@@ -50,7 +50,7 @@ class CustomTypeMarshallingSpec extends GormDatastoreSpec {
     }
 
     @Issue("http://jira.grails.org/browse/GRAILS-8436")
-    @Ignore
+    @PendingFeature(reason = 'Was previously @Ignore')
     void "can re-save an existing instance without modifications"() {
         given:
             def p = Person.findByName("Fred")

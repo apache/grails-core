@@ -1,10 +1,10 @@
-/* Copyright (C) 2017 original authors
+/* Copyright (C) 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,7 +33,6 @@ import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTran
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.springframework.transaction.PlatformTransactionManager

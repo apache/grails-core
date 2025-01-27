@@ -1,6 +1,6 @@
 plugins {
-    id 'com.gradle.develocity' version '3.19'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
+    id 'com.gradle.develocity' version '3.19.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
 }
 
 def isCI = System.getenv('CI') != null
@@ -11,7 +11,7 @@ develocity {
     server = 'https://ge.grails.org'
     buildScan {
         tag('grails')
-        tag('grails-gsp')
+        tag('grails-data-mapping')
         publishing.onlyIf { isAuthenticated }
         uploadInBackground = isLocal
     }
@@ -27,22 +27,26 @@ buildCache {
 
 rootProject.name = 'grails-data-mapping'
 
-include ("grails-datastore-core",
-        "grails-datastore-web",
+include(
+    'grails-datastore-core',
+    'grails-datastore-web',
 
-        // Core GORM Implementation projects
-        'grails-datastore-gorm',
-        'grails-datastore-async',
-        'grails-datastore-gorm-async',
-        'grails-datastore-gorm-validation',
-        'grails-datastore-gorm-support',
-        'grails-datastore-gorm-tck',
-        'grails-datastore-gorm-test',
+    // Core GORM Implementation projects
+    'grails-datastore-gorm',
+    'grails-datastore-async',
+    'grails-datastore-gorm-async',
+    'grails-datastore-gorm-validation',
+    'grails-datastore-gorm-support',
+    'grails-datastore-gorm-tck',
+    'grails-datastore-gorm-test',
 
-        // RX projects
-        // until this can be finished ported to grails 7, we are disabling
-        //'grails-datastore-gorm-rx',
+    // RX projects
+    // until this can be finished ported to grails 7, we are disabling
+    //'grails-datastore-gorm-rx',
 
-        // Testing Support
-        'grails-gorm-testing-support'
+    // Testing Support
+    'grails-gorm-testing-support',
+
+    // Test Report
+    'test-report'
 )

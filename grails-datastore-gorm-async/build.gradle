@@ -7,21 +7,37 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api project(":grails-datastore-gorm")
-    api project(":grails-datastore-async")
+    api project(':grails-datastore-gorm'), {
+        // api: GormEntity, GormStaticApi, GormOperations, GormStaticOperations
+        // impl: GormEnhancer
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
+            //exclude group: 'org.grails', module: 'grails-datastore-core' // DirtyCheckable
+            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            //exclude group: 'org.springframework', module: 'spring-context' // Errors
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            //exclude group: 'org.springframework', module: 'spring-tx' // TransactionDefinition
+        }
+    }
+    api 'org.grails:grails-async', {
+        // api: Promise, PromiseDecorator, PromiseDecoratorProvider
+        // impl: Promises
+    }
 
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
+    compileOnlyApi project(':grails-datastore-async'), {
+        // AST (source retention annotation): DelegateAsync
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-async
+            exclude group: 'org.grails', module: 'grails-async'
+        }
+    }
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
-
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    compileOnly 'org.apache.groovy:groovy'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

@@ -1,10 +1,10 @@
-/* Copyright (C) 2010 SpringSource
+/* Copyright (C) 2010-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,6 @@ package org.grails.datastore.mapping.core;
 import groovy.lang.Closure;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
-import groovy.util.ConfigObject;
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -25,7 +24,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.types.BasicTypeConverterRegistrar;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.FieldEntityAccess;
 import org.grails.datastore.mapping.services.DefaultServiceRegistry;
 import org.grails.datastore.mapping.services.Service;
@@ -34,12 +32,10 @@ import org.grails.datastore.mapping.services.ServiceRegistry;
 import org.grails.datastore.mapping.transactions.SessionHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.convert.converter.ConverterRegistry;
-import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 

@@ -1,6 +1,6 @@
 package grails.gorm.tests
 
-import spock.lang.Ignore
+import spock.lang.PendingFeatureIf
 
 /**
  * @author graemerocher
@@ -160,7 +160,13 @@ class GormEnhancerSpec extends GormDatastoreSpec {
             results.find { it.name == "Frank" } != null
     }
 
-    @Ignore
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'Was previously @Ignore'
+    )
     void "Test ilike query"() {
         given:
             def age = 40

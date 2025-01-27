@@ -7,26 +7,86 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api project(":grails-datastore-gorm-async")
-    api project(":grails-datastore-gorm-support")
+    api project(':grails-datastore-core'), {
+        // api: AbstractPersistenceEvent, AbstractPersistenceEventListener, AbstractQueryEvent, Datastore,
+        //      DirtyCheckable, ProxyHandler, Session
+        // impl: DatastoreUtils, EventType, OneToOne, OptimisticLockingException, PersistentEntity, PostDeleteEvent,
+        //       PostQueryEvent, PreDeleteEvent, PreInsertEvent, PreQueryEvent, PreUpdateEvent, SessionCreationEvent,
+        //       ValidationEvent
+        if (excludeUnusedTransDeps)  {
+            // API dependencies in grails-datastore-core
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
+            exclude group: 'org.javassist', module: 'javassist'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datastore-gorm'), {
+        // api: ApplyDetachedCriteriaTransform, DetachedCriteria, DirtyCheck, Entity
+        // impl: CascadingValidator, ConfigurableApplicationEventPublisher, GroovyProxyFactory, PagedResultList
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            //exclude group: 'org.grails', module: 'grails-datastore-gorm-validation' // CascadingValidator
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datastore-gorm-async'), {
+        // api: AsyncEntity
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm-async
+            exclude group: 'org.grails', module: 'grails-datastore-gorm'
+            //exclude group: 'org.grails', module: 'grails-async' // PromiseDecoratorProvider
+        }
+    }
+    api 'org.springframework:spring-context', {
+        // api: ApplicationEvent, SmartApplicationListener
+        // impl: ApplicationEventPublisher, ConfigurableApplicationContext, Validator
+    }
 
-    api "jakarta.servlet:jakarta.servlet-api"
-    api "org.apache.groovy:groovy-test-junit5"
-    api "org.junit.jupiter:junit-jupiter-api"
-    api "org.junit.platform:junit-platform-runner"
-    api "org.springframework:spring-expression"
+    implementation 'org.grails:grails-core', {
+        // impl: ValidationException
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.grails', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+    implementation 'org.springframework:spring-tx', {
+        // impl: DataIntegrityViolationException
+    }
+    implementation 'org.spockframework:spock-core'
 
-    implementation "org.spockframework:spock-core"
-    runtimeOnly "org.apache.groovy:groovy-dateutil"
-    runtimeOnly "org.junit.jupiter:junit-jupiter-engine"
+    compileOnlyApi project(':grails-datastore-gorm-support'), {
+        // ast transforms
+    }
+    compileOnly 'org.apache.groovy:groovy'
+
+    runtimeOnly 'org.apache.groovy:groovy-dateutil', {
+        // Groovy Date Utils Extensions are used in the tests
+    }
 }
 
 //compileGroovy.groovyOptions.fork = false
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

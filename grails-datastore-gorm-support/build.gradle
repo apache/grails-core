@@ -7,41 +7,83 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api project(':grails-datastore-gorm')
-    api "org.grails:grails-core:$grailsVersion"
-    api "org.grails:grails-bootstrap:$grailsVersion"
-
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
-
-    compileOnly "org.springframework:spring-orm"
-    compileOnly "org.springframework:spring-webmvc"
-    compileOnly "org.grails:grails-web-url-mappings"
-    compileOnly "org.grails:grails-web-common"
-    compileOnly("org.hibernate:hibernate-core-jakarta:$hibernateVersion") {
-        exclude group:'commons-logging', module:'commons-logging'
-        exclude group:'commons-collections', module:'commons-collections'
-        exclude group:'org.slf4j', module:'slf4j-api'
-        exclude group:'xml-apis', module:'xml-apis'
-        exclude group:'dom4j', module:'dom4j'
-        exclude group:'antlr', module: 'antlr'
+    api project(':grails-datastore-core'), {
+        // api: AssociationQueryExecutor, Datastore, GrailsArtefactClassInjector, ProxyFactory, ProxyHandler, Session
+        // impl: AstUtils, PropertySourcesConfig
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.javassist', module: 'javassist' // (test)
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datastore-gorm'), {
+        // api: AbstractDatastorePersistenceContextInterceptor
+        // impl: GormEntityTransformation
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity (test)
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            //exclude group: 'org.springframework', module: 'spring-tx' // TransactionDefinition in GormEntity$Trait$Helper (test)
+        }
+    }
+    api 'org.grails:grails-core', {
+        // api: AstTransformer, EntityProxyHandler, PersistenceContextInterceptor
+        // impl: PropertySourcesConfig
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.grails', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+    api 'org.springframework:spring-context', {
+        // api: ConfigurableApplicationContext
+    }
+    api 'org.springframework:spring-core', {
+        // api: PropertyResolver
+        // impl: ConfigurableConversionService, Converter
     }
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    implementation 'org.grails:grails-bootstrap', {
+        // impl: GrailsResourceUtils
+         if (excludeUnusedTransDeps) {
+            // API dependencies in grails-bootstrap
+            exclude group: 'org.yaml', module: 'snakeyaml'
+        }
+    }
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    compileOnly 'org.apache.groovy:groovy', {
+        // comp: CompileStatic
+    }
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
-project.tasks.withType(Jar) {
-    configure {
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    }
+tasks.withType(Jar).configureEach {
+    // META-INF/grails.factories is also present in grails-core
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

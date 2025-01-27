@@ -2,8 +2,8 @@ package grails.gorm.tests
 
 import grails.persistence.Entity
 
-import spock.lang.Ignore
-import spock.lang.IgnoreRest
+import spock.lang.PendingFeature
+import spock.lang.PendingFeatureIf
 
 /**
  * @author graemerocher
@@ -425,7 +425,7 @@ class NamedQuerySpec extends GormDatastoreSpec {
             'Some Recent Book' == publications[2].title
     }
 
-    @Ignore  // queries on associations not yet supported
+    @PendingFeature(reason = 'queries on associations not yet supported')
     void "Test named query with relationships in criteria"() {
 
         given:
@@ -468,7 +468,7 @@ class NamedQuerySpec extends GormDatastoreSpec {
             'groovy' == results[0].name
     }
 
-    @Ignore  // queries on associations not yet supported
+    @PendingFeature(reason = 'queries on associations not yet supported')
     void "Test list distinct entities"() {
 
         given:
@@ -500,7 +500,7 @@ class NamedQuerySpec extends GormDatastoreSpec {
             true == 'orange' in names
     }
 
-    @Ignore  // queries on associations not yet supported
+    @PendingFeature(reason = 'queries on associations not yet supported')
     void "Another test on listing distinct entities"() {
         given:
             new PlantCategory(name:"leafy")
@@ -682,8 +682,7 @@ class NamedQuerySpec extends GormDatastoreSpec {
             'Some New Book' == publications[0].title
     }
 
-    // findby boolean queries not yet supported
-    @Ignore
+    @PendingFeature(reason = 'findby boolean queries not yet supported')
     void "Test named query with findAll by boolean property"() {
         given:
             def Publication = ga.getDomainClass("Publication").clazz
@@ -703,8 +702,13 @@ class NamedQuerySpec extends GormDatastoreSpec {
             publications[1].title == 'Some Book'
     }
 
-    // findby boolean queries not yet supported
-    @Ignore
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'findby boolean queries not yet supported'
+    )
     void "Test named query with find by boolean property"() {
 
         given:
@@ -742,7 +746,13 @@ class NamedQuerySpec extends GormDatastoreSpec {
             3 == numberOfNewBooksNamedSomeBook
     }
 
-    @Ignore // list order by not yet supported
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'list order by not yet supported'
+    )
     void "Test named query with listOrderBy*() dynamic finder"() {
 
         given:
@@ -826,7 +836,13 @@ class NamedQuerySpec extends GormDatastoreSpec {
             publication == null
     }
 
-    @Ignore
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'Was previously @Ignore'
+    )
     void "Test count method following named criteria"() {
 
         given:

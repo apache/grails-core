@@ -1,6 +1,6 @@
 package grails.gorm.tests
 
-import spock.lang.Ignore
+import spock.lang.PendingFeatureIf
 
 /**
  * Abstract base test for criteria queries. Subclasses should do the necessary setup to configure GORM
@@ -31,7 +31,13 @@ class CriteriaBuilderSpec extends GormDatastoreSpec {
             result == 4
     }
 
-    @Ignore // ignored this test because the id() projection does not actually exist in GORM for Hibernate
+    @PendingFeatureIf(
+            value = { !(
+                System.getProperty('hibernate5.gorm.suite') ||
+                System.getProperty('mongodb.gorm.suite')
+            )},
+            reason = 'ignored this test because the id() projection does not actually exist in GORM for Hibernate'
+    )
     void "Test id projection"() {
         given:
             def entity = new TestEntity(name:"Bob", age: 44, child:new ChildEntity(name:"Child")).save(flush:true)

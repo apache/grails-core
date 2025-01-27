@@ -7,29 +7,50 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
+    api project(':grails-datastore-core'), {
+        // api: MappingContext, PersistentProperty
+        // impl: ClassPropertyFetcher, ClassUtils, PersistentEntity, GormProperties, Property, KeyValueMappingContext,
+        //       PersistentEntity, GormProperties, Identity, ToOne
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // FetchType
+            //exclude group: 'org.javassist', module: 'javassist' // MethodHandler (in tests)
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
 
-    api project(":grails-datastore-core")
-    api "commons-validator:commons-validator:$commonsValidatorVersion", {
+    api "commons-validator:commons-validator:$commonsValidatorVersion", { // Candidate for grails-bom?
         exclude group: 'xml-apis', module:'xml-apis'
         exclude group: 'commons-digester', module:'commons-digester'
         exclude group: 'commons-logging', module:'commons-logging'
         exclude group: 'commons-beanutils', module:'commons-beanutils'
     }
+    api 'org.springframework:spring-context'
+    // api: Errors, MessageSource, Validator
+    // impl: BindingResult, FieldError, LocaleContextHolder
 
-    compileOnly("org.hibernate.validator:hibernate-validator")
-    testImplementation("org.hibernate.validator:hibernate-validator")
+    implementation 'org.slf4j:jcl-over-slf4j'
+    // impl: Log, LogFactory
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    implementation 'org.springframework:spring-beans'
+    // impl: BeanWrapper, BeanWrapperImpl, InvalidPropertyException
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    implementation 'org.springframework:spring-core'
+    // impl: ReflectionUtils, ToStringCreator, Assert, StringUtils
+
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.slf4j:slf4j-api' // provided
+    // impl: Logger, LoggerFactory
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

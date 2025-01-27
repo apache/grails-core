@@ -1,11 +1,11 @@
 /*
- * Copyright 2015 original authors
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,14 +18,10 @@ package org.grails.datastore.mapping.proxy;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.reflect.FieldEntityAccess;
-import org.springframework.cglib.reflect.FastClass;
-import org.springframework.cglib.reflect.FastMethod;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.util.ReflectionUtils;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;

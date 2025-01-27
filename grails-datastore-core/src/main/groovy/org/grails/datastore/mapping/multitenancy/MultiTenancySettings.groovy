@@ -33,7 +33,7 @@ class MultiTenancySettings {
             return tenantResolver
         }
         else if(tenantResolverClass != null) {
-            return BeanUtils.instantiate(tenantResolverClass)
+            return BeanUtils.instantiateClass(tenantResolverClass)
         }
         return new NoTenantResolver()
     }

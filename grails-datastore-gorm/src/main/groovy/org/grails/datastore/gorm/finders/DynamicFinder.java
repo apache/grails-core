@@ -1,10 +1,10 @@
-/* Copyright (C) 2010 SpringSource
+/* Copyright (C) 2010-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ import groovy.lang.Closure;
 import groovy.lang.MissingMethodException;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,7 +56,6 @@ import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.springframework.core.convert.ConversionException;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 /**
  * Abstract base class for dynamic finders.

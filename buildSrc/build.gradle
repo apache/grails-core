@@ -1,0 +1,28 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+def versions = new Properties()
+file('../gradle.properties').withInputStream {
+    versions.load(it)
+}
+
+repositories {
+    mavenLocal()
+    maven { url = 'https://repo.grails.org/grails/core' }
+    mavenCentral()
+    if (System.getenv('GITHUB_MAVEN_PASSWORD')) {
+        maven {
+            url = 'https://maven.pkg.github.com/grails/grails-core'
+            credentials {
+                username = 'DOES_NOT_MATTER'
+                password = System.getenv('GITHUB_MAVEN_PASSWORD')
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation platform("org.grails:grails-bom:${versions.getProperty('grailsVersion')}")
+    implementation 'org.grails:grails-gradle-plugin'
+}

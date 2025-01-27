@@ -9,7 +9,6 @@ import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegis
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
 import org.grails.validation.ConstraintEvalUtils

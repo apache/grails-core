@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'test-report-aggregation'
+}
+
+dependencies {
+    testReportAggregation project(':grails-datastore-async')
+    testReportAggregation project(':grails-datastore-core')
+    testReportAggregation project(':grails-datastore-gorm')
+    testReportAggregation project(':grails-datastore-gorm-async')
+    testReportAggregation project(':grails-datastore-gorm-support')
+    testReportAggregation project(':grails-datastore-gorm-test')
+    testReportAggregation project(':grails-datastore-gorm-validation')
+    testReportAggregation project(':grails-datastore-web')
+}
+
+reporting {
+    reports {
+        testAggregateTestReport(AggregateTestReport) {
+            testType = TestSuiteType.UNIT_TEST
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('testAggregateTestReport', TestReport)
+}

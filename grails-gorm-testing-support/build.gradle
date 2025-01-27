@@ -9,20 +9,110 @@ group = 'org.grails'
 ext {
     pomTitle = 'Grails Web Testing Support'
     pomDescription = 'Support for writing concise expressive tests for Grails Web Artifacts'
-    pomDevelopers = [
-            [id: 'jeffscottbrown', name: 'Jeff Brown'],
-            [id: 'jameskleeh', name: 'James Kleeh']
-    ]
+    pomDevelopers = ['jeffscottbrown': 'Jeff Brown', 'jameskleeh': 'James Kleeh']
 }
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api 'org.grails:grails-plugin-domain-class'
-    api project(':grails-datastore-gorm-test')
+    api project(':grails-datastore-core'), {
+        // api: AbstractDatastore, PersistentEntity, Session
+        // impl: DatastoreUtils, Initializable, MappingContext, Settings, Service
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.javassist', module: 'javassist'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datastore-gorm-validation'), {
+        // api: CascadingValidator, ConstraintsEvaluator, PersistentEntityValidator
+        // impl: ConstraintRegistry, DefaultConstraintEvaluator, DefaultConstraintRegistry, PersistentEntityValidator
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm-validation
+            exclude group: 'commons-validator', module: 'commons-validator'
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.springframework', module: 'spring-context'
+        }
+    }
+    api 'org.grails:grails-testing-support', {
+        // api: GrailsUnitTest
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-testing-support
+            exclude group: 'org.springframework', module: 'spring-test'
+            exclude group: 'org.grails', module: 'grails-plugin-codecs'
+            exclude group: 'org.grails', module: 'grails-plugin-databinding'
+            exclude group: 'org.grails', module: 'grails-datastore-gorm'
+            exclude group: 'org.grails', module: 'grails-test'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-test'
+            exclude group: 'org.spockframework', module: 'spock-spring'
+            exclude group: 'org.spockframework', module: 'spock-core'
+            exclude group: 'org.apache.groovy', module: 'groovy-test-junit5'
+            exclude group: 'org.junit.jupiter', module: 'junit-jupiter-api'
+            exclude group: 'org.junit.platform', module: 'junit-platform-runner'
+        }
+    }
+    api 'org.springframework:spring-context', {
+        // api: MessageSource
+        // impl: ConfigurableApplicationContext, ConfigurableConversionService, Validator
+    }
+    api 'org.springframework:spring-tx', {
+        // api: PlatformTransactionManager
+    }
+    api 'org.spockframework:spock-core', {
+        // api: IGlobalExtension, IMethodInterceptor, IMethodInvocation
+        // impl: Converter
+    }
 
-    api 'org.grails:grails-testing-support'
+    implementation project(':grails-datastore-gorm'), {
+        // impl: GormEnhancer, UniqueConstraint
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    implementation project(':grails-datastore-gorm-test'), {
+        // impl: SimpleMapDatastore
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm-test
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-datastore-gorm'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    implementation 'org.grails:grails-core', {
+        // impl: ConstraintEvalUtils, DomainClassArtefactHandler, GrailsClass
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.grails', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+
+    compileOnly 'org.apache.groovy:groovy', {
+        // comp: CompileStatic, CompileDynamic, TypeCheckingMode
+    }
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

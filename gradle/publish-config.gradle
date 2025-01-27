@@ -1,77 +1,18 @@
-apply plugin: 'maven-publish'
-apply plugin: 'signing'
+import org.grails.gradle.plugin.publishing.GrailsPublishExtension
 
-ext.set('signing.keyId', project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
-ext.set('signing.password', project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE'))
-ext.set('signing.secretKeyRingFile', project.findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg")
+apply plugin: 'org.grails.grails-publish'
 
-publishing {
-    if (isSnapshot) {
-        repositories {
-            maven {
-                credentials {
-                    username = System.getenv('ARTIFACTORY_USERNAME') ?: project.findProperty('artifactoryPublishUsername') ?: ''
-                    password = System.getenv('ARTIFACTORY_PASSWORD') ?: project.findProperty('artifactoryPublishPassword') ?: ''
-                }
-                url = 'https://repo.grails.org/grails/libs-snapshots-local'
-            }
-        }
-    }
-
-    publications {
-        maven(MavenPublication) {
-
-            artifactId = project.findProperty('artifactId') ?: project.name
-            groupId = project.group
-            version = project.version
-
-            from components.java
-
-            pom {
-                name = project.findProperty('pomTitle') ?: 'Grails GORM'
-                description = project.findProperty('pomDescription') ?: 'GORM - Grails Data Access Framework'
-                url = 'https://gorm.grails.org/'
-
-                licenses {
-                    license {
-                        name = 'The Apache Software License, Version 2.0'
-                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                        distribution = 'repo'
-                    }
-                }
-
-                developers {
-                    for (dev in project.findProperty('pomDevelopers') ?: [[id: 'graemerocher', name: 'Graeme Rocher'], [id: 'jeffscottbrown', name: 'Jeff Brown'], [id: 'burtbeckwith', name: 'Burt Beckwith'], [id: 'jameskleeh', name: 'James Kleeh'], [id: 'puneetbelh', name: 'Puneet Behl'], [id: 'jamesfredley', name: 'James Fredley']]) {
-                        developer {
-                            id = dev.id
-                            name = dev.name
-                        }
-                    }
-                }
-
-                scm {
-                    url = 'scm:git@github.com:grails/grails-data-mapping.git'
-                    connection = 'scm:git@github.com:grails/grails-data-mapping.git'
-                    developerConnection = 'scm:git@github.com:grails/grails-data-mapping.git'
-                }
-            }
-
-            // dependency management shouldn't be included
-            pom.withXml {
-                def pomNode = asNode()
-                try { pomNode.dependencyManagement.replaceNode({}) } catch (Throwable ignore) {}
-            }
-        }
-    }
-}
-
-afterEvaluate {
-    signing {
-        required = { isReleaseVersion && gradle.taskGraph.hasTask('publish') }
-        sign(publishing.publications.maven)
-    }
-}
-
-tasks.withType(Sign) {
-    onlyIf { isReleaseVersion }
+project.extensions.configure(GrailsPublishExtension) {
+    it.githubSlug = 'grails/grails-data-mapping'
+    it.license.name = 'Apache-2.0'
+    it.title = findProperty('pomTitle') ?: 'Grails GORM'
+    it.desc = findProperty('pomDescription') ?: 'GORM - Grails Data Access Framework'
+    it.developers = findProperty('pomDevelopers') as Map<String,String> ?: [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith',
+            'jameskleeh': 'James Kleeh',
+            'puneetbehl': 'Puneet Behl',
+            'jamesfredley': 'James Fredley'
+    ]
 }

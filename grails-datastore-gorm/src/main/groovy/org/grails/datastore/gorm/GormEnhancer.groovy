@@ -1,10 +1,10 @@
-/* Copyright (C) 2010 SpringSource
+/* Copyright (C) 2010-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,8 +38,6 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import org.grails.datastore.mapping.multitenancy.TenantResolver
-import org.grails.datastore.mapping.multitenancy.resolvers.FixedTenantResolver
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.MetaClassUtils

@@ -11,7 +11,6 @@ import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PreDeleteEvent
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.springframework.context.ApplicationEvent
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.ConfigurableApplicationContext
 
 /**

@@ -1,13 +1,11 @@
 package org.grails.datastore.mapping.reflect;
 
-
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.springframework.cglib.reflect.FastClass;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Map;
 
 /**

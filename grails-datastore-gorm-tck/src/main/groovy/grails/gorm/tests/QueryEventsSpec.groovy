@@ -11,7 +11,11 @@ import spock.lang.Ignore
 /**
  * Tests for query events.
  */
-@Ignore
+@Ignore('''
+Cannot invoke method addApplicationListener() on null object
+java.lang.NullPointerException: Cannot invoke method addApplicationListener() on null object
+    at grails.gorm.tests.QueryEventsSpec.setup(QueryEventsSpec.groovy)
+''')
 class QueryEventsSpec extends GormDatastoreSpec {
     SpecQueryEventListener listener
 

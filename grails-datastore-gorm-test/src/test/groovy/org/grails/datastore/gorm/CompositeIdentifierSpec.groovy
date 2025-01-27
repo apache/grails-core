@@ -3,14 +3,14 @@ package org.grails.datastore.gorm
 import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
 
-import spock.lang.Ignore
+import spock.lang.PendingFeature
 
 /**
  * TODO: Support composite ids
  */
-@Ignore
 class CompositeIdentifierSpec extends GormDatastoreSpec {
 
+    @PendingFeature(reason = 'Composite ids not supported')
     void "Test that a composite identifier is treated as assigned"() {
         given:"A domain model with a composite identifier"
             def u = new User(name: "Bob").save()

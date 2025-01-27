@@ -3,7 +3,7 @@ package org.grails.datastore.gorm.dirty.checking
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import spock.lang.Ignore
+import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Issue
 
@@ -351,7 +351,7 @@ class FundProduct {
         book.getOriginalValue('title') == 'The Stand'
 
     }
-    @Ignore // currently fails, TODO: add support for dirty checking collection/map changes
+    @PendingFeature(reason = 'currently fails, TODO: add support for dirty checking collection/map changes')
     void "Test that you can dirty check changes to simple collections"() {
         given: "A new book is created"
         def book = new Book()

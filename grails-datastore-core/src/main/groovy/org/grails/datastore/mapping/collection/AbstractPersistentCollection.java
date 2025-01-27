@@ -1,10 +1,10 @@
-/* Copyright (C) 2011 SpringSource
+/* Copyright (C) 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
 package org.grails.datastore.mapping.collection;
 
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationIndexer;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;

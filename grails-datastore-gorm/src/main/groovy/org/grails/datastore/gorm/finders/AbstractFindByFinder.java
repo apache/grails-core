@@ -1,6 +1,5 @@
 package org.grails.datastore.gorm.finders;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
 import org.grails.datastore.mapping.core.Datastore;

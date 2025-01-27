@@ -1195,7 +1195,6 @@ class Project {
 
    }
 
-   @Ignore // rlike not suppported by all datastores yet
    def "Test rlike query"() {
        given:"A bunch of people"
             createPeople()

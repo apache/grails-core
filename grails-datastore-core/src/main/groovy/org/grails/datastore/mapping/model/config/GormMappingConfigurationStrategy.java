@@ -1,10 +1,10 @@
-/* Copyright 2004-2005 the original author or authors.
+/* Copyright 2004-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
 package org.grails.datastore.mapping.model.config;
 
 import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
 
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
@@ -24,7 +23,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +33,6 @@ import java.util.Set;
 
 import jakarta.persistence.Entity;
 
-import groovy.lang.MetaBeanProperty;
 import groovy.lang.MetaProperty;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
 import org.grails.datastore.mapping.model.ClassMapping;

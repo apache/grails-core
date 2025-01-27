@@ -7,20 +7,25 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api "org.grails:grails-async"
+    api 'org.grails:grails-async', {
+        // ast: DelegateAsyncUtils, Promise, Promises
+    }
 
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
+    implementation 'org.apache.groovy:groovy', {
+        // impl: GroovyASTTransformationClass, etc
+    }
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    compileOnly 'jakarta.annotation:jakarta.annotation-api', {
+        // comp: Documented, ElementType, Retention, RetentionPolicy, Target
+    }
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

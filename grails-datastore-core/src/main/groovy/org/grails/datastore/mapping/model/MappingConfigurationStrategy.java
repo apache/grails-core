@@ -1,7 +1,5 @@
 package org.grails.datastore.mapping.model;
 
-import org.grails.datastore.mapping.model.types.TenantId;
-
 import java.util.List;
 import java.util.Set;
 

@@ -9,7 +9,11 @@ import spock.lang.Ignore
 /**
  * Test case that session creation events are fired.
  */
-@Ignore
+@Ignore('''
+Cannot invoke method addApplicationListener() on null object
+java.lang.NullPointerException: Cannot invoke method addApplicationListener() on null object
+    at grails.gorm.tests.SessionCreationEventSpec.setup(SessionCreationEventSpec.groovy)
+''')
 class SessionCreationEventSpec extends GormDatastoreSpec {
 
     Listener listener

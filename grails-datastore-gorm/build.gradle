@@ -7,35 +7,98 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
+    api project(':grails-datastore-core'), {
+        // api: BuildableCriteria, ConnectionSourcesProvider, Criteria, Datastore, MappingContext, PersistentEntity,
+        //      ProjectionList, Query, QueryableCriteria, QueryCreator, Session, SessionCallback, ValidatorRegistry,
+        //      VoidSessionCallback
+        // impl: Association, AssociationQuery, Basic, ClassUtils, Connection, ConnectionSource, DatastoreUtils,
+        //       NameUtils, PersistentProperty, Restrictions, QueryArgumentsAware
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.javassist', module: 'javassist' // activate JavassistProxyFactory
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datastore-gorm-validation'), {
+        // api: BeforeValidateHelper, CascadingValidator, DefaultValidatorRegistry
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm-validation
+            exclude group: 'commons-validator', module: 'commons-validator'
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.springframework', module: 'spring-context'
+        }
+    }
+    api 'jakarta.annotation:jakarta.annotation-api', {
+        // api: PostConstruct, PreDestroy
+    }
+    api 'jakarta.persistence:jakarta.persistence-api', {
+        // api: FetchType, JoinType
+    }
+    api 'org.grails:grails-core', {
+        // ast: grails.persistence.Entity
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.grails', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+    api 'org.springframework:spring-context', {
+        // api: Validator
+    }
+    api 'org.springframework:spring-jdbc', {
+        // api: DriverManagerDataSource
+        // impl: DelegatingDataSource, TransactionAwareDataSourceProxy
+    }
+    api 'org.springframework:spring-tx', {
+        // api: Isolation, PlatformTransactionManager, Propagation, TransactionAttribute, TransactionDefinition,
+        //      TransactionException
+        // impl: DataIntegrityViolationException, DefaultTransactionDefinition, LazyConnectionDataSourceProxy,
+        //       NoRollbackRuleAttribute, RollbackRuleAttribute, TransactionCallback, TransactionDefinition,
+        //       TransactionStatus, TransactionSynchronizationManager, TransactionSystemException
+    }
 
-    api project(":grails-datastore-core")
-    api project(":grails-datastore-gorm-validation")
+    implementation 'org.apache.groovy:groovy', {
+        // impl: Closure, ClosureExpression, DelegatesTo, GroovyASTTransformationClass
+        // comp: CompileDynamic, CompileStatic
+    }
+    implementation 'org.hibernate.validator:hibernate-validator', {
+        // impl: ResourceBundleMessageInterpolator
+    }
 
-    implementation "org.slf4j:slf4j-api"
-    
-    // :grails-datastore-gorm:compileGroovy requires jakarta.el.ExpressionFactory
-    // required by gorm-hibernate5 test compilation 
-    compileOnlyApi("jakarta.el:jakarta.el-api:$jakartaElVersion")
-    runtimeOnly "org.glassfish:jakarta.el:$jakartaElGlassfishImplVersion"
+    compileOnlyApi "jakarta.el:jakarta.el-api:$jakartaElVersion"
 
-    compileOnly("org.hibernate.validator:hibernate-validator")
-    compileOnly("org.springframework:spring-jdbc")
-    compileOnly("org.springframework:spring-web")
-    testImplementation("org.springframework:spring-jdbc")
-    testImplementation("org.hibernate.validator:hibernate-validator")
-    testRuntimeOnly("com.h2database:h2")
+    runtimeOnly "org.glassfish:jakarta.el:$jakartaElGlassfishImplVersion", {
+        // Note: Default EL implementation included for convenience,
+        //       can be replaced by downstream consumers
+    }
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    compileOnly 'org.slf4j:slf4j-api'
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    testImplementation 'org.grails:grails-core', {
+        // impl: ValidationException
+    }
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'com.h2database:h2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']

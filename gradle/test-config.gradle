@@ -1,13 +1,12 @@
-compileTestGroovy {
-    configure(groovyOptions.forkOptions) {
-        jvmArgs = [ '-Xmx768m']
-    }
+tasks.named('compileTestGroovy', GroovyCompile) {
+    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
 }
 
-test {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
     testLogging {
-        exceptionFormat ='full'
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
     }
     if (isCiBuild) {
         maxParallelForks = 2
@@ -22,7 +21,7 @@ test {
         forkEvery = 100
         jvmArgs = ['-server', '-Xmx2048M']
     }
-    if(System.getProperty("debug.tests")) {
+    if (System.getProperty('debug.tests')) {
         jvmArgs '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
                 '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
     }

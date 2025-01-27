@@ -1,5 +1,5 @@
 dependencies {
-    testImplementation project(":grails-datastore-gorm-tck")
+    testImplementation project(':grails-datastore-gorm-tck')
 }
 
 // We need to test against the TCK. Gradle cannot find/run tests from jars
@@ -10,7 +10,7 @@ dependencies {
 // helper, used below.
 def toBaseClassRelativePathWithoutExtension = { String base, String classFile ->
     if (classFile.startsWith(base)) {
-        def sansClass = classFile[0 .. classFile.size() - ".class".size() - 1]
+        def sansClass = classFile[0 .. classFile.size() - '.class'.size() - 1]
         def dollarIndex = sansClass.indexOf('$')
         def baseClass = dollarIndex > 0 ? sansClass[0..dollarIndex - 1] : sansClass
         def relative = baseClass - base - '/'
@@ -21,31 +21,30 @@ def toBaseClassRelativePathWithoutExtension = { String base, String classFile ->
     }
 }
 
-test.doFirst {
-    File tckClassesDir = project(":grails-datastore-gorm-tck").sourceSets.main.output.classesDirs.files.first()
-    def thisProjectsTests = // surely there is a less hardcoded way to do this
-            copy {
-                from tckClassesDir
-                into sourceSets.test.output.classesDirs.files.first()
-                include "**/*.class"
-                exclude { details ->
-                    // Do not copy across any TCK class (or nested classes of that class)
-                    // If there is a corresponding source file in the particular modules
-                    // test source tree. Allows a module to override a test/helper.
-
-                    if (!details.file.isFile()) {
-                        return false
-                    }
-                    def candidatePath = details.file.absolutePath
-                    def relativePath = toBaseClassRelativePathWithoutExtension(tckClassesDir.absolutePath, candidatePath)
-
-                    if (relativePath == null) {
-                        throw new IllegalStateException("$candidatePath does not appear to be in the TCK")
-                    }
-
-                    project.file("src/test/groovy/${relativePath}.groovy").exists()
+tasks.named('test') {
+    doFirst {
+        File tckClassesDir = findProject(':grails-datastore-gorm-tck').sourceSets.main.output.classesDirs.files.first()
+        // surely there is a less hardcoded way to do this
+        copy {
+            from tckClassesDir
+            into sourceSets.test.output.classesDirs.files.first()
+            include '**/*.class'
+            exclude { details ->
+                // Do not copy across any TCK class (or nested classes of that class)
+                // If there is a corresponding source file in the particular modules
+                // test source tree. Allows a module to override a test/helper.
+                if (!details.file.isFile()) {
+                    return false
                 }
+                def candidatePath = details.file.absolutePath
+                def relativePath = toBaseClassRelativePathWithoutExtension(tckClassesDir.absolutePath, candidatePath)
+                if (relativePath == null) {
+                    throw new IllegalStateException("$candidatePath does not appear to be in the TCK")
+                }
+                file("src/test/groovy/${relativePath}.groovy").exists()
             }
+        }
+    }
 }
 
 //        Only enable to force snapshot dependency updates due to spring dependency management plugin snapshot caching behavior

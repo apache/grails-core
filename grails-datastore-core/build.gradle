@@ -7,35 +7,60 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
+    api 'jakarta.persistence:jakarta.persistence-api', {
+        // api: FlushModeType, AccessType, CascadeType, EnumType, FetchType, LockModeType, JoinType
+        // impl: Entity, Transient
+    }
+    api "org.javassist:javassist:$javassistVersion", {
+        // api: MethodHandler
+    }
+    api 'org.springframework:spring-context', {
+        // api: ApplicationContext, ApplicationEvent, ApplicationEventPublisher, ConfigurableApplicationContext, MessageSource, TransactionDefinition, Validator
+        // impl: DataBinder
+    }
+    api 'org.springframework:spring-core', {
+        // api: ConcurrentReferenceHashMap (used in deprecated class), ConversionService, Converter, ConverterRegistry, PropertyResolver
+        // impl: Assert, ClassUtils, ConversionException, ConversionFailedException, MapPropertySource, NamedThreadLocal, PathMatchingResourcePatternResolver, Resource (api?), StringUtils
+    }
+    api 'org.springframework:spring-tx', {
+        // api: DataAccessResourceFailureException, OptimisticLockingFailureException, TransactionDefinition
+        // impl: DefaultTransactionDefinition, InvalidDataAccessResourceUsageException, NoTransactionException, TransactionSynchronizationManager
+    }
 
-    api "jakarta.transaction:jakarta.transaction-api"
-    api "org.slf4j:slf4j-api"
-    api "org.slf4j:jcl-over-slf4j"
-    api "jakarta.persistence:jakarta.persistence-api"
-    api "org.springframework:spring-core"
-    api "org.springframework:spring-beans"
-    api "org.springframework:spring-tx"
-    api "org.springframework:spring-context"
-    implementation "com.github.ben-manes.caffeine:caffeine"
-    implementation "org.javassist:javassist:$javassistVersion"
+    implementation 'com.github.ben-manes.caffeine:caffeine', {
+        // impl: Caffeine, RemovalListener
+    }
+    implementation 'jakarta.annotation:jakarta.annotation-api', {
+        // impl: PreDestroy
+    }
+    implementation 'org.apache.groovy:groovy', {
+        // impl: Builder
+        // comp: CompileStatic
+    }
+    implementation 'org.springframework:spring-beans', {
+        // impl: Autowired, BeanUtils, BeanWrapper, BeanWrapperImpl, MutablePropertyValues
+    }
 
-    // we need the Grails @Entity annotation to test GORM syntax mapping
-    testImplementation project(":grails-datastore-gorm")
+    compileOnly 'org.slf4j:slf4j-api', {
+        // provided: Logger, LoggerFactory
+    }
 
-    testImplementation "org.springframework:spring-context"
-    testImplementation "org.springframework:spring-web"
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    testImplementation project(':grails-datastore-gorm'), {
+        // we only need the @grails.gorm.annotation.Entity annotation to test GORM syntax mapping
+        transitive = false
+    }
+    testImplementation 'org.junit.jupiter:junit-jupiter-api', {
+        // There are some tests that use JUnit 5
+    }
+    testImplementation 'org.spockframework:spock-core'
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    testRuntimeOnly 'org.apache.groovy:groovy-test-junit5'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

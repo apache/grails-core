@@ -7,26 +7,52 @@ version = projectVersion
 group = 'org.grails'
 
 dependencies {
+
     implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    api "jakarta.annotation:jakarta.annotation-api"
-    implementation "jakarta.validation:jakarta.validation-api"
+    api project(':grails-datastore-core'), {
+        // api: Datastore
+        // impl: DatastoreUtils, Session, SessionHolder
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.javassist', module: 'javassist'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            // exclude group: 'org.springframework', module: 'spring-tx' // ResourceHolderSupport
+        }
+    }
+    api 'org.springframework:spring-context', {
+        // api: ModelMap
+    }
+    api 'org.springframework:spring-web', {
+        // api: WebRequest, WebRequestInterceptor
+    }
+    implementation 'org.springframework:spring-tx', {
+        // impl: TransactionSynchronizationManager
+    }
 
-    api project(":grails-datastore-core")
-    api "org.springframework:spring-web"
-    api "org.springframework:spring-context"
-    compileOnly "jakarta.servlet:jakarta.servlet-api"
+    compileOnlyApi 'jakarta.persistence:jakarta.persistence-api', {
+        // compApi: FlushModeType
+    }
 
-    testImplementation "jakarta.servlet:jakarta.servlet-api"
-    testImplementation "org.springframework:spring-test"
+    compileOnly 'jakarta.servlet:jakarta.servlet-api', {
+        // comp: Cookie, HttpServletRequest
+    }
+    compileOnly 'org.apache.groovy:groovy', {
+        // comp: CompileStatic
+    }
 
-    testImplementation "org.apache.groovy:groovy-test-junit5"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    testImplementation 'jakarta.servlet:jakarta.servlet-api', {
+        // impl: Cookie
+    }
+    testImplementation 'org.springframework:spring-test', {
+        // impl: MockHttpServletRequest
+    }
+    testImplementation 'org.spockframework:spock-core'
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api"
-    testImplementation "org.spockframework:spock-core"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

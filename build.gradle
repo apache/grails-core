@@ -1,36 +1,40 @@
-io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
-
-buildscript {
-    repositories {
-        maven { url = 'https://repo.grails.org/grails/core' }
-    }
-    dependencies {
-        classpath 'io.github.gradle-nexus:publish-plugin:2.0.0'
-    }
-}
-
 ext {
-    isCiBuild = System.getenv().get("CI") as Boolean
-    isSnapshot = project.projectVersion.endsWith("-SNAPSHOT")
-    isReleaseVersion = !isSnapshot
+    isCiBuild = System.getenv('CI')
+    excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 }
 
-group = "org.grails"
-version = project.projectVersion
+String customGroovyVersion = findProperty('groovyVersion') ?: System.getenv('GROOVY_VERSION')
+if (customGroovyVersion) {
+    logger.lifecycle("Using custom Groovy version: $customGroovyVersion")
+}
 
 allprojects {
+
+    if (customGroovyVersion) {
+        configurations.configureEach {
+            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.apache.groovy') {
+                    details.useVersion(customGroovyVersion)
+                }
+            }
+        }
+    }
+
     repositories {
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/core' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        if (findProperty('groovyVersion')?.endsWith('-SNAPSHOT')) {
+        if (customGroovyVersion?.endsWith('-SNAPSHOT')) {
+            // Used for testing locally against the latest snapshot of Groovy
+            // Usage: ./gradlew build -P"groovyVersion=X.X.X-SNAPSHOT"
+            logger.lifecycle('Adding Groovy Snapshot Repo for project: {}, Using Groovy {}', name, customGroovyVersion)
             maven {
                 name = 'ASF Snapshot repo'
                 url = 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
         if (System.getenv('GITHUB_MAVEN_PASSWORD') && !grailsVersion.endsWith('-SNAPSHOT')) {
-            System.out.println("Adding Grails Core Staging Repo for project: $name")
+            logger.lifecycle('Adding Grails Core Staging Repo for project: {}', name)
             maven {
                 url = 'https://maven.pkg.github.com/grails/grails-core'
                 credentials {
@@ -42,25 +46,7 @@ allprojects {
     }
 }
 
-if (isReleaseVersion) {
-    apply plugin: 'io.github.gradle-nexus.publish-plugin'
-    nexusPublishing {
-        repositories {
-            sonatype {
-                nexusUrl = uri('https://s01.oss.sonatype.org/service/local')
-                username = System.getenv('SONATYPE_USERNAME') ?: project.findProperty('sonatypeOssUsername') ?: ''
-                password = System.getenv('SONATYPE_PASSWORD') ?: project.findProperty('sonatypeOssPassword') ?: ''
-                stagingProfileId = System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: project.findProperty('sonatypeOssStagingProfileId') ?: ''
-            }
-        }
-    }
-    //do not generate extra load on Nexus with new staging repository if signing fails
-    tasks.withType(InitializeNexusStagingRepository).configureEach {
-        shouldRunAfter = tasks.withType(Sign)
-    }
+tasks.register('clean', Delete) {
+    group = 'build'
+    delete layout.buildDirectory
 }
-
-apply from: "gradle/idea.gradle"
-apply from: "gradle/aggregate-test-report.gradle"
-
-

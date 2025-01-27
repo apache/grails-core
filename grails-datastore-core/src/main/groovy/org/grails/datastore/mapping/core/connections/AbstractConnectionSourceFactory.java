@@ -5,7 +5,6 @@ import org.grails.datastore.mapping.multitenancy.TenantResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.PropertyResolver;
 
-import java.io.Serializable;
 import java.util.List;
 
 /**
