@@ -72,7 +72,7 @@ grailsPublish {
 
 tasks.withType(Groovydoc).configureEach {
     destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
-    docTitle = "Grails Geb Plugin ${version}"
+    docTitle = "Grails Geb Plugin $version"
     classpath = configurations.documentation
     source = files(source, sourceSets.testFixtures.allSource)
 }
