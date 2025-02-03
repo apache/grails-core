@@ -1,9 +1,9 @@
 package grails.gorm.tests.hibernatequery
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.tests.Person
-import org.grails.datastore.mapping.core.Session
+import grails.gorm.tests.Pet
+import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.AbstractHibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -116,6 +116,90 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         new Person(firstName:"Fred", lastName:"Rogers", age: 52).save(flush: true)
         hibernateQuery.rlike("firstName", "/Bob*/")
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def and() {
+        given:
+        new Person(firstName:"Bob", lastName:"Builder", age: 51).save(flush: true)
+        Query.Criterion lastName = new Query.Equals("lastName", "Builder")
+        Query.Criterion age = new Query.Equals("age", 50)
+        hibernateQuery.and(lastName,age)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def or() {
+        given:
+        new Person(firstName:"Bob", lastName:"Builder", age: 51).save(flush: true)
+        Query.Criterion lastNameWrong = new Query.Equals("lastName", "Rogers")
+        Query.Criterion ageCorrect = new Query.Equals("age", 50)
+        hibernateQuery.or(lastNameWrong,ageCorrect)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def isEmpty() {
+        given:
+        hibernateQuery.isEmpty("pets")
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def isNotEmpty() {
+        oldBob.addToPets(new Pet()).save(flush: true)
+        given:
+        hibernateQuery.isNotEmpty("pets")
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def isNull() {
+        oldBob.lastName = null
+        oldBob.save(flush:true)
+        given:
+        hibernateQuery.isNull("lastName")
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def isNotNull() {
+        new Person(firstName:"Fred", age: 52).save(flush: true)
+        given:
+        hibernateQuery.isNotNull("lastName")
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def allEq() {
+        new Person(firstName:"Fred", lastName:"Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.allEq(["firstName":"Bob","lastName":"Builder"])
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def inList() {
+        new Person(firstName:"Fred", lastName:"Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.in("age", [50,51])
         when:
         def newBob = hibernateQuery.singleResult()
         then:

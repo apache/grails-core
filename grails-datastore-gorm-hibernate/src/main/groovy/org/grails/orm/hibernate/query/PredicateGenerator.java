@@ -24,10 +24,10 @@ public class PredicateGenerator {
                 map(criterion -> {
                     if (criterion instanceof Query.Disjunction) {
                         List<Query.Criterion> criterionList = ((Query.Disjunction) criterion).getCriteria();
-                        cb.or(getPredicates(cb,criteriaQuery,root_, criterionList));
+                        return cb.or(getPredicates(cb,criteriaQuery,root_, criterionList));
                     } else if (criterion instanceof Query.Conjunction) {
                         List<Query.Criterion> criterionList = ((Query.Conjunction) criterion).getCriteria();
-                        cb.and(getPredicates(cb,criteriaQuery,root_, criterionList));
+                        return cb.and(getPredicates(cb,criteriaQuery,root_, criterionList));
                     } else if (criterion instanceof Query.Negation) {
                         List<Query.Criterion> criterionList = ((Query.Negation) criterion).getCriteria();
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, root_, criterionList);
@@ -35,9 +35,11 @@ public class PredicateGenerator {
                             log.error("Must have a single predicate behind a not");
                             throw new RuntimeException("Must have a single predicate behind a not");
                         }
-                        cb.not(predicates[0]);
+                        return cb.not(predicates[0]);
                     } else if (criterion instanceof Query.IsNotNull c) {
                         return cb.isNotNull(root_.get(c.getProperty()));
+                    } else if (criterion instanceof Query.IsEmpty c) {
+                        return cb.isEmpty(root_.get(c.getProperty()));
                     } else if (criterion instanceof Query.Equals c ) {
                         return cb.equal(root_.get(c.getProperty()),c.getValue());
                     } else if (criterion instanceof Query.IdEquals c ) {
@@ -57,6 +59,7 @@ public class PredicateGenerator {
                     } else if (criterion instanceof Query.Like c ) {
                         return cb.like(root_.get(c.getProperty()),c.getValue().toString());
                     } else if (criterion instanceof Query.In c
+                            && Objects.nonNull(c.getSubquery())
                             && c.getSubquery().getProjections().size() == 1
                             && c.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
                     ) {
@@ -67,6 +70,10 @@ public class PredicateGenerator {
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, from, c.getSubquery().getCriteria());
                         subquery.select(from.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
                         return cb.in(root_.get(c.getProperty())).value(subquery);
+                    } else if (criterion instanceof Query.In c
+                            && !c.getValues().isEmpty()
+                    ) {
+                        return cb.in(root_.get(c.getProperty()), c.getValues());
                     }
                     return null;
                 }).filter(Objects::nonNull).toList().toArray(new Predicate[0]);

@@ -15,6 +15,7 @@
 package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
+import groovy.lang.Closure;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -26,6 +27,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.SessionFactory;
@@ -102,21 +104,25 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query isEmpty(String property) {
+        detachedCriteria.isEmpty(property);
         return this;
     }
 
     @Override
     public Query isNotEmpty(String property) {
+        detachedCriteria.isNotEmpty(property);
         return this;
     }
 
     @Override
     public Query isNull(String property) {
+        detachedCriteria.isNull(property);
         return this;
     }
 
     @Override
     public Query isNotNull(String property) {
+        detachedCriteria.isNotNull(property);
         return this;
     }
 
@@ -207,16 +213,33 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query and(Criterion a, Criterion b) {
+        Closure addClosure = new Closure(this) {
+            public void doCall() {
+                DetachedCriteria owner = (DetachedCriteria) getDelegate();
+                owner.add(Restrictions.and(a,b));
+            }
+        };
+        detachedCriteria.and(addClosure);
         return this;
     }
 
     @Override
     public Query or(Criterion a, Criterion b) {
+        Closure orClosure = new Closure(this) {
+            public void doCall() {
+                DetachedCriteria owner = (DetachedCriteria) getDelegate();
+                owner.add(Restrictions.or(a,b));
+            }
+        };
+        detachedCriteria.and(orClosure);
            return this;
     }
 
     @Override
     public Query allEq(Map<String, Object> values) {
+        values.forEach((key, value) -> {
+            detachedCriteria.eq(key,value);
+        });
         return this;
     }
 
@@ -252,6 +275,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query in(String property, List values) {
+        detachedCriteria.in(property,values);
         return this;
     }
 
@@ -440,6 +464,7 @@ public abstract class AbstractHibernateQuery extends Query {
             root = cq.from(entity.getJavaClass());
             cq.select(root);
         }
+
         List<Query.Criterion>  criteriaList = (List<Query.Criterion>)detachedCriteria.getCriteria();
 
         jakarta.persistence.criteria.Predicate[] predicates =
