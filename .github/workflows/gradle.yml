@@ -15,8 +15,9 @@ jobs:
     env:
       WORKSPACE: ${{ github.workspace }}
       GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
-      MAVEN_PUBLISH_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
-      MAVEN_PUBLISH_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+      GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+      MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
+      MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
       MAVEN_PUBLISH_URL: 'https://repo.grails.org/grails/libs-snapshots-local'
     steps:
       - uses: actions/checkout@v2
