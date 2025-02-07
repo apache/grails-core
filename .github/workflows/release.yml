@@ -158,7 +158,7 @@ jobs:
           asset_content_type: application/zip
   macos:
     name: "Release OS X Intel Native CLI"
-    runs-on: macos-13
+    runs-on: macos-14
     needs: build
     steps:
       - name: "📥 Checkout repository"
