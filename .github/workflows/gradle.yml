@@ -1,4 +1,4 @@
-name: Java CI
+name: "Java CI"
 on:
   push:
     branches:
@@ -8,49 +8,47 @@ on:
       - '[4-9]+.[0-9]+.x'
   workflow_dispatch:
 env:
-  GIT_USER_NAME: 'grails-build'
-  GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
+  GIT_USER_NAME: grails-build
+  GIT_USER_EMAIL: grails-build@users.noreply.github.com
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: gradle/wrapper-validation-action@v2
-      - name: Set current date as env variable
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+      - name: "📅 Set current date as env variable"
         run: echo "NOW=$(date +'%Y-%m-%dT%H%M%S')" >> $GITHUB_ENV
-      - uses: actions/setup-java@v4
-        with: { java-version: 17, distribution: liberica }
-      - name: Extract branch name
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔀 Extract branch name"
         id: extract_branch
         run: echo "value=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-      - name: Build Snapshot Documentation
-        uses: gradle/actions/setup-gradle@v3
+      - name: "🔨 Build Snapshot Documentation"
         env:
           TARGET_GRAILS_VERSION: ${{ github.event.inputs.grails_version }}
-          TARGET_BRANCH: ${{ steps.extract_branch.outputs.value }}
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-        with:
-          arguments: |
-            build
-            -PgithubBranch=${{ steps.extract_branch.outputs.value }}
-      - name: Upload Docs Artifacts
+        run: ./gradlew build -PgithubBranch=${{ steps.extract_branch.outputs.value }}
+      - name: "📤 Upload Docs Artifacts"
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip
-      - name: Publish Snapshot Documentation to Github Pages
+      - name: "📤 Publish Snapshot Documentation to Github Pages"
         if: success() && github.event_name == 'push'
-        uses: grails/github-pages-deploy-action@v2
+        uses: grails/github-pages-deploy-action@f1bddf4d126e4375529c0f397b028eb5ac9a13e6 # 2024-12-22
         env:
           BRANCH: gh-pages
           COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
           COMMIT_NAME: ${{ env.GIT_USER_NAME }}
           FOLDER: build/docs
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          TARGET_REPOSITORY: ${{ github.repository }}
           SKIP_SNAPSHOT: ${{
               startsWith(steps.extract_branch.outputs.value, '3.3') ||
               startsWith(steps.extract_branch.outputs.value, '4.1') ||

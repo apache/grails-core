@@ -1,30 +1,26 @@
 plugins {
-    id "com.gradle.enterprise" version '3.16.2'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.13'
+    id 'com.gradle.develocity' version '3.19.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
 }
 
-gradleEnterprise {
+def isCI = System.getenv('CI') != null
+def isLocal = !isCI
+def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
+
+develocity {
     server = 'https://ge.grails.org'
     buildScan {
-        publishAlwaysIf(System.getenv('CI') == 'true')
-        publishIfAuthenticated()
-        uploadInBackground = System.getenv("CI") == null
-        capture {
-            taskInputFiles = true
-        }
+        tag('grails')
+        tag('grails-doc')
+        publishing.onlyIf { isAuthenticated }
+        uploadInBackground = isLocal
     }
-
 }
 
 buildCache {
-    local { enabled = System.getenv('CI') != 'true' }
-    remote(HttpBuildCache) {
-        def isAuthenticated = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER') && System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')
-        push = System.getenv('CI') == 'true' && isAuthenticated
+    local { enabled = isLocal }
+    remote(develocity.buildCache) {
+        push = isCI && isAuthenticated
         enabled = true
-        url = 'https://ge.grails.org/cache/'
-        credentials {
-            username = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER')
-            password = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')
-        }
-    }}
+    }
+}
