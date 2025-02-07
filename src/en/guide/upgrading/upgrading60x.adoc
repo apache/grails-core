@@ -110,7 +110,7 @@ Grails 7 introduces several breaking changes that may require updates to your ap
 The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.grails.plugins:hibernate5` plugin. If
 your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
 
-Since `hibernate-ehcache` brings in a conflicting `javax` version of `org.hibernate:hibernate-core`, is
+Since `hibernate-ehcache` brings in a conflicting `javax` version of `org.hibernate:hibernate-core`, it is
 recommended to exclude `hibernate-core` from the `hibernate-ehcache` dependency to avoid conflicts:
 
 [source,groovy]
