@@ -37,7 +37,7 @@ jobs:
             -PgithubBranch=${{ steps.extract_branch.outputs.value }}
       - name: Upload Docs Artifacts
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip
