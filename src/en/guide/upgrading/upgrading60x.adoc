@@ -104,3 +104,25 @@ Grails 7 introduces several breaking changes that may require updates to your ap
 - Micronaut can be added via the Micronaut Spring Boot Starter: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter.
 - Using Micronaut Parent Context: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springParentContext
 - Using a Bean Post Processor: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#beanPostProcessor
+
+#### 8.3 hibernate-ehcache
+
+The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.grails.plugins:hibernate5` plugin. If
+your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
+
+Since `hibernate-ehcache` brings in a conflicting `javax` version of `org.hibernate:hibernate-core`, it is
+recommended to exclude `hibernate-core` from the `hibernate-ehcache` dependency to avoid conflicts:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+        // exclude javax variant of hibernate-core
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+}
+----
