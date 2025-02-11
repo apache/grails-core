@@ -17,18 +17,3 @@ extensions.configure(GrailsPublishExtension) {
             'jamesfredley': 'James Fredley'
     ]
 }
-
-// Add sources and javadoc jar tasks
-// java.withSourcesJar() and java.withJavadocJar() is not compatible here with GrailsPublishPlugin
-if (!tasks.findByName('sourcesJar')) {
-    tasks.register('sourcesJar', Jar) {
-        archiveClassifier = 'sources'
-        from sourceSets.main.allSource
-    }
-}
-if (!tasks.findByName('javadocJar')) {
-    tasks.register('javadocJar', Jar) {
-        archiveClassifier = 'javadoc'
-        from javadoc.destinationDir
-    }
-}
