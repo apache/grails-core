@@ -62,5 +62,5 @@ java {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
+    //systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
 }

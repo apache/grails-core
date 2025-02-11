@@ -73,7 +73,7 @@ class WebDriverContainerHolder {
     }
 
     boolean matchesCurrentContainerConfiguration(WebDriverContainerConfiguration specConfiguration) {
-        specConfiguration == currentConfiguration
+        specConfiguration == currentConfiguration && grailsGebSettings.recordingMode == BrowserWebDriverContainer.VncRecordingMode.SKIP
     }
 
     private static int getPort(IMethodInvocation invocation) {
