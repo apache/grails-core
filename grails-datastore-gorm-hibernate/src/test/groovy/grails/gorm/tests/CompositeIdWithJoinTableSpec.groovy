@@ -13,10 +13,8 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 26/01/2017.
  */
-class CompositeIdWithJoinTableSpec extends Specification {
+class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(CompositeIdParent, CompositeIdChild)
-    @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
     void "test composite id with join table"() {

@@ -566,6 +566,18 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == bobs[0]
     }
 
+    def orderByNameIgnoreCase() {
+        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        new Person(firstName: "Bob", lastName: "builder", age: 50).save(flush: true)
+        given:
+        hibernateQuery.order(new Query.Order("lastName", Query.Order.Direction.DESC).ignoreCase())
+        when:
+        def bobs = hibernateQuery.list()
+        then:
+        bobs.size() == 3
+        fred == bobs[0]
+    }
+
     def projectionProperty() {
         given:
         hibernateQuery.projections().property("lastName")

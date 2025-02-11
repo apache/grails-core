@@ -516,11 +516,20 @@ public abstract class AbstractHibernateQuery extends Query {
             cq.orderBy(orders
                     .stream()
                     .map(order -> {
-                        if (order.getDirection().equals(Order.Direction.ASC)) {
-                            return cb.asc(root.get(order.getProperty()));
+                        if (order.isIgnoreCase()) {
+                            if (order.getDirection().equals(Order.Direction.ASC)) {
+                                return cb.asc(cb.lower(root.get(order.getProperty())));
+                            }  else {
+                                return cb.desc(cb.lower(root.get(order.getProperty())));
+                            }
                         } else {
-                            return cb.desc(root.get(order.getProperty()));
+                            if (order.getDirection().equals(Order.Direction.ASC)) {
+                                return cb.asc(root.get(order.getProperty()));
+                            }  else {
+                                return cb.desc(root.get(order.getProperty()));
+                            }
                         }
+
                     })
                     .toList()
             );

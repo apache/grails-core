@@ -126,8 +126,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         this.targetClass = targetClass;
         this.sessionFactory = sessionFactory;
         this.cb = sessionFactory.getCriteriaBuilder();
-        this.criteriaQuery = cb.createQuery(targetClass);
-        this.root = criteriaQuery.from(targetClass);
+//        this.criteriaQuery = cb.createQuery(targetClass);
+//        this.root = criteriaQuery.from(targetClass);
         AbstractHibernateSession session =(AbstractHibernateSession) datastore.connect();
         hibernateQuery = new HibernateQuery(session, datastore.getMappingContext().getPersistentEntity(targetClass.getTypeName()));
 
@@ -243,10 +243,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return The calculated property name
      */
     protected String calculatePropertyName(String propertyName) {
-        String lastAlias = getLastAlias();
-        if (lastAlias != null) {
-            return lastAlias +'.'+propertyName;
-        }
+//        String lastAlias = getLastAlias();
+//        if (lastAlias != null) {
+//            return lastAlias +'.'+propertyName;
+//        }
 
         return propertyName;
     }
@@ -762,11 +762,13 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     @Override
     public Criteria exists(QueryableCriteria<?> subquery) {
+        hibernateQuery.exists(subquery);
         return this;
     }
 
     @Override
     public Criteria notExists(QueryableCriteria<?> subquery) {
+        hibernateQuery.notExits(subquery);
         return this;
     }
 
@@ -1148,11 +1150,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             else if (name.equals(COUNT_CALL)) {
                 count = true;
             }
-//            else if (name.equals(LIST_DISTINCT_CALL)) {
-//                resultTransformer = CriteriaSpecification.DISTINCT_ROOT_ENTITY;
-//            }
+            else if (name.equals(LIST_DISTINCT_CALL)) {
+                hibernateQuery.projections().distinct();
+            }
 
-//            createCriteriaInstance();
 
             // Check for pagination params
             if (name.equals(LIST_CALL) && args.length == 2) {
@@ -1163,9 +1164,6 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 invokeClosureNode(args[0]);
             }
 
-//            if (resultTransformer != null) {
-//                criteria.setResultTransformer(resultTransformer);
-//            }
             Object result;
             if (!uniqueResult) {
                 if (scroll) {
@@ -1173,78 +1171,39 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 }
                 else if (count) {
                     hibernateQuery.projections().count();
-                    criteriaQuery = cb.createQuery(Long.class);
-                    root = criteriaQuery.from(this.targetClass);
-                    criteriaQuery.select(cb.count(root));
-                    criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root,this.junction.getCriteria())));
-                    result = hibernateSession.createQuery(criteriaQuery).getSingleResult();
+                    result = hibernateQuery.singleResult();
                 }
-//                else if (paginationEnabledList) {
-//                    // Calculate how many results there are in total. This has been
-//                    // moved to before the 'list()' invocation to avoid any "ORDER
-//                    // BY" clause added by 'populateArgumentsForCriteria()', otherwise
-//                    // an exception is thrown for non-string sort fields (GRAILS-2690).
-//                    query.setFirstResult(0);
-//                    query.setMaxResults(Integer.MAX_VALUE);
-//
-//                    // Restore the previous projection, add settings for the pagination parameters,
-//                    // and then execute the query.
-//                    boolean isProjection = (projectionList != null && !projectionList.getProjectionList().isEmpty());
-//
-//                    criteria.setProjection(isProjection ? projectionList : null);
-//
-//                    for (Order orderEntry : orderEntries) {
-//                        criteria.addOrder(orderEntry);
-//                    }
-//                    if (resultTransformer == null) {
-//                        // GRAILS-9644 - Use projection transformer
-//                        criteria.setResultTransformer( isProjection ?
-//                                        CriteriaSpecification.PROJECTION :
-//                                        CriteriaSpecification.ROOT_ENTITY
-//                        );
-//                    }
-//                    else
-//                        if (paginationEnabledList) {
-//                        // relevant to GRAILS-5692
-//                        criteria.setResultTransformer(resultTransformer);
-//                    }
-//                    // GRAILS-7324 look if we already have association to sort by
-//                    Map argMap = (Map)args[0];
-//                    final String sort = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
-//                    if (sort != null) {
-//                        boolean ignoreCase = true;
-//                        Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
-//                        if (caseArg instanceof Boolean) {
-//                            ignoreCase = (Boolean) caseArg;
-//                        }
-//                        final String orderParam = (String) argMap.get(HibernateQueryConstants.ARGUMENT_ORDER);
-//                        final String order = HibernateQueryConstants.ORDER_DESC.equalsIgnoreCase(orderParam) ?
-//                                HibernateQueryConstants.ORDER_DESC : HibernateQueryConstants.ORDER_ASC;
-//                        int lastPropertyPos = sort.lastIndexOf('.');
-//                        String associationForOrdering = lastPropertyPos >= 0 ? sort.substring(0, lastPropertyPos) : null;
-//                        if (associationForOrdering != null && aliasMap.containsKey(associationForOrdering)) {
-//                            addOrder(criteria, aliasMap.get(associationForOrdering) + "." + sort.substring(lastPropertyPos + 1),
-//                                    order, ignoreCase);
-//                            // remove sort from arguments map to exclude from default processing.
-//                            @SuppressWarnings("unchecked") Map argMap2 = new HashMap(argMap);
-//                            argMap2.remove(HibernateQueryConstants.ARGUMENT_SORT);
-//                            argMap = argMap2;
-//                        }
-//                    }
-//                    result = createPagedResultList(argMap);
-//                }
+                else if (paginationEnabledList) {
+                    Map argMap = (Map)args[0];
+                    // With the new query generator only the name of the field in the relation is allowed
+                    // @see HibernateQuerySpec.joinWithProjection() for a clear example
+                    final String sortField = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    if (sortField != null) {
+                        boolean ignoreCase = true;
+                        Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
+                        if (caseArg instanceof Boolean) {
+                            ignoreCase = (Boolean) caseArg;
+                        }
+                        final String orderParam = (String) argMap.get(HibernateQueryConstants.ARGUMENT_ORDER);
+                        final Query.Order.Direction direction = Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam) ? Query.Order.Direction.DESC : Query.Order.Direction.ASC;
+                        //The default for Query.Order.ignoreCase is false and can't be set to false
+                        Query.Order order ;
+                        if (ignoreCase) {
+                            order = new Query.Order(sortField, direction);
+                            order.ignoreCase();
+                        } else {
+                            order = new Query.Order(sortField, direction);
+                        }
+                        hibernateQuery.order(order);
+                    }
+                    result = hibernateQuery.list();
+                }
                 else {
-                    root = criteriaQuery.from(this.targetClass);
-                    criteriaQuery.select(root);
-                    criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.junction.getCriteria())));
-                    result = hibernateSession.createQuery(criteriaQuery).list();
+                    result = hibernateQuery.list();
                 }
             }
             else {
-                root = criteriaQuery.from(this.targetClass);
-                criteriaQuery.select(root);
-                criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.junction.getCriteria())));
-                result = hibernateSession.createQuery(criteriaQuery).uniqueResult();
+                result = hibernateQuery.singleResult();
             }
             if (!participate) {
                 closeSession();
@@ -1269,6 +1228,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         }
 
         if (isAssociationQueryMethod(args) || isAssociationQueryWithJoinSpecificationMethod(args)) {
+            if (1 == 1) {
+                throw new RuntimeException("This branch needs to be filled out");
+            }
             final boolean hasMoreThanOneArg = args.length > 1;
             Object callable = hasMoreThanOneArg ? args[1] : args[0];
 //            int joinType = hasMoreThanOneArg ? (Integer)args[0] : org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue();
@@ -1368,20 +1330,17 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 }
                 String propertyName = calculatePropertyName((String)value);
                 if (name.equals(IS_NULL)) {
-                    c = Restrictions.isNull(propertyName);
+                    hibernateQuery.isNull(propertyName);
                 }
                 else if (name.equals(IS_NOT_NULL)) {
-                    c = Restrictions.isNotNull(propertyName);
+                    hibernateQuery.isNotNull(propertyName);
                 }
                 else if (name.equals(IS_EMPTY)) {
-                    c = Restrictions.isEmpty(propertyName);
+                    hibernateQuery.isEmpty(propertyName);
                 }
-                else if (name.equals(IS_NOT_EMPTY)) {
-                    c = Restrictions.isNotEmpty(propertyName);
+                else {
+                    hibernateQuery.isNotEmpty(propertyName);
                 }
-            }
-            if (c != null) {
-                return addToCriteria(c);
             }
         }
         throw new MissingMethodException(name, getClass(), args);
