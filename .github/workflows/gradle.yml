@@ -66,15 +66,17 @@ jobs:
         id: publish
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-          GRAILS_PUBLISH_RELEASE: 'false'
-        run: ./gradlew publish
+          GRADLE_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
+        run: ./gradlew --no-build-cache publish
       - name: "🔨 Build Docs"
         id: docs
         if: steps.build.outcome == 'success'
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew docs:docs
-      - name: "Determine docs target repository"
+      - name: "👀 Determine docs target repository"
         if: steps.docs.outcome == 'success'
         uses: haya14busa/action-cond@94f77f7a80cd666cb3155084e428254fea4281fd # v1.2.1 (Use commit sha as this is a 3rd party action)
         id: docs_target
