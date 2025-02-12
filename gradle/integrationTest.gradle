@@ -1,8 +1,10 @@
 dependencies {
-    add('testImplementation', libs.micronaut.httpclient)
-    add('testImplementation', libs.bundles.grails.testing.support)
+    add('testImplementation', "io.micronaut:micronaut-http-client:$micronautVersion")
+    add('testImplementation', 'org.grails:grails-gorm-testing-support')
+    add('testImplementation', 'org.grails:grails-web-testing-support')
+    add('testImplementation', 'org.springframework.boot:spring-boot-starter-test')
 
-    integrationTestImplementation testFixtures(libs.geb.plugin)
+    add('integrationTestImplementation', testFixtures('org.grails.plugins:geb'))
 }
 
 tasks.named('integrationTest', Test) {

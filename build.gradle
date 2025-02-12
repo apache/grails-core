@@ -5,7 +5,6 @@ plugins {
 }
 
 version = projectVersion
-ext.set('grailsVersion', libs.versions.grails.asProvider().get())
 ext.set('isSnapshot', projectVersion.endsWith('-SNAPSHOT'))
 ext.set('isReleaseVersion', !isSnapshot)
 
@@ -31,15 +30,12 @@ subprojects {
     repositories {
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/core' }
-        if (libs.versions.groovy.get().endsWith('-SNAPSHOT')) {
+        if (groovyVersion.endsWith('-SNAPSHOT')) {
             maven {
                 name = 'JFrog Groovy snapshot repo'
                 url = 'https://groovy.jfrog.io/artifactory/libs-snapshot-local'
             }
         }
-    }
-    dependencies {
-        implementation platform(libs.grails.bom)
     }
 }
 

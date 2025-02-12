@@ -1,18 +1,23 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+Properties versions = new Properties()
+file('../gradle.properties').withInputStream {
+    versions.load(it)
+}
+
 repositories {
     mavenCentral()
     maven { url = 'https://repo.grails.org/grails/core' }
 }
 
 dependencies {
-    implementation platform(buildsrcLibs.grails.bom)
-    implementation buildsrcLibs.asciidoctorj
-    implementation buildsrcLibs.asset.pipeline.gradle
-    implementation buildsrcLibs.grails.gradle.plugin, {
-        // Grails Gradle plugin leaks groovy-xml onto compile classpath
-        // which is causes a version conflict for Gradle
-        exclude group: 'org.apache.groovy', module: 'groovy-xml'
-    }
-    testImplementation buildsrcLibs.spock.core
+    implementation platform("org.grails:grails-bom:${versions.get('grailsVersion')}")
+    implementation "org.asciidoctor:asciidoctor-gradle-jvm:${versions.get('asciidoctorGradlePluginVersion')}"
+    implementation "com.bertramlabs.plugins:asset-pipeline-gradle:${versions.get('assetPipelineGradlePluginVersion')}"
+    implementation 'org.grails:grails-gradle-plugin'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 tasks.withType(Test).configureEach {

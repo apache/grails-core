@@ -10,25 +10,25 @@ dependencies {
 
     implementation project(':spring-security-core')
 
-    implementation libs.grails.core
-    implementation libs.grails.datastore.core
-    implementation libs.grails.datastore.gorm
-    implementation libs.grails.events.transform
-    implementation libs.grails.rest
-    implementation libs.groovy.core
-    implementation libs.spring.beans
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-datastore-core'
+    implementation 'org.grails:grails-datastore-gorm'
+    implementation "org.grails:grails-events-transform:$grailsAsyncVersion" // Not yet in the milestone bom
+    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.springframework:spring-beans'
 
-    runtimeOnly libs.gorm.hibernate5
-    runtimeOnly libs.grails.gsp
-    runtimeOnly libs.grails.i18n
-    runtimeOnly libs.grails.interceptors
-    runtimeOnly libs.grails.services
-    runtimeOnly libs.grails.urlmappings
-    runtimeOnly libs.springboot.autoconfigure
-    runtimeOnly libs.springboot.starter.logging
-    runtimeOnly libs.springboot.starter.tomcat
-    runtimeOnly libs.h2database
-    runtimeOnly libs.tomcat.jdbc
+    runtimeOnly 'org.grails.plugins:hibernate5'
+    runtimeOnly 'org.grails.plugins:gsp'
+    runtimeOnly 'org.grails:grails-plugin-i18n'
+    runtimeOnly 'org.grails:grails-plugin-interceptors'
+    runtimeOnly 'org.grails:grails-plugin-services'
+    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

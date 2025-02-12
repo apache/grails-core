@@ -9,35 +9,38 @@ group = 'misc.integration.test.app'
 
 dependencies {
 
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
     implementation project(':spring-security-core')
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-datastore-gorm'
+    implementation 'org.grails:grails-plugin-domain-class'
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.springframework.security:spring-security-core'
+    implementation 'org.springframework.security:spring-security-crypto'
+    implementation 'org.springframework.security:spring-security-web'
+    implementation 'org.springframework:spring-web'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
-    implementation libs.grails.core
-    implementation libs.grails.datastore.gorm
-    implementation libs.grails.domain
-    implementation libs.groovy.core
-    implementation libs.spring.security.core
-    implementation libs.spring.security.crypto
-    implementation libs.spring.security.web
-    implementation libs.spring.web
-    implementation libs.springboot.autoconfigure
+    runtimeOnly 'org.grails.plugins:hibernate5'
+    runtimeOnly 'org.grails:grails-plugin-i18n'
+    runtimeOnly 'org.grails:grails-plugin-interceptors'
+    runtimeOnly 'org.grails:grails-plugin-services'
+    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.grails:grails-web-common'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
-    runtimeOnly libs.gorm.hibernate5
-    runtimeOnly libs.grails.i18n
-    runtimeOnly libs.grails.interceptors
-    runtimeOnly libs.grails.services
-    runtimeOnly libs.grails.urlmappings
-    runtimeOnly libs.grails.web.common
-    runtimeOnly libs.h2database
-    runtimeOnly libs.springboot.starter.logging
-    runtimeOnly libs.springboot.starter.tomcat
-    runtimeOnly libs.tomcat.jdbc
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.slf4j:slf4j-nop'
 
-    compileOnly libs.jakarta.servlet.api
-    compileOnly libs.slf4j.nop
-
-    testImplementation libs.spock.core
-    testImplementation libs.spring.tx
-    testImplementation libs.bundles.grails.testing.support
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-tx'
+    testImplementation 'org.grails:grails-gorm-testing-support'
+    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

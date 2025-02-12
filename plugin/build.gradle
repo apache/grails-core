@@ -11,45 +11,49 @@ group = 'org.grails.plugins'
 
 dependencies {
 
-	api libs.grails.core
-	api libs.grails.datastore.core // API because used in templates
-	api libs.grails.datastore.gorm // API because used in templates
-	api libs.grails.events.transform // API because used in templates
-	api libs.grails.mimetypes
-	api libs.grails.plugin.async // AsyncGrailsWebRequest is used in public API
-	implementation libs.grails.plugin.events // Events Plugin is required to implement EventBus
-	api libs.grails.web.common
-	api libs.grails.web.urlmappings
-	api libs.spring.beans
-	api libs.spring.context.core
-	api libs.spring.expression
-	api libs.spring.security.core
-	api libs.spring.security.web
-	api libs.spring.web
+	implementation platform("org.grails:grails-bom:$grailsVersion")
 
-	implementation libs.commons.text
-	implementation libs.ehcache
-	implementation libs.grails.bootstrap
-	implementation libs.grails.converters
-	implementation libs.grails.rest
-	implementation libs.springboot.core
-	implementation libs.spring.context.support
-	implementation libs.spring.core
-	implementation libs.spring.security.crypto
-	implementation libs.spring.tx
+	api 'org.grails:grails-core'
+	api 'org.grails:grails-datastore-core' // API because used in templates
+	api 'org.grails:grails-datastore-gorm' // API because used in templates
+	api "org.grails:grails-events-transform:$grailsAsyncVersion" // API because used in templates, Not yet in the milestone bom
+	api 'org.grails:grails-plugin-mimetypes'
+	api 'org.grails.plugins:async' // AsyncGrailsWebRequest is used in public API
+	implementation 'org.grails.plugins:events' // Events Plugin is required to implement EventBus
+	api 'org.grails:grails-web-common'
+	api 'org.grails:grails-web-url-mappings'
+	api 'org.springframework:spring-beans'
+	api 'org.springframework:spring-context'
+	api 'org.springframework:spring-context'
+	api 'org.springframework.security:spring-security-core'
+	api 'org.springframework.security:spring-security-web'
+	api 'org.springframework:spring-web'
+
+	implementation 'org.apache.commons:commons-text'
+	implementation "org.ehcache:ehcache"
+	implementation 'org.grails:grails-bootstrap'
+	implementation 'org.grails.plugins:converters'
+	implementation 'org.grails:grails-plugin-rest'
+	implementation 'org.springframework.boot:spring-boot'
+	implementation 'org.springframework:spring-context-support'
+	implementation 'org.springframework:spring-core'
+	implementation 'org.springframework.security:spring-security-crypto'
+	implementation 'org.springframework:spring-tx'
 	compileOnly "jline:jline" // for shell commands
 
-	compileOnly libs.groovy.core // Compile-time annotations
-	compileOnly libs.jakarta.servlet.api // Provided
-	compileOnly libs.slf4j.nop // Prevents warnings about missing slf4j implementation during compilation
+	compileOnly 'org.apache.groovy:groovy' // Compile-time annotations
+	compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+	compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation
 
-	testImplementation libs.bundles.grails.testing.support
-	testImplementation libs.spock.core
-	testImplementation libs.spring.test
-	testImplementation libs.spring.security.config
+	testImplementation 'org.grails:grails-gorm-testing-support'
+	testImplementation 'org.grails:grails-web-testing-support'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.spockframework:spock-core'
+	testImplementation 'org.springframework:spring-test'
+	testImplementation 'org.springframework.security:spring-security-config'
 
-	testRuntimeOnly libs.bytebuddy
-	testRuntimeOnly libs.slf4j.nop // Prevents warnings about missing slf4j implementation during tests
+	testRuntimeOnly 'net.bytebuddy:byte-buddy'
+	testRuntimeOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during tests
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
