@@ -1,0 +1,48 @@
+name: Changelog
+on:
+  issues:
+    types: [closed,reopened]
+  push:
+    branches:
+      - '[5-9]+.[0-9]+.x'
+  workflow_dispatch:
+jobs:
+  release_notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if it has release drafter config file
+        id: check_release_drafter
+        run: |
+          has_release_drafter=$([ -f .github/release-drafter.yml ] && echo "true" || echo "false")
+          echo ::set-output name=has_release_drafter::${has_release_drafter}
+      - name: Extract branch name
+        id: extract_branch
+        run: echo ::set-output name=value::${GITHUB_REF:11}
+      # If it has release drafter:
+      - uses: release-drafter/release-drafter@v5.25.0
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          commitish: ${{ steps.extract_branch.outputs.value }}
+          filter-by-commitish: true
+      # Otherwise:
+      - name: Export Gradle Properties
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
+        uses: micronaut-projects/github-actions/export-gradle-properties@master
+      - uses: micronaut-projects/github-actions/release-notes@master
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
+        id: release_notes
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+      - uses: ncipollo/release-action@v1
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'false' && steps.release_notes.outputs.generated_changelog == 'true'
+        with:
+          allowUpdates: true
+          commit: ${{ steps.release_notes.outputs.current_branch }}
+          draft: true
+          name: ${{ env.title }} ${{ steps.release_notes.outputs.next_version }}
+          tag: v${{ steps.release_notes.outputs.next_version }}
+          bodyFile: CHANGELOG.md
+          token: ${{ secrets.GH_TOKEN }}

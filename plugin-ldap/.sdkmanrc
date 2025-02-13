@@ -1,0 +1,2 @@
+# Enable auto-env through the sdkman_auto_env config - https://sdkman.io/usage#env
+java=17.0.12-librca

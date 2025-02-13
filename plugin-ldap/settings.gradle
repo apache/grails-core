@@ -1,0 +1,59 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        maven { url "https://repo.grails.org/grails/core/" }
+        gradlePluginPortal()
+    }
+    plugins {
+        id "org.grails.grails-web" version "${grailsVersion}"
+        id "org.grails.grails-gsp" version "${grailsVersion}"
+        id "org.grails.grails-plugin" version "${grailsVersion}"
+        id "org.grails.grails-publish" version "${grailsVersion}"
+    }
+}
+
+plugins {
+    id 'com.gradle.develocity' version '3.18.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
+}
+
+def isCI = System.getenv('CI') != null
+def isLocal = !isCI
+def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
+def isBuildCacheAuthenticated =
+        System.getenv('DEVELOCITY_BUILD_CACHE_NODE_USER') != null &&
+                System.getenv('DEVELOCITY_BUILD_CACHE_NODE_KEY') != null
+
+develocity {
+    server = 'https://ge.grails.org'
+    buildScan {
+        tag('grails-plugins')
+        tag('grails-plugins/grails-spring-security-ldap')
+        publishing.onlyIf { isAuthenticated }
+        uploadInBackground = isLocal
+    }
+}
+
+buildCache {
+    local { enabled = isLocal }
+    remote(develocity.buildCache) {
+        push = isCI && isBuildCacheAuthenticated
+        enabled = true
+        usernameAndPassword(
+                System.getenv('DEVELOCITY_BUILD_CACHE_NODE_USER') ?: '',
+                System.getenv('DEVELOCITY_BUILD_CACHE_NODE_KEY') ?: ''
+        )
+    }
+}
+
+rootProject.name = 'grails-spring-security-ldap'
+
+include 'plugin'
+include 'docs'
+
+include 'examples:custom-user-details-context-mapper'
+include 'examples:functional-test-app'
+include 'examples:retrieve-db-roles'
+include 'examples:retrieve-group-roles'
+
+findProject(':plugin').name = 'spring-security-ldap'

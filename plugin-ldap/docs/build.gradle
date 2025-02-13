@@ -1,0 +1,50 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+String getGrailsDocumentationVersion(String version) {
+    if (version.endsWith('-SNAPSHOT')) {
+        return 'snapshot'
+    }
+
+    return version
+}
+
+plugins {
+    id 'org.asciidoctor.jvm.convert' version "4.0.3"
+}
+
+def asciidoctorAttributes = [
+        'source-highlighter'              : 'coderay',
+        toc                               : 'left',
+        toclevels                         : '2',
+        'toc-title'                       : 'Table of Contents',
+        icons                             : 'font',
+        id                                : project.name + ':' + project.version,
+        idprefix                          : '',
+        idseparator                       : '-',
+        version                           : project.version,
+        projectUrl                        : "https://github.com/grails-plugins/grails-spring-security-ldap",
+        sourcedir                         : "${rootProject.allprojects.find { it.name == 'spring-security-ldap' }.projectDir}/src/main/groovy",
+        gormDetailedLink                  : "https://gorm.grails.org/${getGrailsDocumentationVersion(project.documentationGormHibernateVersion as String)}/hibernate/manual/index.html",
+        gormSummaryLink                   : "https://docs.grails.org/${getGrailsDocumentationVersion(project.grailsVersion)}/guide/GORM.html",
+        grailsDocBase                     : "https://docs.grails.org/${getGrailsDocumentationVersion(project.grailsVersion)}",
+        functionalTestAppPath             : "${rootProject.allprojects.find { it.name == 'functional-test-app' }.projectDir}",
+        customUserDetailsContextMapperPath: "${rootProject.allprojects.find { it.name == 'custom-user-details-context-mapper' }.projectDir}",
+        grailsSpringSecurityCoreVersion   : project['grailsSpringSecurityCoreVersion'],
+        grailsSpringSecurityCoreLink      : "https://grails.github.io/grails-spring-security-core/${getGrailsDocumentationVersion(project.grailsSpringSecurityCoreVersion)}/index.html",
+        springSecurityLdapLink            : "https://docs.spring.io/spring-security/reference/${project.documentationSpringSecurityVersion}/servlet/authentication/passwords/ldap.html",
+        springSecurityLdapApiLink         : "https://docs.spring.io/spring-security/site/docs/${project.documentationSpringSecurityVersion}/api"
+
+]
+
+tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
+    it.jvm {
+        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
+    }
+
+    it.baseDirFollowsSourceDir()
+    it.sourceDir project.file('src/docs')
+    it.sources { include 'index.adoc' }
+    it.outputDir = project.buildDir.toPath().resolve('docs').toFile()
+    it.options doctype: 'book'
+    it.attributes asciidoctorAttributes
+}

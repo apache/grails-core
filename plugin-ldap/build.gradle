@@ -1,0 +1,44 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url "https://repo.grails.org/grails/core" }
+    }
+    dependencies {
+        classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+        maven { url "https://repo.grails.org/grails/core" }
+    }
+}
+
+version project.projectVersion
+group "org.grails.plugins"
+
+subprojects { project ->
+    version project.projectVersion
+    group "org.grails.plugins"
+
+    apply plugin: "groovy"
+
+    project.compileJava.options.release = 17
+
+    if(project.name.endsWith('spring-security-ldap')) {
+        apply plugin: "org.grails.grails-publish"
+        grailsPublish {
+            githubSlug = 'grails-plugins/grails-spring-security-ldap'
+            license {
+                name = 'Apache-2.0'
+            }
+            title = 'Grails Spring Security LDAP Plugin'
+            desc = 'Adds Spring Security LDAP support to a Grails application.'
+            developers = [burtbeckwith: 'Burt Beckwith']
+        }
+    }
+}
+
+apply from: rootProject.file("gradle/docs.gradle")

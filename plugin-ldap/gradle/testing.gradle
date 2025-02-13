@@ -1,0 +1,21 @@
+apply plugin: 'com.adarshr.test-logger'
+tasks.withType(Test) {
+    useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+        events 'passed', 'skipped', 'failed'//, 'standardOut', 'standardError'
+    }
+
+    //systemProperty 'grails.geb.recording.mode', 'RECORD_FAILING'
+
+    beforeTest { descriptor -> logger.quiet " -- $descriptor" }
+}
+
+testlogger {
+    theme 'mocha'
+    showFullStackTraces true
+    showStandardStreams true
+    showPassedStandardStreams false
+    showSkippedStandardStreams false
+    showFailedStandardStreams true
+}

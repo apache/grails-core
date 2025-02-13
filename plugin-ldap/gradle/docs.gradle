@@ -1,0 +1,43 @@
+tasks.register('cleanDocs', Delete) {
+    delete file("${rootProject.buildDir}/docs")
+}
+
+tasks.register('aggregateGroovyApiDoc', Groovydoc) {
+    def groovyDocProjects = subprojects.findAll { it.name in ['spring-security-ldap'] }
+    dependsOn = [tasks.named('cleanDocs')] + groovyDocProjects.collect { it.tasks.named('groovydoc') }
+
+    description = 'Generates Groovy API Documentation for all plugin projects under rootDir/gapi'
+
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    access = GroovydocAccess.PROTECTED
+    includeAuthor = false
+    includeMainForScripts = true
+    processScripts = true
+    source = groovyDocProjects.groovydoc.source
+    destinationDir = file("${rootProject.buildDir}/docs/gapi")
+    classpath = files(groovyDocProjects.groovydoc.classpath)
+    groovyClasspath = files(groovyDocProjects.groovydoc.groovyClasspath)
+}
+
+tasks.register('docs') {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    dependsOn = ['aggregateGroovyApiDoc', 'docs:asciidoctor']
+    finalizedBy 'copyAsciiDoctorDocs', 'ghPagesRootIndexPage'
+}
+
+tasks.register('copyAsciiDoctorDocs', Copy) {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    dependsOn = ['docs']
+    from "${rootProject.allprojects.find { it.name == 'docs'}.projectDir}/build"
+    includes = ['docs/**']
+    into rootProject.buildDir
+    includeEmptyDirs = false
+}
+
+tasks.register('ghPagesRootIndexPage', Copy) {
+    group = 'documentation'
+    dependsOn = ['docs']
+    from file("${rootProject.allprojects.find { it.name == 'docs'}.projectDir}/src/docs/index.tmpl")
+    into rootProject.buildDir.toPath().resolve('docs').toFile()
+    rename 'index.tmpl', 'ghpages.html'
+}

@@ -1,0 +1,14 @@
+*.iml
+*.ipr
+*.iws
+*.log
+*.sublime-workspace
+.DS_Store
+.asscache
+.classpath
+.gradle
+.idea
+.project
+.settings
+Thumbs.db
+build

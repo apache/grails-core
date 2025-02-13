@@ -1,0 +1,9 @@
+[[introduction]]
+== Introduction to the Spring Security LDAP Plugin
+
+The LDAP plugin adds support for LDAP and Active Directory authentication to a Grails application that uses Spring Security. It depends on the {grailsSpringSecurityCoreLink}[Spring Security Core plugin].
+
+Once you have configured your Grails application as an LDAP client you can delegate authentication to LDAP and not have to manage users' authentication information in your application. By default, roles are inferred from LDAP group membership and you can store additional application-specific roles in your database.
+
+Please refer to the {springSecurityLdapLink}[Spring Security LDAP documentation] for details of the underlying implementation.
+

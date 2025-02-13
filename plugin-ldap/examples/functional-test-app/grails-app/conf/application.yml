@@ -1,0 +1,146 @@
+---
+server:
+    port: 8238
+---
+info:
+  app:
+    name: '@info.app.name@'
+    version: '@info.app.version@'
+    grailsVersion: '@info.app.grailsVersion@'
+dataSource:
+  url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+  driverClassName: org.h2.Driver
+  username: sa
+  password: ''
+  pooled: true
+  jmxExport: true
+  dbCreate: update
+hibernate:
+  cache:
+    queries: false
+    use_second_level_cache: false
+    use_query_cache: false
+grails:
+  views:
+    default:
+      codec: html
+    gsp:
+      encoding: UTF-8
+      htmlcodec: xml
+      codecs:
+        expression: html
+        scriptlet: html
+        taglib: none
+        staticparts: none
+  mime:
+    disable:
+      accept:
+        header:
+          userAgents:
+          - Gecko
+          - WebKit
+          - Presto
+          - Trident
+    types:
+      all: '*/*'
+      atom: application/atom+xml
+      css: text/css
+      csv: text/csv
+      form: application/x-www-form-urlencoded
+      html:
+      - text/html
+      - application/xhtml+xml
+      js: text/javascript
+      json:
+      - application/json
+      - text/json
+      multipartForm: multipart/form-data
+      pdf: application/pdf
+      rss: application/rss+xml
+      text: text/plain
+      hal:
+      - application/hal+json
+      - application/hal+xml
+      xml:
+      - text/xml
+      - application/xml
+
+---
+ldapServers:
+    d1:
+        baseWorkDir: 'build'
+        base: 'dc=d1,dc=example,dc=com'
+        port: 10389
+        indexed:
+            - 'objectClass'
+            - 'uid'
+            - 'mail'
+            - 'userPassword'
+            - 'description'
+---
+grails:
+    plugin:
+        springsecurity:
+            authority:
+                className: 'com.test.Role'
+            controllerAnnotations:
+                staticRules:
+                    -
+                        pattern: '/'
+                        access: 'permitAll'
+                    -
+                        pattern: '/error'
+                        access: 'permitAll'
+                    -
+                        pattern: '/index'
+                        access: 'permitAll'
+                    -
+                        pattern: '/index.gsp'
+                        access: 'permitAll'
+                    -
+                        pattern: '/shutdown'
+                        access: 'permitAll'
+                    -
+                        pattern: '/assets/**'
+                        access: 'permitAll'
+                    -
+                        pattern: '/**/js/**'
+                        access: 'permitAll'
+                    -
+                        pattern: '/**/css/**'
+                        access: 'permitAll'
+                    -
+                        pattern: '/**/images/**'
+                        access: 'permitAll'
+                    -
+                        pattern: '/**/favicon.ico'
+                        access: 'permitAll'
+            password:
+                algorithm: 'SHA-256'
+            rememberMe:
+                persistent: true
+                persistentToken:
+                    domainClassName: 'com.test.PersistentLogin'
+            userLookup:
+                userDomainClassName: 'com.test.User'
+                authorityJoinClassName: 'com.test.UserRole'
+            ldap:
+                authorities:
+                    groupSearchBase: 'ou=groups,dc=d1,dc=example,dc=com'
+                    groupSearchFilter: 'uniquemember={0}'
+                    retrieveDatabaseRoles: true
+                context:
+                    managerDn: 'uid=admin,ou=system'
+                    managerPassword: 'secret'
+                    server: 'ldap://localhost:10389'
+                rememberMe:
+                    detailsManager:
+                        groupRoleAttributeName: 'cn'
+                        groupSearchBase: 'ou=groups,dc=d1,dc=example,dc=com'
+                    usernameMapper:
+                        userDnBase: 'dc=d1,dc=example,dc=com'
+                        usernameAttribute: 'cn'
+                search:
+                    base: 'dc=d1,dc=example,dc=com'
+                    filter: '(uid={0})'
+                useRememberMe: true

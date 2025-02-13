@@ -1,0 +1,10 @@
+= Spring Security LDAP Plugin - Reference Documentation
+:encoding: utf-8
+:lang: en
+:numbered:
+
+include::introduction.adoc[]
+
+include::usage.adoc[]
+
+include::configuration.adoc[]

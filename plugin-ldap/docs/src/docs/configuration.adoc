@@ -1,0 +1,84 @@
+[[configuration]]
+== Configuration
+
+[NOTE]
+====
+Any property overrides must be specified in `grails-app/conf/application.yml` (or `application.groovy`) using the `grails.plugin.springsecurity` suffix, for example
+
+[source,yaml]
+----
+grails:
+   plugin:
+      springsecurity:
+         ldap:
+            search:
+               searchSubtree: true
+----
+====
+
+There are several configuration options for the LDAP plugin. In practice the defaults are fine and only a few will need to be overridden.
+
+[width="100%",options="header"]
+|====================
+| *Name* | *Default* | *Meaning*
+| ldap.search.searchSubtree | `true` | If `true` then searches the entire subtree as identified by context, if false (the default) then only searches the level identified by the context.
+| ldap.search.base | '' | Context name to search in, relative to the base of the configured ContextSource, e.g. 'dc=example,dc=com', 'ou=users,dc=example,dc=com'
+| ldap.search.filter | `'(uid={0})'` | The filter expression used in the user search
+| ldap.search.derefLink | `false` | Enables/disables link dereferencing during the search
+| ldap.search.timeLimit | `0` (unlimited) | The time to wait before the search fails
+| ldap.search. attributesToReturn | `null` (all) | The attributes to return as part of the search
+| ldap.authenticator.useBind | `true` | if `true` uses a `BindAuthenticator` to bind as the authenticating user, if `false` uses a `PasswordComparison Authenticator` to lookup the user login name and compare passwords
+| ldap.authenticator. attributesToReturn | `null` (all) | names of attribute ids to return; use `null` to return all and an empty list to return none
+| ldap.authenticator. dnPatterns | `null` (none) | optional pattern(s) used to create DN search patterns, e.g. \["cn={0},ou=people"\]
+| ldap.authenticator. passwordAttributeName | `'userPassword'` | the name of the password attribute to use when `useBind` = `false`
+| ldap.mapper. convertToUpperCase | `true` | whether to uppercase retrieved role names (will also be prefixed with "ROLE_" or the overridden role prefix)
+| ldap.mapper. passwordAttributeName | `'userPassword'` | password attribute name to use when building the `UserDetails`
+| ldap.mapper. userDetailsClass | `null` (create an LdapUserDetailsImpl) | use `'person'` to create a `Person`, `'inetOrgPerson'` to create an `InetOrgPerson`, or `null` to create an `LdapUserDetailsImpl`
+| ldap.mapper.roleAttributes | `null` | optional names of role attributes
+| ldap.auth. hideUserNotFound Exceptions | `true` | if `true` throw a new `BadCredentialsException`, otherwise throw the original `UsernameNotFoundException`
+| ldap.auth.useAuthPassword | `true` | If `true` use the supplied password as the credentials in the authenticationtoken, otherwise obtain the password from the UserDetails object (it may not be possible to read the password from the directory)
+| ldap.context.managerDn | `'cn=admin,dc=example, dc=com'` | DN to authenticate with
+| ldap.context. managerPassword | `'secret'` | username to authenticate with
+| ldap.context.server | `'ldap://localhost:389'` | address of the LDAP server
+| ldap.context. contextFactoryClassName | `com.sun.jndi. ldap. LdapCtxFactory` | class name of the `InitialContextFactory` to use
+| ldap.context. dirObjectFactoryClassName | http://static.springsource.org/spring-ldap/site/apidocs/org/springframework/ldap/core/support/DefaultDirObjectFactory.html[DefaultDirObjectFactory] | class name of the `DirObjectFactory` to use
+| ldap.context. baseEnvironmentProperties | none | extra context properties
+| ldap.context. cacheEnvironmentProperties | `true` | whether environment properties should be cached between requsts
+| ldap.context. anonymousReadOnly | `false` | whether an anonymous environment should be used for read-only operations
+| ldap.context.referral | `null` ('ignore') | the method to handle referrals. Can be `'ignore'` or `'follow'` to enable referrals to be automatically followed
+| ldap.authorities. retrieveGroupRoles | `true` | whether to infer roles based on group membership
+| ldap.authorities. retrieveDatabaseRoles | `false` | whether to retrieve additional roles from the database using GORM
+| ldap.authorities. groupRoleAttribute | `'cn'` | The ID of the attribute which contains the role name for a group
+| ldap.authorities. groupSearchFilter | `'uniquemember={0}'` | The pattern to be used for the user search. {0} is the user's DN
+| ldap.authorities. searchSubtree | `true` | If `true` a subtree scope search will be performed, otherwise a single-level search is used
+| ldap.authorities. groupSearchBase | `'ou=groups, dc=example, dc=com'` | The base DN from which the search for group membership should be performed
+| ldap.authorities. ignorePartialResult Exception | `false` | Whether `PartialResultException`s should be ignored in searches, typically used with Active Directory since AD servers often have a problem with referrals.
+| ldap.authorities.defaultRole | none | An optional default role to be assigned to all users
+| ldap.authorities.prefix | `'ROLE_'` | The prefix prepended to group names in order to make them Spring Security Roles.
+| ldap.authorities.clean.prefix | none | An optional string prefix to strip from the beginning of LDAP group names.  For example, `'EnHS-'` will change `EnHS-Staff-All` to `ROLE_Staff-All`
+| ldap.authorities.clean.suffix | none | An optional string suffix to strip from the end of LDAP group names.  For example, `'Group'` will change `Faculty Group` to `ROLE_Faculty`
+| ldap.authorities.clean.dashes | `false` | Set this to true to replace all dashes with underscores in LDAP group names.  For example, `Staff-All` will become `ROLE_Staff_All`
+| ldap.authorities.clean.uppercase | `false` |  Set this to true to uppercase all LDAP group names.  For example, `My_Ldap_Group` will become `ROLE_MY_LDAP_GROUP`
+|====================
+
+=== Persistent Logins
+
+To use cookies for persistent logins, configure these properties:
+
+[NOTE]
+====
+Just like with non-LDAP persistent tokens, you need to run the `s2-create-persistent-token` script to create a persistent login domain class and enable the feature.
+====
+
+[width="100%",options="header"]
+|====================
+| *Name* | *Default* | *Meaning*
+| ldap.useRememberMe | `false` | Whether to use persistent logins
+| ldap.rememberMe.detailsManager. attributesToRetrieve | `null` (all) | The attributes to return as part of the search
+| ldap.rememberMe.detailsManager. groupMemberAttributeName | 'uniquemember' | The attribute which contains members of a group
+| ldap.rememberMe.detailsManager. groupRoleAttributeName | 'cn' | The attribute which corresponds to the role name of a group
+| ldap.rememberMe.detailsManager. groupSearchBase | 'ou=groups,dc=example,dc=com' | The DN under which groups are stored
+| ldap.rememberMe.detailsManager. passwordAttributeName | 'userPassword' | Password attribute name
+| ldap.rememberMe.usernameMapper. userDnBase | none, must be set, e.g. 'dc=example,dc=com', 'ou=users,dc=example,dc=com' | The base name of the DN
+| ldap.rememberMe.usernameMapper. usernameAttribute | none, must be set, e.g. 'cn' | the attribute to append for the username component
+|====================
