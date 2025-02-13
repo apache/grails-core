@@ -60,6 +60,13 @@ public class GrailsBase implements DefaultFeature {
                 .version("$grailsVersion")
                 .implementation());
 
+        generatorContext.addBuildscriptDependency(Dependency.builder()
+                .groupId("org.grails")
+                .artifactId("grails-bom")
+                .pom(true)
+                .version("$grailsVersion")
+                .classpath());
+
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.grails")
                 .artifactId("grails-core")

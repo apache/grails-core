@@ -74,7 +74,7 @@ public class ViewJson extends GrailsViews implements DefaultFeature {
 
         generatorContext.addBuildscriptDependency(Dependency.builder()
                 .groupId("org.grails.plugins")
-                .lookupArtifactId("views-gradle")
+                .artifactId("views-gradle")
                 .buildSrc());
 
         generatorContext.addBuildPlugin(GradlePlugin.builder()

@@ -29,6 +29,7 @@ import org.grails.forge.feature.assetPipeline.templates.assetPipelineExtension;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.URLTemplate;
+import org.grails.forge.util.VersionInfo;
 
 import java.util.Set;
 
@@ -63,8 +64,10 @@ public class AssetPipeline implements DefaultFeature {
         generatorContext.addBuildPlugin(GradlePlugin.builder()
                 .id("com.bertramlabs.asset-pipeline")
                 .extension(new RockerWritable(assetPipelineExtension.template(generatorContext.getApplicationType())))
-                .lookupArtifactId("asset-pipeline-gradle")
+                .version("$assetPipelineGradleVersion")
                 .build());
+
+        generatorContext.getBuildProperties().put("assetPipelineGradleVersion", VersionInfo.getBomVersion("asset-pipeline-gradle"));
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId("com.bertramlabs.plugins")

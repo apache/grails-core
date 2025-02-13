@@ -51,7 +51,7 @@ public class Junit implements TestFeature, DefaultFeature {
     public void doApply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.junit.jupiter")
-                .lookupArtifactId("junit-jupiter")
+                .artifactId("junit-jupiter")
                 .testImplementation());
     }
 

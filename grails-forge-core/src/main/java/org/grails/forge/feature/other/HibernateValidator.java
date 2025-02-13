@@ -48,8 +48,8 @@ public class HibernateValidator implements Feature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.hibernate")
-                .lookupArtifactId("hibernate-validator")
+                .groupId("org.hibernate.validator")
+                .artifactId("hibernate-validator")
                 .implementation());
     }
 

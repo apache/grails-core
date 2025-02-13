@@ -13,56 +13,23 @@
     </repositories>
     <dependencies>
         <dependency>
-            <groupId>org.grails</groupId>
-            <artifactId>grails-gradle-plugin</artifactId>
-            <version>7.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.grails.plugins</groupId>
-            <artifactId>hibernate5</artifactId>
-            <version>9.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.grails.plugins</groupId>
-            <artifactId>cache</artifactId>
-            <version>8.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
+            <!-- Last released Feb 24, 2021 -->
             <groupId>org.grails.plugins</groupId>
             <artifactId>cache-ehcache</artifactId>
             <version>3.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.grails.plugins</groupId>
-            <artifactId>database-migration</artifactId>
-            <version>6.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.grails.plugins</groupId>
             <artifactId>quartz</artifactId>
-            <version>3.0.0</version>
+            <version>4.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.asciidoctor.jvm.convert</groupId>
             <artifactId>asciidoctor-gradle-jvm</artifactId>
-            <version>4.0.1</version>
+            <version>4.0.3</version>
         </dependency>
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>7.0.5.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>org.mongodb</groupId>
-            <artifactId>mongodb-driver-sync</artifactId>
-            <version>4.11.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.grails.plugins</groupId>
-            <artifactId>views-gradle</artifactId>
-            <version>4.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
+            <!-- Last released Oct 17, 2022 -->
             <groupId>org.grails.plugins</groupId>
             <artifactId>embedded-mongodb</artifactId>
             <version>2.0.1</version>
@@ -70,12 +37,7 @@
         <dependency>
             <groupId>com.github.johnrengelman.shadow</groupId>
             <artifactId>shadow</artifactId>
-            <version>7.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.grails.plugins</groupId>
-            <artifactId>grails-console</artifactId>
-            <version>2.1.1</version>
+            <version>8.1.1</version>
         </dependency>
         <dependency>
             <groupId>com.github.erdi</groupId>
@@ -85,17 +47,7 @@
         <dependency>
             <groupId>org.zeroturnaround</groupId>
             <artifactId>gradle-jrebel-plugin</artifactId>
-            <version>1.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bertramlabs.plugins</groupId>
-            <artifactId>asset-pipeline-gradle</artifactId>
-            <version>5.0.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.11.4</version>
+            <version>1.2.1</version>
         </dependency>
         <dependency>
             <groupId>io.micronaut</groupId>

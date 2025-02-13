@@ -53,12 +53,12 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
         final String srcDirPath = getSrcDirPath();
         generatorContext.addBuildscriptDependency(Dependency.builder()
                 .groupId("org.grails.plugins")
-                .lookupArtifactId("database-migration")
+                .artifactId("database-migration")
                 .buildSrc()
                 .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))));
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.grails.plugins")
-                .lookupArtifactId("database-migration")
+                .artifactId("database-migration")
                 .implementation());
     }
 

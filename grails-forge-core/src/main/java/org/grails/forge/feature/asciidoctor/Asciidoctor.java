@@ -54,9 +54,9 @@ public class Asciidoctor implements Feature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final String asciidoctorjVersion = coordinateResolver.resolve("asciidoctorj")
-                .map(Coordinate::getVersion).orElse("2.1.0");
+                .map(Coordinate::getVersion).orElse("3.0.0");
         final String asciidoctorjDiagramVersion = coordinateResolver.resolve("asciidoctorj-diagram")
-                .map(Coordinate::getVersion).orElse("1.5.18");
+                .map(Coordinate::getVersion).orElse("2.3.1");
         generatorContext.addTemplate("asciidocGradle", new RockerTemplate("gradle/asciidoc.gradle", asciidocGradle.template(asciidoctorjVersion, asciidoctorjDiagramVersion)));
 
         generatorContext.addBuildPlugin(GradlePlugin.builder()

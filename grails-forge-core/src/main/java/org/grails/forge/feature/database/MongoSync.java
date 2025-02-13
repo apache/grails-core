@@ -51,7 +51,7 @@ public class MongoSync extends MongoFeature {
         config.put("grails.mongodb.url", "mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/foo");
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.mongodb")
-                .lookupArtifactId("mongodb-driver-sync")
+                .artifactId("mongodb-driver-sync")
                 .implementation()
         );
     }

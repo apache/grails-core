@@ -24,7 +24,7 @@ class AsciidoctorSpec extends ApplicationContextSpec implements CommandOutputFix
         final def buildGradle = output["build.gradle"]
 
         expect:
-        buildGradle.contains("id \"org.asciidoctor.jvm.convert\" version \"4.0.1\"")
+        buildGradle.contains("id \"org.asciidoctor.jvm.convert\"")
         buildGradle.contains("apply from: \"gradle/asciidoc.gradle\"")
     }
 
@@ -35,10 +35,10 @@ class AsciidoctorSpec extends ApplicationContextSpec implements CommandOutputFix
 
         expect:
         asciidocGradle.contains("""asciidoctorj {
-    version '2.1.0'
+    version '3.0.0'
     modules {
         diagram {
-            version '1.5.18'
+            version '2.3.1'
         }
     }
 

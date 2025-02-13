@@ -70,7 +70,7 @@ public class ViewMarkup extends GrailsViews implements Feature {
 
         generatorContext.addBuildscriptDependency(Dependency.builder()
                 .groupId("org.grails.plugins")
-                .lookupArtifactId("views-gradle")
+                .artifactId("views-gradle")
                 .buildSrc());
 
         generatorContext.addBuildPlugin(GradlePlugin.builder()

@@ -18,16 +18,15 @@ package org.grails.forge.feature.grails;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
-import org.grails.forge.build.dependencies.Coordinate;
 import org.grails.forge.build.dependencies.CoordinateResolver;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.build.dependencies.LookupFailedException;
 import org.grails.forge.build.gradle.GradlePlugin;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.view.GrailsGsp;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.options.Options;
+import org.grails.forge.util.VersionInfo;
 
 import java.util.Set;
 
@@ -62,22 +61,22 @@ class GrailsGradlePlugin implements DefaultFeature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        final String artifactId = "grails-gradle-plugin";
-        final Coordinate grailsGradlePluginCoordinate = resolver.resolve(artifactId).orElseThrow(() -> new LookupFailedException(artifactId));
         final ApplicationType applicationType = generatorContext.getApplicationType();
         generatorContext.addBuildscriptDependency(Dependency.builder()
                 .groupId("org.grails")
-                .lookupArtifactId("grails-gradle-plugin")
+                .artifactId("grails-gradle-plugin")
                 .buildSrc());
+
+        String grailsGradlePluginVersion = VersionInfo.getBomVersion("grails-gradle-plugin");
+
         if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-plugin").version(grailsGradlePluginCoordinate.getVersion()).useApplyPlugin(true).build());
+            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-plugin").useApplyPlugin(true).build());
         }
         if (generatorContext.getFeature(GrailsWeb.class).isPresent()) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-web").version(grailsGradlePluginCoordinate.getVersion()).useApplyPlugin(true).build());
+            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-web").useApplyPlugin(true).build());
         }
         if (generatorContext.getFeature(GrailsGsp.class).isPresent()) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-gsp").version(grailsGradlePluginCoordinate.getVersion()).useApplyPlugin(true).build());
+            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-gsp").useApplyPlugin(true).build());
         }
-        generatorContext.getBuildProperties().put("grailsGradlePluginVersion", grailsGradlePluginCoordinate.getVersion());
     }
 }

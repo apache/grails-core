@@ -51,7 +51,7 @@ public class GrailsWebConsole implements Feature {
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.grails.plugins")
-                .lookupArtifactId("grails-console")
+                .artifactId("grails-console")
                 .runtimeOnly());
 
         final Map<String, Object> config = generatorContext.getConfiguration();

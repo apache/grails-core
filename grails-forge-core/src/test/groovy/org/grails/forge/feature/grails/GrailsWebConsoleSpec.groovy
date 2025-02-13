@@ -22,7 +22,7 @@ class GrailsWebConsoleSpec extends BeanContextSpec {
                 .render()
 
         then:
-        template.contains("runtimeOnly \"org.grails.plugins:grails-console:2.1.1\"")
+        template.contains("runtimeOnly \"org.grails.plugins:grails-console\"")
     }
 
     void "test config"() {

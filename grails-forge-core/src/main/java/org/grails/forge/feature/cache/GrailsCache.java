@@ -50,7 +50,7 @@ public class GrailsCache implements Feature {
         config.put("grails.cache.cacheManager", "grails.plugin.cache.GrailsConcurrentMapCacheManager");
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.grails.plugins")
-                .lookupArtifactId("cache")
+                .artifactId("cache")
                 .implementation());
     }
 
