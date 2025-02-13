@@ -1,0 +1,29 @@
+== Release History
+Please check release notes at https://github.com/grails/grails-spring-security-cas/releases for release history of future releases.
+
+* Version 3.1.0
+** released Oct 3, 2017
+* Version 2.0.1
+** released Oct 3, 2017
+* Version 3.0.1
+** released May 2, 2017
+* Version 3.0.0
+** released December 8, 2015
+* Version 2.0.0
+** released December 7, 2015
+* Version 3.0.0.M1
+** released September 23, 2015
+* Version 2.0-RC1
+** released November 11, 2013
+* Version 1.0.4
+** released July 11, 2012
+* Version 1.0.3
+** released July 4, 2012
+* Version 1.0.2
+** released February 12, 2011
+* Version 1.0.1
+** released September 1, 2010
+* Version 1.0
+** released July 27, 2010
+* Version 0.1
+** released June 18, 2010

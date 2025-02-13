@@ -1,0 +1,136 @@
+buildscript {
+	repositories {
+		maven { url 'https://repo.grails.org/grails/core' }
+	}
+	dependencies {
+		classpath "org.grails:grails-gradle-plugin:$grailsVersion"
+	}
+}
+
+version = projectVersion
+group = 'org.grails.plugins'
+
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+apply plugin: 'org.grails.grails-plugin'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+ext."signing.keyId" = project.hasProperty("signing.keyId") ? project.getProperty('signing.keyId') : System.getenv('SIGNING_KEY')
+ext."signing.secretKeyRingFile" = project.hasProperty("signing.secretKeyRingFile") ? project.getProperty('signing.secretKeyRingFile') : "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
+ext."signing.password" = project.hasProperty("signing.password") ? project.getProperty('signing.password') : System.getenv('SIGNING_PASSPHRASE')
+ext.pomInfo = {
+	delegate.name "Grails Spring Security CAS Plugin"
+	delegate.description project.projectDesc
+	delegate.url project.hasProperty('vcsUrl') ? project.vcsUrl : "https://github.com/grails/$project.name"
+
+	delegate.licenses {
+		delegate.license {
+			delegate.name 'The Apache Software License, Version 2.0'
+			delegate.url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+			delegate.distribution 'repo'
+		}
+	}
+
+	delegate.scm {
+		delegate.url "scm:git@github.com:${githubSlug}.git"
+		delegate.connection "scm:git@github.com:${githubSlug}.git"
+		delegate.developerConnection "scm:git@github.com:${githubSlug}.git"
+	}
+
+	if (developers) {
+		delegate.developers {
+			for (dev in developers.split(',')) {
+				delegate.developer {
+					delegate.id dev.toLowerCase().replace(' ', '')
+					delegate.name dev
+				}
+			}
+		}
+	}
+}
+
+repositories {
+	maven { url "https://repo.grails.org/grails/core" }
+}
+
+configurations {
+	documentation.extendsFrom compileClasspath
+}
+
+dependencies {
+	compileOnly "jakarta.servlet:jakarta.servlet-api:$jakartaServletApiVersion"
+	compileOnly "org.springframework.boot:spring-boot-starter-logging"
+	compileOnly "org.grails:grails-web-boot"
+
+	profile "org.grails.profiles:web-plugin"
+	api "org.grails.plugins:spring-security-core:$springSecurityCoreVersion"
+
+	api "org.apereo.cas.client:cas-client-core:$casClientCoreVersion", {
+		exclude module: 'slf4j-api'
+	}
+	api "org.springframework.security:spring-security-cas:$springSecurityVersion", {
+		['spring-beans', 'spring-context', 'spring-core', 'spring-security-core',
+		 'spring-security-web', 'spring-web'].each { exclude module: it }
+	}
+
+	documentation "com.github.javaparser:javaparser-core:3.26.2"
+}
+
+tasks.withType(Groovydoc).configureEach {
+	classpath = configurations.documentation
+}
+
+publishing {
+	if (isSnapshot) {
+		repositories {
+			maven {
+				credentials {
+					def u = System.getenv("ARTIFACTORY_USERNAME") ?: project.hasProperty("artifactoryPublishUsername") ? project.artifactoryPublishUsername : ''
+					def p = System.getenv("ARTIFACTORY_PASSWORD") ?: project.hasProperty("artifactoryPublishPassword") ? project.artifactoryPublishPassword : ''
+					username = u
+					password = p
+				}
+				url "https://repo.grails.org/grails/plugins3-snapshots-local"
+			}
+		}
+	}
+
+	publications {
+		maven(MavenPublication) {
+			artifactId project.name
+			from components.java
+
+			artifact sourcesJar
+			artifact javadocJar
+			artifact source: "${buildDir}/classes/groovy/main/META-INF/grails-plugin.xml",
+					classifier: "plugin",
+					extension: 'xml'
+			pom.withXml {
+				def xml = asNode()
+
+				xml.children().last() + pomInfo
+				// dependency management shouldn't be included
+				def n = xml.get("dependencyManagement")
+				if (n)
+					xml.remove(n)
+			}
+
+		}
+	}
+}
+
+signing {
+	sign publishing.publications.maven
+}
+
+tasks.withType(Sign) {
+	onlyIf { isReleaseVersion }
+}

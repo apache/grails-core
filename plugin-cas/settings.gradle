@@ -1,0 +1,35 @@
+plugins {
+    id "com.gradle.enterprise" version "3.16.2"
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.13'
+}
+
+gradleEnterprise {
+    server = 'https://ge.grails.org'
+    buildScan {
+        publishAlwaysIf(System.getenv('CI') == 'true')
+        publishIfAuthenticated()
+        uploadInBackground = System.getenv("CI") == null
+        capture {
+            taskInputFiles = true
+        }
+    }
+
+}
+
+buildCache {
+    local { enabled = System.getenv('CI') != 'true' }
+    remote(gradleEnterprise.buildCache) {
+        def isAuthenticated = System.getenv('GRADLE_ENTERPRISE_ACCESS_KEY')
+        push = System.getenv('CI') == 'true' && isAuthenticated
+        enabled = true
+    }}
+
+include 'docs'
+include 'plugin'
+include 'testapp-spring-security-cas-test1'
+
+project(':testapp-spring-security-cas-test1').projectDir = new File(settingsDir, 'testapps/spring-security-cas-test1')
+
+rootProject.name = 'spring-security-cas'
+
+findProject(':plugin').name = 'spring-security-cas'

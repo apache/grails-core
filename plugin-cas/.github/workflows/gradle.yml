@@ -1,0 +1,68 @@
+name: Java CI
+on:
+  push:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  pull_request:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      WORKSPACE: ${{ github.workspace }}
+      GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+      - name: Run Tests
+        if: github.event_name == 'pull_request'
+        id: tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: check -Dgeb.env=chromeHeadless
+      - name: Run Build
+        if: github.event_name == 'push'
+        id: build
+        uses: gradle/gradle-build-action@v2
+        env:
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+        with:
+          arguments: build -Dgeb.env=chromeHeadless
+      - name: Publish Test Report
+        if: steps.build.outcome == 'failure' || steps.tests.outcome == 'failure'
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          report_paths: '**/build/test-results/test/TEST-*.xml'
+      - name: Publish to repo.grails.org
+        id: publish
+        uses: gradle/gradle-build-action@v2
+        if: steps.build.outcome == 'success' && github.event_name == 'push'
+        env:
+          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+          ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+        with:
+          arguments: -Dorg.gradle.internal.publish.checksums.insecure=true publish
+      - name: Build Docs
+        id: docs
+        if: steps.build.outcome == 'success' && github.event_name == 'push'
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: docs:docs
+      - name: Publish to Github Pages
+        if: steps.docs.outcome == 'success' && github.event_name == 'push'
+        uses: grails/github-pages-deploy-action@v2
+        env:
+          TARGET_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs/build/docs
+          DOC_FOLDER: gh-pages
+          COMMIT_EMAIL: behlp@objectcomputing.com
+          COMMIT_NAME: Puneet Behl

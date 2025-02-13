@@ -1,0 +1,133 @@
+name: Release
+on:
+  release:
+    types: [published]
+jobs:
+  publish:
+    outputs:
+      release_version: ${{ steps.release_version.outputs.value }}
+    runs-on: ubuntu-latest
+    env:
+      GIT_USER_NAME: grails-build
+      GIT_USER_EMAIL: grails-build@users.noreply.github.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Set the current release version
+        id: release_version
+        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
+      - name: Run pre-release
+        uses: grails/github-actions/pre-release@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Assemble
+        if: success()
+        id: assemble
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: assemble
+        env:
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+      - name: Upload Distribution
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spring-security-cas-${{ steps.release_version.outputs.value }}.jar
+          path: plugin/build/libs/spring-security-cas-${{ steps.release_version.outputs.value }}-plain.jar
+      - name: Generate secring file
+        env:
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
+      - name: Publish to Sonatype OSSRH
+        id: publish
+        uses: gradle/gradle-build-action@v2
+        env:
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_NEXUS_URL: ${{ secrets.SONATYPE_NEXUS_URL }}
+          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        with:
+          arguments: |
+            -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
+            publishToSonatype 
+            closeSonatypeStagingRepository
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: Nexus Staging Close And Release
+        uses: gradle/gradle-build-action@v2
+        env:
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
+        with:
+          arguments: |
+            findSonatypeStagingRepository
+            releaseSonatypeStagingRepository
+      - name: Run post-release
+        if: success()
+        uses: grails/github-actions/post-release@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          SNAPSHOT_SUFFIX: -SNAPSHOT
+  docs:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: Build Documentation
+        id: docs
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: docs:docs
+      - name: Publish to Github Pages
+        if: success()
+        uses: grails/github-pages-deploy-action@v2
+        env:
+          SKIP_LATEST: ${{ contains(needs.publish.outputs.release_version, 'M') }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs/build/docs
+          DOC_FOLDER: gh-pages
+          COMMIT_EMAIL: behlp@unityfoundation.io
+          COMMIT_NAME: Puneet Behl
+          VERSION: ${{ needs.publish.outputs.release_version }}

@@ -1,0 +1,12 @@
+*.iml
+*.ipr
+*.iws
+*.log
+*.sublime-workspace
+.asscache
+.DS_Store
+.gradle
+.idea
+build
+cobertura.ser
+testapps/server

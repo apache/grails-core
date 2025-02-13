@@ -1,0 +1,82 @@
+[[usage]]
+== Usage
+
+[NOTE]
+====
+Configuring your CAS server is beyond the scope of this document. There are many different approaches and this will most likely be done by IT staff. It's assumed here that you already have a running CAS server.
+====
+
+http://www.jasig.org/cas[CAS] is a popular single sign-on implementation. It's open source and has an Apache-like license, and is easy to get started with but is also highly configurable. In addition it has clients written in Java, .Net, PHP, Perl, and other languages.
+
+=== Installation
+
+There isn't much that you need to do in your application to be a CAS client. Add a dependency in `build.gradle` for this plugin:
+
+If you are using 3.3.x use:
+
+[source,groovy]
+[subs="attributes"]
+.build.gradle
+----
+dependencies {
+   ...
+   compile 'org.grails.plugins:spring-security-cas:{projectVersion}'
+   ...
+----
+
+If you are using Grails 3.0.x 3.1.x or 3.2.x use:
+
+[source,groovy]
+[subs="attributes"]
+.build.gradle
+----
+dependencies {
+   ...
+   compile 'org.grails.plugins:spring-security-cas:{threeZeroXProjectVersion}'
+   ...
+----
+
+
+
+
+then configure any required parameters and whatever optional parameters you want in application.yml or application.groovy. These are described in detail in the <<configuration>> section but typically you only need to set these properties:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    plugin:
+        springsecurity:
+            cas:
+                loginUri: /login
+                serviceUrl: http://localhost:8080/login/cas
+                serverUrlPrefix: https://your-cas-server/cas
+                proxyCallbackUrl: http://localhost:8080/secure/receptor
+                proxyReceptorUrl: /secure/receptor
+----
+
+=== Single Signout
+
+Single signout is enabled by default and enables signing out for all CAS-managed applications with one logout. This works best in the plugin when combined with the `afterLogoutUrl` parameter, for example:
+
+[source,java]
+----
+grails:
+   plugin:
+      springsecurity:
+         logout:
+            afterLogoutUrl: https://your-cas-server/cas/logout?url=http://localhost:8080/
+----
+
+With this configuration, when a user logs out locally by navigating to `/logout/` they'll then be redirected to the CAS server's logout URL. This request includes a local URL to redirect back afterwards. When the whole process is finished they'll be logged out locally and at the CAS server, so subsequent secure URLs at the local server or other CAS-managed servers will require a new login.
+
+If you don't want the single signout filter registered, you can disable the feature:
+
+[source,java]
+----
+grails:
+   plugin:
+      springsecurity:
+         cas:
+            useSingleSignout: false
+----

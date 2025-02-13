@@ -1,0 +1,68 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "labels": ["type: dependency upgrade"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "allowedVersions": "!/SNAPSHOT$/"
+    },
+    {
+      "matchPackagePatterns": [
+        "^org\\.codehaus\\.groovy"
+      ],
+      "groupName": "groovy monorepo"
+    },
+    {
+      "matchPackagePatterns": [
+        "^org\\.asciidoctor"
+      ],
+      "groupName": "asciidoctor monorepo"
+    {
+      "matchPackagePatterns": [
+        "^org\\.spockframework"
+      ],
+      "groupName": "spock framework monorepo"
+    },
+    {
+      "matchPackageNames": [
+        "org.grails:grails-bom",
+        "org.grails:grails-bootstrap",
+        "org.grails:grails-codecs",
+        "org.grails:grails-console",
+        "org.grails:grails-core",
+        "org.grails:grails-databinding",
+        "org.grails:grails-dependencies",
+        "org.grails:grails-docs",
+        "org.grails:grails-encoder",
+        "org.grails:grails-gradle-model",
+        "org.grails:grails-logging",
+        "org.grails:grails-plugin-codecs",
+        "org.grails:grails-plugin-controllers",
+        "org.grails:grails-plugin-databinding",
+        "org.grails:grails-plugin-datasource",
+        "org.grails:grails-plugin-domain-class",
+        "org.grails:grails-plugin-i18n",
+        "org.grails:grails-plugin-interceptors",
+        "org.grails:grails-plugin-mimetypes",
+        "org.grails:grails-plugin-rest",
+        "org.grails:grails-plugin-services",
+        "org.grails:grails-plugin-url-mappings",
+        "org.grails:grails-plugin-url-validation",
+        "org.grails:grails-shell",
+        "org.grails:grails-spring",
+        "org.grails:grails-test",
+        "org.grails:grails-validation",
+        "org.grails:grails-web",
+        "org.grails:grails-web-boot",
+        "org.grails:grails-web-common",
+        "org.grails:grails-web-databinding",
+        "org.grails:grails-web-fileupload",
+        "org.grails:grails-web-mvc",
+        "org.grails:grails-web-url-mappings"
+      ],
+      "groupName": "grails monorepo"
+    }
+  ]
+}

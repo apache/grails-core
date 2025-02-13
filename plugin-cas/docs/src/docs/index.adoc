@@ -1,0 +1,15 @@
+:includedir: src/docs/
+= Spring Security CAS Plugin - Reference Documentation
+Puneet Behl <behlp@unityfoundation.io>
+:revnumber: {projectVersion}
+:encoding: utf-8
+:lang: en
+:numbered:
+
+include::{includedir}introduction.adoc[]
+
+include::{includedir}usage.adoc[]
+
+include::{includedir}configuration.adoc[]
+
+include::{includedir}history.adoc[]
