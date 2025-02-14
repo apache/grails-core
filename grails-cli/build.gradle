@@ -1,6 +1,6 @@
 plugins {
     id "org.grails.forge.internal.build.cli-module"
-    id 'org.graalvm.buildtools.native' version '0.10.4'
+    id 'org.graalvm.buildtools.native' version '0.10.5'
 }
 
 sourceSets {
@@ -12,7 +12,7 @@ sourceSets {
 }
 
 ext {
-    picocliVersion = '4.7.5'
+    picocliVersion = '4.7.6'
 }
 
 configurations.all {

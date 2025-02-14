@@ -39,7 +39,7 @@ micronaut {
 }
 tasks.named('dockerfileNative') {
     // https://www.graalvm.org/latest/docs/getting-started/container-images/
-    baseImage("ghcr.io/graalvm/jdk:ol8-java17-22.3.3")
+    baseImage("ghcr.io/graalvm/jdk-community:23.0.2-ol8")
 }
 
 tasks.named("dockerBuildNative") {
