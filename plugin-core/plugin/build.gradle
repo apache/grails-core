@@ -71,5 +71,5 @@ apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle'
 apply from: rootProject.layout.projectDirectory.file('gradle/groovy-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/cleanBuild.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/docs.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
