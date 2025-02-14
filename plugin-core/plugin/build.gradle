@@ -27,7 +27,7 @@ dependencies {
 	api 'org.grails:grails-core'
 	api 'org.grails:grails-datastore-core' // API because used in templates
 	api 'org.grails:grails-datastore-gorm' // API because used in templates
-	api "org.grails:grails-events-transform:$grailsAsyncVersion" // API because used in templates, Not yet in the milestone bom
+	api 'org.grails:grails-events-transform' // API because used in templates
 	api 'org.grails:grails-plugin-mimetypes'
 	api 'org.grails.plugins:async' // AsyncGrailsWebRequest is used in public API
 	implementation 'org.grails.plugins:events' // Events Plugin is required to implement EventBus

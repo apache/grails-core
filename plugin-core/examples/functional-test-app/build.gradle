@@ -16,7 +16,7 @@ dependencies {
     implementation 'org.grails:grails-core'
     implementation 'org.grails:grails-datastore-core'
     implementation 'org.grails:grails-datastore-gorm'
-    implementation "org.grails:grails-events-transform:$grailsAsyncVersion" // Not yet in the milestone bom
+    implementation 'org.grails:grails-events-transform'
     implementation 'org.grails.plugins:gsp'
     implementation 'org.grails:grails-plugin-rest'
     implementation 'org.grails:grails-plugin-validation'
