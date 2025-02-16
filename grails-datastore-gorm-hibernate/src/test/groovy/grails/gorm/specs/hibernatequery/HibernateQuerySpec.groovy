@@ -599,26 +599,33 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def orderByAge() {
-        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        oldBob.addToPets(new Pet(name:"Lucky",age:1)).save(flush:true)
+        fred.addToPets(new Pet(name:"Tom",age:2)).save(flush:true)
         given:
-        hibernateQuery.order(new Query.Order("age", Query.Order.Direction.DESC))
+        hibernateQuery.createAlias("pets","mascota")
+                        .order(new Query.Order("mascota.age", Query.Order.Direction.DESC))
         when:
         def bobs = hibernateQuery.list()
         then:
         bobs.size() == 2
-        oldBob == bobs[0]
+        oldBob == bobs[1]
     }
 
     def orderByNameIgnoreCase() {
         def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
-        new Person(firstName: "Bob", lastName: "builder", age: 50).save(flush: true)
+        def walt = new Person(firstName: "Walt", lastName: "Disney", age: 50).save(flush: true)
+        oldBob.addToPets(new Pet(name:"Lucky",age:1)).save(flush:true)
+        fred.addToPets(new Pet(name:"Angel",age:2)).save(flush:true)
+        walt.addToPets(new Pet(name:"angel",age:2)).save(flush:true)
         given:
-        hibernateQuery.order(new Query.Order("lastName", Query.Order.Direction.DESC).ignoreCase())
+        hibernateQuery.createAlias("pets","mascota")
+                .order(new Query.Order("mascota.name", Query.Order.Direction.ASC).ignoreCase())
         when:
         def bobs = hibernateQuery.list()
         then:
         bobs.size() == 3
-        fred == bobs[0]
+        oldBob == bobs[2]
     }
 
     def projectionProperty() {
@@ -691,14 +698,20 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def groupByLastNameAverageAge() {
-        new Person(firstName: "Fred", lastName: "Builder", age: 52).save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 52)
+        fred.save(flush: true)
+        oldBob.addToPets(new Pet(name:"Lucky",age:4)).save(flush:true)
+        fred.addToPets(new Pet(name:"Lucky",age:2)).save(flush:true)
         given:
-        hibernateQuery.projections().groupProperty("lastName").avg("age")
+        hibernateQuery.createAlias("pets","mascota")
+                .projections()
+                .groupProperty("mascota.name")
+                .avg("mascota.age")
         when:
         def result = hibernateQuery.singleResult()
         then:
-        result[0] == "Builder"
-        result[1] == 51
+        result[0] == "Lucky"
+        result[1] == 3
     }
 
     def sizeEquals() {

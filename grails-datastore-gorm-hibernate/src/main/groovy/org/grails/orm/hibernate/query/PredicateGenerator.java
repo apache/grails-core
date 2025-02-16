@@ -233,9 +233,6 @@ public class PredicateGenerator {
         return list.toArray(new Predicate[0]);
     }
 
-    private static String getAlias(Map<String, String> aliasMap, Query.Equals c) {
-        return aliasMap.computeIfAbsent(c.getProperty(), s -> "root." + s);
-    }
 
     private static Class getJavaTypeOfInClause(SqmInListPredicate in) {
         Class javaTypeOfInClause = in.getTestExpression().getExpressible().getExpressibleJavaType().getJavaTypeClass();

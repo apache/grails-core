@@ -479,9 +479,9 @@ public abstract class AbstractHibernateQuery extends Query {
         CriteriaQuery cq = projections.size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
         From root = cq.from(entity.getJavaClass());
         Map<String, From> tablesByName = assignJoinTables(joinColumns, root,aliasMap);
-        assignProjections(projections, cb, root, tablesByName, cq);
-        assignGroupBy(groupProjections, root, cq);
-        assignOrderBy(cq, cb, root);
+        assignProjections(projections, cb, root, cq, tablesByName);
+        assignGroupBy(groupProjections, root, cq, tablesByName);
+        assignOrderBy(cq, cb, root,tablesByName);
         assignCriteria(cq, cb, root,tablesByName);
 
         org.hibernate.query.Query query = getSessionFactory()
@@ -531,23 +531,24 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignOrderBy(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root) {
+    private void assignOrderBy(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root, Map<String, From> tablesByName) {
         List<Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
             cq.orderBy(orders
                     .stream()
                     .map(order -> {
+                        Path expression = getFullyQualifiedPath(tablesByName, order.getProperty());
                         if (order.isIgnoreCase()) {
                             if (order.getDirection().equals(Order.Direction.ASC)) {
-                                return cb.asc(cb.lower(root.get(order.getProperty())));
+                                return cb.asc(cb.lower(expression));
                             }  else {
-                                return cb.desc(cb.lower(root.get(order.getProperty())));
+                                return cb.desc(cb.lower(expression));
                             }
                         } else {
                             if (order.getDirection().equals(Order.Direction.ASC)) {
-                                return cb.asc(root.get(order.getProperty()));
+                                return cb.asc(expression);
                             }  else {
-                                return cb.desc(root.get(order.getProperty()));
+                                return cb.desc(expression);
                             }
                         }
 
@@ -557,18 +558,21 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignGroupBy(List<GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq) {
+    private void assignGroupBy(List<GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq, Map<String, From> tablesByName) {
         if (!groupProjections.isEmpty()) {
             List<Expression> groupByPaths = groupProjections
                     .stream()
-                    .map(groupPropertyProjection -> root.get(groupPropertyProjection.getPropertyName()))
+                    .map(groupPropertyProjection -> {
+                        String propertyName = groupPropertyProjection.getPropertyName();
+                        return getFullyQualifiedPath(tablesByName, propertyName);
+                    })
                     .map(Expression.class::cast)
                     .toList();
             cq.groupBy(groupByPaths);
         }
     }
 
-    private void assignProjections(List<Projection> projections, HibernateCriteriaBuilder cb, From root, Map<String, From> tablesByName, CriteriaQuery cq) {
+    private void assignProjections(List<Projection> projections, HibernateCriteriaBuilder cb, From root, CriteriaQuery cq, Map<String, From> tablesByName) {
         List<Expression> projectionExpressions = projections
                 .stream()
                 .map(projectionToJpaExpression(cb, tablesByName))
