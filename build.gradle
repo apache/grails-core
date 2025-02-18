@@ -64,6 +64,9 @@ dependencies {
     documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.apache.groovy:groovy-xml'
     documentation 'com.github.javaparser:javaparser-core'
+
+    // Added to be able to resolve the geb version from the BOM in the resolveVersions task
+    compileOnly 'org.gebish:geb-spock'
 }
 
 grailsPublish {
@@ -82,12 +85,25 @@ grailsPublish {
     ]
 }
 
+tasks.register('resolvedVersions') {
+    group = 'documentation'
+    description = 'Resolve Geb Version from the BOM'
+    ext.gebVersion = configurations.compileClasspath
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .find {
+                it.moduleVersion.id.group == 'org.gebish' &&
+                it.moduleVersion.id.name == 'geb-spock'
+            }.moduleVersion.id.version
+    logger.lifecycle('Resolved Geb version for Javadoc links: {}', gebVersion)
+}
+
 tasks.withType(Groovydoc).configureEach {
     destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
     docTitle = "Grails Geb Plugin $version"
     classpath = configurations.documentation
     source = files(source, sourceSets.testFixtures.allSource)
-    link("https://www.gebish.org/manual/$gebVersion/api/", 'geb')
+    link("https://www.gebish.org/manual/${resolvedVersions.gebVersion}/api/", 'geb')
 }
 
 tasks.withType(Test).configureEach {
