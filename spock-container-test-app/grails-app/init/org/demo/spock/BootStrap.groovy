@@ -2,8 +2,9 @@ package org.demo.spock
 
 class BootStrap {
 
-    def init = { servletContext ->
+    def init = {
     }
+
     def destroy = {
     }
 }
