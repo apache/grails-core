@@ -30,7 +30,7 @@ public interface GrailsBootstrapClass extends GrailsClass {
     /**
      * Calls the init closure if one exists.
      */
-    void callInit(ServletContext servletContext);
+    void callInit();
 
     /**
      * Calls the destroy closure if one exists.

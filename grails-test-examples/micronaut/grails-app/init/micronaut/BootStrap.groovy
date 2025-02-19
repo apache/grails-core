@@ -2,8 +2,11 @@ package micronaut
 
 class BootStrap {
 
-    def init = { servletContext ->
+    ServletContext servletContext
+
+    def init = {
     }
+    
     def destroy = {
     }
 }

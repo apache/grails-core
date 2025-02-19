@@ -1,15 +1,18 @@
 package functionaltests
 
-import functionaltests.*
+import jakarta.servlet.ServletContext
 
 class BootStrap {
 
-    def init = { servletContext ->
+    ServletContext servletContext
+
+    def init = {
         Book.withTransaction {
             new Book(title:"Example Book").save(flush:true)
             assert Book.count() == 1
         }
     }
+
     def destroy = {
     }
 }

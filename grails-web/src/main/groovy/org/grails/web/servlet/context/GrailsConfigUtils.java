@@ -80,7 +80,7 @@ public class GrailsConfigUtils {
                 final Object instance = bootstrapClass.getReferenceInstance();
                 webContext.getAutowireCapableBeanFactory().autowireBeanProperties(
                         instance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false);
-                bootstrapClass.callInit(servletContext);
+                bootstrapClass.callInit();
             }
             if (interceptor != null) {
                 interceptor.flush();

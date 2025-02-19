@@ -1,10 +1,12 @@
 package gorm
 
-import gorm.*
+import jakarta.servlet.ServletContext
 
 class BootStrap {
 
-    def init = { servletContext ->
+    ServletContext servletContext
+
+    def init = {
         Book.withTransaction {
             def b = new Book(title:"The Stand")
 
@@ -20,8 +22,8 @@ class BootStrap {
             paris.addToUsers(name:"Joe")
             paris.save(flush:true)
         }
-
     }
+
     def destroy = {
     }
 }
