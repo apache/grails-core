@@ -12,12 +12,9 @@ import functional.tests.Team
 import functional.tests.Proxy
 import grails.gorm.transactions.Transactional
 import groovy.transform.CompileStatic
-import jakarta.servlet.ServletContext
 
 @CompileStatic
 class BootStrap {
-
-    ServletContext servletContext
 
     def init = {
         setupData()
