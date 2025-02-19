@@ -79,12 +79,9 @@ Given the next code:
 ----
 package demo
 
-import groovy.transform.CompileStatic
-
-@CompileStatic
 class BootStrap {
 
-    def init = { servletContext ->
+    def init = {
         Book.saveAll(   
             new Book(name: 'Grails 3 - Step by Step', 
                      status: Status.NOT_SET),
@@ -94,7 +91,9 @@ class BootStrap {
                      status: Status.SOLD),
         )
     }
-    def destroy = { }
+
+    def destroy = {
+    }
 }
 ----
 

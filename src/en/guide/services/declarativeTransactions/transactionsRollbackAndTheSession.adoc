@@ -54,7 +54,7 @@ class AuthorService {
 ----
 class AuthorController {
 
-    def authorService
+    AuthorService authorService
 
     def updateAge() {
         try {
@@ -110,7 +110,7 @@ In this case a new request will deal with retrieving the `Author` again. And, fi
 ----
 class AuthorController {
 
-    def authorService
+    AuthorService authorService
 
     def updateAge() {
         try {
@@ -154,7 +154,7 @@ import grails.validation.ValidationException
 
 class AuthorController {
 
-    def authorService
+    AuthorService authorService
 
     def updateAge() {
         try {

@@ -153,7 +153,7 @@ package my.company
 class MyBeanImpl {
     Integer someProperty
     String otherProperty
-    BookService bookService // or just "def bookService"
+    BookService bookService
 }
 ----
 

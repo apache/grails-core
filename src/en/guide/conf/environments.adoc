@@ -123,16 +123,18 @@ It's often desirable to run code when your application starts up on a per-enviro
 
 [source,groovy]
 ----
-def init = { ServletContext ctx ->
+ServletContext servletContext
+
+def init = {
     environments {
         production {
-            ctx.setAttribute("env", "prod")
+            servletContext.setAttribute("env", "prod")
         }
         development {
-            ctx.setAttribute("env", "dev")
+            servletContext.setAttribute("env", "dev")
         }
     }
-    ctx.setAttribute("foo", "bar")
+    servletContext.setAttribute("foo", "bar")
 }
 ----
 

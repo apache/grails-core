@@ -1,20 +1,19 @@
 
 ==== Dependency Injection Basics
 
-
 A key aspect of Grails services is the ability to use http://www.springframework.org/[Spring Framework]'s dependency injection features. Grails supports "dependency injection by convention". In other words, you can use the property name representation of the class name of a service to automatically inject them into controllers, tag libraries, and so on.
 
-As an example, given a service called `BookService`, if you define a property called `bookService` in a controller as follows:
+As an example, given a service called `BookService`, you can define a property called `bookService` in a controller as follows:
 
 [source,groovy]
 ----
 class BookController {
-    def bookService
+    BookService bookService
     ...
 }
 ----
 
-In this case, the Spring container will automatically inject an instance of that service based on its configured scope. All dependency injection is done by name. You can also specify the type as follows:
+In this case, the Spring container will automatically inject an instance of that service based on its configured scope. Since all dependency injection is done by name you can also specify the type as follows:
 
 [source,groovy]
 ----
@@ -33,55 +32,50 @@ NOTE: Only the top level object is subjected to injection as traversing all nest
 
 Be careful when injecting the non-default datasources. For example, using this config:
 
-[source,groovy]
+[source,yaml]
 ----
 dataSources:
     dataSource:
         pooled: true
         jmxExport: true
-	.....
+	...
     secondary:
         pooled: true
         jmxExport: true
-	.....
+	...
 ----
 
 You can inject the primary `dataSource` like you would expect:
 
-[source,java]
+[source,groovy]
 ----
 class BookSqlService {
-
-      def dataSource
+      DataSource dataSource
 }
 ----
 
 But to inject the `secondary` datasource, you have to use Spring's `Autowired` injection or `resources.groovy`.
 
-[source,java]
+[source,groovy]
 ----
 class BookSqlSecondaryService {
 
   @Autowired
   @Qualifier('dataSource_secondary')
-  def dataSource2    
+  DataSource dataSource2
 }
 ----
 
-
-
 ==== Dependency Injection and Services
-
 
 You can inject services in other services with the same technique. If you had an `AuthorService` that needed to use the `BookService`, declaring the `AuthorService` as follows would allow that:
 
 [source,groovy]
 ----
 class AuthorService {
-    def bookService
+    BookService bookService
 }
 ----
-
 
 ==== Dependency Injection and Domain Classes / Tag Libraries
 
@@ -91,7 +85,7 @@ You can even inject services into domain classes and tag libraries, which can ai
 ----
 class Book {
     ...
-    def bookService
+    BookService bookService
 
     def buyBook() {
         bookService.buyBook(this)
@@ -102,7 +96,6 @@ class Book {
 WARNING: Since Grails 3.2.8 this is not enabled by default. If you want to enable it again, take a look at http://docs.grails.org/latest/ref/Domain%20Classes/Usage.html#_spring_autowiring_of_domain_instances[Spring Autowiring of Domain Instance]
 
 ==== Service Bean Names
-
 
 The default bean name which is associated with a service can be problematic if there are multiple services with the same name defined in different packages.  For example consider the situation where an application defines a service class named `com.demo.ReportingService` and the application uses a plugin named `ReportingUtilities` and that plugin provides a service class named `com.reporting.util.ReportingService`.
 

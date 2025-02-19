@@ -21,7 +21,7 @@ You can try it out by adding some test data to `BootStrap.groovy`:
 
 [source,groovy]
 ----
-def init = { servletContext ->
+def init = {
     new Book(title:"The Stand").save()
     new Book(title:"The Shining").save()
 }
