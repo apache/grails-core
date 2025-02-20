@@ -26,6 +26,24 @@ Experienced while upgrading modules for Grails 7
 - The `jakarta` package switch means that older libraries using `javax` will need to be updated to use the correct namespace.  The side effect of this change is most grails plugins will likely need updated to be compatible with Grails 7.
 - When migrating a new project to Grails 7, it's advised to generate a stock 7.0 app from [start.grails.org](https://start.grails.org) and compare the project with a grails app generated from the same grails version that your application uses.  This helps catch the dependency clean up that has occurred.  Including the additions of new dependencies.  Note: due to an issue with project resolution the `grails-bom` will need explicitly imported in buildSrc or any project that does not apply the grails gradle plugins (grails-plugin, grails-web, or grails-gsp).  By default, the grails gradle plugins (grails-plugin, grails-web, grails-gsp) will apply the bom automatically.
 - the gradle property `groovyVersion` is being replaced with the upstream spring property name `groovy.version`.  Please update your projects accordingly.
+- hibernate-ehcache
+
+    The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.grails.plugins:hibernate5` plugin. If
+    your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
+    
+    Since `hibernate-ehcache` brings in a conflicting `javax` version of `org.hibernate:hibernate-core`, it is
+    recommended to exclude `hibernate-core` from the `hibernate-ehcache` dependency to avoid conflicts:
+
+      dependencies {
+          implementation 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+              // exclude javax variant of hibernate-core
+              exclude group: 'org.hibernate', module: 'hibernate-core'
+          }
+          runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+              // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+          }
+      }
+
 
 ## NOTE: This document is a draft and the explanations are only highlights and will be expanded further prior to release of 7.0.
 
