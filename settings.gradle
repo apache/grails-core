@@ -36,8 +36,15 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'grails-spring-security.ROOT'
+gradle.beforeProject {
+    // LDAP examples cannot run in parallel,
+    // because they are connecting to live LDAP server (presumably with rate limiting)
+    if (it.name.startsWith('ldap-examples-')) {
+        gradle.startParameter.parallelProjectExecutionEnabled = false
+    }
+}
 
+rootProject.name = 'grails-spring-security.ROOT'
 
 include 'acl-plugin'
 include 'acl-docs'
