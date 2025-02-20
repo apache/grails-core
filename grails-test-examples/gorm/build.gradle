@@ -27,6 +27,13 @@ dependencies {
     implementation "org.grails:grails-web-boot"
 
     implementation "org.grails.plugins:hibernate5"
+    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
+        // exclude javax variant of hibernate-core
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
     implementation "org.grails.plugins:cache"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
