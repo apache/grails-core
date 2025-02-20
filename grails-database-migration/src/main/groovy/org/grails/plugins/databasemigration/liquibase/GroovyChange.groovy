@@ -51,7 +51,7 @@ import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_N
  * @author Kazuki YAMAMOTO
  */
 @CompileStatic
-@DatabaseChange(name = "grailsChange", description = "Adds creates a primary key out of an existing column or set of columns.", priority = ChangeMetaData.PRIORITY_DEFAULT)
+@DatabaseChange(name = "grailsChange", description = "Executes groovy code to apply a database change.", priority = ChangeMetaData.PRIORITY_DEFAULT)
 class GroovyChange extends AbstractChange {
 
     ApplicationContext ctx
