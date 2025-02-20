@@ -40,12 +40,13 @@ configurations {
 dependencies {
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
-    api "org.liquibase:liquibase-core:$liquibaseHibernate5Version"
+    api("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
     api("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
         exclude group: 'org.hibernate', module: 'hibernate-envers'
         exclude group: 'com.h2database', module: 'h2'
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
 
     api "org.apache.commons:commons-lang3"
