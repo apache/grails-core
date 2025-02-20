@@ -73,9 +73,6 @@ include::ref/Maintenance Scripts/dbm-list-tags.adoc[]
 [[ref-maintenance-scripts-dbm-mark-next-changeset-ran]]
 include::ref/Maintenance Scripts/dbm-mark-next-changeset-ran.adoc[]
 
-[[ref-maintenance-scripts-dbm-register-changelog]]
-include::ref/Maintenance Scripts/dbm-register-changelog.adoc[]
-
 [[ref-maintenance-scripts-dbm-release-locks]]
 include::ref/Maintenance Scripts/dbm-release-locks.adoc[]
 
