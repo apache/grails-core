@@ -6,3 +6,11 @@ tasks.withType(Test).configureEach {
     }
     beforeTest { descriptor -> logger.quiet " -- $descriptor" }
 }
+
+tasks.named('integrationTest', Test) {
+    systemProperty 'geb.build.reportsDir', reporting.file("$project.projectDir/build/geb-reports")
+    systemProperties System.properties
+    doFirst {
+        logger.quiet "\n - Running tests for configuration: ${System.getProperty('TESTCONFIG') ?: 'N/S'} and Grails: $grailsVersion"
+    }
+}

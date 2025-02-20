@@ -28,13 +28,12 @@ dependencies {
     profile "org.grails.profiles:web"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "org.grails:grails-web-testing-support"
 
     implementation project(':acl-plugin')
+    integrationTestImplementation 'org.grails:grails-web-testing-support'
+    integrationTestImplementation 'org.spockframework:spock-core'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/integrationTest.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')

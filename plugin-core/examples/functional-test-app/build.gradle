@@ -36,9 +36,13 @@ dependencies {
     compileOnly 'jakarta.annotation:jakarta.annotation-api'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevent warnings about missing SLF4j implementation during GSP compilation
+
+    integrationTestImplementation testFixtures('org.grails.plugins:geb')
+    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    integrationTestImplementation 'org.grails:grails-web-testing-support'
+    integrationTestImplementation 'org.spockframework:spock-core'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/integrationTest.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')

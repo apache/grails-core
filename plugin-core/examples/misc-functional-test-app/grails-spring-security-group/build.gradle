@@ -28,9 +28,12 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+
+    integrationTestImplementation testFixtures('org.grails.plugins:geb')
+    integrationTestImplementation 'org.grails:grails-web-testing-support'
+    integrationTestImplementation 'org.spockframework:spock-core'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/integrationTest.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')

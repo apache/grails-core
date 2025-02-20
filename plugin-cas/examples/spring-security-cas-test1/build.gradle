@@ -28,16 +28,10 @@ dependencies {
     runtimeOnly "com.h2database:h2"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "org.grails.plugins:geb"
-    testImplementation "org.grails:grails-web-testing-support"
-    testRuntimeOnly "org.seleniumhq.selenium:htmlunit-driver:4.13.0"
-    testRuntimeOnly "org.htmlunit:htmlunit:4.4.0"
 
     implementation project(':cas-plugin')
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/integrationTest.gradle')
+// apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle') // No, tests defined in this project
 apply from: rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')
