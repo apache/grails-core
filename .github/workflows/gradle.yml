@@ -34,7 +34,7 @@ jobs:
           distribution: 'liberica'
       - name: Run Assemble
         if: success() && matrix.java == '17'
-        run: ./gradlew assemble
+        run: ./gradlew assemble --refresh-dependencies
       - name: Publish to repo.grails.org
         if: success() && github.event_name == 'push' && matrix.java == '17'
         run: |
