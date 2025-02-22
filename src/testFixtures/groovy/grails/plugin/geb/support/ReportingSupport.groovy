@@ -18,6 +18,7 @@ package grails.plugin.geb.support
 import geb.report.CompositeReporter
 import geb.report.PageSourceReporter
 import geb.report.Reporter
+import geb.report.ScreenshotReporter
 import grails.plugin.geb.ContainerGebSpec
 import groovy.transform.CompileStatic
 import groovy.transform.SelfType
@@ -41,6 +42,6 @@ trait ReportingSupport {
      * The reporter that Geb should use when reporting is enabled.
      */
     Reporter createReporter() {
-        new CompositeReporter(new PageSourceReporter())
+        return new CompositeReporter(new PageSourceReporter(), new ScreenshotReporter())
     }
 }
