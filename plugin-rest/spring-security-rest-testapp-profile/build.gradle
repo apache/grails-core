@@ -3,6 +3,8 @@ plugins {
     id 'org.grails.grails-profile-publish'
 }
 
+group = 'org.grails.plugins'
+
 ext {
     snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
     publishArtifactId = project.name
