@@ -20,10 +20,6 @@ abstract class AbstractSecuritySpec extends ContainerGebSpec {
 		browser.clearCookies()
 	}
 
-	protected String getPageSource() {
-		browser.driver.pageSource
-	}
-
 	protected void assertContentContains(String expected) {
 		assert browser.$().text().contains(expected)
 	}
