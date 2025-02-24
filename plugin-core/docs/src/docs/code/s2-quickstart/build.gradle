@@ -43,7 +43,13 @@ dependencies {
     implementation "org.grails.plugins:async"
     implementation "org.grails.plugins:scaffolding"
     implementation "org.grails.plugins:hibernate5"
-    implementation "org.hibernate:hibernate-core:5.6.15.Final"
+    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
+        // exclude javax variant of hibernate-core
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
     implementation "org.grails.plugins:events"
     implementation "org.grails.plugins:gsp"
     profile "org.grails.profiles:web"
