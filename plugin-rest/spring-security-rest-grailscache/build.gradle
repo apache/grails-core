@@ -20,9 +20,30 @@ dependencies {
 
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
-    api project(':spring-security-rest')
+    api 'org.grails.plugins:cache', {
+        // api: GrailsCacheManager
+    }
+    api 'org.springframework:spring-context', {
+        // api: Cache
+    }
+    api 'org.springframework.security:spring-security-core', {
+        // api: UserDetails
+    }
 
-    api 'org.grails.plugins:cache'
+    implementation project(':core-plugin'), {
+        // impl: SecurityFilterPosition, SpringSecurityUtils
+    }
+    implementation project(':spring-security-rest'), {
+        // impl: SecureRandomTokenGenerator
+    }
+    implementation 'jakarta.annotation:jakarta.annotation-api', {
+        // impl: @PostConstruct(runtime)
+    }
+
+    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

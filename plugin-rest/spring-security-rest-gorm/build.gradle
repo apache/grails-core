@@ -17,7 +17,22 @@ ext {
 }
 
 dependencies {
-    api project(':spring-security-rest')
+
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    api 'org.springframework.security:spring-security-core', {
+        // api: UserDetails, UserDetailsService
+    }
+
+    implementation project(':core-plugin'), {
+        // impl: SecurityFilterPosition, SpringSecurityUtils
+    }
+    implementation project(':spring-security-rest'), {
+        // impl: SecureRandomTokenGenerator
+    }
+
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

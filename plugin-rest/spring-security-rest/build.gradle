@@ -98,37 +98,7 @@ dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api', { // Provided by Tomcat
         // api: FilterChain, HttpServletResponse, HttpServletRequest, ServletException, ServletRequest, ServletResponse
     }
-    compileOnly 'org.slf4j:slf4j-api', {
-        // comp: @Slf4j(source)
-    }
 
-/*
-    api project(':core-plugin')
-    api "org.springframework.boot:spring-boot-starter-tomcat"
-    api "org.grails:grails-dependencies"
-    api "org.grails:grails-web-boot"
-
-    api "com.google.guava:guava:33.3.1-jre"
-
-    api "org.pac4j:pac4j-core:$pac4jVersion"
-    api "org.pac4j:pac4j-jakartaee:$pac4jVersion"
-    api "org.pac4j:pac4j-oauth:$pac4jVersion"
-    api "org.pac4j:pac4j-cas:$pac4jVersion"
-
-    api 'org.jasig.cas.client:cas-client-core:3.6.4'
-
-    api 'org.bouncycastle:bcprov-jdk18on:1.79'
-
-    api "com.nimbusds:nimbus-jose-jwt:9.42"
-    api 'commons-codec:commons-codec:1.17.1'
-
-    api "commons-fileupload:commons-fileupload:1.5"
-
-    api 'com.fasterxml.jackson.core:jackson-databind'
-
-    testImplementation "org.gperfutils:gbench:0.4.3-groovy-2.4"
-    testImplementation 'net.bytebuddy:byte-buddy'
-*/
     testImplementation "org.pac4j:pac4j-oauth:$pac4jVersion", {
         // impl: CasOAuthWrapperClient
     }

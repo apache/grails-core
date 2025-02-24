@@ -20,9 +20,30 @@ dependencies {
 
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
-    api project(':spring-security-rest')
-    api "org.grails.plugins:grails-redis:$grailsRedisVersion"
-    api 'redis.clients:jedis'
+    api project(':spring-security-rest'), {
+        // api: TokenNotFoundException, TokenStorageService
+        // impl: SecureRandomTokenGenerator
+    }
+    api "org.grails.plugins:grails-redis:$grailsRedisVersion", {
+        // api: RedisService
+    }
+    api 'org.springframework:spring-core', {
+        // api: Converter
+        // impl: SerializingConverter
+    }
+    api 'org.springframework.security:spring-security-core', {
+        // api: UserDetails, UserDetailsService
+    }
+
+    implementation project(':core-plugin'), {
+        // impl: SecurityFilterPosition, SpringSecurityUtils
+    }
+    implementation 'redis.clients:jedis', {
+        // impl: Jedis
+    }
+
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

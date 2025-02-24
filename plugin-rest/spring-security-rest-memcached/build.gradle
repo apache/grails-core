@@ -17,8 +17,27 @@ ext {
 }
 
 dependencies {
-    api project(':spring-security-rest')
-    api "net.spy:spymemcached:2.12.3"
+
+    implementation "org.grails:grails-bom:$grailsVersion"
+
+    api project(':spring-security-rest'), {
+        // api: TokenNotFoundException, TokenStorageService
+        // impl: SecureRandomTokenGenerator
+    }
+    api "net.spy:spymemcached:$spyMemcachedVersion", {
+        // api: MemcachedClient, SerializingTranscoder
+        // impl: CASValue, DefaultHashAlgorithm, MemcachedClientFactoryBean
+    }
+    api 'org.springframework.security:spring-security-core', {
+        // api: UserDetails
+    }
+
+    implementation project(':core-plugin'), {
+        // impl: SecurityFilterPosition, SpringSecurityUtils
+    }
+
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
