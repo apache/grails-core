@@ -1,3 +1,9 @@
+dependencies {
+    // In Gradle 9, this needs to be declared
+    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     testLogging {
