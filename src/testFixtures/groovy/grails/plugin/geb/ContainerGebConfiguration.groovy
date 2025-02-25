@@ -15,8 +15,11 @@
  */
 package grails.plugin.geb
 
+import org.openqa.selenium.remote.FileDetector
+import org.openqa.selenium.remote.LocalFileDetector
 import org.testcontainers.containers.GenericContainer
 
+import javax.validation.constraints.NotNull
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
@@ -34,6 +37,7 @@ import java.lang.annotation.Target
 
     static final String DEFAULT_HOSTNAME_FROM_CONTAINER = GenericContainer.INTERNAL_HOST_HOSTNAME
     static final String DEFAULT_PROTOCOL = 'http'
+    static final Class<? extends FileDetector> DEFAULT_FILE_DETECTOR = LocalFileDetector
 
     /**
      * The protocol that the container's browser will use to access the server under test.
@@ -52,4 +56,19 @@ import java.lang.annotation.Target
      * Whether reporting should be enabled for this test. Add a `GebConfig.groovy` to customize the reporter configuration.
      */
     boolean reporting() default false
+
+    /**
+     * The {@link org.openqa.selenium.remote.FileDetector} implementation used by {@link org.openqa.selenium.remote.RemoteWebDriver} for file uploads.
+     * This allows for setting a custom implementation of {@code FileDetector}
+     * when the remote computer is looking for the provided path on its local file system.
+     *
+     * <p> Must have a zero-argument constructor.
+     *
+     * @since 4.1
+     * @see org.openqa.selenium.remote.LocalFileDetector LocalFileDetector (grails.geb default)
+     * @see org.openqa.selenium.remote.UselessFileDetector UselessFileDetector (null/unset value)
+     * @see
+     */
+    @NotNull(message="You may not set a file detector that is null.")
+    Class<? extends FileDetector> fileDetector() default LocalFileDetector
 }

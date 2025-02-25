@@ -26,7 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeOptions
-import org.openqa.selenium.remote.LocalFileDetector
+import org.openqa.selenium.remote.FileDetector
 import org.openqa.selenium.remote.RemoteWebDriver
 import org.spockframework.runtime.extension.IMethodInvocation
 import org.spockframework.runtime.model.SpecInfo
@@ -122,7 +122,7 @@ class WebDriverContainerHolder {
         currentBrowser = new Browser(new Configuration(configObject, new Properties(), null, null))
 
         WebDriver driver = new RemoteWebDriver(currentContainer.seleniumAddress, new ChromeOptions())
-        ((RemoteWebDriver) driver).setFileDetector(new LocalFileDetector())
+        ((RemoteWebDriver) driver).setFileDetector(currentConfiguration.fileDetector.getDeclaredConstructor().newInstance())
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(30))
 
         currentBrowser.driver = driver
@@ -201,6 +201,7 @@ class WebDriverContainerHolder {
         String protocol
         String hostName
         boolean reporting
+        Class<? extends FileDetector> fileDetector
 
         WebDriverContainerConfiguration(SpecInfo spec) {
             ContainerGebConfiguration configuration = spec.annotations.find {
@@ -210,6 +211,7 @@ class WebDriverContainerHolder {
             protocol = configuration?.protocol() ?: ContainerGebConfiguration.DEFAULT_PROTOCOL
             hostName = configuration?.hostName() ?: ContainerGebConfiguration.DEFAULT_HOSTNAME_FROM_CONTAINER
             reporting = configuration?.reporting() ?: false
+            fileDetector = configuration?.fileDetector() ?: ContainerGebConfiguration.DEFAULT_FILE_DETECTOR
         }
     }
 }
