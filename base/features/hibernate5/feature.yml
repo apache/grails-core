@@ -6,5 +6,5 @@ dependencies:
       coords: "org.grails.plugins:hibernate5"
     - scope: runtimeOnly
       coords: "com.h2database:h2"
-      coords: "org.apache.tomcat:tomcat-jdbc"
     - scope: runtimeOnly
+      coords: "com.zaxxer:HikariCP"
