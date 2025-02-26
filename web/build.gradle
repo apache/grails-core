@@ -3,3 +3,7 @@ grailsPublish {
 	desc = "A profile for Web applications"
 	developers = [graemerocher:'Graeme Rocher']
 }
+
+dependencies {
+	profileRuntimeOnly project(":base")
+}
