@@ -6,7 +6,6 @@ repositories:
     - "https://repo.grails.org/grails/core"
 build:
     repositories:
-        - "https://plugins.gradle.org/m2/"
         - "https://repo.grails.org/grails/core"
     plugins:
         - eclipse
