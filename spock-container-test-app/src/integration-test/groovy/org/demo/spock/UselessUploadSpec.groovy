@@ -2,6 +2,7 @@ package org.demo.spock
 
 import grails.plugin.geb.ContainerGebConfiguration
 import grails.plugin.geb.ContainerGebSpec
+import grails.plugin.geb.UselessContainerFileDetector
 import grails.testing.mixin.integration.Integration
 import org.demo.spock.pages.UploadPage
 import org.openqa.selenium.WebDriverException
@@ -13,7 +14,7 @@ import spock.lang.Requires
  * Altered copy of {@link LocalUploadSpec} that throws {@link org.openqa.selenium.InvalidArgumentException}
  */
 @Integration
-@ContainerGebConfiguration(fileDetector = UselessFileDetector)
+@ContainerGebConfiguration(fileDetector = UselessContainerFileDetector)
 class UselessUploadSpec extends ContainerGebSpec {
 
     @Requires({ os.windows })
