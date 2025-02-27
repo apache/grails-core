@@ -1,3 +1,5 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
 String customGroovyVersion = findProperty('groovyVersion') ?: System.getenv('GROOVY_VERSION')
 if (customGroovyVersion) {
     logger.lifecycle("Using custom Groovy version: $customGroovyVersion")
