@@ -64,7 +64,6 @@ tasks.register('guideDocs', Copy) {
     dependsOn 'asciidoctor'
     def sourceDir = layout.projectDirectory.dir('src/docs')
     def targetDir = layout.buildDirectory.dir('docs')
-    //inputs.files(tasks.named('asciidoctor').flatMap { it.outputs.files })
     outputs.dir(targetDir)
     from sourceDir
     into targetDir
@@ -90,7 +89,6 @@ tasks.register('copyGuide', Copy) {
     }
     dependsOn('guideDocs')
     dependsOn(findProperty('docsFinalizeTasks') as List ?: [])
-    //inputs.dir(tasks.named('guideDocs').flatMap { it.outputs.files.files })
     outputs.dir(targetDir)
 }
 
