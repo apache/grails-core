@@ -26,6 +26,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 - [Improving The Documentation](#improving-the-documentation)
 - [Code Style](#code-style)
 - [Commit Messages](#commit-messages)
+- [Change Review Process](#change-review-process)
 - [Join The Project Team](#join-the-project-team)
 
 
@@ -240,6 +241,19 @@ Grails code style mostly mirrors the Spring Framework's [Style Guide](https://gi
 
 ### Commit Messages
 Grails makes use of [Release Drafter](https://github.com/release-drafter/release-drafter) to draft its release notes so commit messages are important.  They should follow the project's rules.  While a change can be incrementally made under many commits, pull requests should be squashed into a single, meaningful commit message.
+
+### Change Review Process
+The Grails project uses different review processes based on the change being made.  We use both a `Review then Commit` policy and a `Commit then Review` policy.  These policies only apply to what we consider `protected` branches - where a `protected` branch is a branch that will result in published code or tracks a Grails release version (i.e. 7.0.x is for the Grails 7 release).  Development will often occur in side branches without review and the review will be performed at the time of merging those changes into a `protected` branch.
+
+Concerning when a review is required for a `protected` branch:
+* Build Related Changes - `Commit then Review`
+   * Due to the build changes being related to GitHub workflows and not being able to test locally.
+* Documentation Changes - obvious fixes should be allowed without review, otherwise only minimum 1 reviewer with `Commit then Review`
+* Groovy or Spring Dependency Changes - `Review then Commit` and mandated waiting period
+   * Reasoning: due to the impact of past Spring & Groovy upgrades, it often breaks the entire development chain.  These changes should not be merged without significant review.
+   * Minimum # of Reviewers:  2 reviewers, preferred 3
+   * Mandated Waiting Period: 3 days if over a weekend, 1 day if during the week.
+* Otherwise - `Review then Commit` with only 1 reviewer required. 
 
 ## Join The Project Team
 For people willing to contribute more than an occasional pull request, consider joining our core team.  Inquire in the `questions` channel in slack to learn more.
