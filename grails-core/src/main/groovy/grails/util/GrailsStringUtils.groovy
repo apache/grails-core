@@ -205,6 +205,8 @@ abstract class GrailsStringUtils extends StringUtils{
      * GrailsStringUtils.trimToNull("xyz")         = "xyz"
      * GrailsStringUtils.trimToNull("    xyz    ") = "xyz"
      * </pre>
+     * 
+     *  based on https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/StringUtils.java#L8838
      *
      * @param str  the String to be trimmed, may be null
      * @return the trimmed String,
