@@ -25,12 +25,12 @@ class AsciiDocEngine extends DocEngine {
     ]
     @Override
     String render(String content, RenderContext context) {
+        Attributes attrs = Attributes.builder().build()
+        attrs.setAttributes(attributes)
+
         def optionsBuilder = Options.builder()
             .standalone(false)
-            .attributes(Attributes.builder()
-                .imagesDir(attributes['imagesdir'])
-                .sourceHighlighter(attributes[ 'source-highlighter'])
-                .icons('icons').build())
+            .attributes(attrs)
 
         if (attributes.containsKey('safe')) {
             optionsBuilder.safe(SafeMode.valueOf(attributes.get('safe').toString()))

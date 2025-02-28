@@ -138,7 +138,7 @@ class EntityTransformTests extends Specification {
 
             import grails.persistence.*
     
-            // Since Groovy 4 parent domain classes cannot be annotated with @Entity: https://issues.apache.org/jira/browse/GROOVY-5106
+            @Entity
             class Personnel {
                 String lastName
                 String firstName

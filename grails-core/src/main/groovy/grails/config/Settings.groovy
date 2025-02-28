@@ -139,11 +139,6 @@ interface Settings {
     String FILTER_FORCE_ENCODING = 'grails.filter.forceEncoding'
 
     /**
-     * Whether the H2 dbconsole is enabled or not
-     */
-    String DBCONSOLE_ENABLED = 'grails.dbconsole.enabled'
-
-    /**
      * The converter to use for creating URL tokens in URL mapping. Defaults to camel case.
      */
     String WEB_URL_CONVERTER = "grails.web.url.converter"

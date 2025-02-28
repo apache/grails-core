@@ -1,5 +1,6 @@
 dependencies {
     api project(":grails-web-common")
+    compileOnly "org.grails:grails-gsp"
 
     api("org.grails:grails-datastore-gorm-validation")
 

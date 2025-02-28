@@ -1,8 +1,10 @@
 package grails.web.mime
 
 import grails.core.DefaultGrailsApplication
-import org.grails.plugins.web.mime.MimeTypesFactoryBean
+import grails.spring.BeanBuilder
+import org.grails.plugins.web.mime.MimeTypesConfiguration
 import org.grails.web.mime.DefaultMimeUtility
+import org.springframework.context.ApplicationContext
 import spock.lang.Specification
 
 /**
@@ -26,10 +28,15 @@ class MimeUtilitySpec extends Specification {
                       multipartForm: 'multipart/form-data'
                     ]
 
-        final factory = new MimeTypesFactoryBean(grailsApplication: ga)
+        def bb = new BeanBuilder()
+        bb.beans {
+            grailsApplication = ga
+            mimeConfiguration(MimeTypesConfiguration, ga, [])
+        }
+        ga.setApplicationContext(bb.createApplicationContext())
 
-        def mimeTypes = factory.getObject()
-        return new DefaultMimeUtility(mimeTypes)
+        MimeTypesConfiguration mimeTypesConfiguration = ga.mainContext.getBean(MimeTypesConfiguration)
+        return new DefaultMimeUtility(mimeTypesConfiguration.mimeTypes())
     }
 
     void "Test get mime by extension method"() {

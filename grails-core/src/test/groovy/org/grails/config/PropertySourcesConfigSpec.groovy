@@ -41,7 +41,7 @@ class PropertySourcesConfigSpec extends Specification {
             config.one == 1
             config.two == 2
             config.three.four == 34
-            !config?.four?.five
+            !config.four.five
             config.getProperty('one', String) == '1'
             config.getProperty('three.four', String) == '34'
             config.getProperty('three', String) == null

@@ -1,0 +1,31 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-events-core')
+    api 'org.grails:grails-datastore-core'
+    api 'org.springframework:spring-context'
+
+    compileOnly 'org.grails:grails-datastore-gorm', {
+        // TODO: Explain why this exclusion is done
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+    }
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'org.springframework:spring-beans'
+    implementation 'org.springframework:spring-core'
+    implementation 'org.springframework:spring-tx'
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+
+    testImplementation 'org.grails:grails-datastore-gorm', {
+        // TODO: Explain why this exclusion is done
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+    }
+
+    testImplementation 'org.grails:grails-datastore-gorm-test', {
+        // TODO: Explain why this exclusion is done (I don't know)
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+    }
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+}

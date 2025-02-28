@@ -69,8 +69,6 @@ public abstract class AbstractGrailsView extends AbstractUrlBasedView {
             } else {
                 webRequest = (GrailsWebRequest)requestAttributes;
             }
-            // Update response holder to latest response. Necessary for sitemesh to trigger buffering.
-            WrappedResponseHolder.setWrappedResponse(response);
             renderTemplate(model, webRequest, request, response);
         } finally {
             if(attributesChanged) {

@@ -3,6 +3,9 @@ configurations.testCompileClasspath {
 }
 
 dependencies {
+    testImplementation platform(project(':grails-bom'))
+    testImplementation project(':grails-plugin-codecs')
+
     testImplementation project(':grails-test-suite-base'),
                 project(':grails-plugin-domain-class'),
                 project(':grails-plugin-datasource'),
@@ -25,8 +28,11 @@ dependencies {
     testRuntimeOnly "org.springframework:spring-aspects"
     testRuntimeOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
 
-    testImplementation "org.grails.plugins:async"
-    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation project(':grails-async-plugin')
+    testImplementation "org.grails:grails-gorm-testing-support", {
+        exclude module:'grails-testing-support'
+    }
+    testImplementation project(':grails-testing-support')
 }
 
 test {

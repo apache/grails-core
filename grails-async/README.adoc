@@ -1,0 +1,3 @@
+= Grails Async Framework
+
+This project contains APIs and libraries that integrate Grails with various asynchronous libraries and frameworks such as GPars and RxJava.

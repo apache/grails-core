@@ -1,0 +1,60 @@
+buildscript {
+    repositories {
+        maven { url "https://repo.grails.org/grails/core" }
+    }
+    dependencies {
+        classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
+        classpath "org.grails.plugins:views-gradle:${project['plugins-views-gradle.version']}"
+    }
+}
+
+version "0.1"
+group "issueviews182"
+
+apply plugin:"org.grails.grails-web"
+apply plugin:"org.grails.plugins.views-json"
+
+apply plugin: 'java'
+compileJava.options.release = 17
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation "org.springframework.boot:spring-boot-starter-logging"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation "org.grails:grails-core"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-tomcat"
+    implementation "org.grails:grails-plugin-url-mappings"
+    implementation "org.grails:grails-plugin-rest"
+    implementation "org.grails:grails-plugin-codecs"
+    implementation "org.grails:grails-plugin-interceptors"
+    implementation "org.grails:grails-plugin-services"
+    implementation "org.grails:grails-plugin-datasource"
+    implementation "org.grails:grails-plugin-databinding"
+    implementation "org.grails:grails-web-boot"
+    implementation "org.grails:grails-logging"
+    implementation "org.grails.plugins:cache"
+    implementation "org.grails.plugins:async"
+    implementation "org.grails.plugins:events"
+    implementation "org.grails.plugins:hibernate5"
+    implementation "org.grails.plugins:views-json"
+    console "org.grails:grails-console"
+    profile "org.grails.profiles:rest-api"
+    runtimeOnly "com.h2database:h2"
+    runtimeOnly "org.apache.tomcat:tomcat-jdbc"
+
+    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "org.grails:grails-gorm-testing-support"
+
+    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+}
+
+bootRun {
+    jvmArgs('-Dspring.output.ansi.enabled=always')
+    String springProfilesActive = 'spring.profiles.active'
+    systemProperty springProfilesActive, System.getProperty(springProfilesActive)
+}
+
+apply from: rootProject.file('gradle/functional-test-project.gradle')

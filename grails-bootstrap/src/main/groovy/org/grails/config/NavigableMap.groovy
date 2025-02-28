@@ -18,6 +18,7 @@ package org.grails.config
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -47,14 +48,14 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     final Map<String, Object> delegateMap
     final String dottedPath
 
-    public NavigableMap() {
+    NavigableMap() {
         rootConfig = this
         path = []
         dottedPath = ""
         delegateMap = new LinkedHashMap<>()
     }
 
-    public NavigableMap(NavigableMap rootConfig, List<String> path) {
+    NavigableMap(NavigableMap rootConfig, List<String> path) {
         super()
         this.rootConfig = rootConfig
         this.path = path
@@ -144,7 +145,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         delegateMap.entrySet()
     }
 
-    public void merge(Map sourceMap, boolean parseFlatKeys=false) {
+    void merge(Map sourceMap, boolean parseFlatKeys=false) {
         mergeMaps(this, "", this, sourceMap, parseFlatKeys)
     }
 
@@ -341,17 +342,17 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         targetMap.put(sourceKey, newValue)
     }
 
-    public Object getAt(Object key) {
+    Object getAt(Object key) {
         getProperty(String.valueOf(key))
     }
-    
-    public void setAt(Object key, Object value) {
+
+    void setAt(Object key, Object value) {
         setProperty(String.valueOf(key), value)
     }
 
-    public Object getProperty(String name) {
+    Object getProperty(String name) {
         if (!containsKey(name)) {
-            return null
+            return new NullSafeNavigator(this, [name].asImmutable())
         }
         Object result = get(name)
         if (!(result instanceof NavigableMap)) {
@@ -361,12 +362,12 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         return result
     }
-    
-    public void setProperty(String name, Object value) {
+
+    void setProperty(String name, Object value) {
         mergeMapEntry(rootConfig, dottedPath, this, name, value, false, true)
     }
-    
-    public Object navigate(String... path) {
+
+    Object navigate(String... path) {
         return navigateMap(this, path)
     }
     
@@ -392,8 +393,8 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             }
         }
     }
-    
-    public NavigableMap navigateSubMap(List<String> path, boolean createMissing) {
+
+    NavigableMap navigateSubMap(List<String> path, boolean createMissing) {
         NavigableMap rootMap = this
         NavigableMap currentMap = this
         StringBuilder accumulatedPath = new StringBuilder()
@@ -487,5 +488,173 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     @Override
     boolean equals(Object obj) {
         return delegateMap.equals(obj)
+    }
+
+    /**
+     * @deprecated This class should be avoided due to known performance reasons. Use {@code config.getProperty(String key, Class<T> targetType)} instead of dot based navigation.
+     */
+    @Deprecated
+    @CompileStatic
+    static class NullSafeNavigator implements Map<String, Object>{
+        final NavigableMap parent
+        final List<String> path
+
+        NullSafeNavigator(NavigableMap parent, List<String> path) {
+            this.parent = parent
+            this.path = path
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
+            }
+        }
+
+        Object getAt(Object key) {
+            getProperty(String.valueOf(key))
+        }
+
+        void setAt(Object key, Object value) {
+            setProperty(String.valueOf(key), value)
+        }
+
+        @Override
+        int size() {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap != null) {
+                return parentMap.size()
+            }
+            return 0
+        }
+
+        @Override
+        boolean isEmpty() {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap != null) {
+                return parentMap.isEmpty()
+            }
+            return true
+        }
+
+        boolean containsKey(Object key) {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap == null) return false
+            else {
+                return parentMap.containsKey(key)
+            }
+        }
+
+        @Override
+        boolean containsValue(Object value) {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap != null) {
+                return parentMap.containsValue(value)
+            }
+            return false
+        }
+
+        @Override
+        Object get(Object key) {
+            return getAt(key)
+        }
+
+        @Override
+        Object put(String key, Object value) {
+            throw new UnsupportedOperationException("Configuration cannot be modified");
+        }
+
+        @Override
+        Object remove(Object key) {
+            throw new UnsupportedOperationException("Configuration cannot be modified");
+        }
+
+        @Override
+        void putAll(Map<? extends String, ?> m) {
+            throw new UnsupportedOperationException("Configuration cannot be modified");
+        }
+
+        @Override
+        void clear() {
+            throw new UnsupportedOperationException("Configuration cannot be modified");
+        }
+
+        @Override
+        Set<String> keySet() {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap != null) {
+                return parentMap.keySet()
+            }
+            return Collections.emptySet()
+        }
+
+        @Override
+        Collection<Object> values() {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap != null) {
+                return parentMap.values()
+            }
+            return Collections.emptySet()
+        }
+
+        @Override
+        Set<Entry<String, Object>> entrySet() {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap != null) {
+                return parentMap.entrySet()
+            }
+            return Collections.emptySet()
+        }
+
+        Object getProperty(String name) {
+            NavigableMap parentMap = parent.navigateSubMap(path, false)
+            if(parentMap == null) {
+                return new NullSafeNavigator(parent, ((path + [name]) as List<String>).asImmutable())
+            } else {
+                return parentMap.get(name)
+            }
+        }
+
+        void setProperty(String name, Object value) {
+            NavigableMap parentMap = parent.navigateSubMap(path, true)
+            parentMap.setProperty(name, value)
+        }
+
+        boolean asBoolean() {
+            false
+        }
+
+        Object invokeMethod(String name, Object args) {
+            throw new NullPointerException("Cannot invoke method " + name + "() on NullSafeNavigator");
+        }
+
+        boolean equals(Object to) {
+            return to == null || DefaultGroovyMethods.is(this, to)
+        }
+
+        Iterator iterator() {
+            return Collections.EMPTY_LIST.iterator()
+        }
+
+        Object plus(String s) {
+            return toString() + s
+        }
+
+        Object plus(Object o) {
+            throw new NullPointerException("Cannot invoke method plus on NullSafeNavigator")
+        }
+
+        boolean is(Object other) {
+            return other == null || DefaultGroovyMethods.is(this, other)
+        }
+
+        Object asType(Class c) {
+            if(c==Boolean || c==boolean) return false
+            return null
+        }
+
+        String toString() {
+            return null
+        }
+
+//        public int hashCode() {
+//            throw new NullPointerException("Cannot invoke method hashCode() on NullSafeNavigator");
+//        }
     }
 }

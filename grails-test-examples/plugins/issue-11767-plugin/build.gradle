@@ -1,0 +1,27 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+    }
+    dependencies {
+        classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
+    }
+}
+
+version "0.1-SNAPSHOT"
+group 'issue11767.plugin'
+
+apply plugin: 'groovy'
+apply plugin: 'org.grails.grails-plugin'
+
+apply plugin: 'java'
+compileJava.options.release = 17
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    implementation 'org.grails:grails-core'
+    compileOnly 'io.micronaut:micronaut-inject-groovy'
+}
+
+apply from: rootProject.file('gradle/functional-test-project.gradle')

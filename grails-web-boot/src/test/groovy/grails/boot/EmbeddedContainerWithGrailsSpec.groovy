@@ -3,12 +3,11 @@ package grails.boot
 import grails.artefact.Artefact
 import grails.boot.config.GrailsAutoConfiguration
 import grails.web.Controller
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
 import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.web.servlet.config.annotation.EnableWebMvc
 import spock.lang.Specification
 
 /**
@@ -32,8 +31,7 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
             new URL("http://localhost:${context.webServer.port}/foos").text == 'all foos'
     }
 
-    @Configuration
-    @EnableWebMvc
+    @EnableAutoConfiguration
     static class Application extends GrailsAutoConfiguration {
         @Bean
         ConfigurableServletWebServerFactory webServerFactory() {

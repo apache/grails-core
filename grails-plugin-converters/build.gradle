@@ -1,0 +1,24 @@
+group = 'org.grails.plugins'
+version = projectVersion
+
+apply plugin: 'groovy'
+apply plugin: 'java-library'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-web-common')
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+
+    implementation 'org.apache.commons:commons-lang3'
+    implementation 'org.grails:grails-datastore-gorm'
+    implementation project(':grails-bootstrap')
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.grails:grails-datastore-core'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-context'
+    testImplementation project(':grails-core')
+    testImplementation project(':grails-web-common')
+}

@@ -1,0 +1,27 @@
+plugins {
+    id 'groovy'
+    id 'java'
+    id 'java-library'
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-events-core')
+    api project(':grails-events-compat')
+
+    // This dependency contains Groovy Ast transformations
+    // that needs to be on the compile classpath of dependent projects.
+    // https://github.com/gradle/gradle/issues/21539
+    api project(':grails-events-transform')
+
+    // As this is a plugin these dependencies will be provided by the Grails application
+    // This removes circular dependencies
+    compileOnly project(':grails-bootstrap')
+    compileOnly project(':grails-core')
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly project(':grails-bootstrap')
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+}

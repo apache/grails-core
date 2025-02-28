@@ -1,6 +1,6 @@
 plugins {
-    id 'com.gradle.develocity' version '3.18.1'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
+    id 'com.gradle.develocity' version '3.19.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
 }
 
 def isCI = System.getenv('CI') != null
@@ -51,6 +51,9 @@ include (
         'grails-web-mvc',
         'grails-web-url-mappings',
 
+        // test support
+        'grails-testing-support',
+
         // POM / BOMs
         'grails-dependencies',
         'grails-bom',
@@ -58,6 +61,7 @@ include (
         // Plugins
         'grails-plugin-codecs',
         'grails-plugin-controllers',
+        'grails-plugin-converters',
         'grails-plugin-databinding',
         'grails-plugin-datasource',
         'grails-plugin-domain-class',
@@ -76,5 +80,85 @@ include (
         'grails-test-suite-web',
 
         // Gradle Plugin
-        'grails-gradle-model'
+        'grails-gradle-model',
+
+        // events
+        'grails-events-core',
+        'grails-events-compat',
+        'grails-events-transform',
+        'grails-events-gpars',
+        'grails-events-spring',
+        'grails-events-rxjava',
+        'grails-events-rxjava2',
+        'grails-events-rxjava3',
+        'grails-events-plugin',
+
+        // async
+        'grails-async-core',
+        'grails-async-gpars',
+        'grails-async-rxjava',
+        'grails-async-rxjava2',
+        'grails-async-rxjava3',
+        'grails-async-plugin',
 )
+
+// Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
+// (Preserve the parent directory name as part of the nested project name)
+project(':grails-events-core').projectDir = file('grails-events/core')
+project(':grails-events-compat').projectDir = file('grails-events/compat')
+project(':grails-events-transform').projectDir = file('grails-events/transform')
+project(':grails-events-gpars').projectDir = file('grails-events/gpars')
+project(':grails-events-spring').projectDir = file('grails-events/spring')
+project(':grails-events-rxjava').projectDir = file('grails-events/rxjava')
+project(':grails-events-rxjava2').projectDir = file('grails-events/rxjava2')
+project(':grails-events-rxjava3').projectDir = file('grails-events/rxjava3')
+project(':grails-events-plugin').projectDir = file('grails-events/plugin')
+
+project(':grails-async-core').projectDir = file('grails-async/core')
+project(':grails-async-gpars').projectDir = file('grails-async/gpars')
+project(':grails-async-rxjava').projectDir = file('grails-async/rxjava')
+project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
+project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
+project(':grails-async-plugin').projectDir = file('grails-async/plugin')
+
+// Functional Tests
+include (
+        'grails-test-examples-async-events-pubsub-demo',
+        'grails-test-examples-app1',
+        'grails-test-examples-app2',
+        'grails-test-examples-app3',
+        'grails-test-examples-datasources',
+        'grails-test-examples-namespaces',
+        'grails-test-examples-gorm',
+        'grails-test-examples-issue-698-domain-save-npe',
+        'grails-test-examples-hyphenated',
+        'grails-test-examples-issue-views-182',
+        'grails-test-examples-issue-11102',
+        'grails-test-examples-demo33',
+        // 'grails-test-examples-micronaut', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        'grails-test-examples-plugins-loadfirst',
+        'grails-test-examples-plugins-loadsecond',
+        'grails-test-examples-plugins-loadafter',
+        'grails-test-examples-plugins-issue11005',
+        // 'grails-test-examples-issue-11767', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+)
+project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
+project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
+project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
+project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
+project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
+project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
+project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
+project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
+project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
+project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
+project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
+project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
+// project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
+project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
+project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
+project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
+project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
+// project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+// project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')

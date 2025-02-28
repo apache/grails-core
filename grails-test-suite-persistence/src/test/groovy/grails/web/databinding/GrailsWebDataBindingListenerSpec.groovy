@@ -16,7 +16,6 @@ class GrailsWebDataBindingListenerSpec extends Specification implements GrailsUn
         }
     }
 
-    @Ignore("Too few invocations")
     void "test that DataBindingListener is added to GrailsWebDataBinder"() {
 
         given:
@@ -27,9 +26,9 @@ class GrailsWebDataBindingListenerSpec extends Specification implements GrailsUn
         binder.bind(testWidget, ["name": "Clock"] as SimpleMapDataBindingSource)
 
         then:
-        1 * dataBindingListenerAdapter.supports(TestWidget) >> true
-        1 * dataBindingListenerAdapter.beforeBinding(testWidget, _)
-        1 * dataBindingListenerAdapter.afterBinding(testWidget, _)
+        3 * dataBindingListenerAdapter.supports(TestWidget) >> true
+        3 * dataBindingListenerAdapter.beforeBinding(testWidget, _)
+        3 * dataBindingListenerAdapter.afterBinding(testWidget, _)
     }
 
     static class TestWidget {

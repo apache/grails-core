@@ -1,0 +1,16 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+
+    compileOnly 'jakarta.annotation:jakarta.annotation-api'
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly 'org.objenesis:objenesis'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+}

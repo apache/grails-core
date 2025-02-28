@@ -16,10 +16,10 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     Class[] getDomainClassesToMock() {
         [
-            BoolMethodPropertiesDomain, DomainWithTransients, InheritedBoolMethodPropertiesDomain,
-            InheritedDomainWithTransients, InheritedMethodPropertiesDomain, InheritedPropertiesDomain,
-            MethodPropertiesDomain, SimplePropertiesDomain, TraitBoolMethodPropertiesDomain, TraitDomainWithTransients,
-            TraitMethodPropertiesDomain, TraitPropertiesDomain
+            BoolMethodPropertiesDomain, DomainPrimitiveBooleanWithTransients, DomainWithTransients,
+            InheritedBoolMethodPropertiesDomain, InheritedDomainWithTransients, InheritedMethodPropertiesDomain,
+            InheritedPropertiesDomain, MethodPropertiesDomain, SimplePropertiesDomain, TraitBoolMethodPropertiesDomain,
+            TraitDomainWithTransients, TraitMethodPropertiesDomain, TraitPropertiesDomain
         ]
     }
 
@@ -29,7 +29,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
         given:
         def domain = new SimplePropertiesDomain()
-
         when: 'empty domain with simple properties is validated'
         domain.validate()
 
@@ -181,7 +180,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     // BOOL METHODS DOMAIN OBJECT
 
-    @PendingFeature
     void 'ensure only public non-static bool properties with getter and setter are constrained properties'() {
 
         given:
@@ -196,7 +194,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 1
     }
 
-    @PendingFeature
     void 'ensure constrained bool method properties are only public ones with both getter and setter'() {
 
         when: 'constrained properties map is get'
@@ -209,7 +206,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     // BOOL DOMAIN OBJECT WITH SUPER CLASS
 
-    @PendingFeature
     void 'ensure only public non-static inherited bool properties with getter and setter are constrained properties'() {
 
         given:
@@ -224,7 +220,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 1
     }
 
-    @PendingFeature
     void 'ensure constrained inherited bool method properties are only public ones with both getter and setter'() {
 
         when: 'constrained properties map is get from child class'
@@ -237,7 +232,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     // BOOL DOMAIN OBJECT WITH TRAIT
 
-    @PendingFeature
     void 'ensure only public non-static bool properties from trait with getter and setter are constrained properties'() {
 
         given:
@@ -252,7 +246,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 1
     }
 
-    @PendingFeature
     void 'ensure constrained bool method properties from trait are only public ones with both getter and setter'() {
 
         when: 'constrained properties map is get'
@@ -264,7 +257,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
     }
 
     // DOMAIN WITH TRANSIENTS
-    @PendingFeature(reason = 'With Groovy 4, transient properties and methods are currently not excluded from validation')
     void 'ensure transient properties and methods are not validated'() {
 
         given:
@@ -277,7 +269,18 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 0
     }
 
-    @PendingFeature(reason = 'With Groovy 4, transient methods and properties are currently constrained')
+    void 'ensure transient properties and methods are not validated - little boolean'() {
+
+        given:
+        def domain = new DomainPrimitiveBooleanWithTransients()
+
+        when: 'domain with transient methods and properties is validated'
+        domain.validate()
+
+        then: 'nothing should fail'
+        domain.errors.getErrorCount() == 0
+    }
+
     void 'ensure transient methods and properties are not constrained'() {
 
         when: 'constrained properties map is get'
@@ -287,9 +290,17 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         constrainedProperties.size() == 0
     }
 
+    void 'ensure transient methods and properties are not constrained - little boolean'() {
+
+        when: 'constrained properties map is get'
+        def constrainedProperties = DomainPrimitiveBooleanWithTransients.getConstrainedProperties()
+
+        then: 'nothing is constrained'
+        constrainedProperties.size() == 0
+    }
+
     // DOMAIN WITH SUPER CLASS WITH TRANSIENTS
 
-    @PendingFeature(reason = 'With Groovy 4, transient properties and methods are currently not excluded from validation')
     void 'ensure inherited transient properties and methods are not validated'() {
 
         given:
@@ -302,7 +313,6 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 0
     }
 
-    @PendingFeature(reason = 'With Groovy 4, transient properties and methods are currently not excluded from validation')
     void 'ensure inherited transient methods and properties are not constrained'() {
 
         when: 'constrained properties map is get'
@@ -314,7 +324,7 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     // DOMAIN WITH TRAIT WITH TRANSIENTS
 
-    @PendingFeature
+    @PendingFeature(reason = "See #13840")
     void 'ensure trait transient properties and methods are not validated'() {
 
         given:
@@ -327,7 +337,7 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         domain.errors.getErrorCount() == 0
     }
 
-    @PendingFeature
+    @PendingFeature(reason = "See #13840")
     void 'ensure trait transient methods and properties are not constrained'() {
 
         when: 'constrained properties map is get'
@@ -355,25 +365,11 @@ class SimplePropertiesDomain {
     protected static String bar
 }
 
-// Since Groovy 4, parent domain classes cannot be annotated with @Entity (https://issues.apache.org/jira/browse/GROOVY-5106)
-@SuppressWarnings('unused')
-class ParentSimplePropertiesDomain {
-
-    String string
-    Integer pages
-
-    private String firstName
-    protected String secondName
-    static String finalName
-    private static String foo
-    protected static String bar
-}
-
 /**
  * Domain with properties from super class only
  */
 @Entity
-class InheritedPropertiesDomain extends ParentSimplePropertiesDomain {}
+class InheritedPropertiesDomain extends SimplePropertiesDomain {}
 
 /**
  * Domain with getter/setter methods
@@ -428,61 +424,11 @@ class MethodPropertiesDomain {
     static private void setStaticPrivateSetterOnly(String value) {}
 }
 
-// Since Groovy 4, parent domain classes cannot be annotated with @Entity (https://issues.apache.org/jira/browse/GROOVY-5106)
-@SuppressWarnings(['unused', 'GrMethodMayBeStatic'])
-class ParentMethodPropertiesDomain {
-
-    /**
-     * publicProperty should be constrained because those getter and setter
-     */
-    String getPublicProperty() { null }
-    void setPublicProperty(String value) {}
-
-    protected String getProtectedProperty() { null }
-    protected void setProtectedProperty(String value) {}
-
-    private String getPrivateProperty() { null }
-    private void setPrivateProperty(String value) {}
-
-    static String getStaticPublicProperty() { null }
-    static void setStaticPublicProperty(String value) {}
-
-    static protected String getStaticProtectedProperty() { null }
-    static protected void setStaticProtectedProperty(String value) {}
-
-    static private String getStaticPrivateProperty() { null }
-    static private void setStaticPrivateProperty(String value) {}
-
-    String getGetterOnly() { null }
-
-    protected String getProtectedGetterOnly() { null }
-
-    private String getPrivateGetterOnly() { null }
-
-    static String getStaticGetterOnly() { null }
-
-    static protected String getStaticProtectedGetterOnly() { null }
-
-    static private String getStaticPrivateGetterOnly() { null }
-
-    void setSetterOnly(String value) {}
-
-    protected void setProtectedSetterOnly(String value) {}
-
-    private void setPrivateSetterOnly(String value) {}
-
-    static void setStaticSetterOnly(String value) {}
-
-    static protected void setStaticProtectedSetterOnly(String value) {}
-
-    static private void setStaticPrivateSetterOnly(String value) {}
-}
-
 /**
  * Domain with method properties from super class
  */
 @Entity
-class InheritedMethodPropertiesDomain extends ParentMethodPropertiesDomain {}
+class InheritedMethodPropertiesDomain extends MethodPropertiesDomain {}
 
 /**
  * Trait with properties only
@@ -558,85 +504,35 @@ class BoolMethodPropertiesDomain {
     /**
      * publicProperty should be constrained because those getter and setter
      */
-    Boolean isPublicProperty() { null }
+    Boolean getPublicProperty() { null }
     void setPublicProperty(Boolean value) {}
 
-    protected Boolean isProtectedProperty() { null }
+    protected Boolean getProtectedProperty() { null }
     protected void setProtectedProperty(Boolean value) {}
 
-    private Boolean isPrivateProperty() { null }
+    private Boolean getPrivateProperty() { null }
     private void setPrivateProperty(Boolean value) {}
 
-    static Boolean isStaticPublicProperty() { null }
+    static Boolean getStaticPublicProperty() { null }
     static void setStaticPublicProperty(Boolean value) {}
 
-    static protected Boolean isStaticProtectedProperty() { null }
+    static protected Boolean getStaticProtectedProperty() { null }
     static protected void setStaticProtectedProperty(Boolean value) {}
 
-    static private Boolean isStaticPrivateProperty() { null }
+    static private Boolean getStaticPrivateProperty() { null }
     static private void setStaticPrivateProperty(Boolean value) {}
 
-    Boolean isGetterOnly() { null }
+    Boolean getGetterOnly() { null }
 
-    protected Boolean isProtectedGetterOnly() { null }
+    protected Boolean getProtectedGetterOnly() { null }
 
-    private Boolean isPrivateGetterOnly() { null }
+    private Boolean getPrivateGetterOnly() { null }
 
-    static Boolean isStaticGetterOnly() { null }
+    static Boolean getStaticGetterOnly() { null }
 
-    static protected Boolean isStaticProtectedGetterOnly() { null }
+    static protected Boolean getStaticProtectedGetterOnly() { null }
 
-    static private Boolean isStaticPrivateGetterOnly() { null }
-
-    void setSetterOnly(Boolean value) {}
-
-    protected void setProtectedSetterOnly(Boolean value) {}
-
-    private void setPrivateSetterOnly(Boolean value) {}
-
-    static void setStaticSetterOnly(Boolean value) {}
-
-    static protected void setStaticProtectedSetterOnly(Boolean value) {}
-
-    static private void setStaticPrivateSetterOnly(Boolean value) {}
-}
-
-// Since Groovy 4, parent domain classes cannot be annotated with @Entity (https://issues.apache.org/jira/browse/GROOVY-5106)
-@SuppressWarnings(['unused', 'GrMethodMayBeStatic'])
-class ParentBoolMethodPropertiesDomain {
-
-    /**
-     * publicProperty should be constrained because those getter and setter
-     */
-    Boolean isPublicProperty() { null }
-    void setPublicProperty(Boolean value) {}
-
-    protected Boolean isProtectedProperty() { null }
-    protected void setProtectedProperty(Boolean value) {}
-
-    private Boolean isPrivateProperty() { null }
-    private void setPrivateProperty(Boolean value) {}
-
-    static Boolean isStaticPublicProperty() { null }
-    static void setStaticPublicProperty(Boolean value) {}
-
-    static protected Boolean isStaticProtectedProperty() { null }
-    static protected void setStaticProtectedProperty(Boolean value) {}
-
-    static private Boolean isStaticPrivateProperty() { null }
-    static private void setStaticPrivateProperty(Boolean value) {}
-
-    Boolean isGetterOnly() { null }
-
-    protected Boolean isProtectedGetterOnly() { null }
-
-    private Boolean isPrivateGetterOnly() { null }
-
-    static Boolean isStaticGetterOnly() { null }
-
-    static protected Boolean isStaticProtectedGetterOnly() { null }
-
-    static private Boolean isStaticPrivateGetterOnly() { null }
+    static private Boolean getStaticPrivateGetterOnly() { null }
 
     void setSetterOnly(Boolean value) {}
 
@@ -660,25 +556,25 @@ trait BoolMethodPropertiesDomainTrait {
     /**
      * publicProperty should be constrained because those getter and setter
      */
-    Boolean isPublicProperty() { null }
+    Boolean getPublicProperty() { null }
     void setPublicProperty(Boolean value) {}
 
-    private Boolean isPrivateProperty() { null }
+    private Boolean getPrivateProperty() { null }
     private void setPrivateProperty(Boolean value) {}
 
-    static Boolean isStaticPublicProperty() { null }
+    static Boolean getStaticPublicProperty() { null }
     static void setStaticPublicProperty(Boolean value) {}
 
-    static private Boolean isStaticPrivateProperty() { null }
+    static private Boolean getStaticPrivateProperty() { null }
     static private void setStaticPrivateProperty(Boolean value) {}
 
-    Boolean isGetterOnly() { null }
+    Boolean getGetterOnly() { null }
 
-    private Boolean isPrivateGetterOnly() { null }
+    private Boolean getPrivateGetterOnly() { null }
 
-    static Boolean isStaticGetterOnly() { null }
+    static Boolean getStaticGetterOnly() { null }
 
-    static private Boolean isStaticPrivateGetterOnly() { null }
+    static private Boolean getStaticPrivateGetterOnly() { null }
 
     void setSetterOnly(Boolean value) {}
 
@@ -693,7 +589,7 @@ trait BoolMethodPropertiesDomainTrait {
  * Domain with inherited bool method properties from super class
  */
 @Entity
-class InheritedBoolMethodPropertiesDomain extends ParentBoolMethodPropertiesDomain {}
+class InheritedBoolMethodPropertiesDomain extends BoolMethodPropertiesDomain {}
 
 /**
  * Domain with inherited bool method properties from trait
@@ -712,19 +608,13 @@ class DomainWithTransients {
     String getMethodProperty() { null }
     void setMethodProperty(String value) {}
 
-    String getTransientMethodProperty() { null }
-    void setTransientMethodProperty(String value) {}
-
-    Boolean isBoolMethodProperty() { null }
+    Boolean getBoolMethodProperty() { null }
     void setBoolMethodProperty(Boolean value) {}
-
-    Boolean isTransientBoolMethodProperty() { null }
-    void setTransientBoolMethodProperty(Boolean value) {}
 }
 
-// Since Groovy 4, parent domain classes cannot be annotated with @Entity (https://issues.apache.org/jira/browse/GROOVY-5106)
+@Entity
 @SuppressWarnings(['unused', 'GrMethodMayBeStatic'])
-class ParentDomainWithTransients {
+class DomainPrimitiveBooleanWithTransients {
 
     static transients = ['simpleProperty', 'methodProperty', 'boolMethodProperty']
 
@@ -733,14 +623,8 @@ class ParentDomainWithTransients {
     String getMethodProperty() { null }
     void setMethodProperty(String value) {}
 
-    String getTransientMethodProperty() { null }
-    void setTransientMethodProperty(String value) {}
-
-    Boolean isBoolMethodProperty() { null }
-    void setBoolMethodProperty(Boolean value) {}
-
-    Boolean isTransientBoolMethodProperty() { null }
-    void setTransientBoolMethodProperty(Boolean value) {}
+    boolean isBoolMethodProperty() { false }
+    void setBoolMethodProperty(boolean value) {}
 }
 
 @SuppressWarnings(['unused', 'GrMethodMayBeStatic'])
@@ -753,19 +637,12 @@ trait TraitWithTransients {
     String getMethodProperty() { null }
     void setMethodProperty(String value) {}
 
-    transient String getTransientMethodProperty() { null }
-    transient void setTransientMethodProperty(String value) {}
-
-    Boolean isBoolMethodProperty() { null }
+    Boolean getBoolMethodProperty() { null }
     void setBoolMethodProperty(Boolean value) {}
-
-    transient Boolean isTransientBoolMethodProperty() { null }
-    transient void setTransientBoolMethodProperty(Boolean value) {}
 }
 
-
 @Entity
-class InheritedDomainWithTransients extends ParentDomainWithTransients {}
+class InheritedDomainWithTransients extends DomainWithTransients {}
 
 @Entity
 class TraitDomainWithTransients implements TraitWithTransients {}

@@ -18,6 +18,7 @@ package org.grails.plugins;
 import grails.artefact.Enhanced;
 import grails.plugins.Plugin;
 import grails.plugins.PluginFilter;
+import org.grails.config.NavigableMap;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.plugins.GrailsVersionUtils;
@@ -141,10 +142,22 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         if(autowireCapableBeanFactory instanceof ConfigurableListableBeanFactory) {
             ConfigurableListableBeanFactory beanFactory = (ConfigurableListableBeanFactory)autowireCapableBeanFactory;
             ConversionService existingConversionService = beanFactory.getConversionService();
+            ConverterRegistry converterRegistry;
             if(existingConversionService == null) {
                 GenericConversionService conversionService = new GenericConversionService();
+                converterRegistry = conversionService;
                 beanFactory.setConversionService(conversionService);
             }
+            else {
+                converterRegistry = (ConverterRegistry)existingConversionService;
+            }
+
+            converterRegistry.addConverter(new Converter<NavigableMap.NullSafeNavigator, Object>() {
+                @Override
+                public Object convert(NavigableMap.NullSafeNavigator source) {
+                    return null;
+                }
+            });
         }
         checkInitialised();
         for (GrailsPlugin plugin : pluginList) {

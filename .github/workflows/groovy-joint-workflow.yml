@@ -18,7 +18,7 @@ jobs:
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: 17
       - name: "🗄️ Cache local Maven repository"
         uses: actions/cache@v4
@@ -121,7 +121,7 @@ jobs:
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4

@@ -9,6 +9,7 @@ classes
 *.log
 *.ipr
 *.iml
+*.db
 *.iws
 *.hprof
 idea
@@ -23,7 +24,7 @@ stacktrace.log
 /dist
 /idea-target
 target
-/build
+build
 /grails.iws
 .gradle
 .DS_Store

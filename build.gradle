@@ -7,18 +7,22 @@ buildscript {
         classpath "io.github.gradle-nexus:publish-plugin:$gradleNexusPublishPluginVersion"
         classpath "com.netflix.nebula:gradle-extra-configurations-plugin:$gradleExtraConfigurationsPluginVersion"
         classpath "com.bmuschko:gradle-nexus-plugin:$gradleNexusPluginVersion"
-        classpath "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:$gradleLicensePluginVersion"
+        // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
+        classpath "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:$gradleLicensePluginVersion", {
+            exclude group: 'org.springframework', module: 'spring-core'
+        }
     }
 }
 
 apply plugin: 'idea'
 
 ext {
-    isJava8Compatible = org.gradle.api.JavaVersion.current().isJava8Compatible()
     grailsVersion = project.projectVersion
-    isBuildSnapshot = grailsVersion.endsWith("-SNAPSHOT")
-    isReleaseVersion = !isBuildSnapshot
     isCiBuild = System.getenv().get("CI") as Boolean
+    isGitHubRepoPublish = System.getenv("GITHUB_PUBLISH") == 'true'
+    isGrailsRepoPublish = grailsVersion.endsWith("-SNAPSHOT") && !isGitHubRepoPublish
+    isReleaseVersion = !isGrailsRepoPublish && !isGitHubRepoPublish
+
     springLoadedCommonOptions = "-Xverify:none -Dspringloaded.synchronize=true -Djdk.reflect.allowGetCallerClass=true"
 
     nexusUsername = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
@@ -102,12 +106,6 @@ allprojects {
         maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        if(groovyVersion.endsWith('-SNAPSHOT')) {
-            maven {
-                name = 'ASF Snapshot repo'
-                url = 'https://repository.apache.org/content/repositories/snapshots'
-            }
-        }
     }
 
     configurations {
@@ -170,13 +168,50 @@ apply from: "gradle/idea.gradle"
 subprojects { subproject ->
 
     version = grailsVersion
-    group = "org.grails"
 
-    ext.isTestSuite = subproject.name.startsWith("grails-test-suite")
-    ext.isCiBuild = subproject.hasProperty("isCiBuild") || System.getenv().get("CI") as Boolean
+    ext.isTestSuite = subproject.name.startsWith('grails-test-suite')
+    ext.isExample = subproject.name.contains('grails-test-examples')
+    ext.isPlugin = subproject.name in ['grails-async-plugin', 'grails-events-plugin']
+    ext.isCiBuild = subproject.hasProperty('isCiBuild') || System.getenv().get('CI') as Boolean
+    ext.isAsyncProject = subproject.name.startsWith('grails-async') || subproject.name.startsWith('grails-events')
+
+    // Historically async mapped the core libraries to different artifact ids
+    ext.mappedArtifactIds = [
+            'grails-async-core'       : 'grails-async',
+            'grails-async-plugin'     : 'async',
+            'grails-events-core'      : 'grails-events',
+            'grails-events-plugin'    : 'events',
+            'grails-plugin-converters': 'converters'
+    ]
+
+    if(isExample) {
+        // Test projects will often include dependencies from grails-core, this file will ensure any dependencies included
+        // will be substituted with projects in this repository instead of pulling upstream
+        configurations.all {
+            resolutionStrategy {
+                dependencySubstitution {
+                    for (def possibleProject  : rootProject.subprojects) {
+                        if(!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples') && possibleProject.name != 'grails-bom') {
+                            def artifactId = mappedArtifactIds[possibleProject.name] ?: possibleProject.name
+                            substitute module("${subproject.name in ['grails-async-plugin', 'grails-events-plugin'] ? 'org.grails.plugins' : 'org.grails'}:${artifactId}") using project(":${possibleProject.name}")
+                        }
+                    }
+                }
+            }
+        }
+
+        return
+    }
+
+    if (isPlugin) {
+        group = 'org.grails.plugins'
+    } else {
+        group = 'org.grails'
+    }
+
     ext.pomInfo = {
         delegate.name 'Grails® framework'
-        delegate.description 'Grails Web Application Framework'
+        delegate.description subproject.name == 'grails-testing-support' ? 'Support for writing concise expressive tests for Grails artifacts' : 'Grails Web Application Framework'
         delegate.url 'https://grails.org/'
 
         delegate.licenses {
@@ -193,14 +228,27 @@ subprojects { subproject ->
             delegate.developerConnection 'scm:git@github.com:grails/grails-core.git'
         }
 
-        delegate.developers {
-            delegate.developer {
-                delegate.id 'graemerocher'
-                delegate.name 'Graeme Rocher'
-                delegate.email 'grails-build@users.noreply.github.com'
+        if(subproject.name == 'grails-testing-support') {
+            delegate.developers {
+                delegate.developer {
+                    delegate.id 'jeffscottbrown'
+                    delegate.name 'Jeff Brown'
+                }
+                delegate.developer {
+                    delegate.id 'jameskleeh'
+                    delegate.name 'James Kleeh'
+                }
             }
         }
-
+        else {
+            delegate.developers {
+                delegate.developer {
+                    delegate.id 'graemerocher'
+                    delegate.name 'Graeme Rocher'
+                    delegate.email 'grails-build@users.noreply.github.com'
+                }
+            }
+        }
     }
 
     if (subproject.name != 'grails-bom') {
@@ -223,17 +271,29 @@ subprojects { subproject ->
             }
         }
         publishing {
-
-            if (isBuildSnapshot) {
+            if (isGrailsRepoPublish || isGitHubRepoPublish) {
                 repositories {
                     maven {
                         credentials {
-                            def u = subproject.hasProperty("artifactoryPublishUsername") ? subproject.getProperty('artifactoryPublishUsername') : System.getenv("ARTIFACTORY_USERNAME")
-                            def p = subproject.hasProperty("artifactoryPublishPassword") ? subproject.getProperty('artifactoryPublishPassword') : System.getenv("ARTIFACTORY_PASSWORD")
-                            username = u
-                            password = p
+                            if (isGrailsRepoPublish) {
+                                def u = subproject.hasProperty("artifactoryPublishUsername") ? subproject.getProperty('artifactoryPublishUsername') : System.getenv("ARTIFACTORY_USERNAME")
+                                def p = subproject.hasProperty("artifactoryPublishPassword") ? subproject.getProperty('artifactoryPublishPassword') : System.getenv("ARTIFACTORY_PASSWORD")
+                                username = u
+                                password = p
+                            } else {
+                                def u = System.getenv('GITHUB_USERNAME') ?: ''
+                                def p = System.getenv('GITHUB_PASSWORD') ?: ''
+                                username = u
+                                password = p
+                            }
                         }
-                        url "https://repo.grails.org/grails/libs-snapshots-local"
+                        if (isGrailsRepoPublish) {
+                            url = isPlugin ?
+                                    uri('https://repo.grails.org/grails/plugins3-snapshots-local') :
+                                    uri('https://repo.grails.org/grails/libs-snapshots-local')
+                        } else {
+                            url('https://maven.pkg.github.com/grails/grails-core')
+                        }
                     }
                 }
             }
@@ -242,35 +302,27 @@ subprojects { subproject ->
 
             publications {
                 maven(MavenPublication) {
-                    pom {
-                        name = 'Grails® framework'
-                        description = 'Grails Web Application Framework'
-                        url = 'https://grails.org/'
-
-                        licenses {
-                            license {
-                                name = 'The Apache Software License, Version 2.0'
-                                url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                                distribution = 'repo'
-                            }
-                        }
-
-                        scm {
-                            url = 'scm:git@github.com:grails/grails-core.git'
-                            connection = 'scm:git@github.com:grails/grails-core.git'
-                            developerConnection = 'scm:git@github.com:grails/grails-core.git'
-                        }
-
-                        developers {
-                            developer {
-                                id = 'graemerocher'
-                                name = 'Graeme Rocher'
-                                email = 'grails-build@users.noreply.github.com'
-                            }
-                        }
+                    if(mappedArtifactIds.containsKey(subproject.name)) {
+                        artifactId = mappedArtifactIds[subproject.name]
                     }
+
+                    pom.withXml {
+                        def pomNode = asNode()
+                        pomNode.children().last() + pomInfo
+
+                        // dependency management shouldn't be included
+                        try { pomNode.dependencyManagement.replaceNode({}) } catch (Throwable ignore) {}
+                    }
+
                     if (subproject.name != 'grails-bom') {
                         from components.java
+                    }
+
+                    if(isAsyncProject) {
+                        versionMapping {
+                            usage('java-api') { fromResolutionOf('runtimeClasspath') }
+                            usage('java-runtime') { fromResolutionResult() }
+                        }
                     }
                 }
             }
@@ -278,18 +330,20 @@ subprojects { subproject ->
 
         afterEvaluate {
             signing {
-                required { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
+                required { (isReleaseVersion || isGitHubRepoPublish) && gradle.taskGraph.hasTask("publish") }
                 sign publishing.publications.maven
             }
         }
 
         tasks.withType(Sign) {
-            onlyIf { isReleaseVersion }
+            onlyIf { isReleaseVersion || isGitHubRepoPublish }
         }
 
         //do not generate extra load on Nexus with new staging repository if signing fails
-        tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
-            shouldRunAfter(tasks.withType(Sign))
+        if (isReleaseVersion) {
+            tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
+                shouldRunAfter(tasks.withType(Sign))
+            }
         }
     }
 
@@ -352,8 +406,6 @@ subprojects { subproject ->
         testImplementation "org.junit.platform:junit-platform-runner"
         testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
 
-        compileOnly "com.github.spotbugs:spotbugs-annotations"
-
         if (subproject.name != "grails-docs") {
             // Logging
             api "org.slf4j:slf4j-api"
@@ -378,6 +430,12 @@ subprojects { subproject ->
     ]
 
     tasks.withType(Test).configureEach {
+        onlyIf {
+            if(project.hasProperty('onlyFunctionalTests')) {
+                return false
+            }
+            true
+        }
         useJUnitPlatform()
         jvmArgs += java17moduleReflectionCompatibilityArguments
     }
@@ -464,7 +522,7 @@ subprojects { subproject ->
         }
     }
 
-    java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+    compileJava.options.release = 17
 
     if (!isTestSuite) {
         tasks.register('installToHomeDist', Copy) {

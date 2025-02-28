@@ -1,9 +1,3 @@
-configurations.all {
-    resolutionStrategy {
-        force "org.hamcrest:hamcrest-core:1.3"
-    }
-}
-
 dependencies {
     compileOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
     api "jakarta.inject:jakarta.inject-api"
@@ -16,6 +10,7 @@ dependencies {
     api "org.springframework:spring-tx"
     api "org.springframework:spring-beans"
     api "org.springframework:spring-context"
+    api "org.springframework.boot:spring-boot-autoconfigure"
 
     compileOnly "org.springframework:spring-test"
     compileOnly "org.apache.groovy:groovy-templates"
@@ -23,11 +18,13 @@ dependencies {
     api project(":grails-bootstrap")
     api project(":grails-spring")
 
-    api "org.grails:grails-datastore-core"
+    // This only needs the datastore version property because of how source jars are being created.
+    // Build will succeed, but assemble will fail without this because of task ordering in gradle.
+    api "org.grails:grails-datastore-core:${project['grails-datastore.version']}"
 
     testImplementation "org.springframework:spring-jdbc"
 
-    testImplementation "org.hamcrest:hamcrest-core:1.3"
+    testImplementation "org.hamcrest:hamcrest"
 
     testRuntimeOnly "com.h2database:h2"
     testRuntimeOnly "com.fasterxml.jackson.core:jackson-databind"

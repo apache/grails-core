@@ -541,12 +541,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
                 BeanBuilder bb = new BeanBuilder(getParentCtx(),springConfig, grailsApplication.getClassLoader());
                 bb.setBinding(b);
                 c.setDelegate(bb);
-                c.setResolveStrategy(Closure.OWNER_FIRST);
                 bb.invokeMethod("beans", new Object[]{c});
             }
-        }
-        else {
-
+        } else {
             if (!pluginBean.isReadableProperty(DO_WITH_SPRING)) {
                 return;
             }
@@ -559,7 +556,6 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             BeanBuilder bb = new BeanBuilder(getParentCtx(),springConfig, grailsApplication.getClassLoader());
             bb.setBinding(b);
             c.setDelegate(bb);
-            c.setResolveStrategy(Closure.DELEGATE_FIRST);
             bb.invokeMethod("beans", new Object[]{c});
         }
 

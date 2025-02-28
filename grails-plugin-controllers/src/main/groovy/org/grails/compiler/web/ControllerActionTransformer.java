@@ -798,14 +798,12 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             }
             
             if (argumentIsValidateable) {
-                final MethodCallExpression validateMethodCallExpression =
-                        new MethodCallExpression(new VariableExpression(paramName), "validate", EMPTY_TUPLE);
-                final MethodNode validateMethod =
-                        commandObjectNode.getMethod("validate", new Parameter[0]);
+                final MethodCallExpression validateMethodCallExpression = callX(localVarX(paramName, commandObjectNode), "validate");
+                final MethodNode validateMethod = commandObjectNode.getMethod("validate", new Parameter[0]);
                 if (validateMethod != null) {
                     validateMethodCallExpression.setMethodTarget(validateMethod);
                 }
-                final Statement ifCommandObjectIsNotNullThenValidate = new IfStatement(new BooleanExpression(new VariableExpression(paramName)), new ExpressionStatement(validateMethodCallExpression), new ExpressionStatement(new EmptyExpression()));
+                final Statement ifCommandObjectIsNotNullThenValidate = ifS(boolX(varX(paramName)), stmt(validateMethodCallExpression));
                 wrapper.addStatement(ifCommandObjectIsNotNullThenValidate);
             } else {
                 // try to dynamically invoke the .validate() method if it is available at runtime...

@@ -28,6 +28,7 @@ import java.util.Set;
  */
 public interface LinkGenerator {
 
+    String BEAN_NAME = "grailsLinkGenerator";
     String ATTRIBUTE_CONTROLLER = "controller";
     String ATTRIBUTE_RESOURCE = "resource";
     String ATTRIBUTE_ACTION = "action";

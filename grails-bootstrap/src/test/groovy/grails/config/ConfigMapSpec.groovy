@@ -58,7 +58,7 @@ test.another = true
         configMap.getProperty('bar.two') == 'good4'
 
     }
-    def "should support flattening keys"() {
+    def "should support flattening keys - map syntax"() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -66,9 +66,18 @@ test.another = true
         then:
         configMap.toFlatConfig() == ['a.b.c': 1, 'a.b.d': 2]
     }
+    def "should support flattening keys - dot syntax"() {
+        given:
+        NavigableMap configMap = new NavigableMap()
+        when:
+        configMap.a.b.c = 1
+        configMap.a.b.d = 2
+        then:
+        configMap.toFlatConfig() == ['a.b.c': 1, 'a.b.d': 2]
+    }
 
     @Issue('#9146')
-    def "should support hashCode()"() {
+    def "should support hashCode() - map syntax"() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -77,7 +86,18 @@ test.another = true
         configMap.hashCode() == configMap.hashCode()
     }
 
-    def "should support flattening list values"() {
+    @Issue('#9146')
+    def "should support hashCode() - dot syntax"() {
+        given:
+        NavigableMap configMap = new NavigableMap()
+        when:
+        configMap.a.b.c = 1
+        configMap.a.b.d = 2
+        then:"hasCode() doesn't cause a Stack Overflow error"
+        configMap.hashCode() == configMap.hashCode()
+    }
+
+    def "should support flattening list values - map syntax"() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -90,8 +110,23 @@ test.another = true
                  'a.b.c[2]': 3,
                  'a.b.d': 2]
     }
+
+    def "should support flattening list values - dot syntax"() {
+        given:
+        NavigableMap configMap = new NavigableMap()
+        when:
+        configMap.a.b.c = [1, 2, 3]
+        configMap.a.b.d = 2
+        then:
+        configMap.toFlatConfig() ==
+                ['a.b.c': [1, 2, 3],
+                 'a.b.c[0]': 1,
+                 'a.b.c[1]': 2,
+                 'a.b.c[2]': 3,
+                 'a.b.d': 2]
+    }
     
-    def "should support flattening to properties"() {
+    def "should support flattening to properties - map syntax"() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -104,12 +139,45 @@ test.another = true
                  'a.b.c[2]': '3',
                  'a.b.d': '2']
     }
+
+    def "should support flattening to properties - dot syntax"() {
+        given:
+        NavigableMap configMap = new NavigableMap()
+        when:
+        configMap.a.b.c = [1, 2, 3]
+        configMap.a.b.d = 2
+        then:
+        configMap.toProperties() ==
+                ['a.b.c': '1,2,3',
+                 'a.b.c[0]': '1',
+                 'a.b.c[1]': '2',
+                 'a.b.c[2]': '3',
+                 'a.b.d': '2']
+    }
     
-    def "should support cloning"() {
+    def "should support cloning - map syntax"() {
         given:
         NavigableMap configMap = new NavigableMap()
         configMap.a = [b: [c: [1, 2, 3], d: 2]]
         when: 
+        NavigableMap cloned = configMap.clone()
+        then:
+        cloned.toFlatConfig() ==
+                ['a.b.c': [1, 2, 3],
+                 'a.b.c[0]': 1,
+                 'a.b.c[1]': 2,
+                 'a.b.c[2]': 3,
+                 'a.b.d': 2]
+        !cloned.is(configMap)
+        cloned == configMap
+    }
+
+    def "should support cloning - dot syntax"() {
+        given:
+        NavigableMap configMap = new NavigableMap()
+        configMap.a.b.c = [1, 2, 3]
+        configMap.a.b.d = 2
+        when:
         NavigableMap cloned = configMap.clone()
         then:
         cloned.toFlatConfig() ==

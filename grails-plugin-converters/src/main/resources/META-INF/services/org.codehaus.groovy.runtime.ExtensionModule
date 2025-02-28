@@ -1,0 +1,3 @@
+moduleName=grails-converters-module
+moduleVersion=1.0
+extensionClasses=org.grails.web.converters.ConvertersExtension

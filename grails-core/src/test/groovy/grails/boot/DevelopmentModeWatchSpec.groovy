@@ -24,7 +24,6 @@ class DevelopmentModeWatchSpec extends Specification {
         GrailsApp app = new GrailsApp(GrailsTestConfigurationClass.class)
         ConfigurableApplicationContext context = app.run()
         WatchedResourcesGrailsPlugin plugin = context.getBean('grailsPluginManager').pluginList[0].plugin.instance
-        def pollingCondition = new PollingConditions(timeout: 10)
 
         when:
         File watchedFile = new File('testWatchedFile.properties')
@@ -32,7 +31,7 @@ class DevelopmentModeWatchSpec extends Specification {
         watchedFile.write 'foo.bar=baz'
 
         then:
-        pollingCondition.eventually {
+        new PollingConditions(timeout: 10).eventually {
             assert plugin.fileIsChanged.endsWith('testWatchedFile.properties')
         }
 

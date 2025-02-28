@@ -1,0 +1,19 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api "org.springframework:spring-test"
+    api project(":grails-plugin-codecs"), {
+        exclude module: 'grails-plugin-mimetypes'
+        exclude module: 'grails-plugin-converters'
+        exclude module: 'grails-web'
+    }
+
+    api project(":grails-plugin-databinding")
+    api "org.grails:grails-datastore-gorm"
+    api project(":grails-test")
+    api "org.springframework.boot:spring-boot-test"
+    api("org.spockframework:spock-spring") { transitive = false }
+    api "org.junit.jupiter:junit-jupiter-api"
+    api "org.junit.platform:junit-platform-runner"
+    runtimeOnly "org.junit.jupiter:junit-jupiter-engine"
+}

@@ -17,6 +17,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
 @AutoConfiguration
@@ -31,6 +32,12 @@ public class DataBindingConfiguration {
         this.configurationProperties = configurationProperties;
     }
 
+    /*
+    Must be lazy initialized because plugins ValueConverters & StructuredBindingEditors may be initialized by the Grails
+    Bean DSL instead of an AutoConfiguration. For example, DataBindingConfigurationSpec defines beans as part of the test
+    startup and without this being Lazy it, those beans will never be wired to the GrailsWebDataBinder bean.
+     */
+    @Lazy
     @Bean("grailsWebDataBinder")
     protected GrailsWebDataBinder grailsWebDataBinder(
             GrailsApplication grailsApplication,

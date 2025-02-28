@@ -15,7 +15,7 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
         Holders.setConfig(null)
     }
 
-    void "Test that property placeholder configuration works for simple properties"() {
+    void "Test that property placeholder configuration works for simple properties in map syntax"() {
         when:"A bean is defined with a placeholder"
             def application = new DefaultGrailsApplication()
             application.config.foo = [bar: "test"]
@@ -30,6 +30,24 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
             def bean = applicationContext.getBean(TestBean)
         then:"The placeholder is replaced"
             bean.name == "test"
+
+    }
+
+    void "Test that property placeholder configuration works for simple properties in dot syntax"() {
+        when:"A bean is defined with a placeholder"
+        def application = new DefaultGrailsApplication()
+        application.config.foo.bar="test"
+        def bb = new BeanBuilder()
+        bb.beans {
+            addBeanFactoryPostProcessor(new GrailsPlaceholderConfigurer('${', application.config.toProperties()))
+            testBean(TestBean) {
+                name = '${foo.bar}'
+            }
+        }
+        def applicationContext = bb.createApplicationContext()
+        def bean = applicationContext.getBean(TestBean)
+        then:"The placeholder is replaced"
+        bean.name == "test"
 
     }
 

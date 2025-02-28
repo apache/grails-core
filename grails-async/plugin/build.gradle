@@ -1,0 +1,27 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-async-core')
+    api project(':grails-core')
+    api project(':grails-events-compat')
+    api project(':grails-events-core')
+    api project(':grails-web-common')
+    api 'org.apache.groovy:groovy'
+    api 'org.springframework:spring-beans'
+    api 'org.springframework:spring-context'
+    api 'org.springframework:spring-tx'
+
+    implementation project(':grails-plugin-controllers')
+    implementation project(':grails-web-mvc')
+    implementation 'org.springframework:spring-core'
+    implementation 'org.springframework:spring-web'
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+
+}

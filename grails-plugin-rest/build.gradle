@@ -6,7 +6,7 @@ dependencies {
             project(":grails-plugin-controllers"),
             project(":grails-plugin-datasource")
 
-    api "org.grails.plugins:converters"
+    api project(":grails-plugin-converters")
 
     implementation "com.github.ben-manes.caffeine:caffeine"
     testImplementation project(":grails-plugin-url-mappings"),

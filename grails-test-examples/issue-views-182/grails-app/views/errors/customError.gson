@@ -1,0 +1,6 @@
+response.status 500
+
+json {    
+    message "My custom exception handler"
+    error 500
+}

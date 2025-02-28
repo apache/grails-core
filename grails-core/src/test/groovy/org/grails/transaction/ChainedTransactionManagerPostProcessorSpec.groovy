@@ -62,12 +62,31 @@ class ChainedTransactionManagerPostProcessorSpec extends Specification {
         !(transactionManager instanceof ChainedTransactionManager)
     }
     
-    void "transactionManager bean should not get replaced when additional datasources aren't transactional"() {
+    void "transactionManager bean should not get replaced when additional datasources aren't transactional by map syntax"() {
         given:
         def bb = new BeanBuilder()
         def config = new PropertySourcesConfig()
         config['dataSources.ds1.transactional'] = false
         config['dataSources.ds2.transactional'] = false
+        bb.beans {
+            chainedTransactionManagerPostProcessor(ChainedTransactionManagerPostProcessor, config)
+            transactionManager(ChainedTransactionManagerTests.TestPlatformTransactionManager, "transactionManager")
+            transactionManager_ds1(ChainedTransactionManagerTests.TestPlatformTransactionManager, "transactionManager_ds1")
+            transactionManager_ds2(ChainedTransactionManagerTests.TestPlatformTransactionManager, "transactionManager_ds2")
+        }
+        when:
+        def applicationContext = bb.createApplicationContext()
+        def transactionManager = applicationContext.getBean("transactionManager")
+        then:
+        !(transactionManager instanceof ChainedTransactionManager)
+    }
+
+    void "transactionManager bean should not get replaced when additional datasources aren't transactional by dot syntax"() {
+        given:
+        def bb = new BeanBuilder()
+        def config = new PropertySourcesConfig()
+        config.dataSources.ds1.transactional = false
+        config.dataSources.ds2.transactional = false
         bb.beans {
             chainedTransactionManagerPostProcessor(ChainedTransactionManagerPostProcessor, config)
             transactionManager(ChainedTransactionManagerTests.TestPlatformTransactionManager, "transactionManager")

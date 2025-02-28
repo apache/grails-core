@@ -23,17 +23,10 @@ import grails.util.GrailsUtil
  *
  * @author Graeme Rocher
  * @since 1.0
- * @deprecated Use {@link MimeTypesConfiguration} instead
  */
-@Deprecated
-class MimeTypesGrailsPlugin extends AbstractMimeTypesGrailsPlugin {
+class MimeTypesGrailsPlugin {
     
     def version = GrailsUtil.getGrailsVersion()
     def dependsOn = [core:version, controllers:version]
     def observe = ['controllers']
-
-    @Override
-    Closure doWithSpring() {
-        return super.doWithSpring()
-    }
 }

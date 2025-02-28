@@ -127,7 +127,7 @@ trait ResponseRenderer extends WebAttributes {
     void render(Map argMap, @DelegatesTo(strategy = Closure.DELEGATE_FIRST) Closure closure) {
         GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
-        String explicitSiteMeshLayout = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
+        String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
 
         applyContentType response, argMap, closure
         handleStatusArgument argMap, webRequest, response
@@ -139,7 +139,7 @@ trait ResponseRenderer extends WebAttributes {
         else {
             renderMarkupInternal webRequest, closure, response
         }
-        applySiteMeshLayout webRequest.currentRequest, false, explicitSiteMeshLayout
+        setLayout webRequest.currentRequest, layoutArg
     }
 
     private void renderJsonInternal(HttpServletResponse response, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure callable) {
@@ -158,12 +158,12 @@ trait ResponseRenderer extends WebAttributes {
     void render(Map argMap, CharSequence body) {
         GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
-        String explicitSiteMeshLayout = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
+        String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
 
         applyContentType response, argMap, body
         handleStatusArgument argMap, webRequest, response
         render body
-        applySiteMeshLayout webRequest.currentRequest, false, explicitSiteMeshLayout
+        setLayout webRequest.currentRequest, layoutArg
     }
 
     /**
@@ -202,12 +202,12 @@ trait ResponseRenderer extends WebAttributes {
     void render(Map argMap, Writable writable) {
         GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
-        String explicitSiteMeshLayout = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
+        String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
 
         handleStatusArgument argMap, webRequest, response
         applyContentType response, argMap, writable
         renderWritable writable, response
-        applySiteMeshLayout webRequest.currentRequest, false, explicitSiteMeshLayout
+        setLayout webRequest.currentRequest, layoutArg
         webRequest.renderView = false
     }
 
@@ -220,7 +220,7 @@ trait ResponseRenderer extends WebAttributes {
     void render(Map argMap) {
         GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
-        String explicitSiteMeshLayout = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
+        String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
         boolean statusSet = handleStatusArgument(argMap, webRequest, response)
 
 
@@ -235,7 +235,7 @@ trait ResponseRenderer extends WebAttributes {
                 CharSequence text = (textArg instanceof CharSequence) ? ((CharSequence)textArg) : textArg.toString()
                 render text
             }
-            applySiteMeshLayout webRequest.currentRequest, false, explicitSiteMeshLayout
+            setLayout webRequest.currentRequest, layoutArg
         }
         else if (argMap.containsKey(ARGUMENT_VIEW)) {
             String viewName = argMap[ARGUMENT_VIEW].toString()
@@ -263,7 +263,7 @@ trait ResponseRenderer extends WebAttributes {
             }
 
             ((GroovyObject)this).setProperty "modelAndView", new ModelAndView(viewUri, model)
-            applySiteMeshLayout webRequest.currentRequest, true, explicitSiteMeshLayout
+            setLayout webRequest.currentRequest, layoutArg
         }
         else if (argMap.containsKey(ARGUMENT_TEMPLATE)) {
             applyContentType response, argMap, null, false
@@ -296,11 +296,11 @@ trait ResponseRenderer extends WebAttributes {
                 }
 
 
-                boolean renderWithLayout = (explicitSiteMeshLayout || webRequest.getCurrentRequest().getAttribute(WebUtils.LAYOUT_ATTRIBUTE))
+                boolean renderWithLayout = (layoutArg || webRequest.getCurrentRequest().getAttribute(WebUtils.LAYOUT_ATTRIBUTE))
                 // if automatic decoration occurred unwrap, since this is a partial
 
                 if (renderWithLayout) {
-                    applySiteMeshLayout webRequest.currentRequest, false, explicitSiteMeshLayout
+                    setLayout webRequest.currentRequest, layoutArg
                 }
 
 
@@ -532,14 +532,9 @@ trait ResponseRenderer extends WebAttributes {
         renderArgument instanceof GPathResult ? APPLICATION_XML : defaultEncoding
     }
 
-    private void applySiteMeshLayout(HttpServletRequest request, boolean renderView, String explicitSiteMeshLayout) {
-        if(explicitSiteMeshLayout == null && request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE) != null) {
-            // layout has been set already
-            return
-        }
-        String siteMeshLayout = explicitSiteMeshLayout != null ? explicitSiteMeshLayout : (renderView ? null : WebUtils.NONE_LAYOUT)
-        if(siteMeshLayout != null) {
-            request.setAttribute WebUtils.LAYOUT_ATTRIBUTE, siteMeshLayout
+    private void setLayout(HttpServletRequest request, String layout) {
+        if (layout != null && request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE) == null) {
+            request.setAttribute WebUtils.LAYOUT_ATTRIBUTE, layout
         }
     }
 

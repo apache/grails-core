@@ -16,7 +16,6 @@
 package org.grails.transaction;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.*;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -176,7 +175,6 @@ public class ChainedTransactionManagerTests {
 			this.name = name;
 		}
 
-		@Factory
 		static PlatformTransactionManager createFailingTransactionManager(String name) {
 			return new TestPlatformTransactionManager(name + "-failing") {
 				@Override
@@ -191,7 +189,6 @@ public class ChainedTransactionManagerTests {
 			};
 		}
 
-		@Factory
 		static PlatformTransactionManager createNonFailingTransactionManager(String name) {
 			return new TestPlatformTransactionManager(name + "-non-failing");
 		}
@@ -296,12 +293,10 @@ public class ChainedTransactionManagerTests {
 			description.appendText("that a " + (commitCheck ? "committed" : "rolled-back") + " TransactionManager");
 		}
 
-		@Factory
 		public static TransactionManagerMatcher isCommitted() {
 			return new TransactionManagerMatcher(true);
 		}
 
-		@Factory
 		public static TransactionManagerMatcher wasRolledback() {
 			return new TransactionManagerMatcher(false);
 		}

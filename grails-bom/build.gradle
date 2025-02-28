@@ -11,9 +11,6 @@ javaPlatform {
 def plugins = new Properties()
 plugins.load(new StringReader(new File("$projectDir/plugins.properties").text))
 
-def profiles = new Properties()
-profiles.load(new StringReader(new File("$projectDir/profiles.properties").text))
-
 def versions = new Properties()
 versions.load(new StringReader(new File("$projectDir.parentFile/gradle.properties").text))
 
@@ -25,40 +22,46 @@ ext {
     // version name = versionNameOverride ?: artifactId-prefixes[0]
     dependenciesOverview = """\
         com.bertramlabs.plugins:asset-pipeline-grails::
+        com.bertramlabs.plugins:asset-pipeline-gradle::
         com.fasterxml.jackson:jackson-bom:::jackson
         com.github.javaparser:javaparser-core::
         com.h2database:h2::
         commons-codec:commons-codec::
         io.methvin:directory-watcher::
+        io.reactivex:rxjava:::rxjava
+        io.reactivex.rxjava2:rxjava:::rxjava2
+        io.reactivex.rxjava3:rxjava:::rxjava3
         jline:jline::
         net.bytebuddy:byte-buddy::
         net.java.dev.jna:jna::
         org.apache.ant:ant:,junit:
         org.apache.commons:commons-text::
-        org.apache.groovy:groovy:bom:$groovyVersion
+        org.apache.groovy:groovy:bom:::
         org.asciidoctor:asciidoctorj::
         org.fusesource.jansi:jansi::
         org.gebish:geb-spock::
-        com.github.spotbugs:spotbugs-annotations::
-        org.grails.plugins:async,events:::grails-async
-        org.grails.plugins:converters::
         org.grails.plugins:gsp::
-        org.grails:grails-async,grails-events:gpars,rxjava,rxjava2::grails-async
         org.grails:grails-datastore-gorm-hibernate5::
-        org.grails:grails-datastore:async,core,gorm,gorm-async,gorm-support,gorm-rx,gorm-test,gorm-validation,web:
+        org.grails:grails-datastore-gorm-mongodb::
+        org.grails:grails-datastore-async,grails-datastore-core,grails-datastore-gorm,grails-datastore-gorm-async,grails-datastore-gorm-support,grails-datastore-gorm-rx,grails-datastore-gorm-test,grails-datastore-gorm-validation,grails-datastore-web,grails-datastore-gorm-tck,grails-gorm-testing-support:::grails-datastore
         org.grails:grails-gdoc-engine::
         org.grails:grails-gradle-plugin::
-        org.grails:grails-testing-support,grails-gorm-testing-support,grails-web-testing-support::
-        org.grails:grails:gsp,web-gsp,web-taglib::gsp
+        org.grails:grails:gsp,web-gsp,web-taglib,web-testing-support::gsp
         org.grails:views-json-testing-support::
+        org.grails.profiles:base,plugin,profile,web,rest-api,web-plugin,rest-api-plugin,react,vue,angular:::profiles
         org.jsoup:jsoup::
+        org.liquibase:liquibase-cdi,liquibase-core:::liquibase
+        org.liquibase.ext:liquibase-hibernate5:::liquibase
         org.mongodb:bson:,record-codec::mongodb
         org.mongodb:mongodb-driver:core,sync::mongodb
         org.objenesis:objenesis::
         org.spockframework:spock-core,spock-spring:::spock
-        org.springframework.boot:spring-boot-cli:::spring-boot
+        org.springframework.boot:spring-boot-cli,spring-boot-gradle-plugin:::spring-boot
         org.springframework:springloaded::
         org.xhtmlrenderer:flying-saucer-pdf-openpdf::
+        org.webjars.npm:bootstrap::
+        org.webjars.npm:bootstrap-icons::
+        org.webjars.npm:jquery::
     """.stripIndent(true).trim().readLines().collect {
         def info = it.toString().split(':', -1)
         def dep = [group: info[0], names: info[1].split(','), modules: info[2].split(','), version: info.length >= 4? info[3] : null]
@@ -80,19 +83,18 @@ ext {
         }
     }
 
-    pluginsAndProfiles =
-        plugins.collect { [groupId: "org.grails.plugins", artifactId:it.key, versionValue: it.value, name: "plugins-${it.key}"] } +
-        profiles.collect { [groupId: "org.grails.profiles", artifactId:it.key, versionValue: it.value, name: "profiles-${it.key}"] }
+    pluginList =
+        plugins.collect { [groupId: "org.grails.plugins", artifactId:it.key, versionValue: it.value, name: "plugins-${it.key}"] }
 
-    dependenciesVersions = (dependencyList + pluginsAndProfiles).sort { it.name }
+    dependenciesVersions = (dependencyList + pluginList).sort { it.name }
             .groupBy { it.name }.collect { it.value.first() } // remove duplicates
 
-    allDependencies = (pluginsAndProfiles + dependencyList).sort { it.name + it.artifactId }
+    allDependencies = (pluginList + dependencyList).sort { it.name + it.artifactId }
     allDependencies.each { it << [version: "${it.name}.version"] }
 }
 
 allDependencies.each {
-    if (!isBuildSnapshot && version.endsWith("-SNAPSHOT")) {
+    if (!isGitHubRepoPublish && !isGrailsRepoPublish && version.endsWith("-SNAPSHOT")) {
         throw new RuntimeException("Cannot have a snapshot dependency $it.version on a $it.name [$it.groupId] for a release!")
     }
 }
@@ -136,7 +138,8 @@ publishing {
 
                 project.parent.subprojects.findResults {
                     if (it.name == 'grails-bom') return null
-                    [groupId: it.group, artifactId: it.name, version: "${it.version}"] +
+                    if (it.name.startsWith('grails-test-suite') || it.name.contains('grails-test-examples')) return null
+                    [groupId: it.group, artifactId: mappedArtifactIds[it.name] ?: it.name, version: "${it.version}"] +
                         (it.name == 'grails-dependencies'? [type:'pom'] : [])
                 }.each {
                     appendNodes(deps.appendNode('dependency'), it)
@@ -153,20 +156,23 @@ publishing {
 }
 
 task syncProps {
-    def gradlePropertiesFile = rootProject.layout.projectDirectory.file('gradle.properties').asFile
-    String oldProperties = gradlePropertiesFile.text
-    gradlePropertiesFile.write(oldProperties.substring(0, oldProperties.indexOf("# Generated on")) + """\
+    doLast {
+        def gradlePropertiesFile = rootProject.layout.projectDirectory.file('gradle.properties').asFile
+        String oldProperties = gradlePropertiesFile.text
+        gradlePropertiesFile.write(oldProperties.substring(0, oldProperties.indexOf("# Generated on")) + """\
                     # Generated on ${new Date()} by: ./gradlew :grails-bom:${name}
                     # Only version value modifications allowed after this point. Do not insert or change version names. 
                     ${dependenciesVersions.collect { "$it.version=$it.versionValue" }.join('\n                    ')}
                     """.stripIndent(true).trim())
-    println "${gradlePropertiesFile} updated."
+        println "${gradlePropertiesFile} updated."
+    }
 }
 
 task dependabotBuild {
-    def dependabotBuildFile = rootProject.layout.projectDirectory.file('dependabot/build.gradle').asFile
-    dependabotBuildFile.parentFile.mkdirs()
-    dependabotBuildFile.write("""\
+    doLast {
+        def dependabotBuildFile = rootProject.layout.projectDirectory.file('dependabot/build.gradle').asFile
+        dependabotBuildFile.parentFile.mkdirs()
+        dependabotBuildFile.write("""\
                     // Generated on ${new Date()} by: ./gradlew :grails-bom:${name}
                     plugins {
                         id 'java-library'
@@ -176,7 +182,8 @@ task dependabotBuild {
                     ${allDependencies.collect { "    api \"${it.groupId}:${it.artifactId}:\${project['${it.version}']}\"" }.join('\n                    ')}
                     }
                     """.stripIndent(true).trim())
-    println "${dependabotBuildFile} created."
+        println "${dependabotBuildFile} created."
+    }
 }
 
 task dependabot {

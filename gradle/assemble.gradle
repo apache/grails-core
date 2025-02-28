@@ -92,7 +92,8 @@ tasks.register('sourcesJars', Sync) {
     from rootProject.subprojects.findAll { subproject ->
         !subproject.name.startsWith('grails-test-suite') &&
         !subproject.name.startsWith('grails-dependencies') &&
-        !subproject.name.startsWith('grails-bom')
+        !subproject.name.startsWith('grails-bom') &&
+        !subproject.name.contains('grails-test-examples')
     }.sourcesJar*.outputs*.files
     // sourcesFor comes from GrailsBuildPlugin
     from {
@@ -135,7 +136,7 @@ class GrailsCreateStartScripts extends CreateStartScripts {
         generator.classpath = projectArtifacts + getClasspath().resolvedConfiguration.resolvedArtifacts.collect { artifact ->
             def dependency = artifact.moduleVersion.id
             String installedFile = "lib/$dependency.group/$dependency.name/jars/$artifact.file.name"
-            if(dependency.group == 'org.grails' && !project.file(installedFile).exists()) {
+            if (dependency.group == 'org.grails' && !project.file(installedFile).exists()) {
                 installedFile = "dist/$artifact.file.name"
             }
             installedFile
@@ -149,7 +150,7 @@ class GrailsCreateStartScripts extends CreateStartScripts {
 tasks.register('install') { task ->
     dependsOn 'populateDependencies', 'grailsCreateStartScripts'
     subprojects { Project project ->
-        if(!project.name.startsWith('grails-test-suite')) {
+        if(!project.name.startsWith('grails-test-suite') && !project.name.startsWith('grails-test-examples')) {
             task.dependsOn("$project.name:publishToMavenLocal")
         }
     }

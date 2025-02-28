@@ -9,7 +9,6 @@ import grails.web.mime.MimeType
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.plugins.web.mime.MimeTypesConfiguration
-import org.grails.plugins.web.mime.MimeTypesFactoryBean
 import org.grails.web.mime.DefaultMimeUtility
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext

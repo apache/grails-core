@@ -2,6 +2,7 @@ package grails.spring
 
 import grails.core.DefaultGrailsApplication
 import org.grails.plugins.CoreGrailsPlugin
+import org.grails.spring.context.support.GrailsPlaceholderConfigurer
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -29,6 +30,7 @@ class GrailsPlaceHolderConfigurerCorePluginRuntimeSpec extends Specification{
             plugin.grailsApplication = app
             bb.beans plugin.doWithSpring()
             bb.beans {
+                propertySourcesPlaceholderConfigurer(GrailsPlaceholderConfigurer)
                 testBean(ReplacePropertyBean) {
                     foo = '${foo.bar}'
                 }

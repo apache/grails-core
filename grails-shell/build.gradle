@@ -4,10 +4,6 @@ mainClassName = "org.grails.cli.GrailsCli"
 
 repositories {
     mavenCentral()
-    maven {
-        url = 'https://repo.gradle.org/gradle/libs-releases'
-        description = 'Needed for Gradle Tooling API'
-    }
 }
 
 dependencies {
@@ -31,8 +27,8 @@ dependencies {
     api "org.apache.ant:ant"
     api "org.fusesource.jansi:jansi"
     api "jline:jline"
-
-    compileOnly "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
+    api "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
+    
     compileOnly "org.springframework.boot:spring-boot"
     compileOnly "org.springframework.boot:spring-boot-loader-tools"
     compileOnly "org.springframework:spring-web"

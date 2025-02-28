@@ -28,7 +28,7 @@ class InheritanceWithValidationTests extends Specification implements DataTest {
     }
 }
 
-// Since Groovy 4, parent domain classes cannot be annotated with @Entity (https://issues.apache.org/jira/browse/GROOVY-5106)
+@Entity
 @SuppressWarnings('unused')
 class AbstractCustomPropertyValue implements Validateable {
 

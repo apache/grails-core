@@ -1,45 +1,21 @@
 version: 2
-updates:   
+updates:
   - package-ecosystem: gradle
     directory: "/"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 0
-    target-branch: 3.3.x
+      interval: daily
+    open-pull-requests-limit: 10
+    target-branch: 6.2.x
     labels:
       - "type: dependency upgrade"
-      - "relates-to: v3" 
-  - package-ecosystem: gradle
-    directory: "/"
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 0
-    target-branch: 4.1.x
-    labels:
-      - "type: dependency upgrade"      
-      - "relates-to: v4"
     ignore:
       - dependency-name: "*"
-        update-types: [ "version-update:semver-minor", "version-update:semver-major" ]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: gradle
     directory: "/"
     schedule:
       interval: daily
     open-pull-requests-limit: 10
-    target-branch: 5.4.x
+    target-branch: 7.0.x
     labels:
       - "type: dependency upgrade"
-    ignore:
-      - dependency-name: "*"      
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: gradle
-    directory: "/"
-    schedule:
-      interval: daily
-    open-pull-requests-limit: 10
-    target-branch: 6.0.x
-    labels:
-      - "type: dependency upgrade"
-    ignore:
-      - dependency-name: "*"      
-        update-types: ["version-update:semver-patch", "version-update:semver-minor"]         

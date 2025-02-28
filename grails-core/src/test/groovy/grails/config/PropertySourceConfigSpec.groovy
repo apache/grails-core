@@ -113,6 +113,94 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.d' == 1
     }
 
+    void "should support null safe navigation for getting"() {
+
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig()
+
+        expect:
+        config.a.b.c as Boolean == false
+        config.a.b.c as Map == null
+    }
+
+    void "should support null safe navigation for setting"() {
+
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig()
+
+        when:
+        config.a.b.c = 1
+
+        then:
+        config.a == [b: [c: 1]]
+        config.'a.b' == [c: 1]
+        config.'a.b.c' == 1
+    }
+
+    void "should support merging values when map already exists"() {
+
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig()
+
+        when:
+        config.a.b.c = 1
+
+        then:
+        config.a == [b: [c: 1]]
+        config.'a.b' == ['c': 1]
+        config.'a.b.c' == 1
+
+        when:
+        config.merge([a: [d: 2]])
+
+        then:
+        config.a == [b: [c: 1], d: 2]
+        config.'a.b' == ['c': 1]
+        config.'a.b.c' == 1
+        config.'a.d' == 2
+
+        when:
+        config.a.b.e = 3
+
+        then:
+        config.a == [b: [c: 1, e: 3], d: 2]
+        config.'a.b' == [c: 1, e: 3]
+        config.'a.b.c' == 1
+        config.'a.d' == 2
+        config.'a.b.e' == 3
+    }
+
+    void "should support setting map in null safe navigation"() {
+
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig()
+
+        when:
+        config.a.b.c = [d: 3, e: [f: 4]]
+
+        then:
+        config.a == [b: [c: [d: 3, e: [f: 4]]]]
+        config.'a.b' == [c: [d: 3, e: [f: 4]]]
+        config.'a.b.c.d' == 3
+        config.'a.b.c.e.f' == 4
+        config.'a.b.c.e' == [f: 4]
+        config.'a.b.c' == [d: 3, e: [f: 4]]
+    }
+
+    void "should support removing values when key is set to null"() {
+
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig([a: [b: [c: [d: 1, e: 2]]]])
+
+        when:
+        config.a.b = null
+        config.a.b.c = 1
+
+        then:
+        config.a == [b: [c: 1]]
+        config.'a.b.c' == 1
+    }
+
     void "should support casting to boolean"() {
 
         given:
@@ -126,5 +214,46 @@ class PropertySourceConfigSpec extends Specification {
 
         then:
         config as boolean == false
+    }
+
+    void "should support with"() {
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig()
+
+        when:
+        config.a.b.c.with {
+            d = 1
+            e = 2
+        }
+
+        then:
+        config.a == [b: [c: [d: 1, e: 2]]]
+        config.'a.b.c' == [d: 1, e: 2]
+        config.'a.b' == [c: [d: 1, e: 2]]
+        config.'a.b.c.d' == 1
+        config.'a.b.c.e' == 2
+    }
+
+    void "null safe navigation should be supported without creating keys"() {
+
+        given:
+        PropertySourcesConfig config = new PropertySourcesConfig()
+        def subconfigReference = config.a.b.c.d.e
+
+        expect:
+        config.size() == 0
+
+        when:
+        subconfigReference.f.g = 1
+
+        then:
+        config.'a.b.c.d.e.f.g' == 1
+        config.'a.b.c.d.e.f' == [g: 1]
+        config.'a.b.c.d.e' == [f: [g: 1]]
+        config.'a.b.c.d' == [e: [f: [g: 1]]]
+        config.'a.b.c' == [d: [e: [f: [g: 1]]]]
+        config.'a.b' == [c: [d: [e: [f: [g: 1]]]]]
+        config.'a' == [b: [c: [d: [e: [f: [g: 1]]]]]]
+        subconfigReference.f == [g: 1]
     }
 }

@@ -1,0 +1,4 @@
+grails11951:
+    prop1: Prop One Defined By LoadFirst Plugin
+    prop2: Prop Two Defined By LoadFirst Plugin
+    prop3: Prop Three Defined By LoadFirst Plugin

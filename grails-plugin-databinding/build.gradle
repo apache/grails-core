@@ -2,6 +2,8 @@
     api project(':grails-core'), project(':grails-web')
     api "org.springframework.boot:spring-boot-autoconfigure"
 
+    testImplementation project(':grails-plugin-codecs')
+
     testImplementation project(':grails-test-suite-base')
     testImplementation "org.grails:grails-web-testing-support", {
         exclude module:'grails-plugin-rest'
@@ -10,7 +12,9 @@
         exclude module:'grails-core'
         exclude module:'async'
         exclude module:'gsp'
+        exclude module:'grails-testing-support'
     }
+    testImplementation project(':grails-testing-support')
 }
 
 tasks.named('compileTestGroovy').configure {

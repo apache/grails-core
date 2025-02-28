@@ -61,7 +61,6 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static final String DISPATCH_ACTION_PARAMETER = "_action_";
     public static final String SEND_ALLOW_HEADER_FOR_INVALID_HTTP_METHOD = "grails.http.invalid.method.allow.header";
     public static final String LAYOUT_ATTRIBUTE = "org.grails.layout.name";
-    public static final String NONE_LAYOUT = "_none_";
     public static final String RENDERING_VIEW = "org.grails.rendering.view";
     public static final String GRAILS_DISPATCH_EXTENSION = ".dispatch";
     public static final String GRAILS_SERVLET_PATH = "/grails";

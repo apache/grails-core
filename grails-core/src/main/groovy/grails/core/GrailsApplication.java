@@ -30,11 +30,11 @@ import org.springframework.core.io.Resource;
  * main purpose is to provide a mechanism for analysing the conventions within a Grails
  * application as well as providing metadata and information about the execution environment.
  *
- * <p>The GrailsApplication interface interfacts with {@link ArtefactHandler} instances
+ * <p>The GrailsApplication interface interacts with {@link ArtefactHandler} instances
  * which are capable of analysing different artefact types (controllers, domain classes etc.) and introspecting
  * the artefact conventions
  *
- * <p>Implementors of this inteface should be aware that a GrailsApplication is only initialised when the initialise() method
+ * <p>Implementors of this interface should be aware that a GrailsApplication is only initialised when the initialise() method
  * is called. In other words GrailsApplication instances are lazily initialised by the Grails runtime.
  *
  * @see #initialise()

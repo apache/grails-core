@@ -30,7 +30,6 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
         grailsApplication.mainContext.containsBean("grailsWebDataBinder")
     }
 
-    @PendingFeature(reason = 'test != test2')
     void "test custom ValueConverter are ordered if defined with @Order"() {
 
         when:
@@ -43,7 +42,6 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
 
     }
 
-    @PendingFeature(reason = 'test != test2')
     void "test customize data binding for the types which have standard ValueConverters using @Order"() {
         when:
         Map source = ["name": "John Doe", "prop": "test", "dob": "12031990"]

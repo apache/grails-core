@@ -1,0 +1,337 @@
+name: "Pre Release"
+run-name: "Pre Release - ${{ github.event.inputs.purpose }}"
+on:
+  workflow_dispatch:
+    inputs:
+      targetVersion:
+        description: 'Expected Release Version'
+        required: true
+      preventSnapshots:
+        description: 'Prevent Snapshot Publishing'
+        required: false
+      purpose:
+        description: 'Descriptive Purpose'
+        default: 'grails'
+        required: false
+env:
+  GIT_USER_NAME: 'grails-build'
+  GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: "💥 Purge Existing Builds - org.grails.grails-bom"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-bom || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-bootstrap"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-bootstrap || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-codecs"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-codecs || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-console"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-console || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-dependencies"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-dependencies || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-databinding"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-databinding || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-docs"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-docs || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-core"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-core || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-gradle-model"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-gradle-model || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-encoder"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-encoder || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-logging"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-logging || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-controllers"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-controllers || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-codecs"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-codecs || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-databinding"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-databinding || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-datasource"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-datasource || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-domain-class"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-domain-class || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-i18n"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-i18n || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-interceptors"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-interceptors || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-mimetypes"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-mimetypes || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-validation"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-validation || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-rest"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-rest || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-url-mappings"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-url-mappings || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-plugin-services"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-plugin-services || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-shell"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-shell || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-web"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-web || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-spring"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-spring || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-test"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-test || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-web-boot"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-web-boot || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-web-common"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-web-common || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-web-url-mappings"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-web-url-mappings || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-web-databinding"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-web-databinding || true
+      - name: "💥 Purge Existing Builds - org.grails.grails-web-mvc"
+        run: |
+          curl -L \
+          -X DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/orgs/${{ github.repository_owner }}/packages/maven/org.grails.grails-web-mvc || true
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "🛑 Set Prevent Snapshot Publishing Flag"
+        if: ${{ github.event.inputs.preventSnapshots }}
+        run: |
+          sed -i "s/^preventSnapshotPublish.*$/preventSnapshotPublish\=true/" gradle.properties
+      - name: "📩 Commit flag to prevent snapshot publishing"
+        if: ${{ github.event.inputs.preventSnapshots }}
+        run: |
+          git config user.name "${{ env.GIT_USER_NAME }}"
+          git config user.email "${{ env.GIT_USER_EMAIL }}"
+          git add gradle.properties
+          if ! git diff --cached --quiet; then
+            git commit -m "[skip ci] Pre Release - ${{ github.event.inputs.targetVersion }} - Preventing Snapshot Publishing"
+            git push origin HEAD
+          else
+            echo "Publishing already disabled."
+          fi
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "⚙ Set version to ${{ github.event.inputs.targetVersion }}"
+        run: |
+          sed -i "s/^projectVersion.*$/projectVersion\=${{ github.event.inputs.targetVersion }}/" gradle.properties
+          cat gradle.properties
+      - name: "🧩 Run Assemble"
+        if: success()
+        run: ./gradlew -U assemble
+        env:
+          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
+          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
+      - name: "🔐 Generate key file for artifact signing"
+        env:
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
+      - name: "📤 Publish to GitHub Packages"
+        id: publish
+        env:
+          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
+          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
+          GITHUB_USERNAME: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PUBLISH: 'true'
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        run: >
+          ./gradlew
+          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
+          publish

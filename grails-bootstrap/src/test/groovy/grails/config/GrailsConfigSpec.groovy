@@ -109,7 +109,7 @@ class GrailsConfigSpec extends Specification{
         config.configMap == ['a.b.c.d':3, 'a.b.c.e.f':4, 'a.b.c.e':[f:4], 'a.b.c':[d:3, e:[f:4]], 'a.b.hello':'world', 'a.b':[c:[d:3, e:[f:4]], hello:"world"], a:[b:[c:[d:3, e:[f:4]], hello:"world"]]]
     }
     
-    def "should support removing values when key is set to null"() {
+    def "should support removing values when key is set to null - map syntax"() {
         given:
         CodeGenConfig config = new CodeGenConfig([a: [b: [c: [d: 1, e: 2]]]])
         when:
@@ -117,6 +117,16 @@ class GrailsConfigSpec extends Specification{
         config.a.b = [c: 1]
         then:
         config.configMap == [a: [b: [c: 1]], 'a.b.c':1, 'a.b': [c: 1]]
+    }
+
+    def "should support removing values when key is set to null - dot syntax"() {
+        given:
+        CodeGenConfig config = new CodeGenConfig([a: [b: [c: [d: 1, e: 2]]]])
+        when:
+        config.a.b = null
+        config.a.b.c = 1
+        then:
+        config.configMap == [a: [b: [c: 1]], 'a.b.c':1]
     }
     
     def "should support casting to Map"() {

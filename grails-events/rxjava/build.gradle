@@ -1,0 +1,18 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-events-core')
+    api "io.reactivex:rxjava"
+
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.slf4j:slf4j-api'
+
+    testImplementation project(':grails-events-transform')
+    testImplementation 'org.grails:grails-datastore-core'
+    testImplementation 'org.grails:grails-datastore-gorm-test'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-context'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+
+}

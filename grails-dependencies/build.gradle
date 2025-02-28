@@ -1,59 +1,36 @@
+dependencies {
+    for (String exported : [
+            "org.grails:grails-bootstrap:${project.version}",
+            "org.grails:grails-plugin-rest:${project.version}",
+            "org.grails:grails-plugin-databinding:${project.version}",
+            "org.grails:grails-plugin-i18n:${project.version}",
+            "org.grails:grails-plugin-services:${project.version}",
+            "org.grails:grails-plugin-url-mappings:${project.version}",
+            "org.grails:grails-plugin-interceptors:${project.version}",
+            "org.grails.plugins:async:${project.version}",
+            "org.grails.plugins:events:${project.version}",
+            "org.grails.plugins:gsp:${project['gsp.version']}",
+    ]) {
+        api "${exported}"
+    }
+    for (String exported : [
+            "com.h2database:h2:${project['h2.version']}",
+    ]) {
+        runtimeOnly "${exported}"
+    }
+}
 
 apply plugin: 'maven-publish'
-
 publishing {
     publications {
         maven(MavenPublication) {
+            from components.java
+
             pom.withXml {
                 def xml = asNode()
 
-                xml.children().last() + pomInfo                
-
-                xml.children().last() + {
-                    delegate.dependencies {
-                        delegate.dependency {
-                            delegate.groupId "org.grails"
-                            delegate.artifactId "grails-bootstrap"
-                            delegate.version project.version
-                            delegate.scope "api"
-                        }
-                        for(sub in ['rest', 'databinding', 'i18n', 'services', 'url-mappings', 'interceptors']) {
-                            delegate.dependency {
-                                delegate.groupId "org.grails"
-                                delegate.artifactId "grails-plugin-${sub}"
-                                delegate.version project.version
-                                delegate.scope "api"
-                            }
-                        }
-                        delegate.dependency {
-                            delegate.groupId "org.grails.plugins"
-                            delegate.artifactId "async"
-                            delegate.version project['grails-async.version']
-                            delegate.scope "api"
-                        }
-                        delegate.dependency {
-                            delegate.groupId "org.grails.plugins"
-                            delegate.artifactId "events"
-                            delegate.version project['grails-async.version']
-                            delegate.scope "api"
-                        }
-                        delegate.dependency {
-                            delegate.groupId "org.grails.plugins"
-                            delegate.artifactId "gsp"
-                            delegate.version project['gsp.version']
-                            delegate.scope "api"
-                        }
-                        delegate.dependency {
-                            delegate.groupId "com.h2database"
-                            delegate.artifactId "h2"
-                            delegate.version project['h2.version']
-                            delegate.scope "runtimeOnly"
-                        }
-
-                    }
-                }
+                xml.children().last() + pomInfo
             }
-
         }
     }
 }

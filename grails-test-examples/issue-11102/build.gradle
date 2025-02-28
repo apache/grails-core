@@ -1,0 +1,69 @@
+buildscript {
+    repositories {
+        maven { url "https://repo.grails.org/grails/core" }
+    }
+    dependencies {
+        classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:${project['asset-pipeline-gradle.version']}"
+    }
+}
+
+version "0.1"
+group "issue11102"
+
+apply plugin: "war"
+apply plugin: "asset-pipeline"
+apply plugin: "org.grails.grails-web"
+apply plugin: "org.grails.grails-gsp"
+
+apply plugin: 'java'
+compileJava.options.release = 17
+
+assets {
+    minifyJs = true
+    minifyCss = true
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation "org.springframework.boot:spring-boot-starter-logging"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation "org.grails:grails-core"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-tomcat"
+    implementation "org.grails:grails-web-boot"
+    implementation "org.grails:grails-logging"
+    implementation "org.grails:grails-plugin-rest"
+    implementation "org.grails:grails-plugin-databinding"
+    implementation "org.grails:grails-plugin-i18n"
+    implementation "org.grails:grails-plugin-services"
+    implementation "org.grails:grails-plugin-url-mappings"
+    implementation "org.grails:grails-plugin-interceptors"
+    implementation "org.grails.plugins:cache"
+    implementation "org.grails.plugins:async"
+    implementation "org.grails.plugins:scaffolding"
+    implementation "org.grails.plugins:events"
+    implementation "org.grails.plugins:gsp"
+    console "org.grails:grails-console"
+    profile "org.grails.profiles:web"
+    runtimeOnly "com.h2database:h2"
+    runtimeOnly "org.apache.tomcat:tomcat-jdbc"
+    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
+
+    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "org.grails:grails-gorm-testing-support"
+
+    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+
+    integrationTestImplementation testFixtures("org.grails.plugins:geb")
+}
+
+bootRun {
+    jvmArgs('-Dspring.output.ansi.enabled=always')
+    String springProfilesActive = 'spring.profiles.active'
+    systemProperty springProfilesActive, System.getProperty(springProfilesActive)
+}
+
+apply from: rootProject.file('gradle/functional-test-project.gradle')

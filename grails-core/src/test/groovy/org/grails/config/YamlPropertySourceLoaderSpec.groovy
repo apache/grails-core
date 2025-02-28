@@ -26,7 +26,7 @@ class YamlPropertySourceLoaderSpec extends Specification {
         config.one == 2
         config.two == 3
         config.three.four == 45
-        !config.four?.five
+        !config.four.five
         config.getProperty('one', String) == '2'
         config.getProperty('three.four', String) == '45'
         config.getProperty('three', String) == null
@@ -51,7 +51,7 @@ class YamlPropertySourceLoaderSpec extends Specification {
         then: "These will not be navigable due to false parseFlatKeys"
         config.one == 2
         config.two == 3
-        !config.four?.five
+        !config.four.five
         config.getProperty('one', String) == '2'
         config.getProperty('three.four', String) == '45'
         config.getProperty('three', String) == null

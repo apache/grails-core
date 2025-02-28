@@ -25,7 +25,6 @@ import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.grails.spring.RuntimeSpringConfiguration
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
-import org.grails.spring.context.support.GrailsPlaceholderConfigurer
 import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 import org.grails.spring.RuntimeSpringConfigUtilities
 import org.grails.core.io.DefaultResourceLocator
@@ -66,16 +65,11 @@ class CoreGrailsPlugin extends Plugin {
 
         // Grails config as properties
         def config = application.config
-        def placeHolderPrefix = config.getProperty(Settings.SPRING_PLACEHOLDER_PREFIX, '${')
-
 
         // enable post-processing of @Configuration beans defined by plugins
         grailsConfigurationClassPostProcessor ConfigurationClassPostProcessor
         grailsBeanOverrideConfigurer(MapBasedSmartPropertyOverrideConfigurer) {
             delegate.grailsApplication = application
-        }
-        propertySourcesPlaceholderConfigurer(GrailsPlaceholderConfigurer) {
-            placeholderPrefix = placeHolderPrefix
         }
 
         Class proxyCreatorClazz = null

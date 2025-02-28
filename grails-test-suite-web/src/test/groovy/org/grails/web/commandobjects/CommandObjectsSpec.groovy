@@ -304,6 +304,36 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
         commandObject.firstName == 'Douglas'
         commandObject.lastName == 'Mendes'
     }
+
+    @Issue('https://github.com/grails/grails-core/issues/13945')
+    void "calling actions involving inherited command objects - child command"() {
+        given:
+        params.testId = 1
+        params.myId = 3
+        params.pId = 2
+
+        when:
+        def model = controller.zMethodTakingChild()
+        def commandObject = model.commandObject
+
+        then:
+        commandObject.testId == 1
+        commandObject.myId == 3
+        model.pId == 2
+    }
+
+    @Issue('https://github.com/grails/grails-core/issues/13945')
+    void "calling actions involving inherited command objects - parent command"() {
+        given:
+        params.testId = 1
+
+        when:
+        def model = controller.methodTakingParent()
+        def commandObject = model.commandObject
+
+        then:
+        commandObject.testId == 1
+    }
 }
 
 @Artefact('Controller')
@@ -362,6 +392,23 @@ class TestController {
     def methodActionWithGenericBasedCommand(ConcreteGenericBased co) {
         [commandObject: co]
     }
+
+    def zMethodTakingChild(ChildCommand command, long pId) {
+        [commandObject: command, pId: pId]
+    }
+
+    def methodTakingParent(ParentCommand command) {
+        [commandObject: command, pId: 2]
+    }
+}
+
+
+class ParentCommand implements Validateable {
+    int testId
+}
+
+class ChildCommand extends ParentCommand {
+    int myId
 }
 
 class DateComamndObject {

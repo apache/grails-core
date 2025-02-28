@@ -122,6 +122,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
      */
     public void setMultipartRequest(HttpServletRequest multipartRequest) {
         this.multipartRequest = multipartRequest;
+        this.originalParams = null; // originalParams will need to be re-initialized. See https://github.com/grails/grails-core/issues/13837
     }
 
     private void inheritEncodingStateRegistry() {

@@ -7,6 +7,7 @@ import grails.persistence.Entity
 import grails.rest.Linkable
 import grails.rest.Resource
 import grails.rest.render.Renderer
+import grails.spring.BeanBuilder
 import grails.util.GrailsWebMockUtil
 import grails.web.CamelCaseUrlConverter
 import grails.web.mapping.LinkGenerator
@@ -15,13 +16,15 @@ import grails.web.mime.MimeType
 import org.grails.config.PropertySourcesConfig
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.plugins.web.mime.MimeTypesFactoryBean
+import org.grails.plugins.web.mime.MimeTypesConfiguration
 import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.mime.DefaultMimeUtility
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.springframework.context.ApplicationContext
+import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.MutablePropertySources
 import org.springframework.mock.web.MockHttpServletRequest
@@ -89,11 +92,19 @@ abstract class BaseDomainClassRendererSpec extends Specification {
         return new PropertySourcesConfig(propertySources)
     }
 
-    protected static MimeType[] buildMimeTypes(application) {
-        def mimeTypesFactory = new MimeTypesFactoryBean()
-        mimeTypesFactory.grailsApplication = application
-        def mimeTypes = mimeTypesFactory.getObject()
-        return mimeTypes
+    private MimeType[] buildMimeTypes(application) {
+        final def mainContext = new GenericApplicationContext()
+        mainContext.refresh()
+        application.setApplicationContext(mainContext)
+
+        def bb = new BeanBuilder()
+        bb.beans {
+            grailsApplication = application
+            mimeConfiguration(MimeTypesConfiguration, application, [])
+        }
+        final ApplicationContext context = bb.createApplicationContext()
+        final MimeTypesConfiguration mimeTypesConfiguration = context.getBean(MimeTypesConfiguration)
+        mimeTypesConfiguration.mimeTypes()
     }
 
     protected static String toCompactXml(String xml) {

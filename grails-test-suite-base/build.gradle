@@ -6,5 +6,5 @@ dependencies {
         project(':grails-test'),
         project(':grails-plugin-domain-class')
 
-    api "org.grails.plugins:converters"
+    api project(":grails-plugin-converters")
 }

@@ -1,0 +1,19 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-async-core')
+    api "org.codehaus.gpars:gpars:$gparsVersion", {
+        exclude group: 'org.multiverse', module: 'multiverse-core' // Multiverse Software Transactional Memory (STM) Engine not used
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all' // Gpars 1.2.1 pulls in groovy-all:2.1.9
+    }
+
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.slf4j:slf4j-api'
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+
+}
+
+

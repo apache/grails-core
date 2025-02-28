@@ -1,0 +1,43 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+    }
+    dependencies {
+        classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
+    }
+}
+
+group = 'issue11767.app'
+
+apply plugin: 'application'
+apply plugin: 'groovy'
+apply plugin: 'org.grails.grails-web'
+
+apply plugin: 'java'
+compileJava.options.release = 17
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation project(':issue-11767-plugin')
+
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-logging'
+    implementation 'org.grails:grails-plugin-url-mappings'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    compileOnly 'io.micronaut:micronaut-inject-groovy'
+
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+    testImplementation 'io.micronaut:micronaut-inject-groovy'
+    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.spockframework:spock-core'
+
+}
+
+application {
+    mainClass = 'issue11767.Application'
+}
+
+apply from: rootProject.file('gradle/functional-test-project.gradle')

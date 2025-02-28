@@ -1,0 +1,13 @@
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-async-core')
+    api "io.reactivex.rxjava3:rxjava"
+
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.slf4j:slf4j-api'
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+}

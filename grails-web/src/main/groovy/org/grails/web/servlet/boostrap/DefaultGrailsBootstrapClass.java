@@ -48,7 +48,6 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
     }
 
     public Closure<?> getInitClosure() {
-
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, INIT_CLOSURE);
         if (obj instanceof Closure) {
             return (Closure<?>)obj;
@@ -64,13 +63,9 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
         return BLANK_CLOSURE;
     }
 
-    public void callInit(ServletContext servletContext) {
+    public void callInit() {
         Closure<?> init = getInitClosure();
         if (init != null) {
-            Class[] parameterTypes = init.getParameterTypes();
-            if(parameterTypes != null) {
-                init = init.curry(new Object[]{servletContext});
-            }
             Environment.executeForCurrentEnvironment(init);
         }
     }

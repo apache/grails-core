@@ -27,7 +27,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
-import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -43,12 +42,10 @@ import org.springframework.context.annotation.Primary
 class MimeTypesConfiguration {
 
     private final GrailsApplication grailsApplication
-    private final ApplicationContext applicationContext
     private final List<MimeTypeProvider> mimeTypeProviders
 
     MimeTypesConfiguration(GrailsApplication grailsApplication, List<MimeTypeProvider> mimeTypeProviders) {
         this.grailsApplication = grailsApplication
-        this.applicationContext = grailsApplication.getMainContext()
         this.mimeTypeProviders = mimeTypeProviders
     }
 
@@ -86,7 +83,7 @@ class MimeTypesConfiguration {
 
             final List<MimeTypeProvider> mimeTypeProviders = this.mimeTypeProviders
             processProviders(mimes, mimeTypeProviders)
-            final Map<String, MimeTypeProvider> childTypes = applicationContext.getBeansOfType(MimeTypeProvider.class)
+            final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider.class)
             processProviders(mimes, childTypes.values())
             mimeTypes = mimes.toArray(new MimeType[0])
         }

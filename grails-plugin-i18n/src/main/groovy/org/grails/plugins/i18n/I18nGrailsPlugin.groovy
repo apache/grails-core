@@ -15,19 +15,12 @@
  */
 package org.grails.plugins.i18n
 
-import grails.config.Config
-import grails.config.Settings
-import grails.core.GrailsApplication
 import grails.plugins.Plugin
 import grails.util.BuildSettings
-import grails.util.Environment
 import grails.util.GrailsUtil
 import groovy.util.logging.Slf4j
-import org.grails.spring.context.support.PluginAwareResourceBundleMessageSource
-import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.core.io.Resource
-import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
 import java.nio.file.Files
 
@@ -43,29 +36,6 @@ class I18nGrailsPlugin extends Plugin {
     String baseDir = "grails-app/i18n"
     String version = GrailsUtil.getGrailsVersion()
     String watchedResources = "file:./${baseDir}/**/*.properties".toString()
-
-    @Override
-    Closure doWithSpring() {{->
-        GrailsApplication application = grailsApplication
-        Config config = application.config
-        boolean gspEnableReload = config.getProperty(Settings.GSP_ENABLE_RELOAD, Boolean, false)
-        String encoding = config.getProperty(Settings.GSP_VIEW_ENCODING, 'UTF-8')
-
-        messageSource(PluginAwareResourceBundleMessageSource, application, pluginManager) {
-            fallbackToSystemLocale = false
-            if (Environment.current.isReloadEnabled() || gspEnableReload) {
-                cacheSeconds = config.getProperty(Settings.I18N_CACHE_SECONDS, Integer, 5)
-                fileCacheSeconds = config.getProperty(Settings.I18N_FILE_CACHE_SECONDS, Integer, 5)
-            }
-            defaultEncoding = encoding
-        }
-
-        localeChangeInterceptor(ParamsAwareLocaleChangeInterceptor) {
-            paramName = "lang"
-        }
-
-        localeResolver(SessionLocaleResolver)
-    }}
 
     @Override
     void onChange(Map<String, Object> event) {

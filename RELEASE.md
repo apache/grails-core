@@ -1,6 +1,6 @@
 # Grails Core Release Process
 
-1. Perform the release of any other dependent library and update the version in `gradle.properties`/`grails-bom/plugins.properties`/`grails-bom/profiles.properties`
+1. Perform the release of any other dependent library and update the version in `gradle.properties`/`grails-bom/plugins.properties`
 1. Ensure you have the latest changes locally `git pull`
 1. Ensure all changes from previous branches are merged up `git merge ...`
 1. Ensure there are no snapshot dependencies 

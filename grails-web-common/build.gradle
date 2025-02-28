@@ -4,7 +4,7 @@ dependencies {
     }
     api project(":grails-databinding")
     api project(":grails-encoder")
-    api "org.grails:grails-gsp"
+    compileOnly "org.grails:grails-gsp"
 
     api "org.apache.groovy:groovy-templates"
     compileOnly "jakarta.servlet:jakarta.servlet-api"
@@ -13,5 +13,4 @@ dependencies {
     api "org.springframework:spring-webmvc"
     api "org.springframework:spring-context-support"
     implementation "com.github.ben-manes.caffeine:caffeine"
-    compileOnly "com.github.spotbugs:spotbugs-annotations"
 }
