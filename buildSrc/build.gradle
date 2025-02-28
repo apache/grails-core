@@ -8,6 +8,6 @@ repositories {
 dependencies {
     implementation platform("org.grails:grails-bom:$grailsVersion")
     implementation "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
-    implementation "com.bertramlabs.plugins:asset-pipeline-gradle:$assetPipelineGradleVersion"
+    implementation "com.bertramlabs.plugins:asset-pipeline-gradle"
     implementation "io.github.gradle-nexus.publish-plugin:io.github.gradle-nexus.publish-plugin.gradle.plugin:2.0.0"
 }
