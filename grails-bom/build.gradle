@@ -23,7 +23,6 @@ ext {
     dependenciesOverview = """\
         com.bertramlabs.plugins:asset-pipeline-grails::
         com.bertramlabs.plugins:asset-pipeline-gradle::
-        com.fasterxml.jackson:jackson-bom:::jackson
         com.github.javaparser:javaparser-core::
         com.h2database:h2::
         commons-codec:commons-codec::
@@ -36,7 +35,6 @@ ext {
         net.java.dev.jna:jna::
         org.apache.ant:ant:,junit:
         org.apache.commons:commons-text::
-        org.apache.groovy:groovy:bom:::
         org.asciidoctor:asciidoctorj::
         org.fusesource.jansi:jansi::
         org.gebish:geb-spock::
@@ -128,6 +126,23 @@ publishing {
 
                 def dpm = root.appendNode('dependencyManagement')
                 def deps = dpm.appendNode('dependencies')
+
+                appendNodes(deps.appendNode('dependency'), [
+                        groupId: 'org.apache.groovy',
+                        artifactId: 'groovy:bom',
+                        version: '${groovy.version}',
+                        type: 'pom',
+                        scope: 'import'
+                ])
+
+                appendNodes(deps.appendNode('dependency'), [
+                        groupId: 'com.fasterxml.jackson',
+                        artifactId: 'jackson-bom',
+                        version: '${jackson.version}',
+                        type: 'pom',
+                        scope: 'import'
+                ])
+
                 appendNodes(deps.appendNode('dependency'), [
                     groupId: 'org.springframework.boot',
                     artifactId: 'spring-boot-dependencies',
