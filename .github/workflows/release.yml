@@ -61,6 +61,7 @@ jobs:
           publishToSonatype 
           closeSonatypeStagingRepository
   release:
+    environment: release
     needs: publish
     runs-on: ubuntu-latest
     permissions:
@@ -94,6 +95,7 @@ jobs:
         if: success()
         uses: grails/github-actions/post-release@main
   docs:
+    environment: release
     needs: publish
     runs-on: ubuntu-latest
     permissions:
