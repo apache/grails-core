@@ -11,7 +11,7 @@ jobs:
       release_version: ${{ steps.release_version.outputs.value }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: read
     steps:
       - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: read
     steps:
       - name: "📥 Checkout repository"
