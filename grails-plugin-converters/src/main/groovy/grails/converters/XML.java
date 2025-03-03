@@ -148,7 +148,8 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
             return ((NameAwareMarshaller) om).getElementName(o);
         }
         final ProxyHandler proxyHandler = config.getProxyHandler();
-        if (proxyHandler.isProxy(o) && (proxyHandler instanceof EntityProxyHandler entityProxyHandler)) {
+        if (proxyHandler.isProxy(o) && (proxyHandler instanceof EntityProxyHandler)) {
+            EntityProxyHandler entityProxyHandler = (EntityProxyHandler) proxyHandler;
             final Class<?> cls = entityProxyHandler.getProxiedClass(o);
             return GrailsNameUtils.getPropertyName(cls);
         }
