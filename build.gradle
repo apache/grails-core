@@ -171,7 +171,8 @@ subprojects { subproject ->
 
     ext.isTestSuite = subproject.name.startsWith('grails-test-suite')
     ext.isExample = subproject.name.contains('grails-test-examples')
-    ext.isPlugin = subproject.name in ['grails-async-plugin', 'grails-events-plugin']
+    ext.pluginProjects = ['grails-async-plugin', 'grails-events-plugin', 'grails-plugin-converters']
+    ext.isPlugin = subproject.name in pluginProjects
     ext.isCiBuild = subproject.hasProperty('isCiBuild') || System.getenv().get('CI') as Boolean
     ext.isAsyncProject = subproject.name.startsWith('grails-async') || subproject.name.startsWith('grails-events')
 
@@ -191,9 +192,16 @@ subprojects { subproject ->
             resolutionStrategy {
                 dependencySubstitution {
                     for (def possibleProject  : rootProject.subprojects) {
-                        if(!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples') && possibleProject.name != 'grails-bom') {
+                        if(!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples')) {
                             def artifactId = mappedArtifactIds[possibleProject.name] ?: possibleProject.name
-                            substitute module("${subproject.name in ['grails-async-plugin', 'grails-events-plugin'] ? 'org.grails.plugins' : 'org.grails'}:${artifactId}") using project(":${possibleProject.name}")
+
+                            String substitutedArtifact = "${possibleProject.name in pluginProjects ? 'org.grails.plugins' : 'org.grails'}:${artifactId}"
+                            if(possibleProject.name == 'grails-bom') {
+                                substitute module(substitutedArtifact) using platform(project(":${possibleProject.name}"))
+                            }
+                            else {
+                                substitute module(substitutedArtifact) using project(":${possibleProject.name}")
+                            }
                         }
                     }
                 }
