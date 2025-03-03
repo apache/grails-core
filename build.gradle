@@ -47,7 +47,7 @@ if (isReleaseVersion) {
     nexusPublishing {
         repositories {
             sonatype {
-                nexusUrl = uri('https://s01.oss.sonatype.org/service/local')
+                nexusUrl = uri('https://s01.oss.sonatype.org/service/local/')
                 username = System.getenv('SONATYPE_USERNAME') ?: project.findProperty('sonatypeOssUsername') ?: ''
                 password = System.getenv('SONATYPE_PASSWORD') ?: project.findProperty('sonatypeOssPassword') ?: ''
                 stagingProfileId = System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: project.findProperty('sonatypeOssStagingProfileId') ?: ''
