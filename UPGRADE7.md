@@ -19,7 +19,7 @@ Experienced while upgrading modules for Grails 7
         configurations.configureEach {
             resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                 if (details.requested.group == 'org.codehaus.groovy') {
-                    details.useTarget(group: 'org.apache.groovy', name: details.requested.name, version: '4.0.24')
+                    details.useTarget(group: 'org.apache.groovy', name: details.requested.name, version: '4.0.25')
                 }
             }
         }
