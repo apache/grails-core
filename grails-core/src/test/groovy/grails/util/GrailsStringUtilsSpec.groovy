@@ -23,37 +23,24 @@ import spock.lang.Specification
  */
 class GrailsStringUtilsSpec extends Specification{
 
-    static final String FOO = "foo";
-    static final String WHITESPACE;
-    static final String NON_WHITESPACE;
-    static final String HARD_SPACE;
-    static final String TRIMMABLE;
-    static final String NON_TRIMMABLE;
+    static final String FOO = 'foo'
+    static final String TRIMMABLE
+    static final String NON_TRIMMABLE
 
     static {
-        final StringBuilder ws = new StringBuilder();
-        final StringBuilder nws = new StringBuilder();
-        final String hs = String.valueOf((char) 160);
-        final StringBuilder tr = new StringBuilder();
-        final StringBuilder ntr = new StringBuilder();
-        for (int i = 0; i < Character.MAX_VALUE; i++) {
-            if (Character.isWhitespace((char) i)) {
-                ws.append((char) i);
-                if (i > 32) {
-                    ntr.append((char) i);
-                }
-            } else if (i < 40) {
-                nws.append((char) i);
+        def trimmable = new StringBuilder()
+        def nonTrimmable = new StringBuilder()
+        (0..<Character.MAX_VALUE).each { i ->
+            char ch = (char) i
+            if (Character.isWhitespace(ch) && i > 32) {
+                nonTrimmable.append(ch)
             }
         }
-        for (int i = 0; i <= 32; i++) {
-            tr.append((char) i);
+        (0..32).each { int i ->
+            trimmable.append((char) i)
         }
-        WHITESPACE = ws.toString();
-        NON_WHITESPACE = nws.toString();
-        HARD_SPACE = hs;
-        TRIMMABLE = tr.toString();
-        NON_TRIMMABLE = ntr.toString();
+        TRIMMABLE = trimmable.toString()
+        NON_TRIMMABLE = nonTrimmable.toString()
     }
 
     void "Test toBoolean"() {
