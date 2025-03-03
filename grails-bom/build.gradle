@@ -167,7 +167,9 @@ publishing {
                 allDependencies.collect { def m = it.subMap('groupId', 'artifactId', 'version')
                     m + [version: "\${${m.version}}"]
                 }.each {
-                    appendNodes(deps.appendNode('dependency'), it)
+                    if(it.artifactId !in ['groovy-bom', 'jackson-bom']) {
+                        appendNodes(deps.appendNode('dependency'), it)
+                    }
                 }
             }
         }
