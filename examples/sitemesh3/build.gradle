@@ -1,6 +1,16 @@
 buildscript {
     repositories {
         maven { url = 'https://repo.grails.org/grails/core' }
+        if (System.getenv('GITHUB_MAVEN_PASSWORD') && !grailsVersion.endsWith('-SNAPSHOT')) {
+            System.out.println("Adding Grails Core Staging Repo for project: $name")
+            maven {
+                url = 'https://maven.pkg.github.com/grails/grails-core'
+                credentials {
+                    username = 'DOES_NOT_MATTER'
+                    password = System.getenv('GITHUB_MAVEN_PASSWORD')
+                }
+            }
+        }
     }
     dependencies {
         classpath platform("org.grails:grails-bom:$grailsVersion")
