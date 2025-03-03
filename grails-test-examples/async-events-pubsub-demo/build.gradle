@@ -52,7 +52,7 @@ dependencies {
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'
 
-    testImplementation 'io.micronaut.serde:micronaut-serde-jackson:2.10.2'
+    testImplementation 'io.micronaut.serde:micronaut-serde-jackson:2.14.0'
     testImplementation 'io.micronaut:micronaut-http-client:4.6.5'
     testImplementation 'org.grails:grails-web-testing-support'
 }
