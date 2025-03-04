@@ -2,37 +2,55 @@ name: Release
 on:
   release:
     types: [published]
+env:
+  GIT_USER_NAME: grails-build
+  GIT_USER_EMAIL: grails-build@users.noreply.github.com
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    env:
-      GIT_USER_NAME: 'grails-build'
-      GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
+  publish:
+    name: "Publish to Sonatype Staging Repository"
+    outputs:
+      release_version: ${{ steps.release_version.outputs.value }}
+      target_branch: ${{ steps.extract_branch.outputs.value }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: read
     steps:
-      - name: Checkout repository
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-      - uses: gradle/wrapper-validation-action@v3
-      - name: Set up JDK
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
+          java-version: 17
           distribution: liberica
-          java-version: '17'
-      - name: Set the current release version
-        id: release_version
-        run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
-      - name: Run pre-release
-        uses: grails/github-actions/pre-release@main
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate secring file
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "⚙️ Run pre-release"
+        uses: grails/github-actions/pre-release@main
+      - name: "🔍 Determine Target Branch"
+        id: extract_branch
+        run: |
+          echo "Determining Target Branch"
+          TARGET_BRANCH=`cat $GITHUB_EVENT_PATH | jq '.release.target_commitish' | sed -e 's/^"\(.*\)"$/\1/g'`
+          echo $TARGET_BRANCH
+          echo "value=${TARGET_BRANCH}" >> $GITHUB_OUTPUT
+      - name: "📝 Store the current release version"
+        id: release_version
+        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
+      - name: "🧩 Run Assemble"
+        if: success()
+        id: assemble
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew --refresh-dependencies assemble
+      - name: "🔐 Generate key file for artifact signing"
         env:
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
         run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
-      - name: Publish to Sonatype OSSRH
+      - name: "📤 Publish to and close Sonatype staging repository"
         id: publish
-        uses: gradle/gradle-build-action@v3
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
@@ -44,19 +62,81 @@ jobs:
           GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
           GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./gradlew --no-build-cache
+          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
+          publishToSonatype
+          closeSonatypeStagingRepository
+  release:
+    environment: release
+    name: "Release Sonatype Staging Repository"
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
         with:
-          arguments: -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg publishToSonatype closeAndReleaseSonatypeStagingRepository
-      - name: Publish Documentation
-        id: docs
-        if: steps.publish.outcome == 'success'
-        uses: gradle/gradle-build-action@v3
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🚀 Release Sonatype Staging Repository"
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
+          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./gradlew
+          findSonatypeStagingRepository
+          releaseSonatypeStagingRepository
+      - name: "⚙️ Run post-release"
+        if: success()
+        uses: grails/github-actions/post-release@main
+  docs:
+    environment: release
+    name: "Publish Documentation"
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "📖 Generate documentation"
         env:
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
           GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
           GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          arguments: docs:docs
+        run: ./gradlew docs:docs
       - name: Export Gradle Properties
         uses: grails/github-actions/export-gradle-properties@main
       - name: Determine docs target repository
@@ -67,7 +147,7 @@ jobs:
           cond: ${{ github.repository == 'grails/gorm-hibernate5' }}
           if_true: "grails/grails-data-mapping"
           if_false: ${{ github.repository }}
-      - name: Publish to Github Pages
+      - name: "📤 Publish documentation to Github Pages"
         if: success()
         uses: grails/github-pages-deploy-action@grails
         env:
@@ -78,13 +158,6 @@ jobs:
           FOLDER: docs/build/docs
           DOC_SUB_FOLDER: hibernate
           DOC_FOLDER: gh-pages
-          COMMIT_EMAIL: 'grails-build@users.noreply.github.com'
-          COMMIT_NAME: 'grails-build'
-          VERSION: ${{ steps.release_version.outputs.release_version }}
-      - name: Run post-release
-        if: success()
-        uses: grails/github-actions/post-release@main
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          SNAPSHOT_SUFFIX: -SNAPSHOT
+          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
+          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          VERSION: ${{ needs.publish.outputs.release_version }}
