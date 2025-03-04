@@ -527,7 +527,7 @@ jobs:
         if: success()
         uses: ./.github/actions/post-release
   docs:
-    environment: release
+    environment: docs
     needs: publish
     runs-on: ubuntu-latest
     permissions:
