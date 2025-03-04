@@ -2,6 +2,11 @@ plugins {
     id 'groovy'
 }
 
+Properties versions = new Properties()
+file('../gradle.properties').withInputStream {
+    versions.load(it)
+}
+
 repositories {
     maven { url = "https://repo.grails.org/grails/core" }
 }
@@ -9,7 +14,7 @@ repositories {
 compileJava.options.release = 17
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsDocsVersion")
+    implementation platform("org.grails:grails-bom:${versions.getProperty("grails.version")}")
     implementation "org.grails:grails-docs"
     implementation "org.apache.groovy:groovy"
 }
