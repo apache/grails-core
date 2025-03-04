@@ -1505,15 +1505,15 @@ public class GrailsDomainBinder implements MetadataContributor {
                 configureDerivedProperties(sub, subMapping);
             }
         }
-        Integer bs = m.getBatchSize();
+        Integer bs = (m == null) ? null : m.getBatchSize();
         if (bs != null) {
             subClass.setBatchSize(bs);
         }
 
-        if (m.getDynamicUpdate()) {
+        if (m != null && m.getDynamicUpdate()) {
             subClass.setDynamicUpdate(true);
         }
-        if (m.getDynamicInsert()) {
+        if (m != null && m.getDynamicInsert()) {
             subClass.setDynamicInsert(true);
         }
 
