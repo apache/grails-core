@@ -1,6 +1,13 @@
 ext {
     isCiBuild = System.getenv('CI')
+    isSnapshot = projectVersion.endsWith('SNAPSHOT')
+    isReleaseVersion = !isSnapshot
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
+}
+
+if (isReleaseVersion) {
+    // This has to be applied to the root project
+    apply plugin: 'io.github.gradle-nexus.publish-plugin'
 }
 
 String customGroovyVersion = findProperty('groovyVersion') ?: System.getenv('GROOVY_VERSION')
