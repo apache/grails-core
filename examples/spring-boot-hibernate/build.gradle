@@ -1,6 +1,7 @@
 buildscript {
     repositories {
         mavenCentral()
+        maven { url "https://repo.grails.org/grails/core" }
     }
     dependencies {
         classpath platform("org.grails:grails-bom:$grailsVersion")
