@@ -4,10 +4,3 @@ java {
     withSourcesJar()
     withJavadocJar()
 }
-
-tasks.named('javadocJar', Jar).configure {
-    dependsOn tasks.groovydoc
-
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    from tasks.groovydoc.outputs
-}
