@@ -55,7 +55,7 @@ jobs:
         env:
           DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
           DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-        run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue
+        run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue --refresh-dependencies
   functional:
     name: "Functional Tests"
     needs: skip_check
