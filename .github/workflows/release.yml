@@ -9,8 +9,18 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     env:
-      BETA: ${{ contains(github.event.inputs.grails_version, 'M') || contains(github.event.inputs.grails_version, 'RC') }}
-      SKIP_SNAPSHOT: ${{ startsWith(github.event.inputs.grails_version, '3.3') || startsWith(github.event.inputs.grails_version, '4.1') || startsWith(github.event.inputs.grails_version, '5.3') || startsWith(github.event.inputs.grails_version' '6.2') || contains(github.event.inputs.grails_version, 'M') || contains(github.event.inputs.grails_version, 'RC') }}
+      BETA: ${{
+          contains(github.event.inputs.grails_version, 'M') ||
+          contains(github.event.inputs.grails_version, 'RC')
+        }}
+      SKIP_SNAPSHOT: ${{
+          startsWith(github.event.inputs.grails_version, '3.3') ||
+          startsWith(github.event.inputs.grails_version, '4.1') ||
+          startsWith(github.event.inputs.grails_version, '5.3') ||
+          startsWith(github.event.inputs.grails_version, '6.2') ||
+          contains(github.event.inputs.grails_version, 'M') ||
+          contains(github.event.inputs.grails_version, 'RC')
+        }}
       GIT_USER_NAME: grails-build
       GIT_USER_EMAIL: grails-build@users.noreply.github.com
     steps:
