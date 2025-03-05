@@ -66,6 +66,7 @@ jobs:
         uses: Roang-zero1/github-upload-release-artifacts-action@c15e0b65ce2ae1c8d52bfbc75d017d21e1da77d7 # v3.0.0 (Use commit sha as this is a 3rd party action)
         with:
           args: ./build/distributions/grails-docs-${{ github.event.inputs.grails_version }}.zip
+          created_tag: v${{ github.event.inputs.grails_version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "📤 Publish to Github Pages"
