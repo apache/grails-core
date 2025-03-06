@@ -1,0 +1,7 @@
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.grails.org/grails/core' }
+}
+dependencies {
+    runtimeOnly 'org.grails:grails-gradle-plugin:7.0.0-SNAPSHOT'
+}

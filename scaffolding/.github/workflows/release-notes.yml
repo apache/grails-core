@@ -1,0 +1,17 @@
+name: "Changelog"
+on:
+  issues:
+    types: [closed,reopened]
+  push:
+    branches:
+      - master
+      - '[4-9]+.[0-9]+.x'
+  workflow_dispatch:
+jobs:
+  release_notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📝 Update release notes draft"
+        uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
