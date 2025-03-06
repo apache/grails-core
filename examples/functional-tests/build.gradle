@@ -5,9 +5,17 @@ plugins {
     id 'org.grails.grails-web'
 }
 
+version = "0.0.1"
 group = 'functional.tests'
 
 dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion"), {
+        exclude group: 'org.grails.plugins', module: 'views-gradle'
+        exclude group: 'org.grails.plugins', module: 'views-json'
+        exclude group: 'org.grails', module: 'views-core'
+        exclude group: 'org.grails', module: 'views-json-testing-support'
+    }
+
     implementation project(':examples-functional-tests-plugin')
     implementation project(':views-json')
     implementation project(':views-markup')
@@ -47,4 +55,9 @@ dependencies {
 
 java {
     sourceCompatibility = JavaVersion.toVersion(javaVersion)
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging { events 'passed', 'skipped', 'failed', 'standardOut', 'standardError' }
 }

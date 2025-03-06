@@ -1,8 +1,12 @@
 import org.asciidoctor.gradle.jvm.AsciidoctorTask
 
 plugins {
+    id 'groovy'
     id 'org.asciidoctor.jvm.convert'
 }
+
+version = projectVersion
+group = 'org.grails'
 
 tasks.withType(AsciidoctorTask).configureEach {
     baseDirFollowsSourceFile()

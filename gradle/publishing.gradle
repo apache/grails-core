@@ -1,66 +1,18 @@
-def javaComponent = components.named('java')
+import org.grails.gradle.plugin.publishing.GrailsPublishExtension
 
-//TODO: Eventually this can be replaced with the new publishing plugin once it has gradle plugin support & version mapping
-publishing {
-    publications {
-        pluginMaven(MavenPublication) {
-            artifactId = project.name
-            if (project.name != 'views-gradle') {
-                from javaComponent.get()
-            }
-            versionMapping {
-                usage('java-api') { fromResolutionOf('runtimeClasspath') }
-                usage('java-runtime') { fromResolutionResult() }
-            }
-            if (ext.has('isGrailsPlugin')) {
-                artifact source: "${project.sourceSets.main.groovy.classesDirectory.getAsFile().get()}/META-INF/grails-plugin.xml",
-                        classifier: "plugin",
-                        extension: 'xml'
-            }
-            pom {
-                name = 'Grails Views'
-                description = 'Provides additional view technologies to the Grails framework, including JSON and Markup views.'
-            }
-            pom.withXml {
-                def pomNode = asNode()
-                pomNode.children().last() + pomInfo
-                // dependency management shouldn't be included
-                try {
-                    pomNode.dependencyManagement.replaceNode({})
-                } catch (Throwable ignore) {
-                }
-            }
-        }
-    }
-
-    if (isSnapshot) {
-        repositories {
-            maven {
-                credentials {
-                    username = project.findProperty('artifactoryUsername')
-                    password = project.findProperty('artifactoryPassword')
-                }
-                url = group == 'org.grails.plugins' ?
-                        uri('https://repo.grails.org/grails/plugins3-snapshots-local') :
-                        uri('https://repo.grails.org/grails/libs-snapshots-local')
-            }
-        }
-    }
+if (project.hasProperty('mavenSnapshotPublishUrl')) {
+    ext.set('mavenPublishUrl', property('mavenSnapshotPublishUrl'))
+    logger.lifecycle('Configuring {}:{} snapshot publish repo: {}', group, findProperty('pomArtifactId') ?: name, mavenPublishUrl)
 }
 
-afterEvaluate {
-    signing {
-        required = { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
-        Publication[] publications = new Publication[project.publishing.publications.size()]
-        project.publishing.publications.findAll().toArray(publications)
-        sign(publications)
-    }
-
-    tasks.withType(Sign) {
-        onlyIf { isReleaseVersion }
-    }
-}
-
-tasks.register('install') {
-    dependsOn 'publishToMavenLocal'
+extensions.configure(GrailsPublishExtension) {
+    // Explicit `it` is required here
+    it.githubSlug = 'grails/grails-views'
+    it.license.name = 'Apache-2.0'
+    it.title = findProperty('pomTitle') ?: 'Grails Views'
+    it.desc = findProperty('pomDescription') ?: 'Provides additional view technologies to the Grails framework, including JSON and Markup views.'
+    it.developers = findProperty('pomDevelopers') as Map<String,String> ?: [
+            'graemerocher': 'Graeme Rocher',
+            'puneetbehl': 'Puneet Behl',
+    ]
 }

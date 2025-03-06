@@ -5,10 +5,21 @@ plugins {
     id 'signing'
 }
 
+version = projectVersion
 group = 'org.grails.plugins'
-ext.set('projectDesc', 'Grails Views Gradle Plugin')
+
+ext {
+    pomDescription = 'Grails Views Gradle Plugin'
+    mavenSnapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+}
 
 dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion"), {
+        exclude group: 'org.grails.plugins', module: 'views-gradle'
+        exclude group: 'org.grails.plugins', module: 'views-json'
+        exclude group: 'org.grails', module: 'views-core'
+        exclude group: 'org.grails', module: 'views-json-testing-support'
+    }
 
     // the gradle api is provided by java-gradle-plugin
 
@@ -34,19 +45,7 @@ gradlePlugin {
     }
 }
 
-// Publishing for this project is handled
-// separately as it is using the java-gradle-plugin
-afterEvaluate {
-    publishing.publications.each { MavenPublication publication ->
-        if (publication.name != "pluginMaven") {
-            publication.pom.withXml {
-                def xml = asNode()
-                xml.children().last() + pomInfo
-            }
-        }
-    }
-}
-
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/api-docs-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/publishing.gradle')

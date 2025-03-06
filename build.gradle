@@ -1,54 +1,9 @@
-import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
-
-plugins {
-    id 'groovy'
-    id 'io.github.gradle-nexus.publish-plugin'
-    id 'org.asciidoctor.jvm.convert'
-}
-
-group = 'org.grails'
-version = projectVersion
-ext.set('isSnapshot', version.endsWith('-SNAPSHOT'))
-ext.set('isReleaseVersion', !isSnapshot)
-
 String customGroovyVersion = findProperty('groovyVersion') ?: System.getenv('GROOVY_VERSION')
 if (customGroovyVersion) {
     logger.warn("Using custom Groovy version: $customGroovyVersion")
 }
 
 allprojects {
-
-    ext.set('signing.keyId', findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
-    ext.set('signing.password', findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE'))
-    ext.set('signing.secretKeyRingFile', findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg")
-    ext.set('pomInfo', {
-        delegate.url 'https://views.grails.org/latest/'
-        delegate.licenses {
-            delegate.license {
-                delegate.name 'The Apache Software License, Version 2.0'
-                delegate.url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-            }
-        }
-        delegate.scm {
-            delegate.url 'https://github.com/grails/grails-views/'
-            delegate.connection 'scm:git:git://github.com/grails/grails-views'
-            delegate.developerConnection 'scm:git:ssh://github.com:grails/grails-views'
-        }
-        delegate.developers {
-            delegate.developer {
-                delegate.id 'graemerocher'
-                delegate.name 'Graeme Rocher'
-                delegate.email 'graeme.rocher@gmail.com'
-            }
-            delegate.developer {
-                delegate.id 'puneetbehl'
-                delegate.name 'Puneet Behl'
-                delegate.email 'behlp@unityfoundation.io'
-            }
-        }
-    })
-
-    version = rootProject.version
 
     if (customGroovyVersion) {
         configurations.configureEach {
@@ -83,55 +38,24 @@ allprojects {
             }
         }
     }
-    tasks.withType(Test).configureEach {
-        useJUnitPlatform()
-        testLogging { events 'passed', 'skipped', 'failed', 'standardOut', 'standardError' }
-    }
-    tasks.withType(Jar).configureEach {
-        manifest.attributes(
-                'Built-By': System.properties['user.name'],
-                'Created-By': System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
-                'Implementation-Title': project.findProperty('projectDesc') ?: 'Grails Views',
-                'Implementation-Version': project.version,
-                'Implementation-Vendor': 'grails.org'
-        )
-    }
-    tasks.withType(Sign).configureEach {
-        onlyIf { isReleaseVersion }
-    }
 }
 
-if (isReleaseVersion) {
-    nexusPublishing {
-        String ossUser = findProperty('sonatypeOssUsername')
-        String ossPass = findProperty('sonatypeOssPassword')
-        String ossStagingProfileId = findProperty('sonatypeOssStagingProfileId')
-        String ossRepo = findProperty('sonatypeOssRepo') ?: 'https://s01.oss.sonatype.org/service/local/'
-        repositories {
-            sonatype {
-                nexusUrl = uri(ossRepo)
-                username = ossUser
-                password = ossPass
-                stagingProfileId = ossStagingProfileId
-            }
-        }
-    }
-}
+// Workaround needed for nexus publishing bug
+// version and group must be specified in the root project
+// https://github.com/gradle-nexus/publish-plugin/issues/310
+version = projectVersion
+group = 'this.will.be.overridden'
 
-// Do not generate extra load on Nexus with new staging repository if signing fails
-tasks.withType(InitializeNexusStagingRepository).configureEach {
-    shouldRunAfter = tasks.withType(Sign)
-}
-
+def publishedProjects = [
+        'views-core',
+        'views-json',
+        'views-json-testing-support',
+        'views-markup',
+        'views-gradle'
+]
 subprojects {
-    apply plugin: 'groovy'
-
-    dependencies {
-        implementation platform("org.grails:grails-bom:$grailsVersion"), {
-            exclude group: 'org.grails.plugins', module: 'views-gradle'
-            exclude group: 'org.grails.plugins', module: 'views-json'
-            exclude group: 'org.grails', module: 'views-core'
-            exclude group: 'org.grails', module: 'views-json-testing-support'
-        }
+    if (name in publishedProjects) {
+        // This has to be applied here
+        apply plugin: 'org.grails.grails-publish'
     }
 }
