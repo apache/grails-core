@@ -1,0 +1,56 @@
+plugins {
+    id 'java-library'
+    id 'groovy'
+    id 'maven-publish'
+    id 'signing'
+    id 'org.grails.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.grails.plugins'
+
+ext {
+    pomDescription = 'Grails JSON Views'
+    mavenSnapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
+}
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion"), {
+        exclude group: 'org.grails.plugins', module: 'views-gradle'
+        exclude group: 'org.grails.plugins', module: 'views-json'
+        exclude group: 'org.grails', module: 'views-core'
+        exclude group: 'org.grails', module: 'views-json-testing-support'
+        exclude group: 'org.grails.plugins', module: 'scaffolding'
+    }
+
+    api project(':views-core') // Used in public API
+    api 'org.grails:grails-plugin-rest' // Used in public API
+
+    implementation 'org.grails:grails-encoder'
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-json'
+    implementation 'jakarta.validation:jakarta.validation-api'
+
+    testImplementation project(':views-json-testing-support')
+    testImplementation 'org.grails:grails-testing-support'
+    testImplementation 'org.grails:grails-gorm-testing-support'
+    testImplementation 'org.grails:grails-datastore-gorm-hibernate5'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publishing.gradle')
+
+def testArtifacts = ['*.gson', 'circular/**']
+
+tasks.named('jar', Jar).configure {
+    it.exclude testArtifacts
+}
+tasks.named('sourcesJar', Jar).configure {
+    it.exclude testArtifacts
+}

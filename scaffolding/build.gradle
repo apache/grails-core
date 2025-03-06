@@ -2,42 +2,30 @@ plugins {
     id 'java-library'
     id 'org.grails.grails-plugin'
     id 'org.grails.grails-gsp'
-    id 'org.grails.grails-publish'
 }
 
-version = project.projectVersion
+version = projectVersion
 group = 'org.grails.plugins'
 
-repositories {
-    mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/core' }
-    if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
-        System.out.println("Adding Grails Core Repo")
-        maven {
-            url = 'https://maven.pkg.github.com/grails/grails-core'
-            credentials {
-                username = 'DOES_NOT_MATTER'
-                password = System.getenv("GITHUB_MAVEN_PASSWORD")
-            }
-        }
-    }
+ext {
+    pomTitle = 'Grails Scaffolding Plugin'
+    pomDescription = 'Provides scaffolding for Grails applications'
+    pomDevelopers = [puneetbehl: 'Puneet Behl']
 }
 
-compileJava.options.release = 17
-
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.grails:grails-bom:$grailsVersion"), {
+        exclude group: 'org.grails.plugins', module: 'views-gradle'
+        exclude group: 'org.grails.plugins', module: 'views-json'
+        exclude group: 'org.grails', module: 'views-core'
+        exclude group: 'org.grails', module: 'views-json-testing-support'
+        exclude group: 'org.grails.plugins', module: 'scaffolding'
+    }
     api "org.grails:grails-plugin-rest"
     api "org.grails.plugins:fields"
     compileOnly "jline:jline"
 }
 
-grailsPublish {
-    githubSlug = 'grails/scaffolding'
-    license {
-        name = 'Apache-2.0'
-    }
-    title = 'Grails Scaffolding Plugin'
-    desc = 'Provides scaffolding for Grails applications'
-    developers = [puneetbehl: 'Puneet Behl']
-}
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publishing.gradle')

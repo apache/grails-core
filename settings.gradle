@@ -1,3 +1,7 @@
+pluginManagement {
+    includeBuild("views-gradle-plugin")
+}
+
 plugins {
     id 'com.gradle.develocity' version '3.19'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
@@ -27,15 +31,26 @@ buildCache {
 
 rootProject.name = 'grails-views'
 
-['core', 'json', 'docs', 'json-testing-support', 'markup'].each {dirName ->
-    include("views-$dirName")
-    project(":views-$dirName").projectDir = file(dirName)
-}
+include 'views-core'
+project(':views-core').projectDir = file('views-core')
 
-include 'views-gradle'
-project(':views-gradle').projectDir = file('gradle-plugin')
+include 'views-json'
+project(':views-json').projectDir = file('views-json')
 
-file('examples').eachDir { dir ->
-    include "examples-$dir.name"
-    project(":examples-$dir.name").projectDir = dir
-}
+include 'views-docs'
+project(':views-docs').projectDir = file('views-docs')
+
+include 'views-json-testing-support'
+project(':views-json-testing-support').projectDir = file('views-json-testing-support')
+
+include 'views-markup'
+project(':views-markup').projectDir = file('views-markup')
+
+include 'scaffolding'
+project(':scaffolding').projectDir = file('scaffolding')
+
+include 'examples-views-functional-tests'
+project(':examples-views-functional-tests').projectDir = file('examples/views-functional-tests')
+
+include 'examples-views-functional-tests-plugin'
+project(':examples-views-functional-tests-plugin').projectDir = file('examples/views-functional-tests-plugin')

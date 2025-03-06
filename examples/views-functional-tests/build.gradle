@@ -1,0 +1,64 @@
+plugins {
+    id 'application'
+    id 'groovy'
+    id 'org.grails.grails-gsp'
+    id 'org.grails.grails-web'
+}
+
+version = "0.0.1"
+group = 'functional.tests'
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion"), {
+        exclude group: 'org.grails.plugins', module: 'views-gradle'
+        exclude group: 'org.grails.plugins', module: 'views-json'
+        exclude group: 'org.grails', module: 'views-core'
+        exclude group: 'org.grails', module: 'views-json-testing-support'
+        exclude group: 'org.grails.plugins', module: 'scaffolding'
+    }
+
+    implementation project(':examples-views-functional-tests-plugin')
+    implementation project(':views-json')
+    implementation project(':views-markup')
+
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-logging'
+    implementation 'org.grails:grails-web-boot'
+
+    implementation 'org.grails:grails-plugin-databinding'
+    implementation 'org.grails:grails-plugin-i18n'
+    implementation 'org.grails:grails-plugin-interceptors'
+    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.grails:grails-plugin-services'
+    implementation 'org.grails:grails-plugin-url-mappings'
+    implementation 'org.grails:grails-plugin-validation'
+
+    implementation 'org.grails.plugins:gsp'
+    implementation 'org.grails.plugins:hibernate5'
+
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    compileOnly 'org.slf4j:slf4j-api' // Provided by Tomcat
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+
+    testImplementation project(':views-json-testing-support')
+    testImplementation 'org.grails:grails-testing-support'
+
+    integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    integrationTestImplementation  "io.micronaut:micronaut-http-client:$micronautVersion"
+    integrationTestImplementation "io.micronaut:micronaut-jackson-databind:$micronautVersion"
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging { events 'passed', 'skipped', 'failed', 'standardOut', 'standardError' }
+}

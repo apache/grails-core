@@ -9,14 +9,3 @@ dependencies {
 tasks.withType(Groovydoc).configureEach {
     classpath = configurations.groovydocImplementation
 }
-
-// TODO: Eventually we can remove this and replace with the grails publish extension, but gradle plugin publishing
-// must be supported first.  For now, the logic from that plugin is copied here
-tasks.named('javadocJar', Jar).configure { Jar task ->
-    Task groovyDocTask = tasks.findByName('groovydoc')
-
-    task.dependsOn groovyDocTask
-
-    task.duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    task.from groovyDocTask.outputs
-}

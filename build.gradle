@@ -1,3 +1,16 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+    }
+    dependencies {
+        classpath platform("org.grails:grails-bom:${grailsVersion}"), {
+            exclude group: 'org.grails.plugins', module: 'views-gradle'
+            exclude group: 'org.grails.plugins', module: 'views-json'
+        }
+        classpath 'org.grails:grails-gradle-plugin'
+    }
+}
+
 String customGroovyVersion = findProperty('groovyVersion') ?: System.getenv('GROOVY_VERSION')
 if (customGroovyVersion) {
     logger.warn("Using custom Groovy version: $customGroovyVersion")
@@ -51,7 +64,7 @@ def publishedProjects = [
         'views-json',
         'views-json-testing-support',
         'views-markup',
-        'views-gradle'
+        'scaffolding'
 ]
 subprojects {
     if (name in publishedProjects) {

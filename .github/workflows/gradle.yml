@@ -33,7 +33,12 @@ jobs:
       - name: "🏃 Run Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew check
+        run: ./gradlew check --stacktrace
+      - name: "🧪 Run Gradle Plugin Tests"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: views-gradle-plugin
+        run: ./gradlew check --rerun-tasks --stacktrace
   build_project:
     name: "Build Project"
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -56,19 +61,19 @@ jobs:
       - name: "🔨 Build project"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew build --continue
-      - name: "🔨 Test Views Gradle Plugin"
+        run: ./gradlew build --continue --stacktrace
+      - name: "🧪 Test Views Gradle Plugin"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: examples/functional-tests-plugin
-        run: ../../gradlew compileGsonViews --rerun-tasks
+        working-directory: views-gradle-plugin
+        run: ./gradlew build --rerun-tasks --stacktrace
       - name: "📤 Publish Snapshot Artifacts to Artifactory (repo.grails.org)"
         if: success()
         env:
           GRADLE_PUBLISH_RELEASE: 'false'
           MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
-        run: ./gradlew --no-build-cache publish
+        run: ./gradlew --no-build-cache publish && cd views-gradle-plugin && ./gradlew --no-build-cache publish
       - name: "📖 Generate Snapshot Documentation"
         if: success()
         run: ./gradlew views-docs:docs
@@ -79,5 +84,5 @@ jobs:
           BRANCH: gh-pages
           COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
           COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: docs/build/docs
+          FOLDER: views-docs/build/docs
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

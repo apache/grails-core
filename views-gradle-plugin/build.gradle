@@ -1,0 +1,223 @@
+import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
+
+import static com.bmuschko.gradle.nexus.NexusPlugin.getSIGNING_KEYRING
+import static com.bmuschko.gradle.nexus.NexusPlugin.getSIGNING_KEY_ID
+import static com.bmuschko.gradle.nexus.NexusPlugin.getSIGNING_PASSWORD
+
+buildscript {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+    }
+    dependencies {
+        classpath platform("org.grails:grails-bom:${grailsVersion}"), {
+            exclude group: 'org.grails.plugins', module: 'views-gradle'
+            exclude group: 'org.grails.plugins', module: 'views-json'
+        }
+        classpath 'org.grails:grails-gradle-plugin'
+    }
+}
+
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+    id 'maven-publish'
+    id 'signing'
+    id 'io.github.gradle-nexus.publish-plugin'  version '2.0.0'
+}
+
+file("../gradle.properties").withReader {
+    Properties props = new Properties()
+    props.load(it)
+    project.ext.gradleProperties = props
+}
+
+
+version = ext.gradleProperties.projectVersion
+group = 'org.grails.plugins'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.grails.org/grails/core' }
+    // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+    if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
+        System.out.println("Adding Grails Core Repo")
+        maven {
+            url = 'https://maven.pkg.github.com/grails/grails-core'
+            credentials {
+                username = 'DOES_NOT_MATTER'
+                password = System.getenv("GITHUB_MAVEN_PASSWORD")
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion"), {
+        exclude group: 'org.grails.plugins', module: 'views-gradle'
+        exclude group: 'org.grails.plugins', module: 'views-json'
+        exclude group: 'org.grails', module: 'views-core'
+        exclude group: 'org.grails', module: 'views-json-testing-support'
+        exclude group: 'org.grails.plugins', module: 'scaffolding'
+    }
+
+    // the gradle api is provided by java-gradle-plugin
+
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+
+    compileOnly 'org.apache.groovy:groovy' // @CompileStatic
+}
+
+gradlePlugin {
+    plugins {
+        create('viewsJson') {
+            id = 'org.grails.plugins.views-json'
+            implementationClass = 'grails.views.gradle.json.GrailsJsonViewsPlugin'
+            displayName = 'Grails Json Views Gradle Plugin'
+            description = 'The Gradle plugin for Json Views'
+        }
+        create('viewsMarkup') {
+            id = 'org.grails.plugins.views-markup'
+            implementationClass = 'grails.views.gradle.markup.GrailsMarkupViewsPlugin'
+            displayName = 'Grails Markup Views Gradle Plugin'
+            description = 'The Gradle plugin for Markup Views'
+        }
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+    withJavadocJar()
+    withSourcesJar()
+}
+
+// Groovydoc task requires the Groovy version of Gradle
+configurations.register('groovydocImplementation')
+
+dependencies {
+    groovydocImplementation localGroovy(), {
+        because 'The Groovydoc task requires the Groovy version of Gradle'
+    }
+}
+tasks.withType(Groovydoc).configureEach {
+    classpath = configurations.groovydocImplementation
+}
+
+ext.set('isRelease', System.getenv('GRAILS_PUBLISH_RELEASE') != null ? Boolean.parseBoolean(System.getenv('GRAILS_PUBLISH_RELEASE')) : !ext.gradleProperties.projectVersion.endsWith('SNAPSHOT'))
+ext.set('isSnapshot', !ext.isRelease)
+
+ext.set('signing.keyId', project.findProperty(SIGNING_KEY_ID) ?: System.getenv('SIGNING_KEY'))
+ext.set('signing.password', project.findProperty(SIGNING_PASSWORD) ?: System.getenv('SIGNING_PASSPHRASE'))
+ext.set('signing.secretKeyRingFile', project.findProperty(SIGNING_KEYRING) ?: System.getenv('SIGNING_KEYRING'))
+ext.set('pomInfo', {
+    delegate.url 'https://views.grails.org/latest/'
+    delegate.licenses {
+        delegate.license {
+            delegate.name 'The Apache Software License, Version 2.0'
+            delegate.url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+        }
+    }
+    delegate.scm {
+        delegate.url 'https://github.com/grails/grails-views/'
+        delegate.connection 'scm:git:git://github.com/grails/grails-views'
+        delegate.developerConnection 'scm:git:ssh://github.com:grails/grails-views'
+    }
+    delegate.developers {
+        delegate.developer {
+            delegate.id 'graemerocher'
+            delegate.name 'Graeme Rocher'
+            delegate.email 'graeme.rocher@gmail.com'
+        }
+        delegate.developer {
+            delegate.id 'puneetbehl'
+            delegate.name 'Puneet Behl'
+            delegate.email 'behlp@unityfoundation.io'
+        }
+    }
+})
+
+tasks.withType(Sign).configureEach {
+    onlyIf { isRelease }
+}
+
+if (isRelease) {
+    nexusPublishing {
+        String ossUser = project.findProperty('nexusPublishUsername') ?: System.getenv('NEXUS_PUBLISH_USERNAME') ?: ''
+        String ossPass = project.findProperty('nexusPublishPassword') ?: System.getenv('NEXUS_PUBLISH_PASSWORD') ?: ''
+        String ossStagingProfileId = project.findProperty('nexusPublishStagingProfileId') ?: System.getenv('NEXUS_PUBLISH_STAGING_PROFILE_ID') ?: ''
+        String ossRepo = project.findProperty('nexusPublishUrl') ?: System.getenv('NEXUS_PUBLISH_URL') ?: ''
+        repositories {
+            sonatype {
+                nexusUrl = uri(ossRepo)
+                username = ossUser
+                password = ossPass
+                stagingProfileId = ossStagingProfileId
+            }
+        }
+    }
+}
+
+// Do not generate extra load on Nexus with new staging repository if signing fails
+tasks.withType(InitializeNexusStagingRepository).configureEach {
+    shouldRunAfter = tasks.withType(Sign)
+}
+
+publishing {
+    publications {
+        pluginMaven(MavenPublication) {
+            artifactId = 'views-gradle'
+            versionMapping {
+                usage('java-api') { fromResolutionOf('runtimeClasspath') }
+                usage('java-runtime') { fromResolutionResult() }
+            }
+            pom {
+                name = 'Grails Views'
+                description = 'Provides additional view technologies to the Grails framework, including JSON and Markup views.'
+            }
+            pom.withXml {
+                def pomNode = asNode()
+                pomNode.children().last() + pomInfo
+                // dependency management shouldn't be included
+                try {
+                    pomNode.dependencyManagement.replaceNode({})
+                } catch (Throwable ignore) {
+                }
+            }
+        }
+    }
+
+    if (isSnapshot) {
+        repositories {
+            maven {
+                credentials {
+                    username = project.findProperty('mavenPublishUsername') ?: System.getenv('MAVEN_PUBLISH_USERNAME') ?: ''
+                    password = project.findProperty('mavenPublishPassword') ?: System.getenv('MAVEN_PUBLISH_PASSWORD') ?: ''
+                }
+                url = uri('https://repo.grails.org/grails/libs-snapshots-local')
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    // Publishing for this project is handled
+    // separately as it is using the java-gradle-plugin
+    publishing.publications.each { MavenPublication publication ->
+        if (publication.name != "pluginMaven") {
+            publication.pom.withXml {
+                def xml = asNode()
+                xml.children().last() + pomInfo
+            }
+        }
+    }
+
+    signing {
+        required = { isRelease && gradle.taskGraph.hasTask("publish") }
+        Publication[] publications = new Publication[project.publishing.publications.size()]
+        project.publishing.publications.findAll().toArray(publications)
+        sign(publications)
+    }
+
+    tasks.withType(Sign) {
+        onlyIf { isRelease }
+    }
+}
