@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,26 @@ import spock.lang.Specification
 /**
  */
 class GrailsStringUtilsSpec extends Specification{
+
+    static final String FOO = 'foo'
+    static final String TRIMMABLE
+    static final String NON_TRIMMABLE
+
+    static {
+        def trimmable = new StringBuilder()
+        def nonTrimmable = new StringBuilder()
+        (0..<Character.MAX_VALUE).each { i ->
+            char ch = (char) i
+            if (Character.isWhitespace(ch) && i > 32) {
+                nonTrimmable.append(ch)
+            }
+        }
+        (0..32).each { int i ->
+            trimmable.append((char) i)
+        }
+        TRIMMABLE = trimmable.toString()
+        NON_TRIMMABLE = nonTrimmable.toString()
+    }
 
     void "Test toBoolean"() {
         expect:
@@ -62,5 +82,18 @@ class GrailsStringUtilsSpec extends Specification{
             GrailsStringUtils.trimStart("abc", "a") == 'bc'
             GrailsStringUtils.trimStart("abc", "ab") == 'c'
             GrailsStringUtils.trimStart("abc", "c") == 'abc'
+    }
+
+    void "Test trimToNull method"() {
+        expect:
+            GrailsStringUtils.trimToNull(FOO + "  ") == FOO
+            GrailsStringUtils.trimToNull(" " + FOO + "  ") == FOO
+            GrailsStringUtils.trimToNull(" " + FOO) == FOO
+            GrailsStringUtils.trimToNull(FOO + "") == FOO
+            GrailsStringUtils.trimToNull(" \t\r\n\b ") == null
+            GrailsStringUtils.trimToNull(TRIMMABLE) == null
+            GrailsStringUtils.trimToNull(NON_TRIMMABLE) == NON_TRIMMABLE
+            GrailsStringUtils.trimToNull("") == null
+            GrailsStringUtils.trimToNull(null) == null
     }
 }

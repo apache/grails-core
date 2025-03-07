@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -191,4 +191,30 @@ abstract class GrailsStringUtils extends StringUtils{
         stripFilenameExtension( getFilename(path) )
     }
 
+    /**
+     * Removes all space from both ends of this String returning
+     * {@code null} if the String is empty ("") after the trim
+     * or if it is {@code null}.
+     *
+     * <p>The String is trimmed using {@link String#trim()}.
+     *
+     * <pre>
+     * GrailsStringUtils.trimToNull(null)          = null
+     * GrailsStringUtils.trimToNull("")            = null
+     * GrailsStringUtils.trimToNull("     ")       = null
+     * GrailsStringUtils.trimToNull("xyz")         = "xyz"
+     * GrailsStringUtils.trimToNull("    xyz    ") = "xyz"
+     * </pre>
+     * 
+     *  based on https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/StringUtils.java#L8838
+     *
+     * @param str  the String to be trimmed, may be null
+     * @return the trimmed String,
+     *  {@code null} if only containing space, empty or null String input
+     * @since 7.0.0
+     */
+    static String trimToNull(String str) {
+        String trimmed = str?.trim()
+        return hasLength(trimmed) ? trimmed : null
+    }
 }
