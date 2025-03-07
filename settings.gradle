@@ -31,23 +31,16 @@ buildCache {
 
 rootProject.name = 'grails-views'
 
-include 'views-core'
-project(':views-core').projectDir = file('views-core')
-
-include 'views-json'
-project(':views-json').projectDir = file('views-json')
-
-include 'views-docs'
-project(':views-docs').projectDir = file('views-docs')
-
-include 'views-json-testing-support'
-project(':views-json-testing-support').projectDir = file('views-json-testing-support')
-
-include 'views-markup'
-project(':views-markup').projectDir = file('views-markup')
-
-include 'scaffolding'
-project(':scaffolding').projectDir = file('scaffolding')
+include (
+    'views-core',
+    'views-json',
+    'views-docs',
+    'views-json-testing-support',
+    'views-markup',
+    'scaffolding',
+    'fields',
+    'fields-docs'
+)
 
 include 'examples-views-functional-tests'
 project(':examples-views-functional-tests').projectDir = file('examples/views-functional-tests')

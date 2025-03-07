@@ -2,7 +2,7 @@
 
 http://stateless.co/hal_specification.html[HAL] is a standard format for representing JSON that has gained traction for its ability to represent links between resources and provide navigable APIs.
 
-The JSON views plugin for Grails provides HAL support out-of-the-box. All JSON views have access to the `hal` instance which implements link:api/grails/plugin/json/view/api/HalViewHelper.html[HalViewHelper].
+The JSON views plugin for Grails provides HAL support out-of-the-box. All JSON views have access to the `hal` instance which implements link:groovydoc/grails/plugin/json/view/api/HalViewHelper.html[HalViewHelper].
 
 For example:
 

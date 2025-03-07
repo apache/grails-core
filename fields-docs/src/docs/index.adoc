@@ -1,7 +1,4 @@
 = Fields Plugin
-:version: x.y.z
-:source-highlighter: coderay
-:imagesdir: ./images
 
 [#introduction]
 include::introduction.adoc[]

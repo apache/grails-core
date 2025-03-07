@@ -76,7 +76,7 @@ jobs:
         run: ./gradlew --no-build-cache publish && cd views-gradle-plugin && ./gradlew --no-build-cache publish
       - name: "📖 Generate Snapshot Documentation"
         if: success()
-        run: ./gradlew views-docs:docs
+        run: ./gradlew aggregateDocs
       - name: "📤 Publish Snapshot Documentation to Github Pages"
         if: success()
         uses: grails/github-pages-deploy-action@grails
@@ -84,5 +84,5 @@ jobs:
           BRANCH: gh-pages
           COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
           COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: views-docs/build/docs
+          FOLDER: build/docs
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

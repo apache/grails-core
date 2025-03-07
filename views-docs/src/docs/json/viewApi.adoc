@@ -1,8 +1,8 @@
 = JSON View API
 
-All JSON views subclass the link:api/grails/plugin/json/view/JsonViewTemplate.html[JsonViewTemplate] class by default.
+All JSON views subclass the link:groovydoc/grails/plugin/json/view/JsonViewTemplate.html[JsonViewTemplate] class by default.
 
-The `JsonViewTemplate` superclass implements the link:api/grails/plugin/json/view/api/JsonView.html[JsonView] trait which in turn extends the the link:api/grails/views/api/GrailsView.html[GrailsView] trait.
+The `JsonViewTemplate` superclass implements the link:groovydoc/grails/plugin/json/view/api/JsonView.html[JsonView] trait which in turn extends the the link:groovydoc/grails/views/api/GrailsView.html[GrailsView] trait.
 
 Thanks to these traits several methods and properties are available to JSON views that can be used to accomplish different tasks.
 
@@ -20,7 +20,7 @@ The `g.link` method is similar to the equivalent tag in GSP and allows you to ea
 
 == Altering the Response Headers
 
-To customize content types and headers use the `response` object defined by the link:api/grails/views/api/HttpView.html[HttpView] trait:
+To customize content types and headers use the `response` object defined by the link:groovydoc/grails/views/api/HttpView.html[HttpView] trait:
 
 [source,groovy]
 response.contentType "application/hal+json"
@@ -35,7 +35,7 @@ NOTE: The methods available are only a subset of the methods available via the `
 
 == Accessing the Request
 
-Various aspects of the request can be accessed by the `request` object defined by the link:api/grails/views/api/HttpView.html[HttpView] trait:
+Various aspects of the request can be accessed by the `request` object defined by the link:groovydoc/grails/views/api/HttpView.html[HttpView] trait:
 
 [source,groovy]
 json.person {
@@ -43,7 +43,7 @@ json.person {
  userAgent request.getHeader('User-Agent')
 }
 
-Parameters can be accessed via the `params` object which is an instance of link:api/grails/views/api/http/Parameters.html[Parameters]:
+Parameters can be accessed via the `params` object which is an instance of link:groovydoc/grails/views/api/http/Parameters.html[Parameters]:
 
 [source,groovy]
 json.person {

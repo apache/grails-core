@@ -4,21 +4,9 @@ plugins {
 
 ext {
     apiDocsProjects = [
-            'views-core': [
-                    docTitle   : 'Grails Views Core - ' + projectVersion,
-                    windowTitle: 'views-core ' + projectVersion + ' API'
-            ],
-            'views-json': [
-                    docTitle   : 'Grails Views Json - ' + projectVersion,
-                    windowTitle: 'views-json ' + projectVersion + ' API'
-            ],
-            'views-json-testing-support': [
-                    docTitle   : 'Grails Views Json Testing Support - ' + projectVersion,
-                    windowTitle: 'views-json-testing-support ' + projectVersion + ' API'
-            ],
-            'views-markup': [
-                    docTitle   : 'Grails Views Markup - ' + projectVersion,
-                    windowTitle: 'views-markup ' + projectVersion + ' API'
+            'fields': [
+                    docTitle   : 'Grails Fields Plugin - ' + projectVersion,
+                    windowTitle: 'fields ' + projectVersion + ' API'
             ]
     ]
 
@@ -41,9 +29,9 @@ ext {
             toc                 : 'left',
             toc2                : '',
             toclevels           : '2',
-            'version'           : projectVersion
+            'version'           : projectVersion,
+            'sourcedir'         : rootProject.layout.projectDirectory.dir('fields/src/main/groovy')
     ]
-
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')

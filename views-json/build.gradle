@@ -1,8 +1,6 @@
 plugins {
     id 'java-library'
     id 'groovy'
-    id 'maven-publish'
-    id 'signing'
     id 'org.grails.grails-plugin'
 }
 

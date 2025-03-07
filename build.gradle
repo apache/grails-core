@@ -53,6 +53,11 @@ allprojects {
     }
 }
 
+tasks.register('clean', Delete) {
+    group = 'build'
+    delete layout.buildDirectory
+}
+
 // Workaround needed for nexus publishing bug
 // version and group must be specified in the root project
 // https://github.com/gradle-nexus/publish-plugin/issues/310
@@ -64,7 +69,8 @@ def publishedProjects = [
         'views-json',
         'views-json-testing-support',
         'views-markup',
-        'scaffolding'
+        'scaffolding',
+        'fields'
 ]
 subprojects {
     if (name in publishedProjects) {

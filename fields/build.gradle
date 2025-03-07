@@ -1,125 +1,42 @@
-import org.asciidoctor.gradle.jvm.AsciidoctorTask
-
-buildscript {
-    repositories {
-        maven { url "https://plugins.gradle.org/m2/" }
-        maven { url "https://repo.grails.org/grails/core" }
-        if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
-            System.out.println("Adding Grails Core Repo for ${project.name}")
-            maven {
-                url = 'https://maven.pkg.github.com/grails/grails-core'
-                credentials {
-                    username = 'DOES_NOT_MATTER'
-                    password = System.getenv("GITHUB_MAVEN_PASSWORD")
-                }
-            }
-        }
-    }
-    dependencies {
-        classpath platform("org.grails:grails-bom:${grailsVersion}")
-        classpath "org.grails:grails-gradle-plugin"
-    }
-}
-
 plugins {
-    id 'org.asciidoctor.jvm.convert' version '4.0.3'
+    id 'groovy'
     id 'java-library'
+    id 'org.grails.grails-plugin'
+    id 'org.grails.grails-gsp'
 }
 
-version project.projectVersion
-group 'org.grails.plugins'
+version = projectVersion
+group = 'org.grails.plugins'
 
-apply plugin: 'org.grails.grails-plugin'
-apply plugin: 'org.grails.grails-gsp'
-apply plugin: "org.grails.grails-publish"
-
-compileJava.options.release = 17
-
-repositories {
-    mavenCentral()
-    maven { url "https://repo.grails.org/grails/core" }
-    if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
-        System.out.println("Adding Grails Core Repo for ${project.name}")
-        maven {
-            url = 'https://maven.pkg.github.com/grails/grails-core'
-            credentials {
-                username = 'DOES_NOT_MATTER'
-                password = System.getenv("GITHUB_MAVEN_PASSWORD")
-            }
-        }
-    }
+ext {
+    pomTitle = 'Grails Fields Plugin'
+    pomDescription = 'Customizable form-field rendering based on overrideable GSP template'
+    pomDevelopers = [robfletcher: 'Rob Fletcher', graemerocher: "Graeme Rocher", sdelamo: "Sergio del Amo", sbglasius: 'Søren Berg Glasius']
 }
 
 dependencies {
     implementation platform("org.grails:grails-bom:${grailsVersion}")
 
-    compileOnly 'org.springframework.boot:spring-boot-starter-logging'
-    compileOnly "org.springframework.boot:spring-boot-starter-actuator"
-    compileOnly "org.springframework.boot:spring-boot-autoconfigure"
-    compileOnly "org.springframework.boot:spring-boot-starter-tomcat"
-    compileOnly "org.grails:grails-plugin-controllers"
     compileOnly "org.grails.plugins:gsp"
+    compileOnly "org.grails:grails-plugin-controllers"
+    compileOnly "org.springframework.boot:spring-boot-autoconfigure"
+    compileOnly "org.springframework.boot:spring-boot-starter-actuator"
+    compileOnly "org.springframework.boot:spring-boot-starter-tomcat"
+    compileOnly 'org.springframework.boot:spring-boot-starter-logging'
 
-    testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.grails:grails-gorm-testing-support"
-
-    testImplementation 'org.javassist:javassist:3.29.0-GA'
     testImplementation "org.apache.groovy:groovy-dateutil"
+    testImplementation "org.grails:grails-datastore-gorm-hibernate5"
+    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation 'org.javassist:javassist:3.29.0-GA'
     testImplementation("org.jodd:jodd-wot:$joddWotVersion") {
         exclude module: 'slf4j-api'
         exclude module: 'asm'
     }
 
     testRuntimeOnly "net.bytebuddy:byte-buddy"
-
-    testImplementation "org.grails:grails-datastore-gorm-hibernate5"
 }
 
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-}
-
-grailsPublish {
-    githubSlug = 'gpc/fields'
-    license {
-        name = 'Apache-2.0'
-    }
-    title = "Grails Fields Plugin"
-    desc = "Customizable form-field rendering based on overrideable GSP template"
-    developers = [robfletcher: 'Rob Fletcher', graemerocher: "Graeme Rocher", sdelamo: "Sergio del Amo", sbglasius: 'Søren Berg Glasius']
-}
-
-tasks.named('asciidoctor', AsciidoctorTask) { it ->
-    it.dependsOn(tasks.withType(Groovydoc))
-    it.jvm {
-        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
-    }
-
-    resources {
-        from('src/docs/images')
-        into "./images"
-    }
-    sources {
-        include 'index.adoc'
-    }
-    attributes 'experimental': 'true',
-            'compat-mode': 'true',
-            'toc': 'left',
-            'icons': 'font',
-            'version': project.projectVersion,
-            'sourcedir': 'src/main/groovy'
-    baseDirFollowsSourceDir()
-    outputDir = "${buildDir}/docs"
-}
-
-groovydoc {
-    includeAuthor = false
-    includeMainForScripts = true
-    processScripts = true
-    destinationDir = file("${rootProject.buildDir}/docs/api")
-}
-
-tasks.register('docs') {
-    group = JavaBasePlugin.DOCUMENTATION_GROUP
-    dependsOn = ['groovydoc', 'asciidoctor']
-}
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publishing.gradle')

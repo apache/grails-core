@@ -23,7 +23,7 @@ class MarkupViewGrailsPlugin extends Plugin {
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "https://grails.github.io/grails-views/latest/"
+    def documentation = "https://grails.github.io/grails-views/latest/views/guide"
 
     // Extra (optional) plugin metadata
 

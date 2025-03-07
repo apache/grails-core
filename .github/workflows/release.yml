@@ -163,7 +163,7 @@ jobs:
       - name: "📖 Generate Documentation"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew views-docs:docs
+        run: ./gradlew aggregateDocs
       - name: "📤 Publish Documentation to Github Pages"
         if: success()
         uses: grails/github-pages-deploy-action@grails
@@ -172,6 +172,6 @@ jobs:
           BRANCH: gh-pages
           COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
           COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: views-docs/build/docs
+          FOLDER: build/docs
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VERSION: ${{ needs.publish.outputs.release_version }}

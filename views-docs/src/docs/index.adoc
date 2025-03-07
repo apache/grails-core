@@ -1,10 +1,5 @@
 = Grails Views
 
-:author: Graeme Rocher
-:email: graeme.rocher@gmail.com
-:source-highlighter: coderay
-:numbered:
-
 :leveloffset: +1
 
 include::introduction.adoc[]

@@ -67,6 +67,6 @@ Since the release of json views, a new testing framework was released for Grails
 
 The new trait works exactly the same way as the old one, however since the new trait is designed to work with the new framework, there are several benefits you can take advantage of. The first is configuration. In the old trait the application configuration was not included in the template engine, which had the potential to produce incorrect results. Other benefits include extensibility and features like `@OnceBefore`.
 
-To get started, add the `org.grails:views-json-testing-support:{version}` dependency to your project and implement the link:api/grails/views/json/test/JsonViewUnitTest.html[JsonViewUnitTest] trait in your test instead of `JsonViewTest`.
+To get started, add the `org.grails:views-json-testing-support:{version}` dependency to your project and implement the link:groovydoc/grails/views/json/test/JsonViewUnitTest.html[JsonViewUnitTest] trait in your test instead of `JsonViewTest`.
 
 NOTE: The new testing trait, like the testing framework, requires Spock.

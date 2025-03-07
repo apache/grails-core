@@ -1,0 +1,89 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+apply plugin: 'org.asciidoctor.jvm.convert'
+
+configurations.register('documentation')
+
+dependencies {
+    add('documentation', platform("org.grails:grails-bom:$grailsVersion"))
+    add('documentation', 'com.github.javaparser:javaparser-core')
+    add('documentation', 'org.apache.groovy:groovy-groovydoc')
+}
+
+tasks.register('pluginName') {
+    ext.value = project.name - '-docs'
+}
+
+tasks.withType(Groovydoc).configureEach {
+    def firstDocTitle
+    def firstWindowTitle
+    def sources = []
+    rootProject.subprojects
+            .findAll { it.name in (project.findProperty('apiDocsProjects') ?: []) }
+            .each {
+                firstDocTitle = firstDocTitle ?: (project.findProperty('apiDocsProjects') as Map)[it.name]['docTitle']
+                firstWindowTitle = firstWindowTitle ?: (project.findProperty('apiDocsProjects') as Map)[it.name]['windowTitle']
+                sources += it.files('src/main/groovy')
+            }
+    docTitle = firstDocTitle
+    windowTitle = firstWindowTitle
+    source = sources
+    destinationDir = rootProject.layout.buildDirectory.dir("docs/${pluginName.value}/groovydoc").get().asFile
+    access = GroovydocAccess.PROTECTED
+    processScripts = false
+    includeMainForScripts = false
+    includeAuthor = false
+    classpath = configurations.documentation
+    groovyClasspath += configurations.documentation
+}
+
+tasks.named('asciidoctor', AsciidoctorTask) {
+    sourceDir layout.projectDirectory.file('src/docs')
+    sources { include 'index.adoc' }
+    outputDir = layout.buildDirectory.file('docs')
+    attributes findProperty('asciidoctorAttributes') as Map ?: [:]
+    baseDirFollowsSourceDir()
+    jvm {
+        jvmArgs '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED'
+    }
+    inputs.dir(sourceDir)
+    outputs.dir(outputDir)
+}
+
+tasks.register('guideDocs', Copy) {
+    group = 'documentation'
+    dependsOn 'asciidoctor'
+    def sourceDir = layout.projectDirectory.dir('src/docs')
+    def targetDir = layout.buildDirectory.dir('docs')
+    outputs.dir(targetDir)
+    from sourceDir
+    into targetDir
+    include '**/*.png', '**/*.jpg', '**/*.gif', '**/*.svg'
+    finalizedBy findProperty('docsFinalizeTasks') as List ?: []
+}
+
+tasks.register('copyGuide', Copy) {
+    def sourceDir = layout.buildDirectory.dir('docs')
+    def targetDir = rootProject.layout.buildDirectory.dir("docs/${pluginName.value}/guide")
+    from(sourceDir)
+    into(targetDir)
+    dependsOn('guideDocs')
+    dependsOn(findProperty('docsFinalizeTasks') as List ?: [])
+    outputs.dir(targetDir)
+}
+
+tasks.register('copyApiDocs', Copy) {
+    group = 'documentation'
+    dependsOn('groovydoc')
+    for (String projectName : (findProperty('apiDocsProjects') as Map).keySet()) {
+        from(layout.buildDirectory.dir("docs/${projectName}/groovydoc")) {
+            into rootProject.layout.buildDirectory.dir("docs/${projectName}/groovydoc")
+        }
+    }
+}
+
+tasks.register('aggregateDocs') {
+    dependsOn('copyGuide', 'copyApiDocs')
+    group = 'documentation'
+    description = 'Aggregate all documentation from all subprojects into the root docs directory'
+}
