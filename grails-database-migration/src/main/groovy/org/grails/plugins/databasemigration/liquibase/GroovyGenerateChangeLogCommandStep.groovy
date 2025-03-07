@@ -30,7 +30,7 @@ import liquibase.diff.DiffResult
 import liquibase.diff.output.DiffOutputControl
 import liquibase.diff.output.changelog.DiffToChangeLog
 import liquibase.serializer.ChangeLogSerializerFactory
-import org.apache.commons.lang3.StringUtils
+import grails.util.GrailsStringUtils
 
 @CompileStatic
 class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
@@ -46,7 +46,7 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
     void run(CommandResultsBuilder resultsBuilder) throws Exception {
         CommandScope commandScope = resultsBuilder.getCommandScope();
 
-        String changeLogFile = StringUtils.trimToNull(commandScope.getArgumentValue(CHANGELOG_FILE_ARG));
+        String changeLogFile = GrailsStringUtils.trimToNull(commandScope.getArgumentValue(CHANGELOG_FILE_ARG));
         if (changeLogFile != null && changeLogFile.toLowerCase().endsWith(".sql")) {
             Scope.getCurrentScope().getUI().sendMessage("\n" + INFO_MESSAGE + "\n");
             Scope.getCurrentScope().getLog(getClass()).info("\n" + INFO_MESSAGE + "\n");
@@ -71,7 +71,7 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
         ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy();
         try {
             referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS);
-            if (StringUtils.trimToNull(changeLogFile) != null) {
+            if (GrailsStringUtils.trimToNull(changeLogFile) != null) {
                 changeLogWriter.print(changeLogFile, ChangeLogSerializerFactory.instance.getSerializer(changeLogFile))
             } else {
                 PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream());
@@ -82,7 +82,7 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
                 }
 
             }
-            if (StringUtils.trimToNull(changeLogFile) != null) {
+            if (GrailsStringUtils.trimToNull(changeLogFile) != null) {
                 Scope.getCurrentScope().getUI().sendMessage("Generated changelog written to " + new File(changeLogFile).getAbsolutePath());
             }
         } finally {

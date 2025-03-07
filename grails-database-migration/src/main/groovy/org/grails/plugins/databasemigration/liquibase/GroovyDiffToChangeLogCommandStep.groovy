@@ -28,7 +28,7 @@ import liquibase.database.ObjectQuotingStrategy
 import liquibase.diff.DiffResult
 import liquibase.diff.output.DiffOutputControl
 import liquibase.serializer.ChangeLogSerializerFactory
-import org.apache.commons.lang3.StringUtils
+import grails.util.GrailsStringUtils
 
 @CompileStatic
 class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
@@ -55,7 +55,7 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
 
         try {
             referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS);
-            if (StringUtils.trimToNull(changeLogFile) == null) {
+            if (GrailsStringUtils.trimToNull(changeLogFile) == null) {
                 createDiffToChangeLogObject(diffResult, diffOutputControl, false).print(outputStream, ChangeLogSerializerFactory.instance.getSerializer('groovy'))
             } else {
                 createDiffToChangeLogObject(diffResult, diffOutputControl, false).print(changeLogFile, ChangeLogSerializerFactory.instance.getSerializer(changeLogFile))
