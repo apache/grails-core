@@ -83,7 +83,7 @@ jobs:
           path: grails-linux-amd64-snapshot.zip
   macos:
     name: "Build OS X Intel Native CLI"
-    runs-on: macos-14
+    runs-on: macos-13
     needs: build
     steps:
       - name: "📥 Checkout the repository"
