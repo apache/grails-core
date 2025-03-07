@@ -1,145 +1,157 @@
-ext {
-    datastoreGithubBranch = "8.0.x"
-    checkOutDir = "build/checkout"
-    explicitGormSrc = System.getProperty("gorm.src") ?: (project.hasProperty('gorm.src') ? project.getProperty("gorm.src") : null)
-    gormSrc = explicitGormSrc ? file(explicitGormSrc).absolutePath : "$checkOutDir/gorm-src"
-    zipFile = "build/source.zip"
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
 
-    coreProjects = [
-            'core',
-            'gorm'
-    ]
-
+plugins {
+    id 'groovy'
+    id 'org.asciidoctor.jvm.convert'
 }
 
-version rootProject.version
+version = projectVersion
 
-apply plugin: 'groovy'
-apply plugin: 'org.asciidoctor.jvm.convert'
+ext {
+    isReleaseVersion = !projectVersion.endsWith('-SNAPSHOT')
+    checkoutDirName = 'checkout'
+    explicitGormSrc = System.getProperty('gorm.src') ?: project.findProperty('gorm.src')
+    gormSrc = (explicitGormSrc ? file(explicitGormSrc) : "$checkoutDirName/gorm-src") as String
+    zipFile = 'build/source.zip'
+    coreProjects = ['grails-datastore-core', 'grails-datastore-gorm']
+}
 
-dependencies {
-    documentation "org.grails:grails-core"
-    documentation "org.grails:grails-bootstrap"
-    documentation "org.grails:grails-spring"
-    documentation "info.picocli:picocli:$picocliVersion"
-    documentation "org.fusesource.jansi:jansi"
-    documentation "org.apache.groovy:groovy-dateutil"
-    documentation "com.github.javaparser:javaparser-core"
-
-    documentation "org.fusesource.jansi:jansi"
-    for(p in coreProjects) {
-        documentation "org.grails:grails-datastore-$p"
-    }
-    project.rootProject.subprojects.each { subproject ->
-        if(subproject.name != "docs" && !subproject.name.startsWith('examples')) {
-            documentation project(":$subproject.name")
+configurations {
+    documentation {
+        attributes {
+            attribute(Bundling.BUNDLING_ATTRIBUTE, (Bundling) (objects.named(Bundling, 'external')))
         }
     }
 }
 
-asciidoctor {
-    inputs.dir layout.projectDirectory.dir('src/docs/asciidoc')
-    outputs.dir layout.buildDirectory.dir('docs/manual')
-    baseDirFollowsSourceDir()
-    resources {
-        from("${project.projectDir}/src/docs/asciidoc/images")
-        into "./images"
+dependencies {
+    documentation platform("org.grails:grails-bom:$grailsVersion")
+    documentation 'com.github.javaparser:javaparser-core'
+    documentation "info.picocli:picocli:$picocliVersion"
+    documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'org.fusesource.jansi:jansi'
+    documentation 'org.grails:grails-bootstrap'
+    documentation 'org.grails:grails-core'
+    documentation 'org.grails:grails-spring'
+    documentation "org.hibernate:hibernate-core-jakarta:$hibernateVersion"
+    coreProjects.each {
+        documentation "org.grails:$it"
     }
-
-    attributes  'experimental'  : 'true',
-                'compat-mode'   : 'true',
-                'toc'           : 'left',
-                'icons'         : 'font',
-                'reproducible'  : '',
-                'version'       : project.version,
-                'pluginVersion' : project.version,
-                'groupId'       : project.group,
-                'artifactId'    : project.name,
-                'sourcedir'     : "${project.projectDir}/src/main/groovy",
-                'migrationPluginExamplesDir' : rootProject.layout.projectDirectory.dir('grails-database-migration/src/integration-test/resources').asFile.absolutePath,
-                'migrationPluginGroupId' : rootProject.findProject(':database-migration').group,
-                'migrationPluginArtifactId' : rootProject.findProject(':database-migration').name,
-                'liquibaseHibernate5Version': liquibaseHibernate5Version
+    rootProject.subprojects
+            .findAll { it.findProperty('apiDocs') }
+            .each { documentation project(":$it.name") }
 }
 
-task fetchSource {
-    outputs.dir layout.buildDirectory.dir('checkout')
-    inputs.properties(branch: datastoreGithubBranch)
+tasks.named('asciidoctor', AsciidoctorTask) {
+    inputs.dir layout.projectDirectory.dir('src/docs')
+    outputs.dir layout.buildDirectory.dir('docs')
+    baseDirFollowsSourceDir()
+    resources {
+        from("$project.projectDir/src/docs/asciidoc/images")
+        into './images'
+    }
+
+    attributes(
+            'experimental'  : 'true',
+            'compat-mode'   : 'true',
+            'toc'           : 'left',
+            'icons'         : 'font',
+            'reproducible'  : '',
+            'version'       : projectVersion,
+            'pluginVersion' : projectVersion,
+            'groupId'       : project.group,
+            'artifactId'    : project.name,
+            'sourcedir'     : "$project.rootDir",
+            'migrationPluginExamplesDir' : rootProject.layout.projectDirectory.dir('grails-database-migration/src/integration-test/resources').asFile.absolutePath,
+            'migrationPluginGroupId' : rootProject.findProject(':database-migration').group,
+            'migrationPluginArtifactId' : rootProject.findProject(':database-migration').name,
+            'liquibaseHibernate5Version': liquibaseHibernate5Version
+    )
+    jvm {
+        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    }
+}
+
+tasks.register('fetchGormSource') {
+    group = 'documentation'
+    outputs.dir(layout.buildDirectory.dir(checkoutDirName))
+    inputs.property('branch', datastoreGithubBranch)
 
     onlyIf {
-        println "GORM SRC=$explicitGormSrc"
+        // Only download if no local GORM source is provided
         return !explicitGormSrc
     }
 
     doLast {
-        println "Downloading GORM source code."
-        if (isReleaseVersion) {
-            ant.get src: "https://github.com/grails/grails-data-mapping/archive/refs/tags/v${gormVersion}.zip", dest: zipFile, verbose: true
-        } else {
-            ant.get src: "https://github.com/grails/grails-data-mapping/archive/refs/heads/${datastoreGithubBranch}.zip", dest: zipFile, verbose: true
+        def checkoutDir = layout.buildDirectory.dir(checkoutDirName).get().asFile
+        ant.mkdir(dir: layout.buildDirectory.get().asFile)
+        ant.mkdir(dir: checkoutDir)
+        logger.lifecycle('Downloading GORM source code...')
+        def ref = isReleaseVersion ? "tags/v$datastoreVersion" : "heads/$datastoreGithubBranch"
+        ant.get(src: "https://github.com/grails/grails-data-mapping/archive/refs/${ref}.zip", dest: zipFile, verbose: true)
+        ant.unzip(src: zipFile, dest: checkoutDir) {
+            mapper(type: 'regexp', from: '(grails-\\S*?/)(.*)', to: "gorm-src/\\2")
         }
-
-        ant.unzip src: zipFile, dest: checkOutDir, {
-            mapper type: "regexp", from: "(grails-\\S*?/)(.*)", to: "gorm-src/\\2"
-        }
-        println "GORM source code downloaded."
+        logger.lifecycle('GORM source code downloaded!')
     }
 }
 
-task copyDocs(type:Copy, dependsOn:asciidoctor) {
+tasks.register('copyDocs', Copy) {
+    group = 'documentation'
+    dependsOn('asciidoctor')
     mustRunAfter('asciidoctor', 'groovydoc', 'copyResources')
     finalizedBy('cleanAsciidoc')
-    from project(':docs').layout.buildDirectory.dir('docs/asciidoc')
-    into project(':docs').layout.buildDirectory.dir('docs/manual')
+    from(layout.buildDirectory.dir('docs/asciidoc'))
+    into(layout.buildDirectory.dir('docs/manual'))
 }
 
-task cleanAsciidoc(type: Delete, dependsOn: copyDocs) {
-    dependsOn('copyDocs')
-    delete project(':docs').layout.buildDirectory.dir('docs/asciidoc')
+tasks.register('cleanAsciidoc', Delete) {
+    group = 'documentation'
+    delete(layout.buildDirectory.dir('docs/asciidoc'))
 }
 
-tasks.withType(Groovydoc) {
-    dependsOn('fetchSource')
-    docTitle = "GORM for Hibernate 5 - ${project.version}"
-    destinationDir = project.file('build/docs/api')
+tasks.withType(Groovydoc).configureEach {
+    dependsOn('fetchGormSource')
+    docTitle = "GORM for Hibernate 5 - $project.version"
 
-    def files
-    for (p in coreProjects) {
-        if (files == null) {
-            files = project.files("${checkOutDir}/gorm-src/grails-datastore-${p}/src/main/groovy")
-        } else {
-            files += project.files("${checkOutDir}/gorm-src/grails-datastore-${p}/src/main/groovy")
-        }
-    }
-    project.rootProject.subprojects
-            .findAll { !it.name.contains('-rx-') && !it.name.startsWith('examples') }
-            .each { subproject ->
-                if (subproject.file('src/main/groovy').exists()) {
-                    files += subproject.files("src/main/groovy")
-                }
-            }
-    source = files
-    classpath += configurations.documentation
+    def sourceFiles = coreProjects.collect {
+        layout.buildDirectory.files("$checkoutDirName/gorm-src/$it/src/main/groovy")
+    }.sum()
+
+    rootProject.subprojects
+            .findAll { it.findProperty('apiDocs') }
+            .each { sourceFiles += it.files('src/main/groovy') }
+
+    source = sourceFiles
+    destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
+    access = GroovydocAccess.PROTECTED
+    processScripts = false
+    includeMainForScripts = false
+    includeAuthor = false
+    classpath = configurations.documentation
+    groovyClasspath += configurations.documentation
 }
 
-task copyResources(type:Copy) {
-    from 'src/docs/resources'
-    into "${project.layout.buildDirectory.get()}/docs"
+tasks.register('copyResources', Copy) {
+    group = 'documentation'
+    from(layout.projectDirectory.dir('src/docs/resources'))
+    into(layout.buildDirectory.dir('docs'))
 }
 
-task docs(dependsOn:[asciidoctor, groovydoc, copyDocs, copyResources] +
-        subprojects.findAll { project -> project.tasks.findByName('groovydoc')}
-                .collect { project -> project.tasks.groovydoc }
-) {
+tasks.register('docs') {
+    group = 'documentation'
+    dependsOn('asciidoctor', 'copyDocs', 'cleanAsciidoc', 'groovydoc', 'copyResources',
+            rootProject.subprojects
+                    .findAll { it.findProperty('apiDocs') }
+                    .collect { ":${it.name}:groovydoc" }
+    )
+    finalizedBy('assembleDocsDist')
 }
 
-task assembleDocsDist(type: Zip) {
-    dependsOn 'docs', 'copyDocs'
-    from "${project.layout.buildDirectory.get()}/docs"
-    include '*'
-    include '*/**'
+tasks.register('assembleDocsDist', Zip) {
+    group = 'documentation'
+    dependsOn('docs', 'copyDocs')
+    from(layout.buildDirectory.dir('docs'))
     archiveFileName = "${project.name}-${project.version}.zip"
     destinationDirectory = project.layout.buildDirectory.dir('distributions')
 }
-
-docs.finalizedBy assembleDocsDist

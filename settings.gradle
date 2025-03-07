@@ -1,26 +1,26 @@
 plugins {
-    id "com.gradle.enterprise" version "3.19.2"
+    id 'com.gradle.enterprise' version '3.19.2'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
 }
 
-gradleEnterprise {
+def isCI = System.getenv('CI') != null
+def isLocal = !isCI
+def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
+
+develocity {
     server = 'https://ge.grails.org'
     buildScan {
-        publishAlwaysIf(System.getenv('CI') == 'true')
-        publishIfAuthenticated()
-        uploadInBackground = System.getenv("CI") == null
-        capture {
-            taskInputFiles = true
-        }
+        tag('grails')
+        tag('gorm-hibernate5')
+        publishing.onlyIf { isAuthenticated }
+        uploadInBackground = isLocal
     }
-
 }
 
 buildCache {
-    local { enabled = System.getenv('CI') != 'true' }
-    remote(gradleEnterprise.buildCache) {
-        def isAuthenticated = System.getenv('GRADLE_ENTERPRISE_ACCESS_KEY')
-        push = System.getenv('CI') == 'true' && isAuthenticated
+    local { enabled = isLocal }
+    remote(develocity.buildCache) {
+        push = isCI && isAuthenticated
         enabled = true
     }
 }

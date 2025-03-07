@@ -1,28 +1,9 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        maven { url "https://repo.grails.org/grails/core" }
-        if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
-            System.out.println("Adding Grails Core Repo for ${project.name}")
-            maven {
-                url = 'https://maven.pkg.github.com/grails/grails-core'
-                credentials {
-                    username = 'DOES_NOT_MATTER'
-                    password = System.getenv("GITHUB_MAVEN_PASSWORD")
-                }
-            }
-        }
-    }
-    dependencies {
-        classpath platform("org.grails:grails-bom:$grailsVersion")
-        classpath "org.springframework.boot:spring-boot-gradle-plugin"
-    }
+plugins {
+    id 'groovy'
+    id 'org.springframework.boot'
 }
 
-apply plugin: 'groovy'
-apply plugin: 'org.springframework.boot'
-
-version = rootProject.version
+version = projectVersion
 group = 'examples'
 
 dependencies {
@@ -39,4 +20,10 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     testImplementation 'org.spockframework:spock-core'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
 }

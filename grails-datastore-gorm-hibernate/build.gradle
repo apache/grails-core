@@ -1,4 +1,18 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    apiDocs = true
+    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+}
+
 dependencies {
+    // TODO: Clarify and clean up dependencies
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
     api "org.slf4j:slf4j-api"
@@ -21,20 +35,17 @@ dependencies {
         exclude group:'org.slf4j', module:'slf4j-api'
     }
 
+    testImplementation "com.h2database:h2"
+    testImplementation 'junit:junit' // JUnit 4
     testImplementation "org.apache.groovy:groovy-test-junit5"
     testImplementation "org.apache.groovy:groovy-sql"
     testImplementation "org.apache.groovy:groovy-json"
-    testImplementation "org.grails:grails-datastore-gorm-tck", {
-        exclude group: "org.spockframework"
-    }
-    testImplementation "com.h2database:h2"
-
-    // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
+    testImplementation "org.apache.tomcat:tomcat-jdbc"
+    testImplementation 'org.spockframework:spock-core'
     testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+        // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
         exclude group: "org.codehaus.groovy", module: "groovy"
     }
-
-    testImplementation "org.apache.tomcat:tomcat-jdbc"
 
     testRuntimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
         // exclude javax variant of hibernate-core 5.6
@@ -48,69 +59,9 @@ dependencies {
     testRuntimeOnly "org.springframework:spring-aop"
 }
 
-test {
-    if (isTravisBuild || isCiBuild) {
-        maxParallelForks = 2
-        forkEvery = 10
-    }
-    else {
-        maxParallelForks = 4
-        forkEvery = 20
-    }
-
-    jvmArgs = ['-Xmx1028M']
-    afterSuite {
-        System.out.print('.')
-        System.out.flush()
-    }
-}
-
-test.doFirst {
-    def toBaseClassRelativePathWithoutExtension = { String base, String classFile ->
-        if (classFile.startsWith(base)) {
-            def sansClass = classFile[0 .. classFile.size() - ".class".size() - 1]
-            def dollarIndex = sansClass.indexOf('$')
-            def baseClass = dollarIndex > 0 ? sansClass[0..dollarIndex - 1] : sansClass
-            def relative = baseClass - base - '/'
-            relative
-        }
-        else {
-            null
-        }
-    }    
-    def tckClassesFile = project
-                            .configurations
-                            .testCompileClasspath
-                            .resolvedConfiguration
-                            .getResolvedArtifacts()
-                            .find { resolved ->
-                                resolved.moduleVersion.id.name == 'grails-datastore-gorm-tck'
-                            }.file
-
-    def tckClassesDir = project.file("${project.buildDir}/tck")                            
-    copy {
-        from zipTree(tckClassesFile)
-        into tckClassesDir 
-    }
-    copy {
-        from tckClassesDir
-        into sourceSets.test.output.classesDirs.find { it.path.contains('classes' + File.separator + 'groovy') }
-        include "**/*.class"
-        exclude { details ->
-            // Do not copy across any TCK class (or nested classes of that class)
-            // If there is a corresponding source file in the particular modules
-            // test source tree. Allows a module to override a test/helper.
-            if (!details.file.isFile()) {
-                return false
-            }
-            def candidatePath = details.file.absolutePath
-            def relativePath = toBaseClassRelativePathWithoutExtension(tckClassesDir.absolutePath, candidatePath)
-
-            if (relativePath == null) {
-                throw new IllegalStateException("$candidatePath does not appear to be in the TCK")
-            }
-
-            project.file("src/test/groovy/${relativePath}.groovy").exists()
-        }
-    }
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/tck-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

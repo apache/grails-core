@@ -1,22 +1,4 @@
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-name: "Grails Joint Validation Build"
-#  GROOVY_2_5_X == Grails 4.0.x
-#  GROOVY_3_0_X == grails master
-#  Groovy master branch does not map to any due to changed package names.
+name: "Groovy Joint Validation Build"
 on:
   push:
     branches:
@@ -27,136 +9,131 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-env:
-  CI_GROOVY_VERSION:
+  packages: read
 jobs:
   build_groovy:
-    strategy:
-      fail-fast: true
-    runs-on: ubuntu-latest
+    name: "Build Groovy"
+    runs-on: ubuntu-24.04
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:
-      - name: Set up JDK
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: liberica
           java-version: 17
-      - name: Cache local Maven repository & Groovy
+          distribution: liberica
+      - name: "🗄️ Cache local Maven repository"
         uses: actions/cache@v4
         with:
-          path: |
-            ~/groovy
-            ~/.m2/repository
-          key: cache-local-groovy-maven-${{ github.sha }}
-      - name: Checkout Groovy 4_0_X (Grails 7 and later)
-        run: cd .. && git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
-      - name: Set CI_GROOVY_VERSION for Grails
+          path: ~/.m2/repository
+          key: cache-local-maven-${{ github.sha }}
+      - name: "📥 Checkout this project to fetch Gradle Plugin versions it uses"
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: settings.gradle
+      - name: "📝 Store the Gradle Plugin versions used in this project"
+        id: gradle-plugin-versions
+        run: |
+          DEVELOCITY_PLUGIN_VERSION=$(grep -m 1 'id\s*\(\"com.gradle.develocity\"\|'"'com.gradle.develocity'"'\)\s*version' settings.gradle | sed -E "s/.*version[[:space:]]*['\"]?([0-9]+\.[0-9]+(\.[0-9]+)?)['\"]?.*/\1/" | tr -d [:space:])
+          COMMON_CUSTOM_USER_DATA_PLUGIN_VERSION=$(grep -m 1 'id\s*\(\"com.gradle.common-custom-user-data-gradle-plugin\"\|'"'com.gradle.common-custom-user-data-gradle-plugin'"'\)\s*version' settings.gradle | sed -E "s/.*version[[:space:]]*['\"]?([0-9]+\.[0-9]+(\.[0-9]+)?)['\"]?.*/\1/" | tr -d [:space:])
+          echo "Project uses Develocity Plugin version: $DEVELOCITY_PLUGIN_VERSION"
+          echo "Project uses Common Custom User Data Plugin version: $COMMON_CUSTOM_USER_DATA_PLUGIN_VERSION"
+          echo "develocity_plugin_version=$DEVELOCITY_PLUGIN_VERSION" >> $GITHUB_OUTPUT
+          echo "common_custom_user_data_plugin_version=$COMMON_CUSTOM_USER_DATA_PLUGIN_VERSION" >> $GITHUB_OUTPUT
+          rm settings.gradle
+      - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
+        run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "📝 Store Groovy version to use when building the project"
         id: groovy-version
         run: |
-          cd ../groovy
-          echo "CI_GROOVY_VERSION=$(cat gradle.properties | grep groovyVersion | cut -d\= -f2 |  tr -d '[:space:]')" >> $GITHUB_ENV
-          echo "value=$(cat gradle.properties | grep groovyVersion | cut -d\= -f2 |  tr -d '[:space:]')" >> $GITHUB_OUTPUT
-      - name: Prepare Develocity Setup 1
-        id: develocity_conf_1
+          cd groovy
+          GROOVY_VERSION=$(cat gradle.properties | grep groovyVersion | cut -d\= -f2 |  tr -d '[:space:]')
+          echo "Groovy version $GROOVY_VERSION stored"
+          echo "value=$GROOVY_VERSION" >> $GITHUB_OUTPUT
+      - name: "🐘 Configure Gradle Plugins (Step 1/3)"
+        id: develocity-conf-1
         run: |
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
           echo "plugins { " >> $GITHUB_OUTPUT
-          echo "    id 'com.gradle.enterprise' version '3.15.1'" >> $GITHUB_OUTPUT 
-          echo "    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11.3'" >> $GITHUB_OUTPUT 
+          echo "    id 'com.gradle.develocity' version '${{ steps.gradle-plugin-versions.outputs.develocity_plugin_version }}'" >> $GITHUB_OUTPUT 
+          echo "    id 'com.gradle.common-custom-user-data-gradle-plugin' version '${{ steps.gradle-plugin-versions.outputs.common_custom_user_data_plugin_version }}'" >> $GITHUB_OUTPUT 
           echo "}" >> $GITHUB_OUTPUT 
           echo "" >> $GITHUB_OUTPUT 
           echo "EOF" >> $GITHUB_OUTPUT
-      - name: Prepare Develocity Setup 2
-        id: develocity_conf_2
+      - name: "🐘 Configure Gradle Plugins (Step 2/3)"
+        id: develocity-conf-2
         run: |
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
-          echo "gradleEnterprise {" >> $GITHUB_OUTPUT 
-          echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT 
-          echo "    buildScan {" >> $GITHUB_OUTPUT 
-          echo "        publishAlways()" >> $GITHUB_OUTPUT 
-          echo "        publishIfAuthenticated()" >> $GITHUB_OUTPUT 
-          echo "        uploadInBackground = System.getenv('CI') == null" >> $GITHUB_OUTPUT 
-          echo "        capture {" >> $GITHUB_OUTPUT 
-          echo "            taskInputFiles = true" >> $GITHUB_OUTPUT 
-          echo "        }" >> $GITHUB_OUTPUT 
-          echo "    }" >> $GITHUB_OUTPUT 
-          echo "}" >> $GITHUB_OUTPUT 
-          echo "" >> $GITHUB_OUTPUT
-          echo "buildCache {" >> $GITHUB_OUTPUT 
-          echo "    local { enabled = System.getenv('CI') != 'true' }" >> $GITHUB_OUTPUT 
-          echo "    remote(HttpBuildCache) {" >> $GITHUB_OUTPUT 
-          echo "        push = System.getenv('CI') == 'true'" >> $GITHUB_OUTPUT
-          echo "        enabled = true" >> $GITHUB_OUTPUT 
-          echo "        url = 'https://ge.grails.org/cache/'" >> $GITHUB_OUTPUT 
-          echo "        credentials {" >> $GITHUB_OUTPUT 
-          echo "            username = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER')" >> $GITHUB_OUTPUT 
-          echo "            password = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')" >> $GITHUB_OUTPUT 
-          echo "        }" >> $GITHUB_OUTPUT 
-          echo "    }" >> $GITHUB_OUTPUT 
-          echo "}" >> $GITHUB_OUTPUT 
+          echo "def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null" >> $GITHUB_OUTPUT
+          echo "develocity {" >> $GITHUB_OUTPUT
+          echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT
+          echo "    buildScan {" >> $GITHUB_OUTPUT
+          echo "        tag('groovy')" >> $GITHUB_OUTPUT
+          echo "        tag('gorm-hibernate5')" >> $GITHUB_OUTPUT
+          echo "        publishing.onlyIf { isAuthenticated }" >> $GITHUB_OUTPUT
+          echo "        uploadInBackground = false" >> $GITHUB_OUTPUT
+          echo "    }" >> $GITHUB_OUTPUT
+          echo "}" >> $GITHUB_OUTPUT
+          echo "buildCache {" >> $GITHUB_OUTPUT
+          echo "    local { enabled = false }" >> $GITHUB_OUTPUT
+          echo "    remote(develocity.buildCache) {" >> $GITHUB_OUTPUT
+          echo "        push = isAuthenticated" >> $GITHUB_OUTPUT
+          echo "        enabled = true" >> $GITHUB_OUTPUT
+          echo "    }" >> $GITHUB_OUTPUT
+          echo "}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-      - name: Develocity Set-up
+      - name: "🐘 Configure Gradle Plugins (step 3/3)"
         run: |
-          cd ../groovy
+          cd groovy
           # Delete existing plugins from settings.gradle file
           sed -i '32,37d' settings.gradle
-          # Add Gradle Enterprise set-up related configuration after line no 31 in settings.gradle
-          echo "${{ steps.develocity_conf_1.outputs.value }}" | sed -i -e "31r /dev/stdin" settings.gradle
+          # Add Develocity setup related configuration after line no 31 in settings.gradle
+          echo "${{ steps.develocity-conf-1.outputs.value }}" | sed -i -e "31r /dev/stdin" settings.gradle
           # Delete existing buildCache configuration from gradle/build-scans.gradle file
           sed -i '23,46d' gradle/build-scans.gradle
-          # Add Gradle Enterprise set-up related configuration after line no 22 in gradle/build-scans.gradle
-          echo "${{ steps.develocity_conf_2.outputs.value }}" | sed -i -e "22r /dev/stdin" gradle/build-scans.gradle
-      - name: Build and install groovy (no docs)
-        uses: gradle/gradle-build-action@v3
-        env:
-          GRADLE_SCANS_ACCEPT: yes
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          build-root-directory: ../groovy
-          arguments: |
-            publishToMavenLocal
-            -x groovydoc
-            -x javadoc
-            -x javadocAll
-            -x groovydocAll
-            -x asciidoc
-            -x docGDK
-  build_gorm_hibernate5:
-    needs: [build_groovy]
-    strategy:
-      fail-fast: true
-    runs-on: ubuntu-latest
+          # Add Develocity setup related configuration after line no 22 in gradle/build-scans.gradle
+          echo "${{ steps.develocity-conf-2.outputs.value }}" | sed -i -e "22r /dev/stdin" gradle/build-scans.gradle
+      - name: "🔨 Publish Groovy to local maven repository (no docs)"
+        run: |
+          cd groovy
+          ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK
+
+  build_project:
+    name: "Build Project"
+    needs: build_groovy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: "📥 Checkout project"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: liberica
           java-version: 17
-      - name: Cache local Maven repository & Groovy
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v4
         with:
-          path: |
-            ~/groovy
-            ~/.m2/repository
-          key: cache-local-groovy-maven-${{ github.sha }}
-      - name: Set CI_GROOVY_VERSION for Grails
-        run: |
-          echo "CI_GROOVY_VERSION=${{needs.build_groovy.outputs.groovyVersion}}" >> $GITHUB_ENV
-      - name: Build GORM Hibernate5
-        id: build_gorm_hibernate5
-        uses: gradle/gradle-build-action@v3
+          path: ~/.m2/repository
+          key: cache-local-maven-${{ github.sha }}
+      - name: "🪶 Add mavenLocal repository to build"
+        run: sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' build.gradle
+      - name: "🔨 Build and test the project using the locally built Groovy snapshot"
         env:
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          arguments: |
-            build
-            -x groovydoc
+        run: >
+          ./gradlew build --continue
+          -PgroovyVersion=${{needs.build_groovy.outputs.groovyVersion}}
+          -x groovydoc

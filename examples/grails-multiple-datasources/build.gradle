@@ -1,8 +1,8 @@
 plugins {
-    id 'groovy'
+    id 'org.grails.grails-web'
 }
 
-version = rootProject.version
+version = projectVersion
 group = 'examples'
 
 configurations {
@@ -39,4 +39,10 @@ sourceSets {
     integrationTest {
         compileClasspath += configurations.astTransformation
     }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
 }

@@ -1,54 +1,24 @@
-buildscript {
-    repositories {
-        maven { url "https://repo.grails.org/grails/core" }
-        if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
-            System.out.println("Adding Grails Core Repo for ${project.name}")
-            maven {
-                url = 'https://maven.pkg.github.com/grails/grails-core'
-                credentials {
-                    username = 'DOES_NOT_MATTER'
-                    password = System.getenv("GITHUB_MAVEN_PASSWORD")
-                }
-            }
-        }
-    }
-    dependencies {
-        classpath platform("org.grails:grails-bom:$grailsVersion")
-        classpath "org.grails:grails-gradle-plugin"
-        classpath "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleVersion"
-    }
+plugins {
+    id 'java-library'
+    id 'org.grails.grails-plugin'
 }
 
-version project.projectVersion
-group "org.grails.plugins"
+version = projectVersion
+group = 'org.grails.plugins'
 
-apply plugin:"eclipse"
-apply plugin:"idea"
-apply plugin:"java-library"
-apply plugin:"org.grails.grails-plugin"
-apply plugin:"org.grails.grails-gsp"
-apply plugin: "org.asciidoctor.jvm.convert"
-
-repositories {
-    maven { url "https://repo.grails.org/grails/core" }
-    mavenCentral()
-    if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
-        System.out.println("Adding Grails Core Repo for project ${project.name}")
-        maven {
-            url = 'https://maven.pkg.github.com/grails/grails-core'
-            credentials {
-                username = 'DOES_NOT_MATTER'
-                password = System.getenv("GITHUB_MAVEN_PASSWORD")
-            }
-        }
-    }
-}
-
-configurations {
-    documentation
+ext {
+    apiDocs = true
+    pomTitle = 'Grails Database Migration Plugin'
+    pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications'
+    pomDevelopers = [
+        'kazukiyamamoto': 'Kazuki YAMAMOTO',
+        'jamesfredley': 'James Fredley',
+    ]
+    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
 }
 
 dependencies {
+    // TODO: Clarify and clean up dependencies
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
     api("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
@@ -59,9 +29,8 @@ dependencies {
         exclude group: 'com.h2database', module: 'h2'
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
-
-    api "org.apache.commons:commons-lang3"
-    api("org.grails:grails-shell") {
+    api 'org.apache.commons:commons-lang3'
+    api('org.grails:grails-shell') {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
     }
 
@@ -76,63 +45,27 @@ dependencies {
     testImplementation "org.grails:grails-gorm-testing-support"
     testImplementation "org.grails:grails-web-testing-support"
     testImplementation "com.h2database:h2"
-
-    documentation "org.apache.groovy:groovy"
-    documentation "org.apache.groovy:groovy-ant"
-    documentation "org.apache.groovy:groovy-templates"
-    documentation "com.github.javaparser:javaparser-core"
 }
 
-compileJava.options.release = 17
-
-ext {
-    pomTitle = 'Grails Database Migration Plugin'
-    pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications'
-    pomDevelopers = [
-            [id: 'kazukiyamamoto', name: 'Kazuki YAMAMOTO'],
-            [id: 'jamesfredley', name: 'James Fredley']
-    ]
+tasks.named('jar', Jar) {
+    exclude('testapp/**/**')
 }
 
-tasks.withType(GroovyCompile) {
-    configure(groovyOptions) {
-        forkOptions.jvmArgs = ['-Xmx1024m']
-    }
-}
-
-tasks.withType(Test) {
-    useJUnitPlatform()
-}
-
-tasks.withType(Groovydoc) {
-    configure {
-        docTitle = "Grails Database Migration Plugin ${version}"
-        source = project.files('src/main/groovy')
-        destinationDir = layout.buildDirectory.dir('docs/api').get().getAsFile()
-        classpath = configurations.documentation
-        groovyClasspath = configurations.documentation
-    }
-}
-
-jar {
-    exclude "testapp/**/**"
-}
-
-test {
-    testLogging {
-        events "passed", "skipped", "failed"
-
-        showExceptions true
-        exceptionFormat "full"
-        showCauses true
-        showStackTraces true
-    }
-    retry {
-        maxRetries = 2
-        maxFailures = 20
-        failOnPassedAfterRetry = true
-        filter {
-            excludeClasses.add("*GroovyChangeLogSpec")
+tasks.withType(Test).configureEach {
+    develocity.testRetry {
+        if (isCiBuild) {
+            maxRetries = 2
+            maxFailures = 20
+            failOnPassedAfterRetry = true
+            filter {
+                excludeTestsMatching '*.GroovyChangeLogSpec'
+            }
         }
     }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

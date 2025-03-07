@@ -1,4 +1,4 @@
-name: Java CI
+name: "Java CI"
 on:
   push:
     branches:
@@ -7,77 +7,75 @@ on:
     branches:
       - '[7-9]+.[0-9]+.x'
   workflow_dispatch:
+env:
+  GIT_USER_NAME: grails-build
+  GIT_USER_EMAIL: grails-build@users.noreply.github.com
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
-      WORKSPACE: ${{ github.workspace }}
       GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
+          java-version: 17
           distribution: liberica
-          java-version: '17'
-      - name: Run Build
-        id: build
-        uses: gradle/gradle-build-action@v3
-        env:
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
         with:
-          arguments: build
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔨 Run Build"
+        id: build
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew build --continue
   publish:
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    needs: ['build']
+    needs: 'build'
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
+          java-version: 17
           distribution: liberica
-          java-version: '17'
-      - name: Publish Artifacts To Grails Artifactory (repo.grails.org)
-        uses: gradle/gradle-build-action@v3
-        env:
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
-          ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
         with:
-          arguments: -Dorg.gradle.internal.publish.checksums.insecure=true publish
-      - name: Build Docs
-        if: success()
-        uses: gradle/gradle-build-action@v3
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "📤 Publish Snapshot to repo.grails.org"
         env:
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
-        with:
-          arguments: docs:docs
-      - name: Determine docs target repository
-        if: success()
-        uses: haya14busa/action-cond@v1
-        id: docs_target
-        with:
-          cond: ${{ github.repository == 'grails/gorm-hibernate5' }}
-          if_true: "grails/grails-data-mapping"
-          if_false: ${{ github.repository }}
-      - name: Publish to Github Pages
-        if: success()
-        uses: grails/github-pages-deploy-action@grails
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
+        run: ./gradlew publish --no-build-cache
+      - name: "🔨 Build Docs"
         env:
-          SKIP_SNAPSHOT: ${{ contains(steps.release_version.outputs.release_version, 'M') }}
-          TARGET_REPOSITORY: ${{ steps.docs_target.outputs.value }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew docs:docs
+      - name: "👀 Determine docs target repository"
+        run: |
+          if [ "${{ github.repository }}" = "grails/gorm-hibernate5" ]; then
+            DOCS_TARGET_REPOSITORY="grails/grails-data-mapping"
+          else
+            DOCS_TARGET_REPOSITORY="${{ github.repository }}"
+          fi
+          echo "DOCS_TARGET_REPOSITORY=${DOCS_TARGET_REPOSITORY}" >> $GITHUB_ENV
+          echo "Target Repository: ${DOCS_TARGET_REPOSITORY}"
+      - name: "📤 Publish to Github Pages"
+        uses: grails/github-pages-deploy-action@v3
+        env:
           BRANCH: gh-pages
-          FOLDER: docs/build/docs
-          DOC_SUB_FOLDER: hibernate
+          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
+          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
           DOC_FOLDER: gh-pages
-          COMMIT_EMAIL: 'grails-build@users.noreply.github.com'
-          COMMIT_NAME: 'grails-build'
+          DOC_SUB_FOLDER: hibernate
+          FOLDER: docs/build/docs
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TARGET_REPOSITORY: ${{ env.DOCS_TARGET_REPOSITORY }}

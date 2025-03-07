@@ -1,10 +1,9 @@
 plugins {
-    id 'groovy'
     id 'org.grails.grails-web'
     id 'org.grails.plugins.views-json'
 }
 
-version = rootProject.version
+version = projectVersion
 group = 'examples'
 
 dependencies {
@@ -13,6 +12,8 @@ dependencies {
     implementation project(':grails-plugin')
     implementation 'org.grails:grails-core'
     implementation 'org.grails.plugins:views-json'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Remove warning during Gson views compilation
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
@@ -25,4 +26,10 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     integrationTestImplementation 'org.grails:grails-testing-support'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
 }

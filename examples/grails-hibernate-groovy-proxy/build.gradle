@@ -1,9 +1,8 @@
 plugins {
-    id 'groovy'
     id 'org.grails.grails-web'
 }
 
-version = rootProject.version
+version = projectVersion
 group = 'examples'
 
 dependencies {
@@ -12,7 +11,7 @@ dependencies {
     implementation project(':grails-plugin')
     implementation 'org.grails:grails-core'
     implementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
-        exclude group: "org.codehaus.groovy", module: "groovy"
+        exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
 
     runtimeOnly 'com.h2database:h2'
@@ -21,4 +20,10 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
 
     testImplementation 'org.grails:grails-testing-support'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
 }

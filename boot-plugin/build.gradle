@@ -1,4 +1,18 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    apiDocs = true
+    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+}
+
 dependencies {
+    // TODO: Clarify and clean up dependencies
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
     compileOnly "org.grails:grails-shell", {
@@ -15,4 +29,10 @@ dependencies {
 
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "com.h2database:h2"
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

@@ -1,26 +1,20 @@
-configurations.all {
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        if(details.requested.group == 'org.grails' &&
-                details.requested.name.startsWith('grails-datastore') &&
-                details.requested.name != 'grails-datastore-gorm-hibernate5') {
-            details.useVersion(gormVersion)
-        }
-    }
+plugins {
+    id 'java-library'
+    id 'org.grails.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.grails.plugins'
+
+ext {
+    apiDocs = true
+    pomArtifactId = 'hibernate5'
+    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
 }
 
 dependencies {
-    documentation "org.grails:grails-core"
-    documentation "org.grails:grails-bootstrap"
-    documentation "org.grails:grails-spring"
-    documentation "com.github.javaparser:javaparser-core"
-
-    compileOnly "org.grails:grails-bootstrap"
-    compileOnly "org.grails:grails-core"
-    compileOnly "org.spockframework:spock-core", {
-        exclude group: "junit", module: "junit-dep"
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        exclude group: 'org.hamcrest', module: 'hamcrest-core'
-    }
+    // TODO: Clarify and clean up dependencies
+    implementation platform("org.grails:grails-bom:$grailsVersion")
 
     api "org.springframework.boot:spring-boot"
     api "org.springframework:spring-orm"
@@ -38,7 +32,17 @@ dependencies {
         exclude group:'javax.transaction', module:'jta'
     }
 
+    compileOnly "org.grails:grails-bootstrap"
+    compileOnly "org.grails:grails-core"
+
+    compileOnly "org.spockframework:spock-core", {
+        exclude group: "junit", module: "junit-dep"
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+    }
+
     testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.spockframework:spock-core"
 
     testRuntimeOnly "com.h2database:h2"
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
@@ -54,4 +58,8 @@ dependencies {
     testRuntimeOnly "org.yaml:snakeyaml"
 }
 
-groovydoc.classpath += configurations.documentation
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+}

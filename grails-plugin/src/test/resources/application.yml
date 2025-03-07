@@ -1,7 +1,3 @@
----
-grails:
-    profile: plugin
----
 dataSource:
   logSql: true
 ---

@@ -1,6 +1,8 @@
-group = 'examples'
+plugins {
+    id 'groovy'
+}
 
-apply plugin: 'groovy'
+group = 'examples'
 
 dependencies {
 
@@ -14,4 +16,10 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'org.slf4j:slf4j-simple'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
 }

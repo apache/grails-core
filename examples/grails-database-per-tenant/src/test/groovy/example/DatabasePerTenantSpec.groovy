@@ -9,7 +9,6 @@ import org.grails.datastore.mapping.config.Settings
  */
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
-import spock.lang.Ignore
 
 class DatabasePerTenantSpec extends HibernateSpec {
 
