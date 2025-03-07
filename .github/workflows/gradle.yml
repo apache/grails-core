@@ -10,11 +10,11 @@ on:
 env:
   GIT_USER_NAME: grails-build
   GIT_USER_EMAIL: grails-build@users.noreply.github.com
+permissions:
+  packages: read
 jobs:
   build:
     runs-on: ubuntu-24.04
-    permissions:
-      packages: read
     env:
       GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
     steps:

@@ -5,6 +5,8 @@ on:
 env:
   GIT_USER_NAME: grails-build
   GIT_USER_EMAIL: grails-build@users.noreply.github.com
+permissions:
+  packages: read
 jobs:
   publish:
     name: "Publish to Sonatype Staging Repository"
