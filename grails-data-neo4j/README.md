@@ -1,6 +1,6 @@
 # GORM for Neo4j
-[![Maven Central](https://img.shields.io/maven-central/v/org.grails/grails-datastore-gorm-neo4j.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails/grails-datastore-gorm-neo4j)
-[![Java CI](https://github.com/grails/gorm-neo4j/workflows/Java%20CI/badge.svg?event=push)](https://github.com/grails/gorm-neo4j/actions/workflows/gradle.yml)
+
+This project has not been updated for Grails 7 yet and is not included in the build.
 
 This project implements [GORM](https://gorm.grails.org) for the Neo4j 3.x Graph Database using the Bolt Java Driver.
 
