@@ -1,0 +1,73 @@
+A domain class can be created with the `create-domain-class` command if you are using Grails, or if you are not using Grails you can just create the `.groovy` file manually:
+
+[source,groovy]
+----
+grails create-domain-class helloworld.Person
+----
+
+
+This will create a class at the location `grails-app/domain/helloworld/Person.groovy` such as the one below:
+
+[source,groovy]
+----
+package helloworld
+
+class Person {
+}
+----
+
+NOTE: If you have the configured the `dataSource.dbCreate` property and set it to "update", "create" or "create-drop", GORM will automatically generate/modify the database tables for you.
+
+You can customize the class by adding properties:
+
+[source,groovy]
+----
+class Person {
+    String name
+    Integer age
+    Date lastVisit
+}
+----
+
+Once you have a domain class try and manipulate it with `console` command in Grails by typing:
+
+[source,groovy]
+----
+grails console
+----
+
+This loads an interactive GUI where you can run Groovy commands with access to the Spring ApplicationContext, GORM, etc.
+
+Or if you are not using Grails here is a unit test template (using https://docs.spockframework.org[Spock]) that can be run to test out the examples:
+
+[source,groovy]
+----
+import spock.lang.*
+import grails.gorm.annotation.Entity
+import grails.transaction.Rollback
+import org.grails.orm.hibernate.HibernateDatastore
+import org.springframework.transaction.PlatformTransactionManager
+
+class ExampleSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore
+    @Shared PlatformTransactionManager transactionManager
+
+    void setupSpec() {
+       hibernateDatastore = new HibernateDatastore(Person)
+       transactionManager = hibernateDatastore.getTransactionManager()
+    }
+
+    @Rollback
+    void "test execute GORM standalone in a unit test"() {
+       // your logic here
+    }
+}
+
+@Entity
+class Person {
+    ...
+}
+----
+
+

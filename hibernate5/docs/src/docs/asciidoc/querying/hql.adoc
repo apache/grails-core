@@ -1,0 +1,60 @@
+GORM classes also support Hibernate's query language HQL, a very complete reference for which can be found https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#hql[in the Hibernate documentation] of the Hibernate documentation.
+
+GORM provides a number of methods that work with HQL including link:../api/org/grails/datastore/gorm/GormEntity.html#find(java.lang.String)[find], link:../api/org/grails/datastore/gorm/GormEntity.html#findAll(java.lang.String)[findAll] and link:../api/org/grails/datastore/gorm/GormEntity.html#executeQuery(java.lang.String)[executeQuery].
+
+An example of a query can be seen below:
+
+[source,java]
+----
+def results =
+      Book.findAll("from Book as b where b.title like 'Lord of the%'")
+----
+
+
+==== Named Parameters
+
+
+In this case the value passed to the query is hard coded, however you can equally use named parameters:
+
+[source,java]
+----
+def results =
+      Book.findAll("from Book as b " +
+                   "where b.title like :search or b.author like :search",
+                   [search: "The Shi%"])
+----
+
+[source,java]
+----
+def author = Author.findByName("Stephen King")
+def books = Book.findAll("from Book as book where book.author = :author",
+                         [author: author])
+----
+
+
+==== Multiline Queries
+
+Use the triple quoted strings to separate the query across multiple lines:
+
+[source,java]
+----
+def results = Book.findAll("""
+from Book as b,
+     Author as a
+where b.author = a and a.surname = :surname""", [surname:'Smith'])
+----
+
+
+==== Pagination and Sorting
+
+
+You can also perform pagination and sorting whilst using HQL queries. To do so simply specify the pagination options as a Map at the end of the method call and include an "ORDER BY" clause in the HQL:
+
+[source,java]
+----
+def results =
+      Book.findAll("from Book as b where " +
+                   "b.title like 'Lord of the%' " +
+                   "order by b.title asc",
+                   [max: 10, offset: 20])
+----

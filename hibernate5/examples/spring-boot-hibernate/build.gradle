@@ -1,0 +1,29 @@
+plugins {
+    id 'groovy'
+    id 'org.springframework.boot'
+}
+
+version = projectVersion
+group = 'examples'
+
+dependencies {
+
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    implementation project(':gorm-hibernate5-spring-boot')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    testImplementation 'org.spockframework:spock-core'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
+}

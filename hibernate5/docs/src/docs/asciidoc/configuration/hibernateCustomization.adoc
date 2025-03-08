@@ -1,0 +1,29 @@
+If you want to hook into GORM and customize how Hibernate is configured there are a variety of ways to achieve that when using GORM.
+
+Firstly, as mentioned previously, any configuration you specify when configuring GORM for Hibernate will be passed through to Hibernate so you can configure any setting of Hibernate itself.
+
+For more advanced configuration you may want to configure or supply a new link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceFactory.html[HibernateConnectionSourceFactory] instance or a link:../api/org/grails/orm/hibernate/cfg/HibernateMappingContextConfiguration.html[HibernateMappingContextConfiguration] or both.
+
+==== The HibernateConnectionSourceFactory
+
+The `HibernateConnectionSourceFactory` is used to create a new Hibernate `SessionFactory` on startup.
+
+If you are using Spring, it is registered as a Spring bean using the name `hibernateConnectionSourceFactory` and therefore can be overridden.
+
+If you are not using Spring it can be passed to the constructor of the `HibernateDatastore` class on instantiation.
+
+The `HibernateConnectionSourceFactory` has a few useful setters that allow you to specify a Hibernate https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/Interceptor.html[Interceptor] or https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/boot/spi/MetadataContributor.html[MetadataContributor] (Hibernate 5+ only).
+
+==== The HibernateMappingContextConfiguration
+
+link:../api/org/grails/orm/hibernate/cfg/HibernateMappingContextConfiguration.html[HibernateMappingContextConfiguration] is built by the `HibernateConnectionSourceFactory`, but a customized version can be specified using the `hibernate.configClass` setting in your configuration:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+hibernate:
+	configClass: com.example.MyHibernateMappingContextConfiguration
+----
+
+The customized version should extend `HibernateMappingContextConfiguration` and using this class you can add additional classes, packages, `hbm.cfg.xml` files and so on.
+

@@ -1,0 +1,38 @@
+As well as associations between different domain classes, GORM also supports mapping of basic collection types.
+For example, the following class creates a `nicknames` association that is a `Set` of `String` instances:
+
+[source,java]
+----
+class Person {
+    static hasMany = [nicknames: String]
+}
+----
+
+GORM will map an association like the above using a join table. You can alter various aspects of how the join table is mapped using the `joinTable` argument:
+
+[source,java]
+----
+class Person {
+
+    static hasMany = [nicknames: String]
+
+    static mapping = {
+       nicknames joinTable: [name: 'bunch_o_nicknames',
+                           key: 'person_id',
+                           column: 'nickname',
+                           type: "text"]
+    }
+}
+----
+
+The example above will map to a table that looks like the following:
+
+*bunch_o_nicknames Table*
+[source,java]
+----
+---------------------------------------------
+| person_id         |     nickname          |
+---------------------------------------------
+|   1               |      Fred             |
+---------------------------------------------
+----

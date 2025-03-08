@@ -1,0 +1,110 @@
+=== Getting Started
+
+*The first step is to add a dependency for the plugin in `build.gradle`:*
+
+[source,groovy,subs="attributes"]
+----
+buildscript {
+   dependencies {
+      ...
+      classpath '{migrationPluginGroupId}:{migrationPluginArtifactId}:{version}'
+   }
+}
+
+dependencies {
+   ...
+     implementation '{migrationPluginGroupId}:{migrationPluginArtifactId}:{version}'
+}
+----
+
+It is also recommended to add a direct dependency to liquibase because Spring Boot overrides the one provided by this plugin
+
+[source,groovy,subs="attributes"]
+----
+dependencies {
+   ...
+     implementation "org.liquibase:liquibase-core:{liquibaseHibernate5Version}"
+     implementation "org.liquibase.ext:liquibase-hibernate5:{liquibaseHibernate5Version}"
+}
+----
+
+You should also tell Gradle about the migrations folder. If using Grails 4 or above, make sure the configuration below is BEFORE the
+`dependencies` configuration, so that the `sourceSets` declaration takes effect.
+
+[source,groovy,subs="attributes"]
+----
+sourceSets {
+    main {
+        resources {
+            srcDir 'grails-app/migrations'
+        }
+    }
+}
+----
+
+*Typical initial workflow*
+
+Next you'll need to create an initial changelog. You can use Liquibase XML or the plugin's Groovy DSL for individual files. You can even mix and match; Groovy files can include other Groovy files and Liquibase XML files (but XML files can't include Groovy files).
+
+Depending on the state of your database and code, you have two options; either create a changelog from the database or create it from your domain classes. The decision tends to be based on whether you prefer to design the database and adjust the domain classes to work with it, or to design your domain classes and use Hibernate to create the corresponding database structure.
+
+To create a changelog from the database, use the <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>> script:
+[source,groovy]
+----
+grails dbm-generate-changelog changelog.groovy
+----
+
+or
+
+[source,groovy]
+----
+grails dbm-generate-changelog changelog.xml
+----
+
+depending on whether you prefer the Groovy DSL or XML. The filename is relative to the changelog base folder, which defaults to `grails-app/migrations`.
+
+NOTE: If you use the XML format (or use a non-default Groovy filename), be sure to change the name of the file in `application.groovy` so `dbm-update` and other scripts find the file:
+[source,groovy]
+----
+grails.plugin.databasemigration.changelogFileName = 'changelog.xml'
+----
+
+Since the database is already correct, run the <<ref-maintenance-scripts-dbm-changelog-sync,dbm-changelog-sync>> script to record that the changes have already been applied:
+[source,groovy]
+----
+grails dbm-changelog-sync
+----
+
+Running this script is primarily a no-op except that it records the execution(s) in the Liquibase DATABASECHANGELOG table.
+
+To create a changelog from your domain classes, use the <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>> script:
+
+[source,groovy]
+----
+grails dbm-generate-gorm-changelog changelog.groovy
+----
+
+or
+
+[source,groovy]
+----
+grails dbm-generate-gorm-changelog changelog.xml
+----
+
+If you haven't created the database yet, run the <<ref-update-scripts-dbm-update,dbm-update>> script to create the corresponding tables:
+
+[source,groovy]
+----
+grails dbm-update
+----
+
+or the <<ref-maintenance-scripts-dbm-changelog-sync,dbm-changelog-sync>> script if the database is already in sync with your code:
+
+[source,groovy]
+----
+grails dbm-changelog-sync
+----
+
+*Source control*
+
+Now you can commit the changelog and the corresponding application code to source control. Other developers can then update and synchronize their databases, and start doing migrations themselves.

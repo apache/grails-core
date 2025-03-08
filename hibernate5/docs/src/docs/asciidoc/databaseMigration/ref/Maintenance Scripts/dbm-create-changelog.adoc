@@ -1,0 +1,36 @@
+===== dbm-create-changelog
+
+====== Purpose
+
+Creates an empty changelog file.
+
+====== Description
+
+Creates a new empty file instead of generating the file from the database (using <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>>) or your GORM classes (using <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>>).
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-create-changelog <<filename>> --dataSource=<<dataSource>>
+----
+
+Required arguments:
+
+* `filename` - The path to the output file to write to
+
+Optional arguments:
+
+* `dataSource` - if provided will run the script for the specified dataSource creating a file named `changelog-<<dataSource>>.groovy` if a `filename` is not given. Not needed for the default dataSource.
+
+NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-create-changelog "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

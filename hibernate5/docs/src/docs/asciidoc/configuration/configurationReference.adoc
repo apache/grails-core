@@ -1,0 +1,48 @@
+You can refer to the link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class for all available configuration options, but below is a table of the common ones:
+
+[format="csv", options="header"]
+|===
+name,description,default value
+`grails.gorm.flushMode`, The flush mode to use, `COMMIT`
+`grails.gorm.failOnError`, Whether to throw an exception on validation error, `false`
+`grails.gorm.default.mapping`,The default mapping to apply to all classes, `null`
+`grails.gorm.default.constraints`,The default constraints to apply to all classes, `null`
+`grails.gorm.multiTenancy.mode`,The multi tenancy mode, `NONE`
+|===
+
+The following are common configuration options for the SQL connection:
+
+[format="csv", options="header"]
+|===
+name,description,default value
+`dataSource.url`, The JDBC url, `jdbc:h2:mem:grailsDB`
+`dataSource.driverClassName`, The class of the JDBC driver, detected from URL
+`dataSource.username`, The JDBC username, `null`
+`dataSource.password`, The JDBC password, `null`
+`dataSource.jndiName`, The name of the JNDI resource for the `DataSource`, `null`
+`dataSource.pooled`, Whether the connection is pooled, `true`
+`dataSource.lazy`, Whether a `LazyConnectionDataSourceProxy` should be used, `true`
+`dataSource.transactionAware`, Whether a `TransactionAwareDataSourceProxy` should be used, `true`
+`dataSource.readOnly`, Whether the DataSource is read-only, `false`
+`dataSource.options`, A map of options to pass to the underlying JDBC driver, `null`
+|===
+
+And the following are common configuration options for Hibernate:
+
+[format="csv", options="header"]
+|===
+name,description,default value
+`hibernate.dialect`, The hibernate dialect to use, detected automatically from DataSource
+`hibernate.readOnly`, Whether Hibernate should be read-only, `false`
+`hibernate.configClass`, The configuration class to use, `HibernateMappingContextConfiguration`
+`hibernate.hbm2ddl.auto`, Whether to create the tables on startup, `none`
+`hibernate.use_second_level_cache`, Whether to use the second level cache, `true`
+`hibernate.cache.queries`, Whether to cache queries (see Caching Queries), `false`
+`hibernate.cache.use_query_cache`, Enables the query cache, `false`
+`hibernate.configLocations`, Location of additional Hibernate XML configuration files
+`hibernate.packagesToScan`, Specify packages to search for autodetection of your entity classes in the classpath
+|===
+
+In addition, any additional settings that start with `hibernate.` are passed through to Hibernate, so if there is any specific feature of Hibernate you wish to configure that is possible.
+
+TIP: The above table covers the common configuration options. For all configuration refer to properties of the link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class.

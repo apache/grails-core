@@ -1,0 +1,91 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "labels": ["type: dependency upgrade"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "allowedVersions": "!/SNAPSHOT$/"
+    },
+    {
+      "matchPackagePatterns": [
+        "^org\\.apache\\.groovy"
+      ],
+      "groupName": "groovy monorepo"
+    },
+    {
+      "matchPackageNames": [
+        "org.slf4j:slf4j-api",
+        "org.slf4j:slf4j-simple",
+        "org.slf4j:jcl-over-slf4j"
+       ],
+      "groupName": "slf4j monorepo"
+    },
+    {
+      "matchPackageNames": [
+        "org.grails:grails-datastore-core",
+        "org.grails:grails-datastore-web",
+        "org.grails:grails-datastore-aync",
+        "org.grails:grails-datastore-gorm",
+        "org.grails:grails-datastore-gorm-support",
+        "org.grails:grails-datastore-gorm-async",
+        "org.grails:grails-datastore-gorm-rx",
+        "org.grails:grails-datastore-gorm-test",
+        "org.grails:grails-datastore-gorm-tck",
+        "org.grails:grails-datastore-gorm-validation"
+      ],
+      "groupName": "gorm-datastore monorepo"
+    },
+    {
+      "matchPackageNames": [
+        "org.grails:views-core",
+        "org.grails:views-json-testing-support",
+        "org.grails.plugins:views-gradle",
+        "org.grails.plugins:views-json",
+        "org.grails.plugins:views-json-templates",
+        "org.grails.plugins:views-markup"
+      ],
+      "groupName": "grails-views monorepo"
+    },
+    {
+      "matchPackageNames": [
+        "org.grails:grails-bom",
+        "org.grails:grails-bootstrap",
+        "org.grails:grails-codecs",
+        "org.grails:grails-console",
+        "org.grails:grails-core",
+        "org.grails:grails-databinding",
+        "org.grails:grails-dependencies",
+        "org.grails:grails-docs",
+        "org.grails:grails-encoder",
+        "org.grails:grails-gradle-model",
+        "org.grails:grails-logging",
+        "org.grails:grails-plugin-codecs",
+        "org.grails:grails-plugin-controllers",
+        "org.grails:grails-plugin-databinding",
+        "org.grails:grails-plugin-datasource",
+        "org.grails:grails-plugin-domain-class",
+        "org.grails:grails-plugin-i18n",
+        "org.grails:grails-plugin-interceptors",
+        "org.grails:grails-plugin-mimetypes",
+        "org.grails:grails-plugin-rest",
+        "org.grails:grails-plugin-services",
+        "org.grails:grails-plugin-url-mappings",
+        "org.grails:grails-plugin-url-validation",
+        "org.grails:grails-shell",
+        "org.grails:grails-spring",
+        "org.grails:grails-test",
+        "org.grails:grails-validation",
+        "org.grails:grails-web",
+        "org.grails:grails-web-boot",
+        "org.grails:grails-web-common",
+        "org.grails:grails-web-databinding",
+        "org.grails:grails-web-fileupload",
+        "org.grails:grails-web-mvc",
+        "org.grails:grails-web-url-mappings"
+      ],
+      "groupName": "grails monorepo"
+    }
+  ]
+}

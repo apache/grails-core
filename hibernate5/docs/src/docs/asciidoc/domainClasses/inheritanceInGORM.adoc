@@ -1,0 +1,55 @@
+GORM supports inheritance both from abstract base classes and concrete persistent GORM entities. For example:
+
+[source,groovy]
+----
+class Content {
+     String author
+}
+----
+
+[source,groovy]
+----
+class BlogEntry extends Content {
+    URL url
+}
+----
+
+[source,groovy]
+----
+class Book extends Content {
+    String ISBN
+}
+----
+
+[source,groovy]
+----
+class PodCast extends Content {
+    byte[] audioStream
+}
+----
+
+In the above example we have a parent `Content` class and then various child classes with more specific behaviour.
+
+
+==== Considerations
+
+
+At the database level GORM by default uses table-per-hierarchy mapping with a discriminator column called `class` so the parent class (`Content`) and its subclasses (`BlogEntry`, `Book` etc.), share the *same* table.
+
+Table-per-hierarchy mapping has a down side in that you *cannot* have non-nullable properties with inheritance mapping. An alternative is to use table-per-subclass which can be enabled with the <<ormdsl,ORM DSL>>
+
+However, excessive use of inheritance and table-per-subclass can result in poor query performance due to the use of outer join queries. In general our advice is if you're going to use inheritance, don't abuse it and don't make your inheritance hierarchy too deep.
+
+
+==== Polymorphic Queries
+
+
+The upshot of inheritance is that you get the ability to polymorphically query. For example using the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method on the `Content` super class will return all subclasses of `Content`:
+
+[source,groovy]
+----
+def content = Content.list() // list all blog entries, books and podcasts
+content = Content.findAllByAuthor('Joe Bloggs') // find all by author
+
+def podCasts = PodCast.list() // list only podcasts
+----

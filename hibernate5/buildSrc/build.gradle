@@ -1,0 +1,35 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+file('../gradle.properties').withInputStream {
+    def props = new Properties()
+    props.load(it)
+    props.each { k, v -> ext.set(k, v) }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.grails.org/grails/core' }
+    if (System.getenv('GITHUB_MAVEN_PASSWORD') && !grailsVersion.endsWith('-SNAPSHOT')) {
+        maven {
+            url = 'https://maven.pkg.github.com/grails/grails-core'
+            credentials {
+                username = 'DOES_NOT_MATTER'
+                password = System.getenv('GITHUB_MAVEN_PASSWORD')
+            }
+        }
+    }
+}
+
+dependencies {
+
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    implementation "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleVersion"
+    implementation 'org.grails:grails-gradle-plugin'
+
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    runtimeOnly "io.github.gradle-nexus:publish-plugin:$gradleNexusPublishPluginVersion"
+    runtimeOnly 'org.grails.plugins:views-gradle'
+}

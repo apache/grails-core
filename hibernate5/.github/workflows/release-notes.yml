@@ -1,0 +1,26 @@
+name: "Release Drafter"
+on:
+  issues:
+    types: [closed,reopened]
+  push:
+    branches:
+      - '[6-9]+.[0-9]+.x'
+  pull_request:
+    types: [opened, reopened, synchronize]
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+jobs:
+  update_release_draft:
+    permissions:
+      # write permission is required to create a github release
+      contents: write
+      # write permission is required for autolabeler
+      # otherwise, read permission is required at least
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📝 Update Release Draft"
+        uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

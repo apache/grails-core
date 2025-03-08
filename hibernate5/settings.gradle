@@ -1,0 +1,73 @@
+plugins {
+    id 'com.gradle.develocity' version '3.19.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
+}
+
+def isCI = System.getenv('CI') != null
+def isLocal = !isCI
+def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
+
+develocity {
+    server = 'https://ge.grails.org'
+    buildScan {
+        tag('grails')
+        tag('gorm-hibernate5')
+        tag('grails-database-migration')
+        publishing.onlyIf { isAuthenticated }
+        uploadInBackground = isLocal
+    }
+}
+
+buildCache {
+    local { enabled = isLocal }
+    remote(develocity.buildCache) {
+        push = isCI && isAuthenticated
+        enabled = true
+    }
+}
+
+
+// Core
+include "grails-datastore-gorm-hibernate"
+findProject(':grails-datastore-gorm-hibernate').name = 'grails-datastore-gorm-hibernate5'
+
+// Documentation
+include 'docs'
+
+// Plugins
+include "boot-plugin"
+include 'grails-plugin'
+include 'grails-database-migration'
+
+findProject(':boot-plugin').name = 'gorm-hibernate5-spring-boot'
+findProject(':grails-database-migration').name = 'database-migration'
+
+include "examples-grails-hibernate"
+project(":examples-grails-hibernate").projectDir = new File(settingsDir, "examples/grails-hibernate")
+
+include "examples-grails-multiple-datasources"
+project(":examples-grails-multiple-datasources").projectDir = new File(settingsDir, "examples/grails-multiple-datasources")
+
+include "examples-grails-database-per-tenant"
+project(":examples-grails-database-per-tenant").projectDir = new File(settingsDir, "examples/grails-database-per-tenant")
+
+include "examples-grails-schema-per-tenant"
+project(":examples-grails-schema-per-tenant").projectDir = new File(settingsDir, "examples/grails-schema-per-tenant")
+
+include "examples-grails-partitioned-multi-tenancy"
+project(":examples-grails-partitioned-multi-tenancy").projectDir = new File(settingsDir, "examples/grails-partitioned-multi-tenancy")
+
+include "examples-standalone-hibernate"
+project(":examples-standalone-hibernate").projectDir = new File(settingsDir, "examples/standalone-hibernate")
+
+include "examples-spring-boot-hibernate"
+project(":examples-spring-boot-hibernate").projectDir = new File(settingsDir, "examples/spring-boot-hibernate")
+
+include "examples-grails-data-service"
+project(":examples-grails-data-service").projectDir = new File(settingsDir, "examples/grails-data-service")
+
+include "examples-grails-hibernate-groovy-proxy"
+project(":examples-grails-hibernate-groovy-proxy").projectDir = new File(settingsDir, "examples/grails-hibernate-groovy-proxy")
+
+include 'examples-issue450'
+project(':examples-issue450').projectDir = new File(settingsDir, 'examples/issue450')

@@ -1,0 +1,53 @@
+Schema-per-tenant is when a single database is used, but a different database schema is used for each tenant.
+
+==== Configuration
+
+In order to activate schema-per-tenant multi-tenancy you need to set the multi-tenancy mode to `SCHEMA` in your configuration and supply a link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        multiTenancy:
+            mode: SCHEMA
+            tenantResolverClass: foo.bar.MySchemaResolver
+dataSource:
+    dbCreate: create-drop
+    url: jdbc:h2:mem:books
+----
+
+The `TenantResolver` can optionally implement the `AllTenantsResolver` interface and return the schema names of all tenants. This gives you the option to hard code these, place them in configuration or read them from the default schema dynamically.
+
+If the `AllTenantsResolver` resolver is not implemented then GORM will use the configured link:../api/org/grails/org/hibernate/jdbc/schema/SchemaHandler.html[SchemaHandler] to resolve all the schema names from the database which it will use for the tenants.
+
+==== Runtime Schema Creation
+
+On startup, if `dataSource.dbCreate` is set to create the database at runtime, then GORM will attempt to create the schemas if they are missing.
+
+To do this it uses an instance link:../api/org/grails/org/hibernate/jdbc/schema/SchemaHandler.html[SchemaHandler] which by default uses the `CREATE SCHEMA [name]` syntax, but can be overridden and customized for other database dialects as necessary.
+
+If you want to use this feature and create schemas at runtime depending on the database you may need to configure an alternate implementation:
+
+
+[source,yaml]
+----
+dataSource:
+    dbCreate: create-drop
+    schemaHandler: foo.bar.MySchemaHandler
+----
+
+You can disable completely runtime schema creation by removing the `dbCreate` option or setting it to `none`.
+
+If you wish to add a schema whilst the application is running then you can use the `addTenantForSchema` of the `HibernateDatastore` class:
+
+[source,groovy]
+----
+HibernateDatastore datastore = ...
+datastore.addTenantForSchema("myNewSchema")
+----
+
+NOTE: If `dbCreate` is disabled then you will have to create the schema manually prior to invoking this method
+
+==== Schema-Per-Tenant Caveats
+
+In order to support a schema-per-tenant, just like the `DATABASE` Multi-Tenancy mode, GORM uses a unique `SessionFactory` per tenant. So all of the same considerations regarding session management apply.

@@ -1,0 +1,38 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    apiDocs = true
+    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+}
+
+dependencies {
+    // TODO: Clarify and clean up dependencies
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    compileOnly "org.grails:grails-shell", {
+        exclude group:'org.apache.groovy', module:'groovy'
+    }
+    api "org.apache.groovy:groovy"
+    api "org.springframework.boot:spring-boot-autoconfigure"
+    api project(":grails-datastore-gorm-hibernate5")
+
+    testImplementation "org.grails:grails-shell", {
+        exclude group:'org.apache.groovy', module:'groovy'
+    }
+    testImplementation "org.spockframework:spock-core"
+
+    testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
+    testRuntimeOnly "com.h2database:h2"
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+}

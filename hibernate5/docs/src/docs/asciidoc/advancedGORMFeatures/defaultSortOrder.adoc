@@ -1,0 +1,48 @@
+You can sort objects using query arguments such as those found in the <<ref-domain-classes-list,list>> method:
+
+[source,java]
+----
+def airports = Airport.list(sort:'name')
+----
+
+However, you can also declare the default sort order for a collection in the mapping:
+
+[source,java]
+----
+class Airport {
+    ...
+    static mapping = {
+        sort "name"
+    }
+}
+----
+
+The above means that all collections of `Airport` instances will by default be sorted by the airport name. If you also want to change the sort _order_, use this syntax:
+
+[source,java]
+----
+class Airport {
+    ...
+    static mapping = {
+        sort name: "desc"
+    }
+}
+----
+
+Finally, you can configure sorting at the association level:
+
+[source,java]
+----
+class Airport {
+    ...
+    static hasMany = [flights: Flight]
+
+    static mapping = {
+        flights sort: 'number', order: 'desc'
+    }
+}
+----
+
+In this case, the `flights` collection will always be sorted in descending order of flight number.
+
+WARNING: These mappings will not work for default unidirectional one-to-many or many-to-many relationships because they involve a join table. See <<ref-orgbrowse-grails-4089-this issue,this issue>> for more details. Consider using a `SortedSet` or queries with sort parameters to fetch the data you need.

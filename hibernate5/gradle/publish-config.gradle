@@ -1,0 +1,23 @@
+import org.grails.gradle.plugin.publishing.GrailsPublishExtension
+
+if (project.hasProperty('snapshotPublishUrl')) {
+    ext.set('mavenPublishUrl', property('snapshotPublishUrl'))
+    logger.lifecycle('Configuring {}:{} snapshot publish repo: {}', group, findProperty('pomArtifactId') ?: name, mavenPublishUrl)
+}
+
+extensions.configure(GrailsPublishExtension) {
+    // Explicit `it` is required here
+    it.githubSlug = 'grails/gorm-hibernate5'
+    it.license.name = 'Apache-2.0'
+    it.title = findProperty('pomTitle') ?: 'GORM for Hibernate 5'
+    it.desc = findProperty('pomDescription') ?: 'Provides a GORM Object Mapping implementations for Hibernate 5'
+    it.developers = findProperty('pomDevelopers') as Map<String,String> ?: [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith',
+            'puneetbehl': 'Puneet Behl',
+    ]
+    if (findProperty('pomArtifactId')) {
+        it.artifactId = findProperty('pomArtifactId')
+    }
+}

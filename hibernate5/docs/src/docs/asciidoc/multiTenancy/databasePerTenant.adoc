@@ -1,0 +1,113 @@
+Using a database per tenant is the most secure way to isolate each tenants data and builds upon GORM's existing support for <<multipleDataSources, Multiple Data Sources>>.
+
+==== Configuration
+
+In order to activate database-per-tenant multi-tenancy you need to set the multi-tenancy mode to `DATABASE` in your configuration and supply a link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        multiTenancy:
+            mode: DATABASE
+            tenantResolverClass: org.grails.datastore.mapping.multitenancy.web.SubDomainTenantResolver
+dataSource:
+    dbCreate: create-drop
+    url: jdbc:h2:mem:books
+dataSources:
+    moreBooks:
+        url: jdbc:h2:mem:moreBooks
+    evenMoreBooks:
+        url: jdbc:h2:mem:evenMoreBooks
+----
+
+The above example uses a built-in `TenantResolver` implementation that works with Grails or Spring Boot and evaluates the current tenant id from the DNS sub-domain in a web application. However, you can implement whatever tenant resolving strategy you choose.
+
+==== Multi Tenant Domain Classes
+
+With the above configuration in place you then to need to implement the link:../api/grails/gorm/MultiTenant.html[MultiTenant] trait in the domain classes you want to be regarded as multi tenant:
+
+
+[source,groovy]
+----
+class Book implements MultiTenant<Book> {
+    String title
+}
+----
+
+With that done whenever you attempt to execute a method on a domain class the tenant id will be resolved via the `TenantResolver`. So for example if the `TenantResolver` returns `moreBooks` then the `moreBooks` connection will be used when calling GORM methods such as `save()`, `list()` and so on.
+
+
+==== Multi Tenancy and the Session Factory
+
+Note that if you reference the default `SessionFactory` or `PlatformTransactionManager` in your classes that are injected via Spring, these will not be tenant aware and will point directly to default data source.
+
+If you wish to obtain a specific `SessionFactory` or `PlatformTransactionManager` then you can use the `getDatastoreForConnection(name)` method of the `HibernateDatastore` class:
+
+[source,groovy]
+----
+@Autowired
+HibernateDatastore hibernateDatastore
+...
+Serializable tenantId = Tenants.currentId(HibernateDatastore)
+SessionFactory sessionFactory = hibernateDatastore
+                                    .getDatastoreForConnection(tenantId.toString())
+                                    .getSessionFactory()
+----
+
+==== Multi Tenancy with Sessions
+
+When working with GORM typically you need a session bound to the current thread in order for GORM and transactions to work consistently. If you switch to a different tenant then it may be that the session bound to the current thread no longer matches the underlying `SessionFactory` being used by the tenant. With this in mind you may wants to use the link:../api/grails/gorm/multitenancy/Tenants.html[Tenants] class to ensure the correct session is bound for the current tenant:
+
+[source,groovy]
+----
+import static grails.gorm.multitenancy.Tenants.*
+
+List<Book> books = withCurrent {
+    Book.list()
+}
+----
+
+You can also use a specify tenant id using the `withId` method:
+
+[source,groovy]
+----
+import static grails.gorm.multitenancy.Tenants.*
+
+List<Book> books = withId("moreBooks") {
+    Book.list()
+}
+----
+
+Note that if you are using more than one GORM implementation, it may be necessary to specify the implementation type:
+
+[source,groovy]
+----
+import static grails.gorm.multitenancy.Tenants.*
+import org.grails.orm.hibernate.*
+
+List<Book> books = withId(HibernateDatastore, "moreBooks") {
+    Book.list()
+}
+----
+
+==== Adding Tenants at Runtime
+
+Provisioning and creating SQL databases at runtime is non-trivial and beyond the scope of what GORM offers, however the <<connectionSources, ConnectionSources API>> does provide a way to hook into GORM to make this possible.
+
+By default an link:../api/org/grails/datastore/mapping/core/connections/InMemoryConnectionSources.html[InMemoryConnectionSources] object is used which will read the connection sources from the application configuration and store them in-memory.
+
+However, it is possible to configure an alternate implementation:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        connectionSourcesClass: com.example.MyConnectionSources
+        multiTenancy:
+            mode: DATABASE
+----
+
+The implementation could read the connection sources at startup from another database table and implement logic by overriding the `addConnectionSource` method to provision a new databases at runtime.
+
+TIP: If you are interested in more examples, an https://github.com/grails/gorm-mongodb/blob/master/grails-datastore-gorm-mongodb/src/main/groovy/org/grails/datastore/mapping/mongo/connections/MongoConnectionSources.groovy[implementation exists for MongoDB] that reads connection sources from a MongoDB collection. However, it doesn't implement support for provision MongoDB instances at runtime.

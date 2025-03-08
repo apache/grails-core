@@ -1,0 +1,24 @@
+The following table summarizes the available constraints with a brief example:
+
+[format="csv", options="header"]
+|===
+
+Constraint,Description,Example
+blank,Validates that a String value is not blank,`login(blank:false)`
+creditCard,Validates that a String value is a valid credit card number,`cardNumber(creditCard: true)`
+email,Validates that a String value is a valid email address.,`homeEmail(email: true)`
+inList,Validates that a value is within a range or collection of constrained values.,`name(inList: ["Joe"])`
+matches,Validates that a String value matches a given regular expression.,`login(matches: "[a-zA-Z]+")`
+max,Validates that a value does not exceed the given maximum value.,`age(max: new Date())` `price(max: 999F)`
+maxSize,Validates that a value's size does not exceed the given maximum value.,`children(maxSize: 25)`
+min,Validates that a value does not fall below the given minimum value.,`age(min: new Date())` `price(min: 0F)`
+minSize,Validates that a value's size does not fall below the given minimum value.,`children(minSize: 25)`
+notEqual,Validates that that a property is not equal to the specified value,`login(notEqual: "Bob")`
+nullable,Allows a property to be set to `null` - defaults to `false`.,`age(nullable: true)`
+range,Uses a Groovy range to ensure that a property's value occurs within a specified range,`age(range: 18..65)`
+scale,Set to the desired scale for floating point numbers (i.e. the number of digits to the right of the decimal point).,`salary(scale: 2)`
+size,Uses a Groovy range to restrict the size of a collection or number or the length of a String.,`children(size: 5..15)`
+unique,Constrains a property as unique at the database level,`login(unique: true)`
+url,Validates that a String value is a valid URL.,`homePage(url: true)`
+validator,Adds custom validation to a field.,See documentation
+|===

@@ -1,0 +1,34 @@
+===== dbm-list-locks
+
+====== Purpose
+
+Lists who currently has locks on the database changelog to STDOUT or a file.
+
+====== Description
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-list-locks <<filename>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+----
+
+Required arguments: __none__.
+
+Optional arguments:
+
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `defaultSchema` - The default schema name to use
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-list-locks "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

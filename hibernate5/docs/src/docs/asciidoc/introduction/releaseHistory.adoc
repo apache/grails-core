@@ -1,0 +1,77 @@
+==== GORM 7.1
+
+* GORM 7.1 brings support for Apache Groovy 3
+* Default autowire the bean by type in the Data Service
+* Support for Java 14
+* Spring 5.3
+* Spring Boot 2.5
+* Hibernate 5.5
+
+==== GORM 7.0
+
+GORM 7.0 brings support for the latest versions of key dependencies including:
+
+* Java 8 minimum (Java 11 supported)
+* Hibernate 5.3 minimum
+* Spring 5.2 minimum
+
+==== GORM 6.1
+
+GORM 6.1 includes a variety of enhancements to GORM 6.0 including:
+
+* GORM Data Services
+* Multi-Tenancy Transformations
+* Support for Bean Validation API
+* Built-in Package Scanning
+* JPA Annotation Mapping Support
+* Hibernate transformations for dirty checking, managed entities and so on
+* HQL & SQL query escaping for GString queries
+
+See the https://gorm.grails.org/6.1.x/whatsNew/manual[What's New in GORM 6.1] guide for more information.
+
+==== GORM 6.0
+
+GORM 6.0 continues to evolve the new trait based model and includes the following new features:
+
+* Support for MongoDB 3.2.x drivers
+* Support for Neo4j 3.x drivers
+* Unified configuration model across all implementations
+* Unified Multiple Data Sources support for Hibernate, MongoDB and Neo4j
+* Multi Tenancy support for Hibernate, MongoDB and Neo4j
+* RxGORM for MongoDB built on MongoDB Rx drivers
+* RxGORM for REST built on RxNetty
+
+
+==== GORM 5.0
+
+GORM 5.0 replaced the majority of the custom AST transformations that power GORM with https://docs.groovy-lang.org/next/html/documentation/core-traits.html[Groovy Traits].
+
+Support for the MongoDB 3.x drivers, Neo4j 2.3.x and Hibernate 5.x was added.
+
+==== GORM 4.0
+
+GORM 4.0 continued to separate the GORM API from the Grails core APIs and was the first version to be support standalone execution outside of Grails.
+
+GORM 4.0 was released in conjunction with Grails 3.0 and also featured auto configuration starters for Spring Boot.
+
+Support was introduced for MongoDB 2.x drivers, Neo4j 2.2.x and Hibernate 4.3.x.
+
+==== GORM 3.0
+
+GORM 3.0 was the first release of GORM that was released separately to the Grails framework itself and was introduced in Grails 2.1.
+
+More of the metaprogramming functions were refactored and replaced with AST transformations and APIs introduced that allowed GORM to operate against multiple database implementations including MongoDB.
+
+The GORM API was separated from Hibernate and an SDK and TCK released for building compatible implementations.
+
+==== GORM 2.0
+
+GORM 2.0 evolved as part of Grails 2.0 and re-engineered some of the metaprogramming logic that relied on ExpandoMetaClass into a set of https://groovy-lang.org/metaprogramming.html#_compile_time_metaprogramming[Groovy AST transformations].
+
+These AST transformations relied on the Grails 2.x compiler infrastructure and hence this version of GORM was also only usable from within Grails.
+
+==== GORM 1.0
+
+The first version of GORM was a series of meta-programming functions that built on the capabilities of Groovy's https://groovy-lang.org/metaprogramming.html#metaprogramming_emc[ExpandoMetaClass].
+
+It was purely dynamic and integrated into the https://grails.org[Grails framework] and not usable without Grails and hence no actual distribution exists for this version and it is only available as part of Grails.

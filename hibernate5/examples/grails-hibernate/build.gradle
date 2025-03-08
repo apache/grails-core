@@ -1,0 +1,49 @@
+plugins {
+    id 'org.grails.grails-web'
+    id 'org.grails.grails-gsp'
+    id 'com.bertramlabs.asset-pipeline'
+}
+
+version = projectVersion
+group = 'examples'
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    implementation project(':grails-plugin')
+    implementation 'jakarta.persistence:jakarta.persistence-api'
+    implementation 'jakarta.validation:jakarta.validation-api'
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.grails.plugins:gsp'
+
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+    runtimeOnly 'org.grails:grails-plugin-databinding'
+    runtimeOnly 'org.grails:grails-plugin-i18n'
+    runtimeOnly 'org.grails:grails-plugin-services'
+    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.grails.plugins:fields'
+    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
+        // exclude javax variant of hibernate-core 5.6
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    testImplementation 'org.grails:grails-testing-support'
+    testImplementation 'org.grails:grails-web-testing-support'
+
+    integrationTestImplementation testFixtures('org.grails.plugins:geb')
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
+}

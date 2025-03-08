@@ -1,0 +1,81 @@
+Partitioned multi-tenancy is when a discriminator column is used in each multi-tenant class in order to partition the data.
+
+WARNING: When using a discriminator all data for all tenants is stored in a single database. This is means that, as a developer, you have to take much greater care to ensure that each tenants' data is correctly isolated.
+
+==== Configuration
+
+In order to activate discriminator-based multi-tenancy you need to set the multi-tenancy mode to `DISCRIMINATOR` in your configuration and supply a link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        multiTenancy:
+            mode: DISCRIMINATOR
+            tenantResolverClass: foo.bar.MyTenantResolver
+dataSource:
+    dbCreate: create-drop
+    url: jdbc:h2:mem:books
+----
+
+NOTE: The specified `TenantResolver` will also need to implement the link:../api/org/grails/datastore/mapping/multitenancy/AllTenantsResolver.html[AllTenantsResolver] interface, which has an additional method to resolve all known tenants.
+
+==== Mapping Domain Classes
+
+Like the other forms of multi-tenancy you then need to implement the link:../api/grails/gorm/MultiTenant.html[MultiTenant] trait in the domain classes that are multi-tenant. In addition, you also need to specify a discriminator column. The default discriminator column is called `tenantId`, for example:
+
+
+[source,groovy]
+----
+class Book implements MultiTenant<Book> {
+    Long tenantId
+    String title
+}
+----
+
+However, the tenant identifier can be any type or name. For example:
+
+[source,groovy]
+----
+class Book implements MultiTenant<Book> {
+    String publisher
+    String title
+
+    static mapping = {
+        tenantId name:'publisher'
+    }
+}
+----
+
+==== Querying and Caveats
+
+The discriminator-based multi-tenancy transparently adds a Hibernate filter that is activated when you query the domain class and you can also use the link:../api/grails/gorm/multitenancy/Tenants.html[Tenants] API to switch between tenants:
+
+[source,groovy]
+----
+import static grails.gorm.multitenancy.Tenants.*
+
+List<Book> books = withCurrent {
+    Book.list()
+}
+...
+List<Book> books = withId("moreBooks") {
+    Book.list()
+}
+----
+
+Note that this automatic activation of the Hibernate filter using GORM eventing and therefore only works when you use GORM methods, if you perform any raw Hibernate queries on the session factory you will need to activate the filter manually:
+
+[source,groovy]
+----
+import static grails.gorm.multitenancy.Tenants.*
+import org.grails.orm.hibernate.*
+
+// get a reference to the datastore and sessionFactory, probably from Spring
+HibernateDatastore datastore = ..
+SessionFactory sessionFactory = ..
+datastore.enableMultiTenancyFilter()
+
+// do work with the session factory
+sessionFactory.openSession()
+----

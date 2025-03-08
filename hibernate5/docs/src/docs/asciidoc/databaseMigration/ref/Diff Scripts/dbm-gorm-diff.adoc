@@ -1,0 +1,45 @@
+===== dbm-gorm-diff
+
+====== Purpose
+
+Diffs GORM classes against a database and generates a changelog XML or Groovy DSL file.
+
+====== Description
+
+Creates a Groovy DSL file if the filename is specified and it ends with .groovy. If another extension is specified it creates a standard Liquibase XML file, and if no filename is specified it writes to the console.
+
+File are written to the migrations folder, so specify the filename relative to the migrations folder (`grails-app/migrations` by default).
+
+Similar to <<ref-diff-scripts-dbm-diff,dbm-diff>> but diffs the current configuration based on the application's domain classes with the database configured in `application.[yml|groovy]` for the current environment (defaults to `dev`).
+
+Doesn't modify any existing files - you need to manually merge the output into the changeset along with any necessary modifications.
+
+You can configure database objects to be ignored by this script - either in the GORM classes or in the target database. For example you may want domain objects that are transient, or you may have externally-managed tables, keys, etc. that you want left alone by the diff script. The configuration name for these ignored objects is `grails.plugin.databasemigration.ignoredObjects`, whose value is a list of strings.
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-gorm-diff <<filename>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add
+----
+
+Required arguments: _none_ .
+
+Optional arguments:
+
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `defaultSchema` - The default schema name to use
+* `add` - if specified add an include in the root changelog file referencing the new file
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-gorm-diff "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

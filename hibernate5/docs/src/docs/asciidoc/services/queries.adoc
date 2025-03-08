@@ -1,0 +1,50 @@
+GORM Data Services will implement queries for you using a number of different strategies and conventions.
+
+It does this by looking at the return type of a method and the method stem and picking the most appropriate implementation.
+
+The following table summarizes the conventions:
+
+include::queryConventions.adoc[]
+
+The conventions are extensible (more on that later), in terms of queries there are two distinct types.
+
+==== Simple Queries
+
+include::simpleQueries.adoc[]
+
+==== Dynamic Finder Queries
+
+include::finderQueries.adoc[]
+
+==== Where Queries
+
+include::whereQueries.adoc[]
+
+=== Query Joins
+
+You can specify query joins using the `@Join` annotation:
+
+[source,groovy]
+----
+import static jakarta.persistence.criteria.JoinType.*
+
+@Service(Book)
+interface BookService {
+    @Join('author')
+    Book find(String title) <1>
+
+    @Join(value='author', type=LEFT) <2>
+    Book findAnother(String title)
+}
+----
+
+<1> Join on the `author` property
+<2> Join on the `author` property using a `LEFT OUTER` join
+
+==== JPA-QL Queries
+
+include::hqlQueries.adoc[]
+
+==== Query Projections
+
+include::queryProjections.adoc[]

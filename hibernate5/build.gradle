@@ -1,0 +1,82 @@
+ext {
+    isCiBuild = System.getenv().containsKey('CI')
+}
+
+String customGroovyVersion = findProperty('groovyVersion') ?: System.getenv('GROOVY_VERSION')
+if (customGroovyVersion) {
+    logger.lifecycle('Using custom Groovy version: ', customGroovyVersion)
+}
+
+logger.info('GORM VERSION = {}', datastoreVersion)
+
+static boolean isDataMappingDependency(DependencyResolveDetails details) {
+    return details.requested.group == 'org.grails' &&
+            details.requested.name.startsWith('grails-datastore') &&
+            details.requested.name != 'grails-datastore-gorm-hibernate5'
+}
+
+allprojects {
+
+    if (customGroovyVersion) {
+        configurations.configureEach {
+            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.apache.groovy') {
+                    details.useVersion(customGroovyVersion)
+                }
+            }
+        }
+    }
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            // Use the GORM version from the datastoreVersion property, not from the grails-bom
+            if(isDataMappingDependency(details)) {
+                details.useVersion(datastoreVersion)
+            }
+        }
+    }
+
+    repositories {
+        mavenCentral()
+        maven { url = 'https://repo.grails.org/grails/core' }
+        // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        if (customGroovyVersion?.endsWith('-SNAPSHOT')) {
+            // Used for testing locally against the latest snapshot of Groovy
+            // Usage: ./gradlew build -P"groovyVersion=X.X.X-SNAPSHOT"
+            logger.lifecycle('Adding Groovy Snapshot Repo for project: {}, Using Groovy {}', name, customGroovyVersion)
+            maven {
+                name = 'ASF Snapshot repo'
+                url = 'https://repository.apache.org/content/repositories/snapshots'
+            }
+        }
+        if (System.getenv('GITHUB_MAVEN_PASSWORD') && !grailsVersion.endsWith('-SNAPSHOT')) {
+            logger.lifecycle('Adding Grails Core Staging Repo for project: {}', name)
+            maven {
+                url = 'https://maven.pkg.github.com/grails/grails-core'
+                credentials {
+                    username = 'DOES_NOT_MATTER'
+                    password = System.getenv('GITHUB_MAVEN_PASSWORD')
+                }
+            }
+        }
+    }
+}
+
+// Workaround needed for nexus publishing bug
+// version and group must be specified in the root project
+// https://github.com/gradle-nexus/publish-plugin/issues/310
+version = projectVersion
+group = 'this.will.be.overridden'
+
+def publishedProjects = [
+        'database-migration',
+        'gorm-hibernate5-spring-boot',
+        'grails-datastore-gorm-hibernate5',
+        'grails-plugin',
+]
+subprojects {
+    if (name in publishedProjects) {
+        // This has to be applied here
+        apply plugin: 'org.grails.grails-publish'
+    }
+}

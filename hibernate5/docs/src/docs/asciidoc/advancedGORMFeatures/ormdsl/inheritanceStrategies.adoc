@@ -1,0 +1,18 @@
+By default GORM classes use `table-per-hierarchy` inheritance mapping. This has the disadvantage that columns cannot have a `NOT-NULL` constraint applied to them at the database level. If you would prefer to use a `table-per-subclass` inheritance strategy you can do so as follows:
+
+[source,java]
+----
+class Payment {
+    Integer amount
+
+    static mapping = {
+        tablePerHierarchy false
+    }
+}
+
+class CreditCardPayment extends Payment {
+    String cardNumber
+}
+----
+
+The mapping of the root `Payment` class specifies that it will not be using `table-per-hierarchy` mapping for all child classes.

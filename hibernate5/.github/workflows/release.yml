@@ -1,0 +1,156 @@
+name: "Release"
+on:
+  release:
+    types: [published]
+env:
+  GIT_USER_NAME: grails-build
+  GIT_USER_EMAIL: grails-build@users.noreply.github.com
+permissions:
+  packages: read
+jobs:
+  publish:
+    name: "Publish to Sonatype Staging Repository"
+    outputs:
+      release_version: ${{ steps.release_version.outputs.value }}
+      target_branch: ${{ steps.extract_branch.outputs.value }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "⚙️ Run pre-release"
+        uses: grails/github-actions/pre-release@v3
+      - name: "👀 Determine Target Branch"
+        id: extract_branch
+        run: |
+          TARGET_BRANCH=`cat $GITHUB_EVENT_PATH | jq '.release.target_commitish' | sed -e 's/^"\(.*\)"$/\1/g'`
+          echo "value=${TARGET_BRANCH}" >> $GITHUB_OUTPUT
+          echo "Target branch: ${TARGET_BRANCH}"
+      - name: "📝 Store the current release version"
+        id: release_version
+        run: |
+          RELEASE_VERSION=${GITHUB_REF:11}
+          echo "value=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "Release version: ${RELEASE_VERSION}"
+      - name: "🧩 Run Assemble"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew --refresh-dependencies assemble
+      - name: "🔐 Generate key file for artifact signing"
+        env:
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
+      - name: "📤 Publish to and close Sonatype staging repository"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
+          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: >
+          ./gradlew --no-build-cache
+          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
+          publishToSonatype
+          closeSonatypeStagingRepository
+  release:
+    environment: release
+    name: "Release Sonatype Staging Repository"
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🚀 Release Sonatype Staging Repository"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
+          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: >
+          ./gradlew
+          findSonatypeStagingRepository
+          releaseSonatypeStagingRepository
+      - name: "⚙️ Run post-release"
+        uses: grails/github-actions/post-release@v3
+  docs:
+    environment: release
+    name: "Publish Documentation"
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "📖 Generate documentation"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew docs:docs
+      - name: "🛫 Export Gradle Properties"
+        uses: grails/github-actions/export-gradle-properties@v3
+      - name: "👀 Determine docs target repository"
+        run: |
+          if [ "${{ github.repository }}" = "grails/gorm-hibernate5" ]; then
+            DOCS_TARGET_REPOSITORY="grails/grails-data-mapping"
+          else
+            DOCS_TARGET_REPOSITORY="${{ github.repository }}"
+          fi
+          echo "DOCS_TARGET_REPOSITORY=${DOCS_TARGET_REPOSITORY}" >> $GITHUB_ENV
+          echo "Target Repository: ${DOCS_TARGET_REPOSITORY}"
+      - name: "📤 Publish documentation to Github Pages"
+        uses: grails/github-pages-deploy-action@v3
+        env:
+          BETA: ${{ contains(needs.publish.outputs.release_version, 'M') || contains(needs.publish.outputs.release_version, 'RC') }}
+          TARGET_REPOSITORY: ${{ env.DOCS_TARGET_REPOSITORY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs/build/docs
+          DOC_SUB_FOLDER: hibernate
+          DOC_FOLDER: gh-pages
+          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
+          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          VERSION: ${{ needs.publish.outputs.release_version }}

@@ -1,0 +1,27 @@
+===== dbm-list-tags
+
+====== Purpose
+
+Lists the tags in the current database.
+
+====== Description
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-list-tags --defaultSchema=<<defaultSchema>>
+----
+
+Required arguments:
+
+Required arguments: __none__.
+
+Optional arguments:
+
+* `defaultSchema` - The default schema name to use
+
+NOTE: Note that the `defaultSchema` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-tag "--defaultSchema=<<defaultSchema>>"
+----

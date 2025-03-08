@@ -1,0 +1,452 @@
+The link:../api/org/grails/datastore/gorm/GormEntity.html#where(groovy.lang.Closure)[where()] method builds on the support for <<detachedCriteria,Detached Criteria>> by providing an enhanced, compile-time checked query DSL for common queries. The `where` method is more flexible than dynamic finders, less verbose than criteria and provides a powerful mechanism to compose queries.
+
+
+==== Basic Querying
+
+
+The link:../api/org/grails/datastore/gorm/GormEntity.html#where(groovy.lang.Closure)[where()] method accepts a closure that looks very similar to Groovy's regular collection methods. The closure should define the logical criteria in regular Groovy syntax, for example:
+
+[source,groovy]
+----
+def query = Person.where {
+   firstName == "Bart"
+}
+Person bart = query.find()
+----
+
+The returned object is a link:../api/grails/gorm/DetachedCriteria.html[DetachedCriteria] instance, which means it is not associated with any particular database connection or session. This means you can use the `where` method to define common queries at the class level:
+
+[source,groovy]
+----
+import grails.gorm.*
+
+class Person {
+    static DetachedCriteria<Person> simpsons = where {
+         lastName == "Simpson"
+    }
+    ...
+}
+...
+Person.simpsons.each { Person p ->
+    println p.firstname
+}
+----
+
+Query execution is lazy and only happens upon usage of the <<detachedCriteria,DetachedCriteria>> instance. If you want to execute a where-style query immediately there are variations of the `findAll` and `find` methods to accomplish this:
+
+[source,groovy]
+----
+def results = Person.findAll {
+     lastName == "Simpson"
+}
+def results = Person.findAll(sort:"firstName") {
+     lastName == "Simpson"
+}
+Person p = Person.find { firstName == "Bart" }
+----
+
+Each Groovy operator maps onto a regular criteria method. The following table provides a map of Groovy operators to methods:
+
+[format="csv", options="header"]
+|===
+Operator,Criteria Method,Description
+*`==`*,eq,Equal to
+*`!=`*,ne,Not equal to
+*`>`*,gt,Greater than
+*`<`*,lt,Less than
+*`>=`*,ge,Greater than or equal to
+*`<=`*,le,Less than or equal to
+*`in`*,inList,Contained within the given list
+*`==~`*,like,Like a given string
+*`=~`*,ilike,Case insensitive like
+|===
+
+It is possible use regular Groovy comparison operators and logic to formulate complex queries:
+
+[source,groovy]
+----
+def query = Person.where {
+    (lastName != "Simpson" && firstName != "Fred") || (firstName == "Bart" && age > 9)
+}
+def results = query.list(sort:"firstName")
+----
+
+The Groovy regex matching operators map onto like and ilike queries unless the expression on the right hand side is a `Pattern` object, in which case they map onto an `rlike` query:
+
+[source,groovy]
+----
+def query = Person.where {
+     firstName ==~ ~/B.+/
+}
+----
+
+NOTE: Note that `rlike` queries are only supported if the underlying database supports regular expressions
+
+A `between` criteria query can be done by combining the `in` keyword with a range:
+
+[source,groovy]
+----
+def query = Person.where {
+     age in 18..65
+}
+----
+
+Finally, you can do `isNull` and `isNotNull` style queries by using `null` with regular comparison operators:
+
+[source,groovy]
+----
+def query = Person.where {
+     middleName == null
+}
+----
+
+==== Query Composition
+
+
+Since the return value of the `where` method is a <<detachedCriteria,DetachedCriteria>> instance you can compose new queries from the original query:
+
+[source,groovy]
+----
+DetachedCriteria<Person> query = Person.where {
+     lastName == "Simpson"
+}
+DetachedCriteria<Person> bartQuery = query.where {
+     firstName == "Bart"
+}
+Person p = bartQuery.find()
+----
+
+Note that you cannot pass a closure defined as a variable into the `where` method unless it has been explicitly cast to a `DetachedCriteria` instance. In other words the following will produce an error:
+
+[source,groovy]
+----
+def callable = {
+    lastName == "Simpson"
+}
+def query = Person.where(callable)
+----
+
+The above must be written as follows:
+
+[source,groovy]
+----
+import grails.gorm.DetachedCriteria
+
+def callable = {
+    lastName == "Simpson"
+} as DetachedCriteria<Person>
+def query = Person.where(callable)
+----
+
+As you can see the closure definition is cast (using the Groovy `as` keyword) to a <<detachedCriteria,DetachedCriteria>> instance targeted at the `Person` class.
+
+
+==== Conjunction, Disjunction and Negation
+
+
+As mentioned previously you can combine regular Groovy logical operators (`||` and `&&`) to form conjunctions and disjunctions:
+
+[source,groovy]
+----
+def query = Person.where {
+    (lastName != "Simpson" && firstName != "Fred") || (firstName == "Bart" && age > 9)
+}
+----
+
+You can also negate a logical comparison using `!`:
+
+[source,groovy]
+----
+def query = Person.where {
+    firstName == "Fred" && !(lastName == 'Simpson')
+}
+----
+
+
+==== Property Comparison Queries
+
+
+If you use a property name on both the left hand and right side of a comparison expression then the appropriate property comparison criteria is automatically used:
+
+[source,groovy]
+----
+def query = Person.where {
+   firstName == lastName
+}
+----
+
+The following table described how each comparison operator maps onto each criteria property comparison method:
+
+[format="csv", options="header"]
+|===
+
+Operator,Criteria Method,Description
+*==*,eqProperty,Equal to
+*!=*,neProperty,Not equal to
+*>*,gtProperty,Greater than
+*<*,ltProperty,Less than
+*>=*,geProperty,Greater than or equal to
+*<=*,leProperty,Less than or equal to
+|===
+
+
+==== Querying Associations
+
+
+Associations can be queried by using the dot operator to specify the property name of the association to be queried:
+
+[source,groovy]
+----
+def query = Pet.where {
+    owner.firstName == "Joe" || owner.firstName == "Fred"
+}
+----
+
+You can group multiple criterion inside a closure method call where the name of the method matches the association name:
+
+[source,groovy]
+----
+def query = Person.where {
+    pets { name == "Jack" || name == "Joe" }
+}
+----
+
+This technique can be combined with other top-level criteria:
+
+[source,groovy]
+----
+def query = Person.where {
+     pets { name == "Jack" } || firstName == "Ed"
+}
+----
+
+For collection associations it is possible to apply queries to the size of the collection:
+
+[source,groovy]
+----
+def query = Person.where {
+       pets.size() == 2
+}
+----
+
+The following table shows which operator maps onto which criteria method for each size() comparison:
+
+[format="csv", options="header"]
+|===
+
+Operator,Criteria Method,Description
+*==*,sizeEq,The collection size is equal to
+*!=*,sizeNe,The collection size is not equal to
+*>*,sizeGt,The collection size is greater than
+*<*,sizeLt,The collection size is less than
+*>=*,sizeGe,The collection size is greater than or equal to
+*<=*,sizeLe,The collection size is less than or equal to
+|===
+
+==== Query Aliases and Sorting
+
+If you define a query for an association an alias is automatically generated for the query. For example the following query:
+
+[source,groovy]
+----
+def query = Pet.where {
+    owner.firstName == "Fred"
+}
+----
+
+Will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are fine for most cases, but are not useful if you want to later sort or use a projection on the results. For example the following query will fail:
+
+[source,groovy]
+----
+// fails because a dynamic alias is used
+Pet.where {
+    owner.firstName == "Fred"
+}.list(sort:"owner.lastName")
+----
+
+If you plan to sort the results then an explicit alias should be used and these can be defined by simply declaring a variable in the `where` query:
+
+[source,groovy]
+----
+def query = Pet.where {
+    def o1 = owner <1>
+    o1.firstName == "Fred" <2>
+}.list(sort:'o1.lastName') <3>
+----
+
+<1> Define an alias called `o1`
+<2> Use the alias in the query itself
+<3> Use the alias to sort the results
+
+By assigning the name of an association to a local variable it will automatically become an alias usable within the query itself and also for the purposes of sorting or projecting the results.
+
+==== Subqueries
+
+
+It is possible to execute subqueries within where queries. For example to find all the people older than the average age the following query can be used:
+
+[source,groovy]
+----
+final query = Person.where {
+  age > avg(age)
+}
+----
+
+The following table lists the possible subqueries:
+
+[format="csv", options="header"]
+|===
+
+Method,Description
+*avg*,The average of all values
+*sum*,The sum of all values
+*max*,The maximum value
+*min*,The minimum value
+*count*,The count of all values
+*property*,Retrieves a property of the resulting entities
+|===
+
+You can apply additional criteria to any subquery by using the `of` method and passing in a closure containing the criteria:
+
+[source,groovy]
+----
+def query = Person.where {
+  age > avg(age).of { lastName == "Simpson" } && firstName == "Homer"
+}
+----
+
+Since the `property` subquery returns multiple results, the criterion used compares all results. For example the following query will find all people younger than people with the surname "Simpson":
+
+[source,groovy]
+----
+Person.where {
+    age < property(age).of { lastName == "Simpson" }
+}
+----
+
+
+
+==== More Advanced Subqueries in GORM
+
+
+The support for subqueries has been extended. You can now use in  with nested subqueries
+
+[source,groovy]
+----
+def results = Person.where {
+    firstName in where { age < 18 }.firstName
+}.list()
+----
+
+Criteria and where queries can be seamlessly mixed:
+
+[source,groovy]
+----
+def results = Person.withCriteria {
+    notIn "firstName", Person.where { age < 18 }.firstName
+ }
+----
+
+Subqueries can be used with projections:
+
+[source,groovy]
+----
+def results = Person.where {
+    age > where { age > 18 }.avg('age')
+}
+----
+
+Correlated queries that span two domain classes can be used:
+[source,groovy]
+----
+def employees = Employee.where {
+    region.continent in ['APAC', "EMEA"]
+    }.id()
+    def results = Sale.where {
+    employee in employees && total > 100000
+    }.employee.list()
+----
+
+And support for aliases (cross query references) using simple variable declarations has been added to where queries:
+[source,groovy]
+----
+def query = Employee.where {
+    def em1 = Employee
+    exists Sale.where {
+        def s1 = Sale
+        def em2 = employee
+        return em2.id == em1.id
+    }.id()
+}
+def results = query.list()
+----
+
+
+
+==== Other Functions
+
+
+There are several functions available to you within the context of a query. These are summarized in the table below:
+
+[format="csv", options="header"]
+|===
+
+Method,Description
+*second*,The second of a date property
+*minute*,The minute of a date property
+*hour*,The hour of a date property
+*day*,The day of the month of a date property
+*month*,The month of a date property
+*year*,The year of a date property
+*lower*,Converts a string property to lower case
+*upper*,Converts a string property to upper case
+*length*,The length of a string property
+*trim*,Trims a string property
+|===
+
+NOTE: Currently functions can only be applied to properties or associations of domain classes. You cannot, for example, use a function on a result of a subquery.
+
+For example the following query can be used to find all pet's born in 2011:
+
+[source,groovy]
+----
+def query = Pet.where {
+    year(birthDate) == 2011
+}
+----
+
+You can also apply functions to associations:
+
+[source,groovy]
+----
+def query = Person.where {
+    year(pets.birthDate) == 2009
+}
+----
+
+
+
+==== Batch Updates and Deletes
+
+
+Since each `where` method call returns a <<detachedCriteria,DetachedCriteria>> instance, you can use `where` queries to execute batch operations such as batch updates and deletes. For example, the following query will update all people with the surname "Simpson" to have the surname "Bloggs":
+
+[source,groovy]
+----
+DetachedCriteria<Person> query = Person.where {
+    lastName == 'Simpson'
+}
+int total = query.updateAll(lastName:"Bloggs")
+----
+
+NOTE: Note that one limitation with regards to batch operations is that join queries (queries that query associations) are not allowed.
+
+To batch delete records you can use the `deleteAll` method:
+
+[source,groovy]
+----
+DetachedCriteria<Person> query = Person.where {
+    lastName == 'Simpson'
+}
+int total = query.deleteAll()
+----

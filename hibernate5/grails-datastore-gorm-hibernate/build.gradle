@@ -1,0 +1,67 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    apiDocs = true
+    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+}
+
+dependencies {
+    // TODO: Clarify and clean up dependencies
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    api "org.slf4j:slf4j-api"
+
+    api "org.apache.groovy:groovy"
+    api "org.grails:grails-datastore-gorm"
+    api "org.springframework:spring-orm"
+    api "org.hibernate:hibernate-core-jakarta:$hibernateVersion", {
+        exclude group:'commons-logging', module:'commons-logging'
+        exclude group:'com.h2database', module:'h2'
+        exclude group:'commons-collections', module:'commons-collections'
+        exclude group:'org.slf4j', module:'jcl-over-slf4j'
+        exclude group:'org.slf4j', module:'slf4j-api'
+        exclude group:'org.slf4j', module:'slf4j-log4j12'
+        exclude group:'xml-apis', module:'xml-apis'
+    }
+    api "org.hibernate.validator:hibernate-validator", {
+        exclude group:'commons-logging', module:'commons-logging'
+        exclude group:'commons-collections', module:'commons-collections'
+        exclude group:'org.slf4j', module:'slf4j-api'
+    }
+
+    testImplementation "com.h2database:h2"
+    testImplementation 'junit:junit' // JUnit 4
+    testImplementation "org.apache.groovy:groovy-test-junit5"
+    testImplementation "org.apache.groovy:groovy-sql"
+    testImplementation "org.apache.groovy:groovy-json"
+    testImplementation "org.apache.tomcat:tomcat-jdbc"
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+        // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
+        exclude group: "org.codehaus.groovy", module: "groovy"
+    }
+
+    testRuntimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
+        // exclude javax variant of hibernate-core 5.6
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    testRuntimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+    testRuntimeOnly "org.slf4j:slf4j-simple"
+    testRuntimeOnly "org.slf4j:jcl-over-slf4j"
+    testRuntimeOnly "org.springframework:spring-aop"
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/tck-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+}

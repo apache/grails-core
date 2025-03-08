@@ -1,0 +1,12 @@
+GORM is a data access framework with multiple backend implementations that allows you to rapidly write data access code with little effort for your favourite database.
+
+There are currently several implementations of GORM. This documentation covers the original implementation of GORM which is based on the Hibernate ORM. Below you can find links to the other implementations:
+
+* https://gorm.grails.org/latest/mongodb/manual[GORM for MongoDB]
+* https://gorm.grails.org/latest/neo4j/manual[GORM for Neo4j]
+* https://gorm.grails.org/latest/cassandra/manual[GORM for Cassandra]
+* https://gorm.grails.org/latest/rx/manual[RxGORM for MongoDB]
+* https://gorm.grails.org/latest/rx/rest-client/manual[RxGORM for REST]
+
+As mentioned, GORM for Hibernate is the original implementation of GORM and has evolved dramatically over the years from a few meta-programming functions into a complete data access framework with multiple implementations for different datastores relational and NoSQL.
+

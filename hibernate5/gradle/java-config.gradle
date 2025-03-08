@@ -1,0 +1,6 @@
+compileJava.options.release = javaVersion.toInteger()
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}

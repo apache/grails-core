@@ -1,0 +1,25 @@
+plugins {
+    id 'groovy'
+}
+
+group = 'examples'
+
+dependencies {
+
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation project(':grails-datastore-gorm-hibernate5')
+    implementation 'org.springframework:spring-tx'
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
+}

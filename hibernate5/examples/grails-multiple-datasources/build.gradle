@@ -1,0 +1,48 @@
+plugins {
+    id 'org.grails.grails-web'
+}
+
+version = projectVersion
+group = 'examples'
+
+configurations {
+    astTransformation
+}
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    astTransformation 'jakarta.servlet:jakarta.servlet-api'
+    astTransformation 'org.grails:grails-plugin-controllers'
+
+    implementation project(':grails-plugin')
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-plugin-domain-class'
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+    runtimeOnly 'org.grails:grails-plugin-databinding'
+    runtimeOnly 'org.grails:grails-plugin-controllers'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    testImplementation 'org.grails:grails-testing-support'
+
+    testRuntimeOnly 'org.grails:grails-web-testing-support'
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.astTransformation
+    }
+    integrationTest {
+        compileClasspath += configurations.astTransformation
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
+}

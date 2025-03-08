@@ -1,0 +1,43 @@
+An example of using the link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] method can be seen below:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.save()
+----
+
+This save will be not be pushed to the database immediately - it will be pushed when the next flush occurs. But there are occasions when you want to control when those statements are executed or, in Hibernate terminology, when the session is "flushed". To do so you can use the flush argument to the save method:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.save(flush: true)
+----
+
+Note that in this case _all_ pending SQL statements including previous saves, deletes, etc. will be synchronized with the database. This also lets you catch any exceptions, which is typically useful in highly concurrent scenarios involving <<locking,optimistic locking>>:
+
+[source,groovy]
+----
+def p = Person.get(1)
+try {
+    p.save(flush: true)
+}
+catch (org.springframework.dao.DataIntegrityViolationException e) {
+    // deal with exception
+}
+----
+
+Another thing to bear in mind is that GORM validates a domain instance every time you save it. If that validation fails the domain instance will _not_ be persisted to the database. By default, `save()` will simply return `null` in this case, but if you would prefer it to throw an exception you can use the `failOnError` argument:
+
+[source,groovy]
+----
+def p = Person.get(1)
+try {
+    p.save(failOnError: true)
+}
+catch (ValidationException e) {
+    // deal with exception
+}
+----
+
+You can even change the default behaviour with a setting in `application.groovy`, as described in the <<configuration,section on configuration>>. Just remember that when you are saving domain instances that have been bound with data provided by the user, the likelihood of validation exceptions is quite high and you won't want those exceptions propagating to the end user.

@@ -1,0 +1,57 @@
+name: "Publish Docs"
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'The Tag or Branch Name'
+        required: true
+env:
+  GIT_USER_NAME: grails-build
+  GIT_USER_EMAIL: grails-build@users.noreply.github.com
+jobs:
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+      - name: "👀 Find the project version for the checked out tag or branch"
+        run: |
+          PROJECT_VERSION=$(grep '^projectVersion=' gradle.properties | cut -d'=' -f2)
+          echo "PROJECT_VERSION=${PROJECT_VERSION}" >> $GITHUB_ENV
+          echo "Project version: ${PROJECT_VERSION}"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "📖 Generate documentation"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew docs:docs
+      - name: "👀 Determine docs target repository"
+        run: |
+          if [ "${{ github.repository }}" = "grails/gorm-hibernate5" ]; then
+            DOCS_TARGET_REPOSITORY="grails/grails-data-mapping"
+          else
+            DOCS_TARGET_REPOSITORY="${{ github.repository }}"
+          fi
+          echo "DOCS_TARGET_REPOSITORY=${DOCS_TARGET_REPOSITORY}" >> $GITHUB_ENV
+          echo "Target Repository: ${DOCS_TARGET_REPOSITORY}"
+      - name: "📤 Publish documentation to Github Pages"
+        uses: grails/github-pages-deploy-action@v3
+        env:
+          BETA: ${{ contains(env.PROJECT_VERSION, 'M') || contains(env.PROJECT_VERSION, 'RC') }}
+          BRANCH: gh-pages
+          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
+          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          DOC_SUB_FOLDER: hibernate
+          FOLDER: docs/build/docs
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TARGET_REPOSITORY: ${{ env.DOCS_TARGET_REPOSITORY }}
+          VERSION: ${{ env.PROJECT_VERSION }}

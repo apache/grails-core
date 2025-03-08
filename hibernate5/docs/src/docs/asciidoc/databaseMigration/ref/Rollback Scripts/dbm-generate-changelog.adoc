@@ -1,0 +1,42 @@
+===== dbm-generate-changelog
+
+====== Purpose
+
+Generates an initial changelog XML or Groovy DSL file from the database.
+
+====== Description
+
+Creates a Groovy DSL file if the filename is specified and it ends with .groovy. If another extension is specified it creates a standard Liquibase XML file, and if no filename is specified it writes to the console.
+
+File are written to the migrations folder, so specify the filename relative to the migrations folder (`grails-app/migrations` by default).
+
+Executes against the database configured in `application.[yml|groovy]` for the current environment (defaults to `dev`).
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-generate-changelog <<filename>> --diffTypes=<<diffTypes>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add
+----
+
+Required arguments: _none_ .
+
+Optional arguments:
+
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `diffTypes` - A comma-delimited list of change types to include - see http://www.liquibase.org/manual/diff#controlling_checks_since_1.8[the documentation] for what types are available
+* `defaultSchema` - The default schema name to use
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+* `add` - if specified add an include in the root changelog file referencing the new file
+
+NOTE: Note that the `diffTypes`, `defaultSchema`, and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-generate-changelog "--diffTypes=<<diffTypes>>" "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----
