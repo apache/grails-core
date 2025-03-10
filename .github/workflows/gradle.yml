@@ -6,9 +6,6 @@ on:
   pull_request:
     branches:
       - '[7-9]+.[0-9]+.x'
-env:
-  GIT_USER_NAME: grails-build
-  GIT_USER_EMAIL: grails-build@users.noreply.github.com
 jobs:
   build:
     name: "Build Project"
@@ -90,15 +87,13 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew docs --refresh-dependencies
-      - name: "📤 Publish docs to Github Pages"
+      - name: "🚀 Publish to Github Pages"
         if: steps.docs.outcome == 'success'
-        uses: grails/github-pages-deploy-action@v2
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: build/docs
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          SOURCE_FOLDER: build/docs
   trigger-build-gorm-impls:
     if: github.event_name == 'push'
     name: "Trigger Build in GORM Implementations"
