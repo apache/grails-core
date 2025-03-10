@@ -21,8 +21,8 @@ jobs:
           contains(github.event.inputs.grails_version, 'M') ||
           contains(github.event.inputs.grails_version, 'RC')
         }}
-      GIT_USER_NAME: grails-build
-      GIT_USER_EMAIL: grails-build@users.noreply.github.com
+    permissions:
+      contents: write
     steps:
       - name: "🔀 Get Target Branch name"
         run: |
@@ -74,14 +74,12 @@ jobs:
           --title ${{ github.event.inputs.grails_version }}
           --target ${{ env.TARGET_BRANCH }}
           $PRE_RELEASE_FLAG
-      - name: "📤 Publish Documentation to Github Pages"
-        uses: grails/github-pages-deploy-action@v3
+      - name: "🚀 Publish to Github Pages"
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          BRANCH: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: build/docs
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: build/docs
           VERSION: ${{ github.event.inputs.grails_version }}
       - name: "⚙️ Run post-release"
         env:

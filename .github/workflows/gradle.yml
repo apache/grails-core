@@ -7,12 +7,11 @@ on:
     branches:
       - '[4-9]+.[0-9]+.x'
   workflow_dispatch:
-env:
-  GIT_USER_NAME: grails-build
-  GIT_USER_EMAIL: grails-build@users.noreply.github.com
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
@@ -45,18 +44,10 @@ jobs:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip
           compression-level: 0 # Already a zip
-      - name: "📤 Publish Snapshot Documentation to Github Pages"
+      - name: "🚀 Publish to Github Pages"
         if: github.event_name == 'push'
-        uses: grails/github-pages-deploy-action@v3
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          BRANCH: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: build/docs
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          SKIP_SNAPSHOT: ${{
-              startsWith(steps.extract_branch.outputs.value, '3.3') ||
-              startsWith(steps.extract_branch.outputs.value, '4.1') ||
-              startsWith(steps.extract_branch.outputs.value, '5.3') || 
-              startsWith(steps.extract_branch.outputs.value, '6.2')
-            }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          SOURCE_FOLDER: build/docs
