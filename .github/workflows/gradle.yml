@@ -38,6 +38,8 @@ jobs:
     if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -62,14 +64,10 @@ jobs:
           arguments: :grails-redis:groovydoc
         env:
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-      - name: Publish to Github Pages
+      - name: "🚀 Publish to Github Pages"
         if: success()
-        uses: grails/github-pages-deploy-action@v2.0.2
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          TARGET_REPOSITORY: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: plugin/build/docs
-          DOC_FOLDER: gh-pages
-          COMMIT_EMAIL: 'grails-build@users.noreply.github.com'
-          COMMIT_NAME: 'grails-build'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          SOURCE_FOLDER: plugin/build/docs

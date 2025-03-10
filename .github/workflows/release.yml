@@ -8,6 +8,8 @@ jobs:
     env:
       GIT_USER_NAME: 'grails-build'
       GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
+    permissions:
+      contents: write
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -53,18 +55,13 @@ jobs:
           arguments: :grails-redis:groovydoc
         env:
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-      - name: Publish to Github Pages
+      - name: "🚀 Publish to Github Pages"
         if: success()
-        uses: grails/github-pages-deploy-action@v2.0.2
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          SKIP_SNAPSHOT: ${{ contains(steps.release_version.outputs.release_version, 'M') }}
-          TARGET_REPOSITORY: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: plugin/build/docs
-          DOC_FOLDER: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: plugin/build/docs
           VERSION: ${{ steps.release_version.outputs.release_version }}
       - name: Run post-release
         if: success()
