@@ -7,9 +7,6 @@ on:
     branches:
       - '[2-9]+.[0-9]+.x'
   workflow_dispatch:
-env:
-  GIT_USER_NAME: 'grails-build'
-  GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
 jobs:
   test_project:
     name: "Test Project"
@@ -44,7 +41,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
       packages: read
     steps:
       - name: "📥 Checkout repository"
@@ -80,12 +77,10 @@ jobs:
       - name: "📖 Generate Snapshot Documentation"
         if: success()
         run: ./gradlew aggregateDocs
-      - name: "📤 Publish Snapshot Documentation to Github Pages"
+      - name: "🚀 Publish to Github Pages"
         if: success()
-        uses: grails/github-pages-deploy-action@grails
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          BRANCH: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: build/docs
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          SOURCE_FOLDER: build/docs

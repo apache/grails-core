@@ -164,14 +164,11 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew aggregateDocs
-      - name: "📤 Publish Documentation to Github Pages"
+      - name: "🚀 Publish to Github Pages"
         if: success()
-        uses: grails/github-pages-deploy-action@grails
+        uses: grails/grails-github-actions/deploy-github-pages@main
         env:
-          BETA: ${{ contains(needs.publish.outputs.release_version, 'M') || contains(needs.publish.outputs.release_version, 'RC') }}
-          BRANCH: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: build/docs
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: build/docs
           VERSION: ${{ needs.publish.outputs.release_version }}
