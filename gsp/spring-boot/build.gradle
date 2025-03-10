@@ -1,9 +1,0 @@
-plugins {
-    id 'java-library'
-}
-
-allprojects {
-    group = 'org.grails'
-
-    compileJava.options.release = 17
-}

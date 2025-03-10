@@ -93,3 +93,9 @@ project(':grails-web-testing-support').projectDir = file('gsp/grails-web-testing
 
 include 'gsp-examples-sitemesh3'
 project(':gsp-examples-sitemesh3').projectDir = file('gsp/examples/sitemesh3')
+
+include 'grails-gsp-spring-boot'
+project(':grails-gsp-spring-boot').projectDir = file('gsp/grails-gsp-spring-boot')
+
+include 'gsp-examples-spring-boot'
+project(':gsp-examples-spring-boot').projectDir = file('gsp/examples/spring-boot/app')

@@ -1,5 +1,0 @@
-rootProject.name = 'grails-boot'
-
-include ':gsp-example', ':grails-gsp-spring-boot'
-//rootProject.projectDir = file('grails-gsp-spring-boot')
-project(':gsp-example').projectDir = file('sample-apps/gsp/gsp-example')

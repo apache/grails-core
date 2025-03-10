@@ -1,0 +1,19 @@
+plugins {
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+apply plugin: 'org.grails.grails-plugin'
+
+ext {
+    pomTitle='GSP Spring Boot Plugin'
+    pomDescription = 'Provides GSP for Spring Boot Applications'
+    pomDevelopers = ['graemerocher': 'Graeme Rocher', lhotari: 'Lari Hotari', codeconsole: 'Scott Murphy Heiberg']
+    mavenSnapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+}
+
+dependencies {
+    api project(':grails-plugin-sitemesh3')
+}

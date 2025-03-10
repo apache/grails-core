@@ -3,15 +3,16 @@ buildscript {
         maven { url "https://repo.grails.org/grails/core/" }
     }
     dependencies {
-        classpath "org.grails:grails-gradle-plugin:7.0.0-SNAPSHOT"
+        classpath platform("org.grails:grails-bom:$grailsVersion")
+        classpath "org.grails:grails-gradle-plugin"
     }
 }
 
 plugins {
     id 'java'
     id 'war'
-    id 'org.springframework.boot' version "3.3.5"
-    id 'io.spring.dependency-management' version '1.1.6'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
     id "groovy"
 }
 
@@ -31,11 +32,12 @@ compileGroovyPages {
 }
 
 dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion")
     implementation project(':grails-gsp-spring-boot')
 
     implementation "org.hibernate.validator:hibernate-validator:8.0.0.Final" // validation
 
-    implementation "org.grails:grails-web-jsp:7.0.0-SNAPSHOT"
+    implementation project(':grails-web-jsp')
 
     implementation 'org.apache.tomcat.embed:tomcat-embed-jasper' // jsp
     implementation "org.apache.tomcat.embed:tomcat-embed-el"
