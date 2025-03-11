@@ -156,7 +156,7 @@ jobs:
   trigger-build-gorm-impls:
     if: github.event_name == 'push'
     name: "Trigger Build in GORM Implementations"
-    needs: [build, publish]
+    needs: [datastore-build, mongodb-build, hibernate5-build, publish]
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
