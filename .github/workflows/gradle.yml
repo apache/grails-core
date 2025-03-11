@@ -7,17 +7,17 @@ on:
     branches:
       - '[7-9]+.[0-9]+.x'
 jobs:
-  strategy:
-    fail-fast: false
-    matrix:
-      java: [ 17, 21 ]
-      mongodb-version: [ '4', '5', '6', '7', '8' ]
   datastore-build:
     name: "Build Datastore Project"
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21 ]
+        mongodb-version: [ '4', '5', '6', '7', '8' ]
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
@@ -45,6 +45,11 @@ jobs:
     permissions:
       contents: read
       packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21 ]
+        mongodb-version: [ '4', '5', '6', '7', '8' ]
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
@@ -72,6 +77,10 @@ jobs:
     permissions:
       contents: read
       packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21 ]
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
