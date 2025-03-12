@@ -16,6 +16,7 @@
 package org.grails.gradle.plugin.publishing
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 
 /**
  * @author Puneet Behl
@@ -23,16 +24,8 @@ import groovy.transform.CompileStatic
  * @since 4.0.11
  */
 @CompileStatic
+@ToString(includeNames = true)
 class GrailsPublishExtension {
-    /**
-     * Determines which plugin is used to publish snapshots
-     */
-    PublishType snapshotPublishType = PublishType.MAVEN_PUBLISH
-
-    /**
-     * Determines which plugin is used to publish releases
-     */
-    PublishType releasePublishType = PublishType.NEXUS_PUBLISH
 
     /**
      * The slug from github
@@ -83,6 +76,11 @@ class GrailsPublishExtension {
      * Overrides the groupId of the published artifact
      */
     String groupId
+
+    /**
+     * Whether to publish test sources with a "tests" classifier
+     */
+    Boolean publishTestSources
 
     License getLicense() {
         return license

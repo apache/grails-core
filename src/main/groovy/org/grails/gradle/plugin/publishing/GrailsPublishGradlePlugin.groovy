@@ -52,6 +52,8 @@ class GrailsPublishGradlePlugin implements Plugin<Project> {
     public static String MAVEN_PUBLISH_PLUGIN_ID = 'maven-publish'
     public static String SIGNING_PLUGIN_ID = 'signing'
     public static String ENVIRONMENT_VARIABLE_BASED_RELEASE = 'GRAILS_PUBLISH_RELEASE'
+    public static String SNAPSHOT_PUBLISH_TYPE_PROPERTY = 'snapshotPublishType'
+    public static String RELEASE_PUBLISH_TYPE_PROPERTY = 'releasePublishType'
 
     String getErrorMessage(String missingSetting) {
         return """No '$missingSetting' was specified. Please provide a valid publishing configuration. Example:
@@ -80,7 +82,7 @@ grailsPublish {
     developers = [johndoe: 'John Doe']
 }
 
-By default snapshotPublishType is set to MAVEN_PUBLISH and releasePublishType is set to NEXUS_PUBLISH.
+By default snapshotPublishType is set to MAVEN_PUBLISH and releasePublishType is set to NEXUS_PUBLISH.  These can be overridden by setting the associated property.
 
 The credentials and connection url must be specified as a project property or an environment variable:
 
@@ -105,24 +107,23 @@ Note: if project properties are used, the properties must be defined prior to ap
     @Override
     void apply(Project project) {
         project.rootProject.logger.lifecycle("Applying Grails Publish Gradle Plugin for `${project.name}`...");
-
-        final ExtensionContainer extensionContainer = project.extensions
-        final GrailsPublishExtension gpe = extensionContainer.create('grailsPublish', GrailsPublishExtension)
-
+        if (project.extensions.findByName('grailsPublish') == null) {
+            project.extensions.add('grailsPublish', new GrailsPublishExtension())
+        }
         final String nexusPublishUrl = project.findProperty('nexusPublishUrl') ?: System.getenv('NEXUS_PUBLISH_URL') ?: ''
         final String nexusPublishSnapshotUrl = project.findProperty('nexusPublishSnapshotUrl') ?: System.getenv('NEXUS_PUBLISH_SNAPSHOT_URL') ?: ''
         final String nexusPublishUsername = project.findProperty('nexusPublishUsername') ?: System.getenv('NEXUS_PUBLISH_USERNAME') ?: ''
         final String nexusPublishPassword = project.findProperty('nexusPublishPassword') ?: System.getenv('NEXUS_PUBLISH_PASSWORD') ?: ''
         final String nexusPublishStagingProfileId = project.findProperty('nexusPublishStagingProfileId') ?: System.getenv('NEXUS_PUBLISH_STAGING_PROFILE_ID') ?: ''
 
-        final ExtraPropertiesExtension extraPropertiesExtension = extensionContainer.findByType(ExtraPropertiesExtension)
+        final ExtraPropertiesExtension extraPropertiesExtension = project.extensions.findByType(ExtraPropertiesExtension)
 
         extraPropertiesExtension.setProperty('signing.keyId', project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
         extraPropertiesExtension.setProperty('signing.password', project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE'))
         extraPropertiesExtension.setProperty('signing.secretKeyRingFile', project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING'))
 
-        PublishType snapshotPublishType = gpe.snapshotPublishType
-        PublishType releasePublishType = gpe.releasePublishType
+        PublishType snapshotPublishType = project.hasProperty(SNAPSHOT_PUBLISH_TYPE_PROPERTY) ? PublishType.valueOf(project.property(SNAPSHOT_PUBLISH_TYPE_PROPERTY) as String) : PublishType.MAVEN_PUBLISH
+        PublishType releasePublishType = project.hasProperty(RELEASE_PUBLISH_TYPE_PROPERTY) ? PublishType.valueOf(project.property(RELEASE_PUBLISH_TYPE_PROPERTY) as String) : PublishType.NEXUS_PUBLISH
 
         boolean isSnapshot, isRelease
         if (System.getenv(ENVIRONMENT_VARIABLE_BASED_RELEASE) != null) {
@@ -167,7 +168,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         if (isRelease || useNexusPublish) {
             if (project.pluginManager.hasPlugin(SIGNING_PLUGIN_ID)) {
-                project.logger.debug("Signing Plugin already applied to project ${project.name}")
+                project.rootProject.logger.debug("Signing Plugin already applied to project {}", project.name)
             } else {
                 projectPluginManager.apply(SigningPlugin)
             }
@@ -214,6 +215,8 @@ Note: if project properties are used, the properties must be defined prior to ap
         }
 
         project.afterEvaluate {
+            final ExtensionContainer extensionContainer = project.extensions
+
             validateProjectPublishable(project as Project)
             project.publishing {
                 if (useMavenPublish) {
@@ -232,7 +235,7 @@ Note: if project properties are used, the properties must be defined prior to ap
                         maven {
                             final String mavenPublishUsername = project.findProperty('mavenPublishUsername') ?: System.getenv('MAVEN_PUBLISH_USERNAME') ?: ''
                             final String mavenPublishPassword = project.findProperty('mavenPublishPassword') ?: System.getenv('MAVEN_PUBLISH_PASSWORD') ?: ''
-                            if(mavenPublishUsername && mavenPublishPassword) {
+                            if (mavenPublishUsername && mavenPublishPassword) {
                                 credentials {
                                     username = mavenPublishUsername
                                     password = mavenPublishPassword
@@ -243,6 +246,7 @@ Note: if project properties are used, the properties must be defined prior to ap
                     }
                 }
 
+                final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
                 publications {
                     maven(MavenPublication) {
                         artifactId gpe.artifactId ?: project.name
@@ -353,7 +357,7 @@ Note: if project properties are used, the properties must be defined prior to ap
                             def groupIdQName = new QName(mavenPomNamespace, 'groupId')
                             def artifactIdQName = new QName(mavenPomNamespace, 'artifactId')
                             def nodes = (pomNode.getAt(dependenciesQName) as NodeList)
-                            if(nodes) {
+                            if (nodes) {
                                 def dependencyNodes = (nodes.first() as Node).getAt(dependencyQName)
                                 dependencyNodes.findAll { dependencyNode ->
                                     def versionNodes = (dependencyNode as Node).getAt(versionQName)
@@ -432,10 +436,14 @@ Note: if project properties are used, the properties must be defined prior to ap
 
     protected void doAddArtefact(Project project, MavenPublication publication) {
         publication.from project.components.java
+
+        if (project.extensions.findByType(GrailsPublishExtension).publishTestSources) {
+            publication.artifact(project.tasks.named('testSourcesJar', Jar))
+        }
     }
 
     protected Map<String, String> getDefaultExtraArtifact(Project project) {
-        if(!project.sourceSets.main.hasProperty('groovy')) {
+        if (!project.sourceSets.main.hasProperty('groovy')) {
             return null
         }
 
@@ -452,7 +460,7 @@ Note: if project properties are used, the properties must be defined prior to ap
     }
 
     protected validateProjectPublishable(Project project) {
-        if(!project.extensions.findByType(JavaPluginExtension)) {
+        if (!project.extensions.findByType(JavaPluginExtension)) {
             throw new RuntimeException("Grails Publish Plugin requires the Java Plugin to be applied to the project.")
         }
         project.extensions.configure(JavaPluginExtension) {
@@ -462,9 +470,9 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         final TaskContainer taskContainer = project.tasks
         taskContainer.named('javadocJar', Jar).configure { Jar task ->
-            project.logger.lifecycle("Configuring javadocJar task for project ${project.name}")
+            project.rootProject.logger.info("Configuring javadocJar task for project {} to include groovydoc", project.name)
             Task groovyDocTask = taskContainer.findByName('groovydoc')
-            if(groovyDocTask) {
+            if (groovyDocTask) {
                 task.dependsOn groovyDocTask
 
                 task.duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -479,16 +487,27 @@ Note: if project properties are used, the properties must be defined prior to ap
             task.from sourceSets.collect { it.allSource }
         }
 
+        project.tasks.register('testSourcesJar', Jar) {
+            it.dependsOn('testClasses')
+            it.from project.sourceSets.test.output
+            it.archiveClassifier.set('tests')
+        }
+
         SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
-        Collection<SourceSet> publishedSources = sourceSets.findAll {it.name != SourceSet.TEST_SOURCE_SET_NAME && !it.allSource.isEmpty() }
+        Collection<SourceSet> publishedSources = sourceSets.findAll { SourceSet sourceSet ->
+            (
+                    project.extensions.findByType(GrailsPublishExtension).publishTestSources ||
+                            sourceSet.name != SourceSet.TEST_SOURCE_SET_NAME
+            ) && !sourceSet.allSource.isEmpty()
+        }
         if (!publishedSources) {
             throw new RuntimeException("Cannot apply Grails Publish Plugin. Project ${project.name} does not have anything to publish.")
         }
 
         registerValidationTask(project, "grailsPublishValidation") {
             Task groovyDocTask = project.tasks.findByName('groovydoc')
-            if(groovyDocTask) {
-                if(!groovyDocTask.enabled) {
+            if (groovyDocTask) {
+                if (!groovyDocTask.enabled) {
                     throw new RuntimeException("Groovydoc task is disabled. Please enable it to ensure javadoc can be published correctly with the Grails Publish Plugin.")
                 }
             }
