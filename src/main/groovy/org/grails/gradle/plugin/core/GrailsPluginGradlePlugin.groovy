@@ -24,10 +24,8 @@ import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.internal.tasks.DefaultTaskDependency
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskDependency
@@ -36,7 +34,6 @@ import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 import org.grails.gradle.plugin.util.SourceSets
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 import javax.inject.Inject
@@ -64,7 +61,20 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
         configureAstSources(project)
 
-        configureProjectNameAndVersionASTMetadata(project)
+        addGroovyCompilerScript('GrailsPlugin', project) {
+            """
+                withConfig(configuration) {
+                    inline(phase: 'CONVERSION') { source, context, classNode ->
+                        classNode.putNodeMetaData('projectVersion', '${project.version}')
+                        classNode.putNodeMetaData('projectName', '${project.name}')
+                        classNode.putNodeMetaData('isPlugin', 'true')
+                    }
+                }
+            """.stripIndent(16)
+        }.configure { Task task ->
+            task.inputs.property('version', project.provider { project.version.toString() })
+            task.inputs.property('name', project.provider { project.name })
+        }
 
         configureAssembleTask(project)
 
@@ -171,14 +181,13 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             }
 
             Task sourcesJarTask = taskContainer.findByName('sourcesJar')
-            if(sourcesJarTask) {
+            if (sourcesJarTask) {
                 project.rootProject.logger.lifecycle("Found sources jar task")
                 sourcesJarTask.configure {
                     project.rootProject.logger.lifecycle("Including ast in sources jar")
                     from sourceSets.ast.allSource
                 }
-            }
-            else {
+            } else {
                 project.rootProject.logger.lifecycle("No sources jar task found")
             }
 
@@ -187,14 +196,13 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 javadocTask.configure {
                     source += sourceSets.ast.allJava
                 }
-            }
-            else {
+            } else {
                 project.rootProject.logger.lifecycle("Warning - a javadocTask was not found, so the ast source will not be included in the javadoc task")
             }
 
             Task groovydocTask = taskContainer.findByName('groovydoc')
             if (groovydocTask) {
-                if( taskContainer.findByName('javadocJar') == null) {
+                if (taskContainer.findByName('javadocJar') == null) {
                     taskContainer.create("javadocJar", Jar).configure {
                         archiveClassifier.set('javadoc')
                         from groovydocTask.outputs
@@ -204,8 +212,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 groovydocTask.configure {
                     source += sourceSets.ast.allJava
                 }
-            }
-            else {
+            } else {
                 project.rootProject.logger.lifecycle("Warning - a groovydocTask was not found, so the ast source will not be included in the groovydoc task")
             }
         }
@@ -270,27 +277,6 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 exclude "spring/resources.groovy"
                 exclude "**/*.gsp"
             }
-        }
-    }
-
-    protected void configureProjectNameAndVersionASTMetadata(Project project) {
-        def projectNameProvider = project.provider { project.name }
-        def projectVersionProvider = project.provider { project.version }
-        def configScriptTask = project.tasks.named('configScript').get()
-        configScriptTask.inputs.property('name', projectNameProvider)
-        configScriptTask.inputs.property('version', projectVersionProvider)
-        configScriptTask.doLast {
-            def resolvedProjectName = projectNameProvider.get()
-            def resolvedProjectVersion = projectVersionProvider.get()
-            outputs.files.singleFile << """
-            withConfig(configuration) {
-                inline(phase: 'CONVERSION') { source, context, classNode ->
-                    classNode.putNodeMetaData('projectVersion', '$resolvedProjectVersion')
-                    classNode.putNodeMetaData('projectName', '$resolvedProjectName')
-                    classNode.putNodeMetaData('isPlugin', 'true')
-                }
-            }
-            """.stripIndent(12)
         }
     }
 
