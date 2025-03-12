@@ -7,9 +7,9 @@ apply plugin: GrailsBuildPlugin
 
 List<Configuration> libsConfigurations = []
 subprojects { subproject ->
-    if (subproject.name in ['grails-shell', 'grails-core']) {
+    if (subproject.name == 'grails-shell') {
         libsConfigurations << configurations.create("${subproject.name}-libs") {
-            extendsFrom configurations.compileClasspath, configurations.runtimeClasspath
+            extendsFrom configurations.runtimeClasspath
         }
     }
 }
@@ -40,38 +40,6 @@ tasks.register('configurePopulateDependencies') {
                 if (!projectNames.contains(dependency.name)) {
                     populateDependencies.into("$dependency.group/$dependency.name/jars") {
                         from artifact.file // this will trigger the actual download if necessary
-                        def sourceJar = sourceArtifacts[dependency]
-                        if (sourceJar) {
-                            from sourceJar.file
-                        }
-                        def javadocJar = javadocArtifacts[dependency]
-                        if (javadocJar) {
-                            from javadocJar.file
-                        }
-                    }
-
-                    populateDependencies.into("$dependency.group/$dependency.name/jars") {
-                        from artifact.file // this will trigger the actual download if necessary
-                        def sourceJar = sourceArtifacts[dependency]
-                        if (sourceJar) {
-                            from sourceJar.file
-                        }
-                        def javadocJar = javadocArtifacts[dependency]
-                        if (javadocJar) {
-                            from javadocJar.file
-                        }
-                    }
-
-                    populateDependencies.into("$dependency.group/$dependency.name") {
-                        def pomFile = pomArtifacts[dependency]
-                        if (pomFile) {
-                            from pomFile.file
-                        }
-                    }
-
-                    populateDependencies.from("${metadata}/${dependency.group}/${dependency.name}/${dependency.version}") {
-                        include "**/*ivy.xml"
-                        eachFile { it.path = "$dependency.group/$dependency.name/ivy-${dependency.version}.xml" }
                     }
                 }
             }

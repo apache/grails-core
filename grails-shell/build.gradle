@@ -6,6 +6,43 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    // This is a workaround that can optimize the performance of the Shell CLI by reducing the length of the CLASSPATH,
+    // while also solving the problem of the length limit of command line parameters in the Windows environment
+    // This can be removed when we solve the dependencies of grails-bootstrap, grails-shell
+    runtimeClasspath {
+        exclude group: 'commons-codec', module: 'commons-codec'
+        exclude group: 'com.github.ben-manes.caffeine', module: 'caffeine'
+        exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+        exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+        exclude group: 'javax.annotation', module: 'javax.annotation-api'
+        exclude group: 'javax.inject', module: 'javax.inject'
+        exclude group: 'javax.persistence', module: 'javax.persistence-api'
+        exclude group: 'javax.transaction', module: 'javax.transaction-api'
+        exclude group: 'junit', module: 'junit'
+        exclude group: 'io.micrometer', module: 'micrometer-observation'
+        exclude group: 'io.micrometer', module: 'micrometer-commons'
+        exclude group: 'org.checkerframework', module: 'checker-qual'
+        exclude group: 'org.apache.ant', module: 'ant-antlr'
+        exclude group: 'org.apache.ant', module: 'ant-junit'
+        exclude group: 'org.apache.commons', module: 'commons-compress'
+        exclude group: 'org.apache.groovy', module: 'groovy-groovydoc'
+        exclude group: 'org.apache.groovy', module: 'groovy-jmx'
+        exclude group: 'org.codehaus.plexus', module: 'plexus-classworlds'
+        exclude group: 'org.codehaus.plexus', module: 'plexus-component-annotations'
+        exclude group: 'org.codehaus.plexus', module: 'plexus-sec-dispatcher'
+        exclude group: 'org.hamcrest', module: 'hamcrest'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+        exclude group: 'org.javassist', module: 'javassist'
+        exclude group: 'org.springframework', module: 'spring-aop'
+        exclude group: 'org.springframework', module: 'spring-expression'
+        exclude group: 'org.springframework', module: 'spring-jcl'
+        exclude group: 'org.springframework', module: 'spring-tx'
+        exclude group: 'org.springframework', module: 'spring-web'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+    }
+}
+
 dependencies {
     // compile grails-shell with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
