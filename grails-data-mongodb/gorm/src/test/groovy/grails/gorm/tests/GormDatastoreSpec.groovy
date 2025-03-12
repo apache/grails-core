@@ -4,6 +4,31 @@ import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
+import grails.gorm.tck.Book
+import grails.gorm.tck.ChildEntity
+import grails.gorm.tck.City
+import grails.gorm.tck.ClassWithListArgBeforeValidate
+import grails.gorm.tck.ClassWithNoArgBeforeValidate
+import grails.gorm.tck.ClassWithOverloadedBeforeValidate
+import grails.gorm.tck.CommonTypes
+import grails.gorm.tck.Country
+import grails.gorm.tck.EnumThing
+import grails.gorm.tests.Face
+import grails.gorm.tck.Highway
+import grails.gorm.tck.Location
+import grails.gorm.tck.ModifyPerson
+import grails.gorm.tests.Nose
+import grails.gorm.tck.OptLockNotVersioned
+import grails.gorm.tck.OptLockVersioned
+import grails.gorm.tests.Person
+import grails.gorm.tck.PersonEvent
+import grails.gorm.tests.Pet
+import grails.gorm.tck.PetType
+import grails.gorm.tests.Plant
+import grails.gorm.tck.PlantCategory
+import grails.gorm.tck.Publication
+import grails.gorm.tck.Task
+import grails.gorm.tck.TestEntity
 import grails.gorm.validation.PersistentEntityValidator
 import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
@@ -35,10 +60,10 @@ abstract class GormDatastoreSpec extends Specification {
     static final CURRENT_TEST_NAME = "current.gorm.test"
 
     List getDomainClasses() {
-        [       Book, ChildEntity, City, ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                ClassWithOverloadedBeforeValidate, CommonTypes, Country, EnumThing, Face, Highway,
-                Location, ModifyPerson, Nose, OptLockNotVersioned, OptLockVersioned, Person, PersonEvent,
-                Pet, PetType, Plant, PlantCategory, Publication, Task, TestEntity]
+        [Book, ChildEntity, City, ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+         ClassWithOverloadedBeforeValidate, CommonTypes, Country, EnumThing, Face, Highway,
+         Location, ModifyPerson, Nose, OptLockNotVersioned, OptLockVersioned, Person, PersonEvent,
+         Pet, PetType, Plant, PlantCategory, Publication, Task, TestEntity]
     }
 
     Map getConfiguration() {

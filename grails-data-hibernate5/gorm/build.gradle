@@ -43,7 +43,9 @@ dependencies {
     }
 
     testImplementation "com.h2database:h2"
-    testImplementation 'junit:junit' // JUnit 4
+    testImplementation 'org.junit.platform:junit-platform-suite', {
+        // api: SelectClasses, Suite
+    }
     testImplementation "org.apache.groovy:groovy-test-junit5"
     testImplementation "org.apache.groovy:groovy-sql"
     testImplementation "org.apache.groovy:groovy-json"
@@ -69,6 +71,6 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/tck-config.gradle')
 }

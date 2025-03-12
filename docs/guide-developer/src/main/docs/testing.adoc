@@ -2,7 +2,7 @@ The `grails-datastore-gorm-tck` project provides several hundred tests to guaran
 
 [source,groovy]
 ----
-testCompile project(':grails-datastore-gorm-tck')
+testCompile project(':grails-datastore-gorm-tck').testFixtures
 ----
 
 Then create a `Setup.groovy` file that sets up your custom datastore in your implementation.

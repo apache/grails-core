@@ -1,8 +1,9 @@
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Pet
-import grails.gorm.tests.PetType
+import grails.gorm.tests.GormDatastoreSpec
+
+import grails.gorm.tck.PetType
 import spock.lang.Issue
 
 class DisjunctionQuerySpec extends GormDatastoreSpec {

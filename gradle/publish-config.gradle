@@ -20,4 +20,5 @@ extensions.configure(GrailsPublishExtension) {
             'jamesfredley': 'James Fredley'
     ]
     it.artifactId = findProperty('pomArtifactId') ?: name
+    it.publishTestSources = findProperty('pomPublishTestSources') ?: false
 }

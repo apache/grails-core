@@ -1,13 +1,17 @@
 package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.tck.Country
+import grails.gorm.tck.Face
+import grails.gorm.tck.Nose
+import grails.gorm.tck.Pet
 import grails.persistence.Entity
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
+import grails.gorm.tck.Person
 
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
-import spock.lang.Ignore
 import spock.lang.Issue
 
 /**
@@ -25,7 +29,7 @@ class WhereMethodSpec extends GormDatastoreSpec {
 
         gcl= new GroovyClassLoader()
         list << gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.annotation.*
 import grails.persistence.*
 import grails.gorm.DetachedCriteria
@@ -52,7 +56,7 @@ return Todo
 
         list[-1].newInstance()
         list << gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.annotation.*
 import grails.persistence.*
 import grails.gorm.DetachedCriteria
@@ -267,10 +271,8 @@ class Project {
         queryUsingUnknownToOneAssociationProperty()
         then:
         MultipleCompilationErrorsException e = thrown()
-        e.message.contains 'Cannot query property "firstN" - no such property on class grails.gorm.tests.Person exists.'
+        e.message.contains 'Cannot query property "firstN" - no such property on class grails.gorm.tck.Person exists.'
     }
-
-
 
     @Issue('GRAILS-8526')
     def "Test association query with referenced arguments"() {
@@ -916,7 +918,7 @@ class Project {
           queryUsingUnknownPropertyWithSize()
        then:
             MultipleCompilationErrorsException e = thrown()
-            e.message.contains 'Cannot query size of property "blah" - no such property on class grails.gorm.tests.Person exists'
+            e.message.contains 'Cannot query size of property "blah" - no such property on class grails.gorm.tck.Person exists'
    }
 
    def "Test error when using unsupported operator"() {
@@ -932,7 +934,7 @@ class Project {
           queryReferencingNonExistentPropertyOfAssociation()
        then:
             MultipleCompilationErrorsException e = thrown()
-            e.message.contains 'Cannot query on property "doesntExist" - no such property on class grails.gorm.tests.Pet exists.'
+            e.message.contains 'Cannot query on property "doesntExist" - no such property on class grails.gorm.tck.Pet exists.'
    }
 
    def "Test error when using unknown domain property"() {
@@ -940,7 +942,7 @@ class Project {
           queryReferencingNonExistentProperty()
        then:
             MultipleCompilationErrorsException e = thrown()
-            e.message.contains 'Cannot query on property "doesntExist" - no such property on class grails.gorm.tests.Person exists.'
+            e.message.contains 'Cannot query on property "doesntExist" - no such property on class grails.gorm.tck.Person exists.'
    }
 
     def "Test error when using function on property of a to-one association"() {
@@ -1590,7 +1592,7 @@ class Project {
     def queryUsingFunctionOnToOneAssociationProperty() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1610,7 +1612,7 @@ class CallMe {
     def queryUsingUnknownToOneAssociationProperty() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1630,7 +1632,7 @@ class CallMe {
     def queryUsingUnsupportedOperatorInSize() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1649,7 +1651,7 @@ class CallMe {
     def queryUsingUnsupportedOperator() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1669,7 +1671,7 @@ class CallMe {
     def queryUsingInvalidNegation() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1689,7 +1691,7 @@ class CallMe {
     def queryUsingUnknownPropertyWithSize() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1709,7 +1711,7 @@ class CallMe {
     def queryReferencingNonExistentProperty() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1729,7 +1731,7 @@ class CallMe {
     def queryReferencingNonExistentPropertyOfAssociation() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.*
 import grails.persistence.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -1758,6 +1760,7 @@ class Pet {
     def getClassThatCallsWhere() {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         gcl.parseClass('''
+import grails.gorm.tck.*
 import grails.gorm.tests.*
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.*

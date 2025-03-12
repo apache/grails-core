@@ -36,8 +36,12 @@ include(
     'grails-datastore-async',
     'grails-datastore-gorm-async',
     'grails-datastore-gorm-validation',
+    'grails-datastore-gorm-simple',
     'grails-datastore-gorm-support',
+    // the tck is split into domains -> base -> tck so that the base class can be swapped out or reused
     'grails-datastore-gorm-tck',
+    'grails-datastore-gorm-tck-base',
+    'grails-datastore-gorm-tck-domains',
     'grails-datastore-gorm-test',
 
     // RX projects

@@ -3,7 +3,7 @@ package org.grails.datastore.gorm
 import grails.async.Promise
 import grails.async.Promises
 import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.Person
+import grails.gorm.tck.Person
 
 /**
  */

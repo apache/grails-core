@@ -1,7 +1,7 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.Person
+import grails.gorm.tck.Person
 
 class DistinctProjectionSpec extends GormDatastoreSpec {
 

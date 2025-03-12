@@ -16,7 +16,7 @@ class WhereMethodEmbeddedInAssociationSpec extends GormDatastoreSpec {
         gcl = new GroovyClassLoader()
 
         gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.tck.*
 import grails.gorm.annotation.*
 import grails.persistence.*
 import grails.gorm.DetachedCriteria

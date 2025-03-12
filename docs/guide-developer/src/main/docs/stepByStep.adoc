@@ -32,7 +32,7 @@ dependencies {
             project(':grails-datastore-web'),
             project(':grails-datastore-gorm-support')
             
-    testImplementation project(':grails-datastore-gorm-tck')
+    testImplementation project(':grails-datastore-gorm-tck').testFixtures
     testRuntime "javax.servlet:javax.servlet-api:$servletApiVersion"
 
 }

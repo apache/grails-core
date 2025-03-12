@@ -25,27 +25,27 @@ class MultiColumnUniqueConstraintSpec extends GormDatastoreSpec {
 
     void "test generated unique constraints for related domains"() {
         given: 'two existing tasks'
-            Task task1 = new Task(name: 'task1').save(flush: true, failOnError: true)
-            Task task2 = new Task(name: 'task2').save(flush: true, failOnError: true)
+        Task1 task1 = new Task1(name: 'task1').save(flush: true, failOnError: true)
+        Task1 task2 = new Task1(name: 'task2').save(flush: true, failOnError: true)
 
         when: 'saving task links for the same toTask but not breaking unique index'
-            TaskLink taskLink1 = new TaskLink(fromTask: task1, toTask: task2).save(flush: true, validate: false)
-            TaskLink taskLink2 = new TaskLink(fromTask: task2, toTask: task2).save(flush: true, validate: false)
+        TaskLink taskLink1 = new TaskLink(fromTask: task1, toTask: task2).save(flush: true, validate: false)
+        TaskLink taskLink2 = new TaskLink(fromTask: task2, toTask: task2).save(flush: true, validate: false)
 
         then: 'both links may be saved'
-            taskLink1 
-            taskLink2
+        taskLink1
+        taskLink2
 
         when: 'instance which breaks unique index is saved'
-            new TaskLink(fromTask: task1, toTask: task2).save(flush: true, validate: false)            
+        new TaskLink(fromTask: task1, toTask: task2).save(flush: true, validate: false)
 
         then: 'DataIntegrityViolationException is thrown'
-            thrown DataIntegrityViolationException
+        thrown DataIntegrityViolationException
     }
 
     @Override
     List getDomainClasses() {
-        [DomainOne, Task, TaskLink]
+        [DomainOne, Task1, TaskLink]
     }
 }
 
@@ -62,15 +62,15 @@ class DomainOne {
 
 
 @Entity
-class Task {
+class Task1 {
     String name
 }
 
 @Entity
 class TaskLink {
 
-    Task toTask
-    Task fromTask
+    Task1 toTask
+    Task1 fromTask
 
     static constraints = {
         toTask unique: ['fromTask']

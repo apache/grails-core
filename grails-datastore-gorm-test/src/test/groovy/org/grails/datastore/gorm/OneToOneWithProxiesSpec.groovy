@@ -1,9 +1,9 @@
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.Face
+import grails.gorm.tck.Face
 import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.Nose
-import grails.gorm.tests.Pet
+import grails.gorm.tck.Nose
+import grails.gorm.tck.Pet
 import org.grails.datastore.mapping.proxy.EntityProxy
 
 /**
@@ -13,7 +13,7 @@ class OneToOneWithProxiesSpec  extends GormDatastoreSpec {
 
     def "Test persist and retrieve unidirectional many-to-one"() {
         given:"A domain model with a many-to-one"
-            def person = new grails.gorm.tests.Person(firstName:"Fred", lastName: "Flintstone")
+            def person = new grails.gorm.tck.Person(firstName:"Fred", lastName: "Flintstone")
             def pet = new Pet(name:"Dino", owner:person)
             person.save()
             pet.save(flush:true)

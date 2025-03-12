@@ -1,10 +1,7 @@
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
-import spock.lang.Issue
 import grails.gorm.tests.Pet
-import grails.gorm.tests.Person
-import grails.gorm.tests.PetType
+import grails.gorm.tests.GormDatastoreSpec
 
 class LikeQuerySpec extends GormDatastoreSpec {
 

@@ -5,6 +5,7 @@ import grails.persistence.Entity
 import spock.lang.Issue
 import spock.lang.PendingFeature
 import spock.lang.Shared
+import grails.gorm.tck.Person
 
 class CustomTypeMarshallingSpec extends GormDatastoreSpec {
 

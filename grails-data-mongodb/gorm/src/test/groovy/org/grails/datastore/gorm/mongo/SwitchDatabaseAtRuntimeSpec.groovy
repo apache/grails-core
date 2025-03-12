@@ -3,8 +3,6 @@ package org.grails.datastore.gorm.mongo
 import com.mongodb.client.MongoClient
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
-import org.grails.datastore.mapping.mongo.MongoDatastore
-import org.grails.datastore.mapping.mongo.MongoSession
 
 /**
  * @author Graeme Rocher

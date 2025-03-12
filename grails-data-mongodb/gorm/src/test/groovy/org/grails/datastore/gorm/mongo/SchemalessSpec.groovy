@@ -3,7 +3,7 @@ package org.grails.datastore.gorm.mongo
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Plant
 
-class SchemalessSpec extends GormDatastoreSpec{
+class SchemalessSpec extends GormDatastoreSpec {
 
     def "Test attach additional data"() {
         given:

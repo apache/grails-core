@@ -1,0 +1,17 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails.tck.base'
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+    compileOnly project(':grails-datastore-gorm-tck-domains')
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.spockframework:spock-core'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

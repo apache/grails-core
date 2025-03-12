@@ -1,5 +1,7 @@
 package grails.gorm.tests
 
+import grails.gorm.tck.TestEntity
+
 class ReadOperationSpec extends GormDatastoreSpec {
 
     void "test read operation for non existent"() {

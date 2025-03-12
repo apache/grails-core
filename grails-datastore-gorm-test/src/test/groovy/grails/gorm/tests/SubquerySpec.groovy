@@ -1,6 +1,7 @@
 package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.tck.Person
 
 /**
  * Tests for using subqueries in criteria and where method calls

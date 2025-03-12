@@ -1,8 +1,8 @@
 package org.grails.datastore.gorm.mongo
 
+import grails.gorm.tests.Pet
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
-import grails.gorm.tests.Pet
 
 /**
  * Tests the nullification of properties

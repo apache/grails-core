@@ -1,5 +1,6 @@
 package grails.gorm.tests
 
+import grails.gorm.tck.PetType
 import grails.persistence.Entity
 
 /*

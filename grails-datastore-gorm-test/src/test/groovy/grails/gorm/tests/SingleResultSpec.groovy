@@ -1,5 +1,6 @@
 package grails.gorm.tests
 
+import grails.gorm.tck.TestEntity
 import spock.lang.Issue
 
 /**

@@ -1,10 +1,10 @@
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.Face
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Nose
 import grails.gorm.tests.Person
 import grails.gorm.tests.Pet
+import grails.gorm.tests.Face
 import org.bson.Document
 
 class OneToOneIntegritySpec extends GormDatastoreSpec {

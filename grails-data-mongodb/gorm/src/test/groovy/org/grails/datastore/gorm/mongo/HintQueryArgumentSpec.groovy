@@ -6,7 +6,6 @@ import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
-import org.bson.BsonString
 
 class HintQueryArgumentSpec extends GormDatastoreSpec {
 
