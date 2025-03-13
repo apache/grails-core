@@ -40,6 +40,7 @@ import org.grails.core.artefact.ApplicationArtefactHandler
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.UrlResource
 import org.springframework.util.ClassUtils
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 import java.lang.reflect.Modifier
 
 /**
