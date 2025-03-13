@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 original authors
+ * Copyright 2015-2025 original authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,17 +166,18 @@ class GrailsGradlePlugin extends GroovyPlugin {
     private void configureGroovyCompiler(Project project) {
         Provider<Directory> sourceConfigFiles = project.layout.buildDirectory.dir('groovyCompilerConfiguration')
 
-        // Gradle validates that this file exists and it is not a lazy validation so we must force the creation always to ensure it passes gradle's validation
+        // Gradle validates that this file exists and it is not a lazy validation
+        // so we must force the creation always to ensure it passes gradle's validation
         File groovyCompilerConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy').get().asFile
-        if(!groovyCompilerConfigFile.exists()) {
+        if (!groovyCompilerConfigFile.exists()) {
             groovyCompilerConfigFile.parentFile.mkdirs()
             groovyCompilerConfigFile.createNewFile()
         }
-        groovyCompilerConfigFile.write("// Placeholder for grails metadata and other configuration")
+        groovyCompilerConfigFile.write('// Placeholder for grails metadata and other configuration')
 
         if (!project.tasks.findByName('configureGroovyCompiler')) {
             project.tasks.register('cleanGroovyCompilerConfig').configure { Task task ->
-                task.group = "build"
+                task.group = 'build'
                 task.doFirst {
                     sourceConfigFiles.get().asFile.deleteDir()
                     sourceConfigFiles.get().asFile.mkdirs()
@@ -184,7 +185,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
             // Merge the script at runtime so we don't suffer a performance penalty as part of every gradle task run
             project.tasks.register('configureGroovyCompiler').configure { Task task ->
-                task.group = "build"
+                task.group = 'build'
                 task.dependsOn('cleanGroovyCompilerConfig')
 
                 // Gradle will cache the output based on the directory, so we must ensure it exists
@@ -228,7 +229,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         TaskProvider<Task> configScriptTask = project.tasks.register(taskName)
         configScriptTask.configure { Task task ->
-            task.group = "build"
+            task.group = 'build'
             task.outputs.file(targetConfigFile)
             task.dependsOn('cleanGroovyCompilerConfig')
 
