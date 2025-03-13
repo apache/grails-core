@@ -1,0 +1,109 @@
+=== Multi Tenancy Modes
+As mentioned previously, GORM for MongoDB supports all three multi tenancy modes however there are some considerations to keep in mind.
+
+==== Database Per Tenant
+
+When using the `DATABASE` mode, only GORM methods calls are dispatched to the correct tenant. This means the following will use the tenant id:
+
+[source,groovy]
+----
+// switches to the correct client based on the tenant id
+Book.list()
+----
+
+However, going directly through the `MongoClient` will not work:
+
+[source,groovy]
+----
+@Autowired MongoClient mongoClient
+
+// uses the default connection and doesn't resolve the tenant it
+mongoClient.getDatabase("book").find()
+----
+
+If you are working directly with the `MongoClient` instance you need to make sure you obtain the correct instance. For example:
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.*
+
+@Autowired MongoDatastore mongoDatastore
+...
+MongoClient mongoClient =
+        mongoDatastore.getDatastoreForTenantId(Tenants.currentId())
+                      .getMongoClient()
+----
+
+==== Schema Per Tenant
+
+When using the `SCHEMA` mode, GORM for MongoDB will use a different MongoDB database, but the same `MongoClient` instance, for each tenant.
+
+However, once again only GORM methods will use the correct database. For example:
+
+[source,groovy]
+----
+// switches to the correct database based on the tenant id
+Book.list()
+----
+
+However, getting the database directly from `MongoClient` will not work:
+
+[source,groovy]
+----
+@Autowired MongoClient mongoClient
+
+// uses the default connection and doesn't resolve the tenant it
+mongoClient.getDatabase("book").find()
+----
+
+To resolve this you should always use the `DB` property of the class which will ensure the right database is used:
+
+[source,groovy]
+----
+// switches to the correct database based on the tenant id
+Book.DB.find()
+----
+
+==== Partitioned Multi-Tenancy
+
+When using the `DISCRIMINATOR` approach, GORM for MongoDB will store a `tenantId` attribute in each MongoDB document and attempt to partition the data.
+
+Once again this works only when using GORM methods and even then there are cases where it will not work if you use native MongoDB interfaces.
+
+For example the following works fine:
+
+[source,groovy]
+----
+// correctly includes the `tenantId` in the query
+Book.list()
+----
+
+As does this:
+
+[source,groovy]
+----
+import static com.mongodb.client.model.Filters.*;
+
+// correctly includes the `tenantId` in the query
+Book.find(eq("title", "The Stand")).first()
+----
+
+But this logic bypasses any built into tenant id interception and inclusion:
+
+[source,groovy]
+----
+Book.collection.find().first()
+----
+
+Since you are operating directly on the collection GORM cannot know when you perform a query on said collection.
+
+In this case you will have to ensure to include the `tenantId` manually:
+
+[source,groovy]
+----
+import static com.mongodb.client.model.Filters.*;
+...
+Book.collection.find(eq("tenantId", Tenants.currentId())).first()
+----
+
+And the same is true of write operations such as inserts that are done with the native API.

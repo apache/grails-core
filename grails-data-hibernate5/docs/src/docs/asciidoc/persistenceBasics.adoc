@@ -1,0 +1,33 @@
+A key thing to remember about GORM is that under the surface GORM is using https://www.hibernate.org/[Hibernate] for persistence. If you are coming from a background of using https://api.rubyonrails.org/classes/ActiveRecord/Base.html[ActiveRecord] or https://www.mybatis.org/[iBatis/MyBatis], Hibernate's "session" model may feel a little strange.
+
+If you are using Grails, then Grails automatically binds a Hibernate session to the currently executing request. This lets you use the `save()` and `delete` methods as well as other GORM methods transparently.
+
+If you are not using Grails then you have to make sure that a session is bound to the current request. One way to to achieve that is with the link:../api/org/grails/datastore/gorm/GormEntity.html#withNewSession(groovy.lang.Closure)[withNewSession(Closure)] method:
+
+[source,groovy]
+----
+Book.withNewSession {
+	// your logic here
+}
+----
+
+Another option is to bind a transaction using the link:../api/org/grails/datastore/gorm/GormEntity.html#withTransaction(groovy.lang.Closure)[withTransaction(Closure)] method:
+
+[source,groovy]
+----
+Book.withTransaction {
+	// your logic here
+}
+----
+
+
+==== Transactional Write-Behind
+
+
+A useful feature of Hibernate over direct JDBC calls and even other frameworks is that when you call link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] or link:../api/org/grails/datastore/gorm/GormEntity.html#delete()[delete()] it does not necessarily perform any SQL operations *at that point*. Hibernate batches up SQL statements and executes them as late as possible, often at the end of the request when flushing and closing the session.
+
+If you are using Grails this typically done for you automatically, which manages your Hibernate session. If you are using GORM outside of Grails then you may need to manually flush the session at the end of your operation.
+
+Hibernate caches database updates where possible, only actually pushing the changes when it knows that a flush is required, or when a flush is triggered programmatically. One common case where Hibernate will flush cached updates is when performing queries since the cached information might be included in the query results. But as long as you're doing non-conflicting saves, updates, and deletes, they'll be batched until the session is flushed. This can be a significant performance boost for applications that do a lot of database writes.
+
+Note that flushing is not the same as committing a transaction. If your actions are performed in the context of a transaction, flushing will execute SQL updates but the database will save the changes in its transaction queue and only finalize the updates when the transaction commits.

@@ -1,0 +1,34 @@
+===== dbm-validate
+
+====== Purpose
+
+Checks the changelog for errors.
+
+====== Description
+
+Prints any validation messages to the console.
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-validate --dataSource=<<dataSource>>
+----
+
+Required arguments: __none__.
+
+Optional arguments:
+
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-validate "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

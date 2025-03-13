@@ -1,0 +1,51 @@
+=== Identity Generation
+By default in GORM entities are supplied with an integer-based identifier. So for example the following entity:
+
+[source,groovy]
+----
+class Person {}
+----
+
+Has a property called `id` of type `java.lang.Long`. In this case GORM for Mongo will generate a sequence based identifier using the technique https://docs.mongodb.org/manual/tutorial/isolate-sequence-of-operations/[described in the Mongo documentation] on Atomic operations.
+
+However, sequence based integer identifiers are not ideal for environments that require https://docs.mongodb.org/manual/sharding/[sharding] (one of the nicer features of Mongo). Hence it is generally advised to use either String based ids:
+
+[source,groovy]
+----
+class Person {
+    String id
+}
+----
+
+Or a native BSON https://api.mongodb.org/java/current/org/bson/types/ObjectId.html[ObjectId]:
+
+[source,groovy]
+----
+import org.bson.types.ObjectId
+
+class Person {
+    ObjectId id
+}
+----
+
+BSON `ObjectId` instances are generated in a similar fashion to `UUIDs`.
+
+
+==== Assigned Identifiers
+
+
+Note that if you manually assign an identifier, then you will need to use the `insert` method instead of the `save` method, otherwise GORM can't work out whether you are trying to achieve an insert or an update. Example:
+
+[source,groovy]
+----
+class Person {
+    String id
+}
+...
+Person p = new Person()
+p.id = "Fred"
+// to insert
+p.insert()
+// to update
+p.save()
+----

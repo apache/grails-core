@@ -1,0 +1,134 @@
+[[introduction]]
+include::introduction.adoc[]
+
+[[gettingStarted]]
+include::gettingStarted.adoc[]
+
+[[configuration]]
+include::configuration.adoc[]
+
+[[generalUsage]]
+include::generalUsage.adoc[]
+
+[[groovyChanges]]
+include::groovyChanges.adoc[]
+
+[[groovyPreconditions]]
+include::groovyPreconditions.adoc[]
+
+[[gorm]]
+include::gorm.adoc[]
+
+[[dbdoc]]
+include::dbdoc.adoc[]
+
+[[reference]]
+=== Reference
+
+[[ref-diff-scripts]]
+==== Diff Scripts
+
+[[ref-diff-scripts-dbm-diff]]
+include::ref/Diff Scripts/dbm-diff.adoc[]
+
+[[ref-diff-scripts-dbm-gorm-diff]]
+include::ref/Diff Scripts/dbm-gorm-diff.adoc[]
+
+[[ref-documentation-scripts]]
+==== Documentation Scripts
+
+[[ref-documentation-scripts-dbm-db-doc]]
+include::ref/Documentation Scripts/dbm-db-doc.adoc[]
+
+[[ref-maintenance-scripts]]
+==== Maintenance Scripts
+
+[[ref-maintenance-scripts-dbm-add-migration]]
+include::ref/Maintenance Scripts/dbm-add-migration.adoc[]
+
+[[ref-maintenance-scripts-dbm-changelog-sync-sql]]
+include::ref/Maintenance Scripts/dbm-changelog-sync-sql.adoc[]
+
+[[ref-maintenance-scripts-dbm-changelog-sync]]
+include::ref/Maintenance Scripts/dbm-changelog-sync.adoc[]
+
+[[ref-maintenance-scripts-dbm-changelog-to-groovy]]
+include::ref/Maintenance Scripts/dbm-changelog-to-groovy.adoc[]
+
+[[ref-maintenance-scripts-dbm-clear-checksums]]
+include::ref/Maintenance Scripts/dbm-clear-checksums.adoc[]
+
+[[ref-maintenance-scripts-dbm-create-changelog]]
+include::ref/Maintenance Scripts/dbm-create-changelog.adoc[]
+
+[[ref-maintenance-scripts-dbm-drop-all]]
+include::ref/Maintenance Scripts/dbm-drop-all.adoc[]
+
+[[ref-maintenance-scripts-dbm-list-locks]]
+include::ref/Maintenance Scripts/dbm-list-locks.adoc[]
+
+[[ref-maintenance-scripts-dbm-list-tags]]
+include::ref/Maintenance Scripts/dbm-list-tags.adoc[]
+
+[[ref-maintenance-scripts-dbm-mark-next-changeset-ran]]
+include::ref/Maintenance Scripts/dbm-mark-next-changeset-ran.adoc[]
+
+[[ref-maintenance-scripts-dbm-release-locks]]
+include::ref/Maintenance Scripts/dbm-release-locks.adoc[]
+
+[[ref-maintenance-scripts-dbm-status]]
+include::ref/Maintenance Scripts/dbm-status.adoc[]
+
+[[ref-maintenance-scripts-dbm-tag]]
+include::ref/Maintenance Scripts/dbm-tag.adoc[]
+
+[[ref-maintenance-scripts-dbm-validate]]
+include::ref/Maintenance Scripts/dbm-validate.adoc[]
+
+[[ref-rollback-scripts]]
+=== Rollback Scripts
+
+[[ref-rollback-scripts-dbm-future-rollback-sql]]
+include::ref/Rollback Scripts/dbm-future-rollback-sql.adoc[]
+
+[[ref-rollback-scripts-dbm-generate-changelog]]
+include::ref/Rollback Scripts/dbm-generate-changelog.adoc[]
+
+[[ref-rollback-scripts-dbm-generate-gorm-changelog]]
+include::ref/Rollback Scripts/dbm-generate-gorm-changelog.adoc[]
+
+[[ref-rollback-scripts-dbm-rollback-count-sql]]
+include::ref/Rollback Scripts/dbm-rollback-count-sql.adoc[]
+
+[[ref-rollback-scripts-dbm-rollback-count]]
+include::ref/Rollback Scripts/dbm-rollback-count.adoc[]
+
+[[ref-rollback-scripts-dbm-rollback-sql]]
+include::ref/Rollback Scripts/dbm-rollback-sql.adoc[]
+
+[[ref-rollback-scripts-dbm-rollback-to-date-sql]]
+include::ref/Rollback Scripts/dbm-rollback-to-date-sql.adoc[]
+
+[[ref-rollback-scripts-dbm-rollback-to-date]]
+include::ref/Rollback Scripts/dbm-rollback-to-date.adoc[]
+
+[[ref-rollback-scripts-dbm-rollback]]
+include::ref/Rollback Scripts/dbm-rollback.adoc[]
+
+[[ref-update-scripts]]
+==== Update Scripts
+
+[[ref-update-scripts-dbm-previous-changeset-sql]]
+include::ref/Update Scripts/dbm-previous-changeset-sql.adoc[]
+
+[[ref-update-scripts-dbm-update-count-sql]]
+include::ref/Update Scripts/dbm-update-count-sql.adoc[]
+
+[[ref-update-scripts-dbm-update-count]]
+include::ref/Update Scripts/dbm-update-count.adoc[]
+
+[[ref-update-scripts-dbm-update-sql]]
+include::ref/Update Scripts/dbm-update-sql.adoc[]
+
+[[ref-update-scripts-dbm-update]]
+include::ref/Update Scripts/dbm-update.adoc[]

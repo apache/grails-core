@@ -1,6 +1,6 @@
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.TestEntity
+import grails.gorm.tck.TestEntity
 import grails.gorm.tests.GormDatastoreSpec
 
 class GormValidateableSpec extends GormDatastoreSpec {

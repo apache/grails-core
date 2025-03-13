@@ -1,0 +1,14 @@
+== Multi-Tenancy
+GORM for MongoDb supports the following multi-tenancy modes:
+
+* `DATABASE` - A separate database with a separate connection pool is used to store each tenants data.
+* `SCHEMA` - The same database, but different schemas are used to store each tenants data.
+* `DISCRIMINATOR` - The same database is used with a discriminator used to partition and isolate data.
+
+include::configuration.adoc[]
+
+include::tenantTransforms.adoc[]
+
+include::multiTenancyModes.adoc[]
+
+include::dynamicConnectionSources.adoc[]

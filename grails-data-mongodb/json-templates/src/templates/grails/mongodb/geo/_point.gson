@@ -1,0 +1,12 @@
+/**
+ * A template for rendering a GeoJSON Point in MongoDB
+ */
+import grails.mongodb.geo.*
+import groovy.transform.Field
+
+@Field Point point
+
+json {
+    type "Point"
+    coordinates point.asArray()
+}

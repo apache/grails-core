@@ -1,0 +1,123 @@
+== Mapping Domain Classes
+=== Basic Mapping
+
+
+The way GORM for MongoDB works is to map each domain class to a Mongo collection. For example given a domain class such as:
+
+[source,groovy]
+----
+class Person {
+    String firstName
+    String lastName
+    static hasMany = [pets:Pet]
+}
+----
+
+This will map onto a MongoDB https://api.mongodb.org/java/current/com/mongodb/client/MongoCollection.html[Collection] called "person".
+
+
+=== Embedded Documents
+
+
+It is quite common in MongoDB to embed documents within documents (nested documents). This can be done with GORM embedded types:
+
+[source,groovy]
+----
+class Person {
+    String firstName
+    String lastName
+    Address address
+    static embedded = ['address']
+}
+----
+
+You can map embedded lists and sets of documents/domain classes:
+
+[source,groovy]
+----
+class Person {
+    String firstName
+    String lastName
+    Address address
+    List otherAddresses
+    static embedded = ['address', 'otherAddresses']
+}
+----
+
+You can also embed maps of embedded classes where the keys are strings:
+
+[source,groovy]
+----
+class Person {
+    String firstName
+    String lastName
+    Map<String,Address> addresses
+    static embedded = ['addresses']
+}
+----
+
+
+
+=== Basic Collection Types
+
+
+You can also map lists and maps of basic types (such as strings) simply by defining the appropriate collection type:
+
+[source,groovy]
+----
+class Person {
+    List<String> friends
+    Map pets
+}
+
+...
+
+new Person(friends:['Fred', 'Bob'], pets:[chuck:"Dog", eddie:'Parrot']).save(flush:true)
+----
+
+Basic collection types are stored as native ArrayList and BSON documents within the Mongo documents.
+
+
+=== Customized Collection and Database Mapping
+
+
+You may wish to customize how a domain class maps onto a `MongoCollection`. This is possible using the `mapping` block as follows:
+
+[source,groovy]
+----
+class Person {
+    ..
+    static mapping = {
+        collection "mycollection"
+        database "mydb"
+    }
+}
+----
+
+In this example we see that the `Person` entity has been mapped to a collection called "mycollection" in a database called "mydb".
+
+You can also control how an individual property maps onto a Mongo Document field (the default is to use the property name itself):
+
+[source,groovy]
+----
+class Person {
+    ..
+    static mapping = {
+        firstName attr:"first_name"
+    }
+}
+----
+
+If you are using the mapping engine, for non-embedded associations by default GORM for MongoDB will map links between documents using MongoDB https://docs.mongodb.org/manual/reference/database-references/[database references] also known as `DBRefs`.
+
+If you prefer not to use DBRefs then you tell GORM to use direct links by using the `reference:false` mapping:
+
+[source,groovy]
+----
+class Person {
+    ..
+    static mapping = {
+        address reference:false
+    }
+}
+----

@@ -1,0 +1,27 @@
+=== Dynamic Attributes
+Unlike a relational database, MongoDB allows for "schemaless" persistence where there are no limits to the number of attributes a particular document can have. A GORM domain class on the other hand has a schema in that there are a fixed number of properties. For example consider the following domain class:
+
+[source,groovy]
+----
+class Plant {
+    boolean goesInPatch
+    String name
+}
+----
+
+Here there are two fixed properties, `name` and `goesInPatch`, that will be persisted into the MongoDB document. Using GORM for MongoDB you can however use dynamic properties via the Groovy subscript operator. For example:
+
+[source,groovy]
+----
+def p = new Plant(name:"Pineapple")
+p['color'] = 'Yellow'
+p['hasLeaves'] = true
+p.save()
+
+p = Plant.findByName("Pineapple")
+
+println p['color']
+println p['hasLeaves']
+----
+
+Using the subscript operator you can add additional attributes to the underlying `Document` instance that gets persisted to the MongoDB allowing for more dynamic domain models.

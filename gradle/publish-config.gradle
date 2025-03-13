@@ -1,5 +1,10 @@
 import org.grails.gradle.plugin.publishing.GrailsPublishExtension
 
+if (project.hasProperty('snapshotPublishUrl')) {
+    ext.set('mavenPublishUrl', property('snapshotPublishUrl'))
+    logger.lifecycle('Configuring {}:{} snapshot publish repo: {}', group, findProperty('pomArtifactId') ?: name, mavenPublishUrl)
+}
+
 extensions.configure(GrailsPublishExtension) {
     // Explicit `it` is required here
     it.githubSlug = 'grails/grails-data-mapping'
@@ -14,4 +19,6 @@ extensions.configure(GrailsPublishExtension) {
             'puneetbehl': 'Puneet Behl',
             'jamesfredley': 'James Fredley'
     ]
+    it.artifactId = findProperty('pomArtifactId') ?: name
+    it.publishTestSources = findProperty('pomPublishTestSources') ?: false
 }

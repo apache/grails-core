@@ -1,0 +1,33 @@
+== Multiple Data Sources
+GORM for MongoDB supports the notion of multiple data sources where multiple individual `MongoClient` instances can be configured and switched between.
+
+=== Configuring Multiple Mongo Clients
+
+include::configuration.adoc[]
+
+=== Mapping Domain Classes to Mongo Clients
+
+include::mappingDomainsToDataSources.adoc[]
+
+=== Switching between Mongo Clients
+
+include::mongoClientSwitching.adoc[]
+
+[[connectionSources]]
+=== The ConnectionSources API
+
+Introduced in GORM 6.0, the link:../api/org/grails/datastore/mapping/core/connections/ConnectionSources.html[ConnectionSources] API allows you to introspect the data sources configured for the application:
+
+[source,groovy]
+----
+@Autowired
+MongoDatastore mongoDatastore
+...
+ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources
+					= mongoDatastore.getConnectionSources()
+
+for(ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource in connectionSources) {
+	println "Name $connectionSource.name"
+	MongoClient mongoClient = connectionSource.source
+}
+----

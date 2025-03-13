@@ -1,0 +1,53 @@
+dependencies {
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    onlyIf {
+        if (project.hasProperty('skipHibernate5Tests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyMongodbTests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyDatastoreTests')) {
+            return false
+        }
+
+        true
+    }
+
+    useJUnitPlatform()
+    systemProperty('hibernate5.gorm.suite', System.getProperty('hibernate5.gorm.suite') ?: true)
+    reports.html.required = !System.getenv('CI')
+    reports.junitXml.required = !System.getenv('CI')
+    testLogging {
+        events('passed', 'skipped', 'failed')
+        showExceptions = true
+        exceptionFormat = 'full'
+        showCauses = true
+        showStackTraces = true
+
+        // set options for log level DEBUG and INFO
+        debug {
+            events('started', 'passed', 'skipped', 'failed', 'standardOut', 'standardError')
+            exceptionFormat = 'full'
+        }
+        info.events = debug.events
+        info.exceptionFormat = debug.exceptionFormat
+    }
+    afterTest { desc, result ->
+        logger.quiet(' -- Executed test {} [{}] with result: {}', desc.name, desc.className, result.resultType)
+    }
+    afterSuite { desc, result ->
+        if (!desc.parent) { // will match the outermost suite
+            def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+            def startItem = '|  ', endItem = '  |'
+            def repeatLength = startItem.length() + output.length() + endItem.length()
+            def dashes = '-' * repeatLength
+            logger.quiet('\n{}\n{}{}{}\n{}', dashes, startItem, output, endItem, dashes)
+        }
+    }
+}

@@ -1,0 +1,29 @@
+grails:
+    plugin:
+        databasemigration:
+            updateOnStart: true
+            second:
+                updateOnStart: true
+---
+server:
+    port: 0
+---
+dataSource:
+    pooled: true
+    jmxExport: true
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+    dbCreate: none
+    url: jdbc:h2:file:./multipleFirstDb
+    logSql: true
+    formatSql: true
+dataSources:
+    second:
+        pooled: true
+        jmxExport: true
+        driverClassName: org.h2.Driver
+        username: sa
+        password:
+        dbCreate: none
+        url: jdbc:h2:file:./multipleSecondDb

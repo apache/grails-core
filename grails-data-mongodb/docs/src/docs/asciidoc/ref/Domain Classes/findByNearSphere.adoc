@@ -1,0 +1,24 @@
+===== Purpose
+
+Executes a MongoDB https://docs.mongodb.org/manual/reference/operator/query/nearSphere/[$nearSphere] query
+
+===== Examples
+
+[source,groovy]
+----
+import grails.mongodb.geo.*
+...
+Restaurant.findByLocationNearSphere( Point.valueOf( 40, 40 ) )
+// native query
+Restaurant.findAllByLocationNearSphere( [$geometry: [type:'Point', coordinates: [1,7]], $maxDistance:30000] )
+// criteria query
+Restaurant.withCriteria {
+    nearSphere 'location', Point.valueOf(1,7), 300000
+}
+----
+
+===== Description
+
+Specifies a point for which a geospatial query returns the closest documents first. The query sorts the documents from nearest to farthest. MongoDB calculates distances for $nearSphere using spherical geometry.
+
+See the documentation for the https://docs.mongodb.org/manual/reference/operator/query/nearSphere/[$nearSphere] query operator.

@@ -1,0 +1,42 @@
+===== Purpose
+
+Executes a MongoDB https://docs.mongodb.org/manual/reference/operator/query/geoIntersects/[$geoIntersects] query
+
+===== Examples
+
+Given:
+
+[source,groovy]
+----
+import grails.mongodb.geo.*
+...
+class Entry {
+    ObjectId id
+    Shape shape
+
+    static mapping = {
+        shape geoIndex:'2dsphere'
+    }
+}
+...
+new Entry(shape: Polygon.valueOf([[[3, 1], [1, 2], [5, 6], [9, 2], [4, 3], [3, 1]]]) ).save()
+new Entry(shape: LineString.valueOf([[5, 2], [7, 3], [7, 5], [9, 4]]) ).save()
+new Entry(shape: Point.valueOf([5, 2])).save()
+----
+
+And then use the `findBy*GeoIntersects` method to figure out whether shapes intersect with each other:
+
+[source,groovy]
+----
+assert Entry.findByShapeGeoIntersects( Polygon.valueOf( [[ [0,0], [3,0], [3,3], [0,3], [0,0] ]] ) )
+assert Entry.findByShapeGeoIntersects( LineString.valueOf( [[1,4], [8,4]] ) )
+// native query
+assert Entry.findByShapeGeoIntersects( [ $geometry : [type: "Polygon" ,
+                                                      coordinates: [ [ [ 0 , 0 ] , [ 3 , 6 ] , [ 6 , 1 ] , [ 0 , 0 ] ] ]
+                                                      ]
+                                       ])
+----
+
+===== Description
+
+The $geoIntersects operator is a geospatial query operator that selects all locations that intersect with a GeoJSON object. See https://docs.mongodb.org/manual/reference/operator/query/geoIntersects/[$geoIntersects].

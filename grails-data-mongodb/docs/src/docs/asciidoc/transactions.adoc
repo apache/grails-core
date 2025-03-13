@@ -1,0 +1,24 @@
+== Transactions
+MongoDB doesn't support transactions directly, however GORM for MongoDB does batch up inserts and updates until the session is flushed. This makes it possible to support some rollback options.
+
+You can use either transactional services or the static `withTransaction` method. To mark a service as using the MongoDB transaction manager, use the static `transactional` property with the value `'mongo'`:
+
+[source,groovy]
+----
+static transactional = 'mongo'
+----
+
+Alternately you can do ad-hoc transactions using the `withTransaction` method:
+
+[source,groovy]
+----
+Person.withTransaction { status ->
+    new Person(name:"Bob", age:50).save()
+    throw new RuntimeException("bad")
+    new Person(name:"Fred", age:45).save()
+}
+----
+
+For example in this case neither `Person` object will be persisted to the database, because underneath the surface a persistence session is being used to batch up both insert operations into a single insert. When an exception is thrown neither insert is ever executed, hence we allow for some transactional semantics at the GORM-level.
+
+Using the lower level API you can of course also take advantage of Mongo's support for https://docs.mongodb.org/manual/tutorial/isolate-sequence-of-operations[Atomic operations].

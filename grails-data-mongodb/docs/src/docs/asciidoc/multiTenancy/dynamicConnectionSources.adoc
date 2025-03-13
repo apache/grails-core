@@ -1,0 +1,35 @@
+=== Dynamic ConnectionSources
+If you are using a multi-tenancy mode of `DATABASE` then by default the expectation is that all tenants are configured in your `application.yml` file.
+
+However, it is possible read your Mongo client connection sources dynamically using link:../api/org/grails/datastore/mapping/mongo/connections/MongoConnectionSources.html[MongoConnectionSources].
+
+The `MongoConnectionSources` class will read the mongo client configurations from a Mongo collection called `mongo.connections` by default. To configure it you must specify the `connectionSourcesClass` in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        multiTenancy:
+            mode: DATABASE
+        connectionSourcesClass: org.grails.datastore.mapping.mongo.connections.MongoConnectionSources
+        connectionsCollection: "myconnections"
+...
+----
+
+You can then even add new connections at runtime using the `ConnectionSources` API:
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.*
+
+@Autowired MongoDatastore mongoDatastore
+...
+def configuration = [url:"mongodb://localhost/moreBooks"]
+MongoClient mongoClient =
+        mongoDatastore.connectionSources
+					  .addConnectionSource("moreBooks", configuration)
+----
+
+All new connection sources will be stored within the specified `connectionsCollection` and if the application is restarted will read from the `connectionsCollection`.
+
+WARNING: GORM for MongoDB does not implement provisioning of new MongoDB instances at runtime. This is something that would need to be implemented by a cloud services provider for example.

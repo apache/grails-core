@@ -1,0 +1,31 @@
+version = projectVersion
+group = 'examples'
+
+apply plugin: 'groovy'
+apply plugin: 'org.grails.grails-web'
+
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    implementation 'org.grails:grails-core'
+    implementation 'org.grails:grails-web-boot'
+    implementation 'org.grails.plugins:views-json'
+    implementation 'org.grails.plugins:views-markup'
+    implementation 'org.grails.plugins:gsp'
+    implementation 'org.grails:grails-plugin-databinding'
+    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.grails:grails-plugin-url-mappings'
+    implementation project(':mongodb-gorm')
+
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    runtimeOnly project(':mongodb-views-json-templates')
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+
+    integrationTestImplementation 'org.grails:grails-testing-support'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')

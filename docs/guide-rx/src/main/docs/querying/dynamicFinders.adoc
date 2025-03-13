@@ -1,5 +1,5 @@
 === Dynamic Finders
-Although _Where queries_ are preferred, _Dynamic finders_ are another option for simple queries and are also very expressive. The https://gorm.grails.org/latest/hibernate/manual/index.html#finders[syntax for Dynamic finders is described in the GORM user guide]. The major difference in RxGORM is that all dynamic finders return an `rx.Observable`:
+Although _Where queries_ are preferred, _Dynamic finders_ are another option for simple queries and are also very expressive. The https://gorm.grails.org/latest/hibernate5/manual/index.html#finders[syntax for Dynamic finders is described in the GORM user guide]. The major difference in RxGORM is that all dynamic finders return an `rx.Observable`:
 
 [source,groovy]
 ----

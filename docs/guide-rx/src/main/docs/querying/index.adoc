@@ -1,10 +1,10 @@
 == Querying
 RxGORM supports all the typical ways of querying that you are used to with GORM including:
 
-* https://gorm.grails.org/latest/hibernate/manual/index.html#finders[Dynamic finders]
-* https://gorm.grails.org/latest/hibernate/manual/index.html#whereQueries[Where queries]
-* https://gorm.grails.org/latest/hibernate/manual/index.html#detachedCriteria[Detached Criteria]
-* https://gorm.grails.org/latest/hibernate/manual/index.html#criteria[Criteria queries]
+* https://gorm.grails.org/latest/hibernate5/manual/index.html#finders[Dynamic finders]
+* https://gorm.grails.org/latest/hibernate5/manual/index.html#whereQueries[Where queries]
+* https://gorm.grails.org/latest/hibernate5/manual/index.html#detachedCriteria[Detached Criteria]
+* https://gorm.grails.org/latest/hibernate5/manual/index.html#criteria[Criteria queries]
 
 The major difference is that all query operations return an `Observable`. In this section we will go through the various ways you can query for GORM objects.
 

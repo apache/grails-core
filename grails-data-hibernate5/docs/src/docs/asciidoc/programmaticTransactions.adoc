@@ -1,0 +1,60 @@
+GORM's transaction management is built on Spring and uses Spring's Transaction abstraction for dealing with programmatic transactions.
+
+However, GORM classes have been enhanced to make this simpler with the link:../api/org/grails/datastore/gorm/GormEntity.html#withTransaction(groovy.lang.Closure)[withTransaction(Closure)]  method. This method has a single parameter, a Closure, which has a single parameter which is a Spring https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/TransactionStatus.html[TransactionStatus] instance.
+
+==== Using the withTransaction Method
+
+Here's an example of using `withTransaction` in a controller methods:
+
+[source,java]
+----
+def transferFunds() {
+    Account.withTransaction { status ->
+        def source = Account.get(params.from)
+        def dest = Account.get(params.to)
+
+        def amount = params.amount.toInteger()
+        if (source.active) {
+            if (dest.active) {
+                source.balance -= amount
+                dest.amount += amount
+            }
+            else {
+                status.setRollbackOnly()
+            }
+        }
+    }
+}
+----
+
+In this example we rollback the transaction if the destination account is not active. 
+
+Also, if an `Exception` (both checked or runtime exception) or `Error` is thrown during the process the transaction will automatically be rolled back..
+
+WARNING: GORM versions prior to 6.0.0 did not roll back transactions for a checked `Exception`.
+
+You can also use "save points" to rollback a transaction to a particular point in time if you don't want to rollback the entire transaction. This can be achieved through the use of Spring's https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/SavepointManager.html[SavePointManager] interface.
+
+The `withTransaction` method deals with the begin/commit/rollback logic for you within the scope of the block.
+
+==== Using TransactionService
+
+Since GORM 6.1, if you need more flexibility then instead you can instead take advantage of the link:../api/grails/gorm/transactions/TransactionService.html[TransactionService], which can be obtained by looking it up from from the `HibernateDatastore`:
+
+[source,groovy]
+----
+import grails.gorm.transactions.*
+
+TransactionService transactionService = datastore.getService(TransactionService)
+----
+
+Or via dependency injection:
+
+[source,groovy]
+----
+import grails.gorm.transactions.*
+
+@Autowired TransactionService transactionService
+----
+
+Once you have an instance then there are various including `withTransaction`, `withRollback`, `withNewTransaction` etc. which helps with the construction of programmatic transactions.

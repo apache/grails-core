@@ -1,12 +1,10 @@
 buildscript {
-	ext {
-		springBootVersion = "2.1.1.RELEASE"
-	}
 	repositories {
 		mavenCentral()
 	}
 	dependencies {
-		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath platform("org.grails:grails-bom:$grailsVersion")
+		classpath("org.springframework.boot:spring-boot-gradle-plugin")
 	}
 }
 
@@ -16,37 +14,34 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 dependencies {
+	implementation platform("org.grails:grails-bom:$grailsVersion")
+
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation "org.springframework.boot:spring-boot-starter-web"
-	implementation "org.grails:gorm-hibernate5-spring-boot:7.3.1"
+	implementation project(':hibernate5-boot-plugin')
 	implementation "org.hibernate:hibernate-core:$hibernateCoreVersion"
-	implementation "org.hibernate:hibernate-ehcache:5.6.15.Final"
-	implementation "org.grails:grails-core:5.3.2"
+	implementation "org.hibernate:hibernate-ehcache:$hibernateCoreVersion", {
+		// exclude javax variant of hibernate-core
+		exclude group: 'org.hibernate', module: 'hibernate-core'
+	}
+	implementation "org.grails:grails-core"
 	implementation project(":gorm-graphql")
-	implementation 'org.codehaus.groovy:groovy-astbuilder:3.0.19'
-	implementation 'jakarta.transaction:jakarta.transaction-api:2.0.1'
-	implementation 'com.github.javaparser:javaparser-core:3.25.5'
+	//implementation 'org.codehaus.groovy:groovy-astbuilder:3.0.19'
+	implementation 'jakarta.transaction:jakarta.transaction-api'
+	implementation 'com.github.javaparser:javaparser-core'
 	implementation "com.graphql-java:graphql-java:$graphqlJavaVersion"
-	implementation 'junit:junit:4.13.1'
-	runtimeOnly 'com.h2database:h2:2.1.214'
-	runtimeOnly 'org.apache.tomcat:tomcat-jdbc:10.1.9'
-	runtimeOnly "org.apache.tomcat.embed:tomcat-embed-logging-log4j:8.5.0"
-	implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+	implementation 'junit:junit'
+	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+	runtimeOnly "org.apache.tomcat.embed:tomcat-embed-logging-log4j"
+	implementation 'jakarta.persistence:jakarta.persistence-api'
 
-	runtimeOnly "javax.el:javax.el-api:3.0.0"
-	runtimeOnly "org.glassfish:javax.el:3.0.0"
+	runtimeOnly "javax.el:javax.el-api"
+	runtimeOnly "org.glassfish:javax.el"
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
-	testImplementation 'junit:junit:4.13.2'
-
-
-
-
-}
-
-repositories {
-	mavenCentral()
+	testImplementation 'org.spockframework:spock-core'
+	testImplementation 'junit:junit'
 }
 
 tasks.withType(Test) {

@@ -1,0 +1,9 @@
+=== Combining MongoDB and Hibernate
+If you have both the Hibernate and Mongo plugins installed then by default all classes in the `grails-app/domain` directory will be persisted by Hibernate and not Mongo. If you want to persist a particular domain class with Mongo then you must use the `mapWith` property in the domain class:
+
+[source,groovy]
+----
+static mapWith = "mongo"
+----
+
+

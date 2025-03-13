@@ -1,7 +1,7 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.TestEntity
+import grails.gorm.tck.TestEntity
 
 /**
  * Created by graemerocher on 22/08/2017.

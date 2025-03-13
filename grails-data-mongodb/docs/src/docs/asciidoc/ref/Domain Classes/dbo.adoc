@@ -1,0 +1,18 @@
+===== Purpose
+
+Returns the MongoDB https://api.mongodb.com/java/current/org/bson/Document.html[Document] for an instance of a domain class
+
+WARNING: Using the `Document` object directly is discouraged, because it's inefficient. It's better to use <<dynamicAttributes>>.
+
+===== Examples
+
+[source,groovy]
+----
+def b = Book.get(1)
+
+println b.dbo
+----
+
+===== Description
+
+The `dbo` property allows access to the underlying MongoDB https://api.mongodb.com/java/current/org/bson/Document.html[Document], which is a respresentation of the stored BSON document that can be manipulated in memory.

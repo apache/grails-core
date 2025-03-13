@@ -60,7 +60,7 @@ Book.get(id)
     }
 ----
 
-The `switchMap` transforms an `Observable` and converts the result into another `Observable`. However, this is not the most efficient way to perform updates as you can use https://gorm.grails.org/latest/hibernate/manual/index.html#whereQueries[where queries] to update an instance without retrieving it:
+The `switchMap` transforms an `Observable` and converts the result into another `Observable`. However, this is not the most efficient way to perform updates as you can use https://gorm.grails.org/latest/hibernate5/manual/index.html#whereQueries[where queries] to update an instance without retrieving it:
 
 
 [source,groovy]

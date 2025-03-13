@@ -1,0 +1,60 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails.plugins'
+
+ext {
+    pomArtifactId = 'views-json-templates'
+    pomTitle = 'Grails MongoDB JSON Views'
+    pomDescription = 'Provides JSON Views for MongoDB to the Grails framework.'
+    pomDevelopers = ['puneetbehl': 'Puneet Behl']
+    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
+}
+
+dependencies {
+
+    implementation(platform("org.grails:grails-bom:$grailsVersion"))
+
+    api 'org.grails.plugins:views-json'
+
+    implementation project(':mongodb-gorm')
+    implementation project(':mongodb-gorm-bson')
+
+    compileOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during compileGsonViews task
+}
+
+def templateSourceDir = layout.projectDirectory.dir('src/templates')
+def compilationOutputDir = layout.buildDirectory.dir('classes/groovy/main')
+sourceSets {
+    main {
+        groovy {
+            // Add templates as source dir
+            srcDirs = [templateSourceDir]
+        }
+    }
+}
+
+tasks.register('compileViews', JavaExec) {
+    inputs.dir(templateSourceDir)
+    outputs.dir(compilationOutputDir)
+    mainClass = 'grails.plugin.json.view.JsonViewCompiler'
+    classpath = configurations.compileClasspath
+    args(templateSourceDir.asFile, compilationOutputDir.get().asFile, '17', ' ', ' ', 'none', 'UTF-8')
+}
+
+// This is needed to trigger compilation of the views
+tasks.named('classes') {
+    dependsOn 'compileViews'
+}
+
+// There are no javadocs for this project.
+// This is a workaround as a javadoc jar is required for publishing.
+tasks.register('javadocJar', Jar) {
+    from 'src/templates'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

@@ -127,6 +127,10 @@ jobs:
           key: cache-local-maven-${{ github.sha }}
       - name: "🪶 Add mavenLocal repository to build"
         run: sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' build.gradle
+      - name: "▶️ Start MongoDB (needed for some tests)"
+        uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # v1.12.0 (Use commit sha as this is a 3rd party action)
+        with:
+          mongodb-version: '8'
       - name: "🔨 Build and test the project using the locally built Groovy snapshot"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}

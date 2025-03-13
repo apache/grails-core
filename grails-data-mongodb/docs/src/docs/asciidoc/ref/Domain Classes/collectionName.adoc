@@ -1,0 +1,14 @@
+===== Purpose
+
+Returns the name of the MongoDB https://api.mongodb.org/java/current/com/mongodb/DBCollection.html[collection] used for the current domain class
+
+===== Examples
+
+[source,java]
+----
+println Book.collectionName
+----
+
+===== Description
+
+The `collectionName` property allows introspection of the name of the https://api.mongodb.org/java/current/com/mongodb/DBCollection.html[DBCollection] object used by a given domain class. Can be used in conjunction with `useCollection` to switch to different collections and back again.

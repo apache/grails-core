@@ -1,0 +1,38 @@
+The following transformations can be applied to any class to simplify greatly the development of Multi-Tenant applications. These include:
+
+- `@CurrentTenant` - Resolve the current tenant for the context of a class or method
+- `@Tenant` - Use a specific tenant for the context of a class or method
+- `@WithoutTenant` - Execute logic without a specific tenant (using the default connection)
+
+For example:
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.*
+
+// resolve the current tenant for every method
+@CurrentTenant
+class TeamService {
+
+    // execute the countPlayers method without a tenant id
+    @WithoutTenant
+    int countPlayers() {
+        Player.count()
+    }
+
+    // use the tenant id "another" for all GORM logic within the method
+    @Tenant({"another"})
+    List<Team> allTwoTeams() {
+        Team.list()
+    }
+
+    List<Team> listTeams() {
+        Team.list(max:10)
+    }
+
+    @Transactional
+    void addTeam(String name) {
+        new Team(name:name).save(flush:true)
+    }
+}
+----

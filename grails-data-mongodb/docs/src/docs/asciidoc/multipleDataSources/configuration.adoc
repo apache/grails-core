@@ -1,0 +1,16 @@
+To configure multiple Mongo client connections you need to use the `grails.mongodb.connections` setting. For example in `application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    mongodb:
+        url: mongodb://localhost/books
+        connections:
+            moreBooks:
+                url: mongodb://localhost/moreBooks
+            evenMoreBooks:
+                url: mongodb://localhost/moreBooks
+----
+
+You can configure individual settings for each Mongo client. If a setting is not specified by default the setting is inherited from the default Mongo client.

@@ -1,0 +1,20 @@
+===== Purpose
+
+Executes a MongoDB https://docs.mongodb.org/manual/reference/operator/query/geoWithin/[$geoWithin] query
+
+===== Examples
+
+[source,groovy]
+----
+Restaurant.findByLocationGeoWithin( Polygon.valueOf([ [0, 0], [100, 0], [100, 100], [0, 100], [0, 0] ]) )
+Restaurant.findByLocationGeoWithin( Box.valueOf( [[25, 25], [100, 100]] ) )
+Restaurant.findByLocationGeoWithin( Circle.valueOf( [[50, 50], 100] ) )
+Restaurant.findByLocationGeoWithin( Sphere.valueOf( [[50, 50], 0.06]) )
+// native query
+Restaurant.findByPointGeoWithin([ '$polygon': [ [0.0d, 0.0d], [3.0d, 0.0d], [3.0d, 3.0d], [0.0d, 3.0d], [0.0d, 0.0d] ] ])
+----
+
+===== Description
+
+The $geoWithin operator is a geospatial query operator that queries for a defined point, line or shape that exists entirely within another defined shape. When determining inclusion, MongoDB considers the border of a shape to be part of the shape, subject to the precision of floating point numbers.
+See https://docs.mongodb.org/manual/reference/operator/query/geoWithin/[$geoWithin] for more information.

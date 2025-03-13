@@ -1,0 +1,24 @@
+To configure multiple data sources you need to use the `dataSources` setting. For example in `application.yml`:
+
+[source,yaml]
+----
+dataSource:
+    pooled: true
+    dbCreate: create-drop
+    url: jdbc:h2:mem:books
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+dataSources:
+    moreBooks:
+        url: jdbc:h2:mem:moreBooks
+        hibernate:
+            readOnly: true
+    evenMoreBooks:
+        url: jdbc:h2:mem:evenMoreBooks
+----
+
+You can configure individual settings for each data source. If a setting is not specified by default the setting is inherited from the default data source, so in the example above there is no need to specify the `driverClassName` for each data source if the same driver is used for all.
+
+TIP: For more information on configuration see the <<configuration,Configuration section>>.
+

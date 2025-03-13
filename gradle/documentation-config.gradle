@@ -56,10 +56,36 @@ tasks.register('data-mapping-groovydoc', Groovydoc) {
     }
 }
 
+tasks.register('copyMongodbDocs', Copy) {
+    dependsOn(':mongodb-docs:docs')
+
+    def mongodbSourceDir =  project(':mongodb-docs').layout.buildDirectory.dir('docs')
+    def targetDir = rootProject.layout.buildDirectory.dir('docs/mongodb')
+
+    from(mongodbSourceDir)
+    into(targetDir)
+
+    inputs.dir(mongodbSourceDir)
+    outputs.dir(targetDir)
+}
+
+tasks.register('copyHibernate5Docs', Copy) {
+    dependsOn(':hibernate5-docs:docs')
+
+    def hibernate5SourceDir =  project('::hibernate5-docs').layout.buildDirectory.dir('docs')
+    def targetDir = rootProject.layout.buildDirectory.dir('docs/hibernate5')
+
+    from(hibernate5SourceDir)
+    into(targetDir)
+
+    inputs.dir(hibernate5SourceDir)
+    outputs.dir(targetDir)
+}
+
 tasks.register('docs') {
     group = 'documentation'
     dependsOn(':data-mapping-groovydoc')
-    finalizedBy('copyRootWebsite','copyGuides')
+    finalizedBy('copyRootWebsite','copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs')
 }
 
 tasks.register('copyRootWebsite', Copy) {

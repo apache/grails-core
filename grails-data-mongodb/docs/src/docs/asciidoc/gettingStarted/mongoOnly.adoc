@@ -1,0 +1,16 @@
+=== Using MongoDB Standalone
+If you plan to use MongoDB as your primary datastore then you need to remove the Hibernate plugin from the `build.gradle` file by commenting out the hibernate line in the plugins block
+
+[source,groovy]
+----
+compile 'org.grails.plugins:hibernate'
+----
+
+With this done all domain classes in grails-app/domain will be persisted via MongoDB and not Hibernate. You can create a domain class by running the regular `create-domain-class` command:
+
+[source,groovy]
+----
+grails create-domain-class Person
+----
+
+The `Person` domain class will automatically be a persistent entity that can be stored in MongoDB.

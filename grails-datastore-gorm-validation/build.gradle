@@ -49,7 +49,6 @@ dependencies {
 
     testImplementation 'org.spockframework:spock-core'
 
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 

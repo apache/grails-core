@@ -1,0 +1,41 @@
+To unit test with https://junit.org/junit4[JUnit] it is largely similar to Spock, just following different idioms.
+
+So instead of `setupSpec` use `@BeforeClass`:
+
+[source,groovy]
+----
+import org.junit.*
+import grails.gorm.transactions.*
+import org.grails.orm.hibernate.HibernateDatastore
+import org.springframework.transaction.PlatformTransactionManager
+
+class ExampleTest  {
+
+    static HibernateDatastore hibernateDatastore
+
+    PlatformTransactionManager transactionManager
+
+    @BeforeClass
+    void setupGorm() {
+       hibernateDatastore = new HibernateDatastore(Person)
+    }
+
+    @AfterClass
+    void shutdownGorm() {
+       hibernateDatastore.close()
+    }
+
+    @Before
+    void setup() {
+        transactionManager = hibernateDatastore.getTransactionManager()
+    }
+
+    @Rollback
+    @Test
+    void testSomething() {
+       // your logic here
+    }
+}
+----
+
+WARNING: JUnit doesn't have anything like Spock's `AutoCleanup` so you must call `close()` on the `HibernateDatastore` manually!

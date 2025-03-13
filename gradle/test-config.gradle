@@ -1,8 +1,28 @@
+dependencies {
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
 tasks.named('compileTestGroovy', GroovyCompile) {
     groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
 }
 
 tasks.withType(Test).configureEach {
+    onlyIf {
+        if (project.hasProperty('skipDatastoreTests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyMongodbTests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyHibernate5Tests')) {
+            return false
+        }
+
+        true
+    }
+
     useJUnitPlatform()
     testLogging {
         events 'passed', 'skipped', 'failed'

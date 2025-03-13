@@ -1,0 +1,18 @@
+To get the best performance out of your queries it is often necessary to tailor the table index definitions. How you tailor them is domain specific and a matter of monitoring usage patterns of your queries. With GORM's DSL you can specify which columns are used in which indexes:
+
+[source,java]
+----
+class Person {
+    String firstName
+    String address
+    static mapping = {
+        table 'people'
+        version false
+        id column: 'person_id'
+        firstName column: 'First_Name', index: 'Name_Idx'
+        address column: 'Address', index: 'Name_Idx,Address_Index'
+    }
+}
+----
+
+Note that you cannot have any spaces in the value of the `index` attribute; in this example `index:'Name_Idx, Address_Index'` will cause an error.

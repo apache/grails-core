@@ -1,0 +1,74 @@
+plugins {
+    id 'java-library'
+    id 'org.grails.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.grails.plugins'
+
+ext {
+    apiDocs = true
+    pomArtifactId = 'database-migration'
+    pomTitle = 'Grails Database Migration Plugin'
+    pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications'
+    pomDevelopers = [
+        'kazukiyamamoto': 'Kazuki YAMAMOTO',
+        'jamesfredley': 'James Fredley',
+    ]
+    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
+}
+
+dependencies {
+    // TODO: Clarify and clean up dependencies
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    api("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
+    api("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+        exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
+        exclude group: 'org.hibernate', module: 'hibernate-envers'
+        exclude group: 'com.h2database', module: 'h2'
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
+    }
+
+    api('org.grails:grails-shell') {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
+
+    compileOnly "org.springframework.boot:spring-boot-starter-logging"
+    compileOnly "org.springframework.boot:spring-boot-autoconfigure"
+    compileOnly project(":hibernate5-grails-plugin")
+    compileOnly "org.grails:grails-core"
+    compileOnly "org.apache.groovy:groovy-sql"
+    compileOnly "org.apache.groovy:groovy-xml"
+
+    testImplementation "org.springframework.boot:spring-boot-starter-tomcat"
+    testImplementation project(":hibernate5-grails-plugin")
+    testImplementation "org.grails:grails-core"
+    testImplementation project(":grails-gorm-testing-support")
+    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "com.h2database:h2"
+}
+
+tasks.named('jar', Jar) {
+    exclude('testapp/**/**')
+}
+
+tasks.withType(Test).configureEach {
+    develocity.testRetry {
+        if (isCiBuild) {
+            maxRetries = 2
+            maxFailures = 20
+            failOnPassedAfterRetry = true
+            filter {
+                excludeClasses.add('*.GroovyChangeLogSpec')
+            }
+        }
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+}

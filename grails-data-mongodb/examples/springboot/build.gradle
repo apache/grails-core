@@ -1,0 +1,17 @@
+apply plugin: 'groovy'
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    implementation project(':mongodb-boot-plugin')
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.spockframework:spock-core'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')

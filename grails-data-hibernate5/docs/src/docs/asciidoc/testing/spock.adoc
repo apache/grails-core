@@ -1,0 +1,109 @@
+https://docs.spockframework.org[Spock] is the recommended tool for writing unit tests with GORM and is trivial to setup.
+
+==== GORM with Hibernate and Spock Basics
+
+The following is an example Spock unit test:
+
+[source,groovy]
+----
+import spock.lang.*
+import grails.gorm.annotation.Entity
+import org.grails.orm.hibernate.HibernateDatastore
+
+class ExampleSpec extends Specification { <1>
+
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore <2>
+
+    void setupSpec() {
+       hibernateDatastore = new HibernateDatastore(Person) <3>
+    }
+
+    void "test something"() { <4>
+       // your logic here
+    }
+}
+
+@Entity <5>
+class Person {
+    ...
+}
+----
+
+<1> The test should extend `spock.lang.Specification`
+<2> The `Shared` annotation is used to indicate to Spock that the `HibernateDatastore` is shared across all tests. The `AutoCleanup` annotation makes sure that `HibernateDatastore` is shutdown when all tests finish executing.
+<3> Within the `setupSpec` method a new `HibernateDatastore` is constructed with the classes to use as the argument to the constructor.
+<4> You then write your test logic within each method
+<5> You can inline domain classes within the unit test if you annotate them with `@Entity`
+
+==== Spock and Transactions
+
+Note that in general you have to wrap your test execution logic in a session or transaction. The easiest way to do this is with `grails.gorm.transactions.Transactional`:
+
+[source,groovy]
+----
+...
+import grails.gorm.transactions.*
+import org.springframework.transaction.PlatformTransactionManager
+
+class ExampleSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore
+    @Shared PlatformTransactionManager transactionManager <1>
+
+    void setupSpec() {
+        hibernateDatastore = new HibernateDatastore(Person)
+        transactionManager = hibernateDatastore.getTransactionManager() <2>
+    }
+
+    @Transactional <3>
+    def setup() {
+        new Person(firstName:"Fred").save()
+    }
+
+    @Rollback <4>
+    void "test execute GORM standalone in a unit test"() {
+        // your logic here
+    }
+}
+----
+
+<1> The `PlatformTransactionManager` is defined as a `Shared` field
+<2> You can obtain the `PlatformTransactionManager` from the `HibernateDatastore`
+<3> The `Transactional` annotation is used to setup test data
+<4> The `Rollback` annotation is used to rollback any changes made within each test
+
+In the example above, each test method is wrapped in a transaction that rolls back any changes using the `grails.gorm.transactions.Rollback` annotation.
+
+
+TIP: If you want to setup some test data within the `setupSpec` method that is shared across all tests then you can use `withTransaction`:
+
+
+[source,groovy]
+----
+...
+void setupSpec() {
+    hibernateDatastore = new HibernateDatastore(Person)
+    ...
+    Person.withTransaction {
+        new Person(firstName:"Fred").save()
+    }
+}
+----
+
+==== Configuring GORM in Spock
+
+If you need to configure GORM within a Spock unit test you can pass a map to the constructor of `HibernateDatastore`. For example to setup multi-tenancy:
+
+[source,groovy]
+----
+...
+void setupSpec() {
+    Map configuration = [
+        'grails.gorm.multiTenancy.mode':'DISCRIMINATOR',
+        'grails.gorm.multiTenancy.tenantResolverClass':SystemPropertyTenantResolver
+    ]
+    hibernateDatastore = new HibernateDatastore(configuration, Person)
+    ...
+}
+----
+

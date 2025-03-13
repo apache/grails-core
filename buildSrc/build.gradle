@@ -8,7 +8,7 @@ file('../gradle.properties').withInputStream {
 }
 
 repositories {
-    mavenLocal()
+//    mavenLocal()
     maven { url = 'https://repo.grails.org/grails/core' }
     mavenCentral()
     if (System.getenv('GITHUB_MAVEN_PASSWORD')) {
@@ -25,5 +25,7 @@ repositories {
 dependencies {
     implementation platform("org.grails:grails-bom:${versions.getProperty('grailsVersion')}")
     implementation 'org.grails:grails-gradle-plugin'
-    runtimeOnly 'io.github.gradle-nexus:publish-plugin:2.0.0'
+    implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    implementation 'org.grails.plugins:views-gradle'
+    implementation 'org.springframework.boot:spring-boot-gradle-plugin'
 }

@@ -1,0 +1,21 @@
+== Switching Database or Collection at Runtime
+In addition to storing dynamic attributes, as of version 1.3.0 of the plugin you can also switch which database and/or collection to persist to at runtime.
+
+For example:
+
+[source,groovy]
+----
+Person.withDatabase("administrators") {
+    new Person(name:"Bob").save()
+}
+----
+
+The above example will save a `Person` instance to the 'administrators' database. The database is used for the scope of the closure. You can switch database for the scope of the active session:
+
+[source,groovy]
+----
+Person.useDatabase("administrators") 
+new Person(name:"Bob").save()
+----
+
+In addition, there are equivalent `withCollection` and `useCollection` methods for switching collection at runtime.

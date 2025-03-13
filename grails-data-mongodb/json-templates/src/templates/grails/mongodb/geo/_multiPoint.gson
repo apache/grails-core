@@ -1,0 +1,12 @@
+/**
+ * A template for rendering a GeoJSON MultiPoint in MongoDB
+ */
+import grails.mongodb.geo.*
+import groovy.transform.Field
+
+@Field MultiPoint multiPoint
+
+json {
+    type "MultiPoint"
+    coordinates multiPoint.asList()
+}

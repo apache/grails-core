@@ -1,0 +1,59 @@
+== Using the MongoDB Driver Directly
+A lower level API is provided by the plugin via the MongoDB driver
+
+NOTE: There is an excellent tutorial on how to use the MongoDB Java driver's API directly in the https://mongodb.github.io/mongo-java-driver/3.1/driver/getting-started/quick-tour/[MongoDB documentation]
+
+An example can be seen below:
+
+[source,groovy]
+----
+// Get a db reference in the old fashion way
+def db = mongo.getDatabase("mydb")
+
+// Insert a document
+db.languages.insert([name: 'Groovy'])
+// A less verbose way to do it
+db.languages.insert(name: 'Ruby')
+// Yet another way
+db.languages << [name: 'Python']
+
+// Insert a list of documents
+db.languages << [[name: 'Javascript', type: 'prototyped'], [name: 'Ioke', type: 'prototyped']]
+----
+
+
+To get hold of the `mongo` instance (which is an instance of the https://api.mongodb.org/java/current/com/mongodb/Mongo.html[com.mongodb.Mongo] class) inside a controller or service simple define a `mongo` property:
+
+[source,groovy]
+----
+def mongo
+def myAction = {
+    def db = mongo.getDatabase("mongo")
+    db.languages.insert([name: 'Groovy'])
+}
+----
+
+A request scoped bean is also available for the default database (typically the name of your application, unless specified by the `databaseName` config option, plus the suffix "DB").
+
+[source,groovy]
+----
+def peopleDB
+def myAction = {
+    peopleDB.languages.insert([name: 'Fred'])
+}
+----
+
+Each domain class you define also has a `collection` property that allows easy access to the underlying `Collection` instance:
+
+[source,groovy]
+----
+Person.collection.count() == 1
+Person.collection.findOne(firstName:"Fred").lastName == "Flintstone"
+----
+
+You can easily convert from a native MongoDB `Document` into an entity using a cast:
+
+[source,groovy]
+----
+def fred = Person.collection.findOne(firstName:"Fred") as Person
+----

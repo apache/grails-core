@@ -1,0 +1,18 @@
+=== Customizing the WriteConcern
+A feature of MongoDB is its ability to customize how important a database write is to the user. The Java client models this as a https://api.mongodb.org/java/current/com/mongodb/WriteConcern.html[WriteConcern] and there are various options that indicate whether the client cares about server or network errors, or whether the data has been successfully written or not.
+
+If you wish to customize the `WriteConcern` for a domain class you can do so in the mapping block:
+
+[source,groovy]
+----
+import com.mongodb.WriteConcern
+
+class Person {
+    String name
+    static mapping = {
+        writeConcern WriteConcern.FSYNC_SAFE
+    }
+}
+----
+
+NOTE: For versioned entities, if a lower level of WriteConcern than WriteConcern.ACKNOWLEDGE is specified, WriteConcern.ACKNOWLEDGE will also be used for updates, to ensure that optimistic locking failures are reported.

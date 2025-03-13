@@ -1,0 +1,52 @@
+dependencies {
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('compileTestGroovy', GroovyCompile) {
+    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
+}
+
+tasks.withType(Test).configureEach {
+    onlyIf {
+        if (project.hasProperty('skipMongodbTests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyHibernate5Tests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyDatastoreTests')) {
+            return false
+        }
+
+        true
+    }
+
+    useJUnitPlatform()
+    maxParallelForks = 1
+    if (isCiBuild) {
+        forkEvery = 10
+    } else {
+        forkEvery = 30
+    }
+    jvmArgs = ['-Xmx1028M']
+    afterSuite {
+        System.out.print('.')
+        System.out.flush()
+    }
+    testLogging {
+        events('passed', 'skipped', 'failed')
+        exceptionFormat = 'full'
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+    }
+    // Used in the TCK test to selectively enable/disable tests
+    systemProperty('mongodb.gorm.suite', 'true')
+}
+
+// Because the mongo tests do not use a container by default, the resource is exclusive and the tests must be exclusive
+tasks.withType(Test).configureEach { Task task ->
+    task.outputs.dir rootProject.layout.buildDirectory.dir('mongo-test-serialize')
+}

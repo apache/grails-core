@@ -4,7 +4,6 @@ import grails.gorm.annotation.Entity
 import grails.gorm.tests.GormDatastoreSpec
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.model.MappingContext
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 23/08/2017.
@@ -14,7 +13,7 @@ class ArrayMaxSizeSpec extends GormDatastoreSpec {
     void "test size validation"() {
 
         given:
-        def context = session.datastore.mappingContext
+        MappingContext context = session.datastore.mappingContext
         context.setValidatorRegistry(new DefaultValidatorRegistry(context, session.datastore.getConnectionSources().getDefaultConnectionSource().settings))
         ArrayEntity invalid = new ArrayEntity(field: "foo", bytes: new byte[0], stringArray: new String[0])
 

@@ -1,5 +1,6 @@
 package grails.gorm.tests
 
+import grails.gorm.tck.TestEntity
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable

@@ -1,0 +1,14 @@
+===== Purpose
+
+Executes a MongoDB https://docs.mongodb.org/manual/reference/operator/query/text/#op._S_text[$text] search query and returns the number of hits.
+
+===== Examples
+
+[source,groovy]
+----
+assert Product.countHits("coffee") == 5
+----
+
+===== Description
+
+The `countHits` method uses MongoDB's full text search support to perform full text search on a "text" index and return the size of the returned cursor.

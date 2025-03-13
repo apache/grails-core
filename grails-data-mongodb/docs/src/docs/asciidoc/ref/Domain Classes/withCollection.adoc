@@ -1,0 +1,16 @@
+===== Purpose
+
+Allows switching which collection to use to persist for the domain class for the scope of the given closure
+
+===== Examples
+
+[source,groovy]
+----
+Book.withCollection("non-fiction") {
+    // code here
+}
+----
+
+===== Description
+
+The `useCollection` method allows switching, at runtime, the collection used persist and retrieve domain classes. The `collectionName` property will return the current collection being used. Note that the method switches the collection used for the scope of given closure (ie. it is not permanent). If you wish to permanently change the collection used then you need to configure the mapping of the domain class.

@@ -1,0 +1,15 @@
+/**
+ * A template for rendering a GeoJSON GeometryCollection in MongoDB
+ */
+import grails.mongodb.geo.*
+import groovy.transform.Field
+
+@Field GeometryCollection geometryCollection
+
+json {
+    type "GeometryCollection"
+    geometries( geometryCollection ) { GeoJSON current ->
+        type current.getClass().simpleName
+        coordinates current.asList()
+    }
+}

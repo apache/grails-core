@@ -1,9 +1,9 @@
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.ChildEntity
+import grails.gorm.tck.ChildEntity
 import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.PlantCategory
-import grails.gorm.tests.TestEntity
+import grails.gorm.tck.PlantCategory
+import grails.gorm.tck.TestEntity
 
 class QueryAssociationSpec extends GormDatastoreSpec {
 

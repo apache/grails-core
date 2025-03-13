@@ -1,0 +1,135 @@
+Within a domain class constraints are defined with the constraints property that is assigned a code block:
+
+[source,java]
+----
+class User {
+    String login
+    String password
+    String email
+    Integer age
+
+    static constraints = {
+      ...
+    }
+}
+----
+
+You then use method calls that match the property name for which the constraint applies in combination with named parameters to specify constraints:
+
+[source,java]
+----
+class User {
+    ...
+
+    static constraints = {
+        login size: 5..15, blank: false, unique: true
+        password size: 5..15, blank: false
+        email email: true, blank: false
+        age min: 18
+    }
+}
+----
+
+In this example we've declared that the `login` property must be between 5 and 15 characters long, it cannot be blank and must be unique. We've also applied other constraints to the `password`, `email` and `age` properties.
+
+NOTE: By default, all domain class properties are not nullable (i.e. they have an implicit `nullable: false` constraint).
+
+Note that constraints are only evaluated once which may be relevant for a constraint that relies on a value like an instance of `java.util.Date`.
+
+[source,java]
+----
+class User {
+    ...
+
+    static constraints = {
+        // this Date object is created when the constraints are evaluated, not
+        // each time an instance of the User class is validated.
+        birthDate max: new Date()
+    }
+}
+----
+
+
+=== Referencing Instances in Constraints
+
+
+It's very easy to attempt to reference instance variables from the static constraints block, but this isn't legal in Groovy (or Java). If you do so, you will get a `MissingPropertyException` for your trouble. For example, you may try the following:
+
+[source,groovy]
+----
+class Response {
+    Survey survey
+    Answer answer
+
+    static constraints = {
+        survey blank: false
+        answer blank: false, inList: survey.answers
+    }
+}
+----
+
+See how the `inList` constraint references the instance property `survey`? That won't work. Instead, use a custom `validator` constraint:
+
+[source,groovy]
+----
+class Response {
+    ...
+    static constraints = {
+        survey blank: false
+        answer blank: false, validator: { val, Response obj -> val in obj.survey.answers }
+    }
+}
+----
+
+In this example, the `obj` argument to the custom validator is the domain _instance_ that is being validated, so we can access its `survey` property and return a boolean to indicate whether the new value for the `answer` property, `val`, is valid.
+
+=== Cascade constraints validation
+
+If GORM entity references some other entities, then during its constraints evaluation (validation) the constraints of the referenced entity could be 
+evaluated also, if needed. There is a special parameter `cascadeValidate` in the entity mappings section, which manage the way of this _cascaded_ validation happens.
+
+[source,groovy]
+----
+class Author {
+    Publisher publisher
+
+    static mapping = {
+        publisher(cascadeValidate: "dirty")
+    }
+}
+
+class Publisher {
+    String name
+
+    static constraints = {
+        name blank: false
+    }
+}
+----
+
+The following table presents all options, which can be used:
+[cols="1,2"]
+|===
+|Option |Description 
+
+|none
+|Will not do any cascade validation at all for the association.
+
+|default
+|The DEFAULT option. GORM performs cascade validation in some cases.
+
+|dirty
+|Only cascade validation if the referenced object is dirty via the `DirtyCheckable` trait. If the object doesn't implement DirtyCheckable, this will fall back to `default`.
+
+|owned
+|Only cascade validation if the entity <<gormAssociation, owns>> the referenced object. 
+|===
+
+It is possible to set the global option for the `cascadeValidate`:
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.gorm.default.mapping = {
+    '*'(cascadeValidate: 'dirty')
+}
+----

@@ -37,7 +37,10 @@ include(
     'grails-datastore-gorm-async',
     'grails-datastore-gorm-validation',
     'grails-datastore-gorm-support',
+    // the tck is split into domains -> base -> tck so that the base class can be swapped out or reused
     'grails-datastore-gorm-tck',
+    'grails-datastore-gorm-tck-base',
+    'grails-datastore-gorm-tck-domains',
     'grails-datastore-gorm-test',
 
     // RX projects
@@ -61,3 +64,100 @@ project(':docs-guide-developer').projectDir = file('docs/guide-developer')
 
 include 'docs-guide-whats-new'
 project(':docs-guide-whats-new').projectDir = file('docs/guide-whats-new')
+
+// Simple implementation (for simple gorm usage, unit tests, and base implementation testing)
+include 'simple-gorm'
+findProject(':simple-gorm').projectDir = file('grails-data-simple')
+
+// Hibernate 5
+// Core
+include "hibernate5-gorm"
+findProject(':hibernate5-gorm').projectDir = file('grails-data-hibernate5/gorm')
+
+// Documentation
+include 'hibernate5-docs'
+findProject(':hibernate5-docs').projectDir = new File(settingsDir, 'grails-data-hibernate5/docs')
+
+// Plugins
+include 'hibernate5-grails-plugin'
+findProject(':hibernate5-grails-plugin').projectDir = new File(settingsDir, 'grails-data-hibernate5/grails-plugin')
+
+include 'hibernate5-database-migration'
+findProject(':hibernate5-database-migration').projectDir = new File(settingsDir, 'grails-data-hibernate5/database-migration')
+
+include 'hibernate5-boot-plugin'
+findProject(':hibernate5-boot-plugin').projectDir = new File(settingsDir, 'grails-data-hibernate5/boot-plugin')
+
+include "hibernate5-examples-grails-hibernate"
+project(":hibernate5-examples-grails-hibernate").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-hibernate")
+
+include "hibernate5-examples-grails-multiple-datasources"
+project(":hibernate5-examples-grails-multiple-datasources").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-multiple-datasources")
+
+include "hibernate5-examples-grails-database-per-tenant"
+project(":hibernate5-examples-grails-database-per-tenant").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-database-per-tenant")
+
+include "hibernate5-examples-grails-schema-per-tenant"
+project(":hibernate5-examples-grails-schema-per-tenant").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-schema-per-tenant")
+
+include "hibernate5-examples-grails-partitioned-multi-tenancy"
+project(":hibernate5-examples-grails-partitioned-multi-tenancy").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-partitioned-multi-tenancy")
+
+include "hibernate5-examples-standalone-hibernate"
+project(":hibernate5-examples-standalone-hibernate").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/standalone-hibernate")
+
+include "hibernate5-examples-spring-boot-hibernate"
+project(":hibernate5-examples-spring-boot-hibernate").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/spring-boot-hibernate")
+
+include "hibernate5-examples-grails-data-service"
+project(":hibernate5-examples-grails-data-service").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-data-service")
+
+include "hibernate5-examples-grails-hibernate-groovy-proxy"
+project(":hibernate5-examples-grails-hibernate-groovy-proxy").projectDir = new File(settingsDir, "grails-data-hibernate5/examples/grails-hibernate-groovy-proxy")
+
+include 'hibernate5-examples-issue450'
+project(':hibernate5-examples-issue450').projectDir = new File(settingsDir, 'grails-data-hibernate5/examples/issue450')
+
+// core
+include "mongodb-gorm-bson"
+project(":mongodb-gorm-bson").projectDir = new File(settingsDir, 'grails-data-mongodb/gorm-bson')
+
+include "mongodb-gorm"
+project(":mongodb-gorm").projectDir = new File(settingsDir, 'grails-data-mongodb/gorm')
+
+include "mongodb-gorm-ext"
+project(":mongodb-gorm-ext").projectDir = new File(settingsDir, 'grails-data-mongodb/gorm-ext')
+
+// documentation
+include 'mongodb-docs'
+project(':mongodb-docs').projectDir = new File(settingsDir, 'grails-data-mongodb/docs')
+
+// plugins
+include "mongodb-boot-plugin"
+project(':mongodb-boot-plugin').projectDir = new File(settingsDir, 'grails-data-mongodb/boot-plugin')
+
+include 'mongodb-grails-plugin'
+project(':mongodb-grails-plugin').projectDir = new File(settingsDir, 'grails-data-mongodb/grails-plugin')
+
+include 'mongodb-views-json-templates'
+project(':mongodb-views-json-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/json-templates')
+
+// mongodb examples
+include 'mongodb-examples-base'
+project(":mongodb-examples-base").projectDir = new File(settingsDir, "grails-data-mongodb/examples/base")
+
+include 'mongodb-examples-database-per-tenant'
+project(":mongodb-examples-database-per-tenant").projectDir = new File(settingsDir, "grails-data-mongodb/examples/database-per-tenant")
+
+include 'mongodb-hibernate5-examples'
+project(":mongodb-hibernate5-examples").projectDir = new File(settingsDir, "grails-data-mongodb/examples/hibernate5")
+
+include 'mongodb-examples-springboot'
+project(":mongodb-examples-springboot").projectDir = new File(settingsDir, "grails-data-mongodb/examples/springboot")
+
+include 'mongodb-examples-test-data-service'
+project(":mongodb-examples-test-data-service").projectDir = new File(settingsDir, "grails-data-mongodb/examples/test-data-service")
+
+include 'mongodb-examples-gson-templates'
+project(":mongodb-examples-gson-templates").projectDir = new File(settingsDir, "grails-data-mongodb/examples/gson-templates")
+

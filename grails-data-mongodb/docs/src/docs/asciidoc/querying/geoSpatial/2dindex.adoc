@@ -1,0 +1,88 @@
+==== Geospacial 2D Index Support
+MongoDB supports https://docs.mongodb.org/manual/core/2d/[2d indexes] that store points on a two-dimensional plane. although they are considered legacy and you should use `2dsphere` indexes instead.
+
+It is possible to use a MongoDB 2d index by mapping a list or map property using the `geoIndex` mapping:
+
+[source,groovy]
+----
+class Hotel {
+    String name
+    List location
+
+    static mapping = {
+        location geoIndex:'2d'
+    }
+}
+----
+
+By default the index creation assumes latitude/longitude and thus is configured for a -180..180 range. If you are indexing something else you can customise this with `indexAttributes`
+
+[source,groovy]
+----
+class Hotel {
+    String name
+    List location
+
+    static mapping = {
+        location geoIndex:'2d', indexAttributes:[min:-500, max:500]
+    }
+}
+----
+
+You can then save Geo locations using a two dimensional list:
+
+[source,groovy]
+----
+new Hotel(name:"Hilton", location:[50, 50]).save()
+----
+
+Alternatively you can use a map with keys representing latitude and longitude:
+
+[source,groovy]
+----
+new Hotel(name:"Hilton", location:[lat: 40.739037d, long: 73.992964d]).save()
+----
+
+NOTE: You must specify whether the number of a floating point or double by adding a 'd' or 'f' at the end of the number eg. 40.739037d. Groovy's default type for decimal numbers is `BigDecimal` which is not supported by MongoDB.
+
+Once you have your data indexed you can use MongoDB specific dynamic finders to find hotels near a given a location:
+
+[source,groovy]
+----
+def h = Hotel.findByLocationNear([50, 60])
+assert h.name == 'Hilton'
+----
+
+You can also find a location within a box (bound queries). Boxes are defined by specifying the lower-left and upper-right corners:
+
+[source,groovy]
+----
+def box = [[40.73083d, -73.99756d], [40.741404d,  -73.988135d]]
+def h = Hotel.findByLocationWithinBox(box)
+----
+
+You can also find a location within a circle. Circles are specified using a center and radius:
+
+[source,groovy]
+----
+def center = [50, 50]
+def radius = 10
+def h = Hotel.findByLocationWithinCircle([center, radius])
+----
+
+If you plan on querying a location and some other value it is recommended to use a compound index:
+
+[source,groovy]
+----
+class Hotel {
+    String name
+    List location
+    int stars
+
+    static mapping = {
+        compoundIndex location:"2d", stars:1
+    }
+}
+----
+
+In the example above you an index is created for both the location and the number of stars a `Hotel` has.

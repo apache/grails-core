@@ -1,0 +1,14 @@
+===== Purpose
+
+Executes a MongoDB `$within` query on legacy coordinate pairs
+
+WARNING: The $within operator is considered legacy and replaced by $geoWithin. Hence this method is deprecated and `findByGeoWithin` should be used instead
+
+===== Examples
+
+[source,groovy]
+----
+Hotel.findByLocationWithinCircle([[40, 30],40])
+Hotel.findByLocationWithinCircle( Circle.valueOf( [[40, 30],40] ) )
+----
+

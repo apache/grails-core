@@ -1,0 +1,686 @@
+migrationDir = ".*/grails-app/migrations/.*"
+
+final String STRING = String.name
+
+contributor(context(pathRegexp: migrationDir, scope: scriptScope())) {
+    property name: "databaseChangeLog", type: {}
+}
+
+def changelogBody = context(scope: closureScope())
+contributor([changelogBody]) {
+    method name: "changeSet", params: [
+            args: [
+                    parameter(name: 'id', type: STRING),
+                    parameter(name: 'author', type: STRING),
+                    parameter(name: 'dbms', type: STRING),
+                    parameter(name: 'runAlways', type: STRING),
+                    parameter(name: 'runOnChange', type: STRING),
+                    parameter(name: 'context', type: STRING),
+                    parameter(name: 'runInTransaction', type: STRING),
+                    parameter(name: 'failOnError', type: STRING),
+                    parameter(name: 'description', type: STRING)
+            ],
+            body: {}
+
+    ], type: void
+
+    method name: "include", params: [
+            args: [parameter(name: 'file', type: STRING)]
+    ], type: void
+}
+
+void provideChildsOf(String parentMethod, Closure callback) {
+    provideChildsOf(parentMethod, true, callback)
+}
+
+void provideChildsOf(String parentMethod, boolean isArg, Closure callback) {
+    def c = context(scope: closureScope(isArg: isArg), pathRegexp: migrationDir)
+
+    contributor([c]) {
+        if (enclosingCall(parentMethod)) {
+            Closure cloned = callback.clone()
+            cloned.delegate = delegate
+            cloned.call()
+        }
+    }
+}
+
+//Grails changes
+provideChildsOf("changeSet") {
+    method name: "grailsChange", params: [:], body: {}
+}
+
+provideChildsOf("grailsChange") {
+    method name: "init", params: [:], body: {}, type: void
+    method name: "validate", params: [:], body: {}, type: void
+    method name: "change", params: [:], body: {}, type: void
+    method name: "rollback", params: [:], body: {}, type: void
+    method name: "confirm", params: [:], body: {}, type: void
+    method name: "checkSum", params: [:], body: {}, type: void
+}
+
+provideChildsOf("change") {
+    property name: "changeSet", type: "liquibase.changelog.ChangeSet"
+    property name: "resourceAccessor", type: "liquibase.resource.ResourceAccessor"
+    property name: "ctx", type: "org.springframework.context.ApplicationContext"
+    property name: "application", type: "org.codehaus.groovy.grails.commons.GrailsApplication"
+    property name: "database", type: "liquibase.database.Database"
+    property name: "databaseConnection", type: "liquibase.database.DatabaseConnection"
+    property name: "connection", type: "java.sql.Connection"
+    property name: "sql", type: "groovy.sql.Sql"
+}
+
+provideChildsOf("rollback") {
+    property name: "database", type: "liquibase.database.Database"
+    property name: "databaseConnection", type: "liquibase.database.DatabaseConnection"
+    property name: "connection", type: "java.sql.Connection"
+    property name: "sql", type: "groovy.sql.Sql"
+}
+
+
+provideChildsOf("changeSet") {
+    method name: "sql", params: [query: "java.lang.String"], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "sqlFile", params: [
+            args: [
+                    parameter(name: "dbms", type: STRING),
+                    parameter(name: "encoding", type: STRING),
+                    parameter(name: "endDelimiter", type: STRING),
+                    parameter(name: "path", type: STRING),
+                    parameter(name: "relativeToChangelogFile", type: STRING),
+                    parameter(name: "splitStatements", type: STRING),
+                    parameter(name: "stripComments", type: STRING),
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "createSequence", params: [
+            args: [
+                    parameter(name: "catalogName", type: STRING),
+                    parameter(name: "cycle", type: STRING),
+                    parameter(name: "incrementBy", type: STRING),
+                    parameter(name: "maxValue", type: STRING),
+                    parameter(name: "minValue", type: STRING),
+                    parameter(name: "ordered", type: STRING),
+                    parameter(name: "schemaName", type: STRING),
+                    parameter(name: "sequenceName", type: STRING),
+                    parameter(name: "startValue", type: STRING)
+            ]
+    ], type: void
+}
+
+//liquibase changes
+List columnArgs = [
+        parameter(name: 'name', type: STRING),
+        parameter(name: 'type', type: STRING),
+        parameter(name: 'value', type: STRING),
+        parameter(name: 'valueNumeric', type: STRING),
+        parameter(name: 'valueBoolean', type: STRING),
+        parameter(name: 'valueDate', type: STRING),
+        parameter(name: 'defaultValue', type: STRING),
+        parameter(name: 'defaultValueNumeric', type: STRING),
+        parameter(name: 'defaultValueBoolean', type: STRING),
+        parameter(name: 'defaultValueDate', type: STRING),
+        parameter(name: 'autoIncrement', type: STRING),
+        parameter(name: 'beforeColumn', type: STRING),
+        parameter(name: 'afterColumn', type: STRING),
+        parameter(name: 'position', type: STRING),
+        parameter(name: 'descending', type: STRING),
+
+]
+
+columnType = {
+    method name: "column", params: [
+            args: columnArgs,
+            body: {}
+    ], type: void
+}
+
+columnTypeNoBody = {
+    method name: "column", params: [
+            args: columnArgs
+    ], type: void
+}
+
+List param = [
+        parameter(name: 'name', type: STRING),
+        parameter(name: 'value', type: STRING)
+]
+
+provideChildsOf("changeSet") {
+    method name: "createTable", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'remarks', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'tablespace', type: STRING),
+            ],
+            body: {}
+    ], type: void
+
+}
+provideChildsOf("createTable", columnType)
+provideChildsOf("createTable", columnTypeNoBody)
+
+provideChildsOf("changeSet") {
+    method name: "createView", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'replaceIfExists', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'selectQuery', type: STRING),
+                    parameter(name: 'viewName', type: STRING)
+            ]
+    ], type: void
+
+}
+
+provideChildsOf("column") {
+    method name: "constraints", params: [
+            args: [
+                    parameter(name: 'nullable', type: STRING),
+                    parameter(name: 'primaryKey', type: STRING),
+                    parameter(name: 'primaryKeyName', type: STRING),
+                    parameter(name: 'unique', type: STRING),
+                    parameter(name: 'uniqueConstraintName', type: STRING),
+                    parameter(name: 'references', type: STRING),
+                    parameter(name: 'foreignKeyName', type: STRING),
+                    parameter(name: 'deleteCascade', type: STRING),
+                    parameter(name: 'deferrable', type: STRING),
+                    parameter(name: 'initiallyDeferred', type: STRING)
+            ]
+    ], type: void
+}
+
+
+provideChildsOf("changeSet") {
+    method name: "addAutoIncrement", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnDataType', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'incrementBy', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'startWith', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+
+}
+
+provideChildsOf("changeSet") {
+    method name: "addColumn", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ],
+            body: {}
+    ], type: void
+}
+provideChildsOf("addColumn", columnType)
+provideChildsOf("addColumn", columnTypeNoBody)
+
+provideChildsOf("changeSet") {
+    method name: "addDefaultValue", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnDataType', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'defaultValue', type: STRING),
+                    parameter(name: 'defaultValueBoolean', type: STRING),
+                    parameter(name: 'defaultValueComputed', type: STRING),
+                    parameter(name: 'defaultValueDate', type: STRING),
+                    parameter(name: 'defaultValueNumeric', type: STRING),
+                    parameter(name: 'defaultValueSequenceNext', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "addForeignKeyConstraint", params: [
+            args: [
+                    parameter(name: 'baseColumnNames', type: STRING),
+                    parameter(name: 'baseTableCatalogName', type: STRING),
+                    parameter(name: 'baseTableName', type: STRING),
+                    parameter(name: 'baseTableSchemaName', type: STRING),
+                    parameter(name: 'constraintName', type: STRING),
+                    parameter(name: 'deferrable', type: STRING),
+                    parameter(name: 'initiallyDeferred', type: STRING),
+                    parameter(name: 'onDelete', type: STRING),
+                    parameter(name: 'onUpdate', type: STRING),
+                    parameter(name: 'referencedColumnNames', type: STRING),
+                    parameter(name: 'referencedTableCatalogName', type: STRING),
+                    parameter(name: 'referencedTableName', type: STRING),
+                    parameter(name: 'referencedTableSchemaName', type: STRING),
+                    parameter(name: 'referencesUniqueColumn', type: STRING),
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "addNotNullConstraint", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnDataType', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'defaultNullValue', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "addPrimaryKey", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnNames', type: STRING),
+                    parameter(name: 'constraintName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'tablespace', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "addUniqueConstraint", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnNames', type: STRING),
+                    parameter(name: 'constraintName', type: STRING),
+                    parameter(name: 'deferrable', type: STRING),
+                    parameter(name: 'disabled', type: STRING),
+                    parameter(name: 'initiallyDeferred', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'tablespace', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "createIndex", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'indexName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'tablespace', type: STRING),
+                    parameter(name: 'unique', type: STRING),
+            ],
+            body: {}
+    ], type: void
+}
+provideChildsOf("createIndex", columnType)
+provideChildsOf("createIndex", columnTypeNoBody)
+
+provideChildsOf("changeSet") {
+    method name: "delete", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'where', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropAllForeignKeyConstraints", params: [
+            args: [
+                    parameter(name: 'baseTableCatalogName', type: STRING),
+                    parameter(name: 'baseTableName', type: STRING),
+                    parameter(name: 'baseTableSchemaName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropColumn", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropDefaultValue", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnDataType', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropForeignKeyConstraint", params: [
+            args: [
+                    parameter(name: 'baseTableCatalogName', type: STRING),
+                    parameter(name: 'baseTableName', type: STRING),
+                    parameter(name: 'baseTableSchemaName', type: STRING),
+                    parameter(name: 'constraintName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropIndex", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'indexName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropNotNullConstraint", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnDataType', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropPrimaryKey", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'constraintName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropTable", params: [
+            args: [
+                    parameter(name: 'cascadeConstraints', type: STRING),
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropUniqueConstraint", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'constraintName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'uniqueColumns', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropView", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'viewName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "modifyDataType", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnName', type: STRING),
+                    parameter(name: 'newDataType', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "renameColumn", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'columnDataType', type: STRING),
+                    parameter(name: 'newColumnName', type: STRING),
+                    parameter(name: 'oldColumnName', type: STRING),
+                    parameter(name: 'remarks', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "renameTable", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'newTableName', type: STRING),
+                    parameter(name: 'oldTableName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "renameView", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'newViewName', type: STRING),
+                    parameter(name: 'oldViewName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "addLookupTable", params: [
+            args: [
+                    parameter(name: 'constraintName', type: STRING),
+                    parameter(name: 'existingColumnName', type: STRING),
+                    parameter(name: 'existingTableCatalogName', type: STRING),
+                    parameter(name: 'existingTableName', type: STRING),
+                    parameter(name: 'existingTableSchemaName', type: STRING),
+                    parameter(name: 'newColumnDataType', type: STRING),
+                    parameter(name: 'newColumnName', type: STRING),
+                    parameter(name: 'newTableCatalogName', type: STRING),
+                    parameter(name: 'newTableName', type: STRING),
+                    parameter(name: 'newTableSchemaName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "alterSequence", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'incrementBy', type: STRING),
+                    parameter(name: 'maxValue', type: STRING),
+                    parameter(name: 'minValue', type: STRING),
+                    parameter(name: 'ordered', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'sequenceName', type: STRING),
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "createProcedure", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'comments', type: STRING),
+                    parameter(name: 'dbms', type: STRING),
+                    parameter(name: 'encoding', type: STRING),
+                    parameter(name: 'path', type: STRING),
+                    parameter(name: 'procedureName', type: STRING),
+                    parameter(name: 'procedureText', type: STRING),
+                    parameter(name: 'relativeToChangelogFile', type: STRING),
+                    parameter(name: 'schemaName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "customChange", params: [
+            args: [
+                    parameter(name: 'class', type: STRING),
+            ],
+            body: {}
+    ], type: void
+}
+
+provideChildsOf("customChange") {
+    method name: "param", params: [
+            args: [
+                    parameter(name: 'id', type: STRING),
+                    parameter(name: 'value', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropProcedure", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'procedureName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "dropSequence", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'sequenceName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "empty", params: [], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "executeCommand", params: [
+            args: [
+                    parameter(name: 'executable', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "insert", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'dbms', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ],
+            body: {}
+    ], type: void
+}
+provideChildsOf("insert", columnType)
+provideChildsOf("insert", columnTypeNoBody)
+
+provideChildsOf("changeSet") {
+    method name: "loadData", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'encoding', type: STRING),
+                    parameter(name: 'file', type: STRING),
+                    parameter(name: 'quotchar', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'separator', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ],
+            body: {}
+    ], type: void
+}
+provideChildsOf("loadData", columnType)
+provideChildsOf("loadData", columnTypeNoBody)
+
+provideChildsOf("changeSet") {
+    method name: "loadUpdateData", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'encoding', type: STRING),
+                    parameter(name: 'file', type: STRING),
+                    parameter(name: 'primaryKey', type: STRING),
+                    parameter(name: 'quotchar', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'separator', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ],
+            body: {}
+    ], type: void
+}
+provideChildsOf("loadUpdateData", columnType)
+provideChildsOf("loadUpdateData", columnTypeNoBody)
+
+provideChildsOf("changeSet") {
+    method name: "mergeColumns", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'column1Name', type: STRING),
+                    parameter(name: 'column2Name', type: STRING),
+                    parameter(name: 'finalColumnName', type: STRING),
+                    parameter(name: 'finalColumnType', type: STRING),
+                    parameter(name: 'joinString', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "stop", params: [
+            args: [
+                    parameter(name: 'message', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "tagDatabase", params: [
+            args: [
+                    parameter(name: 'tag', type: STRING)
+            ]
+    ], type: void
+}
+
+provideChildsOf("changeSet") {
+    method name: "update", params: [
+            args: [
+                    parameter(name: 'catalogName', type: STRING),
+                    parameter(name: 'schemaName', type: STRING),
+                    parameter(name: 'tableName', type: STRING),
+                    parameter(name: 'where', type: STRING)
+            ],
+            body: {}
+    ], type: void
+}
+provideChildsOf("update", columnType)
+provideChildsOf("update", columnTypeNoBody)

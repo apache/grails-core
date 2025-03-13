@@ -1,0 +1,77 @@
+info:
+  app:
+    name: '@info.app.name@'
+    version: '@info.app.version@'
+    grailsVersion: '@info.app.grailsVersion@'
+---
+grails:
+  profile: web
+  codegen:
+    defaultPackage: datasources
+  mime:
+    disable:
+      accept:
+        header:
+          userAgents:
+            - Gecko
+            - WebKit
+            - Presto
+            - Trident
+    types:
+      all: '*/*'
+      atom: application/atom+xml
+      css: text/css
+      csv: text/csv
+      form: application/x-www-form-urlencoded
+      html:
+        - text/html
+        - application/xhtml+xml
+      js: text/javascript
+      json:
+        - application/json
+        - text/json
+      multipartForm: multipart/form-data
+      rss: application/rss+xml
+      text: text/plain
+      hal:
+        - application/hal+json
+        - application/hal+xml
+      xml:
+        - text/xml
+        - application/xml
+  urlmapping:
+    cache:
+      maxsize: 1000
+  converters:
+    encoding: UTF-8
+  hibernate:
+    cache:
+      queries: false
+  views:
+    default:
+      codec: html
+    gsp:
+      encoding: UTF-8
+      htmlcodec: xml
+      codecs:
+        expression: html
+        scriptlets: html
+        taglib: none
+        staticparts: none
+---
+grails:
+  gorm:
+    multiTenancy:
+      mode: DATABASE
+      tenantResolverClass: org.grails.datastore.mapping.multitenancy.web.SessionTenantResolver
+---
+dataSource:
+  pooled: true
+  driverClassName: org.h2.Driver
+  dbCreate: create-drop
+  url: jdbc:h2:mem:books;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+dataSources:
+  moreBooks:
+    url: jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+  evenMoreBooks:
+    url: jdbc:h2:mem:evenMoreBooks;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE

@@ -1,0 +1,10 @@
+You can switch to a different connection at runtime with the `withConnection` method:
+
+[source,groovy]
+----
+Book.withConnection("moreBooks") {
+    Book.list()
+}
+----
+
+Any logic executed within the body of the closure will use the alternate connection. Once the close finishes execution GORM will switch back to the default connection automatically.

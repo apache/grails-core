@@ -1,0 +1,69 @@
+GORM supports the concept of composite identifiers (identifiers composed from 2 or more properties). It is not an approach we recommend, but is available to you if you need it:
+
+[source,groovy]
+----
+import org.apache.commons.lang.builder.HashCodeBuilder
+
+class Person implements Serializable {
+
+    String firstName
+    String lastName
+
+    boolean equals(other) {
+        if (!(other instanceof Person)) {
+            return false
+        }
+
+        other.firstName == firstName && other.lastName == lastName
+    }
+
+    int hashCode() {
+        def builder = new HashCodeBuilder()
+        builder.append firstName
+        builder.append lastName
+        builder.toHashCode()
+    }
+
+    static mapping = {
+        id composite: ['firstName', 'lastName']
+    }
+}
+----
+
+The above will create a composite id of the `firstName` and `lastName` properties of the Person class. To retrieve an instance by id you use a prototype of the object itself:
+
+[source,java]
+----
+def p = Person.get(new Person(firstName: "Fred", lastName: "Flintstone"))
+println p.firstName
+----
+
+Domain classes mapped with composite primary keys must implement the `Serializable` interface and override the `equals` and `hashCode` methods, using the properties in the composite key for the calculations. The example above uses a `HashCodeBuilder` for convenience but it's fine to implement it yourself.
+
+Another important consideration when using composite primary keys is associations. If for example you have a many-to-one association where the foreign keys are stored in the associated table then 2 columns will be present in the associated table.
+
+For example consider the following domain class:
+
+[source,groovy]
+----
+class Address {
+    Person person
+}
+----
+
+In this case the `address` table will have an additional two columns called `person_first_name` and `person_last_name`. If you wish the change the mapping of these columns then you can do so using the following technique:
+
+[source,groovy]
+----
+class Address {
+    Person person
+    static mapping = {
+        columns {
+		    person {
+                column name: "FirstName"
+                column name: "LastName"
+			}
+        }
+    }
+}
+----

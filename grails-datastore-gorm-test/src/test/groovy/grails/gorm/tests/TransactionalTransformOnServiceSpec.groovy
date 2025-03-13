@@ -1,5 +1,6 @@
 package grails.gorm.tests
 
+import grails.gorm.tck.Person
 import grails.gorm.transactions.Transactional
 
 /**

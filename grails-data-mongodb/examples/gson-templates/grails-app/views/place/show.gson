@@ -1,0 +1,8 @@
+
+import functional.tests.Place
+
+model {
+    Place place
+}
+
+json g.render(place)

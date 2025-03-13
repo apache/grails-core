@@ -1,0 +1,62 @@
+By default GORM uses Hibernate's `ImprovedNamingStrategy` to convert domain class Class and field names to SQL table and column names by converting from camel-cased Strings to ones that use underscores as word separators. You can customize these on a per-class basis in the `mapping` closure but if there's a consistent pattern you can specify a different `NamingStrategy` class to use.
+
+Configure the class name to be used in `grails-app/conf/application.groovy` in the `hibernate` section, e.g.
+
+[source,java]
+----
+dataSource {
+    pooled = true
+    dbCreate = "create-drop"
+    ...
+}
+
+hibernate {
+    cache.use_second_level_cache = true
+    ...
+    naming_strategy = com.myco.myproj.CustomNamingStrategy
+}
+----
+
+You can also specify the name of the class and it will be loaded for you:
+
+[source,java]
+----
+hibernate {
+    ...
+    naming_strategy = 'com.myco.myproj.CustomNamingStrategy'
+}
+----
+
+A third option is to provide an instance if there is some configuration required beyond calling the default constructor:
+
+[source,java]
+----
+hibernate {
+    ...
+    def strategy = new com.myco.myproj.CustomNamingStrategy()
+    // configure as needed
+    naming_strategy = strategy
+}
+----
+
+You can use an existing class or write your own, for example one that prefixes table names and column names:
+
+[source,java]
+----
+package com.myco.myproj
+
+import org.hibernate.cfg.ImprovedNamingStrategy
+import org.hibernate.util.StringHelper
+
+class CustomNamingStrategy extends ImprovedNamingStrategy {
+
+    String classToTableName(String className) {
+        "table_" + StringHelper.unqualify(className)
+    }
+
+    String propertyToColumnName(String propertyName) {
+        "col_" + StringHelper.unqualify(propertyName)
+    }
+}
+----
+

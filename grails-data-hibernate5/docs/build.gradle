@@ -1,0 +1,128 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+plugins {
+    id 'groovy'
+    id 'org.asciidoctor.jvm.convert' version "${asciidoctorVersion}"
+}
+
+version = projectVersion
+
+ext {
+    isReleaseVersion = !projectVersion.endsWith('-SNAPSHOT')
+    coreProjects = ['grails-datastore-core', 'grails-datastore-gorm']
+}
+
+configurations {
+    documentation {
+        attributes {
+            attribute(Bundling.BUNDLING_ATTRIBUTE, (Bundling) (objects.named(Bundling, 'external')))
+        }
+    }
+}
+
+dependencies {
+    documentation platform("org.grails:grails-bom:$grailsVersion")
+    documentation 'com.github.javaparser:javaparser-core'
+    documentation "info.picocli:picocli:$picocliVersion"
+    documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'org.fusesource.jansi:jansi'
+    documentation 'org.grails:grails-bootstrap'
+    documentation 'org.grails:grails-core'
+    documentation 'org.grails:grails-spring'
+    documentation "org.hibernate:hibernate-core-jakarta:$hibernateVersion"
+    coreProjects.each {
+        documentation "org.grails:$it"
+    }
+    rootProject.subprojects
+            .findAll { it.findProperty('apiDocs') }
+            .each { documentation project(":$it.name") }
+}
+
+tasks.named('asciidoctor', AsciidoctorTask) {
+    inputs.dir layout.projectDirectory.dir('src/docs')
+    outputs.dir layout.buildDirectory.dir('docs')
+    baseDirFollowsSourceDir()
+    resources {
+        from("$project.projectDir/src/docs/asciidoc/images")
+        into './images'
+    }
+
+    attributes(
+            'experimental'  : 'true',
+            'compat-mode'   : 'true',
+            'toc'           : 'left',
+            'icons'         : 'font',
+            'reproducible'  : '',
+            'version'       : projectVersion,
+            'pluginVersion' : projectVersion,
+            'groupId'       : project.group,
+            'artifactId'    : project.name,
+            'sourcedir'     : "$project.rootDir",
+            'migrationPluginExamplesDir' : rootProject.layout.projectDirectory.dir('grails-database-migration/src/integration-test/resources').asFile.absolutePath,
+            'migrationPluginGroupId' : rootProject.findProject(':hibernate5-database-migration').group,
+            'migrationPluginArtifactId' : rootProject.findProject(':hibernate5-database-migration').name,
+            'liquibaseHibernate5Version': liquibaseHibernate5Version
+    )
+    jvm {
+        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    }
+}
+
+tasks.register('copyDocs', Copy) {
+    group = 'documentation'
+    dependsOn('asciidoctor')
+    mustRunAfter('asciidoctor', 'groovydoc', 'copyResources')
+    finalizedBy('cleanAsciidoc')
+    from(layout.buildDirectory.dir('docs/asciidoc'))
+    into(layout.buildDirectory.dir('docs/manual'))
+}
+
+tasks.register('cleanAsciidoc', Delete) {
+    group = 'documentation'
+    delete(layout.buildDirectory.dir('docs/asciidoc'))
+}
+
+tasks.withType(Groovydoc).configureEach {
+    docTitle = "GORM for Hibernate 5 - $project.version"
+
+    def sourceFiles = coreProjects.collect {
+        rootProject.layout.projectDirectory.files("$it/src/main/groovy")
+    }.sum()
+
+    rootProject.subprojects
+            .findAll { it.findProperty('apiDocs') }
+            .each { sourceFiles += it.files('src/main/groovy') }
+
+    source = sourceFiles
+    destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
+    access = GroovydocAccess.PROTECTED
+    processScripts = false
+    includeMainForScripts = false
+    includeAuthor = false
+    classpath = configurations.documentation
+    groovyClasspath += configurations.documentation
+}
+
+tasks.register('copyResources', Copy) {
+    group = 'documentation'
+    from(layout.projectDirectory.dir('src/docs/resources'))
+    into(layout.buildDirectory.dir('docs'))
+}
+
+tasks.register('docs') {
+    group = 'documentation'
+    dependsOn('asciidoctor', 'copyDocs', 'cleanAsciidoc', 'groovydoc', 'copyResources',
+            rootProject.subprojects
+                    .findAll { it.findProperty('apiDocs') }
+                    .collect { ":${it.name}:groovydoc" }
+    )
+    finalizedBy('assembleDocsDist')
+}
+
+tasks.register('assembleDocsDist', Zip) {
+    group = 'documentation'
+    dependsOn('docs', 'copyDocs')
+    from(layout.buildDirectory.dir('docs'))
+    archiveFileName = "${project.name}-${project.version}.zip"
+    destinationDirectory = project.layout.buildDirectory.dir('distributions')
+}

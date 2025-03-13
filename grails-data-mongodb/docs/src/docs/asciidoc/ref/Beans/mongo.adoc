@@ -1,0 +1,24 @@
+===== Purpose
+
+Provides access to the native https://api.mongodb.com/java/current/com/mongodb/async/client/MongoClient.html[MongoClient] instance.
+
+===== Examples
+
+
+[source,groovy]
+----
+MongoClient mongo
+
+class FooController {
+    MongoClient mongo
+    def myAction() {
+        MongoDatabase db = mongo.getDatabase("mongo")
+        db.languages.insert([name: 'Groovy'])
+    }
+}
+----
+
+
+===== Description
+
+See the API for the https://api.mongodb.org/java/current/[Mongo Java Driver] for API usage info.

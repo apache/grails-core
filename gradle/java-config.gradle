@@ -4,3 +4,11 @@ java {
     withSourcesJar()
     withJavadocJar()
 }
+
+// work around for parallel builds due to https://github.com/bertramdev/asset-pipeline/issues/177
+if('assetCompile' in tasks.names) {
+    TaskProvider<Task> assetTask = tasks.named('assetCompile')
+    assetTask.configure { Task task ->
+        task.outputs.dir rootProject.layout.buildDirectory.dir('asset-serialize')
+    }
+}

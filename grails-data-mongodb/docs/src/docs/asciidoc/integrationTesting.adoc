@@ -1,0 +1,4 @@
+== Integration Testing
+There is a plugin available that will execute an in memory Mongo database during your integration tests. Data will be cleared between test cases so they can work similarly to H2 with `@Rollback`.
+
+Visit the github page of the link:https://github.com/grails-plugins/grails-embedded-mongodb[Embedded MongoDB Grails Plugin] to learn more.

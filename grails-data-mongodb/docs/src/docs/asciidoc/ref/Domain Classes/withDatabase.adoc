@@ -1,0 +1,16 @@
+===== Purpose
+
+Allows switching which database to use to persist for the domain class for the scope of the given closure.
+
+===== Examples
+
+[source,java]
+----
+Book.withDatabase("non-fiction") {
+    // code here
+}
+----
+
+===== Description
+
+The `withDatabase` method allows switching, at runtime, the database used persist and retrieve domain classes. The `DB` property will return the current database being used. Note that the method switches the database used for the scope of the given closure (ie. it is not permanent). If you wish to permanently change the database used then you need to configure the mapping of the domain class.

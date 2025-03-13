@@ -1,0 +1,5 @@
+=== Geospacial Querying
+MongoDB supports storing https://docs.mongodb.org/manual/applications/geospatial-indexes/[Geospacial data] in both flat and spherical surface types.
+
+To store data in a flat surface you use a "2d" index, whilst a "2dsphere" index used for spherical data. GORM for MongoDB supports both and the following sections describe how to define and query Geospacial data.
+

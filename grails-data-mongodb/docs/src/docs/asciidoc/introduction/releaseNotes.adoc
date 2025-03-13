@@ -1,0 +1,89 @@
+=== Release Notes
+Below are the details of the changes across releases:
+
+==== 7.1
+
+* Support Apache Groovy 3, and Java 14
+* Upgrade to mongodb-driver-sync 4.3.3
+* Autowire bean by type in the Data Service
+* Compatible only with Grails 5
+
+==== 7.0
+
+* Support for MongoDB Driver 3.10.0
+* Support for Java 11
+* Removal of RxJava 1.x Module
+* Java 8 Minimum
+
+==== 6.1
+
+* GORM Data Services Support
+* Package Scanning Constructors
+* Decimal128 Type Support
+* MongoDB 3.4.x Java Driver Support
+
+==== 6.0
+
+* Multiple Data Sources Support
+* Multi Tenancy Support
+* RxGORM for MongoDB (Using MongoDB Rx Drivers)
+* Unified Configuration model
+
+==== 5.0
+
+
+* MongoDB 3.x driver support
+* New Codec Persistence Engine
+* Removal of GMongo
+* Trait based
+
+
+==== 4.0
+
+* Grails 3 compatibility
+
+==== 3.0
+
+
+* Support for MongoDB 2.6
+* MongoDB 2.6 GeoJSON type support (`MultiPoint`, `MultiLineString`, `MultiPolygon` and `GeometryCollection`)
+* Support for Maps of embedded entities
+* Flexible index definition
+* Full text search support
+* Support for projections using MongoDB aggregation
+* Size related criteria implemented (`sizeEq`, `sizeLt` etc.) on collections
+
+
+==== 2.0
+
+
+* GeoJSON shape support
+* Support for SSL connections
+* Support for MongoDB connection strings
+
+
+==== 1.3
+
+
+* Support for stateless mode to improve read performance
+* Support for dynamically switching which database or collection to persist to at runtime
+
+
+==== 1.2
+
+
+WARNING: MongoDB plugin 1.2 and above requires Grails 2.1.5 or 2.2.1 as a minimum Grails version, if you are using older versions of Grails you will need to stay with 1.1
+
+
+==== 1.1 GA
+
+
+* DBRefs no longer used by default for associations
+* Upgrade to GMongo 1.0 and Spring Data MongoDB 1.1
+* Support for global mapping configuration
+
+
+==== 1.0 GA
+
+
+* Initial feature complete 1.0 release

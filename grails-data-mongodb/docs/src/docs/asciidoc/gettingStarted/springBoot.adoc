@@ -1,0 +1,41 @@
+=== Using GORM in Spring Boot
+To use GORM for MongoDB in Spring Boot add the necessary dependencies to your Boot application:
+
+[source,groovy,subs="attributes"]
+----
+compile("org.grails:gorm-mongodb-spring-boot:{version}")
+----
+
+Ensure your Boot `Application` class is annotated with `ComponentScan`, example:
+
+[source,groovy]
+----
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
+import org.springframework.context.annotation.*
+
+@Configuration
+@EnableAutoConfiguration
+@ComponentScan
+class Application {
+    static void main(String[] args) {
+        SpringApplication.run Application, args
+    }
+}
+----
+
+NOTE: Using `ComponentScan` without a value results in Boot scanning for classes in the same package or any package nested within the `Application` class package.
+If your GORM entities are in a different package specify the package name as the value of the `ComponentScan` annotation.
+
+Finally create your GORM entities and ensure they are annotated with `grails.persistence.Entity`:
+
+[source,groovy]
+----
+import grails.persistence.*
+
+@Entity
+class Person {
+    String firstName
+    String lastName
+}
+----

@@ -79,7 +79,6 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'com.h2database:h2'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
@@ -87,5 +86,4 @@ dependencies {
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/tck-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

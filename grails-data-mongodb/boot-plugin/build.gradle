@@ -1,0 +1,88 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    apiDocs = true
+    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
+    pomArtifactId = 'gorm-mongodb-spring-boot'
+    pomTitle = 'GORM for MongoDB'
+    pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
+    pomDevelopers =  [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith'
+    ]
+}
+
+dependencies {
+
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+
+    api project(':mongodb-gorm'), {
+        // api: MongoDatastore
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm-mongodb
+            exclude group: 'org.mongodb', module: 'mongodb-driver-sync'
+            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            //exclude group: 'org.grails', module: 'grails-datastore-gorm' // GormEntity needed downstream
+            //exclude group: 'org.grails', module: 'grails-datastore-gorm-bson' //  Needed at runtime downstream (BsonPersistentEntityCodec)
+        }
+    }
+    api 'org.mongodb:mongodb-driver-core', {
+        // api: MongoClientSettings
+    }
+    api 'org.mongodb:mongodb-driver-sync', {
+        // api: MongoClient
+        // impl: MongoClients
+    }
+    api 'org.springframework:spring-beans', {
+        // api: BeansException
+        // impl: @Autowired(runtime), ConfigurableListableBeanFactory
+    }
+    api 'org.springframework:spring-context', {
+        // api: ApplicationContext, ApplicationContextAware, ConfigurableApplicationContext
+        // impl: @Bean(runtime), @Configuration(runtime)
+    }
+    api 'org.springframework:spring-tx', {
+        // api: PlatformTransactionManager
+    }
+
+    implementation 'org.apache.groovy:groovy', {
+        // impl: Needed for Java Spring Boot apps
+        // comp: @CompileStatic(source)
+    }
+    implementation project(':grails-datastore-core'), {
+        // impl: Service
+    }
+    implementation project(':grails-datastore-gorm'), {
+        // impl: ConfigurableApplicationContextEventPublisher
+    }
+    implementation 'org.springframework:spring-core', {
+        // impl: ConfigurableEnvironment
+    }
+    implementation 'org.springframework.boot:spring-boot-autoconfigure', {
+        // impl: AutoConfigurationPackages, @AutoConfigureAfter(runtime), @ConditionalOnMissingBean(runtime),
+        //       MongoAutoConfiguration, MongoProperties
+    }
+
+    compileOnlyApi 'jakarta.persistence:jakarta.persistence-api', {
+        // compApi: Entity needed for GlobalJpaEntityTransform downstream
+    }
+
+    compileOnly 'org.slf4j:slf4j-api', {
+        // "optional" compile dependency in mongodb-driver-core
+    }
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

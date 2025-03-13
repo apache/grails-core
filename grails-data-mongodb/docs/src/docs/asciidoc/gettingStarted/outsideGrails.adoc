@@ -1,0 +1,46 @@
+=== GORM for MongoDB without Grails
+If you wish to use GORM for MongoDB outside of a Grails application you should declare the necessary dependencies, for example in Gradle:
+
+[source,groovy,subs="attributes"]
+----
+compile "org.grails:grails-datastore-gorm-mongodb:{version}"
+----
+
+Then annotate your entities with the `grails.gorm.annotation.Entity` annotation:
+
+[source,groovy]
+----
+@Entity
+class Person {
+    String name
+}
+----
+
+Then you need to place the bootstrap logic somewhere in the loading sequence of your application which uses `MongoDatastore`:
+
+[source,groovy]
+----
+def datastore = new MongoDatastore(Person)
+
+println Person.count()
+----
+
+For configuration you can either pass a map or an instance of the `org.springframework.core.env.PropertyResolver` interface:
+
+[source,groovy]
+----
+def initializer = new MongoDatastore(['grails.mongodb.url':'http://myserver'], Person)
+
+println Person.count()
+----
+
+If you are using Spring with an existing `ApplicationContext` you can instead call `MongoDbDataStoreSpringInitializer.configureForBeanDefinitionRegistry` prior to refreshing the context. You can pass the Spring `Environment` object to the constructor for configuration:
+
+[source,groovy]
+----
+ApplicationContext myApplicationContext = ...
+def initializer = new MongoDbDataStoreSpringInitializer(myApplicationContext.getEnvironment(), Person)
+initializer.configureForBeanDefinitionRegistry(myApplicationContext)
+
+println Person.count()
+----

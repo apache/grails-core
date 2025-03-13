@@ -1,0 +1,12 @@
+/**
+ * A template for rendering a GeoJSON LineString in MongoDB
+ */
+import grails.mongodb.geo.*
+import groovy.transform.Field
+
+@Field LineString lineString
+
+json {
+    type "LineString"
+    coordinates lineString.asList()
+}

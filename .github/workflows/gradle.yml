@@ -6,17 +6,17 @@ on:
   pull_request:
     branches:
       - '[7-9]+.[0-9]+.x'
+permissions:
+  contents: read
+  packages: read
 jobs:
-  build:
-    name: "Build Project"
+  datastore-build:
+    name: "Build Datastore Project"
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: read
     strategy:
       fail-fast: false
       matrix:
-        java: [17, 21]
+        java: [ 17, 21 ]
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
@@ -33,15 +33,65 @@ jobs:
         id: build
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew build --continue
+        run: ./gradlew cleanTest build --continue -PonlyDatastoreTests
+  mongodb-build:
+    name: "Build Mongodb Project"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21 ]
+        mongodb-version: [ '4', '5', '6', '7', '8' ]
+    steps:
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "▶️ Start MongoDB (needed for some tests)"
+        uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # v1.12.0 (Use commit sha as this is a 3rd party action)
+        with:
+          mongodb-version: ${{ matrix.mongodb-version }}
+      - name: "🔨 Run Build"
+        id: build
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew cleanTest build --continue -PonlyMongodbTests
+  hibernate5-build:
+    name: "Build Hibernate5 Project"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21 ]
+    steps:
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔨 Run Build"
+        id: build
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew cleanTest build --continue -PonlyHibernate5Tests
   publish:
     if: github.event_name == 'push'
     name: "Publish Snapshot"
-    needs: build
+    needs: [datastore-build, hibernate5-build, mongodb-build]
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: read
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
@@ -68,8 +118,7 @@ jobs:
     needs: publish
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
-      packages: read
+      contents: write # so gh-pages can be updated
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
@@ -97,7 +146,7 @@ jobs:
   trigger-build-gorm-impls:
     if: github.event_name == 'push'
     name: "Trigger Build in GORM Implementations"
-    needs: [build, publish]
+    needs: [publish]
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
@@ -111,37 +160,11 @@ jobs:
       - name: "📝 Create Snapshot Message for the Workflow Dispatch"
         id: dispatch_message
         run: echo "value={\"message\":\"New Data Mapping Snapshots $(date) - $GITHUB_SHA\"}" >> $GITHUB_OUTPUT
-      - name: "📡 Invoke the Java CI workflow in GORM Hibernate5"
-        uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4 (Use commit sha as this is a 3rd party action)
-        continue-on-error: true
-        with:
-          workflow: Java CI
-          repo: grails/gorm-hibernate5
-          ref: ${{ steps.extract_branch.outputs.value }}
-          token: ${{ secrets.GH_TOKEN }}
       - name: "📡 Invoke the Java CI workflow in GORM Hibernate6"
         continue-on-error: true
         uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4 (Use commit sha as this is a 3rd party action)
         with:
           workflow: Java CI
           repo: grails/gorm-hibernate6
-          ref: ${{ steps.extract_branch.outputs.value }}
-          token: ${{ secrets.GH_TOKEN }}
-      - name: "📡 Invoke the Java CI workflow in GORM MongoDB"
-        continue-on-error: true
-        uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4 (Use commit sha as this is a 3rd party action)
-        with:
-          workflow: Java CI
-          repo: grails/gorm-mongodb
-          ref: ${{ steps.extract_branch.outputs.value }}
-          token: ${{ secrets.GH_TOKEN }}
-          inputs: ${{ steps.dispatch_message.outputs.value }}
-      - name: "📡 Invoke the Java CI workflow in GORM Neo4j"
-        if: false # Skip until neo4j is ported to grails 7
-        continue-on-error: true
-        uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4 (Use commit sha as this is a 3rd party action)
-        with:
-          workflow: Java CI
-          repo: grails/gorm-neo4j
           ref: ${{ steps.extract_branch.outputs.value }}
           token: ${{ secrets.GH_TOKEN }}

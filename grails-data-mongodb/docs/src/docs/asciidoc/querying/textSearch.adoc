@@ -1,0 +1,39 @@
+=== Full Text Search
+Using MongoDB 2.6 and above you can create https://docs.mongodb.org/manual/reference/operator/query/text/#op._S_text[full text search] indices.
+
+To create a "text" index using the `index` method inside the `mapping` block:
+
+[source,groovy]
+----
+class Product {
+    ObjectId id
+    String title
+
+    static mapping = {
+        index title:"text"
+    }
+}
+----
+
+You can then search for instances using the `search` method:
+
+[source,groovy]
+----
+assert Product.search("bake coffee cake").size() == 10
+assert Product.search("bake coffee -cake").size() == 6
+----
+
+You can search for the top results by rank using the `searchTop` method:
+
+[source,groovy]
+----
+assert Product.searchTop("cake").size() == 4
+assert Product.searchTop("cake",3).size() == 3
+----
+
+And count the number of hits with the `countHits` method:
+
+[source,groovy]
+----
+assert Product.countHits('coffee') == 5
+----

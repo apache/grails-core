@@ -1,0 +1,12 @@
+In previous versions of GORM it was much more difficult to setup a unit test to test your GORM logic.
+
+However, since GORM 6.0, this situation has changed and it is relatively trivial to setup GORM for testing.
+
+=== Unit Testing with Spock
+
+include::spock.adoc[]
+
+=== Unit Testing with JUnit
+
+include::junit.adoc[]
+

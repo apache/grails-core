@@ -1,6 +1,6 @@
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.ClassWithHungarianNotation
+import grails.gorm.tck.ClassWithHungarianNotation
 import grails.gorm.tests.GormDatastoreSpec
 
 /**

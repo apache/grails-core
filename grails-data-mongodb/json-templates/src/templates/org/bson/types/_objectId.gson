@@ -1,0 +1,8 @@
+
+import org.bson.types.*
+import groovy.transform.*
+import grails.plugin.json.builder.*
+
+@Field ObjectId objectId = null
+
+json(JsonOutput.unescaped("\"${objectId?.toString()}\""))

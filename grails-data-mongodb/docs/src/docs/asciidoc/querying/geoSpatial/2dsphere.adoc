@@ -1,0 +1,76 @@
+==== Geospacial 2D Sphere Support
+==== Using a 2dsphere Index
+
+
+MongoDB's https://docs.mongodb.org/manual/core/2dsphere/[2dsphere indexes] support queries that calculate geometries on an earth-like sphere.
+
+Although you can use coordinate pairs in a 2dsphere index, they are considered legacy by the MongoDB documentation and it is recommended you store data using https://geojson.org/geojson-spec.html#id2[GeoJSON Point] types.
+
+WARNING: MongoDB legacy coordinate pairs are in latitude / longitude order, whilst GeoJSON points are stored in longitude / latitude order!
+
+To support this GORM for MongoDB features a special type, `grails.mongodb.geo.Point`, that can be used within domain classes to store geospacial data:
+
+[source,groovy]
+----
+import grails.mongodb.geo.*
+...
+class Restaurant {
+    ObjectId id
+    Point location
+
+    static mapping = {
+        location geoIndex:'2dsphere'
+    }
+}
+----
+
+The `Point` type gets persisted as a https://geojson.org/geojson-spec.html#id2[GeoJSON Point]. A `Point` can be constructed from coordinates represented in longitude and latitude (the inverse of 2d index location coordinates!). Example:
+
+[source,groovy]
+----
+Restaurant r = new Restaurant(location: new Point(50, 50))
+r.id = "Dan's Burgers"
+r.save(flush:true)
+
+Restaurant.findByLocation(new Point(50,50))
+----
+
+
+==== Querying a 2dsphere Index
+
+
+Once the 2dsphere index is in place you can use various MongoDB plugin specific dynamic finders to query, including:
+
+* *findBy...GeoWithin* - Find out whether a `Point` is within a `Box`, `Polygon`, `Circle` or `Sphere`
+* *findBy...GeoIntersects* - Find out whether a `Point` is within a `Box`, `Polygon`, `Circle` or `Sphere`
+* *findBy...Near* - Find out whether any GeoJSON `Shape` is near the given `Point`
+* *findBy...NearSphere* - Find out whether any GeoJSON `Shape` is near the given `Point` using spherical geometry.
+
+Some examples:
+
+[source,groovy]
+----
+Restaurant.findByLocationGeoWithin( Polygon.valueOf([ [0, 0], [100, 0], [100, 100], [0, 100], [0, 0] ]) )
+Restaurant.findByLocationGeoWithin( Box.valueOf( [[25, 25], [100, 100]] ) )
+Restaurant.findByLocationGeoWithin( Circle.valueOf( [[50, 50], 100] ) )
+Restaurant.findByLocationGeoWithin( Sphere.valueOf( [[50, 50], 0.06]) )
+Restaurant.findByLocationNear( Point.valueOf( 40, 40 ) )
+----
+
+NOTE: Note that a `Sphere` differs from a `Circle` in that the radius is specified in https://docs.mongodb.org/manual/tutorial/calculate-distances-using-spherical-geometry-with-2d-geospatial-indexes/[radians].
+There is a special `Distance` class that can help with radian calculation.
+
+
+==== Native Querying Support
+
+
+In addition to being able to pass any `Shape` to geospacial query methods you can also pass a map that represents the native values to be passe to the underlying query. For example:
+
+[source,groovy]
+----
+def results = Restaurant.findAllByLocationNear( [$geometry: [type:'Point', coordinates: [1,7]], $maxDistance:30000] )
+----
+
+In the above example the native query parameters are simply passed to the https://docs.mongodb.org/manual/reference/operator/query/near/#op._S_near[$near query]
+
+

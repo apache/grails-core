@@ -1,0 +1,23 @@
+===== dbm-changelog-to-groovy
+
+====== Purpose
+
+Converts a Liquibase XML changelog file to a Groovy DSL file.
+
+====== Description
+
+If the Groovy file name isn't specified the name and location will be the same as the original XML file with a .groovy extension.
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-changelog-to-groovy [xml_file_name] [groovy_file_name]
+----
+
+Required arguments:
+
+* `xml_file_name` - The name and path of the XML file to convert
+
+Optional arguments:
+
+* `groovy_file_name` - The name and path of the Groovy file

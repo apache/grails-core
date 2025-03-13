@@ -6,6 +6,11 @@ plugins {
 version = projectVersion
 group = 'org.grails'
 
+ext {
+    includeBaseTckClass = true
+    //TODO: We could publish the test classes once https://github.com/grails/grails-gradle-plugin/pull/425 is merged
+}
+
 dependencies {
 
     implementation platform("org.grails:grails-bom:$grailsVersion")
@@ -64,7 +69,6 @@ dependencies {
     testImplementation 'org.junit.platform:junit-platform-suite', {
         // api: SelectClasses, Suite
     }
-    testImplementation project(':grails-datastore-gorm-tck')
     testImplementation 'org.grails:grails-core', {
         // impl: Entity. ValidationException
         if (excludeUnusedTransDeps) {
@@ -88,8 +92,14 @@ dependencies {
     // Commented out since we aren't building / publishing
     //testImplementation project(":grails-datastore-gorm-rx")
 
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Use the simple datastore to ensure the base implementation works correctly
+    api project(':simple-gorm')
+
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
+
+    runtimeOnly 'org.apache.groovy:groovy-dateutil', {
+        // Groovy Date Utils Extensions are used in the tests
+    }
  }
 
 //compileTestGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
@@ -97,4 +107,3 @@ dependencies {
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 apply from: rootProject.layout.projectDirectory.file('gradle/tck-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

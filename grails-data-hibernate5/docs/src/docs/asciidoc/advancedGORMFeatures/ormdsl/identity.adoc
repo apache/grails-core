@@ -1,0 +1,36 @@
+You can customize how GORM generates identifiers for the database using the DSL. By default GORM relies on the native database mechanism for generating ids. This is by far the best approach, but there are still many schemas that have different approaches to identity.
+
+To deal with this Hibernate defines the concept of an id generator. You can customize the id generator and the column it maps to as follows:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        table 'people'
+        version false
+        id generator: 'hilo',
+           params: [table: 'hi_value',
+                    column: 'next_value',
+                    max_lo: 100]
+    }
+}
+----
+
+In this case we're using one of Hibernate's built in 'hilo' generators that uses a separate table to generate ids.
+
+NOTE: For more information on the different Hibernate generators refer to the https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#identifiers-generators[Hibernate reference documentation]
+
+Although you don't typically specify the `id` field (GORM adds it for you) you can still configure its mapping like the other properties. For example to customise the column for the id property you can do:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        table 'people'
+        version false
+        id column: 'person_id'
+    }
+}
+----

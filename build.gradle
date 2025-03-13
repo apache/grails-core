@@ -54,6 +54,7 @@ version = projectVersion
 group = 'this.will.be.overridden'
 
 def publishedProjects = [
+        // datastore
         'grails-datastore-async',
         'grails-datastore-core',
         'grails-datastore-gorm',
@@ -61,10 +62,25 @@ def publishedProjects = [
         //'grails-datastore-gorm-rx',
         'grails-datastore-gorm-support',
         'grails-datastore-gorm-tck',
-        'grails-datastore-gorm-test',
+        'grails-datastore-gorm-tck-base',
+        'grails-datastore-gorm-tck-domains',
         'grails-datastore-gorm-validation',
         'grails-datastore-web',
         'grails-gorm-testing-support',
+        // simple
+        'simple-gorm',
+        // hibernate5
+        'hibernate5-boot-plugin',
+        'hibernate5-database-migration',
+        'hibernate5-gorm',
+        'hibernate5-grails-plugin',
+        // mongodb
+        'mongodb-boot-plugin',
+        'mongodb-gorm',
+        'mongodb-gorm-bson',
+        'mongodb-gorm-ext',
+        'mongodb-grails-plugin',
+        'mongodb-views-json-templates'
 ]
 subprojects {
     if (name in publishedProjects) {
