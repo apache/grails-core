@@ -165,19 +165,34 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     private void configureGroovyCompiler(Project project) {
         Provider<Directory> sourceConfigFiles = project.layout.buildDirectory.dir('groovyCompilerConfiguration')
-        Provider<RegularFile> groovyConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy')
+
+        // Gradle validates that this file exists and it is not a lazy validation so we must force the creation always to ensure it passes gradle's validation
+        File groovyCompilerConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy').get().asFile
+        if(!groovyCompilerConfigFile.exists()) {
+            groovyCompilerConfigFile.parentFile.mkdirs()
+            groovyCompilerConfigFile.createNewFile()
+        }
+        groovyCompilerConfigFile.write("// Placeholder for grails metadata and other configuration")
 
         if (!project.tasks.findByName('configureGroovyCompiler')) {
             project.tasks.register('cleanGroovyCompilerConfig').configure { Task task ->
-                task.doLast {
+                task.group = "build"
+                task.doFirst {
                     sourceConfigFiles.get().asFile.deleteDir()
+                    sourceConfigFiles.get().asFile.mkdirs()
                 }
             }
             // Merge the script at runtime so we don't suffer a performance penalty as part of every gradle task run
             project.tasks.register('configureGroovyCompiler').configure { Task task ->
+                task.group = "build"
                 task.dependsOn('cleanGroovyCompilerConfig')
+
+                // Gradle will cache the output based on the directory, so we must ensure it exists
+                sourceConfigFiles.get().asFile.mkdirs()
+
                 task.inputs.dir(sourceConfigFiles)
-                task.outputs.file(groovyConfigFile)
+                task.outputs.file(groovyCompilerConfigFile)
+
                 task.doLast {
                     List<String> scripts = sourceConfigFiles.get().asFile.listFiles({ File dir, String name ->
                         name.endsWithIgnoreCase('groovy')
@@ -188,11 +203,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         scripts << compileTask.groovyOptions.configurationScript.text
                     }
 
-                    compileTask.groovyOptions.configurationScript = groovyConfigFile.get().asFile
                     String combinedScripts = scripts.findResults { it?.trim() }.join('\n').trim()
-
                     if (combinedScripts) {
-                        groovyConfigFile.get().asFile.text = combinedScripts
+                        groovyCompilerConfigFile.parentFile.mkdirs()
+                        groovyCompilerConfigFile.write(combinedScripts)
+                        compileTask.groovyOptions.configurationScript = groovyCompilerConfigFile
                     }
                 }
             }
@@ -213,6 +228,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         TaskProvider<Task> configScriptTask = project.tasks.register(taskName)
         configScriptTask.configure { Task task ->
+            task.group = "build"
             task.outputs.file(targetConfigFile)
             task.dependsOn('cleanGroovyCompilerConfig')
 
