@@ -144,8 +144,13 @@ class IntegrationTestMixinTransformation implements ASTTransformation {
         if (servletApi != null) {
 
             if( GrailsASTUtils.findAnnotation(classNode, SpringBootTest) == null) {
-                AnnotationNode webIntegrationTestAnnotation = GrailsASTUtils.addAnnotationOrGetExisting(classNode, SpringBootTest)
-                webIntegrationTestAnnotation.addMember("webEnvironment", propX(classX(SpringBootTest.WebEnvironment.class), "RANDOM_PORT"))
+                GrailsASTUtils.addAnnotationOrGetExisting(
+                        classNode, SpringBootTest, [
+                                webEnvironment: propX(classX(SpringBootTest.WebEnvironment), 'RANDOM_PORT'),
+                                useMainMethod: propX(classX(SpringBootTest.UseMainMethod), 'ALWAYS')
+                        ] as Map<String,Object>
+                )
+
                 if(classNode.getProperty("serverPort") == null) {
 
                     def serverPortField = new FieldNode("serverPort", Modifier.PROTECTED, ClassHelper.Integer_TYPE, classNode, new ConstantExpression(8080))

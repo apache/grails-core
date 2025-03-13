@@ -24,6 +24,7 @@ import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 import org.springframework.aop.config.AopConfigUtils
+import org.springframework.boot.SpringBootConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.annotation.Bean
@@ -39,6 +40,7 @@ import java.lang.reflect.Field
  *
  */
 @CompileStatic
+@SpringBootConfiguration
 // WARNING: Never add logging to the source of this class, early initialization causes problems
 class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationContextAware {
 
