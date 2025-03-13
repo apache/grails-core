@@ -42,13 +42,6 @@ class FirstAndLastMethodSpec extends GormDatastoreSpec {
         result?.name == 'three'
     }
 
-    @PendingFeatureIf(
-            value = {
-                !System.getProperty('hibernate5.gorm.suite') &&
-                !System.getProperty('mongodb.gorm.suite')
-            },
-            reason = 'Was previously @Ignore'
-    )
     void "Test first and last method with one entity"() {
         given:
         assert new SimpleWidget(name: 'one', spanishName: 'uno').save()
@@ -67,13 +60,6 @@ class FirstAndLastMethodSpec extends GormDatastoreSpec {
         result?.name == 'one'
     }
 
-    @PendingFeatureIf(
-            value = { (
-                !System.getProperty('hibernate5.gorm.suite') &&
-                !System.getProperty('mongodb.gorm.suite')
-            )},
-            reason = 'Was previously @Ignore'
-    )
     void "Test first and last method with sort parameter"() {
         given:
         assert new SimpleWidget(name: 'one', spanishName: 'uno').save()
@@ -130,13 +116,6 @@ class FirstAndLastMethodSpec extends GormDatastoreSpec {
         result?.spanishName == 'uno'
     }
 
-    @PendingFeatureIf(
-            value = { (
-                !System.getProperty('hibernate5.gorm.suite') &&
-                !System.getProperty('mongodb.gorm.suite')
-            )},
-            reason = 'Was previously @Ignore'
-    )
     void "Test first and last method with non standard identifier"() {
         given:
         ['one', 'two', 'three'].each { name ->
@@ -158,9 +137,9 @@ class FirstAndLastMethodSpec extends GormDatastoreSpec {
     }
 
     @PendingFeatureIf(
-            value = { (
-                !System.getProperty('mongodb.gorm.suite')
-            )},
+            value = {
+                System.getProperty('hibernate5.gorm.suite')
+            },
             reason = 'Was previously @Ignore'
     )
     void "Test first and last method with composite key"() {
