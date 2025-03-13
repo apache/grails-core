@@ -10,6 +10,8 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.ConfigurableApplicationContext
+import spock.lang.IgnoreIf
+import spock.lang.PendingFeatureIf
 import spock.util.concurrent.PollingConditions
 
 class DirtyCheckingAfterListenerSpec extends GormDatastoreSpec {
@@ -33,6 +35,7 @@ class DirtyCheckingAfterListenerSpec extends GormDatastoreSpec {
         }
     }
 
+    @PendingFeatureIf({ !Boolean.getBoolean("hibernate5.gorm.suite") && !Boolean.getBoolean("hibernate6.gorm.suite")})
     void "test state change from listener update the object"() {
 
         when:

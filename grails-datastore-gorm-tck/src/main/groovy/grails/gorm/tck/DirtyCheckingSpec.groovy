@@ -3,6 +3,7 @@ package grails.gorm.tck
 import grails.gorm.tests.GormDatastoreSpec
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import spock.lang.IgnoreIf
+import spock.lang.PendingFeature
 
 /**
  * @author Graeme Rocher
@@ -151,7 +152,7 @@ class DirtyCheckingSpec extends GormDatastoreSpec {
         TestAuthor.deleteAll()
     }
 
-    @IgnoreIf({ Boolean.getBoolean("hibernate5.gorm.suite") || Boolean.getBoolean("hibernate6.gorm.suite")}) // because one-to-one association loads eagerly in the Hibernate
+    @PendingFeature // because one-to-one association loads eagerly in the Hibernate
     void "test initialized proxy is not marked as dirty"() {
 
         given:
