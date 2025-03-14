@@ -23,6 +23,7 @@ import grails.util.BuildSettings
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
+import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
@@ -116,23 +117,15 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                     }
                 }
 
-                def classLoader = getClass().classLoader
-                if (ClassUtils.isPresent('jakarta.servlet.ServletContext', classLoader)) {
-                    GrailsASTUtils.addAnnotationOrGetExisting(classNode, ClassHelper.make(
-                            classLoader.loadClass('org.springframework.web.servlet.config.annotation.EnableWebMvc')
-                    ))
-                }
-                if (ClassUtils.isPresent('org.springframework.boot.autoconfigure.EnableAutoConfiguration', classLoader) ) {
-                    GrailsASTUtils.addAnnotationOrGetExisting(classNode, ClassHelper.make(
-                            classLoader.loadClass('org.springframework.boot.SpringBootConfiguration')
-                    ))
-                    def autoConfigAnn = GrailsASTUtils.addAnnotationOrGetExisting(classNode, ClassHelper.make(
-                            classLoader.loadClass('org.springframework.boot.autoconfigure.EnableAutoConfiguration')
-                    ))
-                    for (autoConfigureClassName in EXCLUDED_AUTO_CONFIGURE_CLASSES) {
-                        if (ClassUtils.isPresent(autoConfigureClassName, classLoader)) {
-                            def autoConfigClassExpression = new ClassExpression(ClassHelper.make(classLoader.loadClass(autoConfigureClassName)))
-                            GrailsASTUtils.addExpressionToAnnotationMember(autoConfigAnn, EXCLUDE_MEMBER, autoConfigClassExpression)
+                // Add @SpringBootConfiguration so that the Application class is picked up by @SpringBootTest
+                addAnnotation('org.springframework.boot.SpringBootConfiguration', classNode)
+                addAnnotation('org.springframework.web.servlet.config.annotation.EnableWebMvc', classNode, 'jakarta.servlet.ServletContext')
+                addAnnotation('org.springframework.boot.autoconfigure.EnableAutoConfiguration', classNode)?.with {
+                    def classLoader = getClass().classLoader
+                    for (excludeClassName in EXCLUDED_AUTO_CONFIGURE_CLASSES) {
+                        if (ClassUtils.isPresent(excludeClassName, classLoader)) {
+                            def excludeClass = new ClassExpression(ClassHelper.make(classLoader.loadClass(excludeClassName)))
+                            GrailsASTUtils.addExpressionToAnnotationMember(it, EXCLUDE_MEMBER, excludeClass)
                         }
                     }
                 }
@@ -145,5 +138,15 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
         if(url == null) return false
         def res = new UrlResource(url)
         return GrailsResourceUtils.isGrailsResource(res) && res.filename == "Application.groovy"
+    }
+
+    private AnnotationNode addAnnotation(String annotationClassName, ClassNode classNode, String conditionalClass = null) {
+        def classLoader = getClass().classLoader
+        if (ClassUtils.isPresent(conditionalClass ?: annotationClassName, classLoader)) {
+            return GrailsASTUtils.addAnnotationOrGetExisting(classNode, ClassHelper.make(
+                    classLoader.loadClass(annotationClassName)
+            ))
+        }
+        return null
     }
 }
