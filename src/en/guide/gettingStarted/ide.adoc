@@ -8,10 +8,7 @@ IntelliJ IDEA also provides powerful database tools that work with Grails' GORM 
 
 https://www.jetbrains.com/idea/[IntelliJ IDEA Website]
 
-To improve speed in IntelliJ IDEA you can adjust the following settings under Help -> Custom VM Options.  If your machine has less RAM, you will need to adjust these down to slightly lower values.
-
-  -Xmx6144m
-  -XX:ReservedCodeCacheSize=512m
+TIP: For larger projects, it may be beneficial to adjust memory settings, based on available system RAM, by increasing `-Xmx` (maximum Java heap size) and `-XX:ReservedCodeCacheSize` (JIT compiler maximum code cache size).  Edit these settings under `Help->Custom VM Options`, by adding one setting per line.  Example for a small project: `-Xmx2048m` `-XX:ReserveCodeCacheSize=128m` and for a large project: `-Xmx6144m` `-XX:ReservedCodeCacheSize=512m`
 
 === 2. Visual Studio Code (VS Code)
 
