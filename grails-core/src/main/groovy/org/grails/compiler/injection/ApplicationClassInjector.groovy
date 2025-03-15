@@ -121,12 +121,8 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 addAnnotation('org.springframework.boot.SpringBootConfiguration', classNode)
                 addAnnotation('org.springframework.web.servlet.config.annotation.EnableWebMvc', classNode, 'jakarta.servlet.ServletContext')
                 addAnnotation('org.springframework.boot.autoconfigure.EnableAutoConfiguration', classNode)?.with {
-                    def classLoader = getClass().classLoader
                     for (excludeClassName in EXCLUDED_AUTO_CONFIGURE_CLASSES) {
-                        if (ClassUtils.isPresent(excludeClassName, classLoader)) {
-                            def excludeClass = new ClassExpression(ClassHelper.make(classLoader.loadClass(excludeClassName)))
-                            GrailsASTUtils.addExpressionToAnnotationMember(it, EXCLUDE_MEMBER, excludeClass)
-                        }
+                        GrailsASTUtils.addExpressionToAnnotationMember(it, 'excludeName', constX(excludeClassName))
                     }
                 }
             }
