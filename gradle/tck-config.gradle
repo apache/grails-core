@@ -1,32 +1,45 @@
+configurations {
+    tck {
+        transitive = false
+    }
+
+    // Because we reference tests in the SimpleTestSuite to be able to run them in the IDE,
+    // the tests need explicitly added to the classpath as well
+    testImplementation.extendsFrom(tck)
+}
+
 dependencies {
     if (!project.hasProperty('includeBaseTckClass') || project.findProperty('includeBaseTckClass')) {
         testImplementation project(':grails-datastore-gorm-tck-base')
     }
-    testImplementation project(':grails-datastore-gorm-tck')
+    // So we can easily extract the compiled classes
+    tck project(':grails-datastore-gorm-tck')
     testImplementation project(':grails-datastore-gorm-tck-domains')
+
+    runtimeOnly 'org.apache.groovy:groovy-dateutil', {
+        // Groovy Date Utils Extensions are used in the tests
+    }
 }
 
-// TODO: gradle will happily put the jar file on the classpath, but junit won't find the tests.  Dynamic test discovery also won't find them.
-tasks.register('extractTckJar', Copy) {
-    dependsOn(configurations.testRuntimeClasspath)
+// TODO: gradle will happily put the jar file on the classpath, but junit won't find the tests.
+//  Dynamic test discovery also won't find them so extract the class files to force junit to work.
+TaskProvider<Sync> extractTck = tasks.register('extractTckJar', Sync) {
+    inputs.files(configurations.tck)
 
-    Provider<Directory> extractTarget = layout.buildDirectory.dir('extracted-tck-classes')
-
-    doFirst {
-        extractTarget.get().asFile.deleteDir()
-    }
-
-    outputs.dir(extractTarget)
-    File tckJar = configurations.testRuntimeClasspath.resolve().find { it.name.startsWith("grails-datastore-gorm-tck-${projectVersion}") }
-    if (tckJar) {
-        from(zipTree(tckJar))
-        into(extractTarget)
-    }
+    from { zipTree(configurations.tck.singleFile) }
+    into(layout.buildDirectory.dir('extracted-tck-classes'))
 }
 
 tasks.withType(Test).configureEach {
-    dependsOn('extractTckJar')
-    doFirst {
-        testClassesDirs += files(layout.buildDirectory.dir('extracted-tck-classes'))
+    testClassesDirs = objects.fileCollection().from(extractTck, testClassesDirs)
+    finalizedBy('cleanupTckClasses')
+}
+
+// There is a known issue with IntelliJ that can cause it's inspection process to lock up.
+// this is a work around to help prevent the scenario that causes the lock up.
+tasks.register('cleanupTckClasses') {
+    Provider<Directory> extractDir = layout.buildDirectory.dir('extracted-tck-classes')
+    doLast {
+        extractDir.get().asFile.deleteDir()
     }
 }
