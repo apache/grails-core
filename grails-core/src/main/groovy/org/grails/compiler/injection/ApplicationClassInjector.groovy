@@ -118,7 +118,9 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 }
 
                 // Add @SpringBootConfiguration so that the Application class is picked up by @SpringBootTest
-                addAnnotation('org.springframework.boot.SpringBootConfiguration', classNode)
+                addAnnotation('org.springframework.boot.SpringBootConfiguration', classNode).with {
+                    GrailsASTUtils.addExpressionToAnnotationMember(it, 'proxyBeanMethods', constX(false))
+                }
                 addAnnotation('org.springframework.web.servlet.config.annotation.EnableWebMvc', classNode, 'jakarta.servlet.ServletContext')
                 addAnnotation('org.springframework.boot.autoconfigure.EnableAutoConfiguration', classNode)?.with {
                     for (excludeClassName in EXCLUDED_AUTO_CONFIGURE_CLASSES) {
