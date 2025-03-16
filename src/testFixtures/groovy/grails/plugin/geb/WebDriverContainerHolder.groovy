@@ -119,7 +119,8 @@ class WebDriverContainerHolder {
             configObject.reporter = (invocation.sharedInstance as ContainerGebSpec).createReporter()
         }
         if (currentConfiguration.fileDetector != NullContainerFileDetector) {
-            ServiceRegistry.setInstance(ContainerFileDetector, currentConfiguration.fileDetector)        }
+            ServiceRegistry.setInstance(ContainerFileDetector, currentConfiguration.fileDetector)
+        }
 
         currentBrowser = new Browser(new Configuration(configObject, new Properties(), null, null))
 

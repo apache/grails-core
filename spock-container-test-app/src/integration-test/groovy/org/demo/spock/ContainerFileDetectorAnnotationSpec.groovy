@@ -17,24 +17,7 @@ import spock.lang.Requires
 @ContainerGebConfiguration(fileDetector = UselessContainerFileDetector)
 class ContainerFileDetectorAnnotationSpec extends ContainerGebSpec {
 
-    @Requires({ os.windows })
-    void 'should be able to find and upload files on a Windows host'() {
-        given:
-        def uploadPage = to UploadPage
-
-        when:
-        uploadPage.fileInput.file = new File('src/integration-test/resources/assets/upload-test.txt')
-
-        and:
-        uploadPage.submitBtn.click()
-
-        then:
-        def e = thrown(WebDriverException)
-        e.message.contains('File not found')
-    }
-
-    @IgnoreIf({ os.windows })
-    void 'should be able to find and upload files on a non-Windows host'() {
+    void 'should fail to find file with fileDetector changed to UselessContainerFileDetector via annotation'() {
         given:
         def uploadPage = to UploadPage
 

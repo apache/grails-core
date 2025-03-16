@@ -39,6 +39,8 @@ class UselessContainerFileDetector extends UselessFileDetector implements Contai
 
 /**
  * Used by {@link ContainerGebConfiguration#fileDetector()} interface to represent a null value.
+ *
+ * @since 4.2
  */
 class NullContainerFileDetector extends DefaultContainerFileDetector {
 }

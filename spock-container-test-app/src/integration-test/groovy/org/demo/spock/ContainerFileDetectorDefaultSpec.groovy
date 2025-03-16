@@ -14,24 +14,7 @@ import spock.lang.Requires
 @Integration
 class ContainerFileDetectorDefaultSpec extends ContainerGebSpec {
 
-    @Requires({ os.windows })
-    void 'should be able to find and upload files on a Windows host'() {
-        given:
-        def uploadPage = to UploadPage
-
-        when:
-        uploadPage.fileInput.file = new File('src/integration-test/resources/assets/upload-test.txt')
-
-        and:
-        uploadPage.submitBtn.click()
-
-        then:
-        title == 'File Uploaded'
-        pageSource.contains('File uploaded successfully')
-    }
-
-    @IgnoreIf({ os.windows })
-    void 'should be able to find and upload files on a non-Windows host'() {
+    void 'should be able to find and upload local files'() {
         given:
         def uploadPage = to UploadPage
 
