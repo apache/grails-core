@@ -112,7 +112,7 @@ tasks.register('cleanAsciidoc', Delete) {
 
 tasks.withType(Groovydoc).configureEach {
     dependsOn('fetchGormSource')
-    docTitle = "GORM for Hibernate 5 - $project.version"
+    docTitle = "GORM for Hibernate 6 - $project.version"
 
     def sourceFiles = coreProjects.collect {
         layout.buildDirectory.files("$checkoutDirName/gorm-src/$it/src/main/groovy")

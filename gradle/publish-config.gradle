@@ -7,10 +7,10 @@ if (project.hasProperty('snapshotPublishUrl')) {
 
 extensions.configure(GrailsPublishExtension) {
     // Explicit `it` is required here
-    it.githubSlug = 'grails/gorm-hibernate5'
+    it.githubSlug = 'grails/gorm-hibernate6'
     it.license.name = 'Apache-2.0'
-    it.title = findProperty('pomTitle') ?: 'GORM for Hibernate 5'
-    it.desc = findProperty('pomDescription') ?: 'Provides a GORM Object Mapping implementations for Hibernate 5'
+    it.title = findProperty('pomTitle') ?: 'GORM for Hibernate 6'
+    it.desc = findProperty('pomDescription') ?: 'Provides a GORM Object Mapping implementations for Hibernate 6'
     it.developers = findProperty('pomDevelopers') as Map<String,String> ?: [
             'graemerocher': 'Graeme Rocher',
             'jeffscottbrown': 'Jeff Brown',

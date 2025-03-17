@@ -29,8 +29,8 @@ class HibernateGrailsPlugin extends Plugin {
     def grailsVersion = '7.0.0 > *'
 
     def author = 'Grails Core Team'
-    def title = 'Hibernate 5 for Grails'
-    def description = 'Provides integration between Grails and Hibernate 5 through GORM'
+    def title = 'Hibernate 6 for Grails'
+    def description = 'Provides integration between Grails and Hibernate 6 through GORM'
     def documentation = 'https://grails.github.io/grails-data-mapping/latest/'
 
     def observe = ['domainClass']

@@ -9,7 +9,7 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
-    systemProperty('hibernate5.gorm.suite', System.getProperty('hibernate5.gorm.suite') ?: true)
+    systemProperty('hibernate6.gorm.suite', System.getProperty('hibernate6.gorm.suite') ?: true)
     reports.html.required = !System.getenv('CI')
     reports.junitXml.required = !System.getenv('CI')
     testLogging {

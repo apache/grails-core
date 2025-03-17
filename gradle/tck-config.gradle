@@ -17,7 +17,7 @@ tasks.withType(Test).configureEach {
         System.out.flush()
     }
     // Used in the TCK test suite to selectively enable/disable tests
-    systemProperty('hibernate5.gorm.suite', 'true')
+    systemProperty('hibernate6.gorm.suite', 'true')
 
     doFirst {
         def toBaseClassRelativePathWithoutExtension = { String base, String classFile ->

@@ -36,13 +36,13 @@ dependencies {
 
     compileOnly "org.springframework.boot:spring-boot-starter-logging"
     compileOnly "org.springframework.boot:spring-boot-autoconfigure"
-    compileOnly "org.grails.plugins:hibernate5"
+    compileOnly project(':grails-plugin')
     compileOnly "org.grails:grails-core"
     compileOnly "org.apache.groovy:groovy-sql"
     compileOnly "org.apache.groovy:groovy-xml"
 
     testImplementation "org.springframework.boot:spring-boot-starter-tomcat"
-    testImplementation "org.grails.plugins:hibernate5"
+    testImplementation project(':grails-plugin')
     testImplementation "org.grails:grails-core"
     testImplementation "org.grails:grails-gorm-testing-support"
     testImplementation "org.grails:grails-web-testing-support"

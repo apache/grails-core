@@ -70,7 +70,7 @@ group = 'this.will.be.overridden'
 
 def publishedProjects = [
         'database-migration',
-        'gorm-hibernate5-spring-boot',
+        'gorm-hibernate6-spring-boot',
         'grails-datastore-gorm-hibernate6',
         'grails-plugin',
 ]

@@ -10,7 +10,7 @@ dependencies {
 
     implementation platform("org.grails:grails-bom:$grailsVersion")
 
-    implementation project(':gorm-hibernate5-spring-boot')
+    implementation project(':gorm-hibernate6-spring-boot')
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
     runtimeOnly 'com.h2database:h2'
