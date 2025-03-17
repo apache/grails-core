@@ -1,5 +1,5 @@
 version = projectVersion
-group = 'org.grails.plugins'
+group = 'io.github.gpc'
 
 apply plugin: 'groovy'
 apply plugin: 'java-library'

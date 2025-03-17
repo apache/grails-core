@@ -1,6 +1,6 @@
 # Grails Mail Plugin
 
-[![Maven Central](https://img.shields.io/maven-central/v/org.grails.plugins/mail.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails.plugins/mail)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.gpc/mail.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.gpc/mail)
 [![Java CI](https://github.com/gpc/grails-mail/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/gpc/grails-mail/actions/workflows/gradle.yml)
 
 The Grails Mail Plugin provides a convenient Domain-Specific Language (DSL) for _sending_ email, supporting features such as plain text, HTML, attachments, inline resources and i18n (internationalization), among others.

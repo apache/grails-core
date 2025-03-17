@@ -25,4 +25,4 @@ buildCache {
     }
 }
 
-rootProject.name = 'mail'
+rootProject.name = 'grails-mail'
