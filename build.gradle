@@ -65,7 +65,7 @@ grailsPublish {
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     testLogging {
-        events 'passed', 'skipped', 'failed', 'standardError', 'standardOut'
+        events 'passed', 'skipped', 'failed'
     }
 }
 
