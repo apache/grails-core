@@ -132,12 +132,10 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Docs"
-        id: docs
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew docs --refresh-dependencies
+        run: ./gradlew docs
       - name: "🚀 Publish to Github Pages"
-        if: steps.docs.outcome == 'success'
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -162,9 +160,8 @@ jobs:
         run: echo "value={\"message\":\"New Data Mapping Snapshots $(date) - $GITHUB_SHA\"}" >> $GITHUB_OUTPUT
       - name: "📡 Invoke the Java CI workflow in GORM Hibernate6"
         continue-on-error: true
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
-          debug: ${{ secrets.ACTIONS_RUNNER_DEBUG }}
           github-token: ${{ secrets.GH_TOKEN }} # must be a PAT since we're triggering on an external repo
           script: |
             try {
