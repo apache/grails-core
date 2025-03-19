@@ -1,0 +1,1 @@
+${part1}<text:newLine/>${part2}

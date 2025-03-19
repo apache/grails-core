@@ -725,6 +725,27 @@ class MailServiceSpec extends Specification {
         mp.getBodyPart(1).content == htmlContent
     }
 
+    void 'should handle newlines in text GSP views'(String view) {
+        given: 'a recipient, subject, and body content using a view with newlines'
+        String recipient = 'abc@123.com'
+        String mailSubject = 'Test subject'
+        String part1 = 'Hello'
+        String part2 = 'World!'
+
+        when: 'the mail service sends the message using a view with newlines'
+        def message = (SimpleMailMessage) nonMimeCapableMailService.sendMail {
+            to recipient
+            subject mailSubject
+            text view: view, model: [part1: part1, part2: part2]
+        }
+
+        then: 'the message should have the correct content'
+        message.text == "Hello\nWorld!"
+
+        where:
+        view << ['/_testemails/newLineTest', '/_testemails/newLineTagTest']
+    }
+
     @Ignore('Not possible to get the currentResponse')
     void testContentTypeDoesNotGetChanged() {
         when:
