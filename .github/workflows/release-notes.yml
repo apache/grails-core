@@ -33,13 +33,13 @@ jobs:
       # Otherwise:
       - name: Export Gradle Properties
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
-        uses: grails/github-actions/export-gradle-properties@main
-      - uses: grails/github-actions/release-notes@main
+        uses: apache/grails-github-actions/export-gradle-properties@asf
+      - uses: apache/grails-github-actions/release-notes@asf
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
         id: release_notes
         with:
           token: ${{ secrets.GH_TOKEN }}
-      - uses: ncipollo/release-action@v1
+      - uses: ncipollo/release-action@1e3e9c6637e5566e185b7ab66f187539c5a76da7
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false' && steps.release_notes.outputs.generated_changelog == 'true'
         with:
           allowUpdates: true
