@@ -54,12 +54,11 @@ jobs:
       - name: "📤 Upload artifacts to the Github release"
         id: upload_artifact
         if: steps.assemble.outcome == 'success'
-        uses: Roang-zero1/github-upload-release-artifacts-action@c15e0b65ce2ae1c8d52bfbc75d017d21e1da77d7 # v3.0.0 (Use commit sha as this is a 3rd party action)
-        with:
-          created_tag: v${{ github.event.inputs.release }}
-          args: build/distributions/grails-${{ steps.release_version.outputs.release_version }}.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release upload v${{ github.event.inputs.release }}
+          build/distributions/grails-${{ steps.release_version.outputs.release_version }}.zip
       - name: "📝 Create Message for the Grails Documentation Release"
         if: steps.assemble.outcome == 'success'
         id: grails_docs_release_message

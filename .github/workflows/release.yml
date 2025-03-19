@@ -459,11 +459,11 @@ jobs:
           path: build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
       - name: "📤 Upload artifacts to the Github release"
         id: upload_artifact
-        uses: Roang-zero1/github-upload-release-artifacts-action@c15e0b65ce2ae1c8d52bfbc75d017d21e1da77d7 # v3.0.0 (Use commit sha as this is a 3rd party action)
-        with:
-          args: build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release upload v${{ steps.release_version.outputs.value }}
+          build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
       - name: "🔐 Generate secring file"
         env:
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
