@@ -3,16 +3,6 @@
 As part of the move to the Apache Software Foundation, the grails artifacts must adhere to the apache namespace. Below
 is a reference of all migrated artifacts - both their old and new name.
 
-Gradle Plugins are published as POM files referencing the 
-
-## Gradle Plugin Marker Artifacts
-
-https://docs.gradle.org/current/userguide/plugins.html#sec:plugin_markers
-
-Since the `plugins{}` DSL block only allows for declaring plugins by their globally unique plugin id and version properties, Gradle needs a way to look up the coordinates of the plugin implementation artifact.
-
-To do so, Gradle will look for a Plugin Marker Artifact with the coordinates `plugin.id:plugin.id.gradle.plugin:plugin.version`. This marker needs to have a dependency on the actual plugin implementation.
-
 | old group id                      | old artifact id                                 | new group id                                    | new artifact id                                               | old gradle plugin name | new gradle plugin name | repository             |
 |-----------------------------------|-------------------------------------------------|-------------------------------------------------|---------------------------------------------------------------|------------------------|------------------------|------------------------|
 | org.grails                        | grails-async                                    | org.apache.grails                               | grails-async-core                                             |                        |                        | grails-core            |
@@ -145,3 +135,11 @@ To do so, Gradle will look for a Plugin Marker Artifact with the coordinates `pl
 | org.grails.forge                  | grails-forge-api                                | org.apache.grails.forge                         | grails-forge-api                                              |                        |                        | grails-forge           |
 | org.grails.forge                  | grails-forge-core                               | org.apache.grails.forge                         | grails-forge-core                                             |                        |                        | grails-forge           |
 | org.grails.plugins                | quartz                                          | org.apache.grails                               | grails-quartz                                                 |                        |                        | grails-quartz          |
+
+## Gradle Plugin Marker Artifacts
+
+https://docs.gradle.org/current/userguide/plugins.html#sec:plugin_markers
+
+Since the `plugins{}` DSL block only allows for declaring plugins by their globally unique plugin id and version properties, Gradle needs a way to look up the coordinates of the plugin implementation artifact.
+
+To do so, Gradle will look for a Plugin Marker Artifact with the coordinates `plugin.id:plugin.id.gradle.plugin:plugin.version`. This marker needs to have a dependency on the actual plugin implementation.
