@@ -132,13 +132,11 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Docs"
-        id: docs
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew docs --refresh-dependencies
+        run: ./gradlew docs
       - name: "🚀 Publish to Github Pages"
-        if: steps.docs.outcome == 'success'
-        uses: grails/grails-github-actions/deploy-github-pages@main
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'
@@ -162,9 +160,19 @@ jobs:
         run: echo "value={\"message\":\"New Data Mapping Snapshots $(date) - $GITHUB_SHA\"}" >> $GITHUB_OUTPUT
       - name: "📡 Invoke the Java CI workflow in GORM Hibernate6"
         continue-on-error: true
-        uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4 (Use commit sha as this is a 3rd party action)
+        uses: actions/github-script@v7
         with:
-          workflow: Java CI
-          repo: grails/gorm-hibernate6
-          ref: ${{ steps.extract_branch.outputs.value }}
-          token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }} # must be a PAT since we're triggering on an external repo
+          script: |
+            try {
+              const result = await github.rest.actions.createWorkflowDispatch({
+                owner: 'apache',
+                repo: 'grails-data-hibernate6',
+                workflow_id: 'gradle.yml',
+                ref: '${{ steps.extract_branch.outputs.value }}'
+              });
+              console.log(result);
+            } catch(error) {
+              console.error(error);
+              core.setFailed(error);
+            }

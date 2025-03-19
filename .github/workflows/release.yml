@@ -2,9 +2,9 @@ name: "Release"
 on:
   release:
     types: [published]
-env:
-  GIT_USER_NAME: grails-build
-  GIT_USER_EMAIL: grails-build@users.noreply.github.com
+permissions:
+  contents: write
+  packages: read
 jobs:
   publish:
     name: "Publish to Sonatype Staging Repository"
@@ -12,9 +12,6 @@ jobs:
       release_version: ${{ steps.release_version.outputs.value }}
       target_branch: ${{ steps.extract_branch.outputs.value }}
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: read
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -28,7 +25,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "⚙️ Run pre-release"
-        uses: grails/github-actions/pre-release@main
+        uses: apache/grails-github-actions/pre-release@asf
       - name: "🔍 Determine Target Branch"
         id: extract_branch
         run: |
@@ -40,13 +37,11 @@ jobs:
         id: release_version
         run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "🧩 Run Assemble"
-        if: success()
         id: assemble
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --refresh-dependencies assemble
+        run: ./gradlew assemble
       - name: "📤 Upload Distribution to workflow summary page"
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: grails-data-mapping-${{ steps.release_version.outputs.value }}.zip
@@ -76,9 +71,6 @@ jobs:
     name: "Release Sonatype Staging Repository"
     needs: publish
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: read
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -106,16 +98,12 @@ jobs:
           findSonatypeStagingRepository
           releaseSonatypeStagingRepository 
       - name: "⚙️ Run post-release"
-        if: success()
-        uses: grails/github-actions/post-release@main
+        uses: apache/grails-github-actions/post-release@asf
   docs:
     environment: release
     name: "Publish Documentation"
     needs: publish
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: read
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -135,8 +123,7 @@ jobs:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew docs
       - name: "🚀 Publish to Github Pages"
-        if: success()
-        uses: grails/grails-github-actions/deploy-github-pages@main
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'true'
