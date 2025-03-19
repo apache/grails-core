@@ -33,8 +33,8 @@ jobs:
       # Otherwise:
       - name: Export Gradle Properties
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
-        uses: apache/github-actions/export-gradle-properties@asf
-      - uses: apache/github-actions/release-notes@asf
+        uses: apache/grails-github-actions/export-gradle-properties@asf
+      - uses: apache/grails-github-actions/release-notes@asf
         if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
         id: release_notes
         with:
