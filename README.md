@@ -5,5 +5,5 @@ This is the project for generating the [Grails user & reference guide][Grails Do
 
 For contributing to grails docs look at the [Contribution Guide](https://github.com/apache/grails-core/blob/HEAD/CONTRIBUTING.md) on GitHub.
 
-[Grails Documentation]: https://grails.org/doc/latest
+[Grails Documentation]: https://docs.grails.org/latest/
 [Grails]: https://grails.org
