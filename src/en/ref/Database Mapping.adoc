@@ -27,7 +27,7 @@ class Book {
 }
 ----
 
-Refer to the user guide section on https://gorm.grails.org/6.0.x/hibernate/manual/index.html#ormdsl[ORM Mapping] for more information.
+Refer to the user guide section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM Mapping] for more information.
 
 
 === Global Database Mapping

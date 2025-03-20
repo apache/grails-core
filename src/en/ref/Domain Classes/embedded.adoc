@@ -6,7 +6,7 @@
 === Purpose
 
 
-Supports embedding domain components into domain classes - otherwise known as https://gorm.grails.org/6.0.x/hibernate/manual/index.html#gormComposition[composition].
+Supports embedding domain components into domain classes - otherwise known as https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#gormComposition[composition].
 
 
 === Examples

@@ -28,7 +28,7 @@ class Book {
 
 Usage: `version(string/boolean)`
 
-By default GORM is configured with https://gorm.grails.org/6.0.x/hibernate/manual/index.html#locking[optimistic locking] enabled. You can disable this by calling the `version` method with an argument of `false`:
+By default GORM is configured with https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#locking[optimistic locking] enabled. You can disable this by calling the `version` method with an argument of `false`:
 
 [source,groovy]
 ----

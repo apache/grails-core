@@ -39,6 +39,6 @@ class User {
 }
 ----
 
-This constraint influences https://gorm.grails.org/6.0.x/hibernate/manual/index.html#constraints[schema generation].
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.max.exceeded`

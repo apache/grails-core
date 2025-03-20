@@ -40,6 +40,6 @@ Plugin that adds Geb functional testing code generation features.
 
 * License: APACHE
 * Documentation: http://grails.org/plugin/geb
-* Issue Tracker: http://github.com/grails3-plugins/geb/issues
-* Source: http://github.com/grails3-plugins/geb
+* Issue Tracker: https://github.com/apache/grails-geb/issues
+* Source: https://github.com/apache/grails-geb/
 ----

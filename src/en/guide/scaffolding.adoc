@@ -179,7 +179,7 @@ def constraints = {
 ==== The Fields Plugin
 
 
-The Grails scaffolding templates make use of the https://grails.org/plugins.html#plugin&#47;fields[The Fields Plugin]. Once you've generated the scaffold views, you can customize the forms and tables using the `Taglib` provided by the plugin (see the http://grails3-plugins.github.io/fields/snapshot/[Fields plugin docs] for details).
+The Grails scaffolding templates make use of the https://views.grails.org/snapshot/fields/[Fields Plugin]. Once you've generated the scaffold views, you can customize the forms and tables using the `Taglib` provided by the plugin (see the https://views.grails.org/snapshot/fields/[Fields plugin docs] for details).
 
 [source,xml]
 ----

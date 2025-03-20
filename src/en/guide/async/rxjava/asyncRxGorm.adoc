@@ -1,4 +1,4 @@
-http://gorm.grails.org/6.0.x/rx/manual/[RxGORM] is new implementation of GORM that has the following goals:
+https://gorm.grails.org/{gormVersion}/rx/manual/[RxGORM] is new implementation of GORM that has the following goals:
 
 * Reactive
 * Non-blocking
@@ -27,4 +27,4 @@ def show() {
 }
 ----
 
-For more information on how to use RxGORM, see the http://gorm.grails.org/latest/rx/manual/[RxGORM user guide].
+For more information on how to use RxGORM, see the https://gorm.grails.org/{gormVersion}/rx/manual/[RxGORM user guide].

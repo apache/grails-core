@@ -31,5 +31,5 @@ Refer to the section on link:{guidePath}/services.html[Services] in the Grails u
 
 Configured Spring Beans given a service class of `BookService`:
 
-* `BookServiceServiceClass` - The https://docs.grails.org/3.2.x/apiorg/codehaus/groovy/grails/commons/GrailsServiceClass.html[GrailsServiceClass] instance which implements the conventions defined within a services class.
+* `BookServiceServiceClass` - The https://docs.grails.org/{GrailsVersion}/apiorg/codehaus/groovy/grails/commons/GrailsServiceClass.html[GrailsServiceClass] instance which implements the conventions defined within a services class.
 * `BookService` - A bean configured according to the scope of the service: if the service is transactional then the type of the actual bean definition will be a {springapi}org/springframework/transaction/interceptor/TransactionProxyFactoryBean.html[TransactionProxyFactoryBean].

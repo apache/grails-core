@@ -45,6 +45,6 @@ username(unique: ['group', 'department'])
 
 In this example `username` must be unique in `group` and `department`. There might be same logins in different groups or different departments.
 
-This constraint influences https://gorm.grails.org/6.0.x/hibernate/manual/index.html#constraints[schema generation].
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.unique`

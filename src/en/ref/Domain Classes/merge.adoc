@@ -39,7 +39,7 @@ ____
 Copy the state of the given object onto the persistent object with the same identifier. If there is no persistent instance currently associated with the session, it will be loaded. If the given instance is unsaved, save a copy of and return it as a newly persistent instance.
 ____
 
-The `merge` method is equivalent to the Hibernate https://docs.jboss.org/hibernate/orm/current/javadocs/org/hibernate/Session#merge(java/lang/Object).html[merge] method.
+The `merge` method is equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/5.6.5.Final/org/hibernate/Session.html#merge(java/lang/Object).html[merge] method.
 
 Parameters:
 

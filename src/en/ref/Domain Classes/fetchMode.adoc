@@ -36,4 +36,4 @@ By default associations in Grails are fetched lazily (each record is read from t
 
 In the case of eager fetching and a one-to-many association, the instance as well as the association will be initialized when they are loaded (eagerly). However, caution should be observed when using eager fetching, since being too eager can result in your entire database being loaded into memory!
 
-For more information see the section on https://gorm.grails.org/6.0.x/hibernate/manual/#fetchingDSL[Eager and Lazy Fetching] in the user guide.
+For more information see the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/#fetchingDSL[Eager and Lazy Fetching] in the user guide.

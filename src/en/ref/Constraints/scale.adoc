@@ -23,6 +23,6 @@ salary scale: 2
 
 Set to the desired scale for floating point numbers (i.e., the number of digits to the right of the decimal point). This constraint is applicable for properties of the following types: `java.lang.Float`, `java.lang.Double`, and `java.math.BigDecimal` (and its subclasses). When validation is invoked, this constraint determines if the number includes more nonzero decimal places than the scale permits. If so, it rounds the number to the maximum number of decimal places allowed by the scale. This constraint does not generate validation error messages.
 
-This constraint influences https://gorm.grails.org/6.0.x/hibernate/manual/index.html#constraints[schema generation].
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
 
 Error Code: N/A

@@ -65,7 +65,7 @@ Grails 4.0 is built on Spring 5 and Spring Boot 2.1. See the https://github.com/
 
 Grails 4.x supports a minimum version of Hibernate 5.4 and GORM 7.x. Several changes have been made to GORM to support the newer version of Hibernate and simplify GORM itself.
 
-The details of these changes are covered in the https://gorm.grails.org/7.0.x/hibernate/manual/index.html#upgradeNotes[GORM upgrade documentation].
+The details of these changes are covered in the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#upgradeNotes[GORM upgrade documentation].
 
 ### Spring Boot 2.1 Actuator
 
@@ -352,7 +352,7 @@ seleniumSafariDriverVersion=3.14.0
 <1> Includes https://plugins.gradle.org/plugin/com.energizedwork.webdriver-binaries[Webdriver binaries Gradle plugin].
 <2> Set the appropriate https://chromedriver.chromium.org[Webdriver for Chrome version].
 <3> Set the appropriate https://github.com/mozilla/geckodriver/releases[Webdriver for Firefox version].
-<4> Includes the https://github.com/grails3-plugins/geb[Grails Geb Plugin dependency] which has a transitive dependency to `geb-spock`. This is the dependency necessary to work with https://www.gebish.org[Geb] and Spock.
+<4> Includes the https://github.com/apache/grails-geb[Grails Geb Plugin dependency] which has a transitive dependency to `geb-spock`. This is the dependency necessary to work with https://www.gebish.org[Geb] and Spock.
 <5> Selenium and different driver dependencies.
 
 Create also a http://www.gebish.org/manual/current/#configuration[Geb Configuration] file at `src/integration-test/resources/GebConfig.groovy`.

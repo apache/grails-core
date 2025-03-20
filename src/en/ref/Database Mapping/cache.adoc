@@ -74,4 +74,4 @@ class Author {
 }
 ----
 
-For more information see the section on https://gorm.grails.org/6.0.x/hibernate/manual/index.html#caching[Caching] in the user guide.
+For more information see the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#caching[Caching] in the user guide.

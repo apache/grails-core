@@ -1,4 +1,4 @@
-GORM defines a http://gorm.grails.org/latest/api/org/grails/datastore/mapping/engine/event/package-summary.html[number of useful events] that you can listen for.
+GORM defines a https://gorm.grails.org/{gormVersion}/api/org/grails/datastore/mapping/engine/event/package-summary.html[number of useful events] that you can listen for.
 
 To subscribe for an event just define a `Subscriber` that receives the event type as an argument:
 

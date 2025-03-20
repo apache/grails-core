@@ -41,7 +41,7 @@ c = Book.countByReleaseDateIsNotNull()
 === Description
 
 
-GORM supports the notion of https://gorm.grails.org/6.0.x/hibernate/manual/index.html#finders[Dynamic Finders]. The `countBy*` method counts the number of records for the given expression
+GORM supports the notion of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[Dynamic Finders]. The `countBy*` method counts the number of records for the given expression
 
 The following operator names can be used within the respective dynamic methods:
 
@@ -60,4 +60,4 @@ The following operator names can be used within the respective dynamic methods:
 * `And`
 * `Or`
 
-These names can be considered keywords, and you will have problems when querying domain classes that have one of these names as a property name. For more information on https://gorm.grails.org/6.0.x/hibernate/manual/index.html#finders[dynamic finders] refer to the user guide.
+These names can be considered keywords, and you will have problems when querying domain classes that have one of these names as a property name. For more information on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[dynamic finders] refer to the user guide.

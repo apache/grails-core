@@ -56,4 +56,4 @@ def author = Author.get(1)
 // the books collection is pre-initialized - no risk of lazy loading exceptions
 ----
 
-Note that excessive use of joins can be a performance bottleneck. See the section on https://gorm.grails.org/6.0.x/hibernate/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.
+Note that excessive use of joins can be a performance bottleneck. See the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.

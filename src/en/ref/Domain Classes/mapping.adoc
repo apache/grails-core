@@ -5,7 +5,7 @@
 
 === Purpose
 
-The `mapping` static property configures how GORM maps the domain class to the database. See the section on the https://gorm.grails.org/6.0.x/hibernate/manual/index.html#ormdsl[ORM DSL] in the user guide for more information.
+The `mapping` static property configures how GORM maps the domain class to the database. See the section on the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM DSL] in the user guide for more information.
 
 === Examples
 
@@ -28,4 +28,4 @@ class Person {
 }
 ----
 
-This example uses the https://gorm.grails.org/6.0.x/hibernate/manual/index.html#ormdsl[ORM DSL] to map the `Person` class onto a table called `people`
+This example uses the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM DSL] to map the `Person` class onto a table called `people`

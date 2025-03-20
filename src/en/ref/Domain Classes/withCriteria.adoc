@@ -38,7 +38,7 @@ def results = Book.withCriteria {
 === Description
 
 
-The `withCriteria` method allows the inline definition of https://gorm.grails.org/6.0.x/hibernate/manual/index.html#criteria[Criteria]. Arguments to the [https://apache.github.io/grails-data-mapping/latest/api/grails/orm/HibernateCriteriaBuilder.html] can be passed as the first parameter:
+The `withCriteria` method allows the inline definition of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#criteria[Criteria]. Arguments to the [https://apache.github.io/grails-data-mapping/latest/api/grails/orm/HibernateCriteriaBuilder.html] can be passed as the first parameter:
 
 [source,groovy]
 ----

@@ -23,6 +23,6 @@ children minSize: 25
 
 Sets the minimum size of a collection or number property.
 
-This constraint influences https://gorm.grails.org/6.0.x/hibernate/manual/index.html#constraints[schema generation].
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.minSize.notmet`

@@ -1,12 +1,12 @@
 
 == namedQueries
 
-_namedQueries are deprecated. Use https://gorm.grails.org/latest/hibernate/manual/index.html#whereQueries[where] queries instead._
+_namedQueries are deprecated. Use https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#whereQueries[where] queries instead._
 
 === Purpose
 
 
-The `namedQueries` static property defines named queries.  Named queries support the criteria builder syntax.  See the section on the https://gorm.grails.org/6.0.x/hibernate/manual/index.html#criteria[Criteria Builder] in the user guide for more information.
+The `namedQueries` static property defines named queries.  Named queries support the criteria builder syntax.  See the section on the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#criteria[Criteria Builder] in the user guide for more information.
 
 
 === Examples

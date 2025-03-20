@@ -4,7 +4,7 @@ Dynamic frameworks like Rails and Django helped pave the way to a more modern wa
 
 Grails is a full stack framework and attempts to solve as many pieces of the web development puzzle through the core technology and its associated plugins. Included out the box are things like:
 
-* https://gorm.grails.org[GORM] - An easy-to-use Object Mapping library with support for https://gorm.grails.org/latest/hibernate[SQL], http://gorm.grails.org/latest/mongodb[MongoDB], http://gorm.grails.org/latest/neo4j[Neo4j] and http://gorm.grails.org[more].
+* https://gorm.grails.org[GORM] - An easy-to-use Object Mapping library with support for https://gorm.grails.org/{gormVersion}/hibernate[SQL], https://gorm.grails.org/{gormVersion}/mongodb[MongoDB], https://gorm.grails.org/{gormVersion}/neo4j[Neo4j] and http://gorm.grails.org[more].
 * View technologies for https://gsp.grails.org[rendering HTML] as well as http://views.grails.org[JSON]
 * A controller layer built on https://spring.io/projects/spring-boot[Spring Boot]
 * A plugin system featuring http://plugins.grails.org[hundreds of plugins].
@@ -24,13 +24,13 @@ Finally, Grails is far more than just a web framework and is made up of various 
 |===
 |Project            | Description
 
-|http://gorm.grails.org/latest/hibernate[GORM for Hibernate]
+|https://gorm.grails.org/{gormVersion}/hibernate[GORM for Hibernate]
 |An Object Mapping implementation for SQL databases
 
-|http://gorm.grails.org/latest/mongodb[GORM for MongoDB]
+|https://gorm.grails.org/{gormVersion}/mongodb[GORM for MongoDB]
 |An Object Mapping implementation for the MongoDB Document Database
 
-|http://gorm.grails.org/latest/neo4j[GORM for Neo4j]
+|https://gorm.grails.org/{gormVersion}/neo4j[GORM for Neo4j]
 |An Object Mapping implementation for Neo4j Graph Database
 
 |http://views.grails.org[JSON Views]

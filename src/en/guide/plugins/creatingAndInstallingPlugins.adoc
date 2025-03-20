@@ -77,13 +77,13 @@ Adds Quartz job scheduling features
 '''
     def profiles = ['web']
     List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
-    def documentation = "https://grails.org/plugin/quartz"
+    def documentation = "https://apache.github.io/grails-quartz/latest/"
     def license = "APACHE"
-    def issueManagement = [ system: "Github Issues", url: "https://github.com/grails3-plugins/quartz/issues" ]
+    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
     def developers = [
             [ name: "Joe Dev", email: "joedev@gmail.com" ]
     ]
-    def scm = [ url: "https://github.com/grails3-plugins/quartz/" ]
+    def scm = [ url: "https://github.com/apache/grails-quartz" ]
 
     Closure doWithSpring()......
 ----
@@ -426,13 +426,13 @@ Adds Quartz job scheduling features
 '''
     def profiles = ['web']
     List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
-    def documentation = "https://grails.org/plugin/quartz"
+    def documentation = "https://apache.github.io/grails-quartz/latest/"
     def license = "APACHE"
-    def issueManagement = [ system: "Github Issues", url: "https://github.com/grails3-plugins/quartz/issues" ]
+    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
     def developers = [
             [ name: "Joe Dev", email: "joedev@gmail.com" ]
     ]
-    def scm = [ url: "https://github.com/grails3-plugins/quartz/" ]
+    def scm = [ url: "https://github.com/apache/grails-quartz" ]
 
     Closure doWithSpring()......
 ----

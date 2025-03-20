@@ -23,13 +23,13 @@ diff a/src/en/guide/commandLine/gradleBuild/gradlePlugins.adoc b/src/en/guide/co
  The default plugins are as follows:
 -
 -* `war` - The http://www.gradle.org/docs/current/userguide/war_plugin.html[WAR plugin] changes the packaging so that Gradle creates as WAR file from your application. You can comment out this plugin if you wish to create only a runnable JAR file for standalone deployment.
--* `asset-pipeline` - The https://grails.org/plugins.html#plugin/asset-pipeline[asset pipeline] plugin enables the compilation of static assets (JavaScript, CSS etc.)
+-* `asset-pipeline` - The https://github.com/bertramdev/asset-pipeline[asset pipeline] plugin enables the compilation of static assets (JavaScript, CSS etc.)
 -
 +* `groovy` - The Groovy plugin add support for Groovy projects. It can deal with Groovy code mixed with Groovy and Java. Read More: https://docs.gradle.org/{gradleVersion}/userguide/groovy_plugin.html[The Groovy Plugin]
 +* `com.github.erdi.webdriver-binaries` - A plugin that downloads and caches WebDriver binaries specific to the OS the build runs on. Read More at https://github.com/erdi/webdriver-binaries-gradle-plugin/blob/master/README.md[GitHub README]
 +* `war` - The https://docs.gradle.org/{gradleVersion}/userguide/war_plugin.html[The WAR plugin] changes the packaging so that Gradle creates as WAR file from your application. You can comment out this plugin if you wish to create only a runnable JAR file for standalone deployment.
 +* `idea` - The IDEA plugin generates files that are used by http://www.jetbrains.com/idea/[IntelliJ IDEA], thus making it possible to open the project from IDEA. Read More: https://docs.gradle.org/{gradleVersion}/userguide/idea_plugin.html[The IDEA Plugin]
-+* `com.bertramlabs.asset-pipeline` - The https://grails.org/plugins.html#plugin/asset-pipeline[asset pipeline] plugin enables the compilation of static assets (JavaScript, CSS etc.)
++* `com.bertramlabs.asset-pipeline` - The https://github.com/bertramdev/asset-pipeline[asset pipeline] plugin enables the compilation of static assets (JavaScript, CSS etc.)
 +* `application` - The Application plugin facilitates creating an executable JVM application. Read More: https://docs.gradle.org/{gradleVersion}/userguide/application_plugin.html[The Application Plugin]
 +* `eclipse` - The Eclipse plugins generate files that are used by the http://eclipse.org/[Eclipse IDE], thus making it possible to import the project into Eclipse (File - Import... - Existing Projects into Workspace). Read More: https://docs.gradle.org/{gradleVersion}/userguide/eclipse_plugin.html[The Eclipse Plugin]
  

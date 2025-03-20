@@ -52,4 +52,4 @@ Account.withTransaction([propagationBehavior: TransactionDefinition.PROPAGATION_
 
 The `withTransaction` method accepts a Closure with a {springapi}org/springframework/transaction/TransactionStatus.html[TransactionStatus] argument. The `TransactionStatus` object can be used to programmatically control rollback of the transaction.
 
-Refer to the user guide section of https://gorm.grails.org/6.0.x/hibernate/manual/index.html#programmaticTransactions[Programmatic Transactions] for more information.
+Refer to the user guide section of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#programmaticTransactions[Programmatic Transactions] for more information.

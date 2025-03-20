@@ -1,6 +1,6 @@
 Since Grails 1.2, the documentation engine that powers the creation of this documentation has been available for your own Grails projects.
 
-The documentation engine uses a variation on the https://txstyle.org/[Textile] syntax to automatically create project documentation with smart linking, formatting etc.
+The documentation engine uses a variation on the https://txstyle.de/[Textile] syntax to automatically create project documentation with smart linking, formatting etc.
 
 
 ==== Creating project documentation

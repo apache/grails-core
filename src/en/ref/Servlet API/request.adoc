@@ -31,8 +31,8 @@ The {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest] 
 
 Grails enhances the `HttpServletRequest` instance by adding the following new properties and methods:
 
-* `XML` - An instance of `XmlSlurper`'s https://docs.groovy-lang.org/latest/html/gapi/groovy/xml/slurpersupport/GPathResult.html[GPathResult] class that allows parsing of an incoming XML request (useful for REST).
-* `JSON` - An instance of Grails' https://docs.grails.org/3.2.x/apiorg/codehaus/groovy/grails/web/json/JSONObject.html[JSONObject] class that allows parsing of an incoming JSON request (useful for JSON based REST).
+* `XML` - An instance of `XmlSlurper`'s https://docs.groovy-lang.org/{groovyVersion}/html/api/groovy/xml/slurpersupport/GPathResult.html[https://docs.groovy-lang.org/{groovyVersion}/html/gapi/groovy/xml/slurpersupport/GPathResult.html][GPathResult] class that allows parsing of an incoming XML request (useful for REST).
+* `JSON` - An instance of Grails' https://docs.grails.org/{GrailsVersion}/api/org/grails/web/json/JSONObject.html[JSONObject] class that allows parsing of an incoming JSON request (useful for JSON based REST).
 * `forwardURI` - Useful for obtaining the current request URI since the `request` object's `requestURI` property returns the original URI, not the matched one.
 * `isRedirected()` - Returns `true` if a redirect has been issued for this request (Grails 2+).
 * `get` - Returns true if the current request is an HTTP `GET` request.

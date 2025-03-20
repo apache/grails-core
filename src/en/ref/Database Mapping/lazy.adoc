@@ -41,4 +41,4 @@ static mapping = {
 }
 ----
 
-See the section on https://gorm.grails.org/6.0.x/hibernate/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.
+See the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.

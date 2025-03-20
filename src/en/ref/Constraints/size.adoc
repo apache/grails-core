@@ -25,6 +25,6 @@ Sets the size of a collection, a number property, or String length.
 
 NOTE: Currently this constraint cannot be used in addition to link:blank.html[blank] or link:nullable.html[nullable]. Use a custom validator for these combinations.
 
-This constraint influences https://gorm.grails.org/6.0.x/hibernate/manual/index.html#constraints[schema generation].
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.size.toosmall` or `className.propertyName.size.toobig`
