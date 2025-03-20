@@ -84,4 +84,4 @@ jobs:
       - name: "⚙️ Run post-release"
         env:
           RELEASE_VERSION: ${{ github.event.inputs.grails_version }}
-        uses: apache/grails-github-actions/post-release@v3
+        uses: apache/grails-github-actions/post-release@asf
