@@ -6,7 +6,7 @@
 === Purpose
 
 
-Updates the database with https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/batch.html#batch-direct[DML-style operations]
+Updates the database with https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html#batch-bulk-hql[DML-style operations]
 
 
 === Examples
