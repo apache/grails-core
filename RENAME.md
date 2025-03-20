@@ -1,6 +1,7 @@
 # Grails Repackaging Reference
 
-As part of the move to the Apache Software Foundation, the grails artifacts must adhere to the apache namespace.  Below is a reference of all migrated artifacts - both their old and new name.
+As part of the move to the Apache Software Foundation, the grails artifacts must adhere to the apache namespace. Below
+is a reference of all migrated artifacts - both their old and new name.
 
 | old group id                      | old artifact id                                 | new group id                                    | new artifact id                                               | old gradle plugin name | new gradle plugin name | repository             |
 |-----------------------------------|-------------------------------------------------|-------------------------------------------------|---------------------------------------------------------------|------------------------|------------------------|------------------------|
@@ -126,7 +127,7 @@ As part of the move to the Apache Software Foundation, the grails artifacts must
 | org.grails.grails-profile-publish | org.grails.grails-profile-publish.gradle.plugin | org.apache.grails.gradle.grails-publish-profile | org.apache.grails.gradle.grails-publish-profile.gradle.plugin | grails-profile-publish | grails-publish-profile | grails-gradle-plugin   |
 | org.grails.grails-publish         | rg.grails.grails-publish.gradle.plugin          | org.apache.grails.gradle.grails-publish         | org.apache.grails.gradle.grails-publish.gradle.plugin         | grails-publish         | grails-publish         | grails-gradle-plugin   |
 | org.grails.grails-web             | org.grails.grails-web.gradle.plugin             | org.apache.grails.gradle.grails-web             | org.apache.grails.gradle.grails-web.gradle.plugin             | grails-web             | grails-web             | grails-gradle-plugin   |
-| org.grails.plugins.views-json     | org.grails.plugins.views-json.gradle.plugin     | org.apache.grails.gradle.grails-json            | org.apache.grails.grails-json.gradle.plugin                   | views-json             | grails-json            | grails-views           |
+| org.grails.plugins.views-json     | org.grails.plugins.views-json.gradle.plugin     | org.apache.grails.gradle.grails-json            | org.apache.grails.gradle.grails-json.gradle.plugin            | views-json             | grails-json            | grails-views           |
 | org.grails.plugins.views-markup   | org.grails.plugins.views-markup.gradle.plugin   | org.apache.grails.gradle.grails-markup          | org.apache.grails.gradle.grails-markup.gradle.plugin          | views-markup           | grails-markup          | grails-views           |
 | org.grails.plugins                | grails-redis                                    | org.apache.grails                               | grails-redis                                                  |                        |                        | grails-redis           |
 | org.grails.forge                  | grails-cli                                      | org.apache.grails.forge                         | grails-forge-cli                                              |                        |                        | grails-forge           |
@@ -138,6 +139,9 @@ As part of the move to the Apache Software Foundation, the grails artifacts must
 
 https://docs.gradle.org/current/userguide/plugins.html#sec:plugin_markers
 
-Since the `plugins{}` DSL block only allows for declaring plugins by their globally unique plugin id and version properties, Gradle needs a way to look up the coordinates of the plugin implementation artifact.
+Since the `plugins{}` DSL block only allows for declaring plugins by their globally unique plugin id and version
+properties, Gradle needs a way to look up the coordinates of the plugin implementation artifact.
 
-To do so, Gradle will look for a Plugin Marker Artifact with the coordinates `plugin.id:plugin.id.gradle.plugin:plugin.version`. This marker needs to have a dependency on the actual plugin implementation.
+To do so, Gradle will look for a Plugin Marker Artifact with the coordinates
+`plugin.id:plugin.id.gradle.plugin:plugin.version`. This marker needs to have a dependency on the actual plugin
+implementation.
