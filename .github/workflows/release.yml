@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       packages: read  # for pre-release workflow
-      contents: write  # to create release
+      contents: write  # to commit changes related to the release and publish documentation to gh-pages
       issues: write  # to modify milestones
     steps:
       - name: "📥 Checkout repository"
@@ -34,7 +34,6 @@ jobs:
         run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
       - name: "📤 Publish artifacts to Sonatype"
         env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'true'
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
