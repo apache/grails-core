@@ -6,17 +6,17 @@ As part of the move to the Apache Software Foundation, the grails artifacts must
 
 The Grails developers have decided on several rules regarding packaging. These rules are enumerated here:
 
-1. For Grails applications, the group used should always be `org.apache.grails`.  
-2. Any group that is further nested is an implementation detail of Grails.  While users can choose to override them, they are typically not meant to be included in a Grails app directly.
-3. Testing artifacts for Grails applications / plugins, will have the prefix `grails-testing-` to remind developers these artifacts should not generally be included in the `implementation` scope of their application.
+1. For Grails applications, the group used should always be `org.apache.grails`.
+2. Any group that is further nested is an implementation detail of Grails. While users can choose to override them, they are typically not meant to be included in a Grails app directly.
+3. Testing artifacts for Grails applications / plugins, will have the prefix `grails-testing-support-` to remind developers these artifacts should not typically be included in the `implementation` scope of their application.
 4. Gradle plugins will be consolidated under a single [repository](https://github.com/apache/grails-gradle-plugin).
 5. As part of the gradle plugin consolidation, we adopt consistent names and remove `views-` from the views gradle plugins. Instead they will match the existing gradle plugin naming pattern - i.e. `grails-gsp`, `grails-markup`, etc.
-5. There will be one artifact published that can be included in either a `buildSrc/build.gradle` or a `buildScript` to import all Grails gradle plugins.  That plugin will be `org.apache.grails:grails-gradle-plugins`.
-6. Grails artifacts should be prefixed with `grails-` with the exception of profiles.  
+5. There will be one artifact published that can be included in either a `buildSrc/build.gradle` or a `buildScript` to import all Grails gradle plugins. That plugin will be `org.apache.grails:grails-gradle-plugins`.
+6. Grails artifacts should be prefixed with `grails-` with the exception of profiles.
 7. Profiles will not use a `grails-` prefix because they are not distributed with an application.
 8. Because there are many modern JSON implementations, and Grails may choose to implement them in the future, we will refer to our existing `.gson` implementation as `gson` instead of `json`.
 9. We have appended `-cli` where a CLI is being provided.
-10. Several artifacts have been renamed for clarity.  In general we use the suffix `-core` to signify a base project and drop the suffix on the package that the end user will use.  
+10. Several artifacts have been renamed for clarity. In general we use the suffix `-core` to signify a base project and drop the suffix on the package that the end user will use.
 11. Package names, artifact ids, and group ids will use the plural form. Implementing classes will use the singular form.
     * For example: `org.apache.grails.events:grails-events` with the `EventBusPlugin`
 
@@ -111,8 +111,8 @@ Below is a reference of all migrated artifacts - both their old and new name.
 | org.grails.plugins                | spring-security-rest-redis                      | org.apache.grails                               | grails-spring-security-rest-redis                             |                        |                        | grails-spring-security |
 | org.grails.plugins                | spring-security-ui                              | org.apache.grails                               | grails-spring-security-ui                                     |                        |                        | grails-spring-security |
 | org.grails                        | grails-taglib                                   | org.apache.grails.views                         | grails-taglib                                                 |                        |                        | grails-views           |
-| org.grails                        | grails-test                                     | org.apache.grails.testing                       | grails-testing-support-core                                   |                        |                        | grails-core            |
-| org.grails                        | grails-testing-support                          | org.apache.grails.testing                       | grails-testing-support                                        |                        |                        | grails-core            |
+| org.grails                        | grails-test                                     | org.apache.grails.testing                       | grails-testing-core                                           |                        |                        | grails-core            |
+| org.grails                        | grails-testing-support                          | org.apache.grails.testing                       | grails-testing-support-core                                   |                        |                        | grails-core            |
 | org.grails                        | grails-plugin-url-mappings                      | org.apache.grails                               | grails-url-mappings                                           |                        |                        | grails-core            |
 | org.grails                        | grails-plugin-validation                        | org.apache.grails                               | grails-validation                                             |                        |                        | grails-core            |
 | org.grails                        | views-core                                      | org.apache.grails.views                         | grails-views-core                                             |                        |                        | grails-views           |
