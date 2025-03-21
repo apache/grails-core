@@ -13,7 +13,7 @@ The Grails developers have decided on several rules regarding packaging. These r
 5. As part of the gradle plugin consolidation, we adopt consistent names and remove `views-` from the views gradle plugins. Instead they will match the existing gradle plugin naming pattern - i.e. `grails-gsp`, `grails-markup`, etc.
 5. There will be one artifact published that can be included in either a `buildSrc/build.gradle` or a `buildScript` to import all Grails gradle plugins.  That plugin will be `org.apache.grails:grails-gradle-plugins`.
 6. Grails artifacts should be prefixed with `grails-` with the exception of profiles.  
-7. Profiles will not use a `grails-` prefix because they are distributed with an application.
+7. Profiles will not use a `grails-` prefix because they are not distributed with an application.
 8. Because there are many modern JSON implementations, and Grails may choose to implement them in the future, we will refer to our existing `.gson` implementation as `gson` instead of `json`.
 9. We have appended `-cli` where a CLI is being provided.
 10. Several artifacts have been renamed for clarity.  In general we use the suffix `-core` to signify a base project and drop the suffix on the package that the end user will use.  
