@@ -62,7 +62,7 @@ class MailMessageBuilder {
     private String envelopeFrom
 
     private int multipart = MimeMessageHelper.MULTIPART_MODE_NO
-	private boolean async = false
+    private boolean async = false
 
     private List<Inline> inlines = []
 
@@ -114,17 +114,17 @@ class MailMessageBuilder {
             sendingMsg.envelopeFrom = envelopeFrom
         }
 
-		if (async) {
-			executorService.execute({
-				try {
-					send(sendingMsg)
-				} catch(Throwable t) {
-					log.error('Failed to send email', t)
-				}
-			} as Runnable)
-		} else {
-			send(sendingMsg)
-		}
+        if (async) {
+            executorService.execute({
+                try {
+                    send(sendingMsg)
+                } catch(Throwable t) {
+                    log.error('Failed to send email', t)
+                }
+            } as Runnable)
+        } else {
+            send(sendingMsg)
+        }
 
         log.trace('Sent mail {} ...', getDescription(message as Message))
 
@@ -164,20 +164,20 @@ class MailMessageBuilder {
         }
 
         MailMessage msg = getMessage()
-		if (msg instanceof MimeMailMessage) {
-	        MimeMessage mimeMessage = (msg as MimeMailMessage).mimeMessageHelper.mimeMessage
-	        headers.each { name, value ->
-	            String nameString = name?.toString()
-	            String valueString = value?.toString()
-	
-	            Assert.hasText(nameString, 'header names cannot be null or empty')
-	            Assert.hasText(valueString, "header value for '$nameString' cannot be null")
-	
-	            mimeMessage.setHeader(nameString, valueString)
-	        }
-		} else {
-			throw new GrailsMailException('Mail message builder is not mime capable so headers cannot be set')
-		}
+        if (msg instanceof MimeMailMessage) {
+            MimeMessage mimeMessage = (msg as MimeMailMessage).mimeMessageHelper.mimeMessage
+            headers.each { name, value ->
+                String nameString = name?.toString()
+                String valueString = value?.toString()
+    
+                Assert.hasText(nameString, 'header names cannot be null or empty')
+                Assert.hasText(valueString, "header value for '$nameString' cannot be null")
+    
+                mimeMessage.setHeader(nameString, valueString)
+            }
+        } else {
+            throw new GrailsMailException('Mail message builder is not mime capable so headers cannot be set')
+        }
     }
 
     void to(Object[] args) {
@@ -368,7 +368,7 @@ class MailMessageBuilder {
         }
         assert multipart, 'message is not marked as "multipart"; use "multipart true" as the first line in your builder DSL'
 
-		getMessage() // ensure that helper is initialized
+        getMessage() // ensure that helper is initialized
         if (isAttachment) {
             helper.addAttachment(MimeUtility.encodeWord(id), toAdd, contentType)
         } else {

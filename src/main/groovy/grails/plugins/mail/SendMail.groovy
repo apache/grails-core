@@ -25,10 +25,10 @@ import org.springframework.mail.MailMessage
 @Enhances(['Controller', 'Service'])
 trait SendMail {
 
-	@Inject
-	ApplicationContext applicationContext
+    @Inject
+    ApplicationContext applicationContext
 
-	MailMessage sendMail(@DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MailMessageBuilder) Closure dsl) {
+    MailMessage sendMail(@DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MailMessageBuilder) Closure dsl) {
         applicationContext.getBean('mailService', MailService).sendMail(dsl)
-	}
+    }
 }

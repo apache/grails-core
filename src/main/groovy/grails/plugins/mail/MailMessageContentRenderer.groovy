@@ -125,7 +125,7 @@ class MailMessageContentRenderer {
         final PrintWriter out
         final Locale locale
         final ApplicationContext applicationContext
-		final LinkGenerator grailsLinkGenerator
+        final LinkGenerator grailsLinkGenerator
 
         private GrailsWebRequest originalRequestAttributes
         private GrailsWebRequest renderRequestAttributes
@@ -135,7 +135,7 @@ class MailMessageContentRenderer {
             this.out = out instanceof PrintWriter ? out as PrintWriter : new PrintWriter(out)
             this.locale = locale
             this.applicationContext = applicationContext
-			this.grailsLinkGenerator = applicationContext.getBean('grailsLinkGenerator', LinkGenerator)
+            this.grailsLinkGenerator = applicationContext.getBean('grailsLinkGenerator', LinkGenerator)
         }
 
         private void init() {
