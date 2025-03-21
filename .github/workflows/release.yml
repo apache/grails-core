@@ -2,12 +2,14 @@ name: "Release"
 on:
   release:
     types: [published]
-env:
-  GIT_USER_NAME: ${{ vars.GIT_USER_NAME }}
-  GIT_USER_EMAIL: ${{ vars.GIT_USER_EMAIL }}
 jobs:
   release:
+    name: "Publish Release"
     runs-on: ubuntu-24.04
+    permissions:
+      packages: read  # for pre-release workflow
+      contents: write  # to create release
+      issues: write  # to modify milestones
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -21,16 +23,16 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📝 Store the current release version"
-        id: release_version
-        run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
+      - run: |
+          echo "Release version: ${GITHUB_REF:11}"
+          echo "RELEASE_VERSION=${GITHUB_REF:11}" >> $GITHUB_ENV
       - name: "⚙ Run pre-release"
-        uses: grails/github-actions/pre-release@main
+        uses: apache/grails-github-actions/pre-release@asf
       - name: "🔐 Generate key file for artifact signing"
         env:
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
         run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
       - name: "📤 Publish artifacts to Sonatype"
-        id: publish_to_sonatype
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'true'
@@ -46,21 +48,13 @@ jobs:
           publishToSonatype
           closeAndReleaseSonatypeStagingRepository
       - name: "📖 Generate Documentation"
-        if: success()
         run: ./gradlew docs
       - name: "📤 Publish Documentation to Github Pages"
-        if: success()
-        uses: grails/github-pages-deploy-action@grails
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
-          BRANCH: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
-          FOLDER: build/docs/manual
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          SKIP_SNAPSHOT: ${{ contains(steps.release_version.outputs.release_version, 'M') }}
-          VERSION: ${{ steps.release_version.outputs.release_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: build/docs
+          VERSION: ${{ env.RELEASE_VERSION }}
       - name: "⚙️ Run post-release"
-        if: steps.publish_to_sonatype.outcome == 'success'
-        uses: grails/github-actions/post-release@main
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: apache/grails-github-actions/post-release@asf
