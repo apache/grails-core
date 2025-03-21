@@ -37,7 +37,7 @@ jobs:
     needs: test_project
     runs-on: ubuntu-24.04
     permissions:
-      content: write # updates gh-pages branch
+      contents: write # updates gh-pages branch
       packages: write # publishes snapshot to GitHub Packages
     steps:
       - name: "📥 Checkout repository"
