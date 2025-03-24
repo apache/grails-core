@@ -82,8 +82,12 @@ dependencies {
     }
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
 
-    testImplementation 'jakarta.servlet:jakarta.servlet-api'
-    testImplementation 'org.grails:grails-testing-support'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api', {
+        // impl: ServletContext
+    }
+    testImplementation 'org.grails:grails-testing-support', {
+        // impl: GrailsUnitTest
+    }
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
