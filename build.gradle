@@ -548,11 +548,6 @@ apply {
     from 'gradle/findbugs.gradle'
 }
 
-// Add a task to list the buildscript dependencies
-tasks.register('buildscriptDependencies', org.gradle.api.tasks.diagnostics.DependencyReportTask) {
-    configurations = project.buildscript.configurations
-}
-
 // compile with the Groovy version provided by Gradle
 // to ensure build compatibility with Gradle, currently Groovy 3.0.x
 // when used by grails-gradle-plugin
