@@ -100,24 +100,35 @@ allprojects {
 
 apply from: layout.projectDirectory.file('gradle/idea.gradle')
 
-subprojects { subproject ->
+subprojects {
 
-    version = grailsVersion
-
-    ext.isTestSuite = subproject.name.startsWith('grails-test-suite')
-    ext.isExample = subproject.name.contains('grails-test-examples')
-    ext.pluginProjects = ['grails-async-plugin', 'grails-events-plugin', 'grails-plugin-converters']
-    ext.isPlugin = subproject.name in pluginProjects
-    ext.isCiBuild = subproject.hasProperty('isCiBuild') || System.getenv().get('CI') as Boolean
-
-    // Historically async mapped the core libraries to different artifact ids
-    ext.mappedArtifactIds = [
+    def activeProject = it
+    def pluginsGroupProjects = [
+            // These projects use the 'org.grails.plugins' group
+            'grails-async-plugin',
+            'grails-events-plugin',
+            'grails-plugin-converters'
+    ]
+    def mappedArtifactIds = ext.mappedArtifactIds = [
+            // Historically async mapped the core libraries to different artifact ids
             'grails-async-core'       : 'grails-async',
             'grails-async-plugin'     : 'async',
             'grails-events-core'      : 'grails-events',
             'grails-events-plugin'    : 'events',
             'grails-plugin-converters': 'converters'
     ]
+    def isTestSuite = name.startsWith('grails-test-suite')
+    def isExample = name.contains('grails-test-examples')
+    def isPluginsGroupProject = name in pluginsGroupProjects
+    def pomDescription = name == 'grails-testing-support' ?
+            'Support for writing concise expressive tests for Grails artifacts' :
+            'Grails Web Application Framework'
+    def pomDevelopers = name == 'grails-testing-support' ?
+            [jeffscottbrown: 'Jeff Brown', jameskleeh: 'James Kleeh'] :
+            [graemerocher: 'Graeme Rocher']
+
+    version = grailsVersion
+    group = isPluginsGroupProject ? 'org.grails.plugins' : 'org.grails'
 
     if (isExample) {
         // Test projects will often include dependencies from grails-core. This will ensure any such dependencies
@@ -125,12 +136,11 @@ subprojects { subproject ->
         configurations.configureEach {
             resolutionStrategy {
                 dependencySubstitution {
-                    for (def possibleProject  : rootProject.subprojects) {
-                        if(!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples')) {
+                    for (def possibleProject : rootProject.subprojects) {
+                        if (!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples')) {
                             def artifactId = mappedArtifactIds[possibleProject.name] ?: possibleProject.name
-
-                            String substitutedArtifact = "${possibleProject.name in pluginProjects ? 'org.grails.plugins' : 'org.grails'}:$artifactId"
-                            if(possibleProject.name == 'grails-bom') {
+                            def substitutedArtifact = "${possibleProject.name in pluginsGroupProjects ? 'org.grails.plugins' : 'org.grails'}:$artifactId"
+                            if (possibleProject.name == 'grails-bom') {
                                 substitute module(substitutedArtifact) using platform(project(':grails-bom'))
                             }
                             else {
@@ -144,17 +154,10 @@ subprojects { subproject ->
         return
     }
 
-    if (isPlugin) {
-        group = 'org.grails.plugins'
-    } else {
-        group = 'org.grails'
-    }
-
     ext.pomInfo = {
         delegate.name 'Grails® framework'
-        delegate.description subproject.name == 'grails-testing-support' ? 'Support for writing concise expressive tests for Grails artifacts' : 'Grails Web Application Framework'
+        delegate.description pomDescription
         delegate.url 'https://grails.org/'
-
         delegate.licenses {
             delegate.license {
                 delegate.name 'The Apache Software License, Version 2.0'
@@ -162,37 +165,22 @@ subprojects { subproject ->
                 delegate.distribution 'repo'
             }
         }
-
         delegate.scm {
             delegate.url 'scm:git@github.com:grails/grails-core.git'
             delegate.connection 'scm:git@github.com:grails/grails-core.git'
             delegate.developerConnection 'scm:git@github.com:grails/grails-core.git'
         }
-
-        if(subproject.name == 'grails-testing-support') {
-            delegate.developers {
+        delegate.developers {
+            for(def dev in pomDevelopers) {
                 delegate.developer {
-                    delegate.id 'jeffscottbrown'
-                    delegate.name 'Jeff Brown'
-                }
-                delegate.developer {
-                    delegate.id 'jameskleeh'
-                    delegate.name 'James Kleeh'
-                }
-            }
-        }
-        else {
-            delegate.developers {
-                delegate.developer {
-                    delegate.id 'graemerocher'
-                    delegate.name 'Graeme Rocher'
-                    delegate.email 'grails-build@users.noreply.github.com'
+                    delegate.id dev.key
+                    delegate.name dev.value
                 }
             }
         }
     }
 
-    if (subproject.name != 'grails-bom') {
+    if (name != 'grails-bom') {
         apply plugin: 'java-library'
         apply plugin: 'groovy'
         apply plugin: 'eclipse'
@@ -203,67 +191,63 @@ subprojects { subproject ->
     if (!isTestSuite) {
         apply plugin: 'maven-publish'
         apply plugin: 'signing'
-
-        if (subproject.name != 'grails-bom') {
-            java {
-                withJavadocJar()
-                withSourcesJar()
+        if (name != 'grails-bom') {
+            extensions.configure(JavaPluginExtension) {
+                it.withJavadocJar()
+                it.withSourcesJar()
             }
         }
-        publishing {
+        extensions.configure(PublishingExtension) {
             if (isGrailsRepoPublish || isGitHubRepoPublish) {
                 repositories {
                     maven {
                         credentials {
                             if (isGrailsRepoPublish) {
-                                username = subproject.findProperty('artifactoryPublishUsername') ?: System.getenv('ARTIFACTORY_USERNAME')
-                                password = subproject.findProperty('artifactoryPublishPassword') ?: System.getenv('ARTIFACTORY_PASSWORD')
+                                username = findProperty('artifactoryPublishUsername') ?: System.getenv('ARTIFACTORY_USERNAME')
+                                password = findProperty('artifactoryPublishPassword') ?: System.getenv('ARTIFACTORY_PASSWORD')
                             } else {
-                                username = System.getenv('GITHUB_USERNAME') ?: ''
-                                password = System.getenv('GITHUB_PASSWORD') ?: ''
+                                username = System.getenv('GITHUB_USERNAME')
+                                password = System.getenv('GITHUB_PASSWORD')
                             }
                         }
                         if (isGrailsRepoPublish) {
-                            url = isPlugin ?
-                                    uri('https://repo.grails.org/grails/plugins3-snapshots-local') :
-                                    uri('https://repo.grails.org/grails/libs-snapshots-local')
+                            url = isPluginsGroupProject ?
+                                    'https://repo.grails.org/grails/plugins3-snapshots-local' :
+                                    'https://repo.grails.org/grails/libs-snapshots-local'
                         } else {
-                            url = uri('https://maven.pkg.github.com/grails/grails-core')
+                            url = 'https://maven.pkg.github.com/grails/grails-core'
                         }
                     }
                 }
             }
 
-            if (subproject.name == 'grails-dependencies') return
+            if (name == 'grails-dependencies') return
 
-            publications {
-                maven(MavenPublication) {
-                    if(mappedArtifactIds.containsKey(subproject.name)) {
-                        artifactId = mappedArtifactIds[subproject.name]
-                    }
-
+            def javaComponent = name != 'grails-bom' ? components.named('java') : null
+            it.publications {
+                register('maven', MavenPublication) {
+                    artifactId = mappedArtifactIds[activeProject.name] ?: activeProject.name
                     pom.withXml {
                         def pomNode = asNode()
                         pomNode.children().last() + pomInfo
                         // dependency management shouldn't be included
                         try { pomNode.dependencyManagement.replaceNode({}) } catch (Throwable ignore) {}
                     }
-
-                    if (subproject.name != 'grails-bom') {
-                        from components.java
+                    if (javaComponent) {
+                        from javaComponent.get()
                     }
                 }
             }
         }
 
         afterEvaluate {
-            signing {
-                required { (isReleaseVersion || isGitHubRepoPublish) && gradle.taskGraph.hasTask('publish') }
-                sign publishing.publications.maven
+            extensions.configure(SigningExtension) {
+                it.required = { (isReleaseVersion || isGitHubRepoPublish) && gradle.taskGraph.hasTask('publish') }
+                it.sign(extensions.findByType(PublishingExtension).publications)
             }
         }
 
-        tasks.withType(Sign) {
+        tasks.withType(Sign).configureEach {
             onlyIf { isReleaseVersion || isGitHubRepoPublish }
         }
 
@@ -275,13 +259,13 @@ subprojects { subproject ->
         }
     }
 
-    if (subproject.name in ['grails-dependencies', 'grails-bom']) return
+    if (name in ['grails-dependencies', 'grails-bom']) return
 
     dependencies {
         implementation platform(project(':grails-bom'))
     }
 
-    if (subproject.name =~ /^(grails-web|grails-plugin-|grails-test-suite|grails-test)/) {
+    if (name =~ /^(grails-web|grails-plugin-|grails-test-suite|grails-test)/) {
         dependencies {
             compileOnly 'jakarta.servlet:jakarta.servlet-api'
             compileOnly 'org.springframework:spring-test', {
@@ -293,7 +277,7 @@ subprojects { subproject ->
         }
     }
 
-    if (subproject.name =~ /^(grails-plugin-datasource|grails-test-suite)/) {
+    if (name =~ /^(grails-plugin-datasource|grails-test-suite)/) {
         dependencies {
             testImplementation 'com.h2database:h2'
         }
@@ -321,8 +305,7 @@ subprojects { subproject ->
         documentation 'org.fusesource.jansi:jansi'
         documentation 'jline:jline'
         documentation 'com.github.javaparser:javaparser-core'
-
-        if (compiledByGradleGroovyVersion(subproject)) {
+        if (compiledByGradleGroovyVersion(activeProject)) {
             documentation "org.codehaus.groovy:groovy:$GroovySystem.version"
             documentation "org.codehaus.groovy:groovy-ant:$GroovySystem.version"
             documentation "org.codehaus.groovy:groovy-cli-picocli:$GroovySystem.version"
@@ -339,7 +322,7 @@ subprojects { subproject ->
 
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
-        if (subproject.name != 'grails-docs') {
+        if (name != 'grails-docs') {
             // Logging
             api 'org.slf4j:slf4j-api'
             api 'org.slf4j:jcl-over-slf4j'
@@ -363,14 +346,37 @@ subprojects { subproject ->
     ]
 
     tasks.withType(Test).configureEach {
-        onlyIf {
-            if(hasProperty('onlyFunctionalTests')) {
-                return false
-            }
-            true
-        }
+        onlyIf { !activeProject.hasProperty('onlyFunctionalTests') }
         useJUnitPlatform()
         jvmArgs += java17moduleReflectionCompatibilityArguments
+        develocity {
+            testRetry {
+                maxRetries = 2
+                maxFailures = 20
+                failOnPassedAfterRetry = true
+            }
+        }
+        testLogging {
+            events('passed', 'skipped', 'failed')
+            showExceptions = true
+            exceptionFormat = 'full'
+            showCauses = true
+            showStackTraces = true
+        }
+        excludes = ['**/*TestCase.class', '**/*\$*.class']
+        if (isCiBuild) {
+            maxParallelForks = 2
+            maxHeapSize = '768m'
+            afterSuite {
+                System.out.print('.')
+                System.out.flush()
+            }
+        } else {
+            maxHeapSize = '1024m'
+        }
+        if (System.getProperty('debug.tests')) {
+            jvmArgs += debugArguments
+        }
     }
 
     // Add the Groovy compiler options
@@ -392,60 +398,12 @@ subprojects { subproject ->
     tasks.withType(Javadoc).configureEach {
         onlyIf { !isTestSuite }
         classpath += configurations.documentation
-        // Using options.jFlags instead of closure otherwise it fails with MinimalJavadocOptions
-        options.encoding 'UTF-8'
-        options.docEncoding 'UTF-8'
-        options.charSet 'UTF-8'
-        options.jFlags '-Xms64M', '-Xmx512M'
-    }
-
-    configure(javadoc) {
-        onlyIf { !isTestSuite }
-        classpath += configurations.documentation
-        // Using options.jFlags instead of closure otherwise it fails with MinimalJavadocOptions
-        options.encoding 'UTF-8'
-        options.docEncoding 'UTF-8'
-        options.charSet 'UTF-8'
-        options.jFlags '-Xms64M', '-Xmx512M'
+        options.encoding = 'UTF-8'
+        options.jFlags('-Xms64M', '-Xmx512M')
     }
 
     // task for running a single test with -DsingleTest.single=TestName singleTest
     tasks.register('singleTest', Test) {
-        if (System.getProperty('debug.tests')) {
-            jvmArgs += debugArguments
-        }
-    }
-
-    test {
-        develocity {
-            testRetry {
-                maxRetries = 2
-                maxFailures = 20
-                failOnPassedAfterRetry = true
-            }
-        }
-
-        testLogging {
-            events 'passed', 'skipped', 'failed'
-
-            showExceptions true
-            exceptionFormat 'full'
-            showCauses true
-            showStackTraces true
-        }
-        excludes = ['**/*TestCase.class', '**/*\$*.class']
-
-        if (isCiBuild) {
-            maxParallelForks = 2
-            maxHeapSize = '768m'
-            afterSuite {
-                System.out.print('.')
-                System.out.flush()
-            }
-        } else {
-            maxHeapSize = '1024m'
-        }
-
         if (System.getProperty('debug.tests')) {
             jvmArgs += debugArguments
         }
