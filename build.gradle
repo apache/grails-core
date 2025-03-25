@@ -23,7 +23,7 @@ ext.set('signing.keyId', System.getenv('SIGNING_KEY') ?: findProperty('signing.k
 ext.set('signing.password', System.getenv('SIGNING_PASSPHRASE') ?: findProperty('signing.password'))
 ext.set('signing.secretKeyRingFile', findProperty('signing.secretKeyRingFile'))
 
-version = grailsVersion
+version = projectVersion
 group = 'org.grails'
 
 if (isReleaseVersion) {
