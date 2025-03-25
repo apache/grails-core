@@ -87,33 +87,25 @@ allprojects {
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
     }
 
-    configurations {
-        all {
-            resolutionStrategy {
-                def cacheHours = isCiBuild ? 0 : 24
-                cacheDynamicVersionsFor cacheHours, 'hours'
-                cacheChangingModulesFor cacheHours, 'hours'
-                eachDependency { DependencyResolveDetails details ->
-                    //specifying a fixed version for all libraries with 'org.gradle' group
-                    if (details.requested.group == 'org.apache.groovy') {
-                        details.useVersion(groovyVersion)
-                    }
-                    if (details.requested.group == 'org.spockframework') {
-                        details.useVersion(project['spock.version'])
-                    }
+    configurations.configureEach {
+        resolutionStrategy {
+            def cacheHours = isCiBuild ? 0 : 24
+            cacheDynamicVersionsFor cacheHours, 'hours'
+            cacheChangingModulesFor cacheHours, 'hours'
+            eachDependency { DependencyResolveDetails details ->
+                // specifying a fixed version for all libraries with 'org.gradle' group
+                if (details.requested.group == 'org.apache.groovy') {
+                    details.useVersion(groovyVersion)
+                }
+                if (details.requested.group == 'org.spockframework') {
+                    details.useVersion(project['spock.version'])
                 }
             }
         }
     }
 
     [Javadoc, Groovydoc].each {
-        tasks.withType(it).all {
-            // exclude problematic jar file from javadoc classpath
-            // https://www.adam-bien.com/roller/abien/entry/trouble_with_crippled_java_ee
-            if (classpath) {
-                classpath -= classpath.filter { it.name == 'javaee-web-api-6.0.jar' }
-            }
-
+        tasks.withType(it).configureEach {
             // this will apply the javadoc fix tool to all generated javadocs
             // we use it to make sure that the javadocs are not vulnerable independently of the JDK used to build
             doLast {
@@ -126,7 +118,7 @@ allprojects {
 
     }
 
-    tasks.withType(Javadoc) {
+    tasks.withType(Javadoc).configureEach {
         options.addStringOption('Xdoclint:none', '-quiet')
     }
 
@@ -167,7 +159,7 @@ subprojects { subproject ->
     if(isExample) {
         // Test projects will often include dependencies from grails-core, this file will ensure any dependencies included
         // will be substituted with projects in this repository instead of pulling upstream
-        configurations.all {
+        configurations.configureEach {
             resolutionStrategy {
                 dependencySubstitution {
                     for (def possibleProject  : rootProject.subprojects) {
@@ -356,13 +348,15 @@ subprojects { subproject ->
         }
     }
 
-    jar {
         manifest.mainAttributes(
+    tasks.withType(Jar).configureEach {
                 'Built-By': System.properties['user.name'],
                 'Created-By': System.properties['java.vm.version'] + ' (' + System.properties['java.vm.vendor'] + ')',
                 'Implementation-Title': 'Grails',
                 'Implementation-Version': grailsVersion,
-                'Implementation-Vendor': 'grails.org')
+                'Implementation-Vendor': 'grails.org'
+        )
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
     configurations {
@@ -425,10 +419,6 @@ subprojects { subproject ->
         }
         useJUnitPlatform()
         jvmArgs += java17moduleReflectionCompatibilityArguments
-    }
-
-    tasks.withType(Jar) {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
     // Add the Groovy compiler options
