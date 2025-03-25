@@ -22,31 +22,29 @@ ext {
     homeConfDir = layout.projectDirectory.dir('conf')
     homeLibDir = layout.projectDirectory.dir('lib')
     homeSrcDir = layout.projectDirectory.dir('src')
+
+    // Groovy is added as a dependency to both the 'groovy' and 'compile'
+    // configurations, so place the dependency in a shared variable. The
+    // 'compile' is required so that Groovy appears as a dependency in the
+    // artifacts' POMs.
+    jointBuildGroovyJarProperty = System.getProperty('groovy.jar')
 }
+ext.set('signing.keyId', System.getenv('SIGNING_KEY') ?: findProperty('signing.keyId'))
+ext.set('signing.password', System.getenv('SIGNING_PASSPHRASE') ?: findProperty('signing.password'))
+ext.set('signing.secretKeyRingFile', findProperty('signing.secretKeyRingFile'))
 
 version = grailsVersion
 group = 'org.grails'
 
-// Groovy is added as a dependency to both the 'groovy' and 'compile'
-// configurations, so place the dependency in a shared variable. The
-// 'compile' is required so that Groovy appears as a dependency in the
-// artifacts' POMs.
-ext.jointBuildGroovyJarProperty = System.getProperty('groovy.jar')
-ext.groovyDependency = null
-
-ext.'signing.keyId' = System.getenv('SIGNING_KEY') ?: findProperty('signing.keyId')
-ext.'signing.password' = System.getenv('SIGNING_PASSPHRASE') ?: findProperty('signing.password')
-ext.'signing.secretKeyRingFile' = findProperty('signing.secretKeyRingFile')
-
 if (jointBuildGroovyJarProperty) {
     def jointBuildGroovyJar = file(jointBuildGroovyJarProperty)
     if (jointBuildGroovyJar.exists()) {
-        groovyDependency = dependencies.create(files(jointBuildGroovyJar))
+        ext.set('groovyDependency', dependencies.create(files(jointBuildGroovyJar)))
     } else {
         throw new GradleException("The groovy.jar system property points to $jointBuildGroovyJar.absolutePath which does not exist.")
     }
 } else {
-    groovyDependency = dependencies.create("org.apache.groovy:groovy:$groovyVersion")
+    ext.set('groovyDependency', dependencies.create("org.apache.groovy:groovy:$groovyVersion"))
 }
 
 if (isReleaseVersion) {
