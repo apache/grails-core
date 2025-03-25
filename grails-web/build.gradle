@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-web-common")
     api project(":grails-web-databinding")
     api project(":grails-web-url-mappings")

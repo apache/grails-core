@@ -1,5 +1,7 @@
 dependencies {
 
+    implementation platform(project(':grails-bom'))
+
     api "jakarta.xml.bind:jakarta.xml.bind-api"
 
     api project(":grails-web"),

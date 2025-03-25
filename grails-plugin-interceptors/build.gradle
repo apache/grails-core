@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-plugin-controllers")
     api project(":grails-plugin-url-mappings")
 }

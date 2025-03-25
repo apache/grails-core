@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(':grails-bootstrap'),
         project(':grails-core'),
         project(':grails-spring'),

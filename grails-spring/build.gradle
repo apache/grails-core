@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api "org.springframework:spring-tx"
     api "org.springframework:spring-web"
     api "org.springframework:spring-context"

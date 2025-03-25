@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-databinding")
     api project(":grails-web-common")
     testRuntimeOnly "org.grails:grails-gsp"

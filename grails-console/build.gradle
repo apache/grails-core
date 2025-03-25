@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-core")
     api "org.apache.groovy:groovy-console"
     api "org.apache.groovy:groovy-swing"

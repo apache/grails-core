@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-web-common")
 
     testImplementation project(":grails-plugin-controllers")

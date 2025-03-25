@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-web")
     testCompileOnly "org.apache.groovy:groovy-ant"
 }

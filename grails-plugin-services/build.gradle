@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api "org.springframework:spring-tx"
 
     api project(":grails-core"), project(":grails-plugin-datasource")

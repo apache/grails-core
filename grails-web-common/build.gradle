@@ -1,4 +1,7 @@
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     api project(":grails-core"), {
         exclude group:'org.grails', module:'grails-spring'
     }

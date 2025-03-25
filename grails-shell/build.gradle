@@ -44,6 +44,9 @@ configurations {
 }
 
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     // compile grails-shell with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // when used by grails-gradle-plugin
