@@ -33,9 +33,9 @@ if (isReleaseVersion) {
         repositories {
             sonatype {
                 nexusUrl.set(uri('https://s01.oss.sonatype.org/service/local'))
-                username.set(System.getenv('SONATYPE_USERNAME') ?: findProperty('sonatypeOssUsername') as String ?: '')
-                password.set(System.getenv('SONATYPE_PASSWORD') ?: findProperty('sonatypeOssPassword') as String ?: '')
-                stagingProfileId.set(System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: findProperty('sonatypeOssStagingProfileId') as String ?: '')
+                username.set(System.getenv('SONATYPE_USERNAME') ?: findProperty('sonatypeOssUsername') as String)
+                password.set(System.getenv('SONATYPE_PASSWORD') ?: findProperty('sonatypeOssPassword') as String)
+                stagingProfileId.set(System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: findProperty('sonatypeOssStagingProfileId') as String)
             }
         }
     }
