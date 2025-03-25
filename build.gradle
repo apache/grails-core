@@ -348,8 +348,8 @@ subprojects { subproject ->
         }
     }
 
-        manifest.mainAttributes(
     tasks.withType(Jar).configureEach {
+        manifest.attributes(
                 'Built-By': System.properties['user.name'],
                 'Created-By': System.properties['java.vm.version'] + ' (' + System.properties['java.vm.vendor'] + ')',
                 'Implementation-Title': 'Grails',
