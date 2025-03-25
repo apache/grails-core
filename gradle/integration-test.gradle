@@ -39,16 +39,3 @@ task mergeTestReports(type: TestReport) {
   reportOn files("$buildDir/test-results/binary/test", "$buildDir/test-results/binary/integrationTest")
 }
 integrationTest.finalizedBy mergeTestReports
-
-// IDE integration for IDEA. Eclipse plugin already handles all source folders.
-idea {
-  module {
-    ["java", "groovy", "scala", "resources"].each {
-      def srcDir = file("src/integration-test/$it")
-      if(srcDir.exists()) {
-        testSourceDirs += srcDir
-      }
-    }
-  }
-}
-

@@ -1,8 +1,6 @@
 import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 
-apply plugin: 'idea'
-
 ext {
     grailsVersion = projectVersion
     isCiBuild = System.getenv().get('CI') as Boolean
@@ -78,8 +76,6 @@ allprojects {
     }
     apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
-
-apply from: layout.projectDirectory.file('gradle/idea.gradle')
 
 subprojects {
 
@@ -164,8 +160,6 @@ subprojects {
     if (name != 'grails-bom') {
         apply plugin: 'java-library'
         apply plugin: 'groovy'
-        apply plugin: 'eclipse'
-        apply plugin: 'idea'
         apply plugin: 'project-report'
     }
 

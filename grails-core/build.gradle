@@ -38,14 +38,3 @@ def writeProps = tasks.register('writeGrailsProperties', WriteProperties) {
 tasks.named('processResources') {
     from writeProps
 }
-
-eclipse {
-    classpath {
-       file {
-           whenMerged { classpath ->
-                // don't add global ASTs since the source code is in this project and that causes greclipse compilation to fail
-                classpath.entries.find { entry -> entry.kind == 'src' && entry.path == "src/main/resources" }?.excludes=["META-INF/services/org.codehaus.groovy.transform.ASTTransformation"]
-           }
-       }
-    }
-}

@@ -39,9 +39,3 @@ tasks.named('jar', Jar) {
 }
 
 jar.dependsOn docFilesJar
-
-eclipse {
-    classpath {
-       plusConfigurations += [configurations.gradleConf]
-    }
-}

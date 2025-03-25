@@ -100,16 +100,6 @@ dependencies {
     runtimeOnly "org.codehaus.plexus:plexus-component-api:$plexusComponentApiVersion"
 }
 
-eclipse {
-    classpath {
-       file {
-           whenMerged { classpath ->
-                classpath.entries.find { entry -> entry.kind == 'src' && entry.path == "src/test/resources" }?.excludes=["profiles-repository/**", "gradle-sample/**"]
-           }
-       }
-    }
-}
-
 apply from: "../gradle/integration-test.gradle"
 
 integrationTest {
