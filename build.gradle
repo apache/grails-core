@@ -426,6 +426,6 @@ apply {
 // to ensure build compatibility with Gradle, currently Groovy 3.0.x
 // when used by grails-gradle-plugin
 // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-boolean compiledByGradleGroovyVersion(Project currentProject) {
+static boolean compiledByGradleGroovyVersion(Project currentProject) {
     currentProject.name in ['grails-bootstrap', 'grails-gradle-model', 'grails-shell']
 }
