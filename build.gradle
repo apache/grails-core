@@ -236,18 +236,6 @@ subprojects {
 
     if (name in ['grails-dependencies', 'grails-bom']) return
 
-    if (name =~ /^(grails-web|grails-plugin-|grails-test-suite|grails-test)/) {
-        dependencies {
-            compileOnly 'jakarta.servlet:jakarta.servlet-api'
-            compileOnly 'org.springframework:spring-test', {
-                // MockHttpServletRequest/Response/Context used in many classes
-            }
-
-            testImplementation 'jakarta.servlet:jakarta.servlet-api'
-            testImplementation 'org.springframework:spring-test'
-        }
-    }
-
     if (name =~ /^(grails-plugin-datasource|grails-test-suite)/) {
         dependencies {
             testImplementation 'com.h2database:h2'

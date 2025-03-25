@@ -34,6 +34,14 @@ dependencies {
     testImplementation project(':grails-testing-support')
 
     testImplementation "com.fasterxml.jackson.core:jackson-databind"
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.springframework:spring-test', {
+        // MockHttpServletRequest/Response/Context used in many classes
+    }
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-test'
 }
 
 def isolatedTestPatterns = [

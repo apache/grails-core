@@ -5,4 +5,12 @@ dependencies {
     api "org.springframework:spring-tx"
 
     api project(":grails-core"), project(":grails-plugin-datasource")
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.springframework:spring-test', {
+        // MockHttpServletRequest/Response/Context used in many classes
+    }
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-test'
 }
