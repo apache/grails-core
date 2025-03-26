@@ -28,4 +28,14 @@ dependencies {
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
 }
