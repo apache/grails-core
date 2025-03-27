@@ -5,40 +5,23 @@ import org.grails.gradle.GrailsBuildPlugin
 
 apply plugin: GrailsBuildPlugin
 
-List<Configuration> libsConfigurations = []
-subprojects { subproject ->
-    if (subproject.name == 'grails-shell') {
-        libsConfigurations << configurations.create("${subproject.name}-libs") {
-            extendsFrom configurations.runtimeClasspath
-        }
+tasks.register('collectCliDependencies') {
+    ext {
+        baseCachesDir = "$gradle.gradleUserHomeDir/caches"
+        cacheDir = "$baseCachesDir/modules-2"
+        metadata = "$cacheDir/metadata-2.1/descriptors"
     }
-}
-
-tasks.register('configurePopulateDependencies') {
-    ext.set('baseCachesDir', "$gradle.gradleUserHomeDir/caches")
-    ext.set('cacheDir', "$baseCachesDir/modules-2")
-    ext.set('metadata', "$cacheDir/metadata-2.1/descriptors")
     doLast {
-        def projectNames = rootProject.subprojects*.name
+        def projectNames = subprojects*.name
         def seen = []
-        libsConfigurations.each { configuration ->
-            configuration.exclude(group: 'org.codehaus.groovy')
-            def sourceArtifacts = sourcesFor(configuration).resolvedConfiguration.lenientConfiguration.artifacts.groupBy {
-                it.moduleVersion.id
-            }
-            def javadocArtifacts = javadocFor(configuration).resolvedConfiguration.lenientConfiguration.artifacts.groupBy {
-                it.moduleVersion.id
-            }
-            def pomArtifacts = pomFor(configuration).resolvedConfiguration.lenientConfiguration.artifacts.groupBy {
-                it.moduleVersion.id
-            }
-
-            for (artifact in configuration.resolvedConfiguration.resolvedArtifacts) {
+        project(':grails-shell').configurations.cli.with {
+            exclude(group: 'org.codehaus.groovy')
+            for (artifact in resolvedConfiguration.resolvedArtifacts) {
                 if (artifact in seen) continue
                 seen << artifact
                 def dependency = artifact.moduleVersion.id
                 if (!projectNames.contains(dependency.name)) {
-                    populateDependencies.into("$dependency.group/$dependency.name/jars") {
+                    syncCliDependencies.into("$dependency.group/$dependency.name/jars") {
                         from artifact.file // this will trigger the actual download if necessary
                     }
                 }
@@ -47,8 +30,8 @@ tasks.register('configurePopulateDependencies') {
     }
 }
 
-tasks.register('populateDependencies', Sync) {
-    dependsOn 'configurePopulateDependencies'
+tasks.register('syncCliDependencies', Sync) {
+    dependsOn 'collectCliDependencies'
     into homeLibDir
     includeEmptyDirs = false
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -57,16 +40,20 @@ tasks.register('populateDependencies', Sync) {
 // Can't use sync task here because this directory contains other things as well.
 tasks.register('sourcesJars', Sync) {
     into homeSrcDir
-    from rootProject.subprojects.findAll { subproject ->
-        !subproject.name.startsWith('grails-test-suite') &&
-        !subproject.name.startsWith('grails-dependencies') &&
-        !subproject.name.startsWith('grails-bom') &&
-        !subproject.name.contains('grails-test-examples')
+    from subprojects.findAll {
+        !it.name.startsWith('grails-test-suite') &&
+        !it.name.startsWith('grails-dependencies') &&
+        !it.name.startsWith('grails-bom') &&
+        !it.name.contains('grails-test-examples')
     }.sourcesJar*.outputs*.files
     // sourcesFor comes from GrailsBuildPlugin
     from {
         sourcesFor(
-            libsConfigurations*.copyRecursive { it.name.startsWith('grails-datastore') }.collect { it.transitive = false; it }
+            project(':grails-shell')
+                    .configurations
+                    .cli
+                    .copyRecursive { it.name.startsWith('grails-datastore') }
+                    .collect { it.transitive = false; it }
         )
     }
 }
@@ -116,7 +103,7 @@ class GrailsCreateStartScripts extends CreateStartScripts {
 }
 
 tasks.register('install') { task ->
-    dependsOn 'populateDependencies', 'grailsCreateStartScripts'
+    dependsOn 'syncCliDependencies', 'grailsCreateStartScripts'
     subprojects { Project project ->
         if(!project.name.startsWith('grails-test-suite') && !project.name.startsWith('grails-test-examples')) {
             task.dependsOn("$project.name:publishToMavenLocal")
@@ -126,7 +113,8 @@ tasks.register('install') { task ->
 //task install(dependsOn: [populateDependencies, grailsCreateStartScripts] + subprojects.findAll { !it.name.startsWith('grails-test-suite') }
 //                                                                                                        *.collect { Project p -> p.tasks.withType(PublishToMavenLocal)})
 
-tasks.register('zipDist', Zip) {
+tasks.register('assemble', Zip) {
+    group = 'build'
     dependsOn 'sourcesJars', 'install'
     destinationDirectory = rootProject.layout.buildDirectory.dir('distributions')
     archiveBaseName = 'grails'
@@ -148,8 +136,4 @@ tasks.register('zipDist', Zip) {
             exclude '*.zip'
         }
     }
-}
-
-tasks.register('assemble') {
-    dependsOn 'zipDist'
 }
