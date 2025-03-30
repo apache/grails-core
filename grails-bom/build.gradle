@@ -183,7 +183,7 @@ publishing {
     }
 }
 
-task syncProps {
+tasks.register('syncProps') {
     doLast {
         def gradlePropertiesFile = rootProject.layout.projectDirectory.file('gradle.properties').asFile
         String oldProperties = gradlePropertiesFile.text
@@ -196,7 +196,7 @@ task syncProps {
     }
 }
 
-task dependabotBuild {
+tasks.register('dependabotBuild') {
     doLast {
         def dependabotBuildFile = rootProject.layout.projectDirectory.file('dependabot/build.gradle').asFile
         dependabotBuildFile.parentFile.mkdirs()
@@ -214,9 +214,9 @@ task dependabotBuild {
     }
 }
 
-task dependabot {
+tasks.register('dependabot') {
     group = 'Dependency Management'
     description = 'This task updates the dependabot/build.gradle and gradle.properties files by syncing them with the latest external dependencies listed in the Grails BOM (Bill of Materials). This ensures that Dependabot can monitor these dependencies and automatically create pull requests when newer versions become available.'
 
-    dependsOn syncProps, dependabotBuild
+    dependsOn 'syncProps', 'dependabotBuild'
 }
