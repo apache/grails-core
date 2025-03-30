@@ -196,16 +196,6 @@ subprojects {
 
     if (name in ['grails-dependencies', 'grails-bom']) return
 
-    tasks.withType(Jar).configureEach {
-        manifest.attributes(
-                'Built-By': System.properties['user.name'],
-                'Created-By': System.properties['java.vm.version'] + ' (' + System.properties['java.vm.vendor'] + ')',
-                'Implementation-Title': 'Grails',
-                'Implementation-Version': grailsVersion,
-                'Implementation-Vendor': 'grails.org'
-        )
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
 
     def debugArguments = [
             '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
@@ -250,12 +240,6 @@ subprojects {
         }
     }
 
-    // Add the Groovy compiler options
-    tasks.withType(GroovyCompile).configureEach {
-        groovyOptions.fork(memoryInitialSize: '128M', memoryMaximumSize: '1G')
-        groovyOptions.encoding = 'UTF-8'
-        options.encoding = 'UTF-8'
-    }
 
     // task for running a single test with -DsingleTest.single=TestName singleTest
     tasks.register('singleTest', Test) {

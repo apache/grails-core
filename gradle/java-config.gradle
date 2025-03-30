@@ -5,6 +5,24 @@ extensions.configure(JavaPluginExtension) {
     it.withSourcesJar()
 }
 
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.encoding = 'UTF-8'
+    options.encoding = 'UTF-8'
+    options.fork = true
+    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx1G']
+}
+
+tasks.withType(Jar).configureEach {
+    manifest.attributes(
+            'Built-By': System.properties['user.name'],
+            'Created-By': System.properties['java.vm.version'] + ' (' + System.properties['java.vm.vendor'] + ')',
+            'Implementation-Title': 'Grails',
+            'Implementation-Version': grailsVersion,
+            'Implementation-Vendor': 'grails.org'
+    )
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
 tasks.named('javadoc') {
     // We only need groovydoc
     enabled = false
