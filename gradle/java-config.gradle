@@ -1,10 +1,5 @@
 compileJava.options.release = javaVersion.toInteger()
 
-extensions.configure(JavaPluginExtension) {
-    it.withJavadocJar()
-    it.withSourcesJar()
-}
-
 tasks.withType(GroovyCompile).configureEach {
     groovyOptions.encoding = 'UTF-8'
     options.encoding = 'UTF-8'
@@ -21,9 +16,4 @@ tasks.withType(Jar).configureEach {
             'Implementation-Vendor': 'grails.org'
     )
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
-tasks.named('javadoc') {
-    // We only need groovydoc
-    enabled = false
 }
