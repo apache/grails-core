@@ -95,7 +95,6 @@ subprojects {
             'grails-plugin-converters': 'converters'
     ]
     def isTestSuite = name.startsWith('grails-test-suite')
-    def isExample = name.contains('grails-test-examples')
     def pomDescription = name == 'grails-testing-support' ?
             'Support for writing concise expressive tests for Grails artifacts' :
             'Grails Web Application Framework'
@@ -103,29 +102,6 @@ subprojects {
             [jeffscottbrown: 'Jeff Brown', jameskleeh: 'James Kleeh'] :
             [graemerocher: 'Graeme Rocher']
 
-    if (isExample) {
-        // Test projects will often include dependencies from grails-core. This will ensure any such dependencies
-        // will be substituted with the local projects in this repository instead of pulling them from a repository.
-        configurations.configureEach {
-            resolutionStrategy {
-                dependencySubstitution {
-                    for (def possibleProject : rootProject.subprojects) {
-                        if (!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples')) {
-                            def artifactId = mappedArtifactIds[possibleProject.name] ?: possibleProject.name
-                            def substitutedArtifact = "${possibleProject.name in pluginsGroupProjects ? 'org.grails.plugins' : 'org.grails'}:$artifactId"
-                            if (possibleProject.name == 'grails-bom') {
-                                substitute module(substitutedArtifact) using platform(project(':grails-bom'))
-                            }
-                            else {
-                                substitute module(substitutedArtifact) using project(":$possibleProject.name")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return
-    }
 
     ext.pomInfo = {
         delegate.name 'Grails® framework'

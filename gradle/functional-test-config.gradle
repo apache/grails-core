@@ -1,0 +1,39 @@
+def pluginsGroupProjects = rootProject.subprojects
+        .findAll { it.group == 'org.grails.plugins' }
+        .collect { it.name }
+
+configurations.configureEach {
+    resolutionStrategy {
+        dependencySubstitution {
+            for (def possibleProject : rootProject.subprojects) {
+                if (!possibleProject.name.startsWith('grails-test-suite') && !possibleProject.name.contains('grails-test-examples')) {
+                    def artifactId = mappedArtifactIds[possibleProject.name] ?: possibleProject.name
+                    def substitutedArtifact = "${possibleProject.name in pluginsGroupProjects ? 'org.grails.plugins' : 'org.grails'}:$artifactId"
+                    if (possibleProject.name == 'grails-bom') {
+                        substitute module(substitutedArtifact) using platform(project(':grails-bom'))
+                    }
+                    else {
+                        substitute module(substitutedArtifact) using project(":$possibleProject.name")
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.named('test', Test) {
+    onlyIf { !project.hasProperty('skipFunctionalTests') }
+    useJUnitPlatform()
+    testLogging {
+        events('passed', 'skipped', 'failed')
+        showExceptions = true
+        exceptionFormat = 'full'
+        showCauses = true
+        showStackTraces = true
+    }
+}
+
+tasks.named('groovydoc') {
+    // We don't need to generate docs for test projects
+    enabled = false
+}

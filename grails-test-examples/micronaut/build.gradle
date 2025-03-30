@@ -68,10 +68,11 @@ bootRun {
 }
 
 tasks.named('assetCompile') {
+    // No need to compile assets in functional tests
     enabled = false
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/functional-test-project.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }

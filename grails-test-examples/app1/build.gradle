@@ -49,6 +49,7 @@ dependencies {
 }
 
 tasks.named('assetCompile') {
+    // No need to compile assets in functional tests
     enabled = false
 }
 
@@ -67,6 +68,6 @@ test {
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/functional-test-project.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }
