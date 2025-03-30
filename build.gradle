@@ -63,9 +63,7 @@ subprojects {
 
 tasks.register('clean', Delete) {
     group = 'build'
-    doLast {
-        delete(layout.buildDirectory, homeBinDir, homeConfDir, homeDistDir, homeLibDir, homeSrcDir)
-    }
+    delete(layout.buildDirectory, homeBinDir, homeConfDir, homeDistDir, homeLibDir, homeSrcDir)
 }
 
 apply {
