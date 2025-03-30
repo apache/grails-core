@@ -110,8 +110,6 @@ tasks.register('install') { task ->
         }
     }
 }
-//task install(dependsOn: [populateDependencies, grailsCreateStartScripts] + subprojects.findAll { !it.name.startsWith('grails-test-suite') }
-//                                                                                                        *.collect { Project p -> p.tasks.withType(PublishToMavenLocal)})
 
 tasks.register('assemble', Zip) {
     group = 'build'
