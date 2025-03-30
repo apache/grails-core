@@ -13,7 +13,7 @@ tasks.register('docs', Groovydoc) {
     destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
     windowTitle = "Grails $grailsVersion"
     docTitle = "Grails $grailsVersion"
-    access = GroovydocAccess.PACKAGE
+    access = GroovydocAccess.PROTECTED
     includeAuthor = true
     includeMainForScripts = false
     processScripts = false
