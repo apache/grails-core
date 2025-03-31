@@ -21,7 +21,7 @@ configurations.configureEach {
     }
 }
 
-tasks.named('test', Test) {
+tasks.withType(Test).configureEach {
     onlyIf { !project.hasProperty('skipFunctionalTests') }
     useJUnitPlatform()
     testLogging {
