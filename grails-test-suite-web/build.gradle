@@ -51,18 +51,21 @@ def isolatedTests = [
 tasks.register('execIsolatedTests', Test) {
     configure(defaultTestConfig)
     forkEvery = 1
-    includes = isolatedTests
+    includes.addAll(isolatedTests)
 }
 
 tasks.register('createCombinedReport', TestReport) {
+    group = 'verification'
     destinationDirectory = layout.buildDirectory.dir('reports/allTests')
-    testResults.from('execIsolatedTests', 'test')
+    testResults.from(
+            tasks.named('execIsolatedTests', Test).map({it.binaryResultsDirectory }),
+            tasks.named('test', Test).map({it.binaryResultsDirectory })
+    )
 }
 
 tasks.named('test', Test) {
     configure(defaultTestConfig)
-    excludes += isolatedTests
-    dependsOn('execIsolatedTests')
+    excludes.addAll(isolatedTests)
 }
 
 apply {
