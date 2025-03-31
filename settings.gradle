@@ -3,9 +3,9 @@ plugins {
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
-def isCI = System.getenv().hasProperty('CI')
+def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
-def isAuthenticated = System.getenv().hasProperty('DEVELOCITY_ACCESS_KEY')
+def isAuthenticated = System.getenv().containsKey('DEVELOCITY_ACCESS_KEY')
 
 develocity {
     server = 'https://ge.grails.org'
