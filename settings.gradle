@@ -1,18 +1,17 @@
 plugins {
-    id 'com.gradle.develocity' version '3.19.1'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
+    id 'com.gradle.develocity' version '3.19.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
-def isCI = System.getenv('CI') != null
+def isCI = System.getenv().hasProperty('CI')
 def isLocal = !isCI
-def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
-def isBuildCacheAuthenticated =
-        System.getenv('DEVELOCITY_BUILD_CACHE_NODE_USER') != null &&
-        System.getenv('DEVELOCITY_BUILD_CACHE_NODE_KEY') != null
+def isAuthenticated = System.getenv().hasProperty('DEVELOCITY_ACCESS_KEY')
 
 develocity {
     server = 'https://ge.grails.org'
     buildScan {
+        tag('grails')
+        tag('grails-core')
         publishing.onlyIf { isAuthenticated }
         uploadInBackground = isLocal
     }
@@ -21,12 +20,8 @@ develocity {
 buildCache {
     local { enabled = isLocal }
     remote(develocity.buildCache) {
-        push = isCI && isBuildCacheAuthenticated
+        push = isCI && isAuthenticated
         enabled = true
-        usernameAndPassword(
-                System.getenv('DEVELOCITY_BUILD_CACHE_NODE_USER') ?: '',
-                System.getenv('DEVELOCITY_BUILD_CACHE_NODE_KEY') ?: ''
-        )
     }
 }
 
