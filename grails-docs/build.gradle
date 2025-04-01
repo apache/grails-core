@@ -1,3 +1,5 @@
+import org.codehaus.groovy.ant.Groovy
+
 plugins {
     id 'groovy'
     id 'java-library'
@@ -17,13 +19,17 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     gradleConf gradleApi()
-    api "org.apache.groovy:groovy:$groovyVersion"
+
+    // grails-docs classes are used in Gradle builds,
+    // so we must compile with Groovy 3 until Gradle upgrades to Groovy 4.
+    compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
+    compileOnly "org.codehaus.groovy:groovy-ant:$GroovySystem.version"
+
     api "org.apache.commons:commons-text",
             "org.slf4j:jcl-over-slf4j",
             "org.apache.ant:ant",
             "org.grails:grails-gdoc-engine",
-            "org.yaml:snakeyaml",
-            "org.apache.groovy:groovy-ant"
+            "org.yaml:snakeyaml"
 
     api "org.asciidoctor:asciidoctorj"
     implementation "org.xhtmlrenderer:flying-saucer-pdf-openpdf:${project['flying-saucer-pdf-openpdf.version']}", {
