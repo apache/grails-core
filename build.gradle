@@ -18,6 +18,12 @@ ext {
             'grails-events-plugin'    : 'events',
             'grails-plugin-converters': 'converters'
     ]
+
+    testProjectsStartWith = [
+            'grails-test-suite',
+            'grails-test-examples'
+    ]
+    testProjects = [ /* Will be populated by subprojects loop below */ ]
 }
 
 allprojects {
@@ -30,6 +36,12 @@ allprojects {
 }
 
 subprojects {
+
+    for (String testPrefix : testProjectsStartWith) {
+        if (name.startsWith(testPrefix)) {
+            rootProject.ext['testProjects'] << name
+        }
+    }
 
     configurations.configureEach {
         resolutionStrategy {

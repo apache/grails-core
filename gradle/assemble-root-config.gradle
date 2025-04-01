@@ -2,11 +2,6 @@ import org.gradle.api.internal.plugins.StartScriptGenerator
 import org.gradle.api.internal.plugins.UnixStartScriptGenerator
 import org.gradle.api.internal.plugins.WindowsStartScriptGenerator
 
-static boolean shouldBeInstalled(Project project) {
-    !project.name.startsWith('grails-test-examples') &&
-    !project.name.startsWith('grails-test-suite')
-}
-
 tasks.register('collectCliDependencies') {
     ext {
         baseCachesDir = "$gradle.gradleUserHomeDir/caches"
@@ -86,7 +81,7 @@ class GrailsCreateStartScripts extends CreateStartScripts {
 tasks.register('install') { task ->
     dependsOn 'syncCliDependencies', 'grailsCreateStartScripts'
     subprojects { Project subproject ->
-        if (shouldBeInstalled(subproject)) {
+        if (!(subproject.name in testProjects)) {
             task.dependsOn("$subproject.name:publishToMavenLocal")
         }
     }
