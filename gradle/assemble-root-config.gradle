@@ -1,9 +1,6 @@
 import org.gradle.api.internal.plugins.StartScriptGenerator
 import org.gradle.api.internal.plugins.UnixStartScriptGenerator
 import org.gradle.api.internal.plugins.WindowsStartScriptGenerator
-import org.grails.gradle.GrailsBuildPlugin
-
-apply plugin: GrailsBuildPlugin
 
 static boolean shouldBeInstalled(Project project) {
     !project.name.startsWith('grails-test-examples') &&
@@ -40,27 +37,6 @@ tasks.register('syncCliDependencies', Sync) {
     into homeLibDir
     includeEmptyDirs = false
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
-// Can't use sync task here because this directory contains other things as well.
-tasks.register('sourcesJars', Sync) {
-    into homeSrcDir
-    from subprojects.findAll {
-        !it.name.startsWith('grails-test-suite') &&
-        !it.name.startsWith('grails-dependencies') &&
-        !it.name.startsWith('grails-bom') &&
-        !it.name.contains('grails-test-examples')
-    }.sourcesJar*.outputs*.files
-    // sourcesFor comes from GrailsBuildPlugin
-    from {
-        sourcesFor(
-            project(':grails-shell')
-                    .configurations
-                    .cli
-                    .copyRecursive { it.name.startsWith('grails-datastore') }
-                    .collect { it.transitive = false; it }
-        )
-    }
 }
 
 tasks.register('grailsCreateStartScripts', GrailsCreateStartScripts) {
@@ -118,7 +94,7 @@ tasks.register('install') { task ->
 
 tasks.register('assemble', Zip) {
     group = 'build'
-    dependsOn 'sourcesJars', 'install'
+    dependsOn 'install'
     destinationDirectory = rootProject.layout.buildDirectory.dir('distributions')
     archiveBaseName = 'grails'
     archiveAppendix = grailsVersion
@@ -128,7 +104,7 @@ tasks.register('assemble', Zip) {
     into("grails-$grailsVersion") {
         from(rootProject.layout.projectDirectory) {
             // Some of these are probably not needed as they are not present in the project folder
-            include 'bin/grails', 'bin/grails.bat', 'lib/', 'media/', 'samples/', 'scripts/', 'LICENSE', 'INSTALL', 'src/'
+            include 'bin/grails', 'bin/grails.bat', 'lib/', 'media/', 'samples/', 'scripts/', 'LICENSE', 'INSTALL'
             exclude 'ant/bin', 'src/grails', 'src/war'
         }
         from(tasks.docs) {
