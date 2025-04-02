@@ -15,7 +15,7 @@
     },
     {
       "matchPackagePatterns": [
-        "^org\\.codehaus\\.groovy"
+        "^org\\.apache\\.groovy"
       ],
       "groupName": "groovy monorepo"
     },
@@ -30,14 +30,6 @@
         "^org\\.apache\\.tomcat"
       ],
       "groupName": "apache-tomcat monorepo"
-    },
-    {
-      "matchPackageNames": [
-        "org.grails:grails-testing-support",
-        "org.grails:grails-web-testing-support",
-        "org.grails:grails-gorm-testing-support"
-      ],
-      "groupName": "grails-testing-support monorepo"
     },
     {
       "matchPackagePatterns": [
