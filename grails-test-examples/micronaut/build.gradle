@@ -14,6 +14,11 @@ group "micronaut"
 apply plugin:"org.grails.grails-web"
 apply plugin:"com.bertramlabs.asset-pipeline"
 
+// The grails-gsp Gradle plugin is not needed for running the functional tests.
+// It is applied as a smoke test to check that compiling gsp
+// for production does not fail during build task.
+apply plugin: 'org.grails.grails-gsp'
+
 configurations {
     developmentOnly
     runtimeClasspath {
