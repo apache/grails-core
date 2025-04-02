@@ -20,6 +20,7 @@ else
 fi
 
 declare -a mappings=()
+declare -a excluded_mappings=()
 while getopts "pdvsqrtcfgl:" flag; do
   if [ "${flag}" = "l" ]; then
     echo "Mapping artifacts in directory"
@@ -76,6 +77,8 @@ while getopts "pdvsqrtcfgl:" flag; do
     "org[.]grails:grails-async-rxjava|org.apache.grails.async:grails-async-rxjava"
     "org[.]grails:grails-async-gpars|org.apache.grails.async:grails-async-gpars"
     "org[.]grails:grails-async|org.apache.grails.async:grails-async-core"
+    )
+      declare -a excluded_core_mappings=(
     "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-testing-support['\"]|exclude module:'grails-testing-support-core'"
     "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-test['\"]|exclude module:'grails-test-core'"
     "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-shell['\"]|exclude module:'grails-shell-cli'"
@@ -117,8 +120,9 @@ while getopts "pdvsqrtcfgl:" flag; do
     "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]events['\"]|exclude module:'grails-events'"
     "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]converters['\"]|exclude module:'grails-converters'"
     "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]async['\"]|exclude module:'grails-async'"
-    )
+      )
     mappings+=("${core_mappings[@]}")
+    excluded_mappings+=("${excluded_core_mappings[@]}")
   elif [ "${flag}" = "v" ]; then
     echo "Mapping grails-views artifacts"
     declare -a views_mappings=(
@@ -137,6 +141,8 @@ while getopts "pdvsqrtcfgl:" flag; do
       "org[.]grails:grails-taglib|org.apache.grails.views:grails-taglib"
       "org[.]grails:grails-plugin-sitemesh3|org.apache.grails:grails-sitemesh3"
       "org[.]grails:grails-gsp|org.apache.grails.views:grails-gsp-core"
+    )
+      declare -a excluded_gsp_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]views-markup['\"]|exclude module:'grails-views-markup'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]views-json['\"]|exclude module:'grails-views-gson'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]views-json-testing-support['\"]|exclude module:'grails-testing-support-views-gson'"
@@ -147,8 +153,9 @@ while getopts "pdvsqrtcfgl:" flag; do
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-sitemesh3['\"]|exclude module:'grails-sitemesh3'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-gsp['\"]|exclude module:'grails-gsp-core'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]fields['\"]|exclude module:'grails-fields'"
-    )
+      )
     mappings+=("${views_mappings[@]}")
+    excluded_mappings+=("${excluded_gsp_mappings[@]}")
   elif [ "${flag}" = "d" ]; then
     echo "Mapping grails-data artifacts"
     declare -a gorm_mappings=(
@@ -177,6 +184,8 @@ while getopts "pdvsqrtcfgl:" flag; do
       "org[.]grails:gorm-mongodb-spring-boot|org.apache.grails:grails-data-mongodb-spring-boot"
       "org[.]grails:gorm-hibernate6-spring-boot|org.apache.grails:grails-data-hibernate6-spring-boot"
       "org[.]grails:gorm-hibernate5-spring-boot|org.apache.grails:grails-data-hibernate5-spring-boot"
+    )
+    declare -a excluded_gorm_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]views-json-templates['\"]|exclude module:'grails-data-mongodb-gson-templates'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]tck-tests['\"]|exclude module:'grails-datamapping-tck-tests'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]tck-domains['\"]|exclude module:'grails-datamapping-tck-domains'"
@@ -203,38 +212,51 @@ while getopts "pdvsqrtcfgl:" flag; do
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]database-migration['\"]|exclude module:'grails-data-hibernate5-dbmigration'"
     )
     mappings+=("${gorm_mappings[@]}")
+    excluded_mappings+=("${excluded_gorm_mappings[@]}")
   elif [ "${flag}" = "t" ]; then
     echo "Mapping grails-geb artifacts"
     declare -a geb_mappings=(
       "org[.]grails[.]plugins:geb|org.apache.grails:grails-geb"
+    )
+    declare -a excluded_geb_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]geb['\"]|exclude module:'grails-geb'"
     )
     mappings+=("${geb_mappings[@]}")
+    excluded_mappings+=("${excluded_geb_mappings[@]}")
   elif [ "${flag}" = "c" ]; then
     echo "Mapping grails-cache artifacts"
     declare -a cache_mappings=(
       "org[.]grails[.]plugins:cache|org.apache.grails:grails-cache"
+    )
+    declare -a excluded_cache_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]cache['\"]|exclude module:'grails-cache'"
     )
     mappings+=("${cache_mappings[@]}")
+    excluded_mappings+=("${excluded_cache_mappings[@]}")
   elif [ "${flag}" = "f" ]; then
     echo "Mapping grails-forge artifacts"
     declare -a forge_mappings=(
       "org[.]grails[.]forge:grails-forge-core|org.apache.grails.forge:grails-forge-core"
       "org[.]grails[.]forge:grails-forge-api|org.apache.grails.forge:grails-forge-api"
       "org[.]grails[.]forge:grails-cli|org.apache.grails.forge:grails-forge-cli"
+    )
+    declare -a excluded_forge_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-forge-core['\"]|exclude module:'grails-forge-core'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-forge-api['\"]|exclude module:'grails-forge-api'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-cli['\"]|exclude module:'grails-forge-cli'"
     )
     mappings+=("${forge_mappings[@]}")
+    excluded_mappings+=("${excluded_forge_mappings[@]}")
   elif [ "${flag}" = "q" ]; then
     echo "Mapping grails-quartz artifacts"
     declare -a quartz_mappings=(
       "org[.]grails[.]plugins:quartz|org.apache.grails:grails-quartz"
+    )
+    declare -a excluded_quartz_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]quartz['\"]|exclude module:'grails-quartz'"
     )
     mappings+=("${quartz_mappings[@]}")
+    excluded_mappings+=("${excluded_quartz_mappings[@]}")
   elif [ "${flag}" = "r" ]; then
     echo "Mapping grails-redis artifacts"
     declare -a redis_mappings=(
@@ -256,6 +278,8 @@ while getopts "pdvsqrtcfgl:" flag; do
       "org[.]grails[.]plugins:spring-security-core|org.apache.grails:grails-spring-security"
       "org[.]grails[.]plugins:spring-security-cas|org.apache.grails:grails-spring-security-cas"
       "org[.]grails[.]plugins:spring-security-acl|org.apache.grails:grails-spring-security-acl"
+    )
+    declare -a excluded_security_mappings=(
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-ui['\"]|exclude module:'grails-spring-security-ui'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest['\"]|exclude module:'grails-spring-security-rest'"
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-testapp-profile['\"]|exclude module:'spring-security-rest-testapp'"
@@ -270,6 +294,7 @@ while getopts "pdvsqrtcfgl:" flag; do
       "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-acl['\"]|exclude module:'grails-spring-security-acl'"
     )
     mappings+=("${security_mappings[@]}")
+    excluded_mappings+=("${excluded_security_mappings[@]}")
   elif [ "${flag}" = "p" ]; then
     echo "Mapping grails-profile artifacts"
     declare -a profile_mappings=(
@@ -308,6 +333,11 @@ for file in ${files}; do
     for mapping in "${mappings[@]}"; do
         IFS='|' read -r old_pattern new_replacement <<< "${mapping}"
         # echo "     Using regex '${old_pattern}' to replace with '${new_replacement}' in '${file}'"
+        sed "${SED_INPLACE[@]}" "s/${old_pattern}([:'\"])/${new_replacement}\1/g" "${file}"
+    done
+    for mapping in "${excluded_mappings[@]}"; do
+        IFS='|' read -r old_pattern new_replacement <<< "${mapping}"
+        # echo "     Using excluded regex '${old_pattern}' to replace with '${new_replacement}' in '${file}'"
         sed "${SED_INPLACE[@]}" "s/${old_pattern}/${new_replacement}/g" "${file}"
     done
 done

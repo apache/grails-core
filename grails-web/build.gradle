@@ -17,7 +17,7 @@ dependencies {
     api project(":grails-web-mvc")
     api "org.apache.groovy:groovy:$groovyVersion"
 
-    api "org.apache.grails.web:grails-web-gsp"
+    api "org.grails:grails-web"
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
