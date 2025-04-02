@@ -102,7 +102,7 @@ tasks.register('assemble', Zip) {
             exclude 'ant/bin', 'src/grails', 'src/war'
         }
         from(tasks.docs) {
-            into 'doc'
+            into 'doc/api'
         }
         from(homeDistDir) {
             into 'dist'
