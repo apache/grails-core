@@ -1,96 +1,74 @@
-configurations.all {
-    resolutionStrategy {
-        preferProjectModules()
-    }
+plugins {
+    id 'groovy'
 }
 
-configurations.testCompileClasspath {
-    exclude module: "grails-plugin-testing"
-}
+version = projectVersion
+group = 'org.grails'
 
 dependencies {
 
-    testImplementation project(':grails-test-suite-base'),
-                project(':grails-plugin-domain-class'),
-                project(':grails-plugin-codecs'),
-                project(':grails-plugin-datasource'),
-                project(':grails-plugin-i18n'),
-                project(':grails-plugin-url-mappings'),
-                project(':grails-plugin-databinding'),
-                project(':grails-plugin-services'),
-                project(':grails-plugin-interceptors'),
-                project(':grails-plugin-controllers'),
-                project(':grails-plugin-rest'),
-                project(':grails-web'),
-                project(':grails-web-databinding'),
-                project(':grails-spring')
+    implementation platform(project(':grails-bom'))
 
-    testImplementation project(":grails-plugin-converters")
-    testImplementation "org.grails:grails-datastore-gorm-hibernate5"
-    testImplementation "org.grails:grails-web-testing-support", {
-        exclude module:'grails-testing-support'
+    testImplementation 'org.grails:grails-gorm-testing-support', {
+        // This is a local project dependency
+        exclude group: 'org.grails', module: 'grails-testing-support'
     }
+    testImplementation project(':grails-test-suite-base')
     testImplementation project(':grails-testing-support')
-    testImplementation "org.grails.plugins:gsp"
-    testImplementation project(':grails-async-plugin')
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "com.fasterxml.jackson.core:jackson-databind"
-
-    testRuntimeOnly "org.springframework:spring-aspects"
-    testRuntimeOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
-
-}
-
-// javaee-web-api has a bad versions of classes we need to compile against
-// Just remove it fromt the compile classpath here
-configurations {
-    testCompileClasspath {
-        exclude module: "javaee-web-api"
+    testImplementation project(':grails-plugin-interceptors')
+    testImplementation project(':grails-plugin-rest')
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.grails:grails-web-testing-support', {
+        // This is a local project dependency
+        exclude group: 'org.grails', module: 'grails-testing-support'
     }
-}
-
-compileTestGroovy {
-    groovyOptions.listFiles = true
+    testImplementation 'org.spockframework:spock-core'
 }
 
 def defaultTestConfig = {
-    maxParallelForks = isCiBuild ? 2 : 4
+    maxParallelForks = isCiBuild ? 2 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1
     forkEvery = isCiBuild ? 10 : 100
-    excludes = ["**/*TestCase.class",
-                "**/*\$*.class"]
+    excludes = ['**/*TestCase.class', '**/*$*.class']
 }
 
 def isolatedTests = [
-    "**/ContentFormatControllerTests.class",
-    "**/JSONBindingTests.class",
-    "**/AutoParams*MarshallingTests.class",
-    "**/JSONBindingToNullTests.class",
-    "**/ControllerWithXmlConvertersTests.class",
-    "**/GroovyPageAttributesTests.class",
-    "**/BindingExcludeTests.class",
-    "**/NestedXmlBindingTests.class",
-    "**/GSPResponseWriterSpec.class",
-    "**/RespondMethodSpec.class",
-    "**/ContentNegotiationSpec.class",
-    "**/pages/ext/jsp/*.class",
-    "**/WithFormatContentTypeSpec.class",
-    "**/CommandObjectNoDataSpec.class"
+    '**/ContentFormatControllerTests.class',
+    '**/JSONBindingTests.class',
+    '**/AutoParams*MarshallingTests.class',
+    '**/JSONBindingToNullTests.class',
+    '**/ControllerWithXmlConvertersTests.class',
+    '**/GroovyPageAttributesTests.class',
+    '**/BindingExcludeTests.class',
+    '**/NestedXmlBindingTests.class',
+    '**/GSPResponseWriterSpec.class',
+    '**/RespondMethodSpec.class',
+    '**/ContentNegotiationSpec.class',
+    '**/pages/ext/jsp/*.class',
+    '**/WithFormatContentTypeSpec.class',
+    '**/CommandObjectNoDataSpec.class'
 ]
 
-task execIsolatedTests(type: Test) {
-    configure defaultTestConfig
+tasks.register('execIsolatedTests', Test) {
+    configure(defaultTestConfig)
     forkEvery = 1
-    includes = isolatedTests
+    includes.addAll(isolatedTests)
 }
 
-task createCombinedReport(type: TestReport) {
-    destinationDir = file("$buildDir/reports/allTests")
-    reportOn execIsolatedTests, test
+tasks.register('createCombinedReport', TestReport) {
+    group = 'verification'
+    destinationDirectory = layout.buildDirectory.dir('reports/allTests')
+    testResults.from(
+            tasks.named('execIsolatedTests', Test).map({it.binaryResultsDirectory }),
+            tasks.named('test', Test).map({it.binaryResultsDirectory })
+    )
 }
 
-test {
-    configure defaultTestConfig
-    excludes += isolatedTests
+tasks.named('test', Test) {
+    configure(defaultTestConfig)
+    excludes.addAll(isolatedTests)
 }
 
-test.dependsOn execIsolatedTests
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

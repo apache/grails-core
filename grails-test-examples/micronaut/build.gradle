@@ -4,7 +4,6 @@ buildscript {
     }
     dependencies {
         classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
-        classpath "org.grails.plugins:hibernate5"
         classpath "com.bertramlabs.plugins:asset-pipeline-gradle:${project['asset-pipeline-gradle.version']}"
     }
 }
@@ -12,15 +11,13 @@ buildscript {
 version "0.1"
 group "micronaut"
 
-apply plugin:"eclipse"
-apply plugin:"idea"
-apply plugin:"war"
 apply plugin:"org.grails.grails-web"
-apply plugin:"org.grails.grails-gsp"
 apply plugin:"com.bertramlabs.asset-pipeline"
 
-apply plugin: 'java'
-compileJava.options.release = 17
+// The grails-gsp Gradle plugin is not needed for running the functional tests.
+// It is applied as a smoke test to check that compiling gsp
+// for production does not fail during build task.
+apply plugin: 'org.grails.grails-gsp'
 
 configurations {
     developmentOnly
@@ -75,9 +72,12 @@ bootRun {
     systemProperty springProfilesActive, System.getProperty(springProfilesActive)
 }
 
-assets {
-    minifyJs = true
-    minifyCss = true
+tasks.named('assetCompile') {
+    // No need to compile assets in functional tests
+    enabled = false
 }
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

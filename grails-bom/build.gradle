@@ -2,7 +2,11 @@
 
 plugins {
     id 'java-platform'
+    id 'maven-publish'
 }
+
+version = projectVersion
+group = 'org.grails'
 
 javaPlatform {
     allowDependencies()
@@ -15,6 +19,9 @@ def versions = new Properties()
 versions.load(new StringReader(new File("$projectDir.parentFile/gradle.properties").text))
 
 ext {
+    isGitHubRepoPublish = 'true' == System.getenv('GITHUB_PUBLISH')
+    isGrailsRepoPublish = !isGitHubRepoPublish && projectVersion.endsWith('-SNAPSHOT')
+
     // When making changes in the dependencyVersions, remember to also update the Grails BOM Documentation:
     // https://docs.grails.org/snapshot/ref/Dependency%20Versions/Grails%20BOM.html
     // Grails dependencies are listed in SCOTTL format:
@@ -156,10 +163,12 @@ publishing {
                 ])
 
                 project.parent.subprojects.findResults {
-                    if (it.name == 'grails-bom') return null
-                    if (it.name.startsWith('grails-test-suite') || it.name.contains('grails-test-examples')) return null
-                    [groupId: it.group, artifactId: mappedArtifactIds[it.name] ?: it.name, version: "${it.version}"] +
-                        (it.name == 'grails-dependencies'? [type:'pom'] : [])
+                    if (it.name == 'grails-bom' || it.name in testProjects) return null
+                    return [
+                            groupId: it.group,
+                            artifactId: it.findProperty('pomArtifactId') ?: it.name,
+                            version: it.version
+                    ] + (it.name == 'grails-dependencies' ? [type: 'pom'] : [])
                 }.each {
                     appendNodes(deps.appendNode('dependency'), it)
                 }
@@ -176,7 +185,7 @@ publishing {
     }
 }
 
-task syncProps {
+tasks.register('syncProps') {
     doLast {
         def gradlePropertiesFile = rootProject.layout.projectDirectory.file('gradle.properties').asFile
         String oldProperties = gradlePropertiesFile.text
@@ -189,7 +198,7 @@ task syncProps {
     }
 }
 
-task dependabotBuild {
+tasks.register('dependabotBuild') {
     doLast {
         def dependabotBuildFile = rootProject.layout.projectDirectory.file('dependabot/build.gradle').asFile
         dependabotBuildFile.parentFile.mkdirs()
@@ -207,9 +216,9 @@ task dependabotBuild {
     }
 }
 
-task dependabot {
+tasks.register('dependabot') {
     group = 'Dependency Management'
     description = 'This task updates the dependabot/build.gradle and gradle.properties files by syncing them with the latest external dependencies listed in the Grails BOM (Bill of Materials). This ensures that Dependabot can monitor these dependencies and automatically create pull requests when newer versions become available.'
 
-    dependsOn syncProps, dependabotBuild
+    dependsOn 'syncProps', 'dependabotBuild'
 }

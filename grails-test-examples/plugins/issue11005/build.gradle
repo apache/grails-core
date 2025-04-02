@@ -11,9 +11,6 @@ apply plugin: "java-library"
 apply plugin: "org.grails.grails-plugin"
 apply plugin: "org.grails.grails-gsp"
 
-apply plugin: 'java'
-compileJava.options.release = 17
-
 version "0.1-SNAPSHOT"
 group "org.grails.plugins"
 
@@ -35,4 +32,7 @@ dependencies {
     console "org.grails:grails-console"
 }
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

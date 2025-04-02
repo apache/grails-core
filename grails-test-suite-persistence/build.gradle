@@ -1,3 +1,12 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.grails'
+
 configurations.testCompileClasspath {
     exclude module: "grails-plugin-testing"
 }
@@ -21,6 +30,7 @@ dependencies {
     testImplementation "org.grails:grails-datastore-gorm-hibernate5"
 
     api "org.apache.tomcat:tomcat-jdbc"
+    api "org.apache.groovy:groovy:$groovyVersion"
 
     testRuntimeOnly "com.h2database:h2"
 
@@ -33,6 +43,32 @@ dependencies {
         exclude module:'grails-testing-support'
     }
     testImplementation project(':grails-testing-support')
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.springframework:spring-test', {
+        // MockHttpServletRequest/Response/Context used in many classes
+    }
+
+    testImplementation 'com.h2database:h2'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-test'
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
 }
 
 test {
@@ -57,3 +93,8 @@ task testIsolatedPersistentOne(type: Test) {
 }
 
 test.dependsOn testGrailsDomainBinder, testIsolatedPersistentOne
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

@@ -9,12 +9,7 @@ buildscript {
 
 group = 'issue11767.app'
 
-apply plugin: 'application'
-apply plugin: 'groovy'
 apply plugin: 'org.grails.grails-web'
-
-apply plugin: 'java'
-compileJava.options.release = 17
 
 dependencies {
     implementation platform(project(':grails-bom'))
@@ -40,4 +35,7 @@ application {
     mainClass = 'issue11767.Application'
 }
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

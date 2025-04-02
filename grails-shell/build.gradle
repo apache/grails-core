@@ -1,9 +1,15 @@
-apply plugin:'application'
+plugins {
+    id 'application'
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
 
-mainClassName = "org.grails.cli.GrailsCli"
+version = projectVersion
+group = 'org.grails'
 
-repositories {
-    mavenCentral()
+application {
+    mainClass = 'org.grails.cli.GrailsCli'
 }
 
 configurations {
@@ -44,6 +50,9 @@ configurations {
 }
 
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     // compile grails-shell with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // when used by grails-gradle-plugin
@@ -56,7 +65,10 @@ dependencies {
 
     runtimeOnly "org.apache.groovy:groovy-ant"
     runtimeOnly "org.apache.groovy:groovy-json"
-    runtimeOnly "org.apache.groovy:groovy-jmx"
+    runtimeOnly "org.apache.groovy:groovy-jmx:$groovyVersion", {
+        // TODO: For some reason, this version is not being resolved from grails-bom
+        // (Not sure why this library is needed in the first place)
+    }
     runtimeOnly "org.apache.groovy:groovy-xml"
 
     api project(":grails-bootstrap")
@@ -98,24 +110,29 @@ dependencies {
 
     runtimeOnly "org.slf4j:slf4j-simple"
     runtimeOnly "org.codehaus.plexus:plexus-component-api:$plexusComponentApiVersion"
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
 }
 
-eclipse {
-    classpath {
-       file {
-           whenMerged { classpath ->
-                classpath.entries.find { entry -> entry.kind == 'src' && entry.path == "src/test/resources" }?.excludes=["profiles-repository/**", "gradle-sample/**"]
-           }
-       }
-    }
-}
-
-apply from: "../gradle/integration-test.gradle"
-
-integrationTest {
-    // jline doesn't use jline.terminal system property when TERM is dumb so use different TERM value for tests
-    // https://github.com/jline/jline2/blob/6a1b6bf/src/main/java/jline/TerminalFactory.java#L54-L57
-    environment 'TERM', 'xterm'
-    // execute in single thread
-    maxParallelForks = 1
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

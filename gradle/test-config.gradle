@@ -1,0 +1,46 @@
+def debugArguments = [
+        '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
+        '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
+]
+def java17moduleReflectionCompatibilityArguments = [
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED'
+]
+
+dependencies {
+    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
+    add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+}
+
+tasks.withType(Test).configureEach {
+    onlyIf { !project.hasProperty('onlyFunctionalTests') }
+    useJUnitPlatform()
+    jvmArgs += java17moduleReflectionCompatibilityArguments
+    develocity {
+        testRetry {
+            maxRetries = 2
+            maxFailures = 20
+            failOnPassedAfterRetry = true
+        }
+    }
+    testLogging {
+        events('passed', 'skipped', 'failed')
+        showExceptions = true
+        exceptionFormat = 'full'
+        showCauses = true
+        showStackTraces = true
+    }
+    excludes = ['**/*TestCase.class', '**/*$*.class']
+    maxParallelForks = isCiBuild ? 2 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1
+    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    if (System.getProperty('debug.tests')) {
+        jvmArgs += debugArguments
+    }
+}
+
+tasks.register('singleTest', Test) {
+    description = 'Task for running a single test with -DsingleTest.single=TestName singleTest'
+    if (System.getProperty('debug.tests')) {
+        jvmArgs += debugArguments
+    }
+}

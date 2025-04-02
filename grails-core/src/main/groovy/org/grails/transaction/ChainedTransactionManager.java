@@ -37,7 +37,7 @@ import org.springframework.util.Assert;
  * {@link PlatformTransactionManager} implementation that orchestrates transaction creation, commits and rollbacks to a
  * list of delegates. Using this implementation assumes that errors causing a transaction rollback will usually happen
  * before the transaction completion or during the commit of the most inner {@link PlatformTransactionManager}.
- * <p />
+ * <p>
  * The configured instances will start transactions in the order given and commit/rollback in <em>reverse</em> order,
  * which means the {@link PlatformTransactionManager} most likely to break the transaction should be the <em>last</em>
  * in the list configured. A {@link PlatformTransactionManager} throwing an exception during commit will automatically

@@ -5,24 +5,23 @@ buildscript {
     }
     dependencies {
         classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
+        classpath "org.grails.plugins:views-gradle:${project['plugins-views-gradle.version']}", {
+            // This dependency is not needed for running the functional tests.
+            // It is added as a smoke test to check that compiling gson-views
+            // for production does not fail during build task.
+        }
     }
-}
-
-plugins {
-    id 'groovy'
-    id 'war'
-    id 'idea'
-    id 'eclipse'
 }
 
 version = rootProject.version
 group = 'pubsub.demo'
 
 apply plugin: 'org.grails.grails-web'
-apply plugin: "org.grails.grails-gsp"
 
-apply plugin: 'java'
-compileJava.options.release = 17
+// The views-json Gradle plugin is not needed for running the functional tests.
+// It is applied as a smoke test to check that compiling gson-views
+// for production does not fail during build task.
+apply plugin: 'org.grails.plugins.views-json'
 
 dependencies {
     implementation platform(project(':grails-bom'))
@@ -39,7 +38,6 @@ dependencies {
     implementation "org.grails:grails-plugin-url-mappings"
     implementation "org.grails:grails-web-boot"
 
-    implementation "org.grails.plugins:gsp"
     implementation 'org.grails.plugins:views-json'
     implementation 'org.grails.plugins:hibernate5'
 
@@ -61,4 +59,7 @@ bootRun {
     mainClass = 'pubsub.demo.Application'
 }
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

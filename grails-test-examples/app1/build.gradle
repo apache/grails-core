@@ -12,18 +12,13 @@ buildscript {
 version "0.1"
 group "functionaltests"
 
-apply plugin: "war"
 apply plugin: "asset-pipeline"
 apply plugin: "org.grails.grails-web"
-apply plugin: "org.grails.grails-gsp"
 
-assets {
-    minifyJs = true
-    minifyCss = true
-}
-
-apply plugin: 'java'
-compileJava.options.release = 17
+// The grails-gsp Gradle plugin is not needed for running the functional tests.
+// It is applied as a smoke test to check that compiling gsp
+// for production does not fail during build task.
+apply plugin: 'org.grails.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))
@@ -58,7 +53,7 @@ dependencies {
     integrationTestImplementation testFixtures("org.grails.plugins:geb")
 }
 
-tasks.withType(org.gradle.api.tasks.JavaExec) {
+tasks.withType(JavaExec).configureEach {
     systemProperty('REPLACE_ME', 'test')
     systemProperty('foo.bar', 'test')
     // jvmArgs '-javaagent:agent.jar'
@@ -72,4 +67,7 @@ test {
 //compileGroovy.groovyOptions.fork = true
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

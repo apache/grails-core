@@ -1,5 +1,14 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.grails'
+
 dependencies {
     implementation platform(project(':grails-bom'))
 
@@ -27,9 +36,34 @@ dependencies {
     testImplementation "org.apache.groovy:groovy-templates"
     testImplementation "org.fusesource.jansi:jansi"
     testImplementation "jline:jline"
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
 }
 
 processResources {
     inputs.property "version", version
     filter(ReplaceTokens, tokens:[version:version])
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

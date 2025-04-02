@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author Graeme Rocher
  * @since 0.4
- *        <p/>
+ *        <p>
  *        Created: Mar 5, 2007
  *        Time: 7:50:41 AM
  */

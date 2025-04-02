@@ -1,36 +1,42 @@
+plugins {
+    // Needed for the dependency configurations
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    skipJavaComponent = true
+}
+
+def configurations = [
+        'api': [
+                "org.grails:grails-bootstrap:$version",
+                "org.grails:grails-plugin-rest:$version",
+                "org.grails:grails-plugin-databinding:$version",
+                "org.grails:grails-plugin-i18n:$version",
+                "org.grails:grails-plugin-services:$version",
+                "org.grails:grails-plugin-url-mappings:$version",
+                "org.grails:grails-plugin-interceptors:$version",
+                "org.grails.plugins:async:$version",
+                "org.grails.plugins:events:$version",
+                "org.grails.plugins:gsp:${property('gsp.version')}",
+        ],
+        'runtimeOnly': [
+                "com.h2database:h2:${property('h2.version')}",
+        ]
+]
+
 dependencies {
-    for (String exported : [
-            "org.grails:grails-bootstrap:${project.version}",
-            "org.grails:grails-plugin-rest:${project.version}",
-            "org.grails:grails-plugin-databinding:${project.version}",
-            "org.grails:grails-plugin-i18n:${project.version}",
-            "org.grails:grails-plugin-services:${project.version}",
-            "org.grails:grails-plugin-url-mappings:${project.version}",
-            "org.grails:grails-plugin-interceptors:${project.version}",
-            "org.grails.plugins:async:${project.version}",
-            "org.grails.plugins:events:${project.version}",
-            "org.grails.plugins:gsp:${project['gsp.version']}",
-    ]) {
-        api "${exported}"
-    }
-    for (String exported : [
-            "com.h2database:h2:${project['h2.version']}",
-    ]) {
-        runtimeOnly "${exported}"
+    configurations.each { String configuration, List<String> deps ->
+        deps.each {
+            add(configuration, it)
+        }
     }
 }
 
-apply plugin: 'maven-publish'
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-
-            pom.withXml {
-                def xml = asNode()
-
-                xml.children().last() + pomInfo
-            }
-        }
-    }
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

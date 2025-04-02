@@ -1,10 +1,23 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.grails'
+
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     compileOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
     api "jakarta.inject:jakarta.inject-api"
     api "jakarta.persistence:jakarta.persistence-api"
     api "jakarta.annotation:jakarta.annotation-api"
 
     implementation "com.github.ben-manes.caffeine:caffeine"
+    api "org.apache.groovy:groovy:$groovyVersion"
     api("org.springframework.boot:spring-boot")
     api "org.springframework:spring-core"
     api "org.springframework:spring-tx"
@@ -28,6 +41,23 @@ dependencies {
 
     testRuntimeOnly "com.h2database:h2"
     testRuntimeOnly "com.fasterxml.jackson.core:jackson-databind"
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
 }
 
 def writeProps = tasks.register('writeGrailsProperties', WriteProperties) {
@@ -39,13 +69,10 @@ tasks.named('processResources') {
     from writeProps
 }
 
-eclipse {
-    classpath {
-       file {
-           whenMerged { classpath ->
-                // don't add global ASTs since the source code is in this project and that causes greclipse compilation to fail
-                classpath.entries.find { entry -> entry.kind == 'src' && entry.path == "src/main/resources" }?.excludes=["META-INF/services/org.codehaus.groovy.transform.ASTTransformation"]
-           }
-       }
-    }
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

@@ -1,0 +1,25 @@
+apply from: layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+
+tasks.register('docs', Groovydoc) {
+    group = 'documentation'
+    def srcDirs = subprojects
+            .findAll { it.findProperty('includeInApiDocs') }
+            .collect { it.sourceSets.main.allSource.srcDirs }
+            .flatten()
+    source(srcDirs)
+    exclude('META-INF/**')
+    classpath = configurations.documentation
+    groovyClasspath = configurations.documentation
+    destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
+    windowTitle = "Grails $grailsVersion"
+    docTitle = "Grails $grailsVersion"
+    access = GroovydocAccess.PROTECTED
+    includeAuthor = true
+    includeMainForScripts = false
+    processScripts = false
+    inputs.files(srcDirs)
+    outputs.dir(destinationDir)
+    doLast {
+        delete(layout.buildDirectory.dir('tmp'))
+    }
+}

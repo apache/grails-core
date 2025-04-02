@@ -11,18 +11,13 @@ buildscript {
 version "0.1"
 group "issue11102"
 
-apply plugin: "war"
 apply plugin: "asset-pipeline"
 apply plugin: "org.grails.grails-web"
-apply plugin: "org.grails.grails-gsp"
 
-apply plugin: 'java'
-compileJava.options.release = 17
-
-assets {
-    minifyJs = true
-    minifyCss = true
-}
+// The grails-gsp Gradle plugin is not needed for running the functional tests.
+// It is applied as a smoke test to check that compiling gsp
+// for production does not fail during build task.
+apply plugin: 'org.grails.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))
@@ -60,10 +55,18 @@ dependencies {
     integrationTestImplementation testFixtures("org.grails.plugins:geb")
 }
 
+tasks.named('assetCompile') {
+    // No need to compile assets in functional tests
+    enabled = false
+}
+
 bootRun {
     jvmArgs('-Dspring.output.ansi.enabled=always')
     String springProfilesActive = 'spring.profiles.active'
     systemProperty springProfilesActive, System.getProperty(springProfilesActive)
 }
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

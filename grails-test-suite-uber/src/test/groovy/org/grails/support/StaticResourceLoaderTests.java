@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  * @author Graeme Rocher
  * @since 0.4
- *        <p/>
+ *        <p>
  *        Created: Feb 26, 2007
  *        Time: 3:49:27 PM
  */

@@ -1,6 +1,24 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.grails'
+
+ext {
+    pomDescription = 'Support for writing concise expressive tests for Grails artifacts'
+    pomDevelopers = [
+            jeffscottbrown: 'Jeff Brown',
+            jameskleeh: 'James Kleeh'
+    ]
+}
+
 dependencies {
     implementation platform(project(':grails-bom'))
 
+    api "org.apache.groovy:groovy:$groovyVersion"
     api "org.springframework:spring-test"
     api project(":grails-plugin-codecs"), {
         exclude module: 'grails-plugin-mimetypes'
@@ -16,4 +34,29 @@ dependencies {
     api "org.junit.jupiter:junit-jupiter-api"
     api "org.junit.platform:junit-platform-runner"
     runtimeOnly "org.junit.jupiter:junit-jupiter-engine"
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

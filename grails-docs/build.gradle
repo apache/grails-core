@@ -1,24 +1,51 @@
+import org.codehaus.groovy.ant.Groovy
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.grails'
+
 configurations {
     // Required to keep Gradle classes off the test compile classpath.
     gradleConf.extendsFrom compileClasspath
 }
 
 dependencies {
+
+    implementation platform(project(':grails-bom'))
+
     gradleConf gradleApi()
+
+    // grails-docs classes are used in Gradle builds,
+    // so we must compile with Groovy 3 until Gradle upgrades to Groovy 4.
+    compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
+    compileOnly "org.codehaus.groovy:groovy-ant:$GroovySystem.version"
+
     api "org.apache.commons:commons-text",
             "org.slf4j:jcl-over-slf4j",
             "org.apache.ant:ant",
             "org.grails:grails-gdoc-engine",
-            "org.yaml:snakeyaml",
-            "org.apache.groovy:groovy-ant"
+            "org.yaml:snakeyaml"
 
     api "org.asciidoctor:asciidoctorj"
-    implementation "org.xhtmlrenderer:flying-saucer-pdf-openpdf"
+    implementation "org.xhtmlrenderer:flying-saucer-pdf-openpdf:${project['flying-saucer-pdf-openpdf.version']}", {
+        // TODO: For some reason, this version is not being resolved from grails-bom
+    }
 
     runtimeOnly "org.slf4j:slf4j-api"
 
     api "org.jsoup:jsoup"
     testImplementation("org.spockframework:spock-core") { transitive = false }
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
 sourceSets {
@@ -40,8 +67,10 @@ tasks.named('jar', Jar) {
 
 jar.dependsOn docFilesJar
 
-eclipse {
-    classpath {
-       plusConfigurations += [configurations.gradleConf]
-    }
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

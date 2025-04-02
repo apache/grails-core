@@ -36,7 +36,7 @@ SOFTWARE.
  * The texts produced strictly conform to JSON syntax rules. No whitespace is
  * added, so the results are ready for transmission or storage. Each instance of
  * JSONWriter can produce one JSON text.
- * <p/>
+ * <p>
  * A JSONWriter instance provides a <code>value</code> method for appending
  * values to the
  * text, and a <code>key</code>
@@ -51,11 +51,11 @@ SOFTWARE.
  *         .value("Hello, World!")
  *     .endObject();</pre> which writes <pre>
  * {"JSON":"Hello, World!"}</pre>
- * <p/>
+ * <p>
  * The first method called must be <code>array</code> or <code>object</code>.
  * There are no methods for adding commas or colons. JSONWriter adds them for
  * you. Objects and arrays can be nested up to 20 levels deep.
- * <p/>
+ * <p>
  * This can sometimes be easier than using a JSONObject to build a string.
  *
  * @author JSON.org

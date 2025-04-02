@@ -32,7 +32,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📝 Store the target branch"
         id: extract_branch
         run: |
@@ -47,9 +47,6 @@ jobs:
           VERSION: ${{ github.event.inputs.release }}
       - name: "🧩 Run Assemble"
         id: assemble
-        env:
-          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
         run: ./gradlew assemble
       - name: "📤 Upload artifacts to the Github release"
         id: upload_artifact

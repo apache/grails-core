@@ -448,9 +448,6 @@ jobs:
           cat gradle.properties
       - name: "🧩 Run Assemble"
         run: ./gradlew -U assemble
-        env:
-          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
       - name: "🔐 Generate key file for artifact signing"
         env:
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
@@ -458,8 +455,6 @@ jobs:
       - name: "📤 Publish to GitHub Packages"
         id: publish
         env:
-          DEVELOCITY_BUILD_CACHE_NODE_USER: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER }}
-          DEVELOCITY_BUILD_CACHE_NODE_KEY: ${{ secrets.GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY }}
           GITHUB_USERNAME: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PUBLISH: 'true'

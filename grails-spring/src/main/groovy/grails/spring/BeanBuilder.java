@@ -446,9 +446,9 @@ public class BeanBuilder extends GroovyObjectSupport {
     }
 
     /**
-     * Loads a set of given beans
+     * Loads a set of given beans.
      * @param resources The resources to load
-     * @throws IOException Thrown if there is an error reading one of the passes resources
+     * @throws BeanDefinitionParsingException Thrown if there is an error reading one of the passes resources
      */
     public void loadBeans(Resource[] resources) {
         @SuppressWarnings("rawtypes") Closure beans = new Closure(this) {

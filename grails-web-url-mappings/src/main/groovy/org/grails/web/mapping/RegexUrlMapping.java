@@ -46,12 +46,11 @@ import java.util.regex.PatternSyntaxException;
 /**
  * <p>A UrlMapping implementation that takes a Grails URL pattern and turns it into a regex matcher so that
  * URLs can be matched and information captured from the match.</p>
- * <p/>
+ * <p>
  * <p>A Grails URL pattern is not a regex, but is an extension to the form defined by Apache Ant and used by
  * Spring AntPathMatcher. Unlike regular Ant paths Grails URL patterns allow for capturing groups in the form:</p>
- * <p/>
+ * <p>
  * <code>/blog/(*)&#47;**</code>
- * <p/>
  * <p>The parenthesis define a capturing group. This implementation transforms regular Ant paths into regular expressions
  * that are able to use capturing groups</p>
  *
@@ -720,14 +719,16 @@ public class RegexUrlMapping extends AbstractUrlMapping {
 
     /**
      * Compares this {@link UrlMapping} instance with the specified {@link UrlMapping} instance and deals with URL mapping precedence rules.
-     * <p> URL Mapping Precedence Order </p>
-     * <ol> Less wildcard tokens.
+     * <p>URL Mapping Precedence Order
+     * <p>Less wildcard tokens:
+     * <ol>
      * <li> /foo          &lt;- match
      * <li> /foo/(*) </li>
      * <li> /foo/(*)/bar/  &lt;- match
      * <li> /foo/(*)/(*) </li>
      * </ol>
-     * <ol> More static tokens.
+     * <p>More static tokens:
+     * <ol>
      * <li> /foo/(*)/bar   &lt;- match
      * <li> /foo/(*) </li>
      * </ol>

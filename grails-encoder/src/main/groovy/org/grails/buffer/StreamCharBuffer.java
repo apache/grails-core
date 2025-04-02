@@ -196,10 +196,8 @@ import org.grails.encoder.WriterEncodedAppender;
  * There's a default maximum chunksize of 1MB by default. The minimum size is
  * the initial chunksize size.<br>
  * </p>
- *
- * <p>
- * System properties to change default configuration parameters:<br>
  * <table>
+ * <caption>System properties to change default configuration parameters:</caption>
  * <tr>
  * <th>System Property name</th>
  * <th>Description</th>
@@ -244,8 +242,6 @@ import org.grails.encoder.WriterEncodedAppender;
  * Configuration values can also be changed for each instance of
  * StreamCharBuffer individually. Default values are defined with System
  * Properties.
- *
- * </p>
  *
  * @author Lari Hotari, Sagire Software Oy
  */

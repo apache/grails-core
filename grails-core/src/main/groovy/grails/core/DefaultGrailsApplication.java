@@ -63,11 +63,11 @@ import org.springframework.util.StringUtils;
 /**
  * Default implementation of the GrailsApplication interface that manages application loading,
  * state, and artefact instances.
- * <p/>
+ * <p>
  * Upon loading this GrailsApplication will inspect each class using its registered ArtefactHandler instances. Each
  * ArtefactHandler provides knowledge about the conventions used to establish its artefact type. For example
  * controllers use the ControllerArtefactHandler to establish this knowledge.
- * <p/>
+ * <p>
  * New ArtefactHandler instances can be registered with the GrailsApplication thus allowing application extensibility.
  *
  * @author Marc Palmer
@@ -627,8 +627,8 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
      * @param methodName The name of the method
      * @param args       The arguments to the method
      * @return The return value of the method
-     * TODO Need to add matches for add<Artefact>Class(java.lang.Class) and add<Artefact>Class(GrailsClass)
      */
+    // TODO Need to add matches for add<Artefact>Class(java.lang.Class) and add<Artefact>Class(GrailsClass)
     @Override
     public Object invokeMethod(String methodName, Object args) {
 

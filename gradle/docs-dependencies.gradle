@@ -1,0 +1,11 @@
+configurations.register('documentation')
+dependencies {
+    add('documentation', platform(project(':grails-bom')))
+    add('documentation', 'org.fusesource.jansi:jansi')
+    add('documentation', 'jline:jline')
+    add('documentation', 'com.github.javaparser:javaparser-core')
+    add('documentation', "org.codehaus.groovy:groovy:$GroovySystem.version")
+    add('documentation', "org.codehaus.groovy:groovy-ant:$GroovySystem.version")
+    add('documentation', "org.codehaus.groovy:groovy-docgenerator:$GroovySystem.version")
+    add('documentation', "org.codehaus.groovy:groovy-templates:$GroovySystem.version")
+}

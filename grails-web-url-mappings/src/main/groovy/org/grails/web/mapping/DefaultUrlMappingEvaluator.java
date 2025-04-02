@@ -52,7 +52,7 @@ import static grails.web.mapping.UrlMapping.*;
 
 /**
  * <p>A UrlMapping evaluator that evaluates Groovy scripts that are in the form:</p>
- * <p/>
+ * <p>
  * <pre>
  * <code>
  * mappings {

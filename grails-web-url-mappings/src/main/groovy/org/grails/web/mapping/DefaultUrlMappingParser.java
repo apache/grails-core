@@ -28,7 +28,7 @@ import grails.web.mapping.UrlMappingParser;
  * @since 0.5
  *
  *
- * <p/>
+ * <p>
  * Created: Mar 5, 2007
  * Time: 8:35:26 AM
  */

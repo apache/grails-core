@@ -1,0 +1,39 @@
+rootProject.subprojects
+        .findAll {!(it.name in testProjects) }
+        .each { project.evaluationDependsOn(it.path) }
+
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        // Test projects will often include dependencies from local projects. This will ensure any dependencies
+        // included will be substituted with the local projects in this repository instead of pulling upstream.
+        for (def possibleProject : rootProject.subprojects) {
+            if (!(possibleProject.name in testProjects)) {
+                def artifactId = possibleProject.findProperty('pomArtifactId') ?: possibleProject.name
+                def substitutedArtifact = "$possibleProject.group:$artifactId"
+                if (possibleProject.name == 'grails-bom') {
+                    substitute module(substitutedArtifact) using platform(project(':grails-bom'))
+                }
+                else {
+                    substitute module(substitutedArtifact) using project(":$possibleProject.name")
+                }
+            }
+        }
+    }
+}
+
+tasks.withType(Test).configureEach {
+    onlyIf { !project.hasProperty('skipFunctionalTests') }
+    useJUnitPlatform()
+    testLogging {
+        events('passed', 'skipped', 'failed')
+        showExceptions = true
+        exceptionFormat = 'full'
+        showCauses = true
+        showStackTraces = true
+    }
+}
+
+tasks.named('groovydoc') {
+    // We don't need to generate docs for test projects
+    enabled = false
+}

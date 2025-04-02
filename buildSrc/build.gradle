@@ -1,0 +1,23 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+file('../gradle.properties').withInputStream {
+    Properties props = new Properties()
+    props.load(it)
+    project.ext.gradleProperties = props
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.grails.org/grails/core' }
+}
+
+dependencies {
+    implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:$gradleProperties.gradleLicensePluginVersion", {
+        // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
+        exclude group: 'org.springframework', module: 'spring-core'
+    }
+    implementation "io.github.gradle-nexus:publish-plugin:$gradleProperties.gradleNexusPublishPluginVersion"
+    implementation "org.grails:grails-gradle-plugin:${gradleProperties['grails-gradle-plugin.version']}"
+}

@@ -279,7 +279,7 @@ public class AntPathMatcher {
      * <p>This implementation simply concatenates the two patterns, unless the first pattern
      * contains a file extension match (such as {@code *.html}. In that case, the second pattern
      * should be included in the first, or an {@code IllegalArgumentException} is thrown.
-     * <p>For example: <table>
+     * <p>For example: <table><caption>Patterns example table</caption>
      * <tr><th>Pattern 1</th><th>Pattern 2</th><th>Result</th></tr> <tr><td>/hotels</td><td>{@code
      * null}</td><td>/hotels</td></tr> <tr><td>{@code null}</td><td>/hotels</td><td>/hotels</td></tr>
      * <tr><td>/hotels</td><td>/bookings</td><td>/hotels/bookings</td></tr> <tr><td>/hotels</td><td>bookings</td><td>/hotels/bookings</td></tr>

@@ -11,10 +11,11 @@ version "0.1"
 group "hyphenated"
 
 apply plugin: "org.grails.grails-web"
-apply plugin: "org.grails.grails-gsp"
 
-apply plugin: 'java'
-compileJava.options.release = 17
+// The grails-gsp Gradle plugin is not needed for running the functional tests.
+// It is applied as a smoke test to check that compiling gsp
+// for production does not fail during build task.
+apply plugin: 'org.grails.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))
@@ -50,5 +51,8 @@ dependencies {
     integrationTestImplementation testFixtures("org.grails.plugins:geb")
 }
 
-apply from: rootProject.file('gradle/functional-test-project.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}
 

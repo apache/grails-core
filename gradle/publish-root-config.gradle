@@ -1,0 +1,64 @@
+// Workaround needed for nexus publishing bug
+// version and group must be specified in the root project
+// https://github.com/gradle-nexus/publish-plugin/issues/310
+version = projectVersion
+group = 'this.will.be.overridden'
+
+def publishedProjects = [
+        'grails-async-core',
+        'grails-async-gpars',
+        'grails-async-plugin',
+        'grails-async-rxjava',
+        'grails-async-rxjava2',
+        'grails-async-rxjava3',
+        //'grails-bom', // Grails BOM has its own publishing
+        'grails-bootstrap',
+        'grails-codecs',
+        'grails-console',
+        'grails-core',
+        'grails-databinding',
+        'grails-dependencies',
+        'grails-docs',
+        'grails-encoder',
+        'grails-events-compat',
+        'grails-events-core',
+        'grails-events-gpars',
+        'grails-events-plugin',
+        'grails-events-rxjava',
+        'grails-events-rxjava2',
+        'grails-events-rxjava3',
+        'grails-events-spring',
+        'grails-events-transform',
+        'grails-gradle-model',
+        'grails-logging',
+        'grails-plugin-codecs',
+        'grails-plugin-controllers',
+        'grails-plugin-converters',
+        'grails-plugin-databinding',
+        'grails-plugin-datasource',
+        'grails-plugin-domain-class',
+        'grails-plugin-interceptors',
+        'grails-plugin-i18n',
+        'grails-plugin-mimetypes',
+        'grails-plugin-rest',
+        'grails-plugin-services',
+        'grails-plugin-url-mappings',
+        'grails-plugin-validation',
+        'grails-shell',
+        'grails-spring',
+        'grails-test',
+        'grails-testing-support',
+        'grails-web',
+        'grails-web-boot',
+        'grails-web-common',
+        'grails-web-databinding',
+        'grails-web-mvc',
+        'grails-web-url-mappings',
+]
+
+subprojects {
+    if (name in publishedProjects) {
+        // This has to be applied here in the root project
+        apply plugin: 'org.grails.grails-publish'
+    }
+}

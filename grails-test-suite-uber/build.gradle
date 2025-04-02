@@ -1,39 +1,60 @@
-configurations.testCompileClasspath {
-    exclude module: 'grails-plugin-testing'
+plugins {
+    id 'groovy'
+    id 'project-report'
 }
 
+version = projectVersion
+group = 'org.grails'
+
 dependencies {
+    implementation platform(project(':grails-bom'))
 
-    api project(':grails-test-suite-base'),
-        project(':grails-plugin-interceptors'),
-        project(':grails-plugin-controllers')
-
-    api "org.apache.tomcat:tomcat-jdbc"
-
-    testRuntimeOnly "com.h2database:h2"
-    testRuntimeOnly "org.springframework:spring-aspects"
-    testRuntimeOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
-
-    testImplementation project(':grails-plugin-codecs'),
-                project(':grails-plugin-domain-class') ,
-                project(':grails-plugin-url-mappings') ,
-                project(":grails-plugin-datasource"),
-                project(":grails-plugin-services"),
-                project(":grails-plugin-rest"),
-                project(":grails-plugin-i18n"),
-                project(":grails-plugin-databinding"),
-                project(':grails-spring')
-
-    testImplementation "org.grails:grails-datastore-gorm-hibernate5"
     testImplementation project(':grails-async-plugin')
+    testImplementation project(':grails-plugin-codecs')
+    testImplementation project(':grails-plugin-controllers')
+    testImplementation project(':grails-plugin-databinding')
+    testImplementation project(':grails-plugin-datasource')
+    testImplementation project(':grails-plugin-domain-class')
+    testImplementation project(':grails-plugin-i18n')
+    testImplementation project(':grails-plugin-interceptors')
+    testImplementation project(':grails-plugin-rest')
+    testImplementation project(':grails-plugin-services')
+    testImplementation project(':grails-plugin-url-mappings')
+    testImplementation project(':grails-spring')
+    testImplementation project(':grails-test-suite-base')
+    testImplementation project(':grails-testing-support')
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.grails:grails-datastore-gorm-hibernate5'
     testImplementation "org.grails.plugins:gsp"
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "org.grails:grails-web-testing-support", {
+    testImplementation 'org.grails:grails-gorm-testing-support', {
+        // This is a local project dependency
         exclude module:'grails-testing-support'
     }
-    testImplementation project(':grails-testing-support')
+    testImplementation 'org.grails:grails-web-testing-support', {
+        // This is a local project dependency
+        exclude module:'grails-testing-support'
+    }
+    testImplementation 'org.objenesis:objenesis'
 
-    testImplementation "com.fasterxml.jackson.core:jackson-databind"
+    testCompileOnly 'jakarta.servlet:jakarta.servlet-api'
+    testCompileOnly 'org.springframework:spring-test', {
+        // MockHttpServletRequest/Response/Context used in many classes
+    }
+
+    testRuntimeOnly 'com.h2database:h2'
+    testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
+    testRuntimeOnly 'org.aspectj:aspectjrt'
+    testRuntimeOnly 'org.aspectj:aspectjweaver'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testRuntimeOnly 'org.springframework:spring-aspects'
+
+
+    // Testing
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }
 
 def isolatedTestPatterns = [
@@ -59,12 +80,25 @@ def isolatedTestPatterns = [
     ]
 ]
 
-tasks.withType(Test).configureEach {
-    maxParallelForks = isCiBuild ? 2 : 4
-    forkEvery = isCiBuild ? 25 : 100
-    if(!isCiBuild) {
-        maxHeapSize = '1024m'
+isolatedTestPatterns.keySet().each { taskName ->
+    tasks.register(taskName, Test) {
+        group = 'verification'
+        filter.includePatterns = isolatedTestPatterns[taskName]
     }
+}
+
+tasks.named('isolatedTestsTwo', Test) {
+    maxParallelForks = 1
+    forkEvery = 100
+}
+
+tasks.withType(Test).configureEach {
+    onlyIf { !project.hasProperty('onlyFunctionalTests') }
+    useJUnitPlatform()
+    maxParallelForks = isCiBuild ? 2 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1
+    forkEvery = isCiBuild ? 25 : 100
+    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
 
 tasks.named('test', Test) {
@@ -76,14 +110,6 @@ tasks.named('test', Test) {
     })
 }
 
-isolatedTestPatterns.keySet().each { taskName ->
-    tasks.register(taskName, Test) {
-        group = 'verification'
-        filter.includePatterns = isolatedTestPatterns[taskName]
-    }
-}
-
-tasks.named('isolatedTestsTwo', Test) {
-    maxParallelForks = 1
-    forkEvery = 100
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }

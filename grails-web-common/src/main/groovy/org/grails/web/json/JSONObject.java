@@ -51,16 +51,16 @@ import java.util.*;
  * exception if one cannot be found. An <code>opt</code> method returns a
  * default value instead of throwing an exception, and so is useful for
  * obtaining optional values.
- * <p/>
+ * <p>
  * The generic <code>get()</code> and <code>opt()</code> methods return an
  * object, which you can cast or query for type. There are also typed
  * <code>get</code> and <code>opt</code> methods that do type checking and type
  * coersion for you.
- * <p/>
+ * <p>
  * The <code>put</code> methods adds values to an object. For example, <pre>
  *     myString = new JSONObject().put("JSON", "Hello, World!").toString();</pre>
  * produces the string <code>{"JSON": "Hello, World"}</code>.
- * <p/>
+ * <p>
  * The texts produced by the <code>toString</code> methods strictly conform to
  * the JSON sysntax rules.
  * The constructors are more forgiving in the texts they will accept:
@@ -917,7 +917,7 @@ public class JSONObject implements JSONElement, Map {
      * Make an JSON text of this JSONObject. For compactness, no whitespace
      * is added. If this would not result in a syntactically correct JSON text,
      * then null will be returned instead.
-     * <p/>
+     * <p>
      * Warning: This method assumes that the data structure is acyclical.
      *
      * @return a printable, displayable, portable, transmittable
@@ -950,7 +950,7 @@ public class JSONObject implements JSONElement, Map {
 
     /**
      * Make a prettyprinted JSON text of this JSONObject.
-     * <p/>
+     * <p>
      * Warning: This method assumes that the data structure is acyclical.
      *
      * @param indentFactor The number of spaces to add to each level of
@@ -968,7 +968,7 @@ public class JSONObject implements JSONElement, Map {
 
     /**
      * Make a prettyprinted JSON text of this JSONObject.
-     * <p/>
+     * <p>
      * Warning: This method assumes that the data structure is acyclical.
      *
      * @param indentFactor The number of spaces to add to each level of
@@ -1026,7 +1026,7 @@ public class JSONObject implements JSONElement, Map {
 
     /**
      * Make a JSON text of an object value.
-     * <p/>
+     * <p>
      * Warning: This method assumes that the data structure is acyclical.
      *
      * @param value The value to be serialized.
@@ -1108,7 +1108,7 @@ public class JSONObject implements JSONElement, Map {
 
     /**
      * Make a prettyprinted JSON text of an object value.
-     * <p/>
+     * <p>
      * Warning: This method assumes that the data structure is acyclical.
      *
      * @param value        The value to be serialized.
@@ -1148,7 +1148,7 @@ public class JSONObject implements JSONElement, Map {
     /**
      * Write the contents of the JSONObject as JSON text to a writer.
      * For compactness, no whitespace is added.
-     * <p/>
+     * <p>
      * Warning: This method assumes that the data structure is acyclical.
      *
      * @return The writer.
