@@ -260,12 +260,12 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    def u = System.getenv("NEXUS_USER") ?: ''
-                    def p = System.getenv("NEXUS_PW") ?: ''
+                    def u = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
+                    def p = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
                     username = u
                     password = p
                 }
-                url "https://repository.apache.org/content/repositories/snapshots"
+                url System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
     }
