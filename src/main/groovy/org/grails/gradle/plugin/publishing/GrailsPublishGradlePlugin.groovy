@@ -218,13 +218,7 @@ Note: if project properties are used, the properties must be defined prior to ap
         project.afterEvaluate {
             final ExtensionContainer extensionContainer = project.extensions
 
-            final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
-            if(gpe.javaPlatform) {
-                validateJavaPlatformProjectPublishable(project as Project)
-            }
-            else {
-                validateJavaProjectPublishable(project as Project)
-            }
+            validateProjectPublishable(project as Project)
             project.publishing {
                 if (useMavenPublish) {
                     final def mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: System.getenv('MAVEN_PUBLISH_URL') ?: ''
@@ -253,12 +247,13 @@ Note: if project properties are used, the properties must be defined prior to ap
                     }
                 }
 
+                final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
                 publications {
                     maven(MavenPublication) {
                         artifactId gpe.artifactId ?: project.name
                         groupId gpe.groupId ?: project.group
 
-                        doAddArtefact(gpe, project, delegate as MavenPublication)
+                        doAddArtefact(project, delegate)
                         def extraArtefact = getDefaultExtraArtifact(project)
                         if (extraArtefact) {
                             artifact extraArtefact
@@ -355,6 +350,12 @@ Note: if project properties are used, the properties must be defined prior to ap
 
                             }
 
+                            if(gpe.pomCustomization) {
+                                gpe.pomCustomization.delegate = delegate
+                                gpe.pomCustomization.resolveStrategy = Closure.DELEGATE_FIRST
+                                gpe.pomCustomization.call()
+                            }
+
                             // fix dependencies without a version
                             def mavenPomNamespace = 'http://maven.apache.org/POM/4.0.0'
                             def dependenciesQName = new QName(mavenPomNamespace, 'dependencies')
@@ -440,18 +441,29 @@ Note: if project properties are used, the properties must be defined prior to ap
         }
     }
 
-    protected void doAddArtefact(GrailsPublishExtension gpe, Project project, MavenPublication publication) {
-        publication.from gpe.javaPlatform ? project.components.javaPlatform : project.components.java
-        if(gpe.javaPlatform && gpe.publishTestSources) {
-            throw new RuntimeException("BOM publishes may only contain dependencies.")
+    protected void doAddArtefact(Project project, MavenPublication publication) {
+        GrailsPublishExtension gpe = project.extensions.findByType(GrailsPublishExtension)
+        if (project.extensions.findByType(JavaPlatformExtension)) {
+            publication.from project.components.javaPlatform
+
+            if (gpe.publishTestSources) {
+                throw new RuntimeException("BOM publishes may only contain dependencies.")
+            }
+
+            return
         }
 
+        publication.from project.components.java
         if (gpe.publishTestSources) {
             publication.artifact(project.tasks.named('testSourcesJar', Jar))
         }
     }
 
     protected Map<String, String> getDefaultExtraArtifact(Project project) {
+        if (project.extensions.findByType(JavaPlatformExtension)) {
+            return null
+        }
+
         if (!project.sourceSets.main.hasProperty('groovy')) {
             return null
         }
@@ -468,16 +480,22 @@ Note: if project properties are used, the properties must be defined prior to ap
         'plugin'
     }
 
-    protected validateJavaPlatformProjectPublishable(Project project) {
-        if (!project.extensions.findByType(JavaPlatformExtension)) {
+    protected validateProjectPublishable(Project project) {
+        boolean hasJavaPlugin = project.extensions.findByType(JavaPluginExtension)
+        boolean hasJavaPlatform = project.extensions.findByType(JavaPlatformExtension)
+
+        if (!hasJavaPlugin && !hasJavaPlatform) {
+            if (!hasJavaPlugin) {
+                throw new RuntimeException("Grails Publish Plugin requires the Java Plugin to be applied to the project.")
+            }
+
             throw new RuntimeException("Grails Publish Plugin requires the Java Platform Plugin to be applied to the project.")
         }
-    }
 
-    protected validateJavaProjectPublishable(Project project) {
-        if (!project.extensions.findByType(JavaPluginExtension)) {
-            throw new RuntimeException("Grails Publish Plugin requires the Java Plugin to be applied to the project.")
+        if (hasJavaPlatform) {
+            return
         }
+
         project.extensions.configure(JavaPluginExtension) {
             it.withJavadocJar()
             it.withSourcesJar()
