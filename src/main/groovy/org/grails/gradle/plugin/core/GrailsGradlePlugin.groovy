@@ -299,7 +299,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileDynamic
     private void applyBomImport(DependencyManagementExtension dme, project) {
         dme.imports({
-            mavenBom("org.grails:grails-bom:${project.properties['grailsVersion']}")
+            mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
         })
         dme.setApplyMavenExclusions(false)
     }
