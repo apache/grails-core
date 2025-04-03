@@ -121,6 +121,12 @@ dependencies {
         allDependencies.each {
             api "${it.groupId}:${it.artifactId}:${it.versionValue}"
         }
+
+        project.parent.subprojects.each {
+            if (it.name == 'grails-bom' || it.name in testProjects) return null
+
+            api "${it.group}:${it.findProperty('pomArtifactId') ?: it.name}:${it.version}"
+        }
     }
 }
 
@@ -173,7 +179,7 @@ ext {
                     groupId: it.group,
                     artifactId: it.findProperty('pomArtifactId') ?: it.name,
                     version: it.version
-            ] + (it.name == 'grails-dependencies' ? [type: 'pom'] : [])
+            ]
         }.each {
             appendNodes(deps.appendNode('dependency'), it)
         }
