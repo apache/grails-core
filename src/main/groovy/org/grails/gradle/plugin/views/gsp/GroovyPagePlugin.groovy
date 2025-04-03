@@ -31,6 +31,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.War
 import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.util.SourceSets
+
 /**
  * A plugin that adds support for compiling Groovy Server Pages (GSP)
  *
@@ -50,14 +51,16 @@ class GroovyPagePlugin implements Plugin<Project> {
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
-        Provider<Directory> destDir =  project.layout.buildDirectory.dir('gsp-classes/main')
+        Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
         output?.dir("gsp-classes")
 
         FileCollection allClasspath = project.getObjects().fileCollection().from(
-                project.configurations.named('compileClasspath'),
-                project.configurations.named('gspCompile'),
-                classesDirs,
-                project.configurations.named('providedCompile')
+                [
+                        project.configurations.named('compileClasspath'),
+                        project.configurations.named('gspCompile'),
+                        classesDirs,
+                        project.configurations.findByName('providedCompile') ?: null
+                ].findAll { it }
         )
 
         def compileGroovyPages = tasks.register("compileGroovyPages", GroovyPageForkCompileTask) {
@@ -125,7 +128,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         tasks.withType(Jar).configureEach { Jar jar ->
             jar.dependsOn compileGroovyPages
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            if(!(jar instanceof War)) {
+            if (!(jar instanceof War)) {
                 if (jar.name == 'bootJar') {
                     jar.from(destDir)
                     jar.into("BOOT-INF/classes")
