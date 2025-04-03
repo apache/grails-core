@@ -22,6 +22,7 @@ allprojects {
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
     }
 }

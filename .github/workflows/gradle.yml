@@ -100,8 +100,8 @@ jobs:
         env:
           GRADLE_PUBLISH_RELEASE: 'false'
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.GRAILS_NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.GRAILS_NEXUS_PW  }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         run: >
           ./gradlew
           -Dorg.gradle.internal.publish.checksums.insecure=true

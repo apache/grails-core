@@ -1,21 +1,23 @@
 buildscript {
     repositories {
-        maven { url "https://repo.grails.org/grails/core" }
+        // mavenLocal()
+        maven { url = "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.grails:grails-gradle-plugin:${project['grails-gradle-plugin.version']}"
+        classpath "org.apache.grails:grails-gradle-plugins:${project['grails-gradle-plugins.version']}"
     }
 }
 
 version "0.1"
 group "hyphenated"
 
-apply plugin: "org.grails.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-web"
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gsp
 // for production does not fail during build task.
-apply plugin: 'org.grails.grails-gsp'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))

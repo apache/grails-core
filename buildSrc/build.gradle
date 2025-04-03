@@ -9,8 +9,10 @@ file('../gradle.properties').withInputStream {
 }
 
 repositories {
+    // mavenLocal()
     mavenCentral()
     maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
@@ -19,5 +21,5 @@ dependencies {
         exclude group: 'org.springframework', module: 'spring-core'
     }
     implementation "io.github.gradle-nexus:publish-plugin:$gradleProperties.gradleNexusPublishPluginVersion"
-    implementation "org.grails:grails-gradle-plugin:${gradleProperties['grails-gradle-plugin.version']}"
+    implementation "org.apache.grails:grails-gradle-plugins:${gradleProperties['grails-gradle-plugins.version']}"
 }
