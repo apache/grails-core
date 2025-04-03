@@ -83,9 +83,9 @@ class GrailsPublishExtension {
     Boolean publishTestSources
 
     /**
-     * If the artifacts published by this project should be considered a javaPlatform (a bom)
+     * An optional closure to be invoked via pom.withXml { } to allow further customization
      */
-    Boolean javaPlatform
+    Closure pomCustomization
 
     License getLicense() {
         return license
