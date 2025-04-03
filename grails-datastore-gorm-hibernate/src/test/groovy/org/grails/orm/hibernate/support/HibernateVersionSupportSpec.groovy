@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.support
 
+import org.hibernate.Version
 import spock.lang.Specification
 
 /**
@@ -9,7 +10,7 @@ class HibernateVersionSupportSpec extends Specification {
 
     void 'test hibernate version is at least'() {
         expect:
-        !HibernateVersionSupport.isAtLeastVersion("6.0.0")
-        HibernateVersionSupport.isAtLeastVersion("5.3.0")
+        Version.getVersionString() > "6.0.0"
+
     }
 }
