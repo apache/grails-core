@@ -142,13 +142,13 @@ gradlePlugin {
             displayName = "Grails GSON Gradle Plugin"
             description = 'A plugin that adds support for compiling Groovy Json Views (GSON)'
             id = 'org.apache.grails.gradle.grails-gson'
-            implementationClass = 'org.grails.gradle.plugin.views.GrailsGsonViewsPlugin'
+            implementationClass = 'org.grails.gradle.plugin.views.json.GrailsGsonViewsPlugin'
         }
         grailsMarkup {
             displayName = "Grails Markup Gradle Plugin"
             description = 'A plugin that adds support for compiling Markup Views'
             id = 'org.apache.grails.gradle.grails-markup'
-            implementationClass = 'org.grails.gradle.plugin.views.GrailsMarkupViewsPlugin'
+            implementationClass = 'org.grails.gradle.plugin.views.markup.GrailsMarkupViewsPlugin'
         }
         grailsPlugin {
             displayName = "Grails-Plugin Gradle Plugin"
