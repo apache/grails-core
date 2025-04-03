@@ -11,6 +11,7 @@ file('../gradle.properties').withInputStream {
 repositories {
     mavenCentral()
     maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
