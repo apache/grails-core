@@ -125,7 +125,7 @@ dependencies {
         project.parent.subprojects.each {
             if (it.name == 'grails-bom' || it.name in testProjects) return null
 
-            api "${it.group}:${it.findProperty('pomArtifactId') ?: it.name}:${it.version}"
+            api project(it.path)
         }
     }
 }
