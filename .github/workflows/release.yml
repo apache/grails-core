@@ -2,18 +2,15 @@ name: "Release"
 on:
   release:
     types: [published]
-env:
-  GIT_USER_NAME: 'grails-build'
-  GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
+permissions:
+  contents: write
+  packages: read
 jobs:
   publish:
     name: "Publish to Sonatype Staging Repository"
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: read
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -25,12 +22,12 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📝 Store the current release version"
         id: release_version
         run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "⚙️ Run pre-release"
-        uses: grails/github-actions/pre-release@main
+        uses: apache/grails-github-actions/pre-release@asf
       - name: "🔐 Generate key file for artifact signing"
         env:
           SECRING_FILE: ${{ secrets.SECRING_FILE }}
@@ -71,7 +68,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🚀 Release Sonatype Staging Repository"
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
@@ -85,8 +82,7 @@ jobs:
           findSonatypeStagingRepository
           releaseSonatypeStagingRepository
       - name: "⚙️ Run post-release"
-        if: success()
-        uses: grails/github-actions/post-release@main
+        uses: apache/grails-github-actions/post-release@asf
   docs:
     environment: release
     name: "Publish Documentation"
@@ -108,14 +104,14 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew groovydoc
       - name: "🚀 Publish to Github Pages"
         if: success()
-        uses: grails/grails-github-actions/deploy-github-pages@main
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'true'

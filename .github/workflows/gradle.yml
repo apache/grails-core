@@ -25,7 +25,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build project"
         id: build
         env:
@@ -54,12 +54,12 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📤 Publish Snapshot version to Artifactory (repo.grails.org)"
         env:
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
-          MAVEN_PUBLISH_URL: ${{ secrets.MAVEN_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.GRAILS_NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.GRAILS_NEXUS_PW  }}
           GRAILS_PUBLISH_RELEASE: 'false'
         run: ./gradlew publish
       - name: "📖 Generate Snapshot Documentation"
@@ -68,7 +68,7 @@ jobs:
         run: ./gradlew groovydoc
       - name: "🚀 Publish to Github Pages"
         if: steps.docs.outcome == 'success'
-        uses: grails/grails-github-actions/deploy-github-pages@main
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'

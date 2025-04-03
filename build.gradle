@@ -1,5 +1,6 @@
 buildscript {
     repositories {
+        mavenLocal() // TODO: Remove after published
         maven { url = 'https://repo.grails.org/grails/core' }
         if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
             System.out.println("Adding Grails Core Repo for project ${project.name}")
@@ -13,7 +14,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath platform("org.grails:grails-bom:$grailsVersion")
+        classpath platform("org.apache.grails:grails-bom:$grailsVersion")
         classpath "org.grails:grails-gradle-plugin"
     }
 }
@@ -23,7 +24,7 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 apply plugin: 'java-library'
 apply plugin: 'java-test-fixtures'
@@ -35,6 +36,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 repositories {
+    mavenLocal() // TODO: remove after published
     maven { url = 'https://repo.grails.org/grails/core' }
     if (System.getenv("GITHUB_MAVEN_PASSWORD") && !grailsVersion.endsWith('-SNAPSHOT')) {
         System.out.println("Adding Grails Core Repo for project ${project.name}")
@@ -54,15 +56,17 @@ ext.set('selenium.version', seleniumVersion) // Override selenium version from s
 
 dependencies {
 
-    implementation(platform("org.grails:grails-bom:$grailsVersion"))
+    implementation(platform("org.apache.grails:grails-bom:$grailsVersion"))
+    testFixturesApi(platform("org.apache.grails:grails-bom:$grailsVersion"))
+    testFixturesImplementation(platform("org.apache.grails:grails-bom:$grailsVersion"))
 
-    compileOnly 'org.grails:grails-core' // Provided, as this is a Grails plugin
+    compileOnly 'org.apache.grails:grails-core' // Provided, as this is a Grails plugin
 
     testFixturesCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testFixturesCompileOnly 'org.slf4j:slf4j-simple' // Remove compilation warning about missing slf4j impl
 
     testFixturesApi 'org.gebish:geb-spock'
-    testFixturesApi 'org.grails:grails-testing-support'
+    testFixturesApi 'org.apache.grails.testing:grails-testing-support-core'
     testFixturesApi 'org.grails:grails-datastore-gorm'
     testFixturesApi "org.testcontainers:selenium:$testcontainersVersion"
     testFixturesApi "org.seleniumhq.selenium:selenium-chrome-driver:$seleniumVersion"

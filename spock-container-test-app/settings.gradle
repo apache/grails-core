@@ -5,7 +5,7 @@ plugins {
 
 def isCI = System.getenv('CI') != null
 def isLocal = !isCI
-def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
+def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY') != null
 
 develocity {
     server = 'https://ge.grails.org'

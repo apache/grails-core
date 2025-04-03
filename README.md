@@ -22,10 +22,10 @@ dependencies {
     
     // This is only needed to if you want to use the
     // create-functional-test command (see below)
-    implementation 'org.grails.plugins:geb'
+    implementation 'org.apache.grails:grails-geb'
     
     // This is needed to compile and run the tests
-    integrationTestImplementation testFixtures('org.grails.plugins:geb')
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 ```
 
