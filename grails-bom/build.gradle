@@ -15,6 +15,9 @@ javaPlatform {
 def plugins = new Properties()
 plugins.load(new StringReader(new File("$projectDir/plugins.properties").text))
 
+def apachePlugins = new Properties()
+apachePlugins.load(new StringReader(new File("$projectDir/apache-plugins.properties").text))
+
 def versions = new Properties()
 versions.load(new StringReader(new File("$projectDir.parentFile/gradle.properties").text))
 
@@ -93,10 +96,13 @@ ext {
     pluginList =
         plugins.collect { [groupId: "org.grails.plugins", artifactId:it.key, versionValue: it.value, name: "plugins-${it.key}"] }
 
-    dependenciesVersions = (dependencyList + pluginList).sort { it.name }
+    apachePluginList =
+        apachePlugins.collect { [groupId: "org.apache.grails", artifactId:it.key, versionValue: it.value, name: "plugins-${it.key}"] }
+
+    dependenciesVersions = (dependencyList + pluginList + apachePluginList).sort { it.name }
             .groupBy { it.name }.collect { it.value.first() } // remove duplicates
 
-    allDependencies = (pluginList + dependencyList).sort { it.name + it.artifactId }
+    allDependencies = (pluginList + apachePluginList + dependencyList).sort { it.name + it.artifactId }
     allDependencies.each { it << [version: "${it.name}.version"] }
 }
 

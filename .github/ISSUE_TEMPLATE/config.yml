@@ -1,6 +1,6 @@
 contact_links:
   - name: Grails Core Discussions
-    url: https://github.com/grails/grails-core/discussions
+    url: https://github.com/apache/grails-core/discussions
     about: Ask questions about Grails® framework on Github
   - name: Stack Overflow
     url: https://stackoverflow.com/tags/grails

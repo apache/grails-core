@@ -25,7 +25,7 @@ class AdditionalParamsMappingTests extends Specification implements UrlMappingsU
         "/users/bob/profile?q=test" == creator.createRelativeURL("user", "profile",[id:"bob",q:"test"], "utf-8")
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/11406')
+    @Issue('https://github.com/apache/grails-core/issues/11406')
     void testWebRequestParametersNotOverwritten() {
         when:
         webRequest.currentRequest.addParameter('format', 'json')

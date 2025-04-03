@@ -44,7 +44,7 @@ class OverlappingParametersReverseMappingSpec extends Specification{
     }
 
 
-    @Issue('https://github.com/grails/grails-core/issues/657')
+    @Issue('https://github.com/apache/grails-core/issues/657')
     void "Test that reverse mapping with overlapping parameters works"() {
         expect:
             generator.link(resource: 'book', id: 1, absolute:true) == 'http://myserver.com/foo/books/1'

@@ -7,7 +7,7 @@ import spock.lang.Specification
 
 class DefaultEncodingStateRegistrySpec extends Specification {
 
-    @Issue("https://github.com/grails/grails-core/issues/11488")
+    @Issue("https://github.com/apache/grails-core/issues/11488")
     void "should not have previous encoding state"() {
         given:
         DefaultEncodingStateRegistry encodingStateRegistry = new DefaultEncodingStateRegistry()

@@ -107,7 +107,7 @@ class GrailsInterceptorHandlerInterceptorAdapterSpec extends Specification{
             webRequest.request.getAttribute('executed') == ['lowest afterView', 'highest afterView']
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9548')
+    @Issue('https://github.com/apache/grails-core/issues/9548')
     void "Test the exception is set in the request if thrown"() {
         given:"An interceptor"
         def adapter = new GrailsInterceptorHandlerInterceptorAdapter()

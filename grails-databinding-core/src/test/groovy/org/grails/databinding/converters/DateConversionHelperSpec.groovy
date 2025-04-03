@@ -118,7 +118,7 @@ class DateConversionHelperSpec extends Specification {
         date == null
     }
 
-    @Issue("https://github.com/grails/grails-core/issues/10387")
+    @Issue("https://github.com/apache/grails-core/issues/10387")
     void 'Test lenient date'() {
         given:
         DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd'])

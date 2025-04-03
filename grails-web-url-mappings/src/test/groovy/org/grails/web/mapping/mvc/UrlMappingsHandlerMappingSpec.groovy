@@ -50,7 +50,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         webRequest.response.contentAsString == 'Not Found'
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10149')
+    @Issue('https://github.com/apache/grails-core/issues/10149')
     void "Test that when an include request from within a 404 forward is matched"() {
         given:"A URL mapping definition that has a 404 mapping"
         def grailsApplication = new DefaultGrailsApplication(FooController)

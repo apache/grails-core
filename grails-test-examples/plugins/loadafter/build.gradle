@@ -10,7 +10,7 @@ buildscript {
 }
 
 version "0.1-SNAPSHOT"
-group "org.grails.plugins"
+group "com.example.grails.plugins"
 
 apply plugin: "java-library"
 apply plugin: "org.apache.grails.gradle.grails-plugin"

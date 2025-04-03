@@ -10,7 +10,7 @@ import spock.lang.Issue
  */
 class ResourcesWithSingleSlashSpec extends AbstractUrlMappingsSpec {
 
-    @Issue('https://github.com/grails/grails-core/issues/10210')
+    @Issue('https://github.com/apache/grails-core/issues/10210')
     void "test that resources expressed with a single slash product the correct URI"() {
         given:"url mappings within groups with resources expressed with a single slash"
         LinkGenerator linkGenerator = getLinkGenerator {

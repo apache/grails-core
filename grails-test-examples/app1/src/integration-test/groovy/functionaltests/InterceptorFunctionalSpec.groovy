@@ -9,7 +9,7 @@ import spock.lang.PendingFeature
 @Integration(applicationClass = Application)
 class InterceptorFunctionalSpec extends ContainerGebSpec {
 
-    @Issue('grails/grails-core#9434')
+    @Issue('apache/grails-core#9434')
     @PendingFeature(reason = 'text does not match')
     void "Test that an interceptor exception is handled correctly"() {
         when:
@@ -19,7 +19,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
         $().text() == 'Message = Interceptor threw error'
     }
 
-    @Issue('grails/grails-core#9183')
+    @Issue('apache/grails-core#9183')
     void "Test that an after interceptor can render text and return false to disable view rendering"() {
         when:
         go '/demo/show'
@@ -52,7 +52,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
         $().text() == 'text rendered by interceptor'
     }
 
-    @Issue('grails/grails-core#9194')
+    @Issue('apache/grails-core#9194')
     void 'Test that after interceptor can redirect'() {
         when:
         go '/demo/show?interceptorRedirects=true'
@@ -62,7 +62,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
     }
 
 
-    @Issue('grails/grails-core#9194')
+    @Issue('apache/grails-core#9194')
     void 'Test that after interceptor can forward'() {
         when:
         go '/demo/show?interceptorForwards=true'
@@ -71,7 +71,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
         $().text() == 'Hi There! Special Action: forward'
     }
 
-    @Issue('grails/grails-core#9194')
+    @Issue('apache/grails-core#9194')
     void 'Test that after interceptor can chain'() {
         when:
         go '/demo/show?interceptorChains=true'

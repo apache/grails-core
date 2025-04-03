@@ -440,7 +440,7 @@ class GrailsCompileStaticCompilationErrorsSpec extends Specification {
         c
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/643')
+    @Issue('https://github.com/apache/grails-core/issues/643')
     void 'Test that a controller marked with @GrailsCompileStatic may reference dynamic request properties'() {
         given:
         def gcl = new GroovyClassLoader()
@@ -564,7 +564,7 @@ class GrailsCompileStaticCompilationErrorsSpec extends Specification {
         e.message.contains 'Cannot find matching method java.lang.String#lastName()'
     }
 
-    @Issue('grails/grails-core#10157')
+    @Issue('apache/grails-core#10157')
     void 'Test constraints block which imports from a non-existent class'() {
         given:
         def gcl = new GroovyClassLoader()
@@ -589,7 +589,7 @@ class GrailsCompileStaticCompilationErrorsSpec extends Specification {
         thrown(MultipleCompilationErrorsException)
     }
 
-    @Issue('grails/grails-core#10157')
+    @Issue('apache/grails-core#10157')
     void 'Test constraints block which imports constraints'() {
         given:
         def gcl = new GroovyClassLoader()

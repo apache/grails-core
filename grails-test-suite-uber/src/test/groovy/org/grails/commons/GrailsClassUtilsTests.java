@@ -386,7 +386,7 @@ public class GrailsClassUtilsTests {
     }
 
     @Test
-    @Issue("https://github.com/grails/grails-core/issues/10343")
+    @Issue("https://github.com/apache/grails-core/issues/10343")
     public void testPropertiesBeginningWithSingleLowerCaseLetter() throws Exception {
         assertTrue(GrailsClassUtils.isPropertyGetter(SomeGroovyClass.class.getDeclaredMethod("getaString")));
         assertTrue(GrailsClassUtils.isPropertyGetter(SomeGroovyClass.class.getDeclaredMethod("isaBoolean")));

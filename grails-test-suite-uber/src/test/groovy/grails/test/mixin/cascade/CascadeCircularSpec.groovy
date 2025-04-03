@@ -27,7 +27,7 @@ import spock.lang.Specification
  */
 class CascadeCircularSpec extends Specification implements DataTest{
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/967')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/967')
     void "test cascade circular"() {
         given:
         Person splinter = new Person(name: 'Master Splinter')

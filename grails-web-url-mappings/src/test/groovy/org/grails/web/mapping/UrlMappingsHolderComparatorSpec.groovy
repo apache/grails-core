@@ -28,7 +28,7 @@ import spock.lang.Specification
 class UrlMappingsHolderComparatorSpec extends Specification {
 
 
-    @Issue('https://github.com/grails/grails-core/issues/665')
+    @Issue('https://github.com/apache/grails-core/issues/665')
     void "Test that RegexUrlMapping doesn't violate its contract"() {
         when:"Url mappings are parsed"
             def ctx = new MockApplicationContext()

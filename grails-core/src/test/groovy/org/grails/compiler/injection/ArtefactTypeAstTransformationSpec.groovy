@@ -63,7 +63,7 @@ class ArtefactTypeAstTransformationSpec extends Specification {
         thrown(RuntimeException)
     }
 
-	@Issue("https://github.com/grails/grails-core/issues/10531")
+	@Issue("https://github.com/apache/grails-core/issues/10531")
 	void "TraitInjector without SupportsClassNode gets applied to artefacts"() {
 		setup:
 		TraitInjectionUtils.@traitInjectors = [new TestTraitInjector()]
@@ -87,7 +87,7 @@ class ArtefactTypeAstTransformationSpec extends Specification {
 		TraitInjectionUtils.@traitInjectors = null
 	}
 
-	@Issue("https://github.com/grails/grails-core/issues/10531")
+	@Issue("https://github.com/apache/grails-core/issues/10531")
 	void "TraitInjector with SupportsClassNode gets applied only if supports return true"() {
 		setup:
 		TraitInjectionUtils.@traitInjectors = [new TestTraitInjectorForSupportsClassNode(false)]

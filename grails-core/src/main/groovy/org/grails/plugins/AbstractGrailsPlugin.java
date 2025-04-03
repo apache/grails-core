@@ -195,7 +195,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         return PLUGINS_PATH + '/' + GrailsNameUtils.getScriptName(getName()) + '-' + getVersion();
     }
 
-    // https://github.com/grails/grails-core/issues/9406
+    // https://github.com/apache/grails-core/issues/9406
     // The name of the plugin for my-plug on the path is myPlugin the GrailsNameUtils.getScriptName(getName()) will always use my-plugin
     public String getPluginPathCamelCase() {
         return PLUGINS_PATH + '/' + GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(getName()) + '-' + getVersion();

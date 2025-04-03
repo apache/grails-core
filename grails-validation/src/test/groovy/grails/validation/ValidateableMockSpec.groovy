@@ -5,7 +5,7 @@ import spock.lang.Specification
 
 class ValidateableMockSpec extends Specification {
 
-    @Issue('grails/grails-core#9761')
+    @Issue('apache/grails-core#9761')
     void 'ensure command is mocked properly'(){
         given:
         SomeCommand command = GroovyMock()

@@ -290,7 +290,7 @@ class LinkGeneratorSpec extends Specification {
             cacheKey == "somePrefix[resource:org.grails.web.mapping.Widget->2]"
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/13627')
+    @Issue('https://github.com/apache/grails-core/issues/13627')
     def 'resource links should use ident and allow controller override'() {
         given:
         final webRequest = GrailsWebMockUtil.bindMockWebRequest()

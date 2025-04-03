@@ -7,7 +7,7 @@ import spock.lang.Specification
 
 class GrailsASTUtilsSpec extends Specification {
 
-    @Issue('grails/grails-core#10079')
+    @Issue('apache/grails-core#10079')
     void 'test domain class detection when the current source unit is associated with a controller'() {
         setup:
         File tmpDir = new File(System.getProperty('java.io.tmpdir'))

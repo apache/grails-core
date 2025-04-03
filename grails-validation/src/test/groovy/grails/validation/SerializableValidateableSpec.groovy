@@ -5,7 +5,7 @@ import spock.lang.Specification
 
 class SerializableValidateableSpec extends Specification {
 
-    @Issue('grails/grails-core#9986')
+    @Issue('apache/grails-core#9986')
     void "test serialization"() {
         given:
         def p = new Person(firstName: 'Jeff', lastName: 'Brown')

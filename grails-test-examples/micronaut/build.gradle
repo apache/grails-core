@@ -60,7 +60,7 @@ dependencies {
     testImplementation "org.mockito:mockito-core"
     testImplementation "org.grails:grails-web-testing-support"
 
-    integrationTestImplementation testFixtures("org.grails.plugins:geb")
+    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 }
 
 bootRun {

@@ -127,7 +127,7 @@ class CodecSpec extends Specification implements GrailsWebUnitTest {
 //    /*
 //     * static defaultEncodeAs = 'raw' // default encodeAs applied to all tags in this taglib class
 //     * static encodeAsForTags = [someTag: 'html'] // default encodeAs for a single tag in this taglib class
-//     * the codec setting accepts a string or a map. (explained in https://github.com/grails/grails-core/blob/scb-encoding-support/grails-web/src/main/groovy/org/codehaus/groovy/grails/web/util/WithCodecHelper.groovy#L54)
+//     * the codec setting accepts a string or a map. (explained in https://github.com/apache/grails-core/blob/scb-encoding-support/grails-web/src/main/groovy/org/codehaus/groovy/grails/web/util/WithCodecHelper.groovy#L54)
 //     */
 //    void "tag call as function call should use defaultEncodeAs / encodeAsForTags settings"() {
 //    }

@@ -598,7 +598,7 @@ class SimpleDataBinderSpec extends Specification {
         obj.map.two == 2
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/11140')
+    @Issue('https://github.com/apache/grails-core/issues/11140')
     void 'Test bind a Integer on a List<Long>'() {
         given:
         def binder = new SimpleDataBinder()
@@ -612,7 +612,7 @@ class SimpleDataBinderSpec extends Specification {
         widget.listOfLongs.first().getClass() == Long
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/11235')
+    @Issue('https://github.com/apache/grails-core/issues/11235')
     void 'Test binding to a list using custom value converters'() {
         given:
         def binder = new SimpleDataBinder()
@@ -648,7 +648,7 @@ class SimpleDataBinderSpec extends Specification {
         comment.attachments.find { it.filename == 'bar.txt' }
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/12150')
+    @Issue('https://github.com/apache/grails-core/issues/12150')
     void 'Test binding when class and embedded classes both implements an interface'() {
         given:
         SimpleDataBinder binder = new SimpleDataBinder()
@@ -664,7 +664,7 @@ class SimpleDataBinderSpec extends Specification {
         classWithInterface.a.data == 'abc'
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/12150')
+    @Issue('https://github.com/apache/grails-core/issues/12150')
     void 'Test binding when class and embedded classes extends abstract class and implements an interface'() {
         given:
         SimpleDataBinder binder = new SimpleDataBinder()

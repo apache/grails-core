@@ -308,7 +308,7 @@ class GrailsParameterMapTests {
     }
 
     @Test
-    @Issue("https://github.com/grails/grails-core/issues/11126")
+    @Issue("https://github.com/apache/grails-core/issues/11126")
     void testDontAutoEvaluateBlankDates() {
         mockRequest.addParameter("foo", "date.struct")
         mockRequest.addParameter("foo_year", "")
@@ -319,7 +319,7 @@ class GrailsParameterMapTests {
     }
 
     @Test
-    @Issue("https://github.com/grails/grails-core/issues/11126")
+    @Issue("https://github.com/apache/grails-core/issues/11126")
     void testDontAutoEvaluateDates() {
         mockRequest.addParameter("foo", "date.struct")
         mockRequest.addParameter("foo_year", "2007")
@@ -330,7 +330,7 @@ class GrailsParameterMapTests {
     }
 
     @Test
-    @Issue("https://github.com/grails/grails-core/issues/11126")
+    @Issue("https://github.com/apache/grails-core/issues/11126")
     void testGetDateDoesConversion() {
         mockRequest.addParameter("foo", "date.struct")
         mockRequest.addParameter("foo_year", "2007")

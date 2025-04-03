@@ -212,7 +212,7 @@ class GRAILS9863UrlMappings {
 
 class GRAILS9863UrlMappingsSpec extends Specification implements UrlMappingsUnitTest<GRAILS9863UrlMappings> {
 
-    @Issue("https://github.com/grails/grails-core/issues/9863")
+    @Issue('https://github.com/apache/grails-core/issues/9863')
     void testGRAILS9863() {
         when:
         assertReverseUrlMapping("/p/user", controller:"user", action:"index", plugin:"sample")
@@ -312,7 +312,7 @@ class ResourceTestUrlMappingsSpec extends Specification implements UrlMappingsUn
         [PersonController]
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9065')
+    @Issue('https://github.com/apache/grails-core/issues/9065')
     void testResourcesUrlMapping() {
         when:
         request.method = 'GET'
@@ -369,7 +369,7 @@ class ExceptionTestUrlMappingsSpec extends Specification implements UrlMappingsU
         [ExceptionTestErrorsController]
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10226')
+    @Issue('https://github.com/apache/grails-core/issues/10226')
     void testExceptionUrlMapping() {
         when:
         assertForwardUrlMapping(500, controller: 'exceptionTestErrors', action: 'handleNullPointer', exception: new NullPointerException())

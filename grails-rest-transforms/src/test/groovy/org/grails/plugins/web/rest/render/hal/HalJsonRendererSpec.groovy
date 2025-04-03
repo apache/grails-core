@@ -747,7 +747,7 @@ class HalJsonRendererSpec extends Specification {
         jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/products","hreflang":"en","type":"application/hal+json"}},"numberInStock":10,"name":"MacBook","_embedded":{}}')
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10293')
+    @Issue('https://github.com/apache/grails-core/issues/10293')
     void "Test that the HAL renderer renders JSON values correctly for collections with a many-to-one association" () {
         given:
         HalJsonCollectionRenderer renderer = getMemberCollectionRenderer()

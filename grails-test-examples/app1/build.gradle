@@ -52,7 +52,7 @@ dependencies {
     implementation project(':grails-test-examples-plugins-loadsecond')
     implementation project(':grails-test-examples-plugins-loadafter')
 
-    integrationTestImplementation testFixtures("org.grails.plugins:geb")
+    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 }
 
 tasks.withType(JavaExec).configureEach {

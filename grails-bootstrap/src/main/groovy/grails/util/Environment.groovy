@@ -59,7 +59,7 @@ enum Environment {
 
     /**
      * Initialize the Logger lazily because:
-     * https://github.com/grails/grails-core/issues/11476
+     * https://github.com/apache/grails-core/issues/11476
      */
     private static final Supplier<Logger> LOG = SupplierUtil.memoized(() -> LoggerFactory.getLogger(Environment.class))
 

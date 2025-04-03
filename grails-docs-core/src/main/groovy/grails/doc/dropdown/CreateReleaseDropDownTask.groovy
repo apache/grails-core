@@ -50,7 +50,7 @@ class CreateReleasesDropdownTask extends DefaultTask {
         parseSoftwareVersions(result).each { softwareVersion ->
             String versionName = softwareVersion.versionText
             String href = "https://${org}.github.io/${repo}/${versionName}/guide/single.html"
-            if (slug == 'grails/grails-core') {
+            if (slug == 'apache/grails-core') {
                 href = "https://docs.grails.org/${versionName}/guide/single.html"
             }
             if (version == versionName) {

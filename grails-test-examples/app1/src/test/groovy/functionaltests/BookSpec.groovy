@@ -13,7 +13,7 @@ class BookSpec extends Specification implements DomainUnitTest<Book> {
             new Book(title:"The Stand").validate()
     }
 
-    @Issue('grails/grails-core#10079')
+    @Issue('apache/grails-core#10079')
     void 'Test that auto-timestamp properties are excluded from mass property binding'() {
         given:
         def book = new Book()

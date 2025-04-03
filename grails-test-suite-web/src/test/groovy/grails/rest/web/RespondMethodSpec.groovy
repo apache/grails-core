@@ -219,7 +219,7 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         modelAndView.viewName == 'showWithModel'
     }
 
-    @Issue(['grails/grails-core#610', 'grails/grails-core#611'])
+    @Issue(['apache/grails-core#610', 'apache/grails-core#611'])
     void 'Test respond with a single Map argument'() {
         when:
         response.format = 'json'
@@ -229,7 +229,7 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         response.json.name == 'Jeff'
     }
 
-    @Issue(['grails/grails-core#610', 'grails/grails-core#611'])
+    @Issue(['apache/grails-core#610', 'apache/grails-core#611'])
     void 'Test respond with a Map argument and named arguments'() {
         when:
         response.format = 'json'

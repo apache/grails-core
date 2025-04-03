@@ -7,10 +7,6 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
-ext {
-    snapshotPublishRepo = 'https://repo.grails.org/grails/plugins3-snapshots-local'
-}
-
 dependencies {
     implementation platform(project(':grails-bom'))
 

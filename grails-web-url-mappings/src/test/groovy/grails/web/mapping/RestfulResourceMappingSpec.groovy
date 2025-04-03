@@ -27,7 +27,7 @@ class RestfulResourceMappingSpec extends Specification{
         WebUtils.clearGrailsWebRequest()
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9849')
+    @Issue('https://github.com/apache/grails-core/issues/9849')
     void "Test conflicting UrlMappings related to a resource mappings"() {
         given:"A URL mappings definition with a single resource"
         def urlMappingsHolder = getUrlMappingsHolder {
@@ -58,7 +58,7 @@ class RestfulResourceMappingSpec extends Specification{
 
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9877')
+    @Issue('https://github.com/apache/grails-core/issues/9877')
     void "Test conflicting UrlMappings with default url mapping"() {
         given:"A URL mappings definition with a single resource"
         def urlMappingsHolder = getUrlMappingsHolder {

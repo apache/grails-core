@@ -8,7 +8,7 @@ import spock.lang.Issue
  */
 class NestedMappingWithinGroupSpec extends AbstractUrlMappingsSpec {
 
-    @Issue('https://github.com/grails/grails-core/issues/10246')
+    @Issue('https://github.com/apache/grails-core/issues/10246')
     void "test nested mapping within group"() {
         given:"A link generator with nested mappings withihn a group"
         def linkGenerator = getLinkGenerator {

@@ -8,7 +8,7 @@ import spock.lang.Specification
  */
 class WebUtilsSpec extends Specification {
 
-	@Issue("https://github.com/grails/grails-core/issues/10545")
+	@Issue("https://github.com/apache/grails-core/issues/10545")
 	def testToQueryString() {
 		given:
 		Map params = ["name":"sudhir-nimavat", "address.zip":"12345"]

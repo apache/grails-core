@@ -52,7 +52,7 @@ class PropertySourcesConfigSpec extends Specification {
             !config.empty.value
     }
 
-    @Issue("https://github.com/grails/grails-spring-security-core/issues/724")
+    @Issue("https://github.com/apache/grails-spring-security-core/issues/724")
     void "Test accessing a NavigableMap property as Map class"() {
         given:
         def source = new NavigableMap()
@@ -101,7 +101,7 @@ class PropertySourcesConfigSpec extends Specification {
 
      */
     @Ignore("Cannot set property 'bar' on null object")
-    @Issue('grails/grails-core#10188')
+    @Issue('apache/grails-core#10188')
     void 'test replacing nested property values'() {
         given: 'a PropertySourcesConfig'
         def cfg = new PropertySourcesConfig()

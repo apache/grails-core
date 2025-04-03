@@ -94,7 +94,7 @@ class ResponseRedirector {
 
         // If the request parameters contain "keepParamsWhenRedirect = true", then we add the original params. The
         // new attribute can be used from UrlMappings to redirect from old URLs to new ones while keeping the params
-        // See https://github.com/grails/grails-core/issues/10622 & https://github.com/grails/grails-core/issues/10965
+        // See https://github.com/apache/grails-core/issues/10622 & https://github.com/apache/grails-core/issues/10965
         if (Boolean.valueOf(arguments.get(KEEP_PARAMS_WHEN_REDIRECT).toString())) {
             // When redirecting from UrlMappings the original request params are on webRequest.originalParams
             // instead of arguments.params so we merge them.

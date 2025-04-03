@@ -6,7 +6,7 @@ import spock.lang.Specification
 
 class NamePropertyServiceSpec extends Specification implements ServiceUnitTest<NamePropertyService> {
 
-    @Issue('grails/grails-core#10363')
+    @Issue('apache/grails-core#10363')
     void "test referencing a service with a 'name' property"() {
         when:
         service

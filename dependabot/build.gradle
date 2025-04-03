@@ -57,7 +57,7 @@ dependencies {
     api "org.grails.plugins:cache:${project['plugins-cache.version']}"
     api "org.grails.plugins:database-migration:${project['plugins-database-migration.version']}"
     api "org.grails.plugins:fields:${project['plugins-fields.version']}"
-    api "org.grails.plugins:geb:${project['plugins-geb.version']}"
+    api "org.apache.grails:grails-geb:${project['plugins-geb.version']}"
     api "org.grails.plugins:hibernate5:${project['plugins-hibernate5.version']}"
     api "org.grails.plugins:mongodb:${project['plugins-mongodb.version']}"
     api "org.grails.plugins:neo4j:${project['plugins-neo4j.version']}"

@@ -11,7 +11,7 @@ import grails.persistence.Entity
  * Check more detailed description in CommandObjectConstraintGettersSpec
  *
  */
-@Issue(['grails/grails-core#9749', 'grails/grails-core#9754'])
+@Issue(['apache/grails-core#9749', 'apache/grails-core#9754'])
 class DomainConstraintGettersSpec extends Specification implements DataTest {
 
     Class[] getDomainClassesToMock() {

@@ -28,7 +28,7 @@ class RestfulUrlMappingSpec extends Specification {
         patch "/$controller/$id(.$format)?"(action: "patch")
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10995')
+    @Issue('https://github.com/apache/grails-core/issues/10995')
     void 'test that the right link is generated for restful mapping'() {
         expect:
         linkGenerator.link(resource: 'user', action: 'show', id: 1, absolute: true) == 'http://localhost/user/1'

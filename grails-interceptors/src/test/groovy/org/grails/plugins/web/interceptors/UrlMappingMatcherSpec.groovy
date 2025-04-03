@@ -8,7 +8,7 @@ import spock.lang.Specification
 
 class UrlMappingMatcherSpec extends Specification {
 
-    @Issue('https://github.com/grails/grails-core/issues/9179')
+    @Issue('https://github.com/apache/grails-core/issues/9179')
     void 'test a matcher with a uri does not match all requests'() {
         given:
         def matcher = new UrlMappingMatcher(Mock(Interceptor))
@@ -21,7 +21,7 @@ class UrlMappingMatcherSpec extends Specification {
         !matcher.doesMatch('/demo/index', mappingInfo)
     }
 
-    @Issue("https://github.com/grails/grails-core/issues/9208")
+    @Issue("https://github.com/apache/grails-core/issues/9208")
     void "test caching of results in production"() {
         given:
         System.setProperty(Environment.KEY, "prod")

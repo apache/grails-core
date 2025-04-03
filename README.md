@@ -1,7 +1,7 @@
 # Grails
 [![Revved up by Develocity](https://img.shields.io/badge/Revved%20up%20by-Develocity-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.grails.org/scans)
-[![Java CI](https://github.com/grails/grails-core/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/grails/grails-core/actions/workflows/gradle.yml)
-[![Groovy Joint Validation Build](https://github.com/grails/grails-core/actions/workflows/groovy-joint-workflow.yml/badge.svg?event=push)](https://github.com/grails/grails-core/actions/workflows/groovy-joint-workflow.yml)
+[![Java CI](https://github.com/apache/grails-core/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/gradle.yml)
+[![Groovy Joint Validation Build](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml)
 
 ### Getting help
 Join the discussions on [Slack](https://slack.grails.org/)  
@@ -24,7 +24,7 @@ To install Grails, visit https://grails.org/download.html and download the versi
 
 To build Grails, clone this GitHub repository and execute the install Gradle target:
 
-    git clone https://github.com/grails/grails-core.git
+    git clone https://github.com/apache/grails-core.git
     cd grails-core
     ./gradlew install
 

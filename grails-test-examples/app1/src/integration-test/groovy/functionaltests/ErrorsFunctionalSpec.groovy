@@ -46,7 +46,7 @@ class ErrorsFunctionalSpec extends ContainerGebSpec {
             driver.pageSource.contains 'Page Not Found'
     }
 
-    @Issue("https://github.com/grails/grails-core/issues/9548")
+    @Issue("https://github.com/apache/grails-core/issues/9548")
     void "Test Interceptor.afterView() has access to the exception if thrown"() {
         expect:
         !System.properties[ErrorsControllerInterceptor.PROPERTY]

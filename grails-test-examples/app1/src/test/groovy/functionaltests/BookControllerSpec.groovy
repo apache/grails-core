@@ -146,7 +146,7 @@ class BookControllerSpec extends Specification implements ControllerUnitTest<Boo
             flash.message != null
     }
 
-    @Issue('grails/grails-core#10079')
+    @Issue('apache/grails-core#10079')
     void 'Test that auto-timestamp properties are not excluded from property binding in a command object'() {
         given:
         params.title = 'Some Title'

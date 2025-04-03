@@ -35,13 +35,13 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 > If you want to ask a question, we assume that you have read the available [Documentation](https://docs.grails.org/latest/).
 
-Before you ask a question, it is best to search for existing [Issues](https://github.com/grails/grails-core/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
+Before you ask a question, it is best to search for existing [Issues](https://github.com/apache/grails-core/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
 
 If you then still feel the need to ask a question and need clarification, we recommend the following:
 
 - Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/grails).
 - Chat with us on [Slack](https://grails.slack.com).
-- If your question is due to a bug, open an [Issue](https://github.com/grails/grails-core/issues/new).
+- If your question is due to a bug, open an [Issue](https://github.com/apache/grails-core/issues/new).
   - Provide as much context as you can about what you're running into.
   - Provide project and platform versions (nodejs, npm, etc), depending on what seems relevant.
 
@@ -52,7 +52,7 @@ If you then still feel the need to ask a question and need clarification, we rec
 ## I Want to Contribute
 
 > ### Legal Notice <!-- omit in toc -->
-> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.  All committers must sign the project's CLA.  More detailed requirements are available in the project's [CLA](https://cla-assistant.io/grails/grails-core).
+> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.  All committers must sign the project's CLA.  More detailed requirements are available in the project's [CLA](https://cla-assistant.io/apache/grails-core).
 
 ### Reporting Bugs
 
@@ -63,7 +63,7 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 
 - Make sure that you are using the latest version.
 - Determine if your bug is really a bug and not an error on your side e.g. using incompatible environment components/versions (Make sure that you have read the [documentation](https://docs.grails.org/latest/). If you are looking for support, you might want to check [this section](#i-have-a-question)).
-- To see if other users have experienced (and potentially already solved) the same issue you are having, check if there is not already a bug report existing for your bug or error in the [bug tracker](https://github.com/grails/grails-coreissues?q=label%3Abug).
+- To see if other users have experienced (and potentially already solved) the same issue you are having, check if there is not already a bug report existing for your bug or error in the [bug tracker](https://github.com/apache/grails-coreissues?q=label%3Abug).
 - Also make sure to search the internet (including Stack Overflow) to see if users outside of the GitHub community have discussed the issue.
 - Collect information about the bug:
 - Stack trace (Traceback)
@@ -77,9 +77,9 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 
 > You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead, sensitive bugs must be sent by email to security@grails.org.
 
-Grails uses GitHub to track issues in the [core framework](https://github.com/grails/grails-core/issues). Similarly, for its documentation there is a [separate tracker](https://github.com/grails/grails-doc/issues).  If you run into an issue with the project:
+Grails uses GitHub to track issues in the [core framework](https://github.com/apache/grails-core/issues). Similarly, for its documentation there is a [separate tracker](https://github.com/apache/grails-doc/issues).  If you run into an issue with the project:
 
-- Open an [Issue](https://github.com/grails/grails-core/issues/new).
+- Open an [Issue](https://github.com/apache/grails-core/issues/new).
 - Explain the behavior you would expect and the actual behavior.
 - Please provide as much context as possible and describe the *reproduction steps* that someone else can follow to recreate the issue on their own. This usually includes your code. For good bug reports you should isolate the problem and create a reduced test case.
 - Provide the information you collected in the previous section.
@@ -100,13 +100,13 @@ This section guides you through submitting an enhancement suggestion for Grails,
 
 - Make sure that you are using the latest version.
 - Read the [documentation](https://docs.grails.org/latest/) carefully and find out if the functionality is already covered, maybe by an individual configuration.
-- Perform a [search](https://github.com/grails/grails-core/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
+- Perform a [search](https://github.com/apache/grails-core/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 - Find out whether your idea fits with the scope and aims of the project. It's up to you to make a strong case to convince the project's developers of the merits of this feature. Keep in mind that we want features that will be useful to the majority of our users and not just a small subset. If you're just targeting a minority of users, consider writing an add-on/plugin library.
 
 <!-- omit in toc -->
 #### How Do I Submit a Good Enhancement Suggestion?
 
-Enhancement suggestions are tracked as [GitHub issues](https://github.com/grails/grails-core/issues).
+Enhancement suggestions are tracked as [GitHub issues](https://github.com/apache/grails-core/issues).
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as many details as possible.
@@ -130,7 +130,7 @@ If you're interested in contributing fixes and features to any part of grails, y
 
 Once you have the pre-requisite packages installed, the next step is to download the Grails source code, which is hosted at [GitHub](http://github.com) in several repositories owned by the ["grails" GitHub user](http://github.com/grails). This is a simple case of cloning the repository you're interested in. For example, to get the core framework run:
 
-    git clone http://github.com/grails/grails-core.git
+    git clone http://github.com/apache/grails-core.git
 
 This will create a `grails-core` directory in your current working directory containing all the project source files. The next step is setting up the JDK to use.  Grails makes use of [SDKMAN!](https://sdkman.io/) for easy JDK setup.  Each Grails project should have a `.sdkmanrc` in it's root directory.  Change to the `grails-core` directory and install the preferred JDK by issuing the command:
 
@@ -158,36 +158,15 @@ Now you will have a dev version in your local which you can use to test your fea
 
 <!-- omit in toc -->
 #### Testing Your Change
-Grails has both local test coverage in the form of `unit` and `integration` tests and an entire functional test suite located at [grails-functional-tests](https://github.com/grails/grails-functional-tests/).
+Grails has both local test coverage in the form of `unit` and `integration` tests.
 
-##### 1. Running `grails-core` tests
 To run the full suite of tests in `grails-core` execute:
 
-    ./gradlew test
+    ./gradlew check
 
-These will take a while (15-30 mins), so consider running individual tests using the command line. For example, to run the test spec `BinaryPluginSpec` simply execute the following command:
+Check the test results & verify that the build completes successfully.
 
-    ./gradlew :grails-core:test --tests *.BinaryPluginSpec
-
-##### 2. Running the functional tests
-To run the functional tests against the current `grails-core`: 
-1. Publish your branch to Maven Local
-
-
-    ./gradlew publishToMavenLocal
-
-
-2. Checkout the associated branch in [grails-functional-tests](https://github.com/grails/grails-functional-tests/).
-3. Add `mavenLocal()` at the top of the repositories block in the root `build.gradle` of `grails/grails-functional-tests`.
-4. Run the Functional Tests:
-   
-
-    ./gradlew build
-
-
-5. Check the test results & verify that the build completes successfully.
-
-##### 3. Advanced Troubleshooting
+##### Advanced Troubleshooting
 Sometimes it's useful to debug your local application to see what's going wrong.  Instead of using `./gradlew bootRun` use:
 
     ./gradlew bootRun --debug-jvm
@@ -197,7 +176,7 @@ By default, Grails forks a JVM to run the application. The `-debug-jvm` argument
 ### Improving The Documentation
 There are many aspects to [Grail's documentation](https://grails.org/documentation.html): 
 - [API](https://docs.grails.org/latest/api/) documentation in the code itself via javadoc & groovydoc.
-- [The Grails User Guide](https://docs.grails.org/6.2.1/guide/single.html) from the [grails-doc](https://github.com/grails/grails-doc) project.
+- [The Grails User Guide](https://docs.grails.org/6.2.1/guide/single.html) from the [grails-doc](https://github.com/apache/grails-doc) project.
 - Various how-to [Guides](https://guides.grails.org/index.html) from the [grails-guides](https://github.com/grails/grails-guides) project.
 
 <!-- omit in toc -->
@@ -210,7 +189,7 @@ This will link to the GitHub edit screen where you can make changes, preview the
 #### <u>Building the Guide</u>
 If you want to make significant changes, such as changing the structure of the table of contents etc. then we recommend you build the user guide. To do that simply checkout the sources from GitHub:
 
-    $ git clone https://github.com/grails/grails-doc/
+    $ git clone https://github.com/apache/grails-doc/
     $ cd grails-doc
 
 The source files can be found in the `src/en/guide` directory. Whilst the Table of Contents (TOC) is defined in the `src/en/guide/toc.yml` file.
@@ -237,7 +216,7 @@ Once the guide is built simply open the `build/docs/index.html` file in a browse
 
 ## Code Style
 
-Grails code style mostly mirrors the Spring Framework's [Style Guide](https://github.com/spring-projects/spring-framework/blob/main/CONTRIBUTING.md#source-code-style).  We are currently working on a more detailed proposal under ticket [#13754](https://github.com/grails/grails-core/issues/13754).
+Grails code style mostly mirrors the Spring Framework's [Style Guide](https://github.com/spring-projects/spring-framework/blob/main/CONTRIBUTING.md#source-code-style).  We are currently working on a more detailed proposal under ticket [#13754](https://github.com/apache/grails-core/issues/13754).
 
 ### Commit Messages
 Grails makes use of [Release Drafter](https://github.com/release-drafter/release-drafter) to draft its release notes so commit messages are important.  They should follow the project's rules.  While a change can be incrementally made under many commits, pull requests should be squashed into a single, meaningful commit message.

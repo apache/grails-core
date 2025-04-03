@@ -12,7 +12,7 @@ import spock.lang.Specification
 class BindCommandObjectsSpec extends Specification implements ControllerUnitTest<BindCommandController>, DomainUnitTest<MyAuthor>  {
     static final String NAME = 'My name is...'
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1145')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1145')
     void "Test bind command to domain with constraints"() {
         when:
         def model = controller.bindDomain()
@@ -24,7 +24,7 @@ class BindCommandObjectsSpec extends Specification implements ControllerUnitTest
     }
 
 
-    @Issue('https://github.com/grails/grails-core/issues/11054')
+    @Issue('https://github.com/apache/grails-core/issues/11054')
     void "Test bind domain to command"() {
         when:
         controller.createDomain()

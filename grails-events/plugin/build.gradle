@@ -9,7 +9,6 @@ group = 'org.apache.grails'
 
 ext {
     pomArtifactId = 'grails-events'
-    snapshotPublishRepo = 'https://repo.grails.org/grails/plugins3-snapshots-local'
 }
 
 dependencies {

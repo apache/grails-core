@@ -283,7 +283,7 @@ class ValidateableTraitSpec extends Specification {
         validateable.errors['subName']?.code == 'nullable'
     }
 
-    @Issue('grails/grails-core#9774')
+    @Issue('apache/grails-core#9774')
     void 'test a Java class which references a Groovy class marked with @Validateable'() {
         given:
         def obj = new SomeJavaClass()

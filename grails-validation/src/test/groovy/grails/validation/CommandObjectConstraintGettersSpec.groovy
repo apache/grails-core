@@ -6,8 +6,8 @@ import spock.lang.Specification
 import grails.validation.Validateable
 
 /**
- * This is a test suite which should prevent issues from grails/grails-core#9749 and 
- * grails/grails-core#9754 to happen again
+ * This is a test suite which should prevent issues from apache/grails-core#9749 and
+ * apache/grails-core#9754 to happen again
  *
  * It verifies all different scenarios of getter/setter methods in command object
  * and Grails making them constrained properties in valid cases only
@@ -21,7 +21,7 @@ import grails.validation.Validateable
  *
  * @see grails.validation.DomainConstraintGettersSpec
  */
-@Issue(['grails/grails-core#9749', 'grails/grails-core#9754'])
+@Issue(['apache/grails-core#9749', 'apache/grails-core#9754'])
 class CommandObjectConstraintGettersSpec extends Specification {
 
     // STANDARD COMMAND OBJECT
