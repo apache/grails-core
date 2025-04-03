@@ -48,7 +48,7 @@ dependencies {
 
     console "org.apache.grails:grails-console"
 
-    integrationTestImplementation testFixtures("org.grails.plugins:geb")
+    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 }
 
 apply {

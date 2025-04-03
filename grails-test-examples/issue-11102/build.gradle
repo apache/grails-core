@@ -52,7 +52,7 @@ dependencies {
     testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
-    integrationTestImplementation testFixtures("org.grails.plugins:geb")
+    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 }
 
 tasks.named('assetCompile') {
