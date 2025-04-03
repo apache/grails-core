@@ -52,7 +52,7 @@ ext {
         org.grails:grails-datastore-gorm-mongodb::
         org.grails:grails-datastore-async,grails-datastore-core,grails-datastore-gorm,grails-datastore-gorm-async,grails-datastore-gorm-support,grails-datastore-gorm-rx,grails-datastore-gorm-test,grails-datastore-gorm-validation,grails-datastore-web,grails-datastore-gorm-tck,grails-gorm-testing-support:::grails-datastore
         org.grails:grails-gdoc-engine::
-        org.grails:grails-gradle-plugin::
+        org.apache.grails:grails-gradle-plugins::
         org.grails:grails:gsp,web-gsp,web-taglib,web-testing-support::gsp
         org.grails:views-json-testing-support::
         org.grails.profiles:base,plugin,profile,web,rest-api,web-plugin,rest-api-plugin,react,vue,angular:::profiles
@@ -118,68 +118,65 @@ dependencies {
     }
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            pom.withXml {
-                def root = asNode()
+ext {
+    pomDescription = "Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects"
+    pomCustomization = { ->
+        def root = asNode()
 
-                def propsNode = root.appendNode('properties')
-                dependenciesVersions.each {
-                    propsNode.appendNode(it.version, it.versionValue)
-                }
+        def propsNode = root.appendNode('properties')
+        dependenciesVersions.each {
+            propsNode.appendNode(it.version, it.versionValue)
+        }
 
-                def appendNodes = { node, attrs ->
-                    attrs.each {
-                        node.appendNode(it.key, it.value)
-                    }
-                }
+        def appendNodes = { node, attrs ->
+            attrs.each {
+                node.appendNode(it.key, it.value)
+            }
+        }
 
-                def dpm = root.appendNode('dependencyManagement')
-                def deps = dpm.appendNode('dependencies')
+        def dpm = root.appendNode('dependencyManagement')
+        def deps = dpm.appendNode('dependencies')
 
-                appendNodes(deps.appendNode('dependency'), [
-                        groupId: 'org.apache.groovy',
-                        artifactId: 'groovy-bom',
-                        version: '${groovy.version}',
-                        type: 'pom',
-                        scope: 'import'
-                ])
+        appendNodes(deps.appendNode('dependency'), [
+                groupId: 'org.apache.groovy',
+                artifactId: 'groovy-bom',
+                version: '${groovy.version}',
+                type: 'pom',
+                scope: 'import'
+        ])
 
-                appendNodes(deps.appendNode('dependency'), [
-                        groupId: 'com.fasterxml.jackson',
-                        artifactId: 'jackson-bom',
-                        version: '${jackson.version}',
-                        type: 'pom',
-                        scope: 'import'
-                ])
+        appendNodes(deps.appendNode('dependency'), [
+                groupId: 'com.fasterxml.jackson',
+                artifactId: 'jackson-bom',
+                version: '${jackson.version}',
+                type: 'pom',
+                scope: 'import'
+        ])
 
-                appendNodes(deps.appendNode('dependency'), [
-                    groupId: 'org.springframework.boot',
-                    artifactId: 'spring-boot-dependencies',
-                    version: '${spring-boot.version}',
-                    type: 'pom',
-                    scope: 'import'
-                ])
+        appendNodes(deps.appendNode('dependency'), [
+                groupId: 'org.springframework.boot',
+                artifactId: 'spring-boot-dependencies',
+                version: '${spring-boot.version}',
+                type: 'pom',
+                scope: 'import'
+        ])
 
-                project.parent.subprojects.findResults {
-                    if (it.name == 'grails-bom' || it.name in testProjects) return null
-                    return [
-                            groupId: it.group,
-                            artifactId: it.findProperty('pomArtifactId') ?: it.name,
-                            version: it.version
-                    ] + (it.name == 'grails-dependencies' ? [type: 'pom'] : [])
-                }.each {
-                    appendNodes(deps.appendNode('dependency'), it)
-                }
+        project.parent.subprojects.findResults {
+            if (it.name == 'grails-bom' || it.name in testProjects) return null
+            return [
+                    groupId: it.group,
+                    artifactId: it.findProperty('pomArtifactId') ?: it.name,
+                    version: it.version
+            ] + (it.name == 'grails-dependencies' ? [type: 'pom'] : [])
+        }.each {
+            appendNodes(deps.appendNode('dependency'), it)
+        }
 
-                allDependencies.collect { def m = it.subMap('groupId', 'artifactId', 'version')
-                    m + [version: "\${${m.version}}"]
-                }.each {
-                    if(it.artifactId !in ['groovy-bom', 'jackson-bom']) {
-                        appendNodes(deps.appendNode('dependency'), it)
-                    }
-                }
+        allDependencies.collect { def m = it.subMap('groupId', 'artifactId', 'version')
+            m + [version: "\${${m.version}}"]
+        }.each {
+            if(it.artifactId !in ['groovy-bom', 'jackson-bom']) {
+                appendNodes(deps.appendNode('dependency'), it)
             }
         }
     }
@@ -221,4 +218,8 @@ tasks.register('dependabot') {
     description = 'This task updates the dependabot/build.gradle and gradle.properties files by syncing them with the latest external dependencies listed in the Grails BOM (Bill of Materials). This ensures that Dependabot can monitor these dependencies and automatically create pull requests when newer versions become available.'
 
     dependsOn 'syncProps', 'dependabotBuild'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
