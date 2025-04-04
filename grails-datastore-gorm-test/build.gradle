@@ -94,7 +94,7 @@ dependencies {
     //testImplementation project(":grails-datastore-gorm-rx")
 
     // Use the simple datastore to ensure the base implementation works correctly
-    api project(':simple-gorm')
+    api project(':grails-data-simple')
 
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 

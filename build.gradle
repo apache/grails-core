@@ -65,7 +65,7 @@ def publishedProjects = [
         'grails-datastore-web',
         'grails-testing-support-datamapping',
         // simple
-        'simple-gorm',
+        'grails-data-simple',
         // hibernate5
         'hibernate5-boot-plugin',
         'hibernate5-database-migration',
