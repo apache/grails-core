@@ -6,12 +6,14 @@ buildscript {
     }
     dependencies {
         classpath "org.apache.grails:grails-gradle-plugins:${project['grails-gradle-plugins.version']}"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:${project['asset-pipeline-gradle.version']}"
     }
 }
 
 version "0.1"
 group "datasources"
 
+apply plugin: "asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"
 
 dependencies {
