@@ -11,7 +11,7 @@ group "org.apache.grails"
 version project.projectVersion
 
 repositories {
-    mavenLocal()
+    // mavenLocal()
     mavenCentral()
     maven { url "https://repo.grails.org/grails/core" }
     maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
@@ -83,31 +83,31 @@ java {
 }
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     // compile grails-gradle-plugin with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
     compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
-    compileOnly "org.grails:grails-bootstrap", {
+    compileOnly "org.apache.grails.bootstrap:grails-bootstrap", {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
     }
-    compileOnly "org.grails:grails-shell", {
-        exclude group: 'org.apache.groovy'
-        exclude group: 'org.spockframework'
-    }
-
-    runtimeOnly "org.grails:grails-bootstrap", {
-        exclude group: 'org.apache.groovy'
-        exclude group: 'org.spockframework'
-    }
-    runtimeOnly "org.grails:grails-shell", {
+    compileOnly "org.apache.grails:grails-shell-cli", {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
     }
 
-    implementation "org.grails:grails-gradle-model", {
+    runtimeOnly "org.apache.grails.bootstrap:grails-bootstrap", {
+        exclude group: 'org.apache.groovy'
+        exclude group: 'org.spockframework'
+    }
+    runtimeOnly "org.apache.grails:grails-shell-cli", {
+        exclude group: 'org.apache.groovy'
+        exclude group: 'org.spockframework'
+    }
+
+    implementation "org.apache.grails.gradle:grails-gradle-model", {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
     }
