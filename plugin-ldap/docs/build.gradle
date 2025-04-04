@@ -5,9 +5,9 @@ plugins {
 dependencies {
     // These are added to be able to resolve versions from grails-bom
     // in the resolveBomVersions task
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation 'org.springframework.security:spring-security-core'
-    implementation 'org.grails:grails-datastore-gorm'
+    implementation 'org.apache.grails.data:grails-datamapping-core'
 }
 
 String getGrailsDocumentationVersion(String version) {
@@ -31,8 +31,8 @@ tasks.register('bomVersions') {
             .resolvedConfiguration
             .resolvedArtifacts
             .find {
-                it.moduleVersion.id.group == 'org.grails' &&
-                        it.moduleVersion.id.name == 'grails-datastore-gorm'
+                it.moduleVersion.id.group == 'org.apache.grails.data' &&
+                        it.moduleVersion.id.name == 'grails-datamapping-core'
             }.moduleVersion.id.version
     logger.lifecycle('Resolved Spring Security version for Guide links: {}', springSecurity)
     logger.lifecycle('Resolved GORM version for Guide links: {}', gorm)

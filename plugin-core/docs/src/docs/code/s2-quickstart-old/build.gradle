@@ -1,12 +1,14 @@
 buildscript {
     repositories {
         mavenLocal()
-        maven { url "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.grails:grails-gradle-plugin:$grailsVersion"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:$assetPipelineVersion"
-        classpath "org.grails.plugins:hibernate5:${gormVersion-".RELEASE"}"
+        classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+        classpath "org.apache.grails:grails-gradle-plugins"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
+        classpath "org.apache.grails:grails-data-hibernate5"
     }
 }
 
@@ -16,37 +18,38 @@ group "s2.quickstart"
 apply plugin:"eclipse"
 apply plugin:"idea"
 apply plugin:"war"
-apply plugin:"org.grails.grails-web"
-apply plugin:"org.grails.grails-gsp"
+apply plugin:"org.apache.grails.gradle.grails-web"
+apply plugin:"org.apache.grails.gradle.grails-gsp"
 apply plugin: "com.bertramlabs.asset-pipeline"
 
 repositories {
     mavenLocal()
-    maven { url "https://repo.grails.org/grails/core" }
+    maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
     compile "org.springframework.boot:spring-boot-starter-logging"
     compile "org.springframework.boot:spring-boot-autoconfigure"
-    compile "org.grails:grails-core"
+    compile "org.apache.grails:grails-core"
     compile "org.springframework.boot:spring-boot-starter-actuator"
     compile "org.springframework.boot:spring-boot-starter-tomcat"
-    compile "org.grails:grails-dependencies"
-    compile "org.grails:grails-web-boot"
-    compile "org.grails.plugins:cache"
-    compile "org.grails.plugins:scaffolding"
-    compile "org.grails.plugins:hibernate5"
+    compile "org.apache.grails:grails-dependencies"
+    compile "org.apache.grails.web:grails-web-boot"
+    compile "org.apache.grails:grails-cache"
+    compile "org.apache.grails:grails-scaffolding"
+    compile "org.apache.grails:grails-data-hibernate5"
     compile "org.hibernate:hibernate-core:$hibernateCoreVersion"
     compile "org.hibernate:hibernate-ehcache:$hibernatEhcacheVersion"
-    console "org.grails:grails-console"
-    profile "org.grails.profiles:web"
+    console "org.apache.grails:grails-console"
+    profile "org.apache.grails.profiles:web"
     runtime "com.bertramlabs.plugins:asset-pipeline-grails:$assetPipelineVersion"
     runtime "com.h2database:h2"
-    testCompile "org.grails:grails-plugin-testing"
-    testCompile "org.grails.plugins:geb"
+    //testCompile "org.grails:grails-plugin-testing" // TODO: ???
+    testCompile "org.apache.grails:grails-geb"
     testRuntime "org.seleniumhq.selenium:selenium-htmlunit-driver:2.52.0"
     testRuntime "net.sourceforge.htmlunit:htmlunit:2.70.0"
-    compile 'org.grails.plugins:spring-security-core:6.1.0'
+    compile 'org.apache.grails:grails-spring-security:6.1.0' // TODO: Version?
 }
 
 bootRun {

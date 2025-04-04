@@ -1,20 +1,18 @@
 plugins {
 	id 'java-library'
-	id 'org.grails.grails-plugin'
+	id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-	publishArtifactId = 'spring-security-ldap'
+	publishArtifactId = 'grails-spring-security-ldap'
 	pomTitle = 'Grails Spring Security LDAP Plugin'
 	pomDescription = 'Adds Spring Security LDAP support to a Grails application.'
 	pomDevelopers = [burtbeckwith: 'Burt Beckwith']
 }
 
 dependencies {
-
-	implementation platform("org.grails:grails-bom:$grailsVersion")
 
 	api project(':core-plugin')
 	api 'org.springframework.security:spring-security-ldap', {
@@ -31,9 +29,9 @@ dependencies {
 		 'spring-core', 'spring-data-commons', 'spring-test', 'spring-tx'].each { exclude module: it }
 	}
 
-	runtimeOnly 'org.grails:grails-web-boot'
+	runtimeOnly 'org.apache.grails.web:grails-web-boot'
 
-	testImplementation 'org.grails:grails-web-testing-support'
+	testImplementation 'org.apache.grails:grails-testing-support-web'
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

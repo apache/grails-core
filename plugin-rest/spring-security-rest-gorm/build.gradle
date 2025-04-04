@@ -1,12 +1,12 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-    publishArtifactId = project.name
+    publishArtifactId = 'grails-spring-security-rest-datamapping'
     pomTitle = 'Grails Spring Security REST Plugin'
     pomDescription = 'Grails plugin to implement token-based, RESTful authentication using Spring Security'
     pomDevelopers = [
@@ -17,8 +17,6 @@ ext {
 }
 
 dependencies {
-
-    implementation platform("org.grails:grails-bom:$grailsVersion")
 
     api 'org.springframework.security:spring-security-core', {
         // api: UserDetails, UserDetailsService
@@ -32,7 +30,7 @@ dependencies {
     }
 
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
-    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
+    compileOnly 'org.apache.grails:grails-core' // Provided as this is a Grails plugin
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

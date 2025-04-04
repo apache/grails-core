@@ -6,14 +6,14 @@ apply plugin: 'org.asciidoctor.jvm.convert'
 configurations.register('documentation')
 
 dependencies {
-    add('documentation', platform("org.grails:grails-bom:$grailsVersion"))
+    add('documentation', platform("org.apache.grails:grails-bom:$grailsVersion"))
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', 'org.apache.groovy:groovy-groovydoc')
 }
 
 tasks.register('createReleaseDropDown', CreateReleaseDropDownTask) {
     group = 'documentation'
-    githubSlug = 'grails/grails-spring-security'
+    githubSlug = 'apache/grails-spring-security'
     currentVersion = version
     versions = docsVersionSelectorInclude.split(',').collect { it.strip() }
     index = layout.buildDirectory.file('docs/index.html')

@@ -1,5 +1,5 @@
 plugins {
-    id 'org.grails.grails-web'
+    id 'org.apache.grails.gradle.grails-web'
     id 'com.bertramlabs.asset-pipeline'
 }
 
@@ -7,29 +7,27 @@ group = 'misc.functional.test.app'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
     implementation project(':ldap-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-plugin-rest'
-    implementation 'org.grails:grails-web-boot'
-    implementation 'org.grails.plugins:gsp'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-gsp'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.fusesource.jansi:jansi'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-databinding'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
-    runtimeOnly 'org.grails.plugins:hibernate5'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-databinding'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-data-hibernate5'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-validation'
 
-    integrationTestImplementation testFixtures('org.grails.plugins:geb')
-    integrationTestImplementation 'org.grails:grails-web-testing-support'
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-web'
     integrationTestImplementation 'org.spockframework:spock-core'
 }
 

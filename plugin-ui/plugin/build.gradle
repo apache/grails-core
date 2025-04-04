@@ -1,14 +1,14 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-gsp'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gsp'
+    id 'org.apache.grails.gradle.grails-plugin'
     id 'com.bertramlabs.asset-pipeline'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-    publishArtifactId = 'spring-security-ui'
+    publishArtifactId = 'grails-spring-security-ui'
     pomTitle = 'Grails Spring Security UI'
     pomDescription = 'The Spring Security UI plugin provides CRUD screens and other user management workflows.'
     pomDevelopers = [burtbeckwith: 'Burt Beckwith']
@@ -18,23 +18,23 @@ dependencies {
 
     // Must be on the compileClasspath of consuming applications to
     // enable compilation of AbstractS2UiDomainController subclasses.
-    compileOnlyApi 'org.grails.plugins:converters'
+    compileOnlyApi 'org.apache.grails:grails-converters'
 
     implementation project(':core-plugin')
-    implementation 'org.grails:grails-plugin-controllers'
-    implementation 'org.grails.plugins:converters'
-    implementation 'org.grails.plugins:gsp'
+    implementation 'org.apache.grails:grails-controllers'
+    implementation 'org.apache.grails:grails-converters'
+    implementation 'org.apache.grails:grails-gsp'
     implementation 'org.springframework.security:spring-security-core'
     implementation 'org.springframework.security:spring-security-web'
 
-    compileOnly 'org.grails:grails-core' // Provided, as this is a Grails plugin
-    compileOnly 'org.grails:grails-plugin-services'
-    compileOnly 'org.grails:grails-plugin-domain-class'
+    compileOnly 'org.apache.grails:grails-core' // Provided, as this is a Grails plugin
+    compileOnly 'org.apache.grails:grails-services'
+    compileOnly 'org.apache.grails:grails-domain-class'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
+    runtimeOnly 'org.apache.grails:grails-i18n'
 
-    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'
 }
 

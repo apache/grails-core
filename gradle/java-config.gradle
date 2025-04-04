@@ -1,6 +1,6 @@
 compileJava.options.release = javaVersion.toInteger()
 
-java {
-    withJavadocJar()
-    withSourcesJar()
+extensions.configure(JavaPluginExtension)  {
+    it.withJavadocJar()
+    it.withSourcesJar()
 }

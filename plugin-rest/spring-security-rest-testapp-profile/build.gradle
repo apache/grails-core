@@ -1,12 +1,11 @@
 plugins {
-    id 'org.grails.grails-profile'
+    id 'org.apache.grails.gradle.grails-profile'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails.profiles'
 
 ext {
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    publishArtifactId = project.name
+    publishArtifactId = 'spring-security-rest-testapp'
     pomTitle = 'Grails Spring Security REST Plugin'
     pomDescription = 'Grails plugin to implement token-based, RESTful authentication using Spring Security'
     pomDevelopers = [

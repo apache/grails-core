@@ -1,7 +1,7 @@
 dependencies {
     // In Gradle 9, this needs to be declared
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
 }
 
 tasks.withType(Test).configureEach {
@@ -10,13 +10,17 @@ tasks.withType(Test).configureEach {
         exceptionFormat = 'full'
         events 'passed', 'skipped', 'failed'//, 'standardOut', 'standardError'
     }
-    beforeTest { descriptor -> logger.quiet " -- $descriptor" }
+    beforeTest { descriptor -> logger.quiet(" -- $descriptor") }
 }
 
 tasks.named('integrationTest', Test) {
     systemProperty 'geb.build.reportsDir', reporting.file("$project.projectDir/build/geb-reports")
     systemProperties System.properties
     doFirst {
-        logger.quiet "\n - Running tests for configuration: ${System.getProperty('TESTCONFIG') ?: 'N/S'} and Grails: $grailsVersion"
+        logger.quiet(
+                '\n - Running tests for configuration: {} and Grails: {}',
+                System.getProperty('TESTCONFIG', 'N/S'),
+                grailsVersion
+        )
     }
 }

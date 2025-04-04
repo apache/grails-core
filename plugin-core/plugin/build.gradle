@@ -1,13 +1,13 @@
 plugins {
 	id 'java-library'
-	id 'org.grails.grails-gsp'
-	id 'org.grails.grails-plugin'
+	id 'org.apache.grails.gradle.grails-gsp'
+	id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-	publishArtifactId = 'spring-security-core'
+	publishArtifactId = 'grails-spring-security'
 	pomTitle = 'Grails spring-security-core plugin'
 	pomDescription = 'The Spring Security plugin simplifies the integration of Spring Security into Grails® framework applications.'
 	pomDevelopers = [
@@ -18,16 +18,14 @@ ext {
 
 dependencies {
 
-	implementation platform("org.grails:grails-bom:$grailsVersion")
-
-	compileOnly 'org.grails:grails-core' // Provided as this is a Grails Plugin
-	api 'org.grails:grails-datastore-core' // API because used in templates
-	api 'org.grails:grails-datastore-gorm' // API because used in templates
-	api 'org.grails:grails-events-transform' // API because used in templates
-	api 'org.grails:grails-plugin-mimetypes'
-	api 'org.grails.plugins:async' // AsyncGrailsWebRequest is used in public API
-	api 'org.grails:grails-web-common'
-	api 'org.grails:grails-web-url-mappings'
+	compileOnly 'org.apache.grails:grails-core' // Provided as this is a Grails Plugin
+	api 'org.apache.grails.data:grails-datastore-core' // API because used in templates
+	api 'org.apache.grails.data:grails-datamapping-core' // API because used in templates
+	api 'org.apache.grails.events:grails-events-transforms' // API because used in templates
+	api 'org.apache.grails:grails-mimetypes'
+	api 'org.apache.grails:grails-async' // AsyncGrailsWebRequest is used in public API
+	api 'org.apache.grails.web:grails-web-common'
+	api 'org.apache.grails.web:grails-web-url-mappings'
 	api 'org.springframework:spring-beans'
 	api 'org.springframework:spring-context'
 	api 'org.springframework:spring-context'
@@ -37,10 +35,10 @@ dependencies {
 
 	implementation 'org.apache.commons:commons-text'
 	implementation "org.ehcache:ehcache"
-	implementation 'org.grails:grails-bootstrap'
-	implementation 'org.grails:grails-plugin-rest'
-	implementation 'org.grails.plugins:converters'
-	implementation 'org.grails.plugins:events' // Events Plugin is required to implement EventBus
+	implementation 'org.apache.grails.bootstrap:grails-bootstrap'
+	implementation 'org.apache.grails:grails-rest-transforms'
+	implementation 'org.apache.grails:grails-converters'
+	implementation 'org.apache.grails:grails-events' // Events Plugin is required to implement EventBus
 	implementation 'org.springframework.boot:spring-boot'
 	implementation 'org.springframework:spring-context-support'
 	implementation 'org.springframework:spring-core'
@@ -52,10 +50,10 @@ dependencies {
 	compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
 	compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation
 
-	runtimeOnly 'org.grails:grails-plugin-services' // A service is defined in the plugin
+	runtimeOnly 'org.apache.grails:grails-services' // A service is defined in the plugin
 
-	testImplementation 'org.grails:grails-gorm-testing-support'
-	testImplementation 'org.grails:grails-web-testing-support'
+	testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+	testImplementation 'org.apache.grails:grails-testing-support-web'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.spockframework:spock-core'
 	testImplementation 'org.springframework:spring-test'

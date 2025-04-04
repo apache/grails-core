@@ -10,13 +10,14 @@ file('../gradle.properties').withInputStream {
 repositories {
     mavenCentral()
     maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
-    implementation platform("org.grails:grails-bom:${versions.get('grailsVersion')}")
+    implementation platform("org.apache.grails:grails-bom:${versions.get('grailsVersion')}")
     implementation "org.asciidoctor:asciidoctor-gradle-jvm:${versions.get('asciidoctorGradlePluginVersion')}"
     implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
-    implementation 'org.grails:grails-gradle-plugin'
+    implementation 'org.apache.grails:grails-gradle-plugins'
     testImplementation 'org.spockframework:spock-core'
 }
 

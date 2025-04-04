@@ -1,43 +1,40 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-gsp'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gsp'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-    publishArtifactId = 'spring-security-acl'
+    publishArtifactId = 'grails-spring-security-acl'
     pomTitle = 'Grails Spring Security ACL Plugin'
     pomDescription = 'Adds Spring Security ACL support to a Grails application.'
     pomDevelopers = ['burtbeckwith': 'Burt Beckwith']
-
 }
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.grails:grails-core"
+    implementation "org.apache.grails:grails-core"
     implementation "org.springframework.boot:spring-boot-starter-actuator"
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.grails:grails-web-boot"
-    implementation "org.grails:grails-logging"
-    implementation "org.grails:grails-plugin-rest"
-    implementation "org.grails:grails-plugin-databinding"
-    implementation "org.grails:grails-plugin-i18n"
-    implementation "org.grails:grails-plugin-services"
-    implementation "org.grails:grails-plugin-url-mappings"
-    implementation "org.grails:grails-plugin-interceptors"
-    implementation "org.grails.plugins:gsp"
-    console "org.grails:grails-console"
-    profile "org.grails.profiles:web-plugin"
-    runtimeOnly "org.grails:grails-plugin-services"
-    runtimeOnly "org.grails:grails-plugin-domain-class"
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "org.grails:grails-web-testing-support"
+    implementation "org.apache.grails.web:grails-web-boot"
+    implementation "org.apache.grails:grails-logging"
+    implementation "org.apache.grails:grails-rest-transforms"
+    implementation "org.apache.grails:grails-databinding"
+    implementation "org.apache.grails:grails-i18n"
+    implementation "org.apache.grails:grails-services"
+    implementation "org.apache.grails:grails-url-mappings"
+    implementation "org.apache.grails:grails-interceptors"
+    implementation "org.apache.grails:grails-gsp"
+    console "org.apache.grails:grails-console"
+    profile "org.apache.grails.profiles:web-plugin"
+    runtimeOnly "org.apache.grails:grails-services"
+    runtimeOnly "org.apache.grails:grails-domain-class"
+    testImplementation "org.apache.grails:grails-testing-support-datamapping"
+    testImplementation "org.apache.grails:grails-testing-support-web"
 
     implementation 'org.ehcache:ehcache'
 

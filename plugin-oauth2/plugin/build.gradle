@@ -1,13 +1,13 @@
 plugins {
 	id 'java-library'
-	id 'org.grails.grails-plugin'
-	id 'org.grails.grails-gsp'
+	id 'org.apache.grails.gradle.grails-plugin'
+	id 'org.apache.grails.gradle.grails-gsp'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-	publishArtifactId = 'spring-security-oauth2'
+	publishArtifactId = 'grails-spring-security-oauth2'
 	pomTitle = 'Grails Spring Security OAuth2 Plugin'
 	pomDescription = 'This plugin provides the capability to authenticate via oauth and depends on grails-spring-security.'
 	pomDevelopers = [
@@ -20,8 +20,6 @@ ext {
 
 dependencies {
 
-	implementation platform("org.grails:grails-bom:$grailsVersion")
-
 	api project(':core-plugin'), {
 		// api: GrailsUserDetailsService, SpringSecurityService
 		// impl: GormUserDetailsService, GrailsUser, ReflectionUtils, @Secured(runtime), SecurityContextHolder,
@@ -31,7 +29,7 @@ dependencies {
 		// api: DefaultApi20, OAuth2AccessToken, OAuth20Service, Response
 		// impl: OAuthRequest, ServiceBuilder, Verb
 	}
-	api 'org.grails:grails-bootstrap', {
+	api 'org.apache.grails.bootstrap:grails-bootstrap', {
 		// api: ConsoleLogger
 		// impl: GrailsConsole, Model
 	}
@@ -39,7 +37,7 @@ dependencies {
 		// api: AbstractAuthenticationToken, AuthenticationManager, GrantedAuthority
 		// impl: AuthenticationException, UserDetails, UsernamePasswordAuthenticationToken
 	}
-	api 'org.grails:grails-taglib', {
+	api 'org.apache.grails.views:grails-taglib', {
 		// api: GrailsTagException
 	}
 
@@ -52,23 +50,23 @@ dependencies {
 	implementation 'jline:jline', {
 		// comp: ConsoleReader
 	}
-	implementation 'org.grails:grails-datastore-gorm', {
+	implementation 'org.apache.grails.data:grails-datamapping-core', {
 		// impl: @Transactional(runtime)
 	}
-	implementation 'org.grails:grails-plugin-controllers', {
+	implementation 'org.apache.grails:grails-controllers', {
 		// impl: ControllerTraitInjector
 	}
-	implementation 'org.grails.plugins:converters', {
+	implementation 'org.apache.grails:grails-converters', {
 		// impl: JSON
 	}
 	implementation 'org.springframework:spring-webmvc', {
 		// impl: ModelAndView
 	}
 
-	runtimeOnly 'org.grails:grails-plugin-i18n'
-	runtimeOnly 'org.grails:grails-plugin-services'
+	runtimeOnly 'org.apache.grails:grails-i18n'
+	runtimeOnly 'org.apache.grails:grails-services'
 
-	compileOnly 'org.grails:grails-core', { // Provided as this is a Grails plugin
+	compileOnly 'org.apache.grails:grails-core', { // Provided as this is a Grails plugin
 		// api: GrailsApplication, GrailsApplicationCommand, GrailsAutoConfiguration, Plugin
 		// impl: Holders
 		// comp: @PluginSource(source)
@@ -76,9 +74,12 @@ dependencies {
 	compileOnly 'org.slf4j:slf4j-api', {
 		// impl: @Slf4j(source)
 	}
+	compileOnly 'org.slf4j:slf4j-nop', {
+		// Remove warning about missing slf4j implementation during gsp compilation
+	}
 	compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
 
-	integrationTestImplementation 'org.grails:grails-web-testing-support'
+	integrationTestImplementation 'org.apache.grails:grails-testing-support-web'
 	integrationTestImplementation 'org.spockframework:spock-core'
 
 	integrationTestRuntimeOnly 'net.bytebuddy:byte-buddy'

@@ -1,40 +1,38 @@
 plugins {
-    id 'org.grails.grails-web'
+    id 'org.apache.grails.gradle.grails-web'
 }
 
 group = 'grails.spring.security.hierarchical.roles'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
     implementation project(':core-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-datastore-core', {
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails.data:grails-datastore-core', {
         // AbstractPersistenceEvent, PreInsertEvent, PreUpdateEvent
     }
-    implementation 'org.grails:grails-datastore-gorm', {
+    implementation 'org.apache.grails.data:grails-datamapping-core', {
         // DetachedCriteria, @Transactional
     }
-    implementation 'org.grails:grails-plugin-domain-class'
-    implementation 'org.grails:grails-events-transform', {
+    implementation 'org.apache.grails:grails-domain-class'
+    implementation 'org.apache.grails.events:grails-events-transforms', {
         // @Listener
     }
-    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.springframework:spring-beans', {
         // @Autowired
     }
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.grails.plugins:hibernate5'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-data-hibernate5'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    integrationTestImplementation testFixtures('org.grails.plugins:geb')
-    integrationTestImplementation 'org.grails:grails-web-testing-support'
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-web'
     integrationTestImplementation 'org.spockframework:spock-core'
 }
 

@@ -1,31 +1,29 @@
 plugins {
-    id 'org.grails.grails-web'
+    id 'org.apache.grails.gradle.grails-web'
 }
 
 group = 'grails.plugin.springsecurity.acl'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
     implementation project(':acl-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-web-boot'
-    implementation 'org.grails:grails-plugin-rest'
-    implementation 'org.grails.plugins:gsp'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-gsp'
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.grails:grails-plugin-databinding'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-services'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
-    runtimeOnly 'org.grails.plugins:hibernate5'
+    runtimeOnly 'org.apache.grails:grails-databinding'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-services'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-data-hibernate5'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    integrationTestImplementation 'org.grails:grails-web-testing-support'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-web'
     integrationTestImplementation 'org.spockframework:spock-core'
 }
 

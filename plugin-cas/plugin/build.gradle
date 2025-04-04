@@ -1,12 +1,12 @@
 plugins {
 	id 'java-library'
-	id 'org.grails.grails-plugin'
+	id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-	publishArtifactId = 'spring-security-cas'
+	publishArtifactId = 'grails-spring-security-cas'
 	pomTitle = 'Grails Spring Security CAS Plugin'
 	pomDescription = 'The CAS plugin adds CAS single sign-on support to a Grails application that uses Spring Security.'
 	pomDevelopers = ['burtbeckwith': 'Burt Beckwith']
@@ -15,9 +15,9 @@ ext {
 dependencies {
 	compileOnly "jakarta.servlet:jakarta.servlet-api"
 	compileOnly "org.springframework.boot:spring-boot-starter-logging"
-	compileOnly "org.grails:grails-web-boot"
+	compileOnly "org.apache.grails.web:grails-web-boot"
 
-	profile "org.grails.profiles:web-plugin"
+	profile "org.apache.grails.profiles:web-plugin"
 	api project(':core-plugin')
 
 	api "org.apereo.cas.client:cas-client-core:$casClientCoreVersion"

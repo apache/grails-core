@@ -1,12 +1,12 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-    publishArtifactId = project.name
+    publishArtifactId = 'grails-spring-security-rest'
     pomTitle = 'Grails Spring Security REST Plugin'
     pomDescription = 'Grails plugin to implement token-based, RESTful authentication using Spring Security'
     pomDevelopers = [
@@ -18,8 +18,6 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
     api project(':core-plugin'), {
         // api: NullAuthenticationEventPublisher, SecurityEventListener
         // impl: BeanTypeResolver, @Secured(runtime), SecurityFilterPosition, SpringSecurityUtils
@@ -28,7 +26,7 @@ dependencies {
         // api: EncryptionMethod, JOSEException, JWEAlgorithm, JWSAlgorithm, JWSSigner, JWT, JWTClaimsSet
         // impl: EncryptedJWT, EncryptionMethod, JWEHeader, JWSHeader, JWTParser, MACSigner, MACVerifier, PlainJWT, RSADecrypter, RSAEncrypter, SignedJWT
     }
-    api 'org.grails:grails-web-url-mappings', {
+    api 'org.apache.grails.web:grails-web-url-mappings', {
         // api: LinkGenerator
     }
     api "org.pac4j:pac4j-core:$pac4jVersion", {
@@ -73,10 +71,10 @@ dependencies {
     implementation 'commons-codec:commons-codec', {
         // impl: Base64
     }
-    implementation 'org.grails:grails-plugin-codecs', {
+    implementation 'org.apache.grails:grails-codecs', {
         // impl: URLCodec
     }
-    implementation 'org.grails.plugins:converters', {
+    implementation 'org.apache.grails:grails-converters', {
         // impl: JSON
     }
     implementation "org.pac4j:pac4j-jakartaee:$pac4jVersion", {
@@ -86,13 +84,13 @@ dependencies {
         // impl: Assert
     }
 
-    runtimeOnly 'org.grails:grails-plugin-services', {
+    runtimeOnly 'org.apache.grails:grails-services', {
         // Project has services
     }
 
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
-    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
-    compileOnly 'org.grails:grails-plugin-controllers', {
+    compileOnly 'org.apache.grails:grails-core' // Provided as this is a Grails plugin
+    compileOnly 'org.apache.grails:grails-controllers', {
         // ControllerTraitInjector
     }
     compileOnly 'jakarta.servlet:jakarta.servlet-api', { // Provided by Tomcat
@@ -103,8 +101,8 @@ dependencies {
         // impl: CasOAuthWrapperClient
     }
     testImplementation 'org.gperfutils:gbench:0.4.3-groovy-2.4'
-    testImplementation 'org.grails:grails-gorm-testing-support'
-    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy'

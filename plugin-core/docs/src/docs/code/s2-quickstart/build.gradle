@@ -1,11 +1,13 @@
 buildscript {
     repositories {
-        maven { url "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:$assetPipelineVersion"
-        classpath "org.grails.plugins:hibernate5:8.0.3"
+        classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+        classpath "org.apache.grails:grails-gradle-plugins"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
+        classpath "org.apache.grails:grails-data-hibernate5"
     }
 }
 
@@ -15,34 +17,35 @@ group "s2.quickstart"
 apply plugin:"eclipse"
 apply plugin:"idea"
 apply plugin:"war"
-apply plugin:"org.grails.grails-web"
-apply plugin:"org.grails.grails-gsp"
+apply plugin:"org.apache.grails.gradle.grails-web"
+apply plugin:"org.apache.grails.gradle.grails-gsp"
 apply plugin: "com.bertramlabs.asset-pipeline"
 
 repositories {
-    maven { url "https://repo.grails.org/grails/core" }
+    maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
-    console "org.grails:grails-console"
+    console "org.apache.grails:grails-console"
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-starter-validation"
     implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.grails:grails-core"
+    implementation "org.apache.grails:grails-core"
     implementation "org.springframework.boot:spring-boot-starter-actuator"
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.grails:grails-web-boot"
-    implementation "org.grails:grails-logging"
-    implementation "org.grails:grails-plugin-rest"
-    implementation "org.grails:grails-plugin-databinding"
-    implementation "org.grails:grails-plugin-i18n"
-    implementation "org.grails:grails-plugin-services"
-    implementation "org.grails:grails-plugin-url-mappings"
-    implementation "org.grails:grails-plugin-interceptors"
-    implementation "org.grails.plugins:cache"
-    implementation "org.grails.plugins:async"
-    implementation "org.grails.plugins:scaffolding"
-    implementation "org.grails.plugins:hibernate5"
+    implementation "org.apache.grails.web:grails-web-boot"
+    implementation "org.apache.grails:grails-logging"
+    implementation "org.apache.grails:grails-rest-transforms"
+    implementation "org.apache.grails:grails-databinding"
+    implementation "org.apache.grails:grails-i18n"
+    implementation "org.apache.grails:grails-services"
+    implementation "org.apache.grails:grails-url-mappings"
+    implementation "org.apache.grails:grails-interceptors"
+    implementation "org.apache.grails:grails-cache"
+    implementation "org.apache.grails:grails-async"
+    implementation "org.apache.grails:grails-scaffolding"
+    implementation "org.apache.grails:grails-data-hibernate5"
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
         // exclude javax variant of hibernate-core
         exclude group: 'org.hibernate', module: 'hibernate-core'
@@ -50,19 +53,19 @@ dependencies {
     runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }
-    implementation "org.grails.plugins:events"
-    implementation "org.grails.plugins:gsp"
-    profile "org.grails.profiles:web"
-    implementation 'org.grails.plugins:spring-security-core:6.1.0'
+    implementation "org.apache.grails:grails-events"
+    implementation "org.apache.grails:grails-gsp"
+    profile "org.apache.grails.profiles:web"
+    implementation 'org.apache.grails:spring-security-core:6.1.0' // TODO: Version?
     runtimeOnly "org.glassfish.web:el-impl:2.2.1-b05"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
     runtimeOnly "javax.xml.bind:jaxb-api:2.3.1"
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:4.3.0"
-    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-datamapping"
     testImplementation "org.mockito:mockito-core"
-    testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.grails.plugins:geb"
+    testImplementation "org.apache.grails:grailstesting-support-web"
+    testImplementation "org.apache.grails:grails-geb"
     testImplementation "org.seleniumhq.selenium:selenium-remote-driver:4.16.1"
     testImplementation "org.seleniumhq.selenium:selenium-api:4.16.1"
     testImplementation "org.seleniumhq.selenium:selenium-support:4.16.1"

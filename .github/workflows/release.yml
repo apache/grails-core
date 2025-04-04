@@ -2,9 +2,9 @@ name: "Release"
 on:
   release:
     types: [published]
-env:
-  GIT_USER_NAME: grails-build
-  GIT_USER_EMAIL: grails-build@users.noreply.github.com
+permissions:
+  contents: write
+  packages: read
 jobs:
   release:
     runs-on: ubuntu-24.04
@@ -23,7 +23,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📝 Store the current release version"
         id: release_version
         run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
@@ -37,10 +37,10 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'true'
-          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
-          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
-          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
-          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
+          NEXUS_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_RELEASE_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }} # TODO: What about this secret?
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
         run: >

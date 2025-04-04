@@ -1,27 +1,26 @@
 plugins {
     id 'com.bertramlabs.asset-pipeline'
-    id 'org.grails.grails-web'
-    id 'org.grails.grails-gsp'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gsp'
 }
 
 group = 'functional.test'
 
 repositories {
     maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
     implementation project(':acl-plugin')
     implementation project(':core-plugin')
     implementation project(':ui-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-plugin-interceptors'
-    implementation 'org.grails:grails-plugin-databinding'
-    implementation 'org.grails:grails-plugin-rest' // Needed for respond method in controllers
-    implementation 'org.grails.plugins:hibernate5'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails:grails-rest-transforms' // Needed for respond method in controllers
+    implementation 'org.apache.grails:grails-data-hibernate5'
 
     implementation "dumbster:dumbster:$dumbsterVersion", { transitive = false } // Uses javax
     implementation "org.grails.plugins:mail:$mailVersion"
@@ -31,21 +30,18 @@ dependencies {
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-services'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-services'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    testImplementation 'org.grails:grails-gorm-testing-support'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.spockframework:spock-core'
 
-    integrationTestImplementation testFixtures('org.grails.plugins:geb')
-
-    // Workaround for asset-pipeline bug
-    integrationTestRuntimeOnly 'org.graalvm.js:js-community:24.1.2'
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')

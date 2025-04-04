@@ -1,12 +1,12 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
-    publishArtifactId = project.name
+    publishArtifactId = 'grails-spring-security-rest-grailscache'
     pomTitle = 'Grails Spring Security REST Plugin'
     pomDescription = 'Grails plugin to implement token-based, RESTful authentication using Spring Security'
     pomDevelopers = [
@@ -18,9 +18,7 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-
-    api 'org.grails.plugins:cache', {
+    api 'org.apache.grails:grails-cache', {
         // api: GrailsCacheManager
     }
     api 'org.springframework:spring-context', {
@@ -40,7 +38,7 @@ dependencies {
         // impl: @PostConstruct(runtime)
     }
 
-    compileOnly 'org.grails:grails-core' // Provided as this is a Grails plugin
+    compileOnly 'org.apache.grails:grails-core' // Provided as this is a Grails plugin
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
 
     testImplementation 'org.spockframework:spock-core'

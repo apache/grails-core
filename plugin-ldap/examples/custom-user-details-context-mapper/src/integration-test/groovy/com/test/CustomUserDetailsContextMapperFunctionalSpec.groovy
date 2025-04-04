@@ -30,13 +30,13 @@ class CustomUserDetailsContextMapperFunctionalSpec extends AbstractSecurityFunct
 		assertContentContains 'Please Login'
 
 		when:
-		login 'galieleo', 'password'
+		login 'galileo', 'password'
 
 		then:
 		at SecureUserPage
 
 		and:
-		assertContentContains('galieleo@ldap.forumsys.com')
+		assertContentContains('galileo@ldap.forumsys.com')
 
 		when:
 		logout()
