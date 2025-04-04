@@ -19,7 +19,7 @@ dependencies {
     testImplementation project(':grails-codecs')
 
     testImplementation project(':grails-test-suite-base')
-    testImplementation "org.grails:grails-web-testing-support", {
+    testImplementation "org.apache.grails:grails-testing-support-web", {
         exclude module:'grails-plugin-rest' // TODO: Remove after gsp is built
         exclude module:'grails-rest-transforms'
         exclude module:'grails-interceptors'
@@ -28,7 +28,7 @@ dependencies {
         exclude module:'grails-test' // TODO: Remove after gsp is built
         exclude module:'grails-core'
         exclude module:'grails-async'
-        exclude module:'gsp'
+        exclude module:'grails-gsp-core'
         exclude module:'grails-testing-support-core'
         exclude module:'grails-testing-support' //TODO: Remove after gsp is built
     }

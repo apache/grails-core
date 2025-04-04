@@ -16,7 +16,7 @@ dependencies {
     }
     api project(":grails-databinding-core")
     api project(":grails-encoder")
-    compileOnly "org.grails:grails-gsp", {
+    compileOnly "org.apache.grails.views:grails-gsp-core", {
         exclude module: 'grails-encoder'
         exclude module: 'grails-core'
     }

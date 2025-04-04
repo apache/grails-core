@@ -21,7 +21,7 @@ def configurations = [
                 "org.apache.grails:grails-interceptors:$version",
                 "org.apache.grails:grails-async:$version",
                 "org.apache.grails:grails-events:$version",
-                "org.grails.plugins:gsp:${property('gsp.version')}",
+                "org.apache.grails:grails-gsp:${property('gsp.version')}",
         ],
         'runtimeOnly': [
                 "com.h2database:h2:${property('h2.version')}",

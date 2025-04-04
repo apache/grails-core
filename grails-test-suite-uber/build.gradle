@@ -27,7 +27,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
-    testImplementation "org.grails.plugins:gsp", {
+    testImplementation "org.apache.grails:grails-gsp", {
         exclude module: 'grails-datastore-gorm-validation' // TODO: Remove after views is built
     }
     testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
@@ -37,7 +37,7 @@ dependencies {
         exclude module: 'grails-plugin-rest' // TODO: remove after gorm is built
         exclude module: 'grails-rest-transforms'
     }
-    testImplementation 'org.grails:grails-web-testing-support', {
+    testImplementation 'org.apache.grails:grails-testing-support-web', {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-datastore-gorm-validation' // TODO: Remove after views is built

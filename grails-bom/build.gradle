@@ -50,7 +50,6 @@ ext {
         org.asciidoctor:asciidoctorj::
         org.fusesource.jansi:jansi::
         org.gebish:geb-spock::
-        org.grails.plugins:gsp::
         org.apache.grails.data:grails-data-hibernate5-core:::grails-datastore
         org.apache.grails.data:grails-datamapping-mongodb:::grails-datastore
         org.apache.grails.data:grails-datastore-async,grails-datastore-core,grails-datastore-web:::grails-datastore
@@ -58,8 +57,9 @@ ext {
         org.apache.grails:grails-testing-support-datamapping:::grails-datastore
         org.grails:grails-gdoc-engine::
         org.apache.grails:grails-gradle-plugins::
-        org.grails:grails:gsp,web-gsp,web-taglib,web-testing-support::gsp
-        org.grails:views-json-testing-support::
+        org.apache.grails:grails:gsp,web-testing-support::gsp
+        org.apache.grails.views:grails:gsp,gsp-core,web-gsp,web-taglib::gsp
+        org.apache.grails:grails:testing-support-views-gson,testing-support-web::gsp
         org.grails.profiles:base,plugin,profile,web,rest-api,web-plugin,rest-api-plugin,react,vue,angular:::profiles
         org.jsoup:jsoup::
         org.liquibase:liquibase-cdi,liquibase-core:::liquibase

@@ -35,13 +35,13 @@ dependencies {
 
     implementation "org.apache.grails:grails-data-hibernate5"
     implementation "org.grails.plugins:cache"
-    implementation "org.grails.plugins:scaffolding"
+    implementation "org.apache.grails:grails-scaffolding"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
-    runtimeOnly "org.grails.plugins:fields"
+    runtimeOnly "org.apache.grails:grails-fields"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
 
-    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-web"
     testImplementation "org.apache.grails:grails-testing-support-datamapping"
 
     console "org.apache.grails:grails-console"

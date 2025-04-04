@@ -18,7 +18,7 @@ dependencies {
     api project(":grails-encoder")
     api "org.apache.groovy:groovy:$groovyVersion"
 
-    api "org.grails:grails-web-gsp", {
+    api "org.apache.grails.views:grails-web-gsp", {
         exclude module: 'grails-encoder'
         exclude module: 'grails-core'
         exclude module: 'grails-web-common'

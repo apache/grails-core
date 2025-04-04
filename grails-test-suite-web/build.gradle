@@ -18,7 +18,7 @@ dependencies {
     testImplementation project(':grails-interceptors')
     testImplementation project(':grails-rest-transforms')
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation 'org.grails:grails-web-testing-support', {
+    testImplementation 'org.apache.grails:grails-testing-support-web', {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-plugin-interceptors' // TODO: remove after views is built
