@@ -177,7 +177,7 @@ gradlePlugin {
         grailsProfilePublish {
             displayName = "Grails Profile Publish Plugin"
             description = 'A plugin for publishing profiles'
-            id = 'org.apache.grails.gradle.grails-profile-publish'
+            id = 'org.apache.grails.gradle.grails-publish-profile'
             implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfilePublishGradlePlugin'
         }
     }
