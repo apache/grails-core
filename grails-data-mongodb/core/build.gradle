@@ -4,12 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    pomArtifactId = 'grails-datastore-gorm-mongodb'
+    pomArtifactId = 'grails-data-mongodb-core'
     pomTitle = 'GORM for MongoDB'
     pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
     pomDevelopers =  [
@@ -21,16 +20,16 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    api project(':mongodb-gorm-bson'), {
+    api project(':mongodb-bson'), {
         // api: BsonQuery, EmbeddedQueryEncoder
         // impl: CodecCustomTypeMarshaller
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm-bson
+            // API dependencies in grails-data-mongodb-bson
             exclude group: 'org.mongodb', module: 'bson'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
         }
     }
     api project(':grails-datastore-core'), {
@@ -43,9 +42,9 @@ dependencies {
             //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PreDestroy
             exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
-            exclude group: 'org.grails', module: 'grails-bootstrap'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-spring'
+            exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails', module: 'grails-spring'
             exclude group: 'org.springframework', module: 'spring-beans'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
@@ -60,21 +59,21 @@ dependencies {
             // API dependencies in grails-datastore-gorm
             //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PreDestroy
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            //exclude group: 'org.grails', module: 'grails-datastore-gorm-validation' // ConstraintRegistry
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            //exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation' // ConstraintRegistry
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-jdbc'
             exclude group: 'org.springframework', module: 'spring-tx'
         }
     }
-    api project(':grails-datastore-gorm-support'), {
+    api project(':grails-datamapping-support'), {
         // api: AbstractDatastorePersistenceContextInterceptor
         // impl: DatastorePersistenceContextInterceptor
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm-support
-            exclude group: 'org.grails', module: 'grails-core'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm'
+            // API dependencies in grails-datamapping-support
+            exclude group: 'org.apache.grails', module: 'grails-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
         }
@@ -95,16 +94,16 @@ dependencies {
         // api: ApplicationEventPublisher
     }
 
-    implementation 'org.grails:grails-core', {
+    implementation 'org.apache.grails:grails-core', {
         // impl: GrailsMessageSourceUtils
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-core
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // FetchType
-            //exclude group: 'org.grails', module: 'grails-bootstrap' // Resource
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-spring'
+            //exclude group: 'org.apache.grails.data', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails', module: 'grails-spring'
             exclude group: 'org.springframework', module: 'spring-beans'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
@@ -124,7 +123,7 @@ dependencies {
 
     testImplementation 'jakarta.validation:jakarta.validation-api'
     testImplementation 'junit:junit' // JUnit 4
-    testImplementation 'org.grails:grails-testing-support'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

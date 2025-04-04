@@ -30,9 +30,9 @@ With contents:
 dependencies {
     implementation project(':grails-datastore-gorm'),
             project(':grails-datastore-web'),
-            project(':grails-datastore-gorm-support')
+            project(':grails-datamapping-support')
             
-    testImplementation project(':grails-datastore-gorm-tck')
+    testImplementation project(':grails-datamapping-tck-tests')
     testRuntime "javax.servlet:javax.servlet-api:$servletApiVersion"
 
 }

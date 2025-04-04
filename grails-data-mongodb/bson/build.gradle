@@ -4,12 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    pomArtifactId = 'grails-datastore-gorm-bson'
+    pomArtifactId = 'grails-data-mongodb-bson'
     pomTitle = 'GORM for MongoDB'
     pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
     pomDevelopers =  [
@@ -21,7 +20,7 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api 'org.mongodb:bson', {
         // api: AbstractBsonReader, AbstractBsonWriter, BsonBinary, BsonContextType, BsonDbPointer, BsonReader,
@@ -39,9 +38,9 @@ dependencies {
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
-            exclude group: 'org.grails', module: 'grails-bootstrap'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-spring'
+            exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails', module: 'grails-spring'
             exclude group: 'org.springframework', module: 'spring-beans'
             exclude group: 'org.springframework', module: 'spring-context'
             //exclude group: 'org.springframework', module: 'spring-core' // ConversionService
@@ -56,8 +55,8 @@ dependencies {
             // API dependencies in grails-datastore-gorm
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
             //exclude group: 'org.springframework', module: 'spring-context' // Validator
             exclude group: 'org.springframework', module: 'spring-jdbc'
             exclude group: 'org.springframework', module: 'spring-tx'

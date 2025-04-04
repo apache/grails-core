@@ -5,7 +5,7 @@ plugins {
 }
 
 version project.projectVersion
-group 'org.grails'
+group 'org.apache.grails'
 
 def asciidoctorAttributes = [
         icons               : 'font',

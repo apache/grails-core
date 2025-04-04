@@ -1,0 +1,85 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomArtifactId = 'grails-data-mongodb-gson-templates'
+    pomTitle = 'Grails MongoDB JSON Views'
+    pomDescription = 'Provides JSON Views for MongoDB to the Grails framework.'
+    pomDevelopers = ['puneetbehl': 'Puneet Behl']
+}
+
+dependencies {
+
+    implementation(platform("org.apache.grails:grails-bom:$grailsVersion"))
+
+    api 'org.grails.plugins:views-json', {
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-plugin-mimetypes' // TODO: Remove when views is published
+        exclude group: 'org.grails', module: 'grails-web-url-mappings' // TODO: Remove when views is published
+        exclude group: 'org.grails', module: 'grails-plugin-rest' // TODO: Remove when views is published
+    }
+
+    // TODO: BEGIN remove when views is published
+    api 'org.apache.grails:grails-mimetypes', {
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
+    api 'org.apache.grails.web:grails-web-url-mappings', {
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
+    api 'org.apache.grails:grails-rest-transforms', { // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
+    // TODO: END remove when views is published
+
+    implementation project(':mongodb-core')
+    implementation project(':mongodb-bson')
+
+    compileOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during compileGsonViews task
+}
+
+def templateSourceDir = layout.projectDirectory.dir('src/templates')
+def compilationOutputDir = layout.buildDirectory.dir('classes/groovy/main')
+sourceSets {
+    main {
+        groovy {
+            // Add templates as source dir
+            srcDirs = [templateSourceDir]
+        }
+    }
+}
+
+tasks.register('compileViews', JavaExec) {
+    inputs.dir(templateSourceDir)
+    outputs.dir(compilationOutputDir)
+    mainClass = 'grails.plugin.json.view.JsonViewCompiler'
+    classpath = configurations.compileClasspath
+    args(templateSourceDir.asFile, compilationOutputDir.get().asFile, '17', ' ', ' ', 'none', 'UTF-8')
+}
+
+// This is needed to trigger compilation of the views
+tasks.named('classes') {
+    dependsOn 'compileViews'
+}
+
+// There are no javadocs for this project.
+// This is a workaround as a javadoc jar is required for publishing.
+tasks.register('javadocJar', Jar) {
+    from 'src/templates'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

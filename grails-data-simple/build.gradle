@@ -4,15 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
-
-ext {
-    pomArtifactId = 'grails-datastore-gorm-simple'
-}
+group = 'org.apache.grails.data'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api project(':grails-datastore-core'), {
         // api: AbstractDatastore, AbstractKeyValueEntityPersister, AbstractSession, AssociationIndexer,
@@ -38,8 +34,8 @@ dependencies {
             // API dependencies in grails-datastore-gorm
             //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PostConstruct
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-jdbc'
             exclude group: 'org.springframework', module: 'spring-tx'

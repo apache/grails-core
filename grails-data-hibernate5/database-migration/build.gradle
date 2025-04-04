@@ -1,26 +1,25 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
 version = projectVersion
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
     apiDocs = true
-    pomArtifactId = 'database-migration'
+    pomArtifactId = 'grails-data-hibernate5-dbmigration'
     pomTitle = 'Grails Database Migration Plugin'
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications'
     pomDevelopers = [
         'kazukiyamamoto': 'Kazuki YAMAMOTO',
         'jamesfredley': 'James Fredley',
     ]
-    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
 }
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
     api("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
@@ -31,22 +30,33 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
 
-    api('org.grails:grails-shell') {
+    api('org.apache.grails:grails-shell-cli') {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
     }
 
     compileOnly "org.springframework.boot:spring-boot-starter-logging"
     compileOnly "org.springframework.boot:spring-boot-autoconfigure"
     compileOnly project(":hibernate5-grails-plugin")
-    compileOnly "org.grails:grails-core"
+    compileOnly "org.apache.grails:grails-core", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
     compileOnly "org.apache.groovy:groovy-sql"
     compileOnly "org.apache.groovy:groovy-xml"
 
     testImplementation "org.springframework.boot:spring-boot-starter-tomcat"
     testImplementation project(":hibernate5-grails-plugin")
-    testImplementation "org.grails:grails-core"
-    testImplementation project(":grails-gorm-testing-support")
-    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "org.apache.grails:grails-core", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    testImplementation project(":grails-testing-support-datamapping")
+    testImplementation "org.grails:grails-web-testing-support", {
+        exclude group: 'org.grails', module: 'grails-testing-support' // TODO: Remove after views are published
+        exclude group: 'org.grails', module: 'grails-plugin-interceptors' // TODO: remove after views published
+        exclude group: 'org.grails', module: 'grails-plugin-rest' // TODO: remove when views published
+    }
+    testImplementation 'org.apache.grails:grails-rest-transforms' // TODO: Remove when views published
+    testImplementation 'org.apache.grails:grails-interceptors' // TODO: Remove when views published
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core' // TODO: Remove after views are published
     testImplementation "com.h2database:h2"
 }
 

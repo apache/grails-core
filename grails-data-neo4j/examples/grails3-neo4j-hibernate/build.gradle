@@ -9,12 +9,14 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-actuator"
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
     implementation "javax.servlet:javax.servlet-api:$servletApiVersion"
-    implementation "org.grails:grails-core:$grailsVersion"
-    implementation "org.grails:grails-dependencies:$grailsVersion"
-    implementation "org.grails:grails-web-boot:$grailsVersion"
+    implementation "org.apache.grails:grails-core:$grailsVersion", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    implementation "org.apache.grails:grails-dependencies:$grailsVersion"
+    implementation "org.apache.grails.web:grails-web-boot:$grailsVersion"
 
     implementation project(':grails-plugin')
-    implementation "org.grails.plugins:hibernate5:$hibernateDatastoreVersion"
+    implementation "org.apache.grails:grails-data-hibernate5:$hibernateDatastoreVersion"
     implementation "org.hibernate:hibernate-ehcache:$hibernateEhcacheVersion"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:$assetPipelineVersion"
@@ -22,14 +24,12 @@ dependencies {
     runtimeOnly "org.grails.plugins:fields:$fieldsVersion"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc:9.0.36"
 
-    testImplementation ("org.grails:grails-gorm-testing-support:$testingSupportVersion") {
-        exclude group: "org.spockframework", module: "spock-core"
-    }
+    testImplementation project(':grails-testing-support-datamapping')
     testImplementation ("org.grails:grails-web-testing-support:$testingSupportVersion") {
         exclude group: "org.spockframework", module: "spock-core"
     }
 
-    testImplementation("org.grails.plugins:geb") {
+    testImplementation("org.apache.grails:grails-geb") {
         exclude group: 'org.gebish', module: 'geb-spock'
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }

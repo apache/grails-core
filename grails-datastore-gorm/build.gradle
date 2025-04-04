@@ -4,11 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api project(':grails-datastore-core'), {
         // api: BuildableCriteria, ConnectionSourcesProvider, Criteria, Datastore, MappingContext, PersistentEntity,
@@ -25,12 +25,12 @@ dependencies {
             exclude group: 'org.springframework', module: 'spring-tx'
         }
     }
-    api project(':grails-datastore-gorm-validation'), {
+    api project(':grails-datamapping-validation'), {
         // api: BeforeValidateHelper, CascadingValidator, DefaultValidatorRegistry
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm-validation
+            // API dependencies in grails-datamapping-validation
             exclude group: 'commons-validator', module: 'commons-validator'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
             exclude group: 'org.springframework', module: 'spring-context'
         }
     }
@@ -72,8 +72,9 @@ dependencies {
 
     compileOnly 'org.slf4j:slf4j-api'
 
-    testImplementation 'org.grails:grails-core', {
+    testImplementation 'org.apache.grails:grails-core', {
         // impl: ValidationException
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
     }
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.spockframework:spock-core'

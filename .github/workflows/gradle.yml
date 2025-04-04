@@ -28,7 +28,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Run Build"
         id: build
         env:
@@ -53,7 +53,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "▶️ Start MongoDB (needed for some tests)"
         uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # v1.12.0 (Use commit sha as this is a 3rd party action)
         with:
@@ -81,7 +81,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Run Build"
         id: build
         env:
@@ -103,15 +103,14 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📤 Publish Snapshot to repo.grails.org"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
-          # NOTE: secrets.MAVEN_PUBLISH_URL == https://repo.grails.org/grails/plugins3-snapshot-local
-          MAVEN_PUBLISH_URL: https://repo.grails.org/grails/libs-snapshots-local
+          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         run: ./gradlew --no-build-cache publish
   docs:
     if: github.event_name == 'push'
@@ -130,7 +129,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Docs"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +161,7 @@ jobs:
         continue-on-error: true
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GH_TOKEN }} # must be a PAT since we're triggering on an external repo
+          github-token: ${{ secrets.GRAILS_GH_TOKEN }} # must be a PAT since we're triggering on an external repo
           script: |
             try {
               const result = await github.rest.actions.createWorkflowDispatch({

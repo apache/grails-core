@@ -4,16 +4,16 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation 'org.apache.groovy:groovy'
 
     api "io.reactivex:rxjava"
     api project(":grails-datastore-gorm"), {
-        exclude group:"org.grails", module:'grails-async'
-        exclude group:"org.grails", module:'grails-datastore-core'
+        exclude group:"org.apache.grails.async", module:'grails-async'
+        exclude group:"org.apache.grails.data", module:'grails-datastore-core'
     }
     api project(":grails-datastore-core")
     implementation "org.javassist:javassist:$javassistVersion"

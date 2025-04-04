@@ -4,16 +4,16 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 ext {
     includeBaseTckClass = true
-    //TODO: We could publish the test classes once https://github.com/grails/grails-gradle-plugin/pull/425 is merged
+    //TODO: We could publish the test classes once https://github.com/apache/grails-gradle-plugin/pull/425 is merged
 }
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api project(':grails-datastore-core'), {
         // api: AbstractDatastore, AbstractKeyValueEntityPersister, AbstractSession, AssociationIndexer,
@@ -39,8 +39,8 @@ dependencies {
             // API dependencies in grails-datastore-gorm
             //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PostConstruct
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-jdbc'
             exclude group: 'org.springframework', module: 'spring-tx'
@@ -69,16 +69,16 @@ dependencies {
     testImplementation 'org.junit.platform:junit-platform-suite', {
         // api: SelectClasses, Suite
     }
-    testImplementation 'org.grails:grails-core', {
+    testImplementation 'org.apache.grails:grails-core', {
         // impl: Entity. ValidationException
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-core
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
-            //exclude group: 'org.grails', module: 'grails-bootstrap' // Resource
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-spring'
+            //exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-spring'
             exclude group: 'org.springframework', module: 'spring-beans'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
@@ -86,6 +86,7 @@ dependencies {
             exclude group: 'org.springframework.boot', module: 'spring-boot'
             exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
         }
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
     }
     testImplementation 'org.spockframework:spock-core'
 

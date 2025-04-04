@@ -6,10 +6,9 @@ buildscript {
     dependencies {
         classpath "org.codehaus.groovy.modules.http-builder:http-builder:0.7.2"
         classpath "io.github.gradle-nexus:publish-plugin:1.3.0"
-        classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
+        classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:4.0.2"
         classpath "com.github.erdi:webdriver-binaries-gradle-plugin:3.2"
-        classpath "org.grails.plugins:views-gradle:3.1.2"
     }
 }
 
@@ -95,15 +94,15 @@ subprojects { subproject ->
         apply plugin: 'groovy'
 
         if (isGrails3Example) {
-            apply plugin:"org.grails.grails-web"
+            apply plugin: 'org.apache.grails.gradle.grails-web'
             apply plugin:"org.grails.grails-gsp"
 
             if (usesGeb) {
                 apply plugin:"com.github.erdi.webdriver-binaries"
             }
         } else if (subproject.name == "examples-test-data-service") {
-            apply plugin:"org.grails.grails-web"
-            apply plugin:"org.grails.plugins.views-json"
+            apply plugin: 'org.apache.grails.gradle.grails-web'
+            apply plugin: 'org.apache.grails.gradle.grails-gson'
         }
 
         configurations.all {
@@ -114,7 +113,7 @@ subprojects { subproject ->
                     details.useVersion(springVersion)
                 } else if (details.requested.group == 'org.springframework.boot') {
                     details.useVersion(springBootVersion)
-                } else if (details.requested.name in ['grails-testing-support', 'grails-web-testing-support', 'grails-gorm-testing-support']) {
+                } else if (details.requested.name in ['grails-testing-support', 'grails-web-testing-support', 'grails-testing-support-datamapping']) {
                     details.useVersion(testingSupportVersion)
                 }
             }
@@ -199,7 +198,7 @@ subprojects { subproject ->
     apply plugin: 'signing'
 
     if(isGrails3PluginProject) {
-        apply plugin: "org.grails.grails-plugin"
+        apply plugin: 'org.apache.grails.gradle.grails-plugin'
     } else {
         apply plugin:"groovy"
     }
@@ -219,12 +218,14 @@ subprojects { subproject ->
                     details.requested.name in ['grails-datastore-core',
                                                'grails-datastore-async',
                                                'grails-datastore-gorm',
-                                               'grails-datastore-gorm-async',
+                                               'grails-datamapping-async',
                                                'grails-datastore-gorm-rx',
-                                               'grails-datastore-gorm-support',
-                                               'grails-datastore-gorm-tck',
+                                               'grails-datamapping-support',
+                                               'grails-datamapping-tck-tests',
+                                               'grails-datamapping-tck-base',
+                                               'grails-datamapping-tck-domains',
                                                'grails-datastore-gorm-test',
-                                               'grails-datastore-gorm-validation',
+                                               'grails-datamapping-validation',
                                                'grails-datastore-web']
             ) {
                 details.useVersion(datastoreVersion)

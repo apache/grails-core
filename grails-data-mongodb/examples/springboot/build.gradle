@@ -3,7 +3,7 @@ apply plugin: 'org.springframework.boot'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':mongodb-boot-plugin')
     implementation 'org.apache.groovy:groovy'

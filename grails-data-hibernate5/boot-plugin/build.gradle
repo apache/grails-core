@@ -4,12 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    pomArtifactId = 'gorm-hibernate5-spring-boot'
+    pomArtifactId = 'grails-data-hibernate5-spring-boot'
     pomDevelopers =  [
             'graemerocher': 'Graeme Rocher',
             'jeffscottbrown': 'Jeff Brown',
@@ -20,16 +19,16 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    compileOnly "org.grails:grails-shell", {
+    compileOnly "org.apache.grails:grails-shell-cli", {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     api "org.apache.groovy:groovy"
     api "org.springframework.boot:spring-boot-autoconfigure"
-    api project(":hibernate5-gorm")
+    api project(":hibernate5-core")
 
-    testImplementation "org.grails:grails-shell", {
+    testImplementation "org.apache.grails:grails-shell-cli", {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     testImplementation "org.spockframework:spock-core"

@@ -1,15 +1,17 @@
 plugins {
-    id 'org.grails.grails-web'
+    id 'org.apache.grails.gradle.grails-web'
 }
 
 version = projectVersion
 group = 'examples'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':hibernate5-grails-plugin')
-    implementation 'org.grails:grails-core'
+    implementation 'org.apache.grails:grails-core', {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
     implementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
@@ -19,7 +21,7 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
 
-    testImplementation 'org.grails:grails-testing-support'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 }
 
 apply {

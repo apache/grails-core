@@ -3,17 +3,17 @@ sourceSets.main.groovy.srcDirs += ["src/main/java"]
 
 dependencies {
     api "org.neo4j.driver:neo4j-java-driver:$neo4jDriverVersion"
-    api "org.grails:grails-datastore-gorm-validation:$datastoreVersion"
-    api "org.grails:grails-datastore-gorm:$datastoreVersion"
+    api "org.apache.grails.data:grails-datamapping-validation:$datastoreVersion"
+    api "org.apache.grails.data:grails-datamapping-core:$datastoreVersion"
 
     // only needed for web dependencies
-    compileOnly "org.grails:grails-datastore-web:$datastoreVersion"
+    compileOnly "org.apache.grails.data:grails-datastore-web:$datastoreVersion"
     compileOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
 
     implementation "org.javassist:javassist:$javassistVersion"
     testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
-    testImplementation "org.grails:grails-datastore-gorm-test:$datastoreVersion",
-                "org.grails:grails-datastore-gorm-tck:$datastoreVersion"
+    testImplementation "org.apache.grails.data:grails-datastore-gorm-test:$datastoreVersion"
+    testImplementation "org.apache.grails.data:grails-datamapping-tck-tests:$datastoreVersion"
     testImplementation "org.hibernate:hibernate-validator:$hibernateValidatorVersion"
     testImplementation "org.codehaus.gpars:gpars:$gparsVersion"
     testImplementation "cglib:cglib-nodep:$cglibNodepVersion"
@@ -63,7 +63,7 @@ test.doFirst {
                             .resolvedConfiguration
                             .getResolvedArtifacts()
                             .find { resolved ->
-                                resolved.moduleVersion.id.name == 'grails-datastore-gorm-tck'
+                                resolved.moduleVersion.id.name == 'grails-datamapping-tck-tests'
                             }.file
 
     def tckClassesDir = project.file("${project.buildDir}/tck")                            

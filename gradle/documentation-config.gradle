@@ -3,7 +3,7 @@ apply plugin: 'groovy'
 configurations.register('documentation')
 
 dependencies {
-    documentation platform("org.grails:grails-bom:$grailsVersion")
+    documentation platform("org.apache.grails:grails-bom:$grailsVersion")
     documentation 'org.apache.groovy:groovy-groovydoc'
     documentation 'org.apache.groovy:groovy-ant'
 }
@@ -22,15 +22,15 @@ tasks.register('data-mapping-groovydoc', Groovydoc) {
                 'grails-datastore-async',
                 'grails-datastore-core',
                 'grails-datastore-gorm',
-                'grails-datastore-gorm-async',
-                'grails-datastore-gorm-support',
-                'grails-datastore-gorm-validation',
+                'grails-datamapping-async',
+                'grails-datamapping-support',
+                'grails-datamapping-validation',
                 'grails-datastore-web',
 
                 // These are test api docs that aren't typically included in the runtime classpath of applications.
                 // for now include them in the groovy doc unless we want to call out that documentation separately later.
                 'grails-datastore-gorm-test',
-                'grails-gorm-testing-support'
+                'grails-testing-support-datamapping'
         ]
     }
 

@@ -4,12 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    pomArtifactId = 'grails-datastore-gorm-hibernate5'
+    pomArtifactId = 'grails-data-hibernate5-core'
     pomDevelopers =  [
             'graemerocher': 'Graeme Rocher',
             'jeffscottbrown': 'Jeff Brown',
@@ -20,7 +19,7 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api "org.slf4j:slf4j-api"
 

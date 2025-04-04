@@ -3,7 +3,7 @@ targetCompatibility = "1.11"
 
 dependencyManagement {
     imports {
-        mavenBom "org.grails:grails-bom:$pluginGrailsVersion"
+        mavenBom "org.apache.grails:grails-bom:$pluginGrailsVersion"
     }
     applyMavenExclusions false
 }
@@ -25,17 +25,19 @@ configurations.all {
 }
 
 dependencies {
-    compileOnly "org.grails:grails-core"
-    compileOnly "org.grails:grails-bootstrap"
+    compileOnly "org.apache.grails:grails-core", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    compileOnly "org.apache.grails.bootstrap:grails-bootstrap"
     compileOnly "org.spockframework:spock-core:$spockVersion", {
         exclude group: "junit", module: "junit-dep"
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
         exclude group: 'org.hamcrest', module: 'hamcrest-core'
     }
 
-    runtimeOnly "org.grails:grails-datastore-web:$datastoreVersion"
+    runtimeOnly "org.apache.grails.data:grails-datastore-web:$datastoreVersion"
 
-    api "org.grails:grails-datastore-gorm-support:$datastoreVersion", {
+    api "org.apache.grails.data:grails-datamapping-support:$datastoreVersion", {
         exclude group:'org.springframework', module:'spring-context'
         exclude group:'org.springframework', module:'spring-core'
         exclude group:'org.springframework', module:'spring-beans'
@@ -56,8 +58,10 @@ dependencies {
         exclude group:'javax.transaction', module:'jta'
     }
 
-    testImplementation "org.grails:grails-core"
-    testImplementation "org.grails:grails-bootstrap"
+    testImplementation "org.apache.grails:grails-core", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    testImplementation "org.apache.grails.bootstrap:grails-bootstrap"
     testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
 
 }

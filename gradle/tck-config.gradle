@@ -10,11 +10,11 @@ configurations {
 
 dependencies {
     if (!project.hasProperty('includeBaseTckClass') || project.findProperty('includeBaseTckClass')) {
-        testImplementation project(':grails-datastore-gorm-tck-base')
+        testImplementation project(':grails-datamapping-tck-base')
     }
     // So we can easily extract the compiled classes
-    tck project(':grails-datastore-gorm-tck')
-    testImplementation project(':grails-datastore-gorm-tck-domains')
+    tck project(':grails-datamapping-tck-tests')
+    testImplementation project(':grails-datamapping-tck-domains')
 
     runtimeOnly 'org.apache.groovy:groovy-dateutil', {
         // Groovy Date Utils Extensions are used in the tests

@@ -3,7 +3,7 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath platform("org.grails:grails-bom:$grailsVersion")
+		classpath platform("org.apache.grails:grails-bom:$grailsVersion")
 		classpath("org.springframework.boot:spring-boot-gradle-plugin")
 	}
 }
@@ -14,7 +14,7 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 dependencies {
-	implementation platform("org.grails:grails-bom:$grailsVersion")
+	implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation "org.springframework.boot:spring-boot-starter-web"
@@ -24,7 +24,9 @@ dependencies {
 		// exclude javax variant of hibernate-core
 		exclude group: 'org.hibernate', module: 'hibernate-core'
 	}
-	implementation "org.grails:grails-core"
+	implementation "org.apache.grails:grails-core", {
+		exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+	}
 	implementation project(":gorm-graphql")
 	//implementation 'org.codehaus.groovy:groovy-astbuilder:3.0.19'
 	implementation 'jakarta.transaction:jakarta.transaction-api'

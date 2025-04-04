@@ -31,8 +31,8 @@ The project is essentially a multi-project Gradle build. There is a core API and
 
 * `grails-datastore-core` - The core API, this provides core interfaces for implementing a GORM provider
 * `grails-datastore-gorm` - The runtime meta-programming and AST transformation infrastructure behind GORM. This also provides end users with APIs like `grails.gorm.CriteriaBuilder` and `grails.gorm.DetachedCriteria`
-* `grails-datastore-gorm-support` - Support classes for easing the writing of a GORM plugin for Grails
-* `grails-datastore-gorm-tck` - The TCK that includes hundreds of Spock specifications that a GORM implementation will need to pass
+* `grails-datamapping-support` - Support classes for easing the writing of a GORM plugin for Grails
+* `grails-datamapping-tck-tests` - The TCK that includes hundreds of Spock specifications that a GORM implementation will need to pass
 * `grails-datastore-web` - Classes required to integrate GORM into a web tier
 
 In addition to this, there are separate projects of GORM implementations for various datastores:

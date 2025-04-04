@@ -1,8 +1,8 @@
-The `grails-datastore-gorm-tck` project provides several hundred tests to guarantee that a particular GORM implementation is compliant. To use the TCK you need to define a dependency on the TCK in the subprojects `build.gradle` file:
+The `grails-datamapping-tck-tests` project provides several hundred tests to guarantee that a particular GORM implementation is compliant. To use the TCK you need to define a dependency on the TCK in the subprojects `build.gradle` file:
 
 [source,groovy]
 ----
-testCompile project(':grails-datastore-gorm-tck')
+testCompile project(':grails-datamapping-tck-tests')
 ----
 
 Then create a `Setup.groovy` file that sets up your custom datastore in your implementation.

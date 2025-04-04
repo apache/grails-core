@@ -6,8 +6,8 @@ group = 'examples'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation project(':hibernate5-gorm')
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation project(':hibernate5-core')
     implementation 'org.springframework:spring-tx'
 
     runtimeOnly 'com.h2database:h2'

@@ -4,11 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api project(':grails-datastore-gorm'), {
         // api: GormEntity, GormStaticApi, GormOperations, GormStaticOperations
@@ -17,14 +17,14 @@ dependencies {
             // API dependencies in grails-datastore-gorm
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
-            //exclude group: 'org.grails', module: 'grails-datastore-core' // DirtyCheckable
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            //exclude group: 'org.apache.grails.data', module: 'grails-datastore-core' // DirtyCheckable
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
             //exclude group: 'org.springframework', module: 'spring-context' // Errors
             exclude group: 'org.springframework', module: 'spring-jdbc'
             //exclude group: 'org.springframework', module: 'spring-tx' // TransactionDefinition
         }
     }
-    api 'org.grails:grails-async', {
+    api 'org.apache.grails.async:grails-async-core', {
         // api: Promise, PromiseDecorator, PromiseDecoratorProvider
         // impl: Promises
     }
@@ -33,7 +33,7 @@ dependencies {
         // AST (source retention annotation): DelegateAsync
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-async
-            exclude group: 'org.grails', module: 'grails-async'
+            exclude group: 'org.apache.grails.async', module: 'grails-async'
         }
     }
 

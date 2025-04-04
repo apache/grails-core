@@ -8,7 +8,7 @@ group = 'examples'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':hibernate5-boot-plugin')
     implementation 'org.springframework.boot:spring-boot-starter-web'

@@ -4,12 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    pomArtifactId = 'gorm-mongodb-spring-boot'
+    pomArtifactId = 'grails-data-mongodb-spring-boot'
     pomTitle = 'GORM for MongoDB'
     pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
     pomDevelopers =  [
@@ -21,16 +20,16 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    api project(':mongodb-gorm'), {
+    api project(':mongodb-core'), {
         // api: MongoDatastore
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-gorm-mongodb
             exclude group: 'org.mongodb', module: 'mongodb-driver-sync'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
-            //exclude group: 'org.grails', module: 'grails-datastore-gorm' // GormEntity needed downstream
-            //exclude group: 'org.grails', module: 'grails-datastore-gorm-bson' //  Needed at runtime downstream (BsonPersistentEntityCodec)
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
+            //exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm' // GormEntity needed downstream
+            //exclude group: 'org.apache.grails.data', module: 'grails-data-mongodb-bson' //  Needed at runtime downstream (BsonPersistentEntityCodec)
         }
     }
     api 'org.mongodb:mongodb-driver-core', {
@@ -56,9 +55,10 @@ dependencies {
         // impl: Needed for Java Spring Boot apps
         // comp: @CompileStatic(source)
     }
-    implementation project(':grails-datastore-core'), {
-        // impl: Service
-    }
+    // Provided by grails-datastore-gorm
+//    implementation project(':grails-datastore-core'), {
+//        // impl: Service
+//    }
     implementation project(':grails-datastore-gorm'), {
         // impl: ConfigurableApplicationContextEventPublisher
     }

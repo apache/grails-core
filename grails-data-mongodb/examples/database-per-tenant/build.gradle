@@ -2,27 +2,34 @@ version = projectVersion
 group = 'examples'
 
 apply plugin: 'groovy'
-apply plugin: 'org.grails.grails-web'
+apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':mongodb-grails-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-plugin-rest'
-    implementation 'org.grails:grails-web-boot'
+    implementation 'org.apache.grails:grails-core', {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    implementation 'org.apache.grails:grails-rest-transforms', {
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
+    implementation 'org.apache.grails.web:grails-web-boot'
     implementation 'org.grails.plugins:gsp'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    testImplementation 'org.grails:grails-testing-support'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
     testImplementation 'org.spockframework:spock-core'
 }
 

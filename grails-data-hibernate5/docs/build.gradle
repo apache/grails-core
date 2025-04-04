@@ -21,17 +21,19 @@ configurations {
 }
 
 dependencies {
-    documentation platform("org.grails:grails-bom:$grailsVersion")
+    documentation platform("org.apache.grails:grails-bom:$grailsVersion")
     documentation 'com.github.javaparser:javaparser-core'
     documentation "info.picocli:picocli:$picocliVersion"
     documentation 'org.apache.groovy:groovy-dateutil'
     documentation 'org.fusesource.jansi:jansi'
-    documentation 'org.grails:grails-bootstrap'
-    documentation 'org.grails:grails-core'
-    documentation 'org.grails:grails-spring'
+    documentation 'org.apache.grails.bootstrap:grails-bootstrap'
+    documentation 'org.apache.grails:grails-core', {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    documentation 'org.apache.grails:grails-spring'
     documentation "org.hibernate:hibernate-core-jakarta:$hibernateVersion"
     coreProjects.each {
-        documentation "org.grails:$it"
+        documentation "org.apache.grails.data:$it"
     }
     rootProject.subprojects
             .findAll { it.findProperty('apiDocs') }

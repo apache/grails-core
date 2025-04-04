@@ -1,6 +1,6 @@
 plugins {
-    id 'org.grails.grails-web'
-    id 'org.grails.grails-gsp'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gsp'
     id 'com.bertramlabs.asset-pipeline'
 }
 
@@ -8,22 +8,30 @@ version = projectVersion
 group = 'examples'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    integrationTestImplementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':hibernate5-grails-plugin')
     implementation 'jakarta.persistence:jakarta.persistence-api'
     implementation 'jakarta.validation:jakarta.validation-api'
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.apache.grails:grails-core', {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    implementation 'org.apache.grails:grails-rest-transforms', {
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
     implementation 'org.grails.plugins:gsp'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.grails:grails-plugin-databinding'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-services'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-databinding'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-services'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.grails.plugins:fields'
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
         // exclude javax variant of hibernate-core 5.6
@@ -36,10 +44,13 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    testImplementation 'org.grails:grails-testing-support'
-    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    testImplementation "org.grails:grails-web-testing-support", {
+        exclude group: 'org.grails', module: 'grails-testing-support' // TODO: Remove after views are published
+    }
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core' // TODO: Remove after views are published
 
-    integrationTestImplementation testFixtures('org.grails.plugins:geb')
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
 apply {

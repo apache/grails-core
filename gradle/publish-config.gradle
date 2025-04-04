@@ -1,13 +1,8 @@
 import org.grails.gradle.plugin.publishing.GrailsPublishExtension
 
-if (project.hasProperty('snapshotPublishUrl')) {
-    ext.set('mavenPublishUrl', property('snapshotPublishUrl'))
-    logger.lifecycle('Configuring {}:{} snapshot publish repo: {}', group, findProperty('pomArtifactId') ?: name, mavenPublishUrl)
-}
-
 extensions.configure(GrailsPublishExtension) {
     // Explicit `it` is required here
-    it.githubSlug = 'grails/grails-data-mapping'
+    it.githubSlug = 'apache/grails-data-mapping'
     it.license.name = 'Apache-2.0'
     it.title = findProperty('pomTitle') ?: 'Grails GORM'
     it.desc = findProperty('pomDescription') ?: 'GORM - Grails Data Access Framework'

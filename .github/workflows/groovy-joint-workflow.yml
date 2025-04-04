@@ -47,7 +47,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📝 Store Groovy version to use when building the project"
         id: groovy-version
         run: |
@@ -69,7 +69,7 @@ jobs:
         id: develocity-conf-2
         run: |
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
-          echo "def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null" >> $GITHUB_OUTPUT
+          echo "def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY') != null" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
           echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
@@ -119,7 +119,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v4
         with:

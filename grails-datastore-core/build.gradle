@@ -4,11 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api 'jakarta.persistence:jakarta.persistence-api', {
         // api: FlushModeType, AccessType, CascadeType, EnumType, FetchType, LockModeType, JoinType

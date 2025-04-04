@@ -1,15 +1,14 @@
 plugins {
     id 'java-library'
-    id 'org.grails.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
 version = projectVersion
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
 ext {
     apiDocs = true
-    pomArtifactId = 'hibernate5'
-    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
+    pomArtifactId = 'grails-data-hibernate5'
     pomDevelopers =  [
             'graemerocher': 'Graeme Rocher',
             'jeffscottbrown': 'Jeff Brown',
@@ -20,26 +19,28 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api "org.springframework.boot:spring-boot"
     api "org.springframework:spring-orm"
     api "org.hibernate:hibernate-core-jakarta:$hibernateVersion"
     api project(":grails-datastore-web")
-    api project(":grails-datastore-gorm-support")
-    api project(":hibernate5-gorm"), {
+    api project(":grails-datamapping-support")
+    api project(":hibernate5-core"), {
         exclude group:'org.springframework', module:'spring-context'
         exclude group:'org.springframework', module:'spring-core'
         exclude group:'org.springframework', module:'spring-beans'
         exclude group:'org.springframework', module:'spring-tx'
-        exclude group:'org.grails', module:'grails-bootstrap'
+        exclude group:'org.apache.grails', module:'grails-bootstrap'
         exclude group:'org.codehaus.groovy', module:'groovy-all'
-        exclude group:'org.grails', module:'grails-core'
+        exclude group:'org.apache.grails', module:'grails-core'
         exclude group:'javax.transaction', module:'jta'
     }
 
-    compileOnly "org.grails:grails-bootstrap"
-    compileOnly "org.grails:grails-core"
+    compileOnly "org.apache.grails.bootstrap:grails-bootstrap"
+    compileOnly "org.apache.grails:grails-core", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
 
     compileOnly "org.spockframework:spock-core", {
         exclude group: "junit", module: "junit-dep"
@@ -47,7 +48,7 @@ dependencies {
         exclude group: 'org.hamcrest', module: 'hamcrest-core'
     }
 
-    testImplementation project(":grails-gorm-testing-support")
+    testImplementation project(":grails-testing-support-datamapping")
     testImplementation "org.spockframework:spock-core"
 
     testRuntimeOnly "com.h2database:h2"

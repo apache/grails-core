@@ -8,7 +8,7 @@ file('../gradle.properties').withInputStream {
 }
 
 repositories {
-//    mavenLocal()
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     maven { url = 'https://repo.grails.org/grails/core' }
     mavenCentral()
     if (System.getenv('GITHUB_MAVEN_PASSWORD')) {
@@ -23,9 +23,8 @@ repositories {
 }
 
 dependencies {
-    implementation platform("org.grails:grails-bom:${versions.getProperty('grailsVersion')}")
-    implementation 'org.grails:grails-gradle-plugin'
+    implementation platform("org.apache.grails:grails-bom:${versions.getProperty('grailsVersion')}")
+    implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
-    implementation 'org.grails.plugins:views-gradle'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
 }

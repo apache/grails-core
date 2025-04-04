@@ -1,31 +1,56 @@
 plugins {
-    id 'org.grails.grails-web'
-    id 'org.grails.plugins.views-json'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gson'
 }
 
 version = projectVersion
 group = 'examples'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':hibernate5-grails-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails.plugins:views-json'
+    implementation 'org.apache.grails:grails-core', {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    implementation 'org.grails.plugins:views-json', {
+        exclude group: 'org.grails', module: 'grails-plugin-rest' // TODO: remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-plugin-mimetypes' // TODO: remove when views published
+        exclude group: 'org.grails', module: 'grails-web-url-mappings' // TODO: remove when views published
+    }
+    implementation 'org.apache.grails:grails-mimetypes', { // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
+    implementation 'org.apache.grails.web:grails-web-url-mappings', { // TODO: Remove views published
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
+    implementation 'org.apache.grails:grails-rest-transforms', { // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
 
     compileOnly 'org.slf4j:slf4j-nop' // Remove warning during Gson views compilation
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.grails:grails-plugin-databinding'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-services'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-databinding'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-services'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    integrationTestImplementation 'org.grails:grails-testing-support'
+    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
 }
 
 apply {

@@ -3,25 +3,27 @@ group "examples"
 dependencies {
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.grails:grails-core"
+    implementation "org.apache.grails:grails-core", {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
     implementation "org.springframework.boot:spring-boot-starter-actuator"
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation ("org.grails:grails-dependencies") {
+    implementation ("org.apache.grails:grails-dependencies") {
         exclude module:'grails-datastore-simple'
     }
-    implementation "org.grails:grails-plugin-codecs"
-    implementation "org.grails:grails-plugin-services"
-    implementation "org.grails:grails-plugin-datasource"
-    implementation "org.grails:grails-web-boot"
-    implementation "org.grails:grails-logging"
+    implementation "org.apache.grails:grails-codecs"
+    implementation "org.apache.grails:grails-services"
+    implementation "org.apache.grails:grails-datasource"
+    implementation "org.apache.grails.web:grails-web-boot"
+    implementation "org.apache.grails:grails-logging"
     implementation "org.grails.plugins:cache"
-    implementation "org.grails.plugins:events"
+    implementation "org.apache.grails:grails-events"
     implementation project(":grails-plugin")
     implementation "org.grails.plugins:views-json"
-    implementation "org.grails.plugins:views-json-templates"
+    implementation "org.apache.grails:grails-data-mongodb-gson-templates"
     implementation 'org.grails.plugins:spring-security-rest:3.0.1'
     profile "org.grails.profiles:rest-api"
-    testImplementation "org.grails:grails-gorm-testing-support:$testingSupportVersion"
+    testImplementation project(':grails-testing-support-datamapping')
     testImplementation "org.grails:grails-web-testing-support:$testingSupportVersion"
     testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
 }

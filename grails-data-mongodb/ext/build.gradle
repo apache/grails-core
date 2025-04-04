@@ -4,12 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/libs-snapshots-local'
-    pomArtifactId = 'grails-datastore-gorm-mongodb-ext'
+    pomArtifactId = 'grails-data-mongodb-ext'
     pomTitle = 'GORM for MongoDB'
     pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
     pomDevelopers =  [
@@ -21,7 +20,7 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     api 'org.mongodb:bson', {
         // api: Document, ObjectId
@@ -32,15 +31,15 @@ dependencies {
         // impl: BasicDBObject
     }
 
-    implementation project(':mongodb-gorm'), {
+    implementation project(':mongodb-core'), {
         // impl: AbstractMongoObectEntityPersister, AbstractMongoSession, MongoConstants, MongoEntityPersister,
         //       MongoQuery
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-gorm-mongodb
-            //exclude group: 'org.grails', module: 'grails-datastore-core' // NativeEntryEntityPersister
-            exclude group: 'org.grails', module: 'grails-datastore-gorm'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-bson'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-support'
+            //exclude group: 'org.apache.grails.data', module: 'grails-datastore-core' // NativeEntryEntityPersister
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-data-mongodb-bson'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-support'
             //exclude group: 'org.mongodb', module: 'bson' // Document
             exclude group: 'org.mongodb', module: 'mongodb-driver-core'
             //exclude group: 'org.mongodb', module: 'mongodb-driver-sync' // FindIterable
@@ -53,9 +52,9 @@ dependencies {
             // API dependencies in grails-datastore-gorm
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
-            exclude group: 'org.grails', module: 'grails-core'
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+            exclude group: 'org.apache.grails', module: 'grails-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
             //exclude group: 'org.springframework', module: 'spring-context' // ApplicationEventPublisher
             exclude group: 'org.springframework', module: 'spring-jdbc'
             //exclude group: 'org.springframework', module: 'spring-tx' // PlatformTransactionManager

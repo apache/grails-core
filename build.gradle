@@ -22,18 +22,15 @@ allprojects {
     }
 
     repositories {
+        // Used for testing locally against the latest snapshot of Groovy & for pulling dependencies in other repos
+        // Usage: ./gradlew build -P"groovyVersion=X.X.X-SNAPSHOT"
+        maven {
+            name = 'ASF Snapshot repo'
+            url = 'https://repository.apache.org/content/repositories/snapshots'
+        }
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/core' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        if (customGroovyVersion?.endsWith('-SNAPSHOT')) {
-            // Used for testing locally against the latest snapshot of Groovy
-            // Usage: ./gradlew build -P"groovyVersion=X.X.X-SNAPSHOT"
-            logger.lifecycle('Adding Groovy Snapshot Repo for project: {}, Using Groovy {}', name, customGroovyVersion)
-            maven {
-                name = 'ASF Snapshot repo'
-                url = 'https://repository.apache.org/content/repositories/snapshots'
-            }
-        }
         if (System.getenv('GITHUB_MAVEN_PASSWORD') && !grailsVersion.endsWith('-SNAPSHOT')) {
             logger.lifecycle('Adding Grails Core Staging Repo for project: {}', name)
             maven {
@@ -58,34 +55,34 @@ def publishedProjects = [
         'grails-datastore-async',
         'grails-datastore-core',
         'grails-datastore-gorm',
-        'grails-datastore-gorm-async',
+        'grails-datamapping-async',
         //'grails-datastore-gorm-rx',
-        'grails-datastore-gorm-support',
-        'grails-datastore-gorm-tck',
-        'grails-datastore-gorm-tck-base',
-        'grails-datastore-gorm-tck-domains',
-        'grails-datastore-gorm-validation',
+        'grails-datamapping-support',
+        'grails-datamapping-tck-tests',
+        'grails-datamapping-tck-base',
+        'grails-datamapping-tck-domains',
+        'grails-datamapping-validation',
         'grails-datastore-web',
-        'grails-gorm-testing-support',
+        'grails-testing-support-datamapping',
         // simple
         'simple-gorm',
         // hibernate5
         'hibernate5-boot-plugin',
         'hibernate5-database-migration',
-        'hibernate5-gorm',
+        'hibernate5-core',
         'hibernate5-grails-plugin',
         // mongodb
         'mongodb-boot-plugin',
-        'mongodb-gorm',
-        'mongodb-gorm-bson',
-        'mongodb-gorm-ext',
+        'mongodb-core',
+        'mongodb-bson',
+        'mongodb-ext',
         'mongodb-grails-plugin',
-        'mongodb-views-json-templates'
+        'mongodb-gson-templates'
 ]
 subprojects {
     if (name in publishedProjects) {
         // This has to be applied here
-        apply plugin: 'org.grails.grails-publish'
+        apply plugin: 'org.apache.grails.gradle.grails-publish'
     }
 }
 

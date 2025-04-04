@@ -4,11 +4,11 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails.tck.base'
+group = 'org.apache.grails.data'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-    compileOnly project(':grails-datastore-gorm-tck-domains')
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    compileOnly project(':grails-datamapping-tck-domains')
     compileOnly 'org.apache.groovy:groovy'
     compileOnly 'org.spockframework:spock-core'
 }

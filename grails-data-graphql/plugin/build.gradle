@@ -5,17 +5,17 @@ plugins {
 }
 
 dependencies {
-    api "org.grails:grails-plugin-controllers"
-    api "org.grails:grails-plugin-databinding"
-    api("org.grails:grails-plugin-rest") {
+    api "org.apache.grails:grails-controllers"
+    api "org.apache.grails:grails-databinding"
+    api("org.apache.grails:grails-rest-transforms") {
         exclude group: 'org.grails.plugins', module: 'converters'
     }
-    api "org.grails:grails-plugin-url-mappings"
+    api "org.apache.grails:grails-url-mappings"
     api "org.grails.plugins:views-json:$viewsJsonVersion"
     api 'io.micronaut.rxjava2:micronaut-rxjava2-http-client:1.3.0'
     api "javax.servlet:javax.servlet-api:$servletApiVersion"
     api "io.micronaut:micronaut-http-client:$micronautVersion"
-    api "org.grails.plugins:converters:3.3.1"
+    api "org.apache.grails:grails-converters:3.3.1"
     api 'com.github.javaparser:javaparser-core:3.25.7'
     api "com.graphql-java:graphql-java:$graphqlJavaVersion"
     testImplementation "org.grails:grails-web-testing-support"

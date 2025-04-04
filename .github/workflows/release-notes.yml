@@ -19,4 +19,4 @@ jobs:
       - name: "📝 Update Release Draft"
         uses: release-drafter/release-drafter@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GRAILS_GH_TOKEN }}

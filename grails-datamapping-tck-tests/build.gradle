@@ -4,23 +4,23 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails.tck.tests'
+group = 'org.apache.grails.data'
 
 ext {
     pomPublishTestSources = true
 }
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-    compileOnly project(':grails-datastore-gorm-tck-base')
-    compileOnly project(':grails-datastore-gorm-tck-domains')
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    compileOnly project(':grails-datamapping-tck-base')
+    compileOnly project(':grails-datamapping-tck-domains')
 
     implementation 'org.springframework:spring-tx', {
         // impl: DataIntegrityViolationException
     }
     implementation 'org.spockframework:spock-core'
 
-    compileOnlyApi project(':grails-datastore-gorm-support'), {
+    compileOnlyApi project(':grails-datamapping-support'), {
         // ast transforms
     }
     compileOnly 'org.apache.groovy:groovy'

@@ -4,13 +4,13 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails'
+group = 'org.apache.grails.data'
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    api 'org.grails:grails-async', {
+    api 'org.apache.grails.async:grails-async-core', {
         // ast: DelegateAsyncUtils, Promise, Promises
     }
 

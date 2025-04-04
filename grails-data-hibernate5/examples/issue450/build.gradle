@@ -1,6 +1,6 @@
 plugins {
-    id 'org.grails.grails-web'
-    id 'org.grails.grails-gsp'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gsp'
     id 'com.bertramlabs.asset-pipeline'
 }
 
@@ -8,20 +8,27 @@ version = projectVersion
 group = 'multitenantcomposite'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
     implementation project(':hibernate5-grails-plugin')
-    implementation 'org.grails:grails-core'
-    implementation 'org.grails:grails-plugin-rest'
+    implementation 'org.apache.grails:grails-core', {
+        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: Remove after gorm published & core updated
+    }
+    implementation 'org.apache.grails:grails-rest-transforms', {
+        exclude group: 'org.grails', module: 'grails-datastore-core'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-support'  // TODO: Remove when views published
+        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'  // TODO: Remove when views published
+    }
     implementation 'org.grails.plugins:gsp'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.grails:grails-plugin-databinding'
-    runtimeOnly 'org.grails:grails-plugin-i18n'
-    runtimeOnly 'org.grails:grails-plugin-services'
-    runtimeOnly 'org.grails:grails-plugin-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-databinding'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.apache.grails:grails-services'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.grails.plugins:fields'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
@@ -29,7 +36,7 @@ dependencies {
 
     integrationTestImplementation platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     integrationTestImplementation 'io.micronaut:micronaut-http-client'
-    integrationTestImplementation 'org.grails:grails-testing-support'
+    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
     integrationTestImplementation 'org.spockframework:spock-core'
 
     integrationTestRuntimeOnly 'io.micronaut.serde:micronaut-serde-jackson'

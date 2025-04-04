@@ -5,14 +5,13 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.grails.plugins'
+group = 'org.apache.grails'
 
-apply plugin: 'org.grails.grails-plugin'
+apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 ext {
     apiDocs = true
-    snapshotPublishUrl = 'https://repo.grails.org/grails/plugins3-snapshots-local'
-    pomArtifactId = 'mongodb'
+    pomArtifactId = 'grails-data-mongodb'
     pomTitle = 'GORM for MongoDB'
     pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
     pomDevelopers =  [
@@ -24,17 +23,18 @@ ext {
 
 dependencies {
 
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    testFixturesCompileOnly platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    api project(':mongodb-gorm'), {
+    api project(':mongodb-core'), {
         // api: needed as classes should also be available when compiling apps. eg. MongoEntity
         // impl: MongoDatastore, MongoDbDataStoreSpringInitializer
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-gorm-mongodb
-            //exclude group: 'org.grails', module: 'grails-datastore-gorm-bson' // Needed at runtime downstream (BsonPersistentEntityCodec)
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm'
-            exclude group: 'org.grails', module: 'grails-datastore-gorm-support'
+            //exclude group: 'org.apache.grails.data', module: 'grails-data-mongodb-bson' // Needed at runtime downstream (BsonPersistentEntityCodec)
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-support'
             //exclude group: 'org.mongodb', module: 'bson' // Needed downstream for compiling MongoEntity
             //exclude group: 'org.mongodb', module: 'mongodb-driver-core' // MongoClientSettings
             //exclude group: 'org.mongodb', module: 'mongodb-driver-sync' // MongoClient
@@ -42,13 +42,13 @@ dependencies {
         }
     }
 
-    implementation project(':grails-datastore-gorm-support'), {
+    implementation project(':grails-datamapping-support'), {
         // impl: ConfigSupport
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm-support
-            exclude group: 'org.grails', module: 'grails-datastore-core'
-            //exclude group: 'org.grails', module: 'grails-datastore-gorm' // AbstractDatastorePersistenceContextInterceptor
-            exclude group: 'org.grails', module: 'grails-core'
+            // API dependencies in grails-datamapping-support
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            //exclude group: 'org.apache.grails.data, module: 'grails-datastore-gorm' // AbstractDatastorePersistenceContextInterceptor
+            exclude group: 'org.apache.grails', module: 'grails-core'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
         }
@@ -67,20 +67,20 @@ dependencies {
     }
 
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
-    compileOnly 'org.grails:grails-core', { // Provided as this is a Grails plugin
+    compileOnly 'org.apache.grails:grails-core', { // Provided as this is a Grails plugin
         // api: GrailsPlugin
         // impl: DomainClassArtefactHandler, GrailsClass, GrailsPlugin, Metadata
     }
 
-    runtimeOnly project(':mongodb-gorm-ext'), {
+    runtimeOnly project(':mongodb-ext'), {
         // Include MongoDB groovy extensions for applications
     }
 
-    testFixturesApi 'org.grails:grails-core', {
+    testFixturesApi 'org.apache.grails:grails-core', {
         // api: Config
         // impl: PropertySourcesConfig
     }
-    testFixturesApi project(':mongodb-gorm'), {
+    testFixturesApi project(':mongodb-core'), {
         // api: MongoDatastore
     }
     testFixturesApi 'org.mongodb:mongodb-driver-sync', {
