@@ -50,8 +50,9 @@ ext {
         org.asciidoctor:asciidoctorj::
         org.fusesource.jansi:jansi::
         org.gebish:geb-spock::
+        org.apache.grails:grails-data:hibernate5,mongodb,simple,hibernate5-dbmigration,mongodb-gson-templates::grails-datastore
         org.apache.grails.data:grails-data-hibernate5-core:::grails-datastore
-        org.apache.grails.data:grails-datamapping-mongodb:::grails-datastore
+        org.apache.grails.data:grails-data-mongodb-core:::grails-datastore
         org.apache.grails.data:grails-datastore-async,grails-datastore-core,grails-datastore-web:::grails-datastore
         org.apache.grails.data:grails-datamapping-core,grails-datamapping-core-test,grails-datamapping-async,grails-datamapping-support,grails-datamapping-rx,grails-datamapping-validation,grails-datamapping-tck-tests:::grails-datastore
         org.apache.grails:grails-testing-support-datamapping:::grails-datastore
