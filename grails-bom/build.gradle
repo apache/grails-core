@@ -51,7 +51,7 @@ ext {
         org.fusesource.jansi:jansi::
         org.gebish:geb-spock::
         org.grails.plugins:gsp::
-        org.apache.grails.data:grails-datamapping-hibernate5::
+        org.apache.grails.data:grails-data-hibernate5-core::
         org.apache.grails.data:grails-datamapping-mongodb::
         org.apache.grails.data:grails-datastore-async,grails-datastore-core,grails-datamapping-core,org.apache.grails.data:grails-datamapping-async,grails-datamapping-support,grails-datastore-gorm-rx,grails-datastore-gorm-test,grails-datamapping-validation,grails-datastore-web,grails-datamapping-tck-tests:::grails-datastore
         org.apache.grails:grails-testing-support-datamapping:::grails-datastore

@@ -23,7 +23,7 @@ dependencies {
                 project(':grails-spring')
 
     testImplementation "org.apache.grails.data:grails-datamapping-validation"
-    testImplementation "org.apache.grails.data:grails-datamapping-hibernate5"
+    testImplementation "org.apache.grails.data:grails-data-hibernate5-core"
 
     api "org.apache.tomcat:tomcat-jdbc"
     api "org.apache.groovy:groovy:$groovyVersion"

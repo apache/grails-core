@@ -26,7 +26,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.apache.grails.data:grails-datamapping-hibernate5'
+    testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
     testImplementation "org.grails.plugins:gsp"
     testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
         // This is a local project dependency

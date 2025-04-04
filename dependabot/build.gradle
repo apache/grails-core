@@ -17,7 +17,7 @@ dependencies {
     api "io.methvin:directory-watcher:${project['directory-watcher.version']}"
     api "org.xhtmlrenderer:flying-saucer-pdf-openpdf:${project['flying-saucer-pdf-openpdf.version']}"
     api "org.gebish:geb-spock:${project['geb-spock.version']}"
-    api "org.apache.grails.data:grails-datamapping-hibernate5:${project['grails-datastore-gorm-hibernate5.version']}"
+    api "org.apache.grails.data:grails-data-hibernate5-core:${project['grails-datastore-gorm-hibernate5.version']}"
     api "org.apache.grails.data:grails-datamapping-mongodb:${project['grails-datastore-gorm-mongodb.version']}"
     api "org.apache.grails.data:grails-datastore-async:${project['grails-datastore.version']}"
     api "org.apache.grails.data:grails-datastore-core:${project['grails-datastore.version']}"
