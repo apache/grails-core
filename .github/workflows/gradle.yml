@@ -11,6 +11,7 @@ permissions:
   packages: read
 jobs:
   datastore-build:
+    if: false # remove after publishing
     name: "Build Datastore Project"
     runs-on: ubuntu-24.04
     strategy:
@@ -93,7 +94,6 @@ jobs:
     if: github.event_name == 'push'
     name: "Publish Snapshot"
     #needs: [datastore-build, hibernate5-build, mongodb-build] # Fix once mongo db action is added
-    needs: [datastore-build, hibernate5-build]
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout the repository"
