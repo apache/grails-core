@@ -34,36 +34,36 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew cleanTest build --continue -PonlyDatastoreTests
-  mongodb-build:
-    if: false # TODO: Remove once we can run mongo
-    name: "Build Mongodb Project"
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [ 17, 21 ]
-        mongodb-version: [ '4', '5', '6', '7', '8' ]
-    steps:
-      - name: "📥 Checkout the repository"
-        uses: actions/checkout@v4
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: liberica
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "▶️ Start MongoDB (needed for some tests)"
-        uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # v1.12.0 (Use commit sha as this is a 3rd party action)
-        with:
-          mongodb-version: ${{ matrix.mongodb-version }}
-      - name: "🔨 Run Build"
-        id: build
-        env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew cleanTest build --continue -PonlyMongodbTests
+#  mongodb-build:
+#    if: false # TODO: Remove once we can run mongo
+#    name: "Build Mongodb Project"
+#    runs-on: ubuntu-24.04
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        java: [ 17, 21 ]
+#        mongodb-version: [ '4', '5', '6', '7', '8' ]
+#    steps:
+#      - name: "📥 Checkout the repository"
+#        uses: actions/checkout@v4
+#      - name: "☕️ Setup JDK"
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: ${{ matrix.java }}
+#          distribution: liberica
+#      - name: "🐘 Setup Gradle"
+#        uses: gradle/actions/setup-gradle@v4
+#        with:
+#          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+#      - name: "▶️ Start MongoDB (needed for some tests)"
+#        uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # v1.12.0 (Use commit sha as this is a 3rd party action)
+#        with:
+#          mongodb-version: ${{ matrix.mongodb-version }}
+#      - name: "🔨 Run Build"
+#        id: build
+#        env:
+#          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+#        run: ./gradlew cleanTest build --continue -PonlyMongodbTests
   hibernate5-build:
     if: false # TODO: Remove after publishing to core
     name: "Build Hibernate5 Project"
@@ -92,7 +92,8 @@ jobs:
   publish:
     if: github.event_name == 'push'
     name: "Publish Snapshot"
-    needs: [datastore-build, hibernate5-build, mongodb-build]
+    #needs: [datastore-build, hibernate5-build, mongodb-build] # Fix once mongo db action is added
+    needs: [datastore-build, hibernate5-build]
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout the repository"
