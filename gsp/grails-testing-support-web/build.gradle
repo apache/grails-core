@@ -4,7 +4,7 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.apache.grails.web'
+group = 'org.apache.grails'
 
 ext {
     pomArtifactId = 'grails-testing-support-web'
