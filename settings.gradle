@@ -66,8 +66,8 @@ include 'docs-guide-whats-new'
 project(':docs-guide-whats-new').projectDir = file('docs/guide-whats-new')
 
 // Simple implementation (for simple gorm usage, unit tests, and base implementation testing)
-include 'simple-gorm'
-findProject(':simple-gorm').projectDir = file('grails-data-simple')
+include 'grails-data-simple'
+findProject(':grails-data-simple').projectDir = file('grails-data-simple')
 
 // Hibernate 5
 // Core
