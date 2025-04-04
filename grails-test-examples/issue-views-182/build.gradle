@@ -40,10 +40,7 @@ dependencies {
     implementation "org.apache.grails:grails-async"
     implementation "org.apache.grails:grails-events"
     implementation "org.apache.grails:grails-data-hibernate5"
-    implementation "org.apache.grails.views:grails-views-gson", {
-        exclude group: 'org.grails', module: 'grails-plugin-rest' // TODO: remove when views published
-    }
-    implementation 'org.apache.grails:grails-rest-transforms' // TODO: Remove when views published
+    implementation "org.apache.grails:grails-views-gson"
     console "org.apache.grails:grails-console"
     profile "org.grails.profiles:rest-api"
     runtimeOnly "com.h2database:h2"

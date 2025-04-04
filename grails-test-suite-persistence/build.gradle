@@ -36,10 +36,7 @@ dependencies {
 
     testImplementation project(':grails-async-plugin')
     testImplementation "org.apache.grails:grails-testing-support-datamapping", {
-        exclude module:'grails-plugin-rest' // TODO: Remove after gorm is built
-        exclude module:'grails-rest-transforms' // TODO: Remove after gorm is built
         exclude module:'grails-testing-support-core'
-        exclude module:'grails-testing-support' // TODO: Remove after gorm is built
     }
     testImplementation project(':grails-testing-support-core')
 

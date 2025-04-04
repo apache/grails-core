@@ -20,17 +20,13 @@ dependencies {
 
     testImplementation project(':grails-test-suite-base')
     testImplementation "org.apache.grails:grails-testing-support-web", {
-        exclude module:'grails-plugin-rest' // TODO: Remove after gsp is built
         exclude module:'grails-rest-transforms'
         exclude module:'grails-interceptors'
-        exclude module:'grails-plugin-interceptors' // TODO: Remove after gsp is built
         exclude module:'grails-test-core'
-        exclude module:'grails-test' // TODO: Remove after gsp is built
         exclude module:'grails-core'
         exclude module:'grails-async'
         exclude module:'grails-gsp-core'
         exclude module:'grails-testing-support-core'
-        exclude module:'grails-testing-support' //TODO: Remove after gsp is built
     }
     testImplementation project(':grails-testing-support-core')
 

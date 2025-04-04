@@ -63,7 +63,7 @@ dependencies {
     api "org.grails.plugins:neo4j:${project['plugins-neo4j.version']}"
     api "org.apache.grails:grails-scaffolding:${project['plugins-scaffolding.version']}"
     api "org.apache.grails:grails-data-mongodb-gson-templates:${project['plugins-views-json-templates.version']}"
-    api "org.apache.grails.views:grails-views-gson:${project['plugins-views-json.version']}"
+    api "org.apache.grails:grails-views-gson:${project['plugins-views-json.version']}"
     api "org.grails.plugins:views-markup:${project['plugins-views-markup.version']}"
     api "org.grails.profiles:angular:${project['profiles.version']}"
     api "org.grails.profiles:base:${project['profiles.version']}"
