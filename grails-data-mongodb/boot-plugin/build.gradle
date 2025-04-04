@@ -55,11 +55,11 @@ dependencies {
         // impl: Needed for Java Spring Boot apps
         // comp: @CompileStatic(source)
     }
-    // Provided by grails-datastore-gorm
+    // Provided by grails-datamapping-core
 //    implementation project(':grails-datastore-core'), {
 //        // impl: Service
 //    }
-    implementation project(':grails-datastore-gorm'), {
+    implementation project(':grails-datamapping-core'), {
         // impl: ConfigurableApplicationContextEventPublisher
     }
     implementation 'org.springframework:spring-core', {

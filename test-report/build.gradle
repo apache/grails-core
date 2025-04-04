@@ -6,10 +6,10 @@ plugins {
 dependencies {
     testReportAggregation project(':grails-datastore-async')
     testReportAggregation project(':grails-datastore-core')
-    testReportAggregation project(':grails-datastore-gorm')
+    testReportAggregation project(':grails-datamapping-core')
     testReportAggregation project(':grails-datamapping-async')
     testReportAggregation project(':grails-datamapping-support')
-    testReportAggregation project(':grails-datastore-gorm-test')
+    testReportAggregation project(':grails-datamapping-core-test')
     testReportAggregation project(':grails-datamapping-validation')
     testReportAggregation project(':grails-datastore-web')
 }

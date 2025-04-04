@@ -21,7 +21,7 @@ tasks.register('data-mapping-groovydoc', Groovydoc) {
         it.name in [
                 'grails-datastore-async',
                 'grails-datastore-core',
-                'grails-datastore-gorm',
+                'grails-datamapping-core',
                 'grails-datamapping-async',
                 'grails-datamapping-support',
                 'grails-datamapping-validation',
@@ -29,7 +29,7 @@ tasks.register('data-mapping-groovydoc', Groovydoc) {
 
                 // These are test api docs that aren't typically included in the runtime classpath of applications.
                 // for now include them in the groovy doc unless we want to call out that documentation separately later.
-                'grails-datastore-gorm-test',
+                'grails-datamapping-core-test',
                 'grails-testing-support-datamapping'
         ]
     }

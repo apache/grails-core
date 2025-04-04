@@ -49,10 +49,10 @@ dependencies {
             exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
         }
     }
-    api project(':grails-datastore-gorm'), {
+    api project(':grails-datamapping-core'), {
         // api: DetachedCriteria
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm
+            // API dependencies in grails-datamapping-core
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'

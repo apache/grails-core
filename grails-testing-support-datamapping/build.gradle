@@ -45,7 +45,7 @@ dependencies {
             exclude group: 'org.springframework', module: 'spring-test'
             exclude group: 'org.apache.grails', module: 'grails-codecs'
             exclude group: 'org.apache.grails', module: 'grails-databinding'
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
             exclude group: 'org.apache.grails', module: 'grails-test-core'
             exclude group: 'org.springframework.boot', module: 'spring-boot-test'
             exclude group: 'org.spockframework', module: 'spock-spring'
@@ -67,7 +67,7 @@ dependencies {
         // impl: Converter
     }
 
-    implementation project(':grails-datastore-gorm'), {
+    implementation project(':grails-datamapping-core'), {
         // impl: GormEnhancer, UniqueConstraint
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-gorm
@@ -80,12 +80,12 @@ dependencies {
             exclude group: 'org.springframework', module: 'spring-tx'
         }
     }
-    api project(':grails-datastore-gorm-test'), {
+    api project(':grails-datamapping-core-test'), {
         // impl: SimpleMapDatastore
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm-test
+            // API dependencies in grails-datamapping-core-test
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
             exclude group: 'org.springframework', module: 'spring-tx'

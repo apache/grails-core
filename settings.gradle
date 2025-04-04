@@ -32,7 +32,7 @@ include(
     'grails-datastore-web',
 
     // Core GORM Implementation projects
-    'grails-datastore-gorm',
+    'grails-datamapping-core',
     'grails-datastore-async',
     'grails-datamapping-async',
     'grails-datamapping-validation',
@@ -41,11 +41,11 @@ include(
     'grails-datamapping-tck-tests',
     'grails-datamapping-tck-base',
     'grails-datamapping-tck-domains',
-    'grails-datastore-gorm-test',
+    'grails-datamapping-core-test',
 
     // RX projects
     // until this can be finished ported to grails 7, we are disabling
-    //'grails-datastore-gorm-rx',
+    //'grails-datamapping-rx',
 
     // Testing Support
     'grails-testing-support-datamapping',

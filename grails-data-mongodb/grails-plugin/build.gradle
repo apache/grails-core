@@ -30,10 +30,10 @@ dependencies {
         // api: needed as classes should also be available when compiling apps. eg. MongoEntity
         // impl: MongoDatastore, MongoDbDataStoreSpringInitializer
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm-mongodb
+            // API dependencies in grails-data-mongodb
             //exclude group: 'org.apache.grails.data', module: 'grails-data-mongodb-bson' // Needed at runtime downstream (BsonPersistentEntityCodec)
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
             exclude group: 'org.apache.grails.data', module: 'grails-datamapping-support'
             //exclude group: 'org.mongodb', module: 'bson' // Needed downstream for compiling MongoEntity
             //exclude group: 'org.mongodb', module: 'mongodb-driver-core' // MongoClientSettings
@@ -47,7 +47,7 @@ dependencies {
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datamapping-support
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
-            //exclude group: 'org.apache.grails.data, module: 'grails-datastore-gorm' // AbstractDatastorePersistenceContextInterceptor
+            //exclude group: 'org.apache.grails.data, module: 'grails-datamapping-core' // AbstractDatastorePersistenceContextInterceptor
             exclude group: 'org.apache.grails', module: 'grails-core'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'

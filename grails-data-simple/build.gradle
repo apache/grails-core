@@ -27,11 +27,11 @@ dependencies {
             exclude group: 'org.springframework', module: 'spring-tx'
         }
     }
-    api project(':grails-datastore-gorm'), {
+    api project(':grails-datamapping-core'), {
         // api: ConfigurableApplicationEventPublisher, GormEnhancer, GormInstanceApi, GormStaticApi, GormValidationApi
         // impl: MultiTenantEventListener, ClasspathEntityScanner
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm
+            // API dependencies in grails-datamapping-core
             //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PostConstruct
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'

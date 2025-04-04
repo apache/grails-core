@@ -37,7 +37,7 @@ dependencies {
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-gorm-mongodb
             //exclude group: 'org.apache.grails.data', module: 'grails-datastore-core' // NativeEntryEntityPersister
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
             exclude group: 'org.apache.grails.data', module: 'grails-data-mongodb-bson'
             exclude group: 'org.apache.grails.data', module: 'grails-datamapping-support'
             //exclude group: 'org.mongodb', module: 'bson' // Document
@@ -46,10 +46,10 @@ dependencies {
             exclude group: 'org.springframework', module: 'spring-context'
         }
     }
-    implementation project(':grails-datastore-gorm'), {
+    implementation project(':grails-datamapping-core'), {
         // impl: GormEnhancer
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm
+            // API dependencies in grails-datamapping-core
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
             exclude group: 'org.apache.grails', module: 'grails-core'

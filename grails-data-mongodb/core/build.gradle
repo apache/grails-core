@@ -29,7 +29,7 @@ dependencies {
             // API dependencies in grails-data-mongodb-bson
             exclude group: 'org.mongodb', module: 'bson'
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
         }
     }
     api project(':grails-datastore-core'), {
@@ -53,7 +53,7 @@ dependencies {
             exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
         }
     }
-    api project(':grails-datastore-gorm'), {
+    api project(':grails-datamapping-core'), {
         // api: CriteriaBuilder, AbstractResultList
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datastore-gorm
@@ -73,7 +73,7 @@ dependencies {
             // API dependencies in grails-datamapping-support
             exclude group: 'org.apache.grails', module: 'grails-core'
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
             exclude group: 'org.springframework', module: 'spring-context'
             exclude group: 'org.springframework', module: 'spring-core'
         }

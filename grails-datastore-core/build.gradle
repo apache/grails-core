@@ -49,7 +49,7 @@ dependencies {
     }
 
 
-    testImplementation project(':grails-datastore-gorm'), {
+    testImplementation project(':grails-datamapping-core'), {
         // we only need the @grails.gorm.annotation.Entity annotation to test GORM syntax mapping
         transitive = false
     }

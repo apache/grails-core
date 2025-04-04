@@ -9,7 +9,7 @@ version = projectVersion
 
 ext {
     isReleaseVersion = !projectVersion.endsWith('-SNAPSHOT')
-    coreProjects = ['grails-datastore-core', 'grails-datastore-gorm']
+    coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
 }
 
 configurations {

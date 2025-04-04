@@ -12,7 +12,7 @@ dependencies {
 
     implementation "org.javassist:javassist:$javassistVersion"
     testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
-    testImplementation "org.apache.grails.data:grails-datastore-gorm-test:$datastoreVersion"
+    testImplementation "org.apache.grails.data:grails-datamapping-core-test:$datastoreVersion"
     testImplementation "org.apache.grails.data:grails-datamapping-tck-tests:$datastoreVersion"
     testImplementation "org.hibernate:hibernate-validator:$hibernateValidatorVersion"
     testImplementation "org.codehaus.gpars:gpars:$gparsVersion"

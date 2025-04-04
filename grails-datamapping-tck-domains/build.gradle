@@ -25,11 +25,11 @@ dependencies {
         }
     }
 
-    api project(':grails-datastore-gorm'), {
+    api project(':grails-datamapping-core'), {
         // api: ApplyDetachedCriteriaTransform, DetachedCriteria, DirtyCheck, Entity
         // impl: CascadingValidator, ConfigurableApplicationEventPublisher, GroovyProxyFactory, PagedResultList
         if (excludeUnusedTransDeps) {
-            // API dependencies in grails-datastore-gorm
+            // API dependencies in grails-datamapping-core
             exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
             exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
@@ -43,7 +43,7 @@ dependencies {
         // api: AsyncEntity
         if (excludeUnusedTransDeps) {
             // API dependencies in grails-datamapping-async
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-gorm'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
             //exclude group: 'org.apache.grails.async', module: 'grails-async' // PromiseDecoratorProvider
         }
     }

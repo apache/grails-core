@@ -32,7 +32,7 @@ dependencies {
             exclude group: 'org.springframework', module: 'spring-tx'
         }
     }
-    api project(':grails-datastore-gorm'), {
+    api project(':grails-datamapping-core'), {
         // api: ConfigurableApplicationEventPublisher, GormEnhancer, GormInstanceApi, GormStaticApi, GormValidationApi
         // impl: MultiTenantEventListener, ClasspathEntityScanner
         if (excludeUnusedTransDeps) {
@@ -91,7 +91,7 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     // Commented out since we aren't building / publishing
-    //testImplementation project(":grails-datastore-gorm-rx")
+    //testImplementation project(":grails-datamapping-rx")
 
     // Use the simple datastore to ensure the base implementation works correctly
     api project(':grails-data-simple')

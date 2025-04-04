@@ -11,7 +11,7 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
 
     api "io.reactivex:rxjava"
-    api project(":grails-datastore-gorm"), {
+    api project(":grails-datamapping-core"), {
         exclude group:"org.apache.grails.async", module:'grails-async'
         exclude group:"org.apache.grails.data", module:'grails-datastore-core'
     }
