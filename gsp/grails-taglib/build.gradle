@@ -4,7 +4,7 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.apache.grails.web'
+group = 'org.apache.grails.views'
 
 ext {
     pomTitle = 'Groovy Server Pages (GSP)'
