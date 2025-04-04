@@ -18,7 +18,7 @@ dependencies {
     }
 
     api "org.apache.groovy:groovy:$groovyVersion"
-    api("org.grails:grails-datastore-gorm-validation")
+    api("org.apache.grails.data:grails-datamapping-validation")
 
     compileOnly "org.fusesource.jansi:jansi"
     testRuntimeOnly "org.fusesource.jansi:jansi"

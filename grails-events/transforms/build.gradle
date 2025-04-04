@@ -11,12 +11,12 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-events-core')
-    api 'org.grails:grails-datastore-core'
+    api 'org.apache.grails.data:grails-datastore-core'
     api 'org.springframework:spring-context'
 
-    compileOnly 'org.grails:grails-datastore-gorm', {
+    compileOnly 'org.apache.grails.data:grails-datamapping-core', {
         // TODO: Explain why this exclusion is done
-        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+        exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
     }
     implementation 'org.apache.groovy:groovy'
     implementation 'org.slf4j:slf4j-api'
@@ -25,14 +25,14 @@ dependencies {
     implementation 'org.springframework:spring-tx'
     implementation 'jakarta.annotation:jakarta.annotation-api'
 
-    testImplementation 'org.grails:grails-datastore-gorm', {
+    testImplementation 'org.apache.grails.data:grails-datamapping-core', {
         // TODO: Explain why this exclusion is done
-        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+        exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
     }
 
-    testImplementation 'org.grails:grails-datastore-gorm-test', {
+    testImplementation 'org.apache.grails.data:grails-datamapping-core-test', {
         // TODO: Explain why this exclusion is done (I don't know)
-        exclude group: 'org.grails', module: 'grails-datastore-gorm-validation'
+        exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
     }
     testImplementation 'org.spockframework:spock-core'
 

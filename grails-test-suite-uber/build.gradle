@@ -26,9 +26,11 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.grails:grails-datastore-gorm-hibernate5'
-    testImplementation "org.grails.plugins:gsp"
-    testImplementation 'org.grails:grails-gorm-testing-support', {
+    testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
+    testImplementation "org.grails.plugins:gsp", {
+        exclude module: 'grails-datastore-gorm-validation' // TODO: Remove after views is built
+    }
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-testing-support'// TODO: remove after gorm is built
@@ -38,11 +40,13 @@ dependencies {
     testImplementation 'org.grails:grails-web-testing-support', {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
+        exclude module: 'grails-datastore-gorm-validation' // TODO: Remove after views is built
         exclude module: 'grails-plugin-interceptors' // TODO: remove after views is built
         exclude module: 'grails-testing-support' // TODO: remove after views is built
         exclude module: 'grails-plugin-rest' // TODO: remove after views is built
         exclude module: 'grails-rest-transforms'
     }
+    testImplementation 'org.apache.grails.data:grails-datamapping-validation'
     testImplementation 'org.objenesis:objenesis'
 
     testCompileOnly 'jakarta.servlet:jakarta.servlet-api'

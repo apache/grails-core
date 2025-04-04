@@ -9,7 +9,7 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    testImplementation 'org.grails:grails-gorm-testing-support', {
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
         // This is a local project dependency
         exclude group: 'org.grails', module: 'grails-testing-support'
     }

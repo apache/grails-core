@@ -27,7 +27,7 @@ dependencies {
     }
 
     api project(":grails-databinding")
-    api "org.grails:grails-datastore-gorm"
+    api "org.apache.grails.data:grails-datamapping-core"
     api project(":grails-test-core")
     api "org.springframework.boot:spring-boot-test"
     api("org.spockframework:spock-spring") { transitive = false }

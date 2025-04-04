@@ -49,7 +49,7 @@ dependencies {
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
 
     testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-datamapping"
 
     testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"

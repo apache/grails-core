@@ -29,7 +29,7 @@ dependencies {
     api "jakarta.servlet:jakarta.servlet-api"
 
     testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-datamapping"
 
     console "org.apache.grails:grails-console"
 }
