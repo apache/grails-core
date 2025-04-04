@@ -126,7 +126,7 @@ while getopts "pdvsqrtcfgl:" flag; do
   elif [ "${flag}" = "v" ]; then
     echo "Mapping grails-views artifacts"
     declare -a views_mappings=(
-      "org[.]grails[.]plugins:views-json|org.apache.grails.views:grails-views-gson"
+      "org[.]grails[.]plugins:views-json|org.apache.grails:grails-views-gson"
       "org[.]grails[.]plugins:scaffolding|org.apache.grails:grails-scaffolding"
       "org[.]grails[.]plugins:gsp|org.apache.grails:grails-gsp"
       "org[.]grails[.]plugins:fields|org.apache.grails:grails-fields"
