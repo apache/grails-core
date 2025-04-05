@@ -8,7 +8,7 @@ def isLocal = !isCI
 def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY') != null
 
 develocity {
-    server = 'https://ge.grails.org'
+    server = 'https://ge.apache.org'
     buildScan {
         tag('grails')
         tag('grails-views')
@@ -43,11 +43,11 @@ project(':grails-testing-support-views-gson').projectDir = file('views/gson-test
 include 'grails-markup'
 project(':grails-markup').projectDir = file('views/markup')
 
-//include 'views-examples-functional-tests'
-//project(':views-examples-functional-tests').projectDir = file('views/examples/functional-tests')
-//
-//include 'views-examples-functional-tests-plugin'
-//project(':views-examples-functional-tests-plugin').projectDir = file('views/examples/functional-tests-plugin')
+include 'views-examples-functional-tests'
+project(':views-examples-functional-tests').projectDir = file('views/examples/functional-tests')
+
+include 'views-examples-functional-tests-plugin'
+project(':views-examples-functional-tests-plugin').projectDir = file('views/examples/functional-tests-plugin')
 
 include 'scaffolding'
 
@@ -87,8 +87,8 @@ project(':grails-web-taglib').projectDir = file('gsp/grails-web-taglib')
 include 'grails-testing-support-web'
 project(':grails-testing-support-web').projectDir = file('gsp/grails-testing-support-web')
 
-//include 'gsp-examples-sitemesh3'
-//project(':gsp-examples-sitemesh3').projectDir = file('gsp/examples/sitemesh3')
+include 'gsp-examples-sitemesh3'
+project(':gsp-examples-sitemesh3').projectDir = file('gsp/examples/sitemesh3')
 
 include 'grails-gsp-spring-boot'
 project(':grails-gsp-spring-boot').projectDir = file('gsp/grails-gsp-spring-boot')

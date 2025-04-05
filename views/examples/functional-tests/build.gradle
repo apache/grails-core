@@ -14,7 +14,7 @@ dependencies {
         exclude group: 'org.apache.grails.views', module: 'grails-views-core'
         exclude group: 'org.apache.grails', module: 'grails-testing-support-views-gson'
         exclude group: 'org.apache.grails', module: 'grails-scaffolding'
-        exclude group: 'org.apache.grails', module: 'gsp'
+        exclude group: 'org.apache.grails', module: 'grails-gsp'
     }
 
     implementation project(':views-examples-functional-tests-plugin')

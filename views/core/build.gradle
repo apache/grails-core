@@ -17,8 +17,6 @@ dependencies {
         exclude group: 'org.apache.grails.views', module: 'grails-views-core'
         exclude group: 'org.apache.grails', module: 'grails-testing-support-views-gson'
         exclude group: 'org.apache.grails', module: 'grails-scaffolding'
-        exclude group: 'org.grails', module: 'views-core' // Remove when views published
-        exclude group: 'org.grails.plugins', module: 'scaffolding' // Remove when views published
     }
 
     api 'com.github.ben-manes.caffeine:caffeine' // Used in public API

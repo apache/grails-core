@@ -31,8 +31,8 @@ dependencies {
     api project(':grails-web-gsp'), { // PageRenderer
         // API dependencies in grails-web-gsp
         exclude group: 'org.apache.grails.views', module: 'grails-gsp-core'
-        exclude group: 'org.apache.grails.web', module: 'grails-web-common'
         exclude group: 'org.apache.grails.views', module: 'grails-web-taglib'
+        exclude group: 'org.apache.grails.web', module: 'grails-web-common'
     }
     api project(':grails-web-taglib'), { // TagLibraryInvoker, TagLib, TagLibrary
         // API dependencies in grails-web-taglib
@@ -116,9 +116,9 @@ dependencies {
         // API dependencies in grails-web
         exclude group: 'org.apache.grails.web', module: 'grails-web-common'
         exclude group: 'org.apache.grails.web', module: 'grails-web-databinding'
-        exclude group: 'org.apache.grails.web', module: 'grails-web-gsp'
         exclude group: 'org.apache.grails.web', module: 'grails-web-mvc'
         exclude group: 'org.apache.grails.web', module: 'grails-web-url-mappings'
+        exclude group: 'org.apache.grails.views', module: 'grails-web-gsp'
     }
     astImplementation 'org.apache.grails:grails-controllers', {
         // API dependencies in grails-plugin-controllers
@@ -132,7 +132,7 @@ dependencies {
 
     runtimeOnly project(':grails-web-jsp'), { // Provided by Application for JSP support
         // API dependencies in grails-web-jsp
-        exclude group: 'org.apache.grails.web', module: 'grails-web-gsp'
+        exclude group: 'org.apache.grails.views', module: 'grails-web-gsp'
     }
 
     api "org.apache.grails:grails-codecs:$grailsVersion" // Registers CodecLookup bean
@@ -141,7 +141,7 @@ dependencies {
 
     testImplementation project(':grails-web-jsp'), { // TagLibraryResolverImpl
         // API dependencies in grails-web-jsp
-        exclude group: 'org.apache.grails.web', module: 'grails-web-gsp'
+        exclude group: 'org.apache.grails.views', module: 'grails-web-gsp'
     }
     testImplementation 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api'
     testImplementation "jakarta.servlet.jsp:jakarta.servlet.jsp-api:$jspApiVersion"

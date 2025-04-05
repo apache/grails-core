@@ -12,7 +12,6 @@ dependencies {
     implementation platform("org.apache.grails:grails-bom:${grailsVersion}"), {
         // as a safeguard, exclude projects in this repo that included transitively to ensure we pick the right version
         exclude group: 'org.apache.grails.views', module: 'grails-views-core'
-        exclude group: 'org.grails', module: 'views-core' // TODO: Remove when views published
     }
 
     implementation project(':grails-gson')
