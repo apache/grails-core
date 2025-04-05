@@ -28,21 +28,7 @@ dependencies {
     api "org.apache.grails:grails-dependencies"
     api "jakarta.servlet:jakarta.servlet-api"
 
-    implementation "org.grails.plugins:spring-security-core:$springSecurityCoreVersion", {
-        exclude group: 'org.grails', module: 'grails-datastore-core' // TODO: remove when spring security is updated
-        exclude group: 'org.grails', module: 'grails-datastore-gorm' // TODO: remove when spring security is updated
-        exclude group: 'org.grails.plugins', module: 'async' // TODO: remove when spring security is updated
-        exclude group: 'org.grails', module: 'grails-web-common' // TODO: remove when spring security is updated
-        exclude group: 'org.grails', module: 'grails-web-url-mappings' // TODO: remove when spring security is updated
-        exclude group: 'org.grails', module: 'grails-events-transform' // TODO: remove when spring security is updated
-        exclude group: 'org.grails', module: 'grails-plugin-mimetypes' // TODO: remove when spring security is updated
-    }
-    implementation 'org.apache.grails.data:grails-datastore-core' // TODO: Remove when spring security is updated
-    implementation 'org.apache.grails.data:grails-datamapping-core' // TODO: Remove when spring security is updated
-    implementation 'org.apache.grails.events:grails-events-transforms' // TODO: Remove when spring security is updated
-    implementation 'org.apache.grails:grails-async' // TODO: Remove when spring security is updated
-    implementation 'org.apache.grails.web:grails-web-common' // TODO: Remove when spring security is updated
-    implementation 'org.apache.grails.web:grails-web-url-mappings' // TODO: Remove spring security is published published
+    implementation "org.apache.grails:grails-spring-security:$springSecurityCoreVersion"
 
     console "org.apache.grails:grails-console"
 }

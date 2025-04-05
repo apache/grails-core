@@ -112,44 +112,44 @@ project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
 project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async-plugin').projectDir = file('grails-async/plugin')
 
-//// Functional Tests
-//include (
-//        'grails-test-examples-async-events-pubsub-demo',
-//        'grails-test-examples-app1',
-//        'grails-test-examples-app2',
-//        'grails-test-examples-app3',
-//        'grails-test-examples-datasources',
-//        'grails-test-examples-namespaces',
-//        'grails-test-examples-gorm',
-//        'grails-test-examples-issue-698-domain-save-npe',
-//        'grails-test-examples-hyphenated',
-//        'grails-test-examples-issue-views-182',
-//        'grails-test-examples-issue-11102',
-//        'grails-test-examples-demo33',
-//        // 'grails-test-examples-micronaut', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
-//        'grails-test-examples-plugins-loadfirst',
-//        'grails-test-examples-plugins-loadsecond',
-//        'grails-test-examples-plugins-loadafter',
-//        'grails-test-examples-plugins-issue11005',
-//        // 'grails-test-examples-issue-11767', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
-//        // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
-//)
-//project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
-//project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
-//project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
-//project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
-//project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
-//project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
-//project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
-//project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
-//project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
-//project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
-//project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
-//project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
-//// project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
-//project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
-//project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
-//project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
-//project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
-//// project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
-//// project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')
+// Functional Tests
+include (
+        'grails-test-examples-async-events-pubsub-demo',
+        'grails-test-examples-app1',
+        'grails-test-examples-app2',
+        'grails-test-examples-app3',
+        'grails-test-examples-datasources',
+        'grails-test-examples-namespaces',
+        'grails-test-examples-gorm',
+        'grails-test-examples-issue-698-domain-save-npe',
+        'grails-test-examples-hyphenated',
+        'grails-test-examples-issue-views-182',
+        'grails-test-examples-issue-11102',
+        'grails-test-examples-demo33',
+        // 'grails-test-examples-micronaut', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        'grails-test-examples-plugins-loadfirst',
+        'grails-test-examples-plugins-loadsecond',
+        'grails-test-examples-plugins-loadafter',
+        'grails-test-examples-plugins-issue11005',
+        // 'grails-test-examples-issue-11767', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+)
+project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
+project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
+project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
+project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
+project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
+project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
+project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
+project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
+project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
+project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
+project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
+project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
+// project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
+project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
+project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
+project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
+project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
+// project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+// project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')
