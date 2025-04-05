@@ -43,7 +43,7 @@ dependencies {
     documentation 'org.apache.groovy:groovy-dateutil'
     documentation 'com.github.javaparser:javaparser-core'
     coreProjects.each {
-        documentation "org.apache.grails:$it"
+        documentation "org.apache.grails.data:$it"
     }
     rootProject.subprojects
             .findAll { it.findProperty('apiDocs') }
