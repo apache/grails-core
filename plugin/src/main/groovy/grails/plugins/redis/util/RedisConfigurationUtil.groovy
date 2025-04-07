@@ -1,6 +1,6 @@
 package grails.plugins.redis.util
 
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
 import redis.clients.jedis.JedisSentinelPool
@@ -19,7 +19,7 @@ import redis.clients.jedis.Protocol
  *   configureService(connection.value, connection?.key?.capitalize(), MyRedisService)
  *}*
  */
-@Commons
+@Slf4j
 class RedisConfigurationUtil {
 
     /**
@@ -86,8 +86,8 @@ class RedisConfigurationUtil {
             try {
                 fakeJedisPoolConfig[configKey] = value
                 return true
-            } catch (Exception exception) {
-                log.warn "Redis pool configuration parameter (${configKey}) does not exist on JedisPoolConfig or value is the wrong type"
+            } catch (Exception ignore) {
+                log.warn('Redis pool configuration parameter ({}) does not exist on JedisPoolConfig or value is the wrong type', configKey.toString())
                 return false
             }
         }

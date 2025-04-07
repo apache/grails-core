@@ -17,13 +17,13 @@ package grails.plugins.redis
 import com.google.gson.Gson
 import grails.core.GrailsApplication
 import grails.gorm.transactions.Transactional
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.Pipeline
 import redis.clients.jedis.Transaction
 import redis.clients.jedis.exceptions.JedisConnectionException
 
-@Commons
+@Slf4j
 class RedisService {
 
     public static final int NO_EXPIRATION_TTL = -1
@@ -38,7 +38,7 @@ class RedisService {
         if (grailsApplication.mainContext.containsBean("redisService${connectionName.capitalize()}")) {
             return (RedisService) grailsApplication.mainContext.getBean("redisService${connectionName.capitalize()}")
         }
-        if (log.errorEnabled) log.error("Connection with name redisService${connectionName.capitalize()} could not be found, returning default redis instead")
+        log.error('Connection with name redisService{} could not be found, returning default redis instead', connectionName.capitalize())
         return this
     }
 
@@ -78,7 +78,7 @@ class RedisService {
     }
 
     def methodMissing(String name, args) {
-        if (log.debugEnabled) log.debug "methodMissing $name"
+        log.debug('methodMissing {}', name)
         withRedis { Jedis redis ->
             redis.invokeMethod(name, args)
         }
@@ -122,13 +122,13 @@ class RedisService {
             redis = redisPool.resource
         }
         catch (JedisConnectionException jce) {
-            log.info('Unreachable redis store trying to retrieve redis resource.  Please check redis server and/or config!')
+            log.info('Unreachable redis store trying to retrieve redis resource. Please check redis server and/or config!')
         }
 
         try {
             return clos(redis)
         } catch (JedisConnectionException jce) {
-            log.error('Unreachable redis store trying to return redis pool resource.  Please check redis server and/or config!', jce)
+            log.error('Unreachable redis store trying to return redis pool resource. Please check redis server and/or config!', jce)
         } catch (Throwable t) {
             throw t
         } finally {
@@ -144,13 +144,13 @@ class RedisService {
 
     // SET/GET a value on a Redis key
     def memoize(String key, Map options = [:], Closure closure) {
-        if (log.debugEnabled) log.debug "using key $key"
+        log.debug('using key {}', key)
         def result = withOptionalRedis { Jedis redis ->
             if (redis) return redis.get(key)
         }
 
         if (!result) {
-            if (log.debugEnabled) log.debug "cache miss: $key"
+            log.debug('cache miss: {}', key)
             result = closure()
             if (result) withOptionalRedis { Jedis redis ->
                 if (redis) {
@@ -162,7 +162,7 @@ class RedisService {
                 }
             }
         } else {
-            if (log.debugEnabled) log.debug "cache hit : $key = $result"
+            log.debug('cache hit : {} = {}', key, result)
         }
         result
     }
@@ -177,7 +177,7 @@ class RedisService {
         }
 
         if (!hash) {
-            if (log.debugEnabled) log.debug "cache miss: $key"
+            log.debug('cache miss: {}', key)
             hash = closure()
             if (hash) withOptionalRedis { Jedis redis ->
                 if (redis) {
@@ -186,7 +186,7 @@ class RedisService {
                 }
             }
         } else {
-            if (log.debugEnabled) log.debug "cache hit : $key = $hash"
+            log.debug('cache hit : {} = {}', key, hash)
         }
         hash
     }
@@ -204,7 +204,7 @@ class RedisService {
         }
 
         if (!result) {
-            if (log.debugEnabled) log.debug "cache miss: $key.$field"
+            log.debug('cache miss: {}.{}', key, field)
             result = closure()
             if (result) withOptionalRedis { Jedis redis ->
                 if (redis) {
@@ -213,7 +213,7 @@ class RedisService {
                 }
             }
         } else {
-            if (log.debugEnabled) log.debug "cache hit : $key.$field = $result"
+            log.debug('cache hit : {}.{} = {}', key, field, result)
         }
         result
     }
@@ -231,7 +231,7 @@ class RedisService {
         }
 
         if (!score) {
-            if (log.debugEnabled) log.debug "cache miss: $key.$member"
+            log.debug('cache miss: {}.{}', key, member)
             score = closure()
             if (score) withOptionalRedis { Jedis redis ->
                 if (redis) {
@@ -240,7 +240,7 @@ class RedisService {
                 }
             }
         } else {
-            if (log.debugEnabled) log.debug "cache hit : $key.$member = $score"
+            log.debug('cache hit : {}.{} = {}', key, member, score)
         }
         score
     }
@@ -284,14 +284,14 @@ class RedisService {
         }
 
         if (idList) {
-            if (log.debugEnabled) log.debug "$key cache hit, returning ${idList.size()} ids"
+            log.debug('{} cache hit, returning {} ids', key, idList.size())
             List<Long> idLongList = idList*.toLong()
             return idLongList
         }
     }
 
     protected void saveIdListTo(String key, List domainList, Integer expire = null) {
-        if (log.debugEnabled) log.debug "$key cache miss, memoizing ${domainList?.size() ?: 0} ids"
+        log.debug('{} cache miss, memoizing {} ids', key, domainList?.size() ?: 0)
         withOptionalPipeline { pipeline ->
             if (pipeline) {
                 for (domain in domainList) {
@@ -359,7 +359,7 @@ class RedisService {
     // perf test before relying on this rather than storing your own set of keys to 
     // delete
     void deleteKeysWithPattern(keyPattern) {
-        if (log.infoEnabled) log.info("Cleaning all redis keys with pattern  [${keyPattern}]")
+        log.info('Cleaning all redis keys with pattern [{}]', keyPattern.toString())
         withRedis { Jedis redis ->
             String[] keys = redis.keys(keyPattern)
             if (keys) redis.del(keys)
@@ -387,7 +387,7 @@ class RedisService {
         }
 
         if (!list) {
-            if (log.debugEnabled) log.debug "cache miss: $key"
+            log.debug('cache miss: {}', key)
             list = closure()
             if (list) withOptionalPipeline { pipeline ->
                 if (pipeline) {
@@ -398,7 +398,7 @@ class RedisService {
                 }
             }
         } else {
-            if (log.debugEnabled) log.debug "cach hit: $key"
+            log.debug('cache hit: {}', key)
         }
         list
     }
@@ -413,7 +413,7 @@ class RedisService {
         }
 
         if (!set) {
-            if (log.debugEnabled) log.debug "cache miss: $key"
+            log.debug('cache miss: {}', key)
             set = closure()
             if (set) withOptionalPipeline { pipeline ->
                 if (pipeline) {
@@ -424,13 +424,13 @@ class RedisService {
                 }
             }
         } else {
-            if (log.debugEnabled) log.debug "cache hit: $key"
+            log.debug('cache hit: {}', key)
         }
         set
     }
     // should ONLY Be used from tests unless we have a really good reason to clear out the entire redis db
     def flushDB() {
-        if (log.warnEnabled) log.warn('flushDB called!')
+        log.warn('flushDB called!')
         withRedis { Jedis redis ->
             redis.flushDB()
         }
