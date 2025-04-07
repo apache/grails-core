@@ -1,4 +1,4 @@
-name: Java CI
+name: "Java CI"
 on:
   push:
     branches:
@@ -7,66 +7,69 @@ on:
     branches:
       - '[3-9]+.[0-9]+.x'
   workflow_dispatch:
+permissions:
+  packages: read
 jobs:
   build:
-    name: Build (Redis ${{ matrix.redis-version }})
-    runs-on: ubuntu-latest
+    name: "Build (Redis ${{ matrix.redis-version }})"
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         redis-version: [6, 7]
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: 'liberica'
           java-version: 17
-      - name: Setup Redis
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "Setup Redis"
         uses: supercharge/redis-github-action@1.8.0
         with:
           redis-version: ${{ matrix.redis-version }}
-      - name: Run Build
+      - name: "🏃‍♂️ Run Build"
         id: build
-        uses: gradle/gradle-build-action@v3
         env:
           REDIS_HOST: redis
           REDIS_PORT: 6379
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-        with:
-          arguments: build -U
-  publish:
-    if: github.event_name == 'push'
+        run: ./gradlew build --continue
+  publish_snapshot:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
         with:
-          distribution: 'liberica'
           java-version: 17
-      - name: Publish Artifacts (repo.grails.org)
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "📤 Publish Snapshot Artifacts"
         id: publish
-        uses: gradle/gradle-build-action@v3
         env:
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
-          MAVEN_PUBLISH_URL: ${{ secrets.MAVEN_PUBLISH_SNAPSHOT_URL }}
-        with:
-          arguments: publish
-      - name: Build Docs
-        id: docs
-        if: success()
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: :grails-redis:groovydoc
-        env:
-          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
+          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+        run: ./gradlew --no-build-cache publish
+      - name: "🔨 Generate Snapshot Documentation"
+        run: ./gradlew :grails-redis:groovydoc
       - name: "🚀 Publish to Github Pages"
-        if: success()
-        uses: grails/grails-github-actions/deploy-github-pages@main
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'

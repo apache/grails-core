@@ -1,0 +1,11 @@
+dependencies {
+    add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher') // Gradle 9+ requires this
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+        events 'passed', 'skipped', 'failed'//, 'standardOut', 'standardError'
+    }
+}

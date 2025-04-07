@@ -1,0 +1,11 @@
+configurations.register('documentation') {
+    extendsFrom(configurations.compileClasspath)
+}
+
+dependencies {
+    add('documentation', 'com.github.javaparser:javaparser-core')
+}
+
+tasks.named('groovydoc', Groovydoc) {
+    groovyClasspath += configurations.documentation
+}

@@ -1,31 +1,27 @@
-
 plugins {
-    id "com.gradle.enterprise" version '3.16.2'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
+    id 'com.gradle.develocity' version '3.19.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
-gradleEnterprise {
-    server = 'https://ge.grails.org'
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isAuthenticated = System.getenv().containsKey('GRAILS_DEVELOCITY_ACCESS_KEY')
+
+develocity {
+    server = 'https://ge.apache.org'
     buildScan {
-        publishAlwaysIf(System.getenv('CI') == 'true')
-        publishIfAuthenticated()
-        uploadInBackground = System.getenv('CI') == null
-        capture {
-            taskInputFiles = true
-        }
+        tag('grails')
+        tag('grails-redis')
+        publishing.onlyIf { isAuthenticated }
+        uploadInBackground = isLocal
     }
 }
 
 buildCache {
-    local { enabled = System.getenv('CI') != 'true' }
-    remote(HttpBuildCache) {
-        push = System.getenv('CI') == 'true'
+    local { enabled = isLocal }
+    remote(develocity.buildCache) {
+        push = isCI && isAuthenticated
         enabled = true
-        url = 'https://ge.grails.org/cache/'
-        credentials {
-            username = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER')
-            password = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')
-        }
     }
 }
 
@@ -34,5 +30,5 @@ rootProject.name = "grails-redis-root"
 include 'plugin'
 findProject(':plugin').name = 'grails-redis'
 
-include "examples-redis-demo"
+include 'examples-redis-demo'
 project(":examples-redis-demo").projectDir = [settingsDir, 'examples/redis-demo'] as File
