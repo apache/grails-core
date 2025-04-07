@@ -36,6 +36,9 @@ dependencies {
     implementation 'org.apache.grails.data:grails-datamapping-core', {
         // impl: @Transactional(runtime)
     }
+    implementation 'org.apache.grails.views:grails-web-taglib', {
+        // Project has a taglib
+    }
 
     compileOnly 'org.apache.grails.bootstrap:grails-bootstrap', {
         // comp: @PluginSource(source)
