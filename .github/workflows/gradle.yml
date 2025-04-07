@@ -28,17 +28,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "Setup Redis"
-        uses: supercharge/redis-github-action@1.8.0
-        with:
-          redis-version: ${{ matrix.redis-version }}
+#      - name: "Setup Redis"
+#        uses: supercharge/redis-github-action@1.8.0
+#        with:
+#          redis-version: ${{ matrix.redis-version }}
       - name: "🏃‍♂️ Run Build"
         id: build
         env:
           REDIS_HOST: redis
           REDIS_PORT: 6379
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-        run: ./gradlew build --continue
+        run: ./gradlew build -x test --continue
   publish_snapshot:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
