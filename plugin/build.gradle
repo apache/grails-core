@@ -7,23 +7,15 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
-configurations.configureEach {
-    resolutionStrategy.eachDependency {
-        if (requested.group == 'org.apache.commons' && requested.name == 'commons-pool2') {
-            useVersion commonsPool2Version
-        }
-    }
-}
-
 dependencies {
 
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    api "redis.clients:jedis:$jredisVersion", {
+    api 'redis.clients:jedis', {
         // api: Jedis, JedisConnectionException
         // impl: JedisPool, JedisPoolConfig, JedisSentinelPool, Pipeline, Protocol, Transaction
     }
-    api "com.google.code.gson:gson:$gsonVersion", {
+    api 'com.google.code.gson:gson', {
         // api: Gson(transform)
     }
     api 'org.springframework:spring-beans', {
