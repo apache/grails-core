@@ -3,10 +3,6 @@ package redis
 import grails.plugins.Plugin
 import grails.plugins.redis.RedisService
 import grails.plugins.redis.util.RedisConfigurationUtil
-import redis.clients.jedis.JedisPool
-import redis.clients.jedis.JedisPoolConfig
-import redis.clients.jedis.JedisSentinelPool
-import redis.clients.jedis.Protocol
 
 class RedisGrailsPlugin extends Plugin {
 

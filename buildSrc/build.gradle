@@ -1,13 +1,20 @@
-apply from: "./loadProps.gradle"
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+Properties versions = new Properties()
+file('../gradle.properties').withInputStream {
+    versions.load(it)
+}
 
 repositories {
     mavenCentral()
-    maven { url "https://repo.grails.org/grails/core" }
+    maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation "org.grails:grails-gradle-plugin"
-    implementation "com.bertramlabs.plugins:asset-pipeline-gradle"
-    implementation "io.github.gradle-nexus.publish-plugin:io.github.gradle-nexus.publish-plugin.gradle.plugin:2.0.0"
+    implementation platform("org.apache.grails:grails-bom:${versions.get('grailsVersion')}")
+    implementation 'org.apache.grails:grails-gradle-plugins'
+    implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
 }

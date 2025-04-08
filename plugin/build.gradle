@@ -1,69 +1,53 @@
 plugins {
     id 'java-library'
-    id 'eclipse'
-    id 'idea'
-    id 'org.grails.grails-plugin'
-    id "org.grails.grails-gsp"
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gsp'
 }
 
-group = 'org.grails.plugins'
-
-compileJava.options.release = 17
-
-configurations {
-    documentation.extendsFrom compileClasspath
-    all {
-        resolutionStrategy {
-            force "org.apache.commons:commons-pool2:$commonsPool2Version"
-        }
-    }
-}
+version = projectVersion
+group = 'org.apache.grails'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.grails:grails-web-boot"
-    implementation "org.grails:grails-dependencies"
 
-    testImplementation 'org.grails:grails-web-testing-support'
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    implementation "org.grails:grails-console"
-
-    api "redis.clients:jedis:$jredisVersion"
-    api "com.google.code.gson:gson:$gsonVersion"
-
-    documentation("com.github.javaparser:javaparser-core") {
-        transitive = false
+    api 'redis.clients:jedis', {
+        // api: Jedis, JedisConnectionException
+        // impl: JedisPool, JedisPoolConfig, JedisSentinelPool, Pipeline, Protocol, Transaction
     }
-}
-
-groovydoc {
-    groovyClasspath += configurations.documentation
-}
-
-test {
-    useJUnitPlatform()
-}
-
-jar {
-  exclude "application.groovy"
-  exclude "src/test/projects/**"
-}
-
-apply plugin: 'org.grails.grails-publish'
-grailsPublish {
-    githubSlug = 'grails/grails-redis'
-    license {
-        name = 'Apache-2.0'
+    api 'com.google.code.gson:gson', {
+        // api: Gson(transform)
     }
-    title = 'Grails Redis Plugin'
-    desc = 'This Plugin provides access to Redis and various utilities (service, annotations, etc) for caching.'
-    developers = ['tednaleid': 'Ted Naleid', 'burtbeckwith': 'Burt Beckwith', 'christianoestreich': 'Christian Oestreich',
-                  'briancoles': 'Brian Coles', 'michaelcameron': 'Michael Cameron', 'johnengelman': 'John Engelman',
-                  'davidseiler': 'David Seiler', 'jordonsaardchit': 'Jordon Saardchit', 'florianlangenhahn': 'Florian Langenhahn',
-                  'germansancho': 'German Sancho', 'johnmulhern': 'John Mulhern', 'shaunjurgemeyer': 'Shaun Jurgemeyer',
-                  'puneetbehl': 'Puneet Behl']
+    api 'org.springframework:spring-beans', {
+        // api: @Autowired(transform)
+    }
+    api 'org.springframework:spring-core', {
+        // api: Opcodes(transform)
+    }
+
+    implementation 'org.apache.grails.data:grails-datamapping-core', {
+        // impl: @Transactional(runtime)
+    }
+    implementation 'org.apache.grails.views:grails-web-taglib', {
+        // Project has a taglib
+    }
+
+    compileOnly 'org.apache.grails.bootstrap:grails-bootstrap', {
+        // comp: @PluginSource(source)
+    }
+    compileOnly 'org.apache.grails:grails-core', { // Provided as this is a Grails Plugin
+        // api GrailsApplication, Holders(transform)
+        // impl: GrailsApp, GrailsAutoConfiguration, Plugin
+    }
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails Plugin
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.spockframework:spock-core'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

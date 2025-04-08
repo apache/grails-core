@@ -1,0 +1,1 @@
+compileJava.options.release = javaVersion.toInteger()

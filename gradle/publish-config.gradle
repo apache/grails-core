@@ -1,0 +1,24 @@
+import org.grails.gradle.plugin.publishing.GrailsPublishExtension
+
+extensions.configure(GrailsPublishExtension) {
+    // Explicit `it` is required here
+    it.githubSlug = 'apache/grails-redis'
+    it.license.name = 'Apache-2.0'
+    it.title = 'Grails Redis Plugin'
+    it.desc = 'This Plugin provides access to Redis and various utilities (service, annotations, etc) for caching.'
+    it.developers = [
+            tednaleid: 'Ted Naleid',
+            burtbeckwith: 'Burt Beckwith',
+            christianoestreich: 'Christian Oestreich',
+            briancoles: 'Brian Coles',
+            michaelcameron: 'Michael Cameron',
+            johnengelman: 'John Engelman',
+            davidseiler: 'David Seiler',
+            jordonsaardchit: 'Jordon Saardchit',
+            florianlangenhahn: 'Florian Langenhahn',
+            germansancho: 'German Sancho',
+            johnmulhern: 'John Mulhern',
+            shaunjurgemeyer: 'Shaun Jurgemeyer',
+            puneetbehl: 'Puneet Behl'
+    ]
+}
