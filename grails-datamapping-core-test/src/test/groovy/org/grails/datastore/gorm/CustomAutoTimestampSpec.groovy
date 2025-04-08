@@ -30,7 +30,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
             then:"the custom lastUpdated property is updated and dateCreated is not"
             r.modified != null && previousModified < r.modified
-            previousCreated == r.created
+            previousCreated.time == r.created.time
     }
 
     void "Test when the auto timestamp properties are already set, they are overwritten"() {
@@ -57,7 +57,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
         then:"the custom lastUpdated property is updated and dateCreated is not"
         r.modified != null && previousModified < r.modified
-        previousCreated == r.created
+        previousCreated.time == r.created.time
     }
 
     void "Test when the auto timestamp properties are already set, they are not overwritten if config is set"() {
@@ -75,8 +75,8 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         r = RecordCustom.get(r.id)
 
         then:"the custom lastUpdated and dateCreated are not overwritten"
-        now == r.modified
-        now == r.created
+        now.time == r.modified.time
+        now.time == r.created.time
 
         when:"An entity is modified"
         Date previousCreated = r.created
@@ -88,7 +88,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
         then:"the custom lastUpdated property is updated and dateCreated is not"
         r.modified != null && previousModified < r.modified
-        previousCreated == r.created
+        previousCreated.time == r.created.time
     }
 
     @Override
