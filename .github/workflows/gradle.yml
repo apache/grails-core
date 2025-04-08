@@ -16,6 +16,16 @@ jobs:
     strategy:
       matrix:
         redis-version: [6, 7]
+    services:
+        redis:
+            image: redis:${{ matrix.redis-version }}
+            ports:
+              - 6379:6379
+            options: >-
+              --health-cmd "redis-cli ping"
+              --health-interval 10s
+              --health-timeout 5s
+              --health-retries 5
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -28,17 +38,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-#      - name: "Setup Redis"
-#        uses: supercharge/redis-github-action@1.8.0
-#        with:
-#          redis-version: ${{ matrix.redis-version }}
       - name: "🏃‍♂️ Run Build"
         id: build
         env:
           REDIS_HOST: redis
           REDIS_PORT: 6379
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-        run: ./gradlew build -x test --continue
+        run: ./gradlew build --continue
   publish_snapshot:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
