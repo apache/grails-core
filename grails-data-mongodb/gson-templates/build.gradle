@@ -17,7 +17,7 @@ dependencies {
 
     implementation(platform("org.apache.grails:grails-bom:$grailsVersion"))
 
-    api 'org.apache.grails:grails-rest-transforms'
+    api 'org.apache.grails:grails-views-gson'
 
     implementation project(':mongodb-core')
     implementation project(':mongodb-bson')
