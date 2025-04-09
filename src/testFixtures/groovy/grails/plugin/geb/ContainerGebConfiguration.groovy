@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 original author or authors
+ * Copyright 2024-2025 original author or authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import java.lang.annotation.Target
 
     static final String DEFAULT_HOSTNAME_FROM_CONTAINER = GenericContainer.INTERNAL_HOST_HOSTNAME
     static final String DEFAULT_PROTOCOL = 'http'
+    static final Class<? extends ContainerFileDetector> DEFAULT_FILE_DETECTOR = DefaultContainerFileDetector
 
     /**
      * The protocol that the container's browser will use to access the server under test.
@@ -52,4 +53,15 @@ import java.lang.annotation.Target
      * Whether reporting should be enabled for this test. Add a `GebConfig.groovy` to customize the reporter configuration.
      */
     boolean reporting() default false
+
+    /**
+     * The {@link org.openqa.selenium.remote.FileDetector} implementation to use for this class.
+     * <p> {@link NullContainerFileDetector} results in the
+     *     {@link grails.plugin.geb.serviceloader.ServiceRegistry last set} instance being used.
+     *
+     * @since 4.2
+     * @see grails.plugin.geb.DefaultContainerFileDetector DefaultContainerFileDetector
+     * @see grails.plugin.geb.UselessContainerFileDetector UselessContainerFileDetector
+     */
+    Class<? extends ContainerFileDetector> fileDetector() default DefaultContainerFileDetector
 }

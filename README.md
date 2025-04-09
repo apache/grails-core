@@ -94,7 +94,27 @@ By default, no test recording will be performed.  Various system properties exis
     * possible values are `FLV` or `MP4`
     * defaults to `MP4`
 
-#### Remove Implicit Wait
+#### Uploads
+
+Uploading a file is more complicated for Remote WebDriver sessions because the file you want to upload
+is likely on the host executing the tests and not in the container running the browser.
+For this reason, this plugin will setup a Local File Detector by default.
+
+To customize the default, either:
+
+1. Create a class that implements [`ContainerFileDetector`](./src/testFixtures/groovy/grails/plugin/geb/ContainerFileDetector.groovy)
+   and specify its fully qualified class name in a `META-INF/services/grails.plugin.geb.ContainerFileDetector` file
+   on the classpath (e.g., `src/integration-test/resources`).
+2. Use the `ContainerGebConfiguration` annotation and set its `fileDetector` property to your `ContainerFileDetector` implementation class.
+
+[//]: # (3. Call [`ServiceRegistry.setInstance&#40;&#41;`]&#40;./src/testFixtures/groovy/grails/plugin/geb/serviceloader/ServiceRegistry.groovy&#41;)
+[//]: # (   in a Spock `setupSpec&#40;&#41;` method to apply your naming convention &#40;And use a `cleanupSpec&#40;&#41;` to limit this to one class&#41;.)
+
+Alternatively, you can access the `BrowserWebDriverContainer` instance via
+the `container` from within your `ContainerGebSpec` to, for example, call `.copyFileToContainer()`.
+An Example of this can be seen in [ContainerSupport#createFileInputSource utility method](./src/testFixtures/groovy/grails/plugin/geb/support/ContainerSupport.groovy).
+
+#### Timeouts
 
 * `grails.geb.timeouts.implicitlyWait`
   * purpose: amount of time the driver should wait when searching for an element if it is not immediately present.

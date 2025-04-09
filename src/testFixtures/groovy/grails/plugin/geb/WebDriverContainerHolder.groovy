@@ -20,12 +20,12 @@ import geb.Browser
 import geb.Configuration
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
+import grails.plugin.geb.serviceloader.ServiceRegistry
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.openqa.selenium.WebDriver
-import org.openqa.selenium.WebDriver.Timeouts
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
 import org.spockframework.runtime.extension.IMethodInvocation
@@ -118,10 +118,15 @@ class WebDriverContainerHolder {
             configObject.reportsDir = grailsGebSettings.reportingDirectory
             configObject.reporter = (invocation.sharedInstance as ContainerGebSpec).createReporter()
         }
+        if (currentConfiguration.fileDetector != NullContainerFileDetector) {
+            ServiceRegistry.setInstance(ContainerFileDetector, currentConfiguration.fileDetector)
+        }
 
         currentBrowser = new Browser(new Configuration(configObject, new Properties(), null, null))
 
         WebDriver driver = new RemoteWebDriver(currentContainer.seleniumAddress, new ChromeOptions())
+        ContainerFileDetector fileDetector = ServiceRegistry.getInstance(ContainerFileDetector, DefaultContainerFileDetector)
+        ((RemoteWebDriver) driver).setFileDetector(fileDetector)
         driver.manage().timeouts().with {
             implicitlyWait(Duration.ofSeconds(grailsGebSettings.implicitlyWait))
             pageLoadTimeout(Duration.ofSeconds(grailsGebSettings.pageLoadTimeout))
@@ -204,6 +209,7 @@ class WebDriverContainerHolder {
         String protocol
         String hostName
         boolean reporting
+        Class<? extends ContainerFileDetector> fileDetector
 
         WebDriverContainerConfiguration(SpecInfo spec) {
             ContainerGebConfiguration configuration = spec.annotations.find {
@@ -213,6 +219,7 @@ class WebDriverContainerHolder {
             protocol = configuration?.protocol() ?: ContainerGebConfiguration.DEFAULT_PROTOCOL
             hostName = configuration?.hostName() ?: ContainerGebConfiguration.DEFAULT_HOSTNAME_FROM_CONTAINER
             reporting = configuration?.reporting() ?: false
+            fileDetector = configuration?.fileDetector() ?: ContainerGebConfiguration.DEFAULT_FILE_DETECTOR
         }
     }
 }
