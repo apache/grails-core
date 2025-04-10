@@ -1,5 +1,5 @@
 plugins {
-    id 'com.gradle.develocity' version '3.19.2'
+    id 'com.gradle.develocity' version '4.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
@@ -8,7 +8,7 @@ def isLocal = !isCI
 def isAuthenticated = System.getenv().containsKey('GRAILS_DEVELOCITY_ACCESS_KEY')
 
 develocity {
-    server = 'https://ge.apache.org'
+    server = 'https://ge.grails.org'
     buildScan {
         tag('grails')
         tag('grails-redis')
@@ -25,10 +25,10 @@ buildCache {
     }
 }
 
-rootProject.name = "grails-redis-root"
+rootProject.name = 'grails-redis-root'
 
 include 'plugin'
 findProject(':plugin').name = 'grails-redis'
 
 include 'examples-redis-demo'
-project(":examples-redis-demo").projectDir = [settingsDir, 'examples/redis-demo'] as File
+project(':examples-redis-demo').projectDir = new File(settingsDir, 'examples/redis-demo')
