@@ -16,8 +16,8 @@ def versions = new Properties()
 versions.load(new StringReader(new File("$projectDir.parentFile/gradle.properties").text))
 
 ext {
-    isPublishedExternal = System.getenv('NEXUS_PUBLISH_STAGING_PROFILE_ID') != null
     isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
+    isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
 
     // When making changes in the dependencyVersions, remember to also update the Grails BOM Documentation:
     // https://docs.grails.org/snapshot/ref/Dependency%20Versions/Grails%20BOM.html
