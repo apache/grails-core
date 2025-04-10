@@ -56,7 +56,7 @@ jobs:
         run: ./gradlew build
       - name: "📤 Publish Snapshot version to Github Packages"
         env:
-          GRADLE_PUBLISH_RELEASE: 'false'
+          GRAILS_PUBLISH_RELEASE: 'false'
           MAVEN_PUBLISH_USERNAME: ${{ secrets.GITHUB_ACTOR }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           MAVEN_PUBLISH_URL: 'https://maven.pkg.github.com/grails-plugins/grails-mail'
