@@ -1,5 +1,5 @@
 plugins {
-	id 'com.gradle.develocity' version '3.19.2'
+	id 'com.gradle.develocity' version '4.0'
 	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
@@ -8,10 +8,10 @@ def isLocal = !isCI
 def isAuthenticated = System.getenv().containsKey('GRAILS_DEVELOCITY_ACCESS_KEY')
 
 develocity {
-	server = 'https://ge.apache.org'
+	server = 'https://ge.grails.org'
 	buildScan {
 		tag('grails')
-		tag('grails-gradle')
+		tag('grails-gradle-plugins')
 		publishing.onlyIf { isAuthenticated }
 		uploadInBackground = isLocal
 	}
