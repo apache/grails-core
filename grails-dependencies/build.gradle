@@ -12,7 +12,7 @@ ext {
 
 def configurations = [
         'api': [
-                "org.apache.grails.bootstrap:grails-bootstrap:$version",
+                "org.apache.grails:grails-core:$version",
                 "org.apache.grails:grails-rest-transforms:$version",
                 "org.apache.grails:grails-databinding:$version",
                 "org.apache.grails:grails-i18n:$version",
