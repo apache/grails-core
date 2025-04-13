@@ -26,16 +26,23 @@ redirect(url: "https://www.blogjava.net/BlueSUN")
 
 redirect(Book.get(1))
 
+// For 302 Moved Temporarily
+redirect(action: "foo", permanent: false)
+
 // For 307 Temporary Redirect
-redirect(action: "foo", temporary: true)
+redirect(action: "foo", permanent: false, moved: false)
+
+// For 301 Moved Permanently Redirect (moved is default true)
+redirect(action: "foo", permanent: true)
 
 // For 308 Permanent Redirect
-redirect(action: "foo", permanent: true, temporary: true)
+redirect(action: "foo", permanent: true, moved: false)
+
 ----
 
 === Description
 
-Redirects the current action to another action, optionally passing parameters and/or errors. When issuing a redirect from a namespaced controller, the namespace for the target controller is implied to be that of the controller initiating the redirect. To issue a redirect from a namespaced controller to a controller that is not in a namespace, the namespace must be explicitly specified with a value of `null` as shown below.
+Redirects the current action to another action, optionally passing parameters and/or errors. When issuing a redirect from a namespaced controller, the namespace for the target controller is implied to be that of the controller initiating the redirect. To issue a redirect from a namespaced controller to a controller that is not in a namespace, the namespace must be explicitly specified with a value of `null` as shown below.  By default, the redirect code will be MOVED_TEMPORARILY (302).
 
 [source,groovy]
 ----
@@ -64,8 +71,8 @@ class SomeController {
 * `url` (optional) - a map containing the action, controller, id, etc.
 * `absolute` (optional) - If `true` (default) will prefix the link target address with the value of the `grails.serverURL` property from `application.yml`, or http://localhost:<port> if there is no value in `application.yml` and not running in the production environment. If `false` a partial URI is generated for the `Location` header.
 * `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
-* `permanent` (optional) - If `true`, the redirect will be issued with a 301 HTTP status code (permanently moved); otherwise, a 302 HTTP status code will be issued.
-* `temporary` (optional) - If `true`, the redirect will use HTTP status codes 307 (temporary) or 308 (permanent temporary) based on the `permanent` flag.
+* `permanent` (optional) - Defaults to `false`.  If `true`, the redirect will be issued with a PERMANENT style HTTP status code. If `moved` is true: MOVED_PERMANENTLY (301). Otherwise, PERMANENT_REDIRECT (308).
+* `moved` (optional) - Defaults to `true`.  When `true`, the redirect will be issued with a MOVED style HTTP status code. If `permanent` is true: MOVED_PERMANTENTLY (301). Otherwise, MOVED_TEMPORARILY (302).
 
 === Domain Class
 
