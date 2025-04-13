@@ -1,0 +1,15 @@
+repositories {
+    maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+}
+
+version "${projectVersion}"
+group "org.grails.example"
+
+apply plugin: 'java-library'
+apply plugin: 'groovy'
+
+dependencies {
+    implementation "org.apache.groovy:groovy:$groovyVersion"
+    implementation 'org.grails.example:subproject1'
+}

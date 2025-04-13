@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "labels": ["type: dependency upgrade"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "allowedVersions": "!/SNAPSHOT$/"
+    }
+  ]
+}

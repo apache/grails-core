@@ -1,0 +1,5 @@
+dependencies {
+    implementation "org.apache.groovy:groovy:$groovyVersion"
+}
+
+logger.lifecycle("Not applying grails-publish plugin to project `${project.name}`")

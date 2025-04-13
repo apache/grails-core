@@ -1,0 +1,52 @@
+name: Changelog
+on:
+  issues:
+    types: [closed,reopened]
+  push:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
+  workflow_dispatch:
+jobs:
+  release_notes:
+    if: github.event_name == 'push' && github.repository_owner == 'grails'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if it has release drafter config file
+        id: check_release_drafter
+        run: |
+          has_release_drafter=$([ -f .github/release-drafter.yml ] && echo "true" || echo "false")
+          echo "has_release_drafter=${has_release_drafter}" >> $GITHUB_OUTPUT
+      - name: Extract branch name
+        id: extract_branch
+        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
+      # If it has release drafter:
+      - uses: release-drafter/release-drafter@v6
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      # Otherwise:
+      - name: Export Gradle Properties
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
+        uses: grails/github-actions/export-gradle-properties@main
+      - uses: grails/github-actions/release-notes@main
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'false'
+        id: release_notes
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+      - uses: ncipollo/release-action@v1
+        if: steps.check_release_drafter.outputs.has_release_drafter == 'false' && steps.release_notes.outputs.generated_changelog == 'true'
+        with:
+          allowUpdates: true
+          commit: ${{ steps.release_notes.outputs.current_branch }}
+          draft: true
+          name: ${{ env.title }} ${{ steps.release_notes.outputs.next_version }}
+          tag: v${{ steps.release_notes.outputs.next_version }}
+          bodyFile: CHANGELOG.md
+          token: ${{ secrets.GH_TOKEN }}

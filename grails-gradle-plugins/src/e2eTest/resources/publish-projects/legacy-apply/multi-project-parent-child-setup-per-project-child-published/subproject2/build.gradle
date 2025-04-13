@@ -1,0 +1,16 @@
+dependencies {
+    implementation "org.apache.groovy:groovy:$groovyVersion"
+}
+
+apply plugin: 'org.apache.grails.gradle.grails-publish'
+grailsPublish {
+    githubSlug = 'apache/grails-gradle-plugins'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Grails Gradle Plugin - Example Project'
+    desc = 'A testing project for the grails gradle plugin'
+    developers = [
+            jdaugherty: 'James Daugherty',
+    ]
+}

@@ -1,0 +1,45 @@
+buildscript {
+    repositories {
+        maven { url "${System.getenv('LOCAL_MAVEN_PATH')}" }
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+    dependencies {
+        classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
+    }
+}
+
+plugins {
+    id 'java-library'
+    id 'groovy'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+version "${projectVersion}"
+group "org.grails.example"
+
+dependencies {
+    implementation "org.apache.groovy:groovy:$groovyVersion"
+}
+
+allprojects {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+
+    version "${projectVersion}"
+    group "org.grails.example"
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-gradle-plugins'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Grails Gradle Plugin - Example Project'
+    desc = 'A testing project for the grails gradle plugin'
+    developers = [
+            jdaugherty: 'James Daugherty',
+    ]
+}

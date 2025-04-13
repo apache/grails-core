@@ -1,0 +1,13 @@
+version: 2
+updates:   
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    target-branch: 5.3.x
+    labels:
+      - "type: dependency upgrade"
+    ignore:
+      - dependency-name: "*"      
+        update-types: ["version-update:semver-major"]
