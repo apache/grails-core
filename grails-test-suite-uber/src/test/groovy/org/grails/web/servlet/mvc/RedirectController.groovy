@@ -53,6 +53,22 @@ class RedirectController {
         redirect(action:"${prefix}oo")
     }
 
+    def toActionTemporaryRedirect() {
+        redirect(action:'foo', moved: false)
+    }
+
+    def toActionPermanentRedirect() {
+        redirect(action:'foo', permanent:true, moved:false)
+    }
+
+    def toActionMovedTemporary() {
+        redirect(action:'foo')
+    }
+
+    def toActionMovedPermanent() {
+        redirect(action:'foo', permanent:true)
+    }
+
     def toRoot() {
         redirect(controller:'default')
     }
