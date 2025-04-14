@@ -131,7 +131,6 @@ if(ext.isReleaseBuild && ext.isPublishedExternal) {
 Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
     Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
 
-    project.logger.lifecycle("Looking for bom = ${isBom}")
     Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
     if(!found) {
         return null
@@ -155,9 +154,7 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
             .replace('views-gson', 'gsp')
     while(possibleKey != null) {
         String propertyName = "${possibleKey}.version" as String
-        logger.lifecycle("Property Name = ${propertyName}")
         if(versions.containsKey(propertyName)) {
-            logger.lifecycle("\tReturning for $groupId:$artifactId:$version")
             return propertyName
         }
 

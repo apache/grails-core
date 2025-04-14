@@ -84,7 +84,7 @@ ext {
             liquibase_hibernate5              : "org.liquibase:liquibase:${bomDependencyVersions['liquibase-hibernate5.version']}",
             liquibase_hibernate5_cdi          : "org.liquibase:liquibase-cdi:${bomDependencyVersions['liquibase-hibernate5.version']}",
             liquibase_hibernate5_core         : "org.liquibase:liquibase-core:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            liquibase_hibernate5_ext          : "org.liquibase.ext:liquibase5-hibernate:${bomDependencyVersions['liquibase5-hibernate.version']}",
+            liquibase_hibernate5_ext          : "org.liquibase.ext:liquibase5-hibernate:${bomDependencyVersions['liquibase-hibernate5.version']}",
             mongodb_bson                      : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
             mongodb_driver_core               : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
             mongodb_driver_sync               : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
