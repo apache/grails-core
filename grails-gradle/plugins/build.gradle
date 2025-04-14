@@ -57,18 +57,6 @@ dependencies {
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
     compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
 
-    //TODO
-//    implementation 'org.apache.grails.bootstrap:grails-bootstrap', {
-//        exclude group: 'org.apache.groovy'
-//        exclude group: 'org.spockframework'
-//    }
-
-    //TODO
-//    implementation project(':grails-shell-cli'), {
-//        exclude group: 'org.apache.groovy'
-//        exclude group: 'org.spockframework'
-//    }
-
     implementation project(':grails-gradle-model'), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
