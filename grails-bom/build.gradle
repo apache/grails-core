@@ -209,44 +209,6 @@ ext {
     }
 }
 
-//tasks.register('syncProps') {
-//    doLast {
-//        def gradlePropertiesFile = rootProject.layout.projectDirectory.file('gradle.properties').asFile
-//        String oldProperties = gradlePropertiesFile.text
-//        gradlePropertiesFile.write(oldProperties.substring(0, oldProperties.indexOf("# Generated on")) + """\
-//                    # Generated on ${new Date()} by: ./gradlew :grails-bom:${name}
-//                    # Only version value modifications allowed after this point. Do not insert or change version names.
-//                    ${dependenciesVersions.collect { "$it.version=$it.versionValue" }.join('\n                    ')}
-//                    """.stripIndent(true).trim())
-//        println "${gradlePropertiesFile} updated."
-//    }
-//}
-
-//tasks.register('dependabotBuild') {
-//    doLast {
-//        def dependabotBuildFile = rootProject.layout.projectDirectory.file('dependabot/build.gradle').asFile
-//        dependabotBuildFile.parentFile.mkdirs()
-//        dependabotBuildFile.write("""\
-//                    // Generated on ${new Date()} by: ./gradlew :grails-bom:${name}
-//                    plugins {
-//                        id 'java-library'
-//                    }
-//
-//                    dependencies {
-//                    ${allDependencies.collect { "    api \"${it.groupId}:${it.artifactId}:\${project['${it.version}']}\"" }.join('\n                    ')}
-//                    }
-//                    """.stripIndent(true).trim())
-//        println "${dependabotBuildFile} created."
-//    }
-//}
-//
-//tasks.register('dependabot') {
-//    group = 'Dependency Management'
-//    description = 'This task updates the dependabot/build.gradle and gradle.properties files by syncing them with the latest external dependencies listed in the Grails BOM (Bill of Materials). This ensures that Dependabot can monitor these dependencies and automatically create pull requests when newer versions become available.'
-//
-//    dependsOn 'syncProps', 'dependabotBuild'
-//}
-
 apply {
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
