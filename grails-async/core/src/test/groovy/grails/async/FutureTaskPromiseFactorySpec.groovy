@@ -84,7 +84,13 @@ class FutureTaskPromiseFactorySpec extends Specification {
     void 'Test promise onError handling'() {
         
         when: 'a promise is executed with an onComplete handler'
-            def promise = Promises.createPromise { throw new RuntimeException('bad') }
+            def promise = Promises.createPromise {
+                // Sleep to give the get() method below a chance to wrap the exception,
+                // otherwise a RuntimeException will bubble up instead of an ExecutionException
+                // resulting in a flaky test.
+                sleep 50
+                throw new RuntimeException('bad')
+            }
             def result = null
             Throwable error = null
             promise.onComplete { result = it }
