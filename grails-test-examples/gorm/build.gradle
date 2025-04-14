@@ -6,14 +6,12 @@ buildscript {
     }
     dependencies {
         classpath "org.apache.grails:grails-gradle-plugins:${project['grails-gradle-plugins.version']}"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:${project['asset-pipeline-gradle.version']}"
     }
 }
 
 version "0.1"
 group "gorm"
 
-apply plugin: "asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"
 
 dependencies {
@@ -36,7 +34,6 @@ dependencies {
     }
     implementation "org.apache.grails:grails-cache"
 
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
     runtimeOnly "org.apache.grails:grails-scaffolding"
     runtimeOnly "org.apache.grails:grails-fields"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
