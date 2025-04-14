@@ -37,7 +37,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         when:"An entity is persisted"
         def r = new RecordCustom(name: "Test")
         def now = new Date()
-        r.created = new Date()
+        r.created = new Date(now.time)
         r.modified = r.created
         r.save(flush:true, failOnError:true)
         session.clear()
@@ -68,7 +68,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
         def r = new RecordCustom(name: "Test")
         def now = new Date()
-        r.created = new Date()
+        r.created = new Date(now.time)
         r.modified = r.created
         r.save(flush:true, failOnError:true)
         session.clear()
