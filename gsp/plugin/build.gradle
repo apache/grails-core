@@ -21,6 +21,8 @@ ext {
 dependencies {
 
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    astImplementation platform("org.apache.grails:grails-bom:$grailsVersion")
+
     api project(":grails-sitemesh3")
 
     api project(':grails-gsp-core'), { // GroovyPageResourceLoader, GroovyPagesTemplateEngine, CachingGroovyPageStaticResourceLocator
