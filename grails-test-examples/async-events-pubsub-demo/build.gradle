@@ -35,8 +35,8 @@ dependencies {
     implementation "org.apache.grails:grails-url-mappings"
     implementation "org.apache.grails.web:grails-web-boot"
 
-    implementation 'org.grails.plugins:views-json'
-    implementation 'org.grails.plugins:hibernate5'
+    implementation 'org.apache.grails:grails-views-gson'
+    implementation 'org.apache.grails:grails-data-hibernate5'
 
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter'
@@ -49,7 +49,7 @@ dependencies {
 
     testImplementation 'io.micronaut.serde:micronaut-serde-jackson:2.10.2'
     testImplementation 'io.micronaut:micronaut-http-client:4.6.5'
-    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
 }
 
 bootRun {

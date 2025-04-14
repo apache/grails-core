@@ -34,9 +34,9 @@ dependencies {
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-interceptors'
     implementation 'org.apache.grails.web:grails-web-boot'
-    implementation 'org.grails.plugins:gsp'
-    implementation 'org.grails.plugins:hibernate5'
-    implementation 'org.grails.plugins:views-json'
+    implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-views-gson'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
@@ -45,8 +45,8 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    testImplementation 'org.grails:grails-web-testing-support'
-    testImplementation 'org.grails:grails-gorm-testing-support'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 }
 
 tasks.named('compileTestGroovy') {

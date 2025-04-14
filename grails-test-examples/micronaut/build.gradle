@@ -43,12 +43,12 @@ dependencies {
     implementation "org.apache.grails:grails-services"
     implementation "org.apache.grails:grails-url-mappings"
     implementation "org.apache.grails:grails-interceptors"
-    implementation "org.grails.plugins:cache"
+    implementation "org.apache.grails:grails-cache"
     implementation "org.apache.grails:grails-async"
-    implementation "org.grails.plugins:scaffolding"
+    implementation "org.apache.grails:grails-scaffolding"
     implementation "org.apache.grails:grails-events"
-    implementation "org.grails.plugins:hibernate5"
-    implementation "org.grails.plugins:gsp"
+    implementation "org.apache.grails:grails-data-hibernate5"
+    implementation "org.apache.grails:grails-gsp"
     compileOnly "io.micronaut:micronaut-inject-groovy"
     console "org.apache.grails:grails-console"
     profile "org.grails.profiles:web"
@@ -56,9 +56,9 @@ dependencies {
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
     runtimeOnly "jakarta.xml.bind:jakarta.xml.bind-api"
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
-    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-datamapping"
     testImplementation "org.mockito:mockito-core"
-    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-web"
 
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 }

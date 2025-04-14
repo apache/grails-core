@@ -33,7 +33,7 @@ dependencies {
 
     // This only needs the datastore version property because of how source jars are being created.
     // Build will succeed, but assemble will fail without this because of task ordering in gradle.
-    api "org.grails:grails-datastore-core:${project['grails-datastore.version']}"
+    api "org.apache.grails.data:grails-datastore-core:${project['grails-datastore.version']}"
 
     testImplementation "org.springframework:spring-jdbc"
 

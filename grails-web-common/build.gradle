@@ -12,13 +12,13 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(":grails-core"), {
-        exclude group:'org.grails', module:'grails-spring'
+        exclude group:'org.apache.grails', module:'grails-spring'
     }
     api project(":grails-databinding-core")
     api project(":grails-encoder")
-    compileOnly "org.grails:grails-gsp", {
-        exclude module: 'grails-encoder'
-        exclude module: 'grails-core'
+    compileOnly "org.apache.grails.views:grails-gsp-core", {
+        exclude group:'org.apache.grails', module: 'grails-encoder'
+        exclude group:'org.apache.grails', module: 'grails-core'
     }
 
     api "org.apache.groovy:groovy:$groovyVersion"

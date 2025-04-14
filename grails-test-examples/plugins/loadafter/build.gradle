@@ -28,7 +28,7 @@ dependencies {
     api "org.apache.grails:grails-dependencies"
     api "jakarta.servlet:jakarta.servlet-api"
 
-    implementation "org.grails.plugins:spring-security-core:$springSecurityCoreVersion"
+    implementation "org.apache.grails:grails-spring-security:$springSecurityCoreVersion"
 
     console "org.apache.grails:grails-console"
 }

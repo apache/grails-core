@@ -12,18 +12,12 @@ javaPlatform {
     allowDependencies()
 }
 
-def plugins = new Properties()
-plugins.load(new StringReader(new File("$projectDir/plugins.properties").text))
-
-def apachePlugins = new Properties()
-apachePlugins.load(new StringReader(new File("$projectDir/apache-plugins.properties").text))
-
 def versions = new Properties()
 versions.load(new StringReader(new File("$projectDir.parentFile/gradle.properties").text))
 
 ext {
-    isGitHubRepoPublish = 'true' == System.getenv('GITHUB_PUBLISH')
-    isGrailsRepoPublish = !isGitHubRepoPublish && projectVersion.endsWith('-SNAPSHOT')
+    isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
+    isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
 
     // When making changes in the dependencyVersions, remember to also update the Grails BOM Documentation:
     // https://docs.grails.org/snapshot/ref/Dependency%20Versions/Grails%20BOM.html
@@ -31,47 +25,51 @@ ext {
     // groupId:artifactId-prefixes:artifactId-suffixes:version:versionNameOverride
     // version name = versionNameOverride ?: artifactId-prefixes[0]
     dependenciesOverview = """\
-        com.bertramlabs.plugins:asset-pipeline-grails::
         com.bertramlabs.plugins:asset-pipeline-gradle::
+        com.bertramlabs.plugins:asset-pipeline-grails::
         com.fasterxml.jackson:jackson-bom:::jackson
         com.github.javaparser:javaparser-core::
         com.h2database:h2::
         commons-codec:commons-codec::
         io.methvin:directory-watcher::
-        io.reactivex:rxjava:::rxjava
         io.reactivex.rxjava2:rxjava:::rxjava2
         io.reactivex.rxjava3:rxjava:::rxjava3
+        io.reactivex:rxjava:::rxjava
         jline:jline::
         net.bytebuddy:byte-buddy::
         net.java.dev.jna:jna::
         org.apache.ant:ant:,junit:
         org.apache.commons:commons-text::
+        org.apache.grails.data:grails-data:hibernate5-core,mongodb-core,mongodb-ext,mongodb-bson,simple::grails-datastore
+        org.apache.grails:grails-data:hibernate5,hibernate5-dbmigration,hibernate5-spring-boot,mongodb,mongodb-spring-boot,mongodb-gson-templates::grails-datastore
+        org.apache.grails.data:grails-datamapping:core,core-test,async,support,rx,validation,tck-tests::grails-datastore
+        org.apache.grails.data:grails-datastore:async,core,web::grails-datastore
+        org.apache.grails:grails-testing-support-datamapping:::grails-datastore
+        org.apache.grails.views:grails:gsp,gsp-core,web-gsp,web-taglib::gsp
+        org.apache.grails:grails:gsp,web-testing-support,testing-support-views-gson,testing-support-web::gsp
+        org.apache.grails:grails:fields,scaffolding,views-gson,views-markup::gsp
+        org.apache.grails:grails-gradle-plugins::
+        org.apache.grails:grails:cache::grails-cache
+        org.apache.grails:grails:geb::grails-geb
         org.apache.groovy:groovy:bom:::
         org.asciidoctor:asciidoctorj::
         org.fusesource.jansi:jansi::
         org.gebish:geb-spock::
-        org.grails.plugins:gsp::
-        org.grails:grails-datastore-gorm-hibernate5::
-        org.grails:grails-datastore-gorm-mongodb::
-        org.grails:grails-datastore-async,grails-datastore-core,grails-datastore-gorm,grails-datastore-gorm-async,grails-datastore-gorm-support,grails-datastore-gorm-rx,grails-datastore-gorm-test,grails-datastore-gorm-validation,grails-datastore-web,grails-datastore-gorm-tck,grails-gorm-testing-support:::grails-datastore
-        org.grails:grails-gdoc-engine::
-        org.apache.grails:grails-gradle-plugins::
-        org.grails:grails:gsp,web-gsp,web-taglib,web-testing-support::gsp
-        org.grails:views-json-testing-support::
         org.grails.profiles:base,plugin,profile,web,rest-api,web-plugin,rest-api-plugin,react,vue,angular:::profiles
+        org.grails:grails-gdoc-engine::
         org.jsoup:jsoup::
-        org.liquibase:liquibase-cdi,liquibase-core:::liquibase
-        org.liquibase.ext:liquibase-hibernate5:::liquibase
+        org.liquibase.ext:liquibase-hibernate5:::liquibase-hibernate5
+        org.liquibase:liquibase-cdi,liquibase-core:::liquibase-hibernate5
         org.mongodb:bson:,record-codec::mongodb
         org.mongodb:mongodb-driver:core,sync::mongodb
         org.objenesis:objenesis::
         org.spockframework:spock-core,spock-spring:::spock
         org.springframework.boot:spring-boot-cli,spring-boot-gradle-plugin:::spring-boot
         org.springframework:springloaded::
-        org.xhtmlrenderer:flying-saucer-pdf-openpdf::
-        org.webjars.npm:bootstrap::
         org.webjars.npm:bootstrap-icons::
+        org.webjars.npm:bootstrap::
         org.webjars.npm:jquery::
+        org.xhtmlrenderer:flying-saucer-pdf-openpdf::
     """.stripIndent(true).trim().readLines().collect {
         def info = it.toString().split(':', -1)
         def dep = [group: info[0], names: info[1].split(','), modules: info[2].split(','), version: info.length >= 4? info[3] : null]
@@ -93,25 +91,23 @@ ext {
         }
     }
 
-    pluginList =
-        plugins.collect { [groupId: "org.grails.plugins", artifactId:it.key, versionValue: it.value, name: "plugins-${it.key}"] }
-
-    apachePluginList =
-        apachePlugins.collect { [groupId: "org.apache.grails", artifactId:it.key, versionValue: it.value, name: "plugins-${it.key}"] }
-
-    dependenciesVersions = (dependencyList + pluginList + apachePluginList).sort { it.name }
+    dependenciesVersions = dependencyList.sort { it.name }
             .groupBy { it.name }.collect { it.value.first() } // remove duplicates
 
-    allDependencies = (pluginList + apachePluginList + dependencyList).sort { it.name + it.artifactId }
+    allDependencies = dependencyList.sort { it.name + it.artifactId }
     allDependencies.each { it << [version: "${it.name}.version"] }
 }
 
-allDependencies.each {
-    if (!isGitHubRepoPublish && !isGrailsRepoPublish && version.endsWith("-SNAPSHOT")) {
-        throw new RuntimeException("Cannot have a snapshot dependency $it.version on a $it.name [$it.groupId] for a release!")
+if(ext.isReleaseBuild && ext.isPublishedExternal) {
+    allDependencies.each {
+        if (version.endsWith("-SNAPSHOT")) {
+            throw new GradleException("Releases cannot have a snapshot dependency: $it.groupId:$it.name ($it.version)")
+        }
     }
 }
 
+// Generate a valid gradle constraint as well as the pom that's generated so we can use either platform()
+// or the spring dependency management plugin
 dependencies {
     api platform("org.springframework.boot:spring-boot-dependencies:${project['spring-boot.version']}")
     api platform("org.apache.groovy:groovy-bom:${project['groovy.version']}")

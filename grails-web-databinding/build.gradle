@@ -18,7 +18,7 @@ dependencies {
     api project(':grails-encoder')
     api "org.apache.groovy:groovy:$groovyVersion"
 
-    testRuntimeOnly "org.grails:grails-gsp", {
+    testRuntimeOnly "org.apache.grails.views:grails-gsp-core", {
         exclude module: 'grails-encoder'
         exclude module: 'grails-core'
     }

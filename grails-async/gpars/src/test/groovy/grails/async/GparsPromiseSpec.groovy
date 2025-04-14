@@ -49,7 +49,7 @@ class GparsPromiseSpec extends Specification {
         
         when: 'a promise that takes longer than the timeout'
             def p = Promises.createPromise {
-                sleep 200
+                sleep 1000
                 println 'completed op'
             }
             p.get(50, TimeUnit.MILLISECONDS)

@@ -15,8 +15,8 @@ dependencies {
     api "org.springframework:spring-jdbc"
     api "org.apache.groovy:groovy-sql"
     api "org.springframework:spring-context"
-    api "org.grails:grails-datastore-gorm"
-    api "org.grails:grails-datastore-core"
+    api "org.apache.grails.data:grails-datamapping-core"
+    api "org.apache.grails.data:grails-datastore-core"
 
     compileOnly "org.apache.tomcat:tomcat-jdbc"
 

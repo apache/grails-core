@@ -12,13 +12,13 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(":grails-web-common")
-    compileOnly "org.grails:grails-gsp", {
+    compileOnly "org.apache.grails.views:grails-gsp-core", {
         exclude module: 'grails-encoder'
         exclude module: 'grails-core'
     }
 
     api "org.apache.groovy:groovy:$groovyVersion"
-    api("org.grails:grails-datastore-gorm-validation")
+    api("org.apache.grails.data:grails-datamapping-validation")
 
     compileOnly "org.fusesource.jansi:jansi"
     testRuntimeOnly "org.fusesource.jansi:jansi"

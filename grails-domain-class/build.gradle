@@ -17,14 +17,14 @@ dependencies {
     api "org.apache.groovy:groovy:$groovyVersion"
 
     // Datastore APIs
-    api "org.grails:grails-datastore-gorm-validation"
-    api("org.grails:grails-datastore-gorm") {
+    api "org.apache.grails.data:grails-datamapping-validation"
+    api("org.apache.grails.data:grails-datamapping-core") {
         transitive = false
     }
-    api("org.grails:grails-datastore-gorm-support") {
+    api("org.apache.grails.data:grails-datamapping-support") {
         transitive = false
     }
-    api "org.grails:grails-datastore-core"
+    api "org.apache.grails.data:grails-datastore-core"
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {

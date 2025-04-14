@@ -9,22 +9,19 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    testImplementation 'org.grails:grails-gorm-testing-support', {
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
         // This is a local project dependency
-        exclude group: 'org.grails', module: 'grails-testing-support'
+        exclude group: 'org.apache.grails', module: 'grails-testing-support-core'
     }
     testImplementation project(':grails-test-suite-base')
     testImplementation project(':grails-testing-support-core')
     testImplementation project(':grails-interceptors')
     testImplementation project(':grails-rest-transforms')
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation 'org.grails:grails-web-testing-support', {
+    testImplementation 'org.apache.grails:grails-testing-support-web', {
         // This is a local project dependency
-        exclude module: 'grails-testing-support-core'
-        exclude module: 'grails-plugin-interceptors' // TODO: remove after views is built
-        exclude module: 'grails-testing-support' // TODO: remove after views is built
-        exclude module: 'grails-plugin-rest' // TODO: remove after views is built
-        exclude module: 'grails-rest-transforms'
+        exclude group: 'org.apache.grails', module: 'grails-testing-support-core'
+        exclude group: 'org.apache.grails', module: 'grails-rest-transforms'
     }
     testImplementation 'org.spockframework:spock-core'
 }

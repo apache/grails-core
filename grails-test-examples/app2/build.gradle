@@ -31,15 +31,15 @@ dependencies {
     implementation "org.apache.grails:grails-dependencies"
     implementation "org.apache.grails.web:grails-web-boot"
 
-    implementation "org.grails.plugins:hibernate5"
-    implementation "org.grails.plugins:cache"
+    implementation "org.apache.grails:grails-data-hibernate5"
+    implementation "org.apache.grails:grails-cache"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
-    runtimeOnly "org.grails.plugins:scaffolding"
-    runtimeOnly "org.grails.plugins:fields"
+    runtimeOnly "org.apache.grails:grails-scaffolding"
+    runtimeOnly "org.apache.grails:grails-fields"
 
-    testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.apache.grails:grails-testing-support-web"
+    testImplementation "org.apache.grails:grails-testing-support-datamapping"
 
     console "org.apache.grails:grails-console"
 
