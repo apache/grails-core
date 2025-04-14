@@ -30,7 +30,7 @@ dependencies {
     implementation "org.apache.grails.web:grails-web-boot"
 
     implementation "org.apache.grails:grails-data-hibernate5"
-    implementation "org.grails.plugins:cache"
+    implementation "org.apache.grails:grails-cache"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
     runtimeOnly "org.apache.grails:grails-scaffolding"

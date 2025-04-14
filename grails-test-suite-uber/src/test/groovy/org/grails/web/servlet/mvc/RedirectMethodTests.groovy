@@ -6,6 +6,7 @@ import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import org.grails.web.util.GrailsApplicationAttributes
 import grails.artefact.Artefact
 import grails.web.mapping.mvc.RedirectEventListener
+import org.springframework.http.HttpStatus
 import spock.lang.Specification
 
 /**
@@ -250,6 +251,50 @@ class RedirectMethodTests extends Specification implements UrlMappingsUnitTest<U
         c.testNoController()
         then:
         "/little-brown-bottle/thankyou" ==  response.redirectedUrl
+    }
+
+    void "test temporary redirect"() {
+        when:
+        def c = new RedirectController()
+        webRequest.controllerName = 'redirect'
+        c.toActionTemporaryRedirect()
+        
+        then: "should use HTTP 307 Temporary Redirect"
+        HttpStatus.TEMPORARY_REDIRECT.value() == response.status
+        "/redirect/foo" == response.redirectedUrl
+    }
+
+    void "test permanent redirect"() {
+        when:
+        def c = new RedirectController() 
+        webRequest.controllerName = 'redirect'
+        c.toActionPermanentRedirect()
+        
+        then: "should use HTTP 308 Permanent Redirect"
+        HttpStatus.PERMANENT_REDIRECT.value() == response.status
+        "/redirect/foo" == response.redirectedUrl
+    }
+
+    void "test moved temporary redirect"() {
+        when:
+        def c = new RedirectController()
+        webRequest.controllerName = 'redirect'
+        c.toActionMovedTemporary()
+
+        then: "should use HTTP 302 Moved Temporary"
+        HttpStatus.MOVED_TEMPORARILY.value() == response.status
+        "/redirect/foo" == response.redirectedUrl
+    }
+
+    void "test moved permanent redirect"() {
+        when:
+        def c = new RedirectController()
+        webRequest.controllerName = 'redirect'
+        c.toActionMovedPermanent()
+
+        then: "should use HTTP 301 Moved Permanent"
+        HttpStatus.MOVED_PERMANENTLY.value() == response.status
+        "/redirect/foo" == response.redirectedUrl
     }
 
     static class UrlMappings {

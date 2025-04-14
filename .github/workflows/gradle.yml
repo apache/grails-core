@@ -28,7 +28,6 @@ jobs:
             echo "value=false" >> $GITHUB_OUTPUT
           fi
   build:
-    if: false
     name: 'Build'
     needs: skip_check
     permissions:
@@ -55,7 +54,6 @@ jobs:
         id: build
         run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue
   functional:
-    if: false
     name: "Functional Tests"
     needs: skip_check
     permissions:
@@ -81,7 +79,7 @@ jobs:
         run: ./gradlew build -PonlyFunctionalTests
   publish:
     if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    # needs: [build, functional]
+    needs: [build, functional]
     permissions:
       contents: read # limit to read access
     runs-on: ubuntu-latest

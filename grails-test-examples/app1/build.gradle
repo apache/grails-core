@@ -34,7 +34,7 @@ dependencies {
     implementation "org.apache.grails:grails-core"
 
     implementation "org.apache.grails:grails-data-hibernate5"
-    implementation "org.grails.plugins:cache"
+    implementation "org.apache.grails:grails-cache"
     implementation "org.apache.grails:grails-scaffolding"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"

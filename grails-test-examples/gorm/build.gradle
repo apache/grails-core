@@ -32,7 +32,7 @@ dependencies {
     runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }
-    implementation "org.grails.plugins:cache"
+    implementation "org.apache.grails:grails-cache"
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
     runtimeOnly "org.apache.grails:grails-scaffolding"

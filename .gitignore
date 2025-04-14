@@ -37,6 +37,6 @@ build
 /*/*.iml
 /eclipse-build
 
-/.idea/
+.idea
 /grails-test-suite-uber/configured/
 /grails-docs/src/test/resources/docs/guide/single.pdf

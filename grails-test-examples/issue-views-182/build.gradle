@@ -36,7 +36,7 @@ dependencies {
     implementation "org.apache.grails:grails-databinding"
     implementation "org.apache.grails.web:grails-web-boot"
     implementation "org.apache.grails:grails-logging"
-    implementation "org.grails.plugins:cache"
+    implementation "org.apache.grails:grails-cache"
     implementation "org.apache.grails:grails-async"
     implementation "org.apache.grails:grails-events"
     implementation "org.apache.grails:grails-data-hibernate5"
