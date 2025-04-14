@@ -27,7 +27,6 @@ dependencies {
     implementation "org.apache.grails:grails-data-hibernate5"
     implementation "org.apache.grails:grails-cache"
 
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
     runtimeOnly "org.apache.grails:grails-scaffolding"
     runtimeOnly "org.apache.grails:grails-fields"
     runtimeOnly "org.apache.tomcat:tomcat-jdbc"
