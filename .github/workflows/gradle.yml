@@ -43,7 +43,6 @@ jobs:
         env:
           REDIS_HOST: redis
           REDIS_PORT: 6379
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
         run: ./gradlew build --continue
   publish_snapshot:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
