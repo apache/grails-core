@@ -1,0 +1,23 @@
+Grails adopts the "convention over configuration" approach to configure itself. In this approach, the name and location of files are used instead of explicit configuration. Therefore, it's essential to become familiar with the directory structure provided by Grails. Here's a breakdown of the key directories and links to relevant sections:
+
+1. `grails-app` - Top-Level Directory for Groovy Sources
+
+* `conf` - link:conf.html[Configuration Sources]
+* `controllers` - link:theWebLayer.html#controllers[Web Controllers] - Responsible for the "C" in MVC (Model-View-Controller).
+* `domain` - link:GORM.html[Application Domain] - Represents the "M" in MVC.
+* `i18n` - Supports link:i18n.html[Internationalization (i18n)].
+* `services` - The link:services.html[Service Layer].
+* `taglib` - link:theWebLayer.html#taglibs[Tag Libraries].
+* `utils` - Houses Grails-specific utilities.
+* `views` - link:theWebLayer.html#gsp[Groovy Server Pages (GSP)] or http://views.grails.org/latest[JSON Views] - Responsible for the "V" in MVC.
+* `commands` - link:commandLine.html#customCommands[Custom Grails Commands] - Create your own Grails CLI commands.
+
+2.  `src/main/groovy` - Supporting Sources
+
+3.  `src/test/groovy` - link:testing.html[Unit Tests]
+
+4.  `src/integration-test/groovy` - link:testing.html#integrationTests[Integration Tests] - For testing Grails applications at the integration level.
+
+5.  `src/main/scripts` - link:commandLine.html[Code generation scripts].
+
+Understanding this directory structure and its conventions is fundamental to efficient Grails development.

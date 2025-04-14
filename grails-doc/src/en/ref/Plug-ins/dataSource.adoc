@@ -1,0 +1,46 @@
+
+== dataSource
+
+
+
+=== Purpose
+
+
+The `dataSource` plugin configures the Grails JDBC `DataSource`.
+
+
+=== Examples
+
+
+A `DataSource` configured with explicit settings in `grails-app/conf/application.groovy`:
+
+[source,groovy]
+----
+dataSource {
+    pooled = true
+    dbCreate = "update"
+    url = "jdbc:mysql://localhost/yourDB"
+    driverClassName = "com.mysql.jdbc.Driver"
+    username = "yourUser"
+    password = "yourPassword"
+}
+----
+
+A `DataSource` configured to look up via JNDI:
+
+[source,groovy]
+----
+dataSource {
+    jndiName = "java:comp/env/myDataSource"
+}
+----
+
+
+=== Description
+
+
+Refer to the section on link:{guidePath}/conf.html#dataSource[Data Sources] in the Grails user guide.
+
+Configured Spring Beans:
+
+* `dataSource` - An instance of the Apache DBCP library's `org.apache.commons.dbcp.BasicDataSource` class or a {springapi}org/springframework/jndi/JndiObjectFactoryBean.html[JndiObjectFactoryBean] in the case of a JNDI `DataSource`

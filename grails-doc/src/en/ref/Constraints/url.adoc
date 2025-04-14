@@ -1,0 +1,26 @@
+
+== url
+
+
+
+=== Purpose
+
+
+To validate that a `String` value is a valid URL.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+homePage url: true
+----
+
+
+=== Description
+
+
+Set to `true` if a string value must be a URL.
+
+Error Code: `className.propertyName.url.invalid`

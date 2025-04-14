@@ -1,0 +1,37 @@
+There are several ways in which you can customize the `Application` class.
+
+
+=== Customizing Scanning
+
+
+By default Grails will scan all known source directories for controllers, domain class etc., however if there are packages in other JAR files you wish to scan you can do so by overriding the `packageNames()` method of the `Application` class:
+
+[source,groovy]
+----
+class Application extends GrailsAutoConfiguration {
+    @Override
+    Collection<String> packageNames() {
+        super.packageNames() + ['my.additional.package']
+    }
+
+    ...
+}
+----
+
+
+=== Registering Additional Beans
+
+
+The `Application` class can also be used as a source for Spring bean definitions, simply define a method annotated with the {springapi}org/springframework/context/annotation/Bean.html[Bean] and the returned object will become a Spring bean. The name of the method is used as the bean name:
+
+[source,groovy]
+----
+class Application extends GrailsAutoConfiguration {
+    @Bean
+    MyType myBean() {
+        return new MyType()
+    }
+
+    ...
+}
+----

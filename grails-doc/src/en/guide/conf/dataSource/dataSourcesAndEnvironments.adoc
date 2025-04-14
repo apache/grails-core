@@ -1,0 +1,22 @@
+The previous example configuration assumes you want the same config for all environments: production, test, development etc.
+
+Grails' DataSource definition is "environment aware", however, so you can do:
+
+[source,groovy]
+----
+dataSource {
+    pooled = true
+    driverClassName = "com.mysql.jdbc.Driver"
+    dialect = org.hibernate.dialect.MySQL5InnoDBDialect
+    // other common settings here
+}
+
+environments {
+    production {
+        dataSource {
+            url = "jdbc:mysql://liveip.com/liveDb"
+            // other environment-specific settings here
+        }
+    }
+}
+----

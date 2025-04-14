@@ -1,0 +1,94 @@
+Since Grails 3.2.1, Grails supports a profile for creating applications with Angular that provides a more future facing setup.
+
+The biggest change in this profile is that the profile creates a multi project gradle build. This is the first profile to have done so. The Angular profile relies on the https://github.com/angular/angular-cli[Angular CLI] to manage the client side application. The server side application is the same as an application created with the `rest-api` profile.
+
+To get started with the Angular profile, create an application specifying `angular` as the name of the profile:
+
+[source,bash]
+----
+$ grails create-app my-app --profile angular
+----
+
+This will create a `my-app` directory with the following contents:
+
+[source]
+----
+client/
+gradle/
+gradlew
+gradlew.bat
+server/
+settings.gradle
+----
+
+The entire client application lives in the `client` folder and the entire server application lives in the `server` folder.
+
+==== Prerequisites
+
+To use this profile, you should have Node, NPM, and the Angular CLI installed. Node should be at least version 5 and NPM should be at least version 3.
+
+* https://docs.npmjs.com/getting-started/installing-node[Node && NPM]
+* https://github.com/angular/angular-cli#installation[Angular CLI]
+
+==== Project Structure
+
+The Angular profile is designed to be used with the https://github.com/angular/angular-cli[Angular CLI]. The CLI was used to create the client application side of the profile to start with. The CLI provides commands to do most of the things you would want to do with the client application, including creating components or services. Because of that, the profile itself provides no commands to do those same things.
+
+==== Running The App
+
+To execute the server side application only, you can execute the `bootRun` task in the `server` project:
+
+[source,bash]
+----
+./gradlew server:bootRun
+----
+
+The same can be done for the client application:
+
+[source,bash]
+----
+./gradlew client:bootRun
+----
+
+To execute both, you must do so in parallel:
+
+[source,bash]
+----
+./gradlew bootRun --parallel
+----
+
+NOTE: It is necessary to do so in parallel because by default Gradle executes tasks synchronously, and neither of the `bootRun` tasks will "finish".
+
+==== Testing
+
+The default client application that comes with the profile provides some tests that can be executed. To execute tests in the application:
+
+[source,bash]
+----
+./gradlew test
+----
+
+The `test` task will execute unit tests with Karma and Jasmine.
+
+[source,bash]
+----
+./gradlew integrationTest
+----
+
+The `integrationTest` task will execute e2e tests with Protractor.
+
+TIP: You can execute the `test` and `integrationTest` tasks on each of the sub-projects the same as you would `bootRun`.
+
+==== CORS
+
+Because the client side and server side will be running on separate ports, CORS configuration is required. By default the profile will configure the server side to allow CORS from all hosts via the following config:
+
+[source,yaml]
+.server/grails-app/conf/application.yml
+----
+grails:
+    cors:
+        enabled: true
+----
+
+See the section on link:theWebLayer.html#cors[CORS] in the user guide for information on configuring this feature for your needs.

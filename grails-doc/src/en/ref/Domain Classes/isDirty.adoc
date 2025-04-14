@@ -1,0 +1,36 @@
+
+== isDirty
+
+
+
+=== Purpose
+
+
+Checks to see if a domain class instance has been modified.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = Book.get(1)
+someMethodThatMightModifyTheInstance(b)
+
+// when called without arguments returns true if any field was changed
+if (b.isDirty()) {
+    // can also check if one field has changed
+    if (b.isDirty('title')) {
+        ...
+    }
+}
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `fieldName` - The name of a field to check
+

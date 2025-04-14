@@ -1,0 +1,40 @@
+A domain class can be created with the <<ref-command-line-create-domain-class,create-domain-class>> command:
+
+[source,groovy]
+----
+grails create-domain-class myapp.Person
+----
+
+NOTE: If no package is specified with the create-domain-class script, Grails automatically uses the application name as the package name.
+
+This will create a class at the location `grails-app/domain/myapp/Person.groovy` such as the one below:
+
+[source,groovy]
+----
+package myapp
+
+class Person {
+}
+----
+
+NOTE: If you have the `dbCreate` property set to "update", "create" or "create-drop" on your link:conf.html#dataSource[DataSource], Grails will automatically generate/modify the database tables for you.
+
+You can customize the class by adding properties:
+
+[source,groovy]
+----
+class Person {
+    String name
+    Integer age
+    Date lastVisit
+}
+----
+
+Once you have a domain class try and manipulate it with the <<ref-command-line-shell,shell>> or <<ref-command-line-console,console>> by typing:
+
+[source,groovy]
+----
+grails console
+----
+
+This loads an interactive GUI where you can run Groovy commands with access to the Spring ApplicationContext, GORM, etc.

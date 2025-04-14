@@ -1,0 +1,1 @@
+This section is for advanced users and those who are interested in how Grails integrates with and builds on the https://spring.io/[Spring Framework]. It is also useful for link:plugins.html[plugin developers] considering doing runtime configuration Grails.

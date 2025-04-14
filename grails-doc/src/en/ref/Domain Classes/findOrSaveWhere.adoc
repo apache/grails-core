@@ -1,0 +1,44 @@
+
+== findOrSaveWhere
+
+
+
+=== Purpose
+
+
+Uses named arguments corresponding to property names of the domain class to execute a query returning the first matching result. This method behaves just like link:../Domain%20Classes/findWhere.html[findWhere] except that it will never return `null`. If a matching instance cannot be found in the database then a new instance is created, populated with values from the query parameters, saved and returned.  The difference between this method and link:../Domain%20Classes/findOrCreateWhere.html[findOrCreateWhere] is that this method will save a newly created instance where link:../Domain%20Classes/findOrCreateWhere.html[findOrCreateWhere] does not.
+
+
+=== Examples
+
+
+Given the domain class:
+
+[source,groovy]
+----
+class Book {
+
+   String title
+   Date releaseDate
+   String author
+
+   static constraints = {
+      releaseDate nullable: true
+   }
+}
+----
+
+You can query in the form:
+
+[source,groovy]
+----
+def book = Book.findOrSaveWhere(author: "Stephen King", title: "The Stand")
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `queryParams` - A Map of key/value pairs to be used in the query. If no matching instance is found then this data is used to initialize a new instance.

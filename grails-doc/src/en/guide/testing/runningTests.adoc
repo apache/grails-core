@@ -1,0 +1,1 @@
+Automated testing is a key part of Grails. Hence, Grails provides many ways to making testing easier from low level unit testing to high level functional tests. This section details the different ways to run tests for Grails.

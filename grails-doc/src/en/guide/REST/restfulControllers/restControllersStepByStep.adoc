@@ -1,0 +1,221 @@
+If you don't want to take advantage of the features provided by the `RestfulController` super class, then you can implement each HTTP verb yourself manually. The first step is to create a controller:
+
+[source,groovy]
+----
+$ grails create-controller book
+----
+
+Then add some useful imports and enable readOnly by default:
+
+[source,groovy]
+----
+import grails.gorm.transactions.*
+import static org.springframework.http.HttpStatus.*
+import static org.springframework.http.HttpMethod.*
+
+@Transactional(readOnly = true)
+class BookController {
+    ...
+}
+----
+
+Recall that each HTTP verb matches a particular Grails action according to the following conventions:
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URI,Controller Action
+GET,/books,index
+GET,/books/${id},show
+GET,/books/create,create
+GET,/books/${id}/edit,edit
+POST,/books,save
+PUT,/books/${id},update
+DELETE,/books/${id},delete
+|===
+
+NOTE: The `create` and `edit` actions are already required if you plan to implement an HTML interface for the REST resource. They are there in order to render appropriate HTML forms to create and edit a resource. They can be discarded if that is not a requirement.
+
+The key to implementing REST actions is the link:../ref/Controllers/respond.html[respond] method introduced in Grails 2.3. The `respond` method tries to produce the most appropriate response for the requested content type (JSON, XML, HTML etc.)
+
+
+==== Implementing the 'index' action
+
+
+For example, to implement the `index` action, simply call the `respond` method passing the list of objects to respond with:
+
+[source,groovy]
+----
+def index(Integer max) {
+    params.max = Math.min(max ?: 10, 100)
+    respond Book.list(params), model:[bookCount: Book.count()]
+}
+----
+
+Note that in the above example we also use the `model` argument of the `respond` method to supply the total count. This is only required if you plan to support pagination via some user interface.
+
+The `respond` method will, using link:theWebLayer.html#contentNegotiation[Content Negotiation], attempt to reply with the most appropriate response given the content type requested by the client (via the ACCEPT header or file extension).
+
+If the content type is established to be HTML then a model will be produced such that the action above would be the equivalent of writing:
+
+[source,groovy]
+----
+def index(Integer max) {
+    params.max = Math.min(max ?: 10, 100)
+    [bookList: Book.list(params), bookCount: Book.count()]
+}
+----
+
+By providing an `index.gsp` file you can render an appropriate view for the given model. If the content type is something other than HTML then the `respond` method will attempt to lookup an appropriate `grails.rest.render.Renderer` instance that is capable of rendering the passed object. This is done by inspecting the `grails.rest.render.RendererRegistry`.
+
+By default there are already renderers configured for JSON and XML, to find out how to register a custom renderer see the section on "Customizing Response Rendering".
+
+
+==== Implementing the 'show' action
+
+
+The `show` action, which is used to display and individual resource by id, can be implemented in one line of Groovy code (excluding the method signature):
+
+[source,groovy]
+----
+def show(Book book) {
+    respond book
+}
+----
+
+By specifying the domain instance as a parameter to the action Grails will automatically attempt to lookup the domain instance using the `id` parameter of the request. If the domain instance doesn't exist, then `null` will be passed into the action. The `respond` method will return a 404 error if null is passed otherwise once again it will attempt to render an appropriate response. If the format is HTML then an appropriate model will produced. The following action is functionally equivalent to the above action:
+
+[source,groovy]
+----
+def show(Book book) {
+    if(book == null) {
+        render status:404
+    }
+    else {
+        return [book: book]
+    }
+}
+----
+
+
+==== Implementing the 'save' action
+
+
+The `save` action creates new resource representations. To start off, simply define an action that accepts a resource as the first argument and mark it as `Transactional` with the `grails.gorm.transactions.Transactional` transform:
+
+[source,groovy]
+----
+@Transactional
+def save(Book book) {
+    ...
+}
+----
+
+Then the first thing to do is check whether the resource has any link:validation.html[validation errors] and if so respond with the errors:
+
+[source,groovy]
+----
+if(book.hasErrors()) {
+    respond book.errors, view:'create'
+}
+else {
+    ...
+}
+----
+
+In the case of HTML the 'create' view will be rendered again so the user can correct the invalid input. In the case of other formats (JSON, XML etc.), the errors object itself will be rendered in the appropriate format and a status code of 422 (UNPROCESSABLE_ENTITY) returned.
+
+If there are no errors then the resource can be saved and an appropriate response sent:
+
+[source,groovy]
+----
+book.save flush:true
+    withFormat {
+        html {
+            flash.message = message(code: 'default.created.message', args: [message(code: 'book.label', default: 'Book'), book.id])
+            redirect book
+        }
+        '*' { render status: CREATED }
+    }
+----
+
+In the case of HTML a redirect is issued to the originating resource and for other formats a status code of 201 (CREATED) is returned.
+
+
+==== Implementing the 'update' action
+
+
+
+The `update` action updates an existing resource representation and is largely similar to the `save` action. First define the method signature:
+
+[source,groovy]
+----
+@Transactional
+def update(Book book) {
+    ...
+}
+----
+
+If the resource exists then Grails will load the resource, otherwise null is passed. In the case of null, you should return a 404:
+
+[source,groovy]
+----
+if(book == null) {
+        render status: NOT_FOUND
+    }
+    else {
+        ...
+    }
+----
+
+Then once again check for errors link:validation.html[validation errors] and if so respond with the errors:
+
+[source,groovy]
+----
+if(book.hasErrors()) {
+    respond book.errors, view:'edit'
+}
+else {
+    ...
+}
+----
+
+In the case of HTML the 'edit' view will be rendered again so the user can correct the invalid input. In the case of other formats (JSON, XML etc.) the errors object itself will be rendered in the appropriate format and a status code of 422 (UNPROCESSABLE_ENTITY) returned.
+
+If there are no errors then the resource can be saved and an appropriate response sent:
+
+[source,groovy]
+----
+book.save flush:true
+withFormat {
+    html {
+        flash.message = message(code: 'default.updated.message', args: [message(code: 'book.label', default: 'Book'), book.id])
+        redirect book
+    }
+    '*' { render status: OK }
+}
+----
+
+In the case of HTML a redirect is issued to the originating resource and for other formats a status code of 200 (OK) is returned.
+
+
+==== Implementing the 'delete' action
+
+
+The `delete` action deletes an existing resource. The implementation is largely similar to the `update` action, except the `delete()` method is called instead:
+
+[source,groovy]
+----
+book.delete flush:true
+withFormat {
+    html {
+        flash.message = message(code: 'default.deleted.message', args: [message(code: 'Book.label', default: 'Book'), book.id])
+        redirect action:"index", method:"GET"
+    }
+    '*'{ render status: NO_CONTENT }
+}
+----
+
+Notice that for an HTML response a redirect is issued back to the `index` action, whilst for other content types a response code 204 (NO_CONTENT) is returned.
+
+

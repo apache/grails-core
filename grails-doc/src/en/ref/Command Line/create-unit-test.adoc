@@ -1,0 +1,36 @@
+== create-unit-test
+
+=== Purpose
+
+The `create-unit-test` command creates a unit test for the given base name.
+
+=== Examples
+
+[source,groovy]
+----
+grails create-unit-test
+grails create-unit-test book
+grails create-unit-test org.bookstore.Book
+----
+
+=== Description
+
+Creates a unit test for the given base name. The argument is optional, but if you don't include it the command will ask you for the name of the controller.
+
+A unit test differs from an integration test in that the Grails environment is not loaded for each test execution and it is left up to you to perform the appropriate mocking using http://spockframework.org/spock/docs/1.0/interaction_based_testing.html[Spock's mocking APIs].
+
+TIP: Refer to the section on link:{guidePath}/testing.html[Unit Testing] of the user guide for information on unit vs. integration testing.
+
+The name of the test can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `test/integration/<appname>/BookSpec.groovy` whereas the last one will create `test/integration/org/bookstore/BookSpec.groovy` directory. Note that the first letter of the test name is always upper-cased when determining the class name.
+
+If you want the command to default to a different package for tests, provide a value for `grails.project.groupId` in the link:{guidePath}/conf.html[runtime configuration].
+
+Note that this command is just for convenience and you can also create integration tests in your favourite text editor or IDE if you choose.
+
+Usage:
+
+[source,groovy]
+----
+grails create-unit-test <<name>>
+----
+

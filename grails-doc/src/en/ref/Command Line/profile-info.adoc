@@ -1,0 +1,32 @@
+
+== profile-info
+
+
+
+=== Purpose
+
+
+Displays detailed info about a profile
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails profile-info rest-api
+grails profile-info org.grails.profiles:rest-api
+grails profile-info org.grails.profiles:rest-api:3.1.0
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+$ grails profile-info <<name>>
+----
+
+This command will display information about the given profile and expects an argument that is either the profile name or the fully qualified dependency coordinates.

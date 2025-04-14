@@ -1,0 +1,53 @@
+
+==== Using the render method to output XML
+
+
+Grails supports a few different ways to produce XML and JSON responses. The first is the link:../ref/Controllers/render.html[render] method.
+
+The `render` method can be passed a block of code to do mark-up building in XML:
+
+[source,groovy]
+----
+def list() {
+
+    def results = Book.list()
+
+    render(contentType: "text/xml") {
+        books {
+            for (b in results) {
+                book(title: b.title)
+            }
+        }
+    }
+}
+----
+
+The result of this code would be something like:
+
+[source,xml]
+----
+<books>
+    <book title="The Stand" />
+    <book title="The Shining" />
+</books>
+----
+
+Be careful to avoid naming conflicts when using mark-up building. For example this code would produce an error:
+
+[source,groovy]
+----
+def list() {
+
+    def books = Book.list()  // naming conflict here
+
+    render(contentType: "text/xml") {
+        books {
+            for (b in results) {
+                book(title: b.title)
+            }
+        }
+    }
+}
+----
+
+This is because there is local variable `books` which Groovy attempts to invoke as a method.

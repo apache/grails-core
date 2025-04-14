@@ -1,0 +1,46 @@
+
+== withForm
+
+
+
+=== Purpose
+
+
+Used to handle duplicate form submissions.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+withForm {
+   // good request
+}.invalidToken {
+   // bad request
+}
+----
+
+
+=== Description
+
+
+The `withForm` method requires the use of the `useToken` attribute in a link:{gspdocs}/ref/Tags/form.html[form]
+
+[source,xml]
+----
+<g:form useToken="true" ...>
+----
+
+Then in your controller code you can use the `withForm` method to handle valid and invalid requests:
+
+[source,groovy]
+----
+withForm {
+   // good request
+}.invalidToken {
+   // bad request
+}
+----
+
+See link:{guidePath}/theWebLayer.html#formtokens[Handling Duplicate Form Submissions] for more information.

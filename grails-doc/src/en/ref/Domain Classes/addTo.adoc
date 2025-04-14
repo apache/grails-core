@@ -1,0 +1,67 @@
+
+== addTo*
+
+
+
+=== Purpose
+
+
+Adds a domain class relationship for one-to-many or many-to-many relationship, where the relationship is indicated by the property used as the suffix to the method.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def fictBook = new Book(title: "IT")
+def nonFictBook = new Book(title: "On Writing: A Memoir of the Craft")
+def a = new Author(name: "Stephen King")
+             .addToFiction(fictBook)
+             .addToNonFiction(nonFictBook)
+             .save()
+----
+
+
+=== Description
+
+
+The `addTo*` method is a dynamic method that uses an association to automatically add instances to the association. It also automatically configures the bi-directional relationship so that both sides are set.
+
+Consider these domain classes which are used in the example above:
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static hasMany = [fiction: Book, nonFiction: Book]
+}
+----
+
+[source,groovy]
+----
+class Book {
+
+    String title
+
+    static belongsTo = [author: Author]
+}
+----
+
+The example creates a new fiction book and a new non-fiction book, and an author. `addToFiction` is a dynamic method that works because the `Fiction` part corresponds to the `fiction` collection that results from the `hasMany` declaration, and likewise for `NonFiction` and `nonFiction`. After calling `save()` on the `Author`, the associated `Book` instances are transitively saved too, even though we didn't call `save()` on either of them.
+
+In addition, calling addTo* initializes the associated collections, and sets the back-reference of the `author` property in each `Book`.
+
+There's also a more compact version of the method that accepts a `Map` instead of a domain class instance:
+
+[source,groovy]
+----
+def a = new Author(name: "Stephen King")
+             .addToFiction(title: "IT")
+             .addToNonFiction(title: "On Writing: A Memoir of the Craft")
+             .save()
+----
+
+This works because GORM knows the type that is being added and can use the standard `Map` constructor to create the instances for you.

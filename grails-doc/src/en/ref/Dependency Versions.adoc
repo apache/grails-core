@@ -1,0 +1,3 @@
+== Dependency Versions
+
+Grails applications rely on a set of dependencies managed through a Bill of Materials (BOM). This BOM serves as a centralized location to declare and manage versions of dependencies used within a Grails project. Understanding these dependencies and their versions is crucial for effective project management and dependency resolution.

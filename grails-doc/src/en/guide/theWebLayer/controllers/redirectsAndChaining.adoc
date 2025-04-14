@@ -1,0 +1,137 @@
+==== Redirects
+
+
+Actions can be redirected using the link:../ref/Controllers/redirect.html[redirect] controller method:
+
+[source,groovy]
+----
+class OverviewController {
+
+    def login() {}
+
+    def find() {
+        if (!session.user)
+            redirect(action: 'login')
+            return
+        }
+        ...
+    }
+}
+----
+
+Internally the link:../ref/Controllers/redirect.html[redirect] method uses the {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] object's `sendRedirect` method.
+
+The `redirect` method expects one of:
+
+* The name of an action (and controller name if the redirect isn't to an action in the current controller):
+
+[source,groovy]
+----
+// Also redirects to the index action in the home controller
+redirect(controller: 'home', action: 'index')
+----
+
+*  A URI for a resource relative the application context path:
+
+[source,groovy]
+----
+// Redirect to an explicit URI
+redirect(uri: "/login.html")
+----
+
+* Or a full URL:
+
+[source,groovy]
+----
+// Redirect to a URL
+redirect(url: "http://grails.org")
+----
+
+* A link:GORM.html[domain class] instance:
+
+[source,groovy]
+----
+// Redirect to the domain instance
+Book book = ... // obtain a domain instance
+redirect book
+----
+
+In the above example Grails will construct a link using the domain class `id` (if present).
+
+Parameters can optionally be passed from one action to the next using the `params` argument of the method:
+
+[source,groovy]
+----
+redirect(action: 'myaction', params: [myparam: "myvalue"])
+----
+
+These parameters are made available through the link:../ref/Controllers/params.html[params] dynamic property that accesses request parameters. If a parameter is specified with the same name as a request parameter, the request parameter is overridden and the controller parameter is used.
+
+Since the `params` object is a Map, you can use it to pass the current request parameters from one action to the next:
+
+[source,groovy]
+----
+redirect(action: "next", params: params)
+----
+
+Finally, you can also include a fragment in the target URI:
+
+[source,groovy]
+----
+redirect(controller: "test", action: "show", fragment: "profile")
+----
+
+which will (depending on the URL mappings) redirect to something like "/myapp/test/show#profile".
+
+
+==== Chaining
+
+
+Actions can also be chained. Chaining allows the model to be retained from one action to the next. For example calling the `first` action in this action:
+
+[source,groovy]
+----
+class ExampleChainController {
+
+    def first() {
+        chain(action: second, model: [one: 1])
+    }
+
+    def second () {
+        chain(action: third, model: [two: 2])
+    }
+
+    def third() {
+        [three: 3])
+    }
+}
+----
+
+results in the model:
+
+[source,groovy]
+----
+[one: 1, two: 2, three: 3]
+----
+
+The model can be accessed in subsequent controller actions in the chain using the `chainModel` map. This dynamic property only exists in actions following the call to the `chain` method:
+
+[source,groovy]
+----
+class ChainController {
+
+    def nextInChain() {
+        def model = chainModel.myModel
+        ...
+    }
+}
+----
+
+Like the `redirect` method you can also pass parameters to the `chain` method:
+
+[source,groovy]
+----
+chain(action: "action1", model: [one: 1], params: [myparam: "param1"])
+----
+
+NOTE: The chain method uses the HTTP session and hence should only be used if your application is stateful.

@@ -1,0 +1,321 @@
+
+You can create your own commands by running the <<ref-command-line-create-command,create-command>> command from the root of your project. For example the following command will create a command called `grails-app/commands/HelloWorldCommand`:
+
+[source,groovy]
+----
+grails create-command HelloWorld
+----
+
+NOTE: Unlike scripts, commands cause the Grails environment to start and you have full access to the application context and the runtime.
+
+Since Grails 3.2.0, commands have similar abilities as scripts in regards to retrieving arguments, template generation, file access, and model building.
+
+If you created a command in a previous version of grails, you can update your command to have those abilities by changing which trait you are implementing.
+
+Commands created in Grails 3.1.x or lower implement the http://docs.grails.org/latest/api/grails/dev/commands/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
+
+[source,groovy]
+----
+boolean handle(ExecutionContext executionContext)
+----
+
+Commands created in Grails 3.2.0 or higher implement the http://docs.grails.org/latest/api/grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
+
+[source,groovy]
+----
+boolean handle()
+----
+
+NOTE: Commands defined this way still have access to the execution context via a variable called "executionContext".
+
+Custom commands can be executed using *grails run-command*:
+
+[source]
+----
+grails run-command my-example
+----
+
+Commands can also be executed using the *runCommand* gradle task. Note that the gradle task uses camelCase:
+
+[source]
+----
+gradle runCommand -Pargs="my-example"
+----
+
+If the grails server is a subproject (e.g., in a project created with the *angular* profile), the subproject command can still be invoked from the gradle wrapper in the parent project:
+
+[source]
+----
+./gradlew server:runCommand -Pargs="my-example"
+----
+
+
+
+
+
+
+With Gradle, a custom command is a piece of functionality that you can add to your Grails application and execute via the command-line interface (CLI). These commands are not part of the core Grails framework but are extensions you can create to perform specific tasks or operations that are unique to your application's requirements. Custom commands are a powerful way to automate various tasks, interact with your application, and perform administrative functions from the command line. When you run custom commands, they cause the Grails environment to start, giving you full access to the application context and the runtime, allowing you to work with the application's resources, services, and configuration as needed within your custom command.
+
+There are several reasons why you might want to write a custom command for your Grails application:
+
+* Automating Tasks: Custom commands allow you to automate routine tasks, such as data migration, database updates, or batch processing, by encapsulating the logic in a command that can be executed on-demand.
+* Administrative Operations: You can use custom commands for administrative tasks like user management, system maintenance, and configuration management, making it easier to manage your application in different environments.
+* Integration: Custom commands can be used to integrate your Grails application with other systems or services. For example, you can create a command to synchronize data with an external API.
+* Customized Workflows: If your application has unique workflows or processes, custom commands provide a way to execute these workflows from the command line.
+
+In Grails, you can create custom commands by implementing the https://docs.grails.org/latest/api/grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait. By default, this trait requires your command to implement the handle() method as following:
+
+[source,shell]
+----
+boolean handle()
+----
+
+[NOTE]
+====
+Commands defined this way still have access to the execution context via a variable called "executionContext."
+====
+
+Here's a step-by-step guide on how to create custom commands using the GrailsApplicationCommand trait with examples, and how to run these commands.
+
+In Grails, you can create custom commands by implementing the `GrailsApplicationCommand` trait. Custom commands allow you to add functionality to your Grails application that can be executed via the command-line interface (CLI). Here's a step-by-step guide on how to create custom commands using the `GrailsApplicationCommand` trait with examples, and how to run these commands.
+
+**Step 1: Create a Custom Command**
+
+To create a custom command, you need to create a Groovy class that implements the `GrailsApplicationCommand` trait. This trait provides methods for command execution. Let's create a simple example command that greets the user:
+
+[source,groovy]
+----
+// grails-app/commands/com/example/GreetCommand.groovy
+package com.example
+
+import grails.dev.commands.GrailsApplicationCommand
+
+class GreetCommand implements GrailsApplicationCommand {
+
+    String getName() {
+        return "greet"
+    }
+
+    String getDescription() {
+        return "Greet the user"
+    }
+
+    boolean handle() {
+        println("Hello, user!")
+        return true // Return true to indicate successful execution
+    }
+}
+----
+
+In this example, we've created a `GreetCommand` class that implements the `GrailsApplicationCommand` trait. It provides a `getName()` method to define the command name, a `getDescription()` method for a brief description, and the `run()` method to specify the code to execute when the command is run.
+
+Step 2: Build Your Grails Application
+
+Before you can use the runCommand task, ensure you have built your Grails application using the following command:
+
+[source,shell]
+----
+./gradlew assemble
+----
+
+This command will compile your application and make it ready for running custom commands.
+
+**Step 3: Run the Custom Command**
+
+To run the custom command, use Gradle's runCommand task. Open your terminal and navigate to your Grails application's root directory. Then, run the custom command with the following Gradle command:
+
+[source,shell]
+----
+./gradlew runCommand -Pargs="greet"
+----
+
+In the command above, replace "greet" with the name of your custom command. This will execute the GreetCommand, and you will see the output.
+
+Here's the expected final output when you run the greet command:
+
+[source,shell]
+----
+Hello, user!
+----
+
+**Additional Features: Command Arguments and Options**
+
+Grails also supports command-line arguments and options for custom commands. You can define these in your command class by implementing the `GrailsApplicationCommand` interface. Here's an example of a command that takes a name as an argument and an optional `--loud` option to make the greeting louder:
+
+[source,groovy]
+----
+// grails-app/commands/com/example/GreetCommand.groovy
+package com.example
+
+import grails.dev.commands.GrailsApplicationCommand
+
+class GreetCommand implements GrailsApplicationCommand {
+
+    String getName() {
+        return "greet"
+    }
+
+    String getDescription() {
+        return "Greet the user with options"
+    }
+
+    boolean handle() {
+        def args = commandLine.args
+        String name = args.size() > 0 ? args[0] : "user"
+        boolean loud = args.contains("--loud")
+
+        if (loud) {
+            println("HELLO, $name! (LOUD)")
+        } else {
+            println("Hello, $name!")
+        }
+
+        return true
+    }
+}
+----
+
+Now you can run the `greet` command with arguments and options:
+
+[source,shell]
+----
+# Greet the user with the default message
+./gradlew runCommand -Pargs="greet"
+
+# Greet a specific user
+./gradlew runCommand -Pargs="greet Alice"
+
+# Greet loudly
+./gradlew runCommand -Pargs="greet --loud"
+
+# Greet a specific user loudly
+./gradlew runCommand -Pargs="greet Alice --loud"
+----
+
+This allows you to create more versatile and interactive custom commands for your Grails application.
+
+In summary, creating custom commands in Grails using the `GrailsApplicationCommand` trait is a powerful way to extend your application's functionality beyond the web interface. You can define the command's name, description, and logic, and then execute it from the command line, optionally passing arguments and options as needed.
+
+**Using the `executionContext` in the Grails Custom Commands**
+
+In Grails, the executionContext is a runtime context object that provides valuable information about the current execution environment of a Grails application. It includes details such as the application's environment (e.g., development, production, test) and allows developers to access this context within custom commands.
+
+Custom commands in Grails can use the executionContext to make informed decisions and perform specific tasks based on the current runtime environment. For example, developers can write conditional logic in custom commands that execute differently in production, development, or testing environments. This flexibility enables custom commands to adapt and behave differently depending on the context in which they are run, making them versatile tools for managing and extending Grails applications.
+
+Suppose you have a Grails application that manages customer data, and you want to create a custom command to perform data backup. In this scenario, you may want the backup process to behave differently depending on whether you're running it in a development, staging, or production environment.
+
+Here's an example of how you can create a custom command that uses the executionContext to determine the backup behavior:
+
+[source,groovy]
+----
+// grails-app/commands/com/example/BackupCommand.groovy
+package com.example
+
+import grails.dev.commands.GrailsApplicationCommand
+
+class BackupCommand implements GrailsApplicationCommand {
+
+    String getName() {
+        return "backup"
+    }
+
+    String getDescription() {
+        return "Backup customer data"
+    }
+
+    boolean handle() {
+        // Access the executionContext to determine the environment
+        def environment = executionContext.environment
+
+        if (environment == "production") {
+            // Perform a full backup in the production environment
+            println("Performing a full backup of customer data (Production)")
+            // Add production-specific backup logic here
+        } else {
+            // Perform a partial backup in other environments
+            println("Performing a partial backup of customer data (Non-production)")
+            // Add non-production backup logic here
+        }
+
+        return true // Return true to indicate successful execution
+    }
+}
+----
+
+In this example:
+
+- The custom command, named `BackupCommand`, is created to back up customer data.
+- It checks the `executionContext` to determine the current environment.
+- If the environment is "production," it performs a full backup with production-specific logic.
+- In all other environments, it performs a partial backup with non-production logic.
+
+When you run this custom command using `./gradlew runCommand -Pargs="backup"`, it will adapt its behavior based on whether you're in a production or non-production environment, demonstrating how the `executionContext` can be used to make environment-specific decisions in a realistic scenario.
+
+**How to Create a Custom Command from a Grails Plugin**
+
+You can create custom commands not only within your Grails application but also from a Grails plugin. Here's how to do it:
+
+1. **Create a Grails Plugin:** If you don't already have a Grails plugin, you can create one using Grails' plugin generation commands. For example:
+
++
+[source,shell]
+----
+grails create-plugin my-plugin
+----
+
+2. **Define the Command:** Inside your Grails plugin, define the custom command by creating a Groovy class that implements the `GrailsApplicationCommand` trait or interface, providing the necessary methods like `getName()`, `getDescription()`, and `handle()`.
+
+3. **Build and Package the Plugin:** To publish the plugin, you should use the Gradle maven-publish plugin. Update your plugin's build.gradle file to include the following configuration:
+
++
+[source,groovy]
+----
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://path/to/your/local/repo" // Adjust the path accordingly
+        }
+    }
+}
+
+----
++
+
+Then, you can publish the plugin to your local repository:
+
++
+[source,shell]
+----
+./gradlew publishToMavenLocal
+----
+
+4. **Add the Plugin as a Dependency:** Instead of using the grails install-plugin command, you should add the plugin as a dependency in your Grails application's build.gradle file. Include the following dependency:
+
++
+[source,groovy]
+----
+dependencies {
+    // ...
+    implementation 'com.example:my-plugin:1.0.0' // Replace with your plugin's group and version
+    // ...
+}
+----
++
+Make sure to replace "com.example:my-plugin:1.0.0" with the appropriate group and version for your plugin
+
+5. **Run the Custom Command:** Now, you can run the custom command from your Grails application's root directory using the Gradle `runCommand` task, as previously explained:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="your-command-name"
+----
++
+
+Replace `"your-command-name"` with the name of the custom command you defined in your plugin.
+
+By following these steps, you can create and run custom commands from a Grails plugin, extending the functionality of your Grails application as needed. This approach allows you to modularize your custom functionality and share it across multiple Grails projects if necessary.

@@ -1,0 +1,146 @@
+The `grails test-app` command is one way to run Grails tests.  This section documents how to use `grails test-app`.
+
+
+==== Running All Tests
+
+
+Tests are run with the link:../ref/Command%20Line/test-app.html[test-app] command:
+
+[source,groovy]
+----
+grails test-app
+----
+
+The command will produce output such as:
+
+[source,groovy]
+----
+-------------------------------------------------------
+Running Unit Tests...
+Running test FooSpec...FAILURE
+Unit Tests Completed in 464ms ...
+-------------------------------------------------------
+
+Tests failed: 0 errors, 1 failures
+----
+
+whilst showing the reason for each test failure.
+
+NOTE: You can force a clean before running tests by passing `-clean` to the `test-app` command.
+
+Grails writes HTML test reports to the `build/reports/tests` directory and JUnit XML test reports to the `build/test-results` directory. The HTML reports are generally the best ones to look at.
+
+Using Grails' link:commandLine.html#interactiveMode[interactive mode] confers some distinct advantages when executing tests. First, the tests will execute significantly faster on the second and subsequent runs. Second, a shortcut is available to open the HTML reports in your browser:
+
+[source,groovy]
+----
+open test-report
+----
+
+You can also run your unit tests from within most IDEs.
+
+
+==== Targeting Tests
+
+
+You can selectively target the test(s) to be run in different ways. To run all tests for a controller named `SimpleController` you would run:
+
+[source,groovy]
+----
+grails test-app SimpleController
+----
+
+This will run any tests for the class named `SimpleController`. Wildcards can be used...
+
+[source,groovy]
+----
+grails test-app *Controller
+----
+
+This will test all classes ending in `Controller`. Package names can optionally be specified...
+
+[source,groovy]
+----
+grails test-app some.org.*Controller
+----
+
+or to run all tests in a package...
+
+[source,groovy]
+----
+grails test-app some.org.*
+----
+
+or to run all tests in a package including subpackages...
+
+[source,groovy]
+----
+grails test-app some.org.**.*
+----
+
+You can also target particular test methods...
+
+[source,groovy]
+----
+grails test-app SimpleController.testLogin
+----
+
+This will run the `testLogin` test in the `SimpleController` tests. You can specify as many patterns in combination as you like...
+
+[source,groovy]
+----
+grails test-app some.org.* SimpleController.testLogin BookController
+----
+
+NOTE: In Grails 2.x, adding `-rerun` as an argument would only run those tests which failed in the previous test-app run. This argument is no longer supported.
+
+NOTE: In Grails 3.x, you might need to specify the package name before the class name, as well as append "Spec" to the end. For example, if you want to run the test for the ProductController, you should use `grails test-app *.ProductControllerSpec`. Note that the star can be used if you don't want to type the whole package hierarchy.
+
+==== Debugging
+
+
+In order to debug your tests via a remote debugger, you can add `--debug-jvm` after `grails` in any commands, like so:
+
+[source,groovy]
+----
+grails --debug-jvm test-app
+----
+
+This will open the default Java remote debugging port, 5005, for you to attach a remote debugger from your editor / IDE of choice.
+
+NOTE: This differs from Grails 2.3 and previous, where the `grails-debug` command existed.
+
+
+==== Targeting Test Phases
+
+
+In addition to targeting certain tests, you can also target test _phases._ By default Grails has two testing phases `unit` and `integration.`
+
+NOTE: Grails 2.x uses `phase:type` syntax. In Grails 3.0 it was removed, because it made no sense in Gradle context.
+
+To execute `unit` tests you can run:
+
+[source,groovy]
+----
+grails test-app -unit
+----
+
+To run `integration` tests you would run...
+
+[source,groovy]
+----
+grails test-app -integration
+----
+
+
+==== Targeting Tests When Using Phases
+
+
+Test and phase targeting can be applied at the same time:
+
+[source,groovy]
+----
+grails test-app some.org.**.* -unit
+----
+
+This would run all tests in the `unit` phase that are in the package `some.org` or a subpackage.

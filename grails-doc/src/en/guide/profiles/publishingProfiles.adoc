@@ -1,0 +1,62 @@
+
+==== Publishing Profiles to the Grails Central Repository
+
+
+Any profile created with the link:../ref/Command%20Line/create-profile.html[create-profile] command already comes configured with a `grails-profile-publish` plugin defined in `build.gradle`:
+
+[source,groovy]
+----
+apply plugin: "org.grails.grails-profile-publish"
+----
+
+To publish a profile using this plugin to the Grails central repository first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on http://bintray.com[Bintray] and configure your keys as follows in the profile's `build.gradle` file:
+
+[source,groovy]
+----
+grailsPublish {
+  user = 'YOUR USERNAME'
+  key = 'YOUR KEY'
+  githubSlug = 'your-repo/your-profile'
+  license = 'Apache-2.0'
+}
+----
+
+NOTE: The `githubSlug` argument should point to the path to your Github repository. For example if your repository is located at https://github.com/foo/bar then your `githubSlug` is `foo/bar`
+
+With this in place you can run `gradle publishProfile` to publish your profile:
+
+[source,bash]
+----
+$ gradle publishProfile
+----
+
+The profile will be uploaded to Bintray. You can then go the https://github.com/grails-profiles[Grails profiles repository] and request to have your profile included by clicking "Include My Package" button on Bintray's interface (you must be logged in to see this).
+
+
+==== Publishing Profiles to an Internal Repository
+
+
+The aforementioned `grails-profile-publish` plugin configures https://docs.gradle.org/current/userguide/publishing_maven.html[Gradle's Maven Publish plugin]. In order to publish to an internal repository all you need to do is define the repository in `build.gradle`. For example:
+
+[source,groovy]
+----
+publishing {
+    repositories {
+        maven {
+            credentials {
+                username "foo"
+                password "bar"
+            }
+
+            url "http://foo.com/repo"
+        }
+    }
+}
+----
+
+Once configured you can publish your plugin with `gradle publish`:
+
+[source,bash]
+----
+$ gradle publish
+----

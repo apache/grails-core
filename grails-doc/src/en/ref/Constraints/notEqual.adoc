@@ -1,0 +1,24 @@
+
+== notEqual
+
+
+
+=== Purpose
+
+
+Ensures that a property is not equal a specified value
+
+
+=== Examples
+
+
+[source,groovy]
+----
+username notEqual: "Bob"
+----
+
+
+=== Description
+
+
+Error Code: `className.propertyName.notEqual`

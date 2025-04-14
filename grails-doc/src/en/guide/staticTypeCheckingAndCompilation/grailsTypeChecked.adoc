@@ -1,0 +1,30 @@
+
+==== GrailsTypeChecked
+
+
+The {apiDocs}grails/compiler/GrailsTypeChecked.html[grails.compiler.GrailsTypeChecked] annotation works a lot like the `GrailsCompileStatic` annotation except that it only enables static type checking, not static compilation.  This affords compile time feedback for expressions which cannot be validated statically at compile time while still leaving dynamic dispatch in place for the class.
+
+[source,groovy]
+----
+import grails.compiler.GrailsTypeChecked
+
+@GrailsTypeChecked
+class SomeClass {
+
+    // all of the code in this class will be statically type
+    // checked and will be dynamically dispatched at runtime
+
+    def methodOne() {
+        // ...
+    }
+
+    def methodTwo() {
+        // ...
+    }
+
+    def methodThree() {
+        // ...
+    }
+}
+----
+

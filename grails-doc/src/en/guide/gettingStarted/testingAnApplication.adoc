@@ -1,0 +1,30 @@
+The `create-*` commands in Grails automatically create unit or integration tests for you within the `src/test/groovy` directory. It is of course up to you to populate these tests with valid test logic, information on which can be found in the section on link:testing.html[Unit and integration tests].
+
+To execute tests you run the link:../ref/Command%20Line/test-app.html[test-app] command as follows:
+
+[source,groovy]
+----
+grails test-app
+----
+
+
+Gradle offers a convenient feature where you can automatically generate unit and integration tests for your application using the `create-*` commands. These generated tests are stored in the `src/test/groovy` and `src/integration-test/groovy` directories. However, it is your responsibility to populate these tests with the appropriate test logic. You can find comprehensive guidance on crafting valid test logic in the section dedicated to link:testing.html[Unit and Integration Tests].
+
+To initiate the execution of your tests, including both unit and integration tests, you can utilize the Gradle `check` task. Follow these steps:
+
+1. Open your terminal or command prompt and navigate to your Grails project's root directory.
+
+2. Execute the following Gradle command:
+
++
+[source,console]
+$ ./gradlew check
+
++
+By running the `check` task, you ensure that all tests in your Grails project, including the ones you've created and populated with test logic, are executed. This comprehensive testing approach contributes significantly to the robustness and overall quality of your application.
+
+3. **Viewing Test Reports**: After running your tests, Grails generates test reports that provide valuable insights into the test results. You can typically find these reports in the `build/reports/tests` directory of your Grails project. Open these reports in a web browser to view detailed information about test outcomes, including passed, failed, and skipped tests.
+
+Remember, testing is not just a process; it's a fundamental practice that enhances your Grails application's reliability. Viewing test reports helps you analyze and understand the test results, making it easier to identify and address any issues.
+
+By following these testing practices and reviewing test reports, you can deliver a high-quality Grails application to your users with confidence.

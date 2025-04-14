@@ -1,0 +1,40 @@
+
+== hibernate
+
+
+
+=== Purpose
+
+
+The `hibernate` plugin configures the Hibernate implementation of link:GORM.html[GORM].
+
+
+=== Examples
+
+
+An example domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date releaseDate
+    Author author
+}
+----
+
+
+=== Description
+
+
+Refer to the section on link:GORM.html[GORM] in the Grails user guide which details how to create Grails domain classes.
+
+Configured Spring Beans:
+
+* `dialectDetector` - An instance of {apiDocs}org/grails/orm/hibernate/support/HibernateDialectDetectorFactoryBean.html[HibernateDialectDetectorFactoryBean] that attempts to automatically detect the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/dialect/Dialect.html[Dialect] which is used to communicate with the database.
+* `hibernateProperties` - A `Map` of Hibernate properties passed to the `SessionFactory`
+* `lobHandlerDetector` - An instance of {apiDocs}org/grails/orm/hibernate/support/SpringLobHandlerDetectorFactoryBean.html[SpringLobHandlerDetectorFactoryBean] that attempts to automatically detect the Spring LobHandler to use based on the database.
+* `sessionFactory` -  An instance of the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/SessionFactory.html[SessionFactory] class
+* `transactionManager` - An instance of Spring's {springapi}org/springframework/orm/hibernate3/HibernateTransactionManager.html[HibernateTransactionManager] class
+* `persistenceInterceptor` - An instance of {apiDocs}org/grails/orm/hibernate/support/HibernatePersistenceContextInterceptor.html[HibernatePersistenceContextInterceptor] that abstracts away how persistence is used from the controller/view layer so that Grails can be used without GORM.
+* `openSessionInViewInterceptor` - An instance of {apiDocs}org/grails/orm/hibernate/support/GrailsOpenSessionInViewFilter.html[GrailsOpenSessionInViewFilter] that deals with Grails' https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html[Session] management.

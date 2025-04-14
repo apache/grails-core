@@ -1,0 +1,44 @@
+
+== list-profiles
+
+
+
+=== Purpose
+
+
+Lists the available profiles
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails list-profiles
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails list-profiles
+----
+
+Lists the profiles that are available. Note: This command can take a while to execute depending in your internet connectivity. Typical output looks like this:
+
+[source,groovy]
+----
+| Available Profiles
+--------------------
+* base - The base profile extended by other profiles
+* plugin - Profile for plugins designed to work across all profiles
+* profile - A profile for creating new Grails profiles
+* web - Profile for Web applications
+* rest-api - Profile for Web API applications
+* web-plugin - Profile for Plugins designed for Web applications
+----
+
+If you require more info about a profile you can use the link:profile-info.html[profile-info] command.

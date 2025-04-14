@@ -1,0 +1,103 @@
+
+= schema-export
+
+
+
+== Purpose
+
+
+Uses Hibernate's SchemaExport tool to generate DDL or export the schema.
+NOTE: As of Grails 3, the Hibernate plugin is not by default on the build classpath. You need to add it to the build classpath to get the command working.
+
+
+== Examples
+
+
+[source,groovy]
+----
+//Add Hibernate to the build classpath
+buildscript {
+    dependencies {
+        classpath "org.grails.plugins:hibernate:4.3.8.0"
+    }
+}
+----
+
+
+[source,groovy]
+----
+grails schema-export
+grails schema-export --datasource=lookup
+grails prod schema-export
+grails dev schema-export
+grails prod schema-export export
+grails prod schema-export export --datasource=auditing
+grails prod schema-export stdout
+----
+
+
+== Description
+
+
+Usage:
+[source,groovy]
+----
+grails <<environment>> schema-export <<action>> ['stdout'] <<filename>> [--datasource]
+----
+
+Arguments:
+
+* `environment` - The environment containing the database configuration to use (dev, prod, etc...).
+* `action` - Either 'generate' or 'export'.  The default is 'generate'. Specifying 'export' will execute the script against the specified environment's database instead of just generating the ddl file.
+* `stdout` - Passing 'stdout' will cause the script to dump the ddl to stdout.
+* `filename` - The name of the file to write the ddl to.  The default is ddl.sql in the project's 'target' directory.
+* `datasource` - The `DataSource` name suffix; defaults to the default `DataSource` if not specified
+
+
+
+
+= Gradle runCommand `schema-export` Command
+
+== Purpose
+
+The `schema-export` command uses Hibernate's SchemaExport tool to generate Data Definition Language (DDL) or export the schema. You need to add it to the build classpath for this command to work properly.
+
+== Examples
+
+[source,groovy,subs="attributes+"]
+build.gradle
+----
+repositories {
+    mavenCentral()
+    maven { url = "https://repo.grails.org/grails/core/" }
+}
+dependencies {
+    classpath "org.grails.plugins:hibernate5:{gormVersion}"
+}
+----
+
+[source,console]
+----
+$ ./gradlew runCommand -Pargs="schema-export"
+$ ./gradlew runCommand -Pargs="schema-export --datasource=lookup"
+$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export"
+$ ./gradlew -Dgrails.env=dev runCommand -Pargs="schema-export"
+$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export export"
+$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export export --datasource=auditing"
+$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export stdout"
+----
+
+== Description
+
+Usage:
+
+[source,console]
+$ ./gradlew -Dgrails.env=<<environment>> runCommand -Pargs="schema-export <<action>> ['stdout'] <<filename>> [--datasource]"
+
+Arguments:
+
+* `environment` - The environment containing the database configuration to use (e.g., dev, prod).
+* `action` - Can be either 'generate' or 'export', with the default being 'generate'. Specifying 'export' will execute the script against the specified environment's database instead of just generating the DDL file.
+* `stdout` - Including 'stdout' will cause the script to output the DDL to the standard output (stdout).
+* `filename` - Specifies the name of the file to write the DDL to, with the default being 'ddl.sql' in the project's 'build' directory.
+* `datasource` - The `DataSource` name suffix; defaults to the default `DataSource` if not specified.

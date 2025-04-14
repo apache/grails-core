@@ -1,0 +1,57 @@
+https://github.com/blongden/vnd.error[Vnd.Error] is a standardised way of expressing an error response.
+
+By default when a validation error occurs when attempting to POST new resources then the errors object will be sent back allow with a 422 respond code:
+
+[source,groovy]
+----
+$ curl -i -H "Accept: application/json"  -H "Content-Type: application/json" -X POST -d "" http://localhost:8080/books
+
+HTTP/1.1 422 Unprocessable Entity
+Server: Apache-Coyote/1.1
+Content-Type: application/json;charset=ISO-8859-1
+
+{
+  "errors": [
+    {
+      "object": "rest.test.Book",
+      "field": "title",
+      "rejected-value": null,
+      "message": "Property [title] of class [class rest.test.Book] cannot be null"
+    }
+  ]
+}
+----
+
+If you wish to change the format to Vnd.Error then simply register `grails.rest.render.errors.VndErrorJsonRenderer` bean in `grails-app/conf/spring/resources.groovy`:
+
+
+[source,groovy]
+----
+beans = {
+    vndJsonErrorRenderer(grails.rest.render.errors.VndErrorJsonRenderer)
+    // for Vnd.Error XML format
+    vndXmlErrorRenderer(grails.rest.render.errors.VndErrorXmlRenderer)
+}
+----
+
+Then if you alter the client request to accept Vnd.Error you get an appropriate response:
+
+[source,groovy]
+----
+$ curl -i -H "Accept: application/vnd.error+json,application/json" -H "Content-Type: application/json" -X POST -d "" http://localhost:8080/books
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: application/vnd.error+json;charset=ISO-8859-1
+
+[
+    {
+        "logref": "book.nullable,
+        "message": "Property [title] of class [class rest.test.Book] cannot be null",
+        "_links": {
+            "resource": {
+                "href": "http://localhost:8080/rest-test/books"
+            }
+        }
+    }
+]
+----

@@ -1,0 +1,32 @@
+
+== dependency-report
+
+
+
+=== Purpose
+
+
+The `dependency-report` command generates Ivy reports showing JAR dependencies required by the application.
+
+
+=== Examples
+
+
+----
+grails dependency-report
+grails dependency-report runtime
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails dependency-report <<configuration>>
+----
+
+Arguments:
+
+* `configuration` - optional configuration to generate a report for. If omitted reports for all configurations are generated

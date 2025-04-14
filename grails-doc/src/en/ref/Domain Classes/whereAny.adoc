@@ -1,0 +1,33 @@
+
+== where
+
+
+
+=== Purpose
+
+
+Defines a new `grails.gorm.DetachedCriteria` instance that uses a disjunction (logical OR).
+
+
+=== Examples
+
+
+Basic query:
+
+[source,groovy]
+----
+def query = Person.whereAny {
+   firstName == "Bart"
+   firstName == "Lisa"
+}
+Person bart = query.find()
+----
+
+
+
+=== Description
+
+
+The `where` method defaults to a conjunction (logical AND) for the created query. The `whereAny` compliments the `where` method by allowing the creation of `DetachedCriteria` using a disjunction (logical OR).
+
+The `where` method is a powerful new type-safe querying option introduced in Grails 2.0. For more information on using the `where` method see the dedicated section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#whereQueries[Where Queries] and https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#detachedCriteria[Detached Criteria] in the user guide.

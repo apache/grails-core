@@ -1,0 +1,31 @@
+Grails provides standalone Interceptors using the link:../ref/Command%20Line/create-interceptor.html[create-interceptor] command:
+
+[source,bash]
+----
+$ grails create-interceptor MyInterceptor
+----
+
+The above command will create an Interceptor in the `grails-app/controllers` directory with the following default contents:
+
+[source,groovy]
+----
+class MyInterceptor {
+
+  boolean before() { true }
+
+  boolean after() { true }
+
+  void afterView() {
+    // no-op
+  }
+
+}
+----
+
+
+==== Interceptors vs Filters
+
+
+In versions of Grails prior to Grails 3.0, Grails supported the notion of filters. These are still supported for backwards compatibility but are considered deprecated.
+
+The new interceptors concept in Grails 3.0 is superior in a number of ways, most significantly interceptors can use Groovy's `CompileStatic` annotation to optimize performance (something which is often critical as interceptors can be executed for every request.)

@@ -1,0 +1,63 @@
+
+== find
+
+
+
+=== Purpose
+
+
+Finds the first matching result for the given query or `null` if no instance is found
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// Dan brown's first book
+Book.find("from Book as b where b.author='Dan Brown'")
+
+// with a positional parameter
+Book.find("from Book as b where b.author=?", ['Dan Brown'])
+
+// with a named parameter
+Book.find("from Book as b where b.author=:author", [author: 'Dan Brown'])
+
+// use the query cache
+Book.find("from Book as b where b.author='Dan Brown'", [cache: true])
+Book.find("from Book as b where b.author=:author",
+          [author: 'Dan Brown'],
+          [cache: true])
+
+// query by example
+def example = new Book(author: "Dan Brown")
+Book.find(example)
+
+// Using where criteria (since Grails 2.0)
+Person p = Person.find { firstName == "Bart" }
+----
+
+
+=== Description
+
+
+The `find` method allows querying with Hibernate's query language https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#hql[HQL] and querying by example. The basic syntax is:
+
+[source,groovy]
+----
+Book.find(String query)
+Book.find(String query, Collection positionalParams)
+Book.find(String query, Collection positionalParams, Map queryParams)
+Book.find(String query, Map namedParams)
+Book.find(String query, Map namedParams, Map queryParams)
+Book.find(Book example)
+Book.find(Closure whereCriteria)
+----
+
+Parameters:
+
+* `query` - An HQL query
+* `positionalParams` - A `List` of parameters for a positional parametrized HQL query
+* `namedParams` - A `Map` of named parameters a HQL query
+* `queryParams` - A `Map` of query parameters. Currently, only `cache` is supported
+* `example` - An instance of the domain class for query by example

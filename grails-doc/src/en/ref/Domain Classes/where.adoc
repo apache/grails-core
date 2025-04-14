@@ -1,0 +1,67 @@
+
+== where
+
+
+
+=== Purpose
+
+
+Defines a new `grails.gorm.DetachedCriteria` instance.
+
+
+=== Examples
+
+
+Basic query:
+
+[source,groovy]
+----
+def query = Person.where {
+   firstName == "Bart"
+}
+Person bart = query.find()
+----
+
+Conjunctions/Disjunctions:
+
+[source,groovy]
+----
+def query = Person.where {
+    (lastName != "Simpson" && firstName != "Fred") || (firstName == "Bart" && age > 9)
+}
+def results = query.list(sort:"firstName")
+----
+
+Property comparison:
+
+[source,groovy]
+----
+def query = Person.where {
+   firstName == lastName
+}
+----
+
+Querying Associations:
+
+[source,groovy]
+----
+def query = Pet.where {
+    owner.firstName == "Joe" || owner.firstName == "Fred"
+}
+----
+
+Subqueries:
+
+
+[source,groovy]
+----
+final query = Person.where {
+  age > avg(age)
+}
+----
+
+
+=== Description
+
+
+The `where` method is a powerful new type-safe querying option introduced in Grails 2.0. For more information on using the `where` method see the dedicated section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#whereQueries[Where Queries] and https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#detachedCriteria[Detached Criteria] in the user guide.

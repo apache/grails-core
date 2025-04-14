@@ -1,0 +1,5 @@
+REST is not really a technology in itself, but more an architectural pattern. REST is very simple and just involves using plain XML or JSON as a communication medium, combined with URL patterns that are "representational" of the underlying system, and HTTP methods such as GET, PUT, POST and DELETE.
+
+Each HTTP method maps to an action type. For example GET for retrieving data, POST for creating data, PUT for updating and so on.
+
+Grails includes flexible features that make it easy to create RESTful APIs. Creating a RESTful resource can be as simple as one line of code, as demonstrated in the next section.

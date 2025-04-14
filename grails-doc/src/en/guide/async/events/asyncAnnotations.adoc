@@ -1,0 +1,16 @@
+In Grails versions earlier than 3.3, Grails used Reactor 2.x which provided `@Consumer` and `@Selector` annotations to listen for events. For example:
+
+[source,groovy]
+----
+import reactor.spring.context.annotation.*
+
+@Consumer
+class MyService {
+	@Selector('myEvent')
+	void myEventListener(Object data) {
+		println "GOT EVENT $data"
+	}
+}
+----
+
+Within the `grails-events-compat` dependency Grails 3.3 and above ship versions of these annotations that bridge and provide compatibility for applications upgrading to Grails 3.3, however these annotations are considered deprecated and the link:{asyncApi}/grails/events/annotation/Subscriber.html[Subscriber] annotation should be used instead which provides equivalent functionality.

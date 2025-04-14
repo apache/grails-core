@@ -1,0 +1,29 @@
+
+== grailsApplication
+
+
+
+=== Purpose
+
+
+An instance of the {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] class.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        def bookClass = grailsApplication.classLoader.loadClass("Book")
+        [book: bookClass.newInstance()]
+    }
+}
+----
+
+
+=== Description
+
+
+The `GrailsApplication` class provides information about the conventions within Grails and access to {apiDocs}grails/core/GrailsApplication#getMetadata().html[metadata], {apiDocs}grails/core/GrailsApplication#getConfig().html[config] and the {apiDocs}grails/core/GrailsApplication#getClassLoader().html[ClassLoader]

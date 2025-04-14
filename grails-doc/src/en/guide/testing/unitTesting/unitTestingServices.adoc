@@ -1,0 +1,17 @@
+Use the `grails.testing.services.ServiceUnitTest` trait to unit
+test services.
+
+[source,groovy]
+.grails-app/services/demo/HelperService.groovy
+----
+include::{functionalSourceDir}/demo33/grails-app/services/demo/HelperService.groovy[tags=basic_declaration,indent=0]
+----
+
+[source,groovy]
+.src/test/groovy/demo/HelperServiceSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/HelperServiceSpec.groovy[tags=basic_declaration,indent=0]
+----
+
+Adding the `ServiceUnitTest` trait to a test causes a new `service` property to
+be automatically created for the Service class under test.

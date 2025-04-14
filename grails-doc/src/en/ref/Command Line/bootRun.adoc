@@ -1,0 +1,46 @@
+== bootRun
+
+=== Purpose
+
+Runs a Grails application in an embedded servlet container
+
+WARNING: This target is _not_ intended to be used for application deployment. There are many optimizations implemented when  generating a WAR file for deployment that are not available to `bootRun` since `bootRun` is optimized for developer productivity, not performance.
+
+=== Examples
+
+[source,console]
+----
+$ ./gradlew bootRun
+$ ./gradlew bootRun --debug-jvm
+$ ./gradlew bootRun -Dgrails.env=test
+$ ./gradlew bootRun --args=--server.port=8081
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+$ ./gradlew bootRun <<gradle-args>> --args=<<*args>>
+
+Gradle Arguments: \<<gradle-args>>
+
+* `--debug-jvm` - Run the application using a debug JVM (port 5005) in order to attach a remote debugger.
+* `-Dgrails.env=*env` - The grails environment to use (dev/test/prod)
+
+Additional Arguments <<*args>>:
+
+* `server.port` - The port to use.
+For more args, see {springBootReference}/html/application-properties.html#appendix.application-properties.server[Spring Boot Application Properties].
+
+
+This command starts Grails in an embedded servlet container that can serve HTTP requests. The default container is https://tomcat.apache.org[Tomcat] but alternative containers are supported by altering the Spring boot starter in `build.gradle`.
+
+[source,groovy]
+.build.gradle
+----
+// use Jetty
+runtimeOnly "org.springframework.boot:spring-boot-starter-jetty"
+----
+
+For more information see the Spring Boot documentation on {springBootReference}/html/howto.html#howto.webserver[Embedded Containers].

@@ -1,0 +1,31 @@
+
+== defaultAction
+
+
+
+=== Purpose
+
+
+Specifies the default action to be executed if none is specified in the URI.
+
+This is unnecessary if you have an action named "index" and want it to be the default, since that happens automatically.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+
+    static defaultAction = "list"
+
+    def list() {
+        [books: Book.list()]
+    }
+
+    def show() {
+        [bookInstance: Book.get(params.id)]
+    }
+}
+----

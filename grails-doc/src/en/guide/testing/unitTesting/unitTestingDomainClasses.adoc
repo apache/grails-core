@@ -1,0 +1,46 @@
+Use the link:../api/grails/testing/gorm/DomainUnitTest.html[`grails.testing.gorm.DomainUnitTest`]
+trait to unit test single domain class.
+
+[source,groovy]
+.grails-app/domain/demo/Person.groovy
+----
+include::{functionalSourceDir}/demo33/grails-app/domain/demo/Person.groovy[indent=0]
+----
+
+[source,groovy]
+.src/test/groovy/demo/PersonSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/PersonSpec.groovy[indent=0]
+----
+
+Alternatively, the link:../api/grails/testing/gorm/DataTest.html[`grails.testing.gorm.DataTest`]
+trait may be used.  When using `DataTest`, an explicit call to the
+link:../api/grails/testing/gorm/DataTest.html#mockDomain(Class<?>)[mockDomain] or
+link:../api/grails/testing/gorm/DataTest.html#mockDomains(Class<?>)[mockDomains]
+method may be used to specify which domain class(es) should be mocked for this
+test. This is useful when mocking more than one Domain class at a time to test persistence.
+
+[source,groovy]
+.src/test/groovy/demo/DataTestTraitSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/DataTestTraitSpec.groovy[indent=0]
+----
+
+Another way to express which domain classes should be mocked for this test is
+to provide a `Class[] getDomainClassesToMock()` method in the test.
+
+[source,groovy]
+.src/test/groovy/demo/GetDomainClassesToMockMethodSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/GetDomainClassesToMockMethodSpec.groovy[indent=0]
+----
+
+When mocking domain classes in a test for another artifact type (like a
+`ControllerUnitTest` test, for example), the test must implement the `DataTest`
+trait in order to mock the related domain classes.
+
+[source,groovy]
+.src/test/groovy/demo/PersonControllerSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/PersonControllerSpec.groovy[indent=0]
+----

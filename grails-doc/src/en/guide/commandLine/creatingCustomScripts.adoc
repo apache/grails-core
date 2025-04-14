@@ -1,0 +1,111 @@
+
+You can create your own Command scripts by running the link:../ref/Command%20Line/create-script.html[create-script] command from the root of your project. For example the following command will create a script called `src/main/scripts/hello-world.groovy`:
+
+[source,groovy]
+----
+grails create-script hello-world
+----
+
+NOTE: In general Grails scripts should be used for scripting the Gradle based build system and code generation. Scripts cannot load application classes and in fact should not since Gradle is required to construct the application classpath.
+
+See below for an example script that prints "Hello World":
+
+[source,groovy]
+----
+description "Example description", "grails hello-world"
+
+println "Hello World"
+----
+
+The `description` method is used to define the output seen by `grails help` and to aid users of the script. The following is a more complete example of providing a description taken from the `generate-all` command:
+
+[source,groovy]
+----
+description( "Generates a controller that performs CRUD operations and the associated views" ) {
+  usage "grails generate-all <<DOMAIN CLASS>>"
+  flag name:'force', description:"Whether to overwrite existing files"
+  argument name:'Domain Class', description:'The name of the domain class'
+}
+----
+
+As you can see this description profiles usage instructions, a flag and an argument. This allows the command to be used as follows:
+
+[source,groovy]
+----
+grails generate-all MyClass --force
+----
+
+
+==== Template Generation
+
+
+Plugins and applications that need to define template generation tasks can do so using scripts. A example of this is the Scaffolding plugin which defines the `generate-all` and `generate-controllers` commands.
+
+Every Grails script implements the {apiDocs}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
+
+The following is an example of the link:../ref/Command%20Line/create-script.html[create-script] command written in Groovy:
+
+[source,groovy]
+----
+description( "Creates a Grails script" ) {
+  usage "grails create-script <<SCRIPT NAME>>"
+  argument name:'Script Name', description:"The name of the script to create"
+  flag name:'force', description:"Whether to overwrite existing files"
+}
+
+def scriptName = args[0]
+def model = model(scriptName)
+def overwrite = flag('force') ? true : false
+
+render  template: template('artifacts/Script.groovy'),
+        destination: file("src/main/scripts/${model.lowerCaseName}.groovy"),
+        model: model,
+        overwrite: overwrite
+----
+
+If a script is defined in a plugin or profile, the `template(String)` method will search for the template in the application before using the template provided by your plugin or profile. This allows users of your plugin or profile to customize what gets generated.
+
+It is common to provide an easy way to allow users to copy the templates from your plugin or profile. Here is one example on how the angular scaffolding copies templates.
+
+[source,groovy]
+----
+templates("angular/**/*").each { Resource r ->
+    String path = r.URL.toString().replaceAll(/^.*?META-INF/, "src/main")
+    if (path.endsWith('/')) {
+        mkdir(path)
+    } else {
+        File to = new File(path)
+        SpringIOUtils.copy(r, to)
+        println("Copied ${r.filename} to location ${to.canonicalPath}")
+    }
+}
+----
+
+
+==== The "model"
+
+
+Executing the `model` method with a `Class`/`String`/`File`/`Resource` will return an instance of {apiDocs}grails/codegen/model/Model.html[Model]. The model contains several properties that can help you generate code.
+
+Example:
+
+[source,groovy]
+----
+def domain = model(com.foo.Bar)
+
+domain.className == "FooBar"
+domain.fullName == "com.foo.FooBar"
+domain.packageName == "com.foo"
+domain.packagePath == "com/foo"
+domain.propertyName == "fooBar"
+domain.lowerCaseName == "foo-bar"
+----
+
+In addition, an `asMap` method is available to turn all of the properties into a map to pass to the `render` method.
+
+
+==== Working with files
+
+
+All scripts have access to methods on the {apiDocs}org/grails/cli/profile/commands/io/FileSystemInteraction.html[FileSystemInteraction] class. It contains helpful methods to copy, delete, and create files.
+

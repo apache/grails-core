@@ -1,0 +1,160 @@
+Creating a project is the primary usage of the CLI. The primary command for creating a new project is create-app, which creates a standard Grails web application that communicates over HTTP. For other types of application, see the documentation below.
+
+[cols="1,3,4a,8a"]
+|===
+| Command | Description | Options | Example
+
+| create-app / create-webapp
+| Creates a Grails web application
+|
+
+[none]
+* -jdk, --java-version
+* -s, --servlet
+* -g, --gorm
+* -t, --test
+* -f, --features
+* -i, --inplace
+|
+[source,shell]
+----
+grails create-app \
+    --servlet=tomcat \
+    --jdk=11 \
+    --gorm=hibernate \
+    --test=spock \
+    --features=github-workflow-java-ci \
+    com.example.demo`
+----
+
+| create-restapi
+| Creates a Grails REST API application
+|
+
+[none]
+* -jdk, --java-version
+* -s, --servlet
+* -g, --gorm
+* -t, --test
+* -f, --features
+* -i, --inplace
+|
+[source,shell]
+----
+grails create-restapi \
+    --servlet=tomcat \
+    --jdk=11 \
+    --gorm=hibernate \
+    --test=spock \
+    --features=github-workflow-java-ci \
+    com.example.demo`
+----
+
+| create-plugin
+| Creates a Grails Plugin application
+|
+
+[none]
+* -jdk, --java-version
+* -s, --servlet
+* -g, --gorm
+* -t, --test
+* -f, --features
+* -i, --inplace
+|
+[source,shell]
+----
+grails create-plugin \
+    --servlet=tomcat \
+    --jdk=11 \
+    --gorm=hibernate \
+    --test=spock \
+    --features=github-workflow-java-ci \
+    com.example.demo`
+----
+
+| create-web-plugin
+| Creates a Grails Web Plugin application
+|
+
+[none]
+* -jdk, --java-version
+* -s, --servlet
+* -g, --gorm
+* -t, --test
+* -f, --features
+* -i, --inplace
+|
+[source,shell]
+----
+grails create-web-plugin \
+    --servlet=tomcat \
+    --jdk=11 \
+    --gorm=hibernate \
+    --test=spock \
+    --features=github-workflow-java-ci \
+    com.example.demo`
+----
+
+|===
+| Flag  | Description | Example
+
+=== The `create-` command flags
+
+The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize GORM settings, an embedded servlet, the test framework, and the Java version.
+
+[cols="4,8,6a"]
+|===
+| Flag | Description | Example
+
+| -jdk, --java-version
+| The JDK version the project should target
+|
+[source,shell]
+----
+--java-version 11
+----
+
+| -s, --servlet
+| Which Servlet Implementation to configure. Possible values: none, tomcat,
+jetty, undertow.
+|
+[source,shell]
+----
+--servlet=tomcat
+----
+
+| -g, --gorm
+| Which GORM Implementation to configure. Possible values: hibernate,
+mongodb, neo4j.
+|
+[source,shell]
+----
+--gorm hibernate
+----
+
+| -t, --test
+| Which test framework to use. Possible values: junit, spock.
+|
+[source,shell]
+----
+--test spock
+----
+
+| -f, --features
+| The features to use. Possible values: h2, gorm-hibernate5, spring-boot-starter-jetty, springloaded, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, properties
+|
+[source,shell]
+----
+--features github-workflow-java-ci,micronaut-http-client
+----
+
+| -i, --inplace
+| Create a project using the current directory
+|
+[source,shell]
+----
+--inplace
+----
+
+|===

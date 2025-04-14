@@ -1,0 +1,38 @@
+
+== autoImport
+
+
+
+=== Purpose
+
+
+Enable/disable auto import of this domain classes in HQL queries.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    ...
+    static mapping = {
+        autoImport false
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `autoImport(boolean)`
+
+By default the domain classes are auto-imported in HQL queries so you aren't required to specify the whole class name including the package, but if you have duplicate domain class names in different packages the names are no longer unique, causing a `org.hibernate.DuplicateMappingException`. Disable auto-import of one or both of them to fix this, setting `autoImport` to `false`. Remember that you need to use the fully qualified class name in the HQL query for references to these classes.
+
+[source,groovy]
+----
+static mapping = {
+    autoImport false
+}
+----

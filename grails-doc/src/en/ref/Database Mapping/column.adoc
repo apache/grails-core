@@ -1,0 +1,219 @@
+
+== column
+
+
+
+=== Purpose
+
+
+Customizes a column definition
+
+
+=== Examples
+
+
+[source,groovy]
+----
+static mapping = {
+        currency column: "currency", sqlType: "char", length: 3
+    }
+----
+
+
+=== Description
+
+
+Usage: `property_name(map)`
+
+Arguments:
+
+* `column` - The name of the column as a String
+* `sqlType` (optional) - The underlying SQL type
+* `enumType` (optional) - The enum type for type-safe Enum properties. Can be `ordinal`, `string` or `identity`.
+* `index` (optional) - The index name
+* `unique` (optional) - Whether it is unique
+* `length` (optional) - The length of the column
+* `precision` (optional) - The precision of the column
+* `scale` (optional) - The scale of the column
+* `comment` (optional) - The comment for the column (used to create the table DDL)
+* `defaultValue` (optional) - The database default value
+
+By default GORM uses the property name and type to determine how to map a property in the database. For example a `String` property is typically mapped as a `varchar(255)` column. You can customize these with column configuration arguments:
+
+[source,groovy]
+----
+static mapping = {
+    currency column: "currency", sqlType: "char", length: 3
+}
+----
+
+If you use a Hibernate link:type.html[type] that requires multiple column definitions you can use the `column` method to define each column:
+
+[source,groovy]
+----
+static mapping = {
+    amount type: MonetaryUserType, {
+        column name: "value"
+        column name: "currency", sqlType: "char", length: 3
+    }
+}
+----
+
+Note that if you have a static method that is the same name as one of your properties you are trying to configure or you use the same property name as one of the static GORM methods this can lead to conflicts. To avoid this scenario scope the mapping configuration using the `delegate` property:
+
+
+[source,groovy]
+----
+static mapping = {
+    delegate.currency column: "currency", sqlType: "char", length: 3
+}
+----
+
+=== Mapping an Enum
+
+The next example illustrates the different options to map an enum. 
+
+Given the next code:
+
+[source, groovy]
+----
+package demo
+
+class BootStrap {
+
+    def init = {
+        Book.saveAll(   
+            new Book(name: 'Grails 3 - Step by Step', 
+                     status: Status.NOT_SET),
+            new Book(name: 'Grails 3 - A practical guide to application development', 
+                     status: Status.BORROWED),
+            new Book(name: 'Falando de Grails', 
+                     status: Status.SOLD),
+        )
+    }
+
+    def destroy = {
+    }
+}
+----
+
+[source, groovy]
+----
+package demo
+
+import groovy.transform.CompileStatic
+
+@CompileStatic
+enum Status {
+    NOT_SET(-1),
+    BORROWED(0),
+    SOLD(1),
+
+    final int id
+    private Status(int id) { this.id = id }
+}
+----
+
+For enumType `ordinal`
+
+[source, groovy]
+----
+package demo
+
+class Book {
+    String name
+    Status status
+
+    static mapping = {
+        status enumType: 'ordinal'
+    }
+}
+----
+
+The enum will be mapped in the database as: 
+
+|===
+|ID|VERSION|NAME|STATUS
+|1
+|0
+|Grails 3 - Step by Step
+|0
+|2
+|0
+|Grails 3 - A practical guide to application development
+|1
+|3
+|0
+|Falando de Grails
+|2
+|===
+
+For enumType `identity`
+
+[source, groovy]
+----
+package demo
+
+class Book {
+    String name
+    Status status
+
+    static mapping = {
+        status enumType: 'identity'
+    }
+}
+----
+
+The enum will be mapped in the database as: 
+
+|===
+|ID|VERSION|NAME|STATUS
+|1
+|0
+|Grails 3 - Step by Step
+|-1
+|2
+|0
+|Grails 3 - A practical guide to application development
+|0
+|3
+|0
+|Falando de Grails
+|1
+|===
+
+
+For enumType `string`
+
+[source, groovy]
+----
+package demo
+
+class Book {
+    String name
+    Status status
+
+    static mapping = {
+        status enumType: 'string'
+    }
+}
+----
+
+The enum will be mapped in the database as: 
+
+|===
+|ID|VERSION|NAME|STATUS
+|1
+|0
+|Grails 3 - Step by Step
+|NOT_SET
+|2
+|0
+|Grails 3 - A practical guide to application development
+|BORROWED
+|3
+|0
+|Falando de Grails
+|SOLD 
+|===
+

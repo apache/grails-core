@@ -1,0 +1,57 @@
+
+== install-templates
+
+
+
+=== Purpose
+
+
+Copies the the templates used by Grails during code generation to your project directory
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails install-templates
+----
+
+
+=== Description
+
+
+Usage:
+
+[source,groovy]
+----
+grails install-templates
+----
+
+The `install-templates` command will copy the templates Grails uses for all code generation activities to the application's `src/main/templates/scaffolding` directory.
+
+
+== Gradle runCommand install-templates
+
+=== Purpose
+
+Copies the templates used by Grails during code generation to your project directory
+
+=== Examples
+
+[source,console]
+----
+$ ./gradlew runCommand -Pargs="install-templates"
+----
+
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+$ ./gradlew runCommand -Pargs="install-templates"
+----
+
+The `install-templates` command will copy the templates Grails uses for all code generation activities to the application's `src/main/templates/scaffolding` directory.

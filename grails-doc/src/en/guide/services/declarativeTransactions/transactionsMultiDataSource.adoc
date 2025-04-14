@@ -1,0 +1,56 @@
+Given two domain classes such as:
+
+[source, groovy]
+----
+class Movie {
+    String title
+}
+----
+
+[source, groovy]
+----
+class Book {
+    String title
+
+    static mapping = {
+        datasource 'books'
+    }
+}
+----
+
+You can supply the desired data source to `@Transactional` or `@ReadOnly` annotations.
+
+[source, groovy]
+----
+import grails.gorm.transactions.ReadOnly
+import grails.gorm.transactions.Transactional
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class BookService {
+
+    @ReadOnly('books')
+    List<Book> findAll() {
+        Book.where {}.findAll()
+    }
+
+    @Transactional('books')
+    Book save(String title) {
+        Book book = new Book(title: title)
+        book.save()
+        book
+    }
+}
+----
+
+[source, groovy]
+----
+@CompileStatic
+class MovieService {
+
+    @ReadOnly
+    List<Movie> findAll() {
+        Movie.where {}.findAll()
+    }
+}
+----

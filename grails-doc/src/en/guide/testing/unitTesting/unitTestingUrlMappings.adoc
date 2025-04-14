@@ -1,0 +1,106 @@
+Use the link:../api/grails/testing/web/UrlMappingsUnitTest.html[`UrlMappingsUnitTest`] trait to unit test url mappings. Testing url mappings also requires controllers to be mocked to match the mappings to.
+
+NOTE: Controllers can not be mocked in `setupSpec` due to the nature of the request being created and reset for each test. The request is not available until the `setup` method, therefore controllers can not be mocked until then.
+
+All of the methods that check the url mappings come in 2 forms, `assert` and `verify`. The `assert` versions will throw AssertionFailed exceptions, similar to the `assert` keyword in Groovy. The `verify` methods will simply return true or false depending on whether the url mapping was found and is valid for the expectations.
+
+The examples assume the following mappings are being used.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/grails-app/controllers/demo/UrlMappings.groovy[indent=0]
+----
+
+=== Getting Started
+
+To get started, implement the `UrlMappingsUnitTest` in your test class and mock controllers you would like to test against.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=setup,indent=0]
+----
+
+It is also possible call the `mockController` method in the given blocks of your feature methods if different controllers need to be tested in different test methods.
+
+=== Forward Url Mapping Test
+
+Tests whether a URL mapping is forwarded for the given controller class
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=forward,indent=0]
+----
+
+=== Reverse Url Mapping Test
+
+Test whether the given URL is produced when reverse mapping a link to a given controller and action
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=reverse,indent=0]
+----
+
+NOTE: Url mappings for HTTP status codes can not be reversed because it doesn't make sense to "link" to a status code.
+
+=== Combined
+
+Tests whether a URL mapping is valid for the given URL. This combines the forward and reverse methods.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=combined,indent=0]
+----
+
+NOTE: When calling `verifyUrlMapping`, then reverse mapping will only be checked if a controller is supplied and the first parameter is not an HTTP status code.
+
+=== HTTP Methods
+
+When testing HTTP methods on reverse URL mapping it is necessary to specify the HTTP method in the test.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=httpMethodsReverse,indent=0]
+----
+
+When testing HTTP methods on forward URL mapping it is necessary to specify the HTTP method in the request.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=httpMethodsForward,indent=0]
+----
+
+When testing HTTP methods on both forward and reverse URL mapping combined it is necessary to specify the HTTP method in both the request and in the test.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=httpMethodsCombined,indent=0]
+----
+
+=== Other Helpful Methods
+
+==== Controller Check
+
+Use the `verifyController` method to check whether or not the given controller name exists.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=controller,indent=0]
+----
+
+==== Action Check
+
+Use the `verifyAction` method to verify if an action exists for a controller.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=action,indent=0]
+----
+
+==== View Check
+
+User the `verifyView` method to check if a GSP exists for a controller.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/UrlMappingsSpec.groovy[tags=view,indent=0]
+----

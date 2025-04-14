@@ -1,0 +1,31 @@
+
+== mapping
+
+
+
+=== Purpose
+
+The `mapping` static property configures how GORM maps the domain class to the database. See the section on the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM DSL] in the user guide for more information.
+
+=== Examples
+
+
+[source,groovy]
+----
+class Person {
+
+    String firstName
+
+    static hasMany = [addresses: Address]
+
+    static mapping = {
+        table 'people'
+        version false
+        id column: 'person_id'
+        firstName column: 'First_Name'
+        addresses lazy: false
+    }
+}
+----
+
+This example uses the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM DSL] to map the `Person` class onto a table called `people`

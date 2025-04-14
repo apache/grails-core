@@ -1,0 +1,44 @@
+
+== session
+
+
+
+=== Purpose
+
+
+The `session` object is an instance of the Servlet API's {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class UserController {
+
+    def logout() {
+        log.info "User agent: " + request.getHeader("User-Agent")
+        session.invalidate()
+        redirect(action: "login")
+    }
+
+    def login() {}
+}
+----
+
+
+=== Description
+
+
+The {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
+
+Session attributes which are normally accessible from the {jakartaee}jakarta/servlet/http/HttpSession#getAttribute(java/lang/String).html[getAttribute] can also be indexed into using the array index operator or de-reference operator:
+
+[source,groovy]
+----
+def user = session["user"]
+
+session["user"] = "John"
+
+assert "John" == session.user
+----

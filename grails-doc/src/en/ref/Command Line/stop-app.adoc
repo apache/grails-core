@@ -1,0 +1,35 @@
+
+== stop-app
+
+
+
+=== Purpose
+
+
+Stops a running Grails application in an embedded servlet container.
+
+NOTE: This command will work in development mode only.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails stop-app
+grails stop-app --port=9090 --host=mywebsite
+----
+
+
+=== Description
+
+
+Arguments:
+
+* `port` - Specifies the port which the Grails application is running on (defaults to 8080 for HTTP or 8443 for HTTPS)
+* `host` - Specifies the host the Grails application is bound to
+
+Supported system properties:
+
+* `server.port` - Same as `port` argument.
+* `server.address` - Same as `host` argument.

@@ -1,0 +1,51 @@
+
+==== Displaying Errors
+
+
+Typically if you get a validation error you redirect back to the view for rendering. Once there you need some way of displaying errors. Grails supports a rich set of tags for dealing with errors. To render the errors as a list you can use link:{gspdocs}/ref/Tags/renderErrors.html[renderErrors]:
+
+[source,xml]
+----
+<g:renderErrors bean="${user}" />
+----
+
+If you need more control you can use link:{gspdocs}/ref/Tags/hasErrors.html[hasErrors] and link:{gspdocs}/ref/Tags/eachError.html[eachError]:
+
+[source,xml]
+----
+<g:hasErrors bean="${user}">
+  <ul>
+   <g:eachError var="err" bean="${user}">
+       <li>${err}</li>
+   </g:eachError>
+  </ul>
+</g:hasErrors>
+----
+
+
+==== Highlighting Errors
+
+
+It is often useful to highlight using a red box or some indicator when a field has been incorrectly input. This can also be done with the link:{gspdocs}/ref/Tags/hasErrors.html[hasErrors] by invoking it as a method. For example:
+
+[source,xml]
+----
+<div class='value ${hasErrors(bean:user,field:'login','errors')}'>
+   <input type="text" name="login" value="${fieldValue(bean:user,field:'login')}"/>
+</div>
+----
+
+This code checks if the `login` field of the `user` bean has any errors and if so it adds an `errors` CSS class to the `div`, allowing you to use CSS rules to highlight the `div`.
+
+
+==== Retrieving Input Values
+
+
+Each error is actually an instance of the {springapi}org/springframework/validation/FieldError.html[FieldError] class in Spring, which retains the original input value within it. This is useful as you can use the error object to restore the value input by the user using the link:../ref/Tags/fieldValue.html[fieldValue] tag:
+
+[source,xml]
+----
+<input type="text" name="login" value="${fieldValue(bean:user,field:'login')}"/>
+----
+
+This code will check for an existing `FieldError` in the `User` bean and if there is obtain the originally input value for the `login` field.

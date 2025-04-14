@@ -1,0 +1,65 @@
+
+==== Creating a controller
+
+
+Controllers can be created with the link:../ref/Command%20Line/create-controller.html[create-controller] or link:../ref/Command%20Line/generate-controller.html[generate-controller] command. For example try running the following command from the root of a Grails project:
+
+[source,bash]
+----
+grails create-controller book
+----
+
+The command will create a controller at the location `grails-app/controllers/myapp/BookController.groovy`:
+
+[source,groovy]
+----
+package myapp
+
+class BookController {
+
+    def index() { }
+}
+----
+
+where "myapp" will be the name of your application, the default package name if one isn't specified.
+
+`BookController` by default maps to the /book URI (relative to your application root).
+
+NOTE: The `create-controller` and `generate-controller` commands are just for convenience and you can just as easily create controllers using your favorite text editor or IDE
+
+
+==== Creating Actions
+
+
+A controller can have multiple public action methods; each one maps to a URI:
+
+[source,groovy]
+----
+class BookController {
+
+    def list() {
+
+        // do controller logic
+        // create model
+
+        return model
+    }
+}
+----
+
+This example maps to the `/book/list` URI by default thanks to the property being named `list`.
+
+
+==== The Default Action
+
+
+A controller has the concept of a default URI that maps to the root URI of the controller, for example `/book` for `BookController`. The action that is called when the default URI is requested is dictated by the following rules:
+
+* If there is only one action, it's the default
+* If you have an action named `index`, it's the default
+* Alternatively you can set it explicitly with the `defaultAction` property:
+
+[source,groovy]
+----
+static defaultAction = "list"
+----

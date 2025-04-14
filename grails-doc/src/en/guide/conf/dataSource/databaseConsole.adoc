@@ -1,0 +1,7 @@
+The http://h2database.com/html/quickstart.html#h2_console[H2 database console] is a convenient feature of H2 that provides a web-based interface to any database that you have a JDBC driver for, and it's very useful to view the database you're developing against. It's especially useful when running against an in-memory database.
+
+You can access the console by navigating to http://localhost:8080/h2-console in a browser. See the {springBootReference}/htmlsingle/#data.sql.h2-web-console[Spring Boot H2 Console Documentation] for more information on the options available.
+
+TIP: The H2 console is disabled by default (unless you are using Spring Boot's developer tools) and must be enabled by configuring the `spring.h2.console.enabled` property with a value of `true`.
+
+NOTE: The H2 console is only intended for use during development so care should be taken to ensure that `spring.h2.console.enabled` is not set to `true` in production.

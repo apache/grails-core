@@ -1,0 +1,42 @@
+Before looking at providing runtime configuration based on conventions you first need to understand how to evaluate those conventions from a plugin. Every plugin has an implicit `application` variable which is an instance of the {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] interface.
+
+The `GrailsApplication` interface provides methods to evaluate the conventions within the project and internally stores references to all artifact classes within your application.
+
+Artifacts implement the {apiDocs}grails/core/GrailsClass.html[GrailsClass] interface, which represents a Grails resource such as a controller or a tag library. For example to get all `GrailsClass` instances you can do:
+
+[source,groovy]
+----
+for (grailsClass in application.allClasses) {
+    println grailsClass.name
+}
+----
+
+`GrailsApplication` has a few "magic" properties to narrow the type of artefact you are interested in. For example to access controllers you can use:
+
+[source,groovy]
+----
+for (controllerClass in application.controllerClasses) {
+    println controllerClass.name
+}
+----
+
+The dynamic method conventions are as follows:
+
+* `*Classes` - Retrieves all the classes for a particular artefact name. For example `application.controllerClasses`.
+* `get*Class` - Retrieves a named class for a particular artefact. For example `application.getControllerClass("PersonController")`
+* `is*Class` - Returns `true` if the given class is of the given artefact type. For example `application.isControllerClass(PersonController)`
+
+The `GrailsClass` interface has a number of useful methods that let you further evaluate and work with the conventions. These include:
+
+* `getPropertyValue` - Gets the initial value of the given property on the class
+* `hasProperty` - Returns `true` if the class has the specified property
+* `newInstance` - Creates a new instance of this class.
+* `getName` -  Returns the logical name of the class in the application without the trailing convention part if applicable
+* `getShortName` - Returns the short name of the class without package prefix
+* `getFullName` - Returns the full name of the class in the application with the trailing convention part and with the package name
+* `getPropertyName` - Returns the name of the class as a property name
+* `getLogicalPropertyName` - Returns the logical property name of the class in the application without the trailing convention part if applicable
+* `getNaturalName` - Returns the name of the property in natural terms (e.g. 'lastName' becomes 'Last Name')
+* `getPackageName` - Returns the package name
+
+For a full reference refer to the {apiDocs}grails/core/GrailsClass.html[javadoc API].

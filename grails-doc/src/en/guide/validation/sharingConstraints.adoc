@@ -1,0 +1,100 @@
+A common pattern in Grails is to use link:theWebLayer.html#commandObjects[Command Objects] for validating user-submitted data and then copy the properties of the command object to the relevant domain classes. This often means that your command objects and domain classes share properties and their constraints. You could manually copy and paste the constraints between the two, but that's a very error-prone approach. Instead, make use of Grails' global constraints and import mechanism.
+
+
+=== Global Constraints
+
+
+In addition to defining constraints in domain classes, command objects and <<validationNonDomainAndCommandObjectClasses,other validateable classes>>, you can also define them in `grails-app/conf/runtime.groovy`:
+
+[source,groovy]
+----
+grails.gorm.default.constraints = {
+    '*'(nullable: true, size: 1..20)
+    myShared(nullable: false, blank: false)
+}
+----
+
+These constraints are not attached to any particular classes, but they can be easily referenced from any validateable class:
+
+[source,groovy]
+----
+class User {
+    ...
+
+    static constraints = {
+        login shared: "myShared"
+    }
+}
+----
+
+Note the use of the `shared` argument, whose value is the name of one of the constraints defined in `grails.gorm.default.constraints`. Despite the name of the configuration setting, you can reference these shared constraints from any validateable class, such as command objects.
+
+The '*' constraint is a special case: it means that the associated constraints ('nullable' and 'size' in the above example) will be applied to all properties in all validateable classes. These defaults can be overridden by the constraints declared in a validateable class.
+
+
+=== Importing Constraints
+
+
+Grails 2 introduced an alternative approach to sharing constraints that allows you to import a set of constraints from one class into another.
+
+Let's say you have a domain class like so:
+
+[source,groovy]
+----
+class User {
+    String firstName
+    String lastName
+    String passwordHash
+
+    static constraints = {
+        firstName blank: false, nullable: false
+        lastName blank: false, nullable: false
+        passwordHash blank: false, nullable: false
+    }
+}
+----
+
+You then want to create a command object, `UserCommand`, that shares some of the properties of the domain class and the corresponding constraints. You do this with the `importFrom()` method:
+
+[source,groovy]
+----
+class UserCommand {
+    String firstName
+    String lastName
+    String password
+    String confirmPassword
+
+    static constraints = {
+        importFrom User
+
+        password blank: false, nullable: false
+        confirmPassword blank: false, nullable: false
+    }
+}
+----
+
+This will import all the constraints from the `User` domain class and apply them to `UserCommand`. The import will ignore any constraints in the source class (`User`) that don't have corresponding properties in the importing class (`UserCommand`). In the above example, only the 'firstName' and 'lastName' constraints will be imported into `UserCommand` because those are the only properties shared by the two classes.
+
+If you want more control over which constraints are imported, use the `include` and `exclude` arguments. Both of these accept a list of simple or regular expression strings that are matched against the property names in the source constraints. So for example, if you only wanted to import the 'lastName' constraint you would use:
+
+[source,groovy]
+----
+...
+static constraints = {
+    importFrom User, include: ["lastName"]
+    ...
+}
+----
+
+or if you wanted all constraints that ended with 'Name':
+
+[source,groovy]
+----
+...
+static constraints = {
+    importFrom User, include: [/.*Name/]
+    ...
+}
+----
+
+Of course, `exclude` does the reverse, specifying which constraints should _not_ be imported.

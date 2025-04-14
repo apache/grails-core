@@ -1,0 +1,48 @@
+As mention in the previous section, by default an interceptor will match only requests to the associated controller by convention. However you can configure the interceptor to match any request using the `match` or `matchAll` methods defined in the {apiDocs}grails/artefact/Interceptor.html[Interceptor API].
+
+The matching methods return a {apiDocs}grails/interceptors/Matcher.html[Matcher] instance which can be used to configure how the interceptor matches the request.
+
+For example the following interceptor will match all requests except those to the `login` controller:
+
+[source,groovy]
+----
+class AuthInterceptor {
+  AuthInterceptor() {
+    matchAll()
+    .excludes(controller:"login")
+  }
+
+  boolean before() {
+    // perform authentication
+  }
+}
+----
+
+You can also perform matching using named argument:
+
+[source,groovy]
+----
+class LoggingInterceptor {
+  LoggingInterceptor() {
+    match(controller:"book", action:"show") // using strings
+    match(controller: ~/(author|publisher)/) // using regex
+  }
+
+  boolean before() {
+    ...
+  }
+}
+----
+
+You can use any number of matchers defined in your interceptor. They will be executed in the order in which they have been defined. For example the above interceptor will match for all of the following:
+
+* when the `show` action of `BookController` is called
+* when `AuthorController` or `PublisherController` is called
+
+All named arguments except for `uri` accept either a String or a Regex expression. The `uri` argument supports a String path that is compatible with Spring's {springapi}org/springframework/util/AntPathMatcher.html[AntPathMatcher].  The possible named arguments are:
+
+* `namespace` - The namespace of the controller
+* `controller` - The name of the controller
+* `action` - The name of the action
+* `method` - The HTTP method
+* `uri` - The URI of the request. If this argument is used then all other arguments will be ignored and only this will be used.

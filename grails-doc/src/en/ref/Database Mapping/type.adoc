@@ -1,0 +1,71 @@
+
+== type
+
+
+
+=== Purpose
+
+
+Configures the Hibernate type for a particular property.
+
+
+=== Examples
+
+
+Changing to a text type (CLOB or TEXT depending on database dialect):
+
+[source,groovy]
+----
+class Book {
+
+    String title
+
+    static mapping = {
+        title type: "text"
+    }
+}
+----
+
+User types with multiple columns:
+
+[source,groovy]
+----
+class Book {
+    ...
+    MonetaryAmount amount
+
+    static mapping = {
+        amount type: MonetaryUserType, {
+            column name: "value"
+            column name: "currency", sqlType: "char", length: 3
+        }
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `association_name(type:string/class)`
+
+Hibernate will attempt to automatically select the appropriate database type from the field typed based on configuration in the `Dialect` class that is being used. But you can override the defaults if necessary. For example `String` values are mapped by default to `varchar(255)` columns. To store larger `String` values you can use a `text` type instead:
+
+[source,groovy]
+----
+static mapping = {
+    title type: "text"
+}
+----
+
+Hibernate also has the concept of custom `UserType` implementations. In this case you specify the `UserType` class. If the `UserType` maps to multiple columns you may need to specify a mapping for each column:
+
+[source,groovy]
+----
+static mapping = {
+    amount type: MonetaryUserType, {
+        column name: "value"
+        column name: "currency", sqlType: "char", length: 3
+    }
+}
+----

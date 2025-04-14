@@ -1,0 +1,94 @@
+Since Grails 3.1, Grails supports a profile for creating applications with AngularJS that provides a more focused set of dependencies and commands. The angular profile inherits from the REST profile and therefore has all of the commands and properties that the REST profile has.
+
+To get started with the AngularJS profile, create an application specifying `angularjs` as the name of the profile:
+
+[source,bash]
+----
+$ grails create-app my-api --profile angularjs
+----
+
+This will create a new Grails application that provides the following features:
+
+* Default set of commands for creating AngularJS artefacts
+* Gradle plugin to manage client side dependencies
+* Gradle plugin to execute client side unit tests
+* Asset Pipeline plugins to ease development
+
+By default the AngularJS profile includes GSP support in order to render the index page. This is necessary because the profile is designed around asset pipeline.
+
+The new commands are:
+
+* `create-ng-component`
+* `create-ng-controller`
+* `create-ng-directive`
+* `create-ng-domain`
+* `create-ng-module`
+* `create-ng-service`
+
+
+
+==== Project structure
+
+
+The AngularJS profile is designed around a specific project structure. The `create-ng` commands will automatically create modules where they do not exist.
+
+Example:
+[source,bash]
+----
+$ grails create-ng-controller foo
+----
+
+This will produce a `fooController.js` file in `grails-app/assets/javascripts/${default package name}/controllers`.
+
+NOTE: By default the angularjs profile will create files in the `javascripts` directory. You can change that behavior in your configuration with the key `grails.codegen.angular.assetDir`.
+
+[source,bash]
+----
+$ grails create-ng-domain foo.bar
+----
+
+This will produce a `Bar.js` file in `grails-app/assets/javascripts/foo/domains`. It will also create the "foo" module if it does not already exist.
+
+[source,bash]
+----
+$ grails create-ng-module foo.bar
+----
+
+This will produce a `foo.bar.js` file in `grails-app/assets/javascripts/foo/bar`. Note the naming convention for modules is different than other artefacts.
+
+[source,bash]
+----
+$ grails create-ng-service foo.bar --type constant
+----
+
+This will produce a `bar.js` file in `grails-app/assets/javascripts/foo/services`. It will also create the "foo" module if it does not already exist. The `create-ng-service` command accepts a flag `-type`. The types that can be used are:
+
+* service
+* factory _default_
+* value
+* provider
+* constant
+
+Along with the artefacts themselves, the profile will also produce a skeleton unit test file under `src/test/javascripts` for each create command.
+
+
+==== Client side dependencies
+
+
+The https://github.com/craigburke/bower-installer-gradle[Gradle Bower Plugin] is used to manage dependencies with bower. Visit the plugin documentation to learn how to use the plugin.
+
+
+==== Unit Testing
+
+
+The https://github.com/craigburke/karma-gradle[Gradle Karma Plugin] is used to execute client side unit tests. All generated tests are written with Jasmine. Visit the plugin documentation to learn how to use the plugin.
+
+
+==== Asset Pipeline
+
+
+The AngularJS profile includes several asset pipeline plugins to make development easier.
+
+* https://github.com/craigburke/js-closure-wrap-asset-pipeline[JS Closure Wrap Asset Pipeline] will wrap your Angular code in immediately invoked function expressions.
+* https://github.com/craigburke/angular-annotate-asset-pipeline[Annotate Asset Pipeline] will annotate your dependencies to be safe for minification.
+* https://github.com/craigburke/angular-template-asset-pipeline[Template Asset Pipeline] will put your templates into the `$templateCache` to prevent http requests to retrieve the templates.

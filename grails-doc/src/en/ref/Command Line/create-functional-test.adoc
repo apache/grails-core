@@ -1,0 +1,33 @@
+== create-functional-test
+
+=== Purpose
+
+The `create-functional-test` command creates a Geb functional test for the given base name.
+
+=== Examples
+
+[source,groovy]
+----
+grails create-functional-test
+grails create-functional-test book
+grails create-functional-test org.bookstore.Book
+----
+
+=== Description
+
+Creates an functional test for the given base name. The argument is optional, but if you don't include it the command will ask you for the name of the controller.
+
+An functional test differs from a unit test in that the Grails environment is loaded for the test execution. Refer to the section on link:{guidePath}/testing.html[Unit Testing] of the user guide for information on unit vs. functional testing.
+
+The name of the test can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `test/integration/<appname>/BookSpec.groovy` whereas the last one will create `test/integration/org/bookstore/BookSpec.groovy` directory. Note that the first letter of the test name is always upper-cased when determining the class name.
+
+If you want the command to default to a different package for tests, provide a value for `grails.project.groupId` in the link:{guidePath}/conf.html[runtime configuration].
+
+Note that this command is just for convenience and you can also create functional tests in your favourite text editor or IDE if you choose.
+
+Usage:
+[source,groovy]
+----
+grails create-functional-test <<name>>
+----
+

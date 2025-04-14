@@ -1,0 +1,15 @@
+The `dbCreate` property of the `DataSource` definition is important as it dictates what Grails should do at runtime with regards to automatically generating the database tables from link:GORM.html[GORM] classes. The options are described in the <<dataSource,DataSource>> section:
+
+* `create`
+* `create-drop`
+* `update`
+* `validate`
+* no value
+
+In <<environments,development>> mode `dbCreate` is by default set to "create-drop", but at some point in development (and certainly once you go to production) you'll need to stop dropping and re-creating the database every time you start up your server.
+
+It's tempting to switch to `update` so you retain existing data and only update the schema when your code changes, but Hibernate's update support is very conservative. It won't make any changes that could result in data loss, and doesn't detect renamed columns or tables, so you'll be left with the old one and will also have the new one.
+
+Grails supports migrations with Liquibase plugin.
+
+* https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#databaseMigration[Database Migration]

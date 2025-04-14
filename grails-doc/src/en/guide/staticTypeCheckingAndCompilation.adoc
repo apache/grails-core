@@ -1,0 +1,17 @@
+Groovy is a dynamic language and by default Groovy uses a dynamic dispatch mechanism to carry out method calls and property access.  This dynamic dispatch mechanism provides a lot of flexibility and power to the language.  For example, it is possible to dynamically add methods to classes at runtime and it is possible to dynamically replace existing methods at runtime.  Features like these are important and provide a lot of power to the language.  However, there are times when you may want to disable this dynamic dispatch in favor of a more static dispatch mechanism and Groovy provides a way to do that.  The way to tell the Groovy compiler that a particular class should compiled statically is to mark the class with the https://docs.groovy-lang.org/docs/latest/html/api/groovy/transform/CompileStatic.html[groovy.transform.CompileStatic] annotation as shown below.
+
+[source,groovy]
+----
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class MyClass {
+
+    // this class will be statically compiled...
+
+}
+----
+
+See https://docs.groovy-lang.org/latest/html/documentation/#_static_compilation[these notes on Groovy static compilation] for more details on how `CompileStatic` works and why you might want to use it.
+
+One limitation of using `CompileStatic` is that when you use it you give up access to the power and flexibility offered by dynamic dispatch.  For example, in Grails you would not be able to invoke a GORM dynamic finder from a class that is marked with `CompileStatic` because the compiler cannot verify that the dynamic finder method exists, because it doesn't exist at compile time.  It may be that you want to take advantage of Groovy's static compilation benefits without giving up access to dynamic dispatch for Grails specific things like dynamic finders and this is where {apiDocs}grails/compiler/GrailsCompileStatic.html[grails.compiler.GrailsCompileStatic] comes in.  `GrailsCompileStatic` behaves just like `CompileStatic` but is aware of certain Grails features and allows access to those specific features to be accessed dynamically.

@@ -1,0 +1,34 @@
+http://gsp.grails.org[Groovy Servers Pages] (or GSP for short) is Grails' view technology. It is designed to be familiar for users of technologies such as ASP and JSP, but to be far more flexible and intuitive.
+
+TIP: Although GSP can render any format, not just HTML, it is more designed around rendering markup. If you are looking for a way to simplify JSON responses take a look at link:webServices.html#jsonViews[JSON Views].
+
+GSPs live in the `grails-app/views` directory and are typically rendered automatically (by convention) or with the link:../ref/Controllers/render.html[render] method such as:
+
+[source,groovy]
+----
+render(view: "index")
+----
+
+A GSP is typically a mix of mark-up and GSP tags which aid in view rendering.
+
+NOTE: Although it is possible to have Groovy logic embedded in your GSP and doing this will be covered in this document, the practice is strongly discouraged. Mixing mark-up and code is a *bad* thing and most GSP pages contain no code and needn't do so.
+
+A GSP typically has a "model" which is a set of variables that are used for view rendering. The model is passed to the GSP view from a controller. For example consider the following controller action:
+
+[source,groovy]
+----
+def show() {
+    [book: Book.get(params.id)]
+}
+----
+
+This action will look up a `Book` instance and create a model that contains a key called `book`. This key can then be referenced within the GSP view using the name `book`:
+
+[source,groovy]
+----
+${book.title}
+----
+
+WARNING: Embedding data received from user input has the risk of making your application vulnerable to an Cross Site Scripting (XSS) attack. Please read the documentation on link:security.html#xssPrevention[XSS prevention] for information on how to prevent XSS attacks.
+
+For more information on using GSP please refer to the http://gsp.grails.org[dedicated GSP documentation].

@@ -1,0 +1,58 @@
+Grails' URL mappings mechanism also supports wildcard mappings. For example consider the following mapping:
+
+[source,groovy]
+----
+static mappings = {
+    "/images/*.jpg"(controller: "image")
+}
+----
+
+This mapping will match all paths to images such as `/image/logo.jpg`. Of course you can achieve the same effect with a variable:
+
+[source,groovy]
+----
+static mappings = {
+    "/images/$name.jpg"(controller: "image")
+}
+----
+
+However, you can also use double wildcards to match more than one level below:
+
+[source,groovy]
+----
+static mappings = {
+    "/images/**.jpg"(controller: "image")
+}
+----
+
+In this cases the mapping will match `/image/logo.jpg` as well as `/image/other/logo.jpg`. Even better you can use a double wildcard variable:
+
+[source,groovy]
+----
+static mappings = {
+    // will match /image/logo.jpg and /image/other/logo.jpg
+    "/images/$name**.jpg"(controller: "image")
+}
+----
+
+In this case it will store the path matched by the wildcard inside a `name` parameter obtainable from the link:../ref/Controllers/params.html[params] object:
+
+[source,groovy]
+----
+def name = params.name
+println name // prints "logo" or "other/logo"
+----
+
+If you use wildcard URL mappings then you may want to exclude certain URIs from Grails' URL mapping process. To do this you can provide an `excludes` setting inside the `UrlMappings.groovy` class:
+
+[source,groovy]
+----
+class UrlMappings {
+    static excludes = ["/images/*", "/css/*"]
+    static mappings = {
+        ...
+    }
+}
+----
+
+In this case Grails won't attempt to match any URIs that start with `/images` or `/css`.

@@ -1,0 +1,37 @@
+When you create a new project with the link:../ref/Command%20Line/create-app.html[create-app] command, a default `build.gradle` is created. The default `build.gradle` configures the build with a set of Gradle plugins that allow Gradle to build the Grails project:
+
+[source,groovy]
+----
+plugins {
+    id "groovy"
+    id "org.grails.grails-web"
+    id "org.grails.grails-gsp"
+    id "com.github.erdi.webdriver-binaries"
+    id "war"
+    id "idea"
+    id "com.bertramlabs.asset-pipeline"
+    id "application"
+    id "eclipse"
+}
+----
+
+The default plugins are as follows:
+* `groovy` - The Groovy plugin add support for Groovy projects. It can deal with Groovy code mixed with Groovy and Java. Read More: https://docs.gradle.org/{gradleVersion}/userguide/groovy_plugin.html[The Groovy Plugin]
+* `com.github.erdi.webdriver-binaries` - A plugin that downloads and caches WebDriver binaries specific to the OS the build runs on. Read More at https://github.com/erdi/webdriver-binaries-gradle-plugin/blob/master/README.md[GitHub README]
+* `war` - The https://docs.gradle.org/{gradleVersion}/userguide/war_plugin.html[The WAR plugin] changes the packaging so that Gradle creates as WAR file from your application. You can comment out this plugin if you wish to create only a runnable JAR file for standalone deployment.
+* `idea` - The IDEA plugin generates files that are used by http://www.jetbrains.com/idea/[IntelliJ IDEA], thus making it possible to open the project from IDEA. Read More: https://docs.gradle.org/{gradleVersion}/userguide/idea_plugin.html[The IDEA Plugin]
+* `com.bertramlabs.asset-pipeline` - The https://github.com/bertramdev/asset-pipeline[asset pipeline] plugin enables the compilation of static assets (JavaScript, CSS etc.)
+* `application` - The Application plugin facilitates creating an executable JVM application. Read More: https://docs.gradle.org/{gradleVersion}/userguide/application_plugin.html[The Application Plugin]
+* `eclipse` - The Eclipse plugins generate files that are used by the http://eclipse.org/[Eclipse IDE], thus making it possible to import the project into Eclipse (File - Import... - Existing Projects into Workspace). Read More: https://docs.gradle.org/{gradleVersion}/userguide/eclipse_plugin.html[The Eclipse Plugin]
+
+Many of these are built in plugins provided by Gradle or third party plugins. The Gradle plugins that Grails provides are as follows:
+
+* `org.grails.grails-doc` - A plugin for Gradle for using Grails 2.0's documentation engine.
+* `org.grails.grails-gsp` - The Grails GSP plugin adds pre-compilation of GSP files for production deployments.
+* `org.grails.grails-plugin` - A plugin for Gradle for building Grails plugins.
+* `org.grails.grails-web` - The Grails Web gradle plugin configures Gradle to understand the Grails conventions and directory structure.
+* `org.grails.grails-plugin-publish` - A plugin for publishing Grails plugins to the central repository.
+* `org.grails.grails-profile` - A plugin for use when creating Grails <<profiles,Profiles>>.
+* `org.grails.grails-profile-publish` - A plugin for publishing Grails profiles to the central repository.
+
+

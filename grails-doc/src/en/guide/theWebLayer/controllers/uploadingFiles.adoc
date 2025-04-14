@@ -1,0 +1,102 @@
+
+==== Programmatic File Uploads
+
+
+Grails supports file uploads using Spring's {springapi}org/springframework/web/multipart/MultipartHttpServletRequest.html[MultipartHttpServletRequest] interface. The first step for file uploading is to create a multipart form like this:
+
+[source,xml]
+----
+Upload Form: <br />
+    <g:uploadForm action="upload">
+        <input type="file" name="myFile" />
+        <input type="submit" />
+    </g:uploadForm>
+----
+
+The `uploadForm` tag conveniently adds the `enctype="multipart/form-data"` attribute to the standard `<g:form>` tag.
+
+There are then a number of ways to handle the file upload. One is to work with the Spring {springapi}org/springframework/web/multipart/MultipartFile.html[MultipartFile] instance directly:
+
+[source,groovy]
+----
+def upload() {
+    def f = request.getFile('myFile')
+    if (f.empty) {
+        flash.message = 'file cannot be empty'
+        render(view: 'uploadForm')
+        return
+    }
+
+    f.transferTo(new File('/some/local/dir/myfile.txt'))
+    response.sendError(200, 'Done')
+}
+----
+
+This is convenient for doing transfers to other destinations and manipulating the file directly as you can obtain an `InputStream` and so on with the {springapi}org/springframework/web/multipart/MultipartFile.html[MultipartFile] interface.
+
+
+==== File Uploads through Data Binding
+
+
+File uploads can also be performed using data binding. Consider this `Image` domain class:
+
+[source,groovy]
+----
+class Image {
+    byte[] myFile
+
+    static constraints = {
+        // Limit upload file size to 2MB
+        myFile maxSize: 1024 * 1024 * 2
+    }
+}
+----
+
+If you create an image using the `params` object in the constructor as in the example below, Grails will automatically bind the file's contents as a `byte[]` to the `myFile` property:
+
+[source,groovy]
+----
+def img = new Image(params)
+----
+
+It's important that you set the link:../ref/Constraints/size.html[size] or link:../ref/Constraints/maxSize.html[maxSize] constraints, otherwise your database may be created with a small column size that can't handle reasonably sized files. For example, both H2 and MySQL default to a blob size of 255 bytes for `byte[]` properties.
+
+It is also possible to set the contents of the file as a string by changing the type of the `myFile` property on the image to a String type:
+
+[source,groovy]
+----
+class Image {
+   String myFile
+}
+----
+
+==== Increase Upload Max File Size
+
+Grails default size for file uploads is 128000 (~128KB). When this limit is exceeded you'll see the following exception:
+
+[source,java]
+----
+org.springframework.web.multipart.MultipartException: Could not parse multipart servlet request; nested exception is java.lang.IllegalStateException: org.apache.tomcat.util.http.fileupload.FileUploadBase$SizeLimitExceededException
+----
+
+You can configure the limit in your `application.yml` as follows:
+
+[source,yml]
+.grails-app/conf/application.yml
+----
+grails:
+    controllers:
+        upload:
+            maxFileSize: 2000000
+            maxRequestSize: 2000000
+----
+
+`maxFileSize` = The maximum size allowed for uploaded files.
+
+`maxRequestSize` =  The maximum size allowed for multipart/form-data requests.
+
+You should keep in mind https://www.owasp.org/index.php/Unrestricted_File_Upload[OWASP recommendations - Unrestricted File Upload]
+
+NOTE: Limit the file size to a maximum value in order to prevent denial of service attacks.
+
+These limits exist to prevent DoS attacks and to enforce overall application performance

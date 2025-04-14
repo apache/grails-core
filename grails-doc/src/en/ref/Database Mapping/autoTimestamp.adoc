@@ -1,0 +1,38 @@
+
+== autoTimestamp
+
+
+
+=== Purpose
+
+
+Disables auto timestamping when set to false
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    ...
+    static mapping = {
+        autoTimestamp false
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `autoTimestamp(boolean)`
+
+By default when you have properties called `dateCreated` and/or `lastUpdated` in a domain class, Grails automatically maintains their state in the database. You can disable this by setting `autoTimestamp` to `false`:
+
+[source,groovy]
+----
+static mapping = {
+    autoTimestamp false
+}
+----

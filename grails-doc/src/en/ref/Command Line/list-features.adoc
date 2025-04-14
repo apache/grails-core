@@ -1,0 +1,92 @@
+== --list-features
+
+=== Purpose
+
+Output the available features and their descriptions for a given `create-\<<application-type>>` command. Such as: `create-app`, `create-plugin`, `create-web-plugin`, etc.
+
+=== Examples
+
+[source,shell]
+----
+grails create-app --list-features
+----
+
+=== Description
+
+Usage:
+[source,shell]
+----
+grails create-app --list-features
+grails create-plugin --list-features
+----
+
+Lists the features that are available. Note: Typical output looks like this:
+
+[source,shell]
+----
+grails> create-restapi --list-features
+Available Features
+(+) denotes the feature is included by default
+  Name                                Description
+  ----------------------------------  ---------------
+  CI/CD
+  github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application
+
+  Cache
+  cache                               The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.
+  cache-ehcache                       The Grails Cache Ehcache plugin extends the Cache plugin and uses Ehcache as the storage provider for cached content.
+
+  Client
+  micronaut-http-client               Adds support for the Micronaut HTTP client
+
+  Configuration
+  properties                          Creates a properties configuration file
+
+  Database
+  database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
+  embedded-mongodb                    Executes an embedded mongo database for integration or functional testing
+  gorm-hibernate5 (+)                 Adds support for Hibernate5 using GORM
+  gorm-mongodb                        Configures GORM for MongoDB for Groovy applications
+  gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
+  h2 (+)                              Adds the H2 driver and default config
+  mongo-sync                          Adds support for the MongoDB Synchronous Driver
+  mysql                               Adds the MySQL driver and default config
+  postgres                            Adds the PostgresSQL driver and default config
+  sqlserver                           Adds the SQL Server driver and default config
+  testcontainers                      Use Testcontainers to run a database or other software in a Docker container for tests
+
+  Development Tools
+  assertj                             AssertJ fluent assertions framework
+  hamcrest                            Hamcrest matchers for JUnit
+  jrebel                              Adds support for class reloading with JRebel (requires separate JRebel installation)
+  springloaded                        Adds support for class reloading with Spring Loaded
+
+  Documentation
+  asciidoctor                         Adds support for creating Asciidoctor documentation
+
+  Logging
+  logbackGroovy                       Gives you the ability to use groovy to configure logback instead of XML.
+
+  Management
+  grails-web-console                  A web-based Groovy console for interactive runtime application management and debugging
+
+  Other
+  grails-console (+)                  Starts the Grails console, which is an extended version of the regular Groovy console.
+
+  Packaging
+  shade                               Adds the ability to build a Fat/Shaded JAR
+
+  Server
+  spring-boot-starter-jetty           spring-boot-starter-jetty
+  spring-boot-starter-tomcat (+)      spring-boot-starter-tomcat
+  spring-boot-starter-undertow        spring-boot-starter-undertow
+
+  Validation
+  hibernate-validator                 Adds support for the Hibernate Validator
+  mockito                             Mockito test mocking framework for JUnit
+
+  View Rendering
+  grails-gsp                          grails-gsp
+  views-json (+)                      JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
+  views-markup                        Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
+----

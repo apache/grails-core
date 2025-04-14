@@ -1,0 +1,45 @@
+
+=== Database Mapping Usage
+
+
+Domain classes in Grails by default dictate the way they are mapped to the database using sensible defaults. You can customize these with the ORM Mapping DSL. For example create a `Book` domain:
+
+[source,groovy]
+----
+grails create-domain-class org.bookstore.Book
+----
+
+And then you can use the `mapping` block to customize the ORM mapping behavior.
+
+[source,groovy]
+----
+package org.bookstore
+
+class Book {
+    String title
+    Date releaseDate
+    Author author
+
+    static mapping = {
+        table "books"
+        author column: "auth_id"
+    }
+}
+----
+
+Refer to the user guide section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM Mapping] for more information.
+
+
+=== Global Database Mapping
+
+
+You can configure mappings globally in `grails-app/conf/runtime.groovy` as follows:
+
+[source,groovy]
+----
+grails.gorm.default.mapping = {
+    cache true
+    id generator: 'sequence'
+    'user-type'(type: org.hibernate.type.YesNoType, class: Boolean)
+}
+----

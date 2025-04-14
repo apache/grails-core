@@ -1,0 +1,20 @@
+Since Grails 3.2, you can use https://github.com/ReactiveX/RxJava[RxJava] to write reactive logic in your Grails controllers that leverages the underlying containers asynchronous processing capabilities.
+
+To get started simply declare a dependency on the plugin in `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    //...
+    implementation 'org.grails.plugins:rxjava'
+}
+----
+
+You can then return `rx.Observable` as a return value from any controller and Grails will automatically apply the following steps:
+
+1. Create a new asynchronous request
+2. Spawn a new thread that subscribes to the observable
+3. When the observable emits a result, process the result using the link:../ref/Controllers/respond.html[respond] method.
+
+For more detailed instructions on how to use the RxJava plugin see the https://grails-plugins.github.io/grails-rxjava/latest/[user guide documentation] for the plugin.

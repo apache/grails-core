@@ -1,0 +1,42 @@
+Because Grails is built upon the https://spring.io[Spring Framework] (Spring Boot), the https://gradle.org/[Gradle] build tool, and the https://groovy-lang.org[Groovy] programming language, it is possible to develop Grails application using most popular JVM Integrated Development Environments (IDEs). Some IDEs offer more specialized support for Grails, while others may offer basic support for managing dependencies/plugins, running Gradle tasks, code-completion and syntax highlighting.
+
+=== 1. IntelliJ IDEA
+
+IntelliJ IDEA is a widely used IDE for Grails development. It offers comprehensive support for Groovy and Grails, including features like code-completion, intelligent code analysis, and seamless integration with Grails artefacts.
+
+IntelliJ IDEA also provides powerful database tools that work with Grails' GORM (Grails Object Relational Mapping) seamlessly. It offers both a Community (free) and Ultimate (paid) edition, with the latter offering more advanced Grails support via the regularly updated https://plugins.jetbrains.com/plugin/18504-grails/versions[Grails Plugin], including an embedded version of the https://start.grails.org[Grails Forge], and view resolution for both GSPs and JSON views.
+
+https://www.jetbrains.com/idea/[IntelliJ IDEA Website]
+
+TIP: For larger projects, it may be beneficial to adjust memory settings, based on available system RAM, by increasing `-Xmx` (maximum Java heap size) and `-XX:ReservedCodeCacheSize` (JIT compiler maximum code cache size).  Edit these settings under `Help->Custom VM Options`, by adding one setting per line.  Example for a small project: `-Xmx2048m` `-XX:ReserveCodeCacheSize=128m` and for a large project: `-Xmx6144m` `-XX:ReservedCodeCacheSize=512m`
+
+=== 2. Visual Studio Code (VS Code)
+
+Visual Studio Code is a lightweight, open-source code editor developed by Microsoft. While it's not a full-fledged IDE, it offers powerful extensions for Grails and Groovy development. You can install extensions like https://marketplace.visualstudio.com/items?itemName=marlon407.code-groovy[code-groovy] and https://marketplace.visualstudio.com/items?itemName=GDOTecnologia.gfvscode[Grails for VS Code] to enhance your Grails developer experience.
+
+VS Code provides features such as syntax highlighting, code navigation, and integrated terminal support. It's a great choice for developers who prefer a lightweight and customizable development environment.
+
+https://code.visualstudio.com/[Visual Studio Code (VS Code)]
+
+=== 3. STS (Spring Tool Suite)
+
+The https://spring.io/tools[Spring Tool Suite] (STS) is set of IDE tools designed for Spring Framework development, with versions based on both VS Code and Eclipse. This section focuses on the Eclipse version.
+
+STS can work as an effective Grails developer platform when used with the https://marketplace.eclipse.org/content/groovy-development-tools[Groovy Development Tools] plugin (which can be installed using the Eclipse Marketplace). STS does not offer specific support for Grails artefacts or GSP views.
+
+https://spring.io/tools/sts[Spring Tool Suite (STS)]
+
+=== 4. Netbeans
+
+Apache https://netbeans.apache.org[Netbeans] does not offer specific support for Grails, but it will import Grails applications as Gradle projects and provides reasonable editing support for Groovy and GSP views.
+
+=== 5. TextMate, VIM, and More
+
+There are several excellent text editors that work nicely with Groovy and Grails. Here are some references:
+
+* A https://github.com/textmate/groovy-grails.tmbundle[bundle] is available for Groovy / Grails support in http://macromates.com[Textmate].
+* A https://packagecontrol.io/packages/Grails[plugin] can be installed via Sublime Package Control for the http://www.sublimetext.com[Sublime Text Editor].
+* The https://github.com/lifeisfoo/emacs-grails[emacs-grails] extension offers basic support for Grails development in Emacs.
+* See http://www.objectpartners.com/2012/02/21/using-vim-as-your-grails-ide-part-1-navigating-your-project/[this post] for some helpful tips on how to set up VIM as your Grails editor of choice.
+
+These text editors, along with the provided extensions and configurations, can enhance your Groovy and Grails development experience, offering flexibility and customization to meet your coding preferences.

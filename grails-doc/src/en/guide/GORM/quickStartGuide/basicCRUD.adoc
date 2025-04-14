@@ -1,0 +1,77 @@
+Try performing some basic CRUD (Create/Read/Update/Delete) operations.
+
+
+=== Create
+
+
+To create a domain class use Map constructor to set its properties and call <<ref-domain-classes-save,save>>:
+
+[source,groovy]
+----
+def p = new Person(name: "Fred", age: 40, lastVisit: new Date())
+p.save()
+----
+
+The <<ref-domain-classes-save,save>> method will persist your class to the database using the underlying Hibernate ORM layer.
+
+
+=== Read
+
+
+Grails transparently adds an implicit `id` property to your domain class which you can use for retrieval:
+
+[source,groovy]
+----
+def p = Person.get(1)
+assert 1 == p.id
+----
+
+This uses the <<ref-domain-classes-get,get>> method that expects a database identifier to read the `Person` object back from the database.
+You can also load an object in a read-only state by using the <<ref-domain-classes-read,read>> method:
+
+[source,groovy]
+----
+def p = Person.read(1)
+----
+
+In this case the underlying Hibernate engine will not do any dirty checking and the object will not be persisted. Note that
+if you explicitly call the <<ref-domain-classes-save,save>> method then the object is placed back into a read-write state.
+
+In addition, you can also load a proxy for an instance by using the <<ref-domain-classes-load,load>> method:
+
+[source,groovy]
+----
+def p = Person.load(1)
+----
+
+This incurs no database access until a method other than getId() is called. Hibernate then initializes the proxied instance, or
+throws an exception if no record is found for the specified id.
+
+
+=== Update
+
+
+To update an instance, change some properties and then call <<ref-domain-classes-save,save>> again:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.name = "Bob"
+p.save()
+----
+
+
+=== Delete
+
+
+To delete an instance use the <<ref-domain-classes-delete,delete>> method:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.delete()
+----
+
+
+
+

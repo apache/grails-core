@@ -1,0 +1,128 @@
+If an application defines multiple controllers with the same name
+in different packages, the controllers must be defined in a
+namespace.  The way to define a namespace for a controller is to 
+define a static property named `namespace` in the controller and 
+assign a String to the property that represents the namespace.
+
+[source,groovy]
+.grails-app/controllers/com/app/reporting/AdminController.groovy
+----
+package com.app.reporting
+
+class AdminController {
+
+    static namespace = 'reports'
+
+    // ...
+}
+----
+
+[source,groovy]
+.grails-app/controllers/com/app/security/AdminController.groovy
+----
+package com.app.security
+
+class AdminController {
+
+    static namespace = 'users'
+
+    // ...
+}
+----
+
+When defining url mappings which should be associated with a namespaced
+controller, the `namespace` variable needs to be part of the URL mapping.
+
+[source,groovy]
+.grails-app/controllers/UrlMappings.groovy
+----
+class UrlMappings {
+
+    static mappings = {
+        '/userAdmin' {
+            controller = 'admin'
+            namespace = 'users'
+        }
+
+        '/reportAdmin' {
+            controller = 'admin'
+            namespace = 'reports'
+        }
+
+        "/$namespace/$controller/$action?"()
+    }
+}
+----
+
+Reverse URL mappings also require that the `namespace` be specified.
+
+[source,groovy]
+----
+<g:link controller="admin" namespace="reports">Click For Report Admin</g:link>
+<g:link controller="admin" namespace="users">Click For User Admin</g:link>
+----
+
+When resolving a URL mapping (forward or reverse) to a namespaced controller,
+a mapping will only match if the `namespace` has been provided.  If
+the application provides several controllers with the same name in different
+packages, at most 1 of them may be defined without a `namespace` property.  If
+there are multiple controllers with the same name that do not define a
+`namespace` property, the framework will not know how to distinguish between
+them for forward or reverse mapping resolutions.
+
+It is allowed for an application to use a plugin which provides a controller
+with the same name as a controller provided by the application and for neither
+of the controllers to define a `namespace` property as long as the
+controllers are in separate packages.  For example, an application
+may include a controller named `com.accounting.ReportingController`
+and the application may use a plugin which provides a controller
+named `com.humanresources.ReportingController`.  The only issue
+with that is the URL mapping for the controller provided by the
+plugin needs to be explicit in specifying that the mapping applies
+to the `ReportingController` which is provided by the plugin.
+
+See the following example.
+
+[source,groovy]
+----
+static mappings = {
+    "/accountingReports" {
+        controller = "reporting"
+    }
+    "/humanResourceReports" {
+        controller = "reporting"
+        plugin = "humanResources"
+    }
+}
+----
+
+With that mapping in place, a request to `/accountingReports` will
+be handled by the `ReportingController` which is defined in the
+application.  A request to `/humanResourceReports` will be handled
+by the `ReportingController` which is provided by the `humanResources`
+plugin.
+
+There could be any number of `ReportingController` controllers provided
+by any number of plugins but no plugin may provide more than one
+`ReportingController` even if they are defined in separate packages.
+
+Assigning a value to the `plugin` variable in the mapping is only
+required if there are multiple controllers with the same name
+available at runtime provided by the application and/or plugins.
+If the `humanResources` plugin provides a `ReportingController` and
+there is no other `ReportingController` available at runtime, the
+following mapping would work.
+
+[source,groovy]
+----
+static mappings = {
+    "/humanResourceReports" {
+        controller = "reporting"
+    }
+}
+----
+
+It is best practice to be explicit about the fact that the controller
+is being provided by a plugin.
+
+

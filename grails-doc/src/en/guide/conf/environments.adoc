@@ -1,0 +1,157 @@
+
+=== Per Environment Configuration
+
+
+Grails supports the concept of per environment configuration. The `application.yml` and `application.groovy` files in the `grails-app/conf` directory can use per-environment configuration using either YAML or the syntax provided by https://docs.groovy-lang.org/latest/html/documentation/#_configslurper[ConfigSlurper]. As an example consider the following default `application.yml` definition provided by Grails:
+
+[source,yaml]
+----
+environments:
+    development:
+        dataSource:
+            dbCreate: create-drop
+            url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+    test:
+        dataSource:
+            dbCreate: update
+            url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+    production:
+        dataSource:
+            dbCreate: update
+            url: jdbc:h2:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            properties:
+               jmxEnabled: true
+               initialSize: 5
+        ...
+----
+
+The above can be expressed in Groovy syntax in `application.groovy` as follows:
+
+[source,groovy]
+----
+dataSource {
+    pooled = false
+    driverClassName = "org.h2.Driver"
+    username = "sa"
+    password = ""
+}
+environments {
+    development {
+        dataSource {
+            dbCreate = "create-drop"
+            url = "jdbc:h2:mem:devDb"
+        }
+    }
+    test {
+        dataSource {
+            dbCreate = "update"
+            url = "jdbc:h2:mem:testDb"
+        }
+    }
+    production {
+        dataSource {
+            dbCreate = "update"
+            url = "jdbc:h2:prodDb"
+            properties {
+               jmxEnabled = true
+               initialSize = 5
+            }
+        }
+    }
+}
+----
+
+Notice how the common configuration is provided at the top level and then an `environments` block specifies per environment settings for the `dbCreate` and `url` properties of the `DataSource`.
+
+
+=== Packaging and Running for Different Environments
+
+
+Grails' link:commandLine.html[command line] has built in capabilities to execute any command within the context of a specific environment. The format is:
+
+[source,bash]
+----
+grails <<environment>> <<command name>>
+----
+
+In addition, there are 3 preset environments known to Grails: `dev`, `prod`, and `test` for `development`, `production` and `test`. For example to create a WAR for the `test` environment you would run:
+
+[source,bash]
+----
+grails test war
+----
+
+To target other environments you can pass a `grails.env` variable to any command:
+
+[source,bash]
+----
+grails -Dgrails.env=UAT run-app
+----
+
+[source,bash]
+----
+./gradlew bootRun -Dgrails.env=UAT
+----
+
+
+=== Programmatic Environment Detection
+
+
+Within your code, such as in a Gant script or a bootstrap class you can detect the environment using the {apiDocs}grails/util/Environment.html[Environment] class:
+
+[source,groovy]
+----
+import grails.util.Environment
+
+...
+
+switch (Environment.current) {
+    case Environment.DEVELOPMENT:
+        configureForDevelopment()
+        break
+    case Environment.PRODUCTION:
+        configureForProduction()
+        break
+}
+----
+
+
+=== Per Environment Bootstrapping
+
+
+It's often desirable to run code when your application starts up on a per-environment basis. To do so you can use the `grails-app/init/BootStrap.groovy` file's support for per-environment execution:
+
+[source,groovy]
+----
+ServletContext servletContext
+
+def init = {
+    environments {
+        production {
+            servletContext.setAttribute("env", "prod")
+        }
+        development {
+            servletContext.setAttribute("env", "dev")
+        }
+    }
+    servletContext.setAttribute("foo", "bar")
+}
+----
+
+
+=== Generic Per Environment Execution
+
+
+The previous `BootStrap` example uses the `grails.util.Environment` class internally to execute. You can also use this class yourself to execute your own environment specific logic:
+
+[source,groovy]
+----
+Environment.executeForCurrentEnvironment {
+    production {
+        // do something in production
+    }
+    development {
+        // do something only in development
+    }
+}
+----

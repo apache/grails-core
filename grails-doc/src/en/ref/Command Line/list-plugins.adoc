@@ -1,0 +1,47 @@
+
+== list-plugins
+
+
+
+=== Purpose
+
+
+Lists the available plugins
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails list-plugins
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails list-plugins
+grails list-plugins -repository=myRepository
+----
+
+Lists the plugins that are installable. Note: This command can take a while to execute depending in your internet connectivity. Typical output looks like this:
+
+[source,groovy]
+----
+| Available Plugins
+* asset-pipeline
+* cache
+* cache-ehcache
+* fields
+* geb
+* hibernate
+* mongodb
+* quartz
+* scaffolding
+----
+
+If you require more info about a plugin you can use the link:plugin-info.html[plugin-info] command.

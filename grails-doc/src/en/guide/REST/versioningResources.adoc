@@ -1,0 +1,102 @@
+A common requirement with a REST API is to expose different versions at the same time. There are a few ways this can be achieved in Grails.
+
+
+==== Versioning using the URI
+
+
+A common approach is to use the URI to version APIs (although this approach is discouraged in favour of Hypermedia). For example, you can define the following URL mappings:
+
+[source,groovy]
+----
+"/books/v1"(resources:"book", namespace:'v1')
+"/books/v2"(resources:"book", namespace:'v2')
+----
+
+That will match the following controllers:
+
+[source,groovy]
+----
+package myapp.v1
+
+class BookController {
+    static namespace = 'v1'
+}
+
+package myapp.v2
+
+class BookController {
+    static namespace = 'v2'
+}
+----
+
+This approach has the disadvantage of requiring two different URI namespaces for your API.
+
+
+==== Versioning with the Accept-Version header
+
+
+As an alternative Grails supports the passing of an `Accept-Version` header from clients. For example you can define the following URL mappings:
+
+[source,groovy]
+----
+"/books"(version:'1.0', resources:"book", namespace:'v1')
+"/books"(version:'2.0', resources:"book", namespace:'v2')
+----
+
+
+Then in the client simply pass which version you need using the `Accept-Version` header:
+
+[source,bash]
+----
+$ curl -i -H "Accept-Version: 1.0" -X GET http://localhost:8080/books
+----
+
+
+==== Versioning using Hypermedia / Mime Types
+
+
+Another approach to versioning is to use Mime Type definitions to declare the version of your custom media types (see the section on "Hypermedia as the Engine of Application State" for more information about Hypermedia concepts). For example, in `application.groovy` you can declare a custom Mime Type for your resource that includes a version parameter (the 'v' parameter):
+
+[source,groovy]
+----
+grails.mime.types = [
+    all: '*/*',
+    book: "application/vnd.books.org.book+json;v=1.0",
+    bookv2: "application/vnd.books.org.book+json;v=2.0",
+    ...
+}
+----
+
+WARNING: It is critical that place your new mime types after the 'all' Mime Type because if the Content Type of the request cannot be established then the first entry in the map is used for the response. If you have your new Mime Type at the top then Grails will always try and send back your new Mime Type if the requested Mime Type cannot be established.
+
+Then override the renderer (see the section on "Customizing Response Rendering" for more information on custom renderers) to send back the custom Mime Type in `grails-app/conf/spring/resourses.groovy`:
+
+[source,groovy]
+----
+import grails.rest.render.json.*
+import grails.web.mime.*
+
+beans = {
+    bookRendererV1(JsonRenderer, myapp.v1.Book, new MimeType("application/vnd.books.org.book+json", [v:"1.0"]))
+    bookRendererV2(JsonRenderer, myapp.v2.Book, new MimeType("application/vnd.books.org.book+json", [v:"2.0"]))
+}
+----
+
+Then update the list of acceptable response formats in your controller:
+
+[source,groovy]
+----
+class BookController extends RestfulController {
+    static responseFormats = ['json', 'xml', 'book', 'bookv2']
+
+    // ...
+}
+----
+
+
+Then using the `Accept` header you can specify which version you need using the Mime Type:
+
+[source,groovy]
+----
+$ curl -i -H "Accept: application/vnd.books.org.book+json;v=1.0" -X GET http://localhost:8080/books
+----

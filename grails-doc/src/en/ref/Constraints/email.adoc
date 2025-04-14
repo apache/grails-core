@@ -1,0 +1,28 @@
+
+== email
+
+
+
+=== Purpose
+
+
+Validates that a String value is a valid email address.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+homeEmail email: true
+----
+
+
+=== Description
+
+
+Set to `true` if a string value must be an email address. 
+
+Internally uses the `org.apache.commons.validator.routines.EmailValidator` class (i.e. in contrast to earlier Grails versions no longer the deprecated `org.apache.commons.validator.EmailValidator` with the most notable difference that the new version validates the emails TLDs).
+
+Error Code: `className.propertyName.email.invalid`

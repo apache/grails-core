@@ -1,0 +1,32 @@
+
+== refresh
+
+
+
+=== Purpose
+
+
+Refreshes a domain classes state from the database
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = Book.get(1)
+...
+b.refresh()
+----
+
+
+=== Description
+
+
+Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html#refresh-java.lang.Object-[refresh] method.
+
+Re-reads the state of the given instance from the underlying database. It is inadvisable to use this to implement long-running sessions that span many business tasks. However this method is useful in certain special circumstances. For example
+
+* where a database trigger alters the object state upon insert or update
+* after executing direct SQL (e.g. a bulk update) in the same Session
+* after inserting a Blob or Clob

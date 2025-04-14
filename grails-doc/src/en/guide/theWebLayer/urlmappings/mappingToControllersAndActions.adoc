@@ -1,0 +1,56 @@
+To create a simple mapping simply use a relative URL as the method name and specify named parameters for the controller and action to map to:
+
+[source,groovy]
+----
+"/product"(controller: "product", action: "list")
+----
+
+In this case we've mapped the URL `/product` to the `list` action of the `ProductController`. Omit the action definition to map to the default action of the controller:
+
+[source,groovy]
+----
+"/product"(controller: "product")
+----
+
+An alternative syntax is to assign the controller and action to use within a block passed to the method:
+
+[source,groovy]
+----
+"/product" {
+    controller = "product"
+    action = "list"
+}
+----
+
+Which syntax you use is largely dependent on personal preference. 
+
+If you have mappings that all fall under a particular path you can group mappings with the `group` method:
+
+[source,groovy]
+----
+group "/product", {
+    "/apple"(controller:"product", id:"apple")
+    "/htc"(controller:"product", id:"htc")
+}
+----
+
+You can also create nested `group` url mappings:
+
+[source,groovy]
+----
+group "/store", {
+    group "/product", {
+        "/$id"(controller:"product")
+    }
+}
+----
+
+
+To rewrite one URI onto another explicit URI (rather than a controller/action pair) do something like this:
+
+[source,groovy]
+----
+"/hello"(uri: "/hello.dispatch")
+----
+
+Rewriting specific URIs is often useful when integrating with other frameworks.

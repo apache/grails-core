@@ -1,0 +1,19 @@
+If you prefer to keep the declaration of the URL mapping in your `UrlMappings.groovy` file then simply removing the `uri` attribute of the `Resource` transformation and adding the following line to `UrlMappings.groovy` will suffice:
+
+[source,groovy]
+----
+"/books"(resources:"book")
+----
+
+Extending your API to include more end points then becomes trivial:
+
+[source,groovy]
+----
+"/books"(resources:"book") {
+    "/publisher"(controller:"publisher", method:"GET")
+}
+----
+
+The above example will expose the URI `/books/1/publisher`.
+
+A more detailed explanation on link:theWebLayer.html#restfulMappings[creating RESTful URL mappings] can be found in the link:theWebLayer.html#urlmappings[URL Mappings section] of the user guide.

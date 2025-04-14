@@ -1,0 +1,17 @@
+
+== package
+
+
+
+=== Purpose
+
+
+Runs the packaging phase of Grails' runtime. This is mainly useful when used by other scripts.
+
+
+=== Examples
+
+----
+grails package
+----
+

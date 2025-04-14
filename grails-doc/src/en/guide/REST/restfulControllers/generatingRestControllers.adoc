@@ -1,0 +1,7 @@
+To see some of these concepts in action and help you get going, the https://docs.grails.org/{GrailsVersion}/guide/single.html#scaffolding[Scaffolding plugin], version 2.0 and above, can generate a REST ready controller for you, simply run the command:
+
+
+[source,bash]
+----
+$ grails generate-controller <<Domain Class Name>>
+----

@@ -1,0 +1,29 @@
+
+== exists
+
+
+
+=== Purpose
+
+
+Checks whether an instance exists for the specified id
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def accountId = ...
+if (Account.exists(accountId)) {
+    // do something
+}
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `id` - The id of the object

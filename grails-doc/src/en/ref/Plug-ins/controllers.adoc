@@ -1,0 +1,53 @@
+
+== controllers
+
+
+
+=== Purpose
+
+
+A plugin that configures core Grails MVC architecture using the underlying Spring MVC component model
+
+
+=== Examples
+
+
+A controller:
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        [books:Book.list()]
+    }
+}
+----
+
+A tag library:
+
+[source,groovy]
+----
+import java.text.SimpleDateFormat
+
+class FormatTagLib {
+    def dateFormat = { attrs ->
+        out << new SimpleDateFormat(attrs.format).format(attrs.value)
+    }
+}
+----
+
+
+=== Description
+
+
+This plugin configures Grails to use Spring MVC at its core to deal with web requests. The plugin sets up the `GrailsDispatcherServlet` and necessary Spring beans (see below) for controllers, tag libraries and Groovy Server Pages (GSP)
+
+Configured Spring Beans:
+
+* `exceptionHandler` - An instance of {apiDocs}org/grails/web/errors/GrailsExceptionResolver.html[GrailsExceptionResolver] for dealing with exceptions
+* `multipartResolver` - An instance of {springapi}org/springframework/web/multipart/commons/CommonsMultipartResolver.html[CommonsMultipartResolver] used for dealing with file uploads using Apache Commons File Upload. If you do not wish to use this, set grails.disableCommonsMultipart to true in `application.groovy`. Be aware that disabling multipart handling will effect the behaviour of g:actionSubmit which needs to inspect the parameters (requiring the multipart request to be parsed) during the URL mapping phase.
+* `groovyPageResourceLoader` - Configured in `development` mode only or when the `grails.gsp.view.dir` is set. This is a Spring ResourceLoader that knows how to load GSP views from the an arbitrary location
+* `groovyPagesTemplateEngine` - An instance of {apiDocs}org/grails/gsp/GroovyPagesTemplateEngine.html[GroovyPagesTemplateEngine], this class deals with rendering of GSP views
+* `jspViewResolver` - An instance of {apiDocs}org/grails/web/servlet/view/GrailsViewResolver.html[GrailsViewResolver] that knows how to resolve GSP views and is environment aware
+
+The plugin also configures each Grails controller class as a prototyped Spring bean and each Grails tag library as a singleton Spring bean

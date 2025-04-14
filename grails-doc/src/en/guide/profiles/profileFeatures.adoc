@@ -1,0 +1,59 @@
+A Profile feature is a shareable set of templates and dependencies that may span multiple profiles. Typically you create a base profile that has multiple features and child profiles that inherit from the parent and hence can use the features available from the parent.
+
+To create a feature use the `create-feature` command from the root directory of your profile:
+
+[source,bash]
+----
+$ grails create-feature myfeature
+----
+
+This will create a `myfeature/feature.yml` file that looks like the following:
+
+[source,yaml]
+----
+description: Description of the feature
+# customize versions here
+# dependencies:
+#   - scope: compile
+#     coords: "org.grails.plugins:myplugin2:1.0"
+#
+----
+
+As a more concrete example. The following is the `feature.yml` file from the "asset-pipeline" feature:
+
+[source,yaml]
+----
+description: Adds Asset Pipeline to a Grails project
+build:
+    plugins:
+        - asset-pipeline
+dependencies:
+    - scope: build
+      coords: 'com.bertramlabs.plugins:asset-pipeline-gradle:2.5.0'
+    - scope: runtime
+      coords: "org.grails.plugins:asset-pipeline"
+----
+
+The structure of a feature is as follows:
+
+[source]
+----
+FEATURE_DIR
+    feature.yml
+    skeleton/
+        grails-app/
+            conf/
+                application.yml
+        build.gradle
+----
+
+The contents of the skeleton get copied into the application tree, whilst the `application.yml` and `build.gradle` get merged with their respective counterparts in the profile by used.
+
+With the `feature.yml` you can define additional dependencies. This allows users to create applications with optional features. For example:
+
+[source,bash]
+----
+$ grails create-app myapp --profile myprofile --features myfeature,hibernate
+----
+
+The above example will create a new application using your new feature and the "hibernate" feature.

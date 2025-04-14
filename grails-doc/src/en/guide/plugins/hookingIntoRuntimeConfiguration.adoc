@@ -1,0 +1,111 @@
+Grails provides a number of hooks to leverage the different parts of the system and perform runtime configuration by convention.
+
+
+==== Hooking into the Grails Spring configuration
+
+
+First, you can hook in Grails runtime configuration overriding the `doWithSpring` method from the {apiDocs}grails/plugins/Plugin.html[Plugin] class and returning a closure that defines additional beans. For example the following snippet is from one of the core Grails plugins that provides link:i18n.html[i18n] support:
+
+[source,groovy]
+----
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
+import grails.plugins.*
+
+class I18nGrailsPlugin extends Plugin {
+
+    def version = "0.1"
+
+    Closure doWithSpring() {{->
+        messageSource(ReloadableResourceBundleMessageSource) {
+            basename = "WEB-INF/grails-app/i18n/messages"
+        }
+        localeChangeInterceptor(LocaleChangeInterceptor) {
+            paramName = "lang"
+        }
+        localeResolver(CookieLocaleResolver)
+    }}
+}
+----
+
+This plugin configures the Grails `messageSource` bean and a couple of other beans to manage Locale resolution and switching. It using the link:spring.html#theBeanBuilderDSLExplained[Spring Bean Builder] syntax to do so.
+
+
+==== Customizing the Servlet Environment
+
+
+In previous versions of Grails it was possible to dynamically modify the generated `web.xml`. In Grails 3.x there is no `web.xml` file and it is not possible to programmatically modify the `web.xml` file anymore.
+
+However, it is possible to perform the most commons tasks of modifying the Servlet environment in Grails 3.x.
+
+
+==== Adding New Servlets
+
+
+If you want to add a new Servlet instance the simplest way is simply to define a new Spring bean in the `doWithSpring` method:
+
+[source,groovy]
+----
+Closure doWithSpring() {{->
+  myServlet(MyServlet)
+}}
+----
+
+If you need to customize the servlet you can use Spring Boot's http://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/context/embedded/ServletRegistrationBean.html[ServletRegistrationBean]:
+
+[source,groovy]
+----
+Closure doWithSpring() {{->
+  myServlet(ServletRegistrationBean, new MyServlet(), "/myServlet/*") {
+    loadOnStartup = 2
+  }
+}}
+----
+
+
+==== Adding New Servlet Filters
+
+
+Just like Servlets, the simplest way to configure a new filter is to simply define a Spring bean:
+
+[source,groovy]
+----
+Closure doWithSpring() {{->
+  myFilter(MyFilter)
+}}
+----
+
+However, if you want to control the order of filter registrations you will need to use Spring Boot's http://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/web/servlet/FilterRegistrationBean.html[FilterRegistrationBean]:
+
+[source,groovy]
+----
+myFilter(FilterRegistrationBean) {
+    filter = bean(MyFilter)
+    urlPatterns = ['/*']
+    order = Ordered.HIGHEST_PRECEDENCE
+}
+----
+
+NOTE: Grails' internal registered filters (`GrailsWebRequestFilter`, `HiddenHttpMethodFilter` etc.) are defined by incrementing `HIGHEST_PRECEDENCE` by 10 thus allowing several filters to be inserted before or between Grails' filters.
+
+
+==== Doing Post Initialisation Configuration
+
+
+Sometimes it is useful to be able do some runtime configuration after the Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] has been built. In this case you can define a `doWithApplicationContext` closure property.
+
+[source,groovy]
+----
+class SimplePlugin extends Plugin{
+
+    def name = "simple"
+    def version = "1.1"
+
+    @Override
+    void doWithApplicationContext() {
+        def sessionFactory = applicationContext.sessionFactory
+        // do something here with session factory
+    }
+}
+----

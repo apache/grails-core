@@ -1,0 +1,29 @@
+
+== header
+
+
+
+=== Purpose
+
+
+To add a header to the response.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// Adds a header to the response
+header 'Cache-Control', 'max-age=84600, public'
+----
+
+
+=== Description
+
+A method to add headers to the response.
+
+=== Parameters:
+
+* `headerName` - The header name to add
+* `headerValue` - The header value to add

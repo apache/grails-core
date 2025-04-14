@@ -1,0 +1,262 @@
+A Promise is a concept being embraced by many concurrency frameworks. They are similar to `java.util.concurrent.Future` instances, but include a more user friendly exception handling model, useful features like chaining and the ability to attach listeners.
+
+To use the Grails Promise abstraction you should add a dependency on the `async` plugin to your `build.gradle` file:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+implementation "org.grails.plugins:async:{GrailsVersion}"
+----
+
+=== Promise Basics
+
+
+In Grails the `grails.async.Promises` class provides the entry point to the Promise API:
+
+[source,groovy]
+----
+import static grails.async.Promises.*
+----
+
+To create promises you can use the `task` method, which returns an instance of the `grails.async.Promise` interface:
+
+[source,groovy]
+----
+def p1 = task { 2 * 2 }
+def p2 = task { 4 * 4 }
+def p3 = task { 8 * 8 }
+assert [4,16,64] == waitAll(p1, p2, p3)
+----
+
+The `waitAll` method waits synchronously, blocking the current thread, for all of the concurrent tasks to complete and returns the results.
+
+If you prefer not to block the current thread you can use the `onComplete` method:
+
+[source,groovy]
+----
+onComplete([p1,p2,p3]) { List results ->
+   assert [4,16,64] == results
+}
+----
+
+The `waitAll` method will throw an exception if an error occurs executing one of the promises. The originating exception will be thrown. The `onComplete` method, however, will simply not execute the passed closure if an exception occurs. You can register an `onError` listener if you wish to handle exceptions without blocking:
+
+[source,groovy]
+----
+onError([p1,p2,p3]) { Throwable t ->
+   println "An error occured ${t.message}"
+}
+----
+
+If you have just a single long running promise then the `grails.async.Promise` interface provides a similar API on the promise itself. For example:
+
+[source,groovy]
+----
+import static java.util.concurrent.TimeUnit.*
+import static grails.async.Promises.*
+
+Promise p = task {
+	// Long running task
+}
+p.onError { Throwable err ->
+	println "An error occured ${err.message}"
+}
+p.onComplete { result ->
+    println "Promise returned $result"
+}
+// block until result is called
+def result = p.get()
+// block for the specified time
+def result = p.get(1,MINUTES)
+----
+
+=== The PromiseFactory Interface
+
+By default, the `Promises` static methods use an instance of `PromiseFactory`. This `PromiseFactory` interface has various implementations. The default implementation is link:{asyncApi}/org/grails/async/factory/future/CachedThreadPoolPromiseFactory.html[CachedThreadPoolPromiseFactory] which uses a thread pool that will create threads as needed (the same as `java.util.concurrent.Executors.newCachedThreadPool()`)
+
+However, the design of the Grails promises framework is such that you can swap out the underlying implementation for your own or one of the pre-supported implementations. For example to use RxJava 1.x simply add the RxJava dependency to `build.gradle`:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+runtimeOnly "org.grails:grails-async-rxjava:{GrailsVersion}"
+----
+
+With the above in place RxJava 1.x will be used to create `Promise` instances.
+
+The following table summarizes the available implementation and the dependency that should be added to activate them:
+
+.Promise Factory Implementations
+|===
+|Framework | Dependency | Implementation Class
+
+|GPars 1.2.x
+|`grails-async-gpars`
+|`org.grails.async.factory.gpars.GparsPromiseFactory`
+
+|RxJava 1.2.x
+|`grails-async-rxjava`
+|`org.grails.async.factory.rxjava.RxPromiseFactory`
+
+|RxJava 2.x
+|`grails-async-rxjava2`
+|`org.grails.async.factory.rxjava2.RxPromiseFactory`
+
+|===
+
+You can also override the `grails.async.PromiseFactory` class used by `Promises` by setting the `promiseFactory` static field.
+
+
+One common use case for this is unit testing, typically you do not want promises to execute asynchronously during unit tests, as this makes tests harder to write. For this purpose Grails ships with a `org.grails.async.factory.SynchronousPromiseFactory` instance that makes it easier to test promises:
+
+[source,groovy]
+----
+import org.grails.async.factory.*
+import grails.async.*
+
+Promises.promiseFactory = new SynchronousPromiseFactory()
+----
+
+Using the `PromiseFactory` mechanism it is theoretically possible to plug in other concurrency libraries into the Grails framework. For this you need to override the two interfaces `grails.async.Promise` and `grails.async.PromiseFactory`.
+
+=== Promise Chaining
+
+
+It is possible to chain several promises and wait for the chain to complete using the `then` method:
+
+[source,groovy]
+----
+final polish = { ... }
+final transform = { ... }
+final save = { ... }
+final notify = { ... }
+
+Promise promise = task {
+    // long running task
+}
+promise.then polish then transform then save then {
+	// notify end result
+}
+----
+
+If an exception occurs at any point in the chain it will be propagated back to the caller and the next step in the chain will not be called.
+
+
+=== Promise Lists and Maps
+
+
+Grails' async API also features the concept of a promise lists and maps. These are represented by the `grails.async.PromiseList` and `grails.async.PromiseMap` classes respectively.
+
+The easiest way to create a promise list or map is via the `tasks` method of the `Promises` class:
+
+[source,groovy]
+----
+import static grails.async.Promises.*
+
+def promiseList = tasks([{ 2 * 2 }, { 4 * 4}, { 8 * 8 }])
+
+assert [4,16,64] == promiseList.get()
+----
+
+The `tasks` method, when passed a list of closures, returns a `PromiseList`. You can also construct a `PromiseList` manually:
+
+[source,groovy]
+----
+import grails.async.*
+
+def list = new PromiseList()
+list << { 2 * 2 }
+list << { 4 * 4 }
+list << { 8 * 8 }
+list.onComplete { List results ->
+  assert [4,16,64] == results
+}
+----
+
+NOTE: The `PromiseList` class does not implement the java.util.List interface, but instead returns a java.util.List from the get() method
+
+Working with `PromiseMap` instances is largely similar. Again you can either use the `tasks` method:
+
+
+[source,groovy]
+----
+import static grails.async.Promises.*
+
+def promiseMap = tasks one:{ 2 * 2 }, 
+                       two:{ 4 * 4}, 
+                       three:{ 8 * 8 }
+
+assert [one:4,two:16,three:64] == promiseMap.get()
+----
+
+Or construct a `PromiseMap` manually:
+
+[source,groovy]
+----
+import grails.async.*
+
+def map = new PromiseMap()
+map['one'] = { 2 * 2 }
+map['two'] = { 4 * 4 }
+map['three'] = { 8 * 8 }
+map.onComplete { Map results ->
+  assert [one:4,two:16,three:64] == results
+}
+----
+
+
+
+=== DelegateAsync Transformation
+
+
+It is quite common to require both synchronous and asynchronous versions of the same API. Developing both can result in a maintenance problem as typically the asynchronous API would simply delegate to the synchronous version.
+
+The `DelegateAsync` transformation is designed to mitigate this problem by transforming any synchronous API into an asynchronous one.
+
+For example, consider the following service:
+
+[source,groovy]
+----
+class BookService {	
+    List<Book> findBooks(String title) {
+      // implementation
+    }
+}
+----
+
+The `findBooks` method executes synchronously in the same thread as the caller. To make an asynchronous version of this API you can define another class as follows:
+
+[source,groovy]
+----
+import grails.async.*
+
+class AsyncBookService {
+   @DelegateAsync BookService bookService	
+}
+----
+
+The `DelegateAsync` transformation will automatically add a new method that looks like the following to the `AsyncBookService` class:
+
+[source,groovy]
+----
+Promise<List<Book>> findBooks(String title) {
+    Promises.task {
+       bookService.findBooks(title)
+    }
+}
+----
+
+As you see the transform adds equivalent methods that return a Promise and execute asynchronously.
+
+The `AsyncBookService` can then be injected into other controllers and services and used as follows:
+
+[source,groovy]
+----
+AsyncBookService asyncBookService
+def findBooks(String title) {
+    asyncBookService.findBooks(title)
+       .onComplete { List results ->
+          println "Books = ${results}"				
+       }
+}
+----

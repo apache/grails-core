@@ -1,0 +1,157 @@
+Integration tests differ from unit tests in that you have full access to the Grails environment within the test. You can create an integration test using the link:../ref/Command%20Line/create-integration-test.html[create-integration-test] command:
+
+[source,groovy]
+----
+$ grails create-integration-test Example
+----
+
+The above command will create a new integration test at the location `src/integration-test/groovy/<PACKAGE>/ExampleSpec.groovy`.
+
+Grails uses the test environment for integration tests and loads the application prior to the first test run. All tests use the same application state.
+
+
+==== Transactions
+
+
+Integration test methods run inside their own database transaction by default, which is rolled back at the end of each test method. This means that data saved during a test is not persisted to the database (which is shared across all tests). The default generated integration test template includes the {apiDocs}grails/transaction/Rollback.html[Rollback] annotation:
+
+[source,groovy]
+----
+import grails.testing.mixin.integration.Integration
+import grails.gorm.transactions.*
+import spock.lang.*
+
+@Integration
+@Rollback
+class ExampleSpec extends Specification {
+
+    ...
+
+    void "test something"() {
+        expect:"fix me"
+            true == false
+    }
+}
+----
+
+The `Rollback` annotation ensures that each test method runs in a transaction that is rolled back. Generally this is desirable because you do not want your tests depending on order or application state.
+
+In Grails 3.0 tests rely on `grails.gorm.transactions.Rollback` annotation to bind the session in integration tests. Though each test method transaction is rolled back, the `setup()` method uses a separate transaction that is not rolled back.
+Data will persist to the database and will need to be cleaned up manually if `setup()` sets up data and persists them as shown in the below sample:
+
+[source,groovy]
+----
+import grails.testing.mixin.integration.Integration
+import grails.gorm.transactions.*
+import spock.lang.*
+
+@Integration
+@Rollback
+class BookSpec extends Specification {
+
+    void setup() {
+        // Below line would persist and not roll back
+        new Book(name: 'Grails in Action').save(flush: true)
+    }
+
+    void "test something"() {
+        expect:
+        Book.count() == 1
+    }
+}
+----
+
+To preload the database and automatically roll back setup logic, any persistence operations need to be called from the test method itself so that they can run within the test method's rolled back transaction. Similar to usage of the `setupData()` method shown below which creates a record in database and after running other test will be rolled back:
+
+[source,groovy]
+----
+import grails.testing.mixin.integration.Integration
+import grails.gorm.transactions.*
+import spock.lang.*
+
+@Integration
+@Rollback
+class BookSpec extends Specification {
+
+    void setupData() {
+        // Below line would roll back
+        new Book(name: 'Grails in Action').save(flush: true)
+    }
+
+    void "test something"() {
+        given:
+        setupData()
+
+        expect:
+        Book.count() == 1
+    }
+}
+----
+
+
+==== Using Spring's Rollback annotation
+
+Another transactional approach could be to use Spring's {springapi}org/springframework/test/annotation/Rollback.html[@Rollback] instead.
+
+[source,groovy]
+----
+import grails.testing.mixin.integration.Integration
+import org.springframework.test.annotation.Rollback
+import spock.lang.*
+
+@Integration
+@Rollback
+class BookSpec extends Specification {
+
+    void setup() {
+        new Book(name: 'Grails in Action').save(flush: true)
+    }
+
+    void "test something"() {
+        expect:
+        Book.count() == 1
+    }
+}
+----
+
+NOTE: It isn't possible to make `grails.gorm.transactions.Rollback` behave the same way as Spring's Rollback annotation because `grails.gorm.transactions.Rollback` transforms the byte code of the class, eliminating the need for a proxy (which Spring's version requires).
+This has the downside that you cannot implement it differently for different cases (as Spring does for testing).
+
+
+==== DirtiesContext
+
+
+If you do have a series of tests that will share state you can remove the `Rollback` and the last test in the suite should feature the {springapi}org/springframework/test/annotation/DirtiesContext.html[DirtiesContext] annotation which will shutdown the environment and restart it fresh (note that this will have an impact on test run times).
+
+
+==== Autowiring
+
+
+To obtain a reference to a bean you can use the {springapi}org/springframework/beans/factory/annotation/Autowired.html[Autowired] annotation. For example:
+
+[source,groovy]
+----
+...
+import org.springframework.beans.factory.annotation.*
+
+@Integration
+@Rollback
+class ExampleServiceSpec extends Specification {
+
+    @Autowired
+    ExampleService exampleService
+    ...
+
+    void "Test example service"() {
+        expect:
+            exampleService.countExamples() == 0
+    }
+}
+----
+
+
+
+==== Testing Controllers
+
+
+To integration test controllers it is recommended you use link:../ref/Command%20Line/create-functional-test.html[create-functional-test] command to create a Geb functional test. See the following section on functional testing for more information.

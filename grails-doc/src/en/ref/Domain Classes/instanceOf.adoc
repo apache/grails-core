@@ -1,0 +1,66 @@
+
+== instanceOf
+
+
+
+=== Purpose
+
+
+Determines if a domain class instance is an instance of the specified class, resolving the actual class if the instance is a proxy.
+
+
+=== Examples
+
+
+Given the domain classes:
+
+[source,groovy]
+----
+class Container {
+   static hasMany = [children: Child]
+}
+----
+
+[source,groovy]
+----
+class Child {
+   String name
+   static belongsTo = [container: Container]
+}
+----
+
+[source,groovy]
+----
+class Thing extends Child {}
+----
+
+[source,groovy]
+----
+class Other extends Child {}
+----
+
+Then you can determine the type of the elements in a `Container`'s `children` collection using
+
+[source,groovy]
+----
+def container = Container.get(id)
+for (child in container.children) {
+   if (child.instanceOf(Thing)) {
+      // process Thing
+   }
+   else if (child.instanceOf(Other)) {
+      // process Other
+   }
+   else {
+      // handle unexpected type
+   }
+}
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `clazz` - the type to check

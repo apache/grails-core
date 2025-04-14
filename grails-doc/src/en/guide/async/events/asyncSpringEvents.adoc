@@ -1,0 +1,27 @@
+Spring also fires a number of useful events. All events in the `org.springframework` use the `spring` namespace. However, these events are disabled by default as they add a performance overhead.
+
+To enable Spring Event translation set `grails.events.spring` to `true` in `application.yml` prior to defining subscribers.
+
+For example:
+
+[source,groovy]
+----
+import grails.events.annotation.*
+import org.springframework.web.context.support.*
+import org.springframework.boot.context.event.*
+...
+
+@Events(namespace="spring")
+class MyService {
+
+    @Subscriber
+    void applicationStarted(ApplicationStartedEvent event) {
+        // fired when the application starts
+    }
+
+    @Subscriber
+    void servletRequestHandled(RequestHandledEvent event) {
+        // fired each time a request is handled
+    }
+}
+----

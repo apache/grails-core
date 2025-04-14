@@ -1,0 +1,19 @@
+Since Grails 3.1 the http://gradle.org[Gradle Build System] is used for build related tasks such as compilation, runnings tests and producing binary distributions of your project. It is recommended to use Gradle 2.2 or above with Grails 3.1 (and higher).
+
+The build is defined by the `build.gradle` file which specifies the version of your project, the dependencies of the project and the repositories where to find those dependencies (amongst other things).
+
+When you invoke the `grails` command the version of Gradle that ships with Grails 3.1 (currently 2.9) is invoked by the `grails` process via the http://www.gradle.org/docs/current/userguide/embedding.html[Gradle Tooling API]:
+
+[source,bash]
+----
+# Equivalent to 'gradle classes'
+$ grails compile
+----
+
+You can invoke Gradle directly using the `gradle` command and use your own local version of Gradle, however you will need Gradle 2.2 or above to work with Grails 3.0 (and higher):
+
+[source,bash]
+----
+$ gradle assemble
+----
+

@@ -1,0 +1,22 @@
+If you set the configuration property `logging.config`, you can instruct `Logback` to use an external configuration file.
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+logging:
+    config: /Users/me/config/logback-spring.xml
+----
+
+Alternatively, you can supply the configuration file location with a system property:
+
+`$ ./gradlew -Dlogging.config=/Users/me/config/logback-spring.xml bootRun`
+
+Or, you could use an environment variable:
+
+[source, bash]
+----
+$ export LOGGING_CONFIG=/Users/me/config/logback-spring.xml
+$ ./gradlew bootRun
+----
+
+

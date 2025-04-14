@@ -1,0 +1,87 @@
+name: "Release"
+on:
+  workflow_dispatch:
+    inputs:
+      grails_version:
+        description: 'Grails Version (eg: 4.0.6)'
+        required: true
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      BETA: ${{
+          contains(github.event.inputs.grails_version, 'M') ||
+          contains(github.event.inputs.grails_version, 'RC')
+        }}
+      SKIP_SNAPSHOT: ${{
+          startsWith(github.event.inputs.grails_version, '3.3') ||
+          startsWith(github.event.inputs.grails_version, '4.1') ||
+          startsWith(github.event.inputs.grails_version, '5.3') ||
+          startsWith(github.event.inputs.grails_version, '6.2') ||
+          contains(github.event.inputs.grails_version, 'M') ||
+          contains(github.event.inputs.grails_version, 'RC')
+        }}
+    permissions:
+      contents: write
+    steps:
+      - name: "🔀 Get Target Branch name"
+        run: |
+          TARGET_BRANCH="${GITHUB_REF:11}"
+          echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
+          echo "Target Branch: $TARGET_BRANCH"
+      - name: "📥 Checkout the Target Branch"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+      - name: "✔️ Commit the assigned Release Version to gradle.properties"
+        run: |
+          sed -i "s/^projectVersion.*$/projectVersion=${{ github.event.inputs.grails_version }}/" gradle.properties
+          cat gradle.properties
+          git config --global user.email "${{ env.GIT_USER_EMAIL }}"
+          git config --global user.name "${{ env.GIT_USER_NAME }}"
+          git add gradle.properties
+          git commit -m "[skip ci] Release v${{ github.event.inputs.grails_version }} docs"
+          git push origin ${{ env.TARGET_BRANCH }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔨 Build the Documentation"
+        env:
+          TARGET_GRAILS_VERSION: ${{ github.event.inputs.grails_version }}
+        run: >
+          ./gradlew assemble
+          -PgithubBranch=${{ env.TARGET_BRANCH }}
+          --info --stacktrace
+      - name: "🚩 Conditionally create a pre-release flag"
+        run: |
+          PRE_RELEASE_FLAG=""
+          if [ "${{ env.BETA }}" = "true" ]; then
+              PRE_RELEASE_FLAG="--pre-release"
+          fi
+          echo "PRE_RELEASE_FLAG=${PRE_RELEASE_FLAG}" >> $GITHUB_ENV
+      - name: "🎉 Create the GitHub Release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release create v${{ github.event.inputs.grails_version }}
+          build/distributions/grails-docs-${{ github.event.inputs.grails_version }}.zip
+          --title ${{ github.event.inputs.grails_version }}
+          --target ${{ env.TARGET_BRANCH }}
+          $PRE_RELEASE_FLAG
+      - name: "🚀 Publish to Github Pages"
+        uses: apache/grails-github-actions/deploy-github-pages@asf
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: build/docs
+          VERSION: ${{ github.event.inputs.grails_version }}
+      - name: "⚙️ Run post-release"
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.grails_version }}
+        uses: apache/grails-github-actions/post-release@asf

@@ -1,0 +1,133 @@
+
+==== Add Command Line Commands
+
+
+A plugin can add new commands to the Grails 3.0 interactive shell in one of two ways. First, using the link:../ref/Command%20Line/create-script.html[create-script] you can create a code generation script which will become available to the application. The `create-script` command will create the script in the `src/main/scripts` directory:
+
+[source,groovy]
+----
++ src/main/scripts     <-- additional scripts here
+ + grails-app
+      + controllers
+      + services
+      + etc.
+----
+
+Code generation scripts can be used to create artefacts within the project tree and automate interactions with Gradle.
+
+If you want to create a new shell command that interacts with a loaded Grails application instance then you should use the `create-command` command:
+
+[source,groovy]
+----
+$ grails create-command MyExampleCommand
+----
+
+This will create a file called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy` that extends {apiDocs}grails/dev/commands/ApplicationCommand.html[ApplicationCommand]:
+
+[source,groovy]
+----
+import grails.dev.commands.*
+
+class MyExampleCommand implements ApplicationCommand {
+
+  boolean handle(ExecutionContext ctx) {
+      println "Hello World"
+      return true
+  }
+}
+----
+
+An `ApplicationCommand` has access to the `GrailsApplication` instance and is subject to autowiring like any other Spring bean.
+
+You can also inform Grails to skip the execution of `Bootstrap.groovy` files with a simple property in your command:
+
+[source,groovy]
+----
+class MyExampleCommand implements ApplicationCommand {
+
+  boolean skipBootstrap = true
+
+  boolean handle(ExecutionContext ctx) {
+      ...
+  }
+}
+----
+
+For each `ApplicationCommand` present Grails will create a shell command and a Gradle task to invoke the `ApplicationCommand`. In the above example you can invoke the `MyExampleCommand` class using either:
+
+[source,groovy]
+----
+$ grails my-example
+----
+
+Or
+
+[source,groovy]
+----
+$ gradle myExample
+----
+
+The Grails version is all lower case hyphen separated and excludes the "Command" suffix.
+
+The main difference between code generation scripts and `ApplicationCommand` instances is that the latter has full access to the Grails application state and hence can be used to perform tasks that interactive with the database, call into GORM etc.
+
+In Grails 2.x Gant scripts could be used to perform both these tasks, in Grails 3.x code generation and interacting with runtime application state has been cleanly separated.
+
+
+==== Adding a new grails-app artifact (Controller, Tag Library, Service, etc.)
+
+
+A plugin can add new artifacts by creating the relevant file within the `grails-app` tree.
+
+[source,groovy]
+----
++ grails-app
+      + controllers  <-- additional controllers here
+      + services <-- additional services here
+      + etc.  <-- additional XXX here
+----
+
+
+==== Providing Views, Templates and View resolution
+
+
+When a plugin provides a controller it may also provide default views to be rendered. This is an excellent way to modularize your application through plugins. Grails' view resolution mechanism will first look for the view in the application it is installed into and if that fails will attempt to look for the view within the plugin. This means that you can override views provided by a plugin by creating corresponding GSPs in the application's `grails-app/views` directory.
+
+For example, consider a controller called `BookController` that's provided by an 'amazon' plugin. If the action being executed is `list`, Grails will first look for a view called `grails-app/views/book/list.gsp` then if that fails it will look for the same view relative to the plugin.
+
+However if the view uses templates that are also provided by the plugin then the following syntax may be necessary:
+
+[source,groovy]
+----
+<g:render template="fooTemplate" plugin="amazon"/>
+----
+
+Note the usage of the `plugin` attribute, which contains the name of the plugin where the template resides. If this is not specified then Grails will look for the template relative to the application.
+
+
+==== Excluded Artefacts
+
+By default Grails excludes the following files during the packaging process:
+
+* `grails-app/conf/logback.xml`
+* `grails-app/conf/logback-spring.xml`
+* `grails-app/conf/application.yml`
+* `grails-app/conf/application.groovy`
+* `grails-app/conf/spring/resources.groovy`
+* Everything within `/src/test/\*\*`
+* SCM management files within `\*\*/.svn/\*\*` and `\*\*/CVS/\*\*`
+
+
+The default `UrlMappings.groovy` file is not excluded, so remove any mappings that are not required for the plugin to work.  You are also free to add a UrlMappings definition under a different name which *will* be included. For example a file called `grails-app/controllers/BlogUrlMappings.groovy` is fine.
+
+The list of excludes is extensible with the `pluginExcludes` property:
+
+[source,groovy]
+----
+// resources that are excluded from plugin packaging
+def pluginExcludes = [
+    "grails-app/views/error.gsp"
+]
+----
+
+This is useful for example to include demo or test resources in the plugin repository, but not include them in the final distribution.

@@ -1,0 +1,170 @@
+
+=== Understanding Transactions and the Hibernate Session
+
+
+When using transactions there are important considerations you must take into account with regards to how the underlying persistence session is handled by Hibernate. When a transaction is rolled back the Hibernate session used by GORM is cleared. This means any objects within the session become detached and accessing uninitialized lazy-loaded collections will lead to a `LazyInitializationException`.
+
+To understand why it is important that the Hibernate session is cleared. Consider the following example:
+
+[source,groovy]
+----
+class Author {
+    String name
+    Integer age
+
+    static hasMany = [books: Book]
+}
+----
+
+If you were to save two authors using consecutive transactions as follows:
+
+[source,groovy]
+----
+Author.withTransaction { status ->
+    new Author(name: "Stephen King", age: 40).save()
+    status.setRollbackOnly()
+}
+
+Author.withTransaction { status ->
+    new Author(name: "Stephen King", age: 40).save()
+}
+----
+
+Only the second author would be saved since the first transaction rolls back the author `save()` by clearing the Hibernate session. If the Hibernate session were not cleared then both author instances would be persisted and it would lead to very unexpected results.
+
+It can, however, be frustrating to get a `LazyInitializationException` due to the session being cleared.
+
+For example, consider the following example:
+
+[source,groovy]
+----
+class AuthorService {
+
+    void updateAge(id, int age) {
+        def author = Author.get(id)
+        author.age = age
+        if (author.isTooOld()) {
+            throw new AuthorException("too old", author)
+        }
+    }
+}
+----
+
+[source,groovy]
+----
+class AuthorController {
+
+    AuthorService authorService
+
+    def updateAge() {
+        try {
+            authorService.updateAge(params.id, params.int("age"))
+        }
+        catch(e) {
+            render "Author books ${e.author.books}"
+        }
+    }
+}
+----
+
+In the above example the transaction will be rolled back if the age of the `Author` age exceeds the maximum value defined in the `isTooOld()` method by throwing an `AuthorException`. The `AuthorException` references the author but when the `books` association is accessed a `LazyInitializationException` will be thrown because the underlying Hibernate session has been cleared.
+
+To solve this problem you have a number of options. One is to ensure you query eagerly to get the data you will need:
+
+[source,groovy]
+----
+class AuthorService {
+    ...
+    void updateAge(id, int age) {
+        def author = Author.findById(id, [fetch:[books:"eager"]])
+        ...
+----
+
+In this example the `books` association will be queried when retrieving the `Author`.
+
+NOTE: This is the optimal solution as it requires fewer queries than the following suggested solutions.
+
+Another solution is to redirect the request after a transaction rollback:
+
+[source,groovy]
+----
+class AuthorController {
+
+    AuthorService authorService
+
+    def updateAge() {
+        try {
+            authorService.updateAge(params.id, params.int("age"))
+        }
+        catch(e) {
+            flash.message = "Can't update age"
+            redirect action:"show", id:params.id
+        }
+    }
+}
+----
+
+In this case a new request will deal with retrieving the `Author` again. And, finally a third solution is to retrieve the data for the `Author` again to make sure the session remains in the correct state:
+
+[source,groovy]
+----
+class AuthorController {
+
+    AuthorService authorService
+
+    def updateAge() {
+        try {
+            authorService.updateAge(params.id, params.int("age"))
+        }
+        catch(e) {
+            def author = Author.read(params.id)
+            render "Author books ${author.books}"
+        }
+    }
+}
+----
+
+
+=== Validation Errors and Rollback
+
+
+A common use case is to rollback a transaction if there are validation errors. For example consider this service:
+
+[source,groovy]
+----
+import grails.validation.ValidationException
+
+class AuthorService {
+
+    void updateAge(id, int age) {
+        def author = Author.get(id)
+        author.age = age
+        if (!author.validate()) {
+            throw new ValidationException("Author is not valid", author.errors)
+        }
+    }
+}
+----
+
+To re-render the same view that a transaction was rolled back in you can re-associate the errors with a refreshed instance before rendering:
+
+[source,groovy]
+----
+import grails.validation.ValidationException
+
+class AuthorController {
+
+    AuthorService authorService
+
+    def updateAge() {
+        try {
+            authorService.updateAge(params.id, params.int("age"))
+        }
+        catch (ValidationException e) {
+            def author = Author.read(params.id)
+            author.errors = e.errors
+            render view: "edit", model: [author:author]
+        }
+    }
+}
+----

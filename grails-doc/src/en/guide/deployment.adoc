@@ -1,0 +1,1 @@
+Grails applications can be deployed in a number of ways, each of which has its pros and cons.

@@ -1,0 +1,70 @@
+
+== bindable
+
+
+
+=== Purpose
+
+
+Configure the bindability of a property.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+salary bindable: false
+firstName size: 5..15, bindable: true
+department bindable: true
+----
+
+
+=== Description
+
+
+Set to `false` to indicate that a property is not to be automatically assigned a value during data binding.
+
+[source,groovy]
+----
+package com.demo
+
+class Employee {
+    String firstName
+    String department
+    BigDecimal salary
+
+    static constraints = {
+        department bindable: false
+        salary bindable: false
+    }
+}
+----
+
+[source,groovy]
+----
+import com.demo.Employee
+
+def employee = new Employee()
+employee.firstName = 'Bill'
+employee.department = 'Percussion'
+employee.salary = 42.0
+
+// department and salary will NOT be bound because they are configured as non-bindable in the Employee.constraints closure
+employee.properties = [firstName: 'William',
+                       department: 'Retired',
+                       salary: 99.99]
+
+assert 'William' == employee.firstName
+assert 'Percussion' == employee.department
+assert 42.0 == employee.salary
+----
+
+Statically typed instance properties are bindable by default.  Properties which are not bindable by default are those related to transient fields, dynamically typed properties and static properties.
+
+See the link:{guidePath}/theWebLayer.html#dataBinding[data binding] section for more details on data binding.
+
+NOTE: The bindable constraint must be assigned a literal boolean value.  Dynamic expressions are not valid values for the bindable constraint.  The value must be the literal `true` or `false`.
+
+The bindable constraint must be applied in the constraints closure which is defined in the relevant class.  This means that bindable may not be used as a shared constraint.
+

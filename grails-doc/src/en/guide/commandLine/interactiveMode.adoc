@@ -1,0 +1,145 @@
+Interactive mode is a feature of the Grails command line which keeps the JVM running and allows for quicker execution of commands. To activate interactive mode type 'grails' at the command line and then use TAB completion to get a list of commands:
+
+image::interactive-output.png[]
+
+If you need to open a file whilst within interactive mode you can use the `open` command which will TAB complete file paths:
+
+image::interactive-open-cmd.png[]
+
+Even better, the `open` command understands the logical aliases 'test-report' and 'dep-report', which will open the most recent test and dependency reports respectively. In other words, to open the test report in a browser simply execute `open test-report`. You can even open multiple files at once: `open test-report test/unit/MyTests.groovy` will open the HTML test report in your browser and the `MyTests.groovy` source file in your text editor.
+
+TAB completion also works for class names after the `create-*` commands:
+
+image::interactive-complete-class.png[]
+
+If you need to run an external process whilst interactive mode is running you can do so by starting the command with a !:
+
+image::interactive-run-external.png[]
+
+Note that with ! (bang) commands, you get file path auto completion - ideal for external commands that operate on the file system such as 'ls', 'cat', 'git', etc.
+
+To exit interactive mode enter the `exit` command. Note that if the Grails application has been run with `run-app` normally it will terminate when the interactive mode console exits because the JVM will be terminated. An exception to this would be if the application were running in forked mode which means the application is running in a different JVM. In that case the application will be left running after the interactive mode console terminates. If you want to exit interactive mode and stop an application that is running in forked mode, use the `quit` command. The `quit` command will stop the running application and then close interactive mode.
+
+
+With Grails Forge, when you execute the `grails` command without any arguments, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
+
+One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. Here's an example of the available options in interactive mode:
+
+[source,shell]
+----
+grails>
+--help                --verbose             -V                    -v                    create-app            create-domain-class   create-restapi        create-webapp
+--stacktrace          --version             -h                    -x                    create-controller     create-plugin         create-web-plugin
+----
+
+== Help and Information
+
+You can access general usage information for Grails commands using the help flag associated with a specific command.
+
+[source,shell]
+----
+grails> create-app -h
+Usage: grails create-app [-hivVx] [--list-features] [-g=GORM Implementation] [--jdk=<javaVersion>]
+                         [-s=Servlet Implementation] [-t=TEST] [-f=FEATURE[,FEATURE...]]... [NAME]
+Creates an application
+      [NAME]            The name of the application to create.
+  -f, --features=FEATURE[,FEATURE...]
+                        The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
+                          spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat,
+                          micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
+                          mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
+                          assertj, mockito, spring-boot-starter-undertow,
+                          github-workflow-java-ci, jrebel, testcontainers, sqlserver,
+                          grails-console, views-markup, asset-pipeline-grails, views-json,
+                          gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console,
+                          logbackGroovy, mongo-sync, shade, geb, properties
+  -g, --gorm=GORM Implementation
+                        Which GORM Implementation to configure. Possible values: hibernate,
+                          mongodb, neo4j.
+  -h, --help            Show this help message and exit.
+  -i, --inplace         Create a service using the current directory
+      --jdk, --java-version=<javaVersion>
+                        The JDK version the project should target
+      --list-features   Output the available features and their descriptions
+  -s, --servlet=Servlet Implementation
+                        Which Servlet Implementation to configure. Possible values: none, tomcat,
+                          jetty, undertow.
+  -t, --test=TEST       Which test framework to use. Possible values: junit, spock.
+  -v, --verbose         Create verbose output.
+  -V, --version         Print version information and exit.
+  -x, --stacktrace      Show full stack trace when exceptions occur.
+----
+
+You can also obtain a list of available features by using the --list-features flag with any of the create commands.
+
+[source,shell]
+----
+grails> create-app --list-features
+Available Features
+(+) denotes the feature is included by default
+  Name                                Description
+  ----------------------------------  ---------------
+  CI/CD
+  github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application
+
+  Cache
+  cache                               The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.
+  cache-ehcache                       The Grails Cache Ehcache plugin extends the Cache plugin and uses Ehcache as the storage provider for cached content.
+
+  Client
+  micronaut-http-client               Adds support for the Micronaut HTTP client
+
+  Configuration
+  properties                          Creates a properties configuration file
+
+  Database
+  database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
+  embedded-mongodb                    Executes an embedded mongo database for integration or functional testing
+  gorm-hibernate5 (+)                 Adds support for Hibernate5 using GORM
+  gorm-mongodb                        Configures GORM for MongoDB for Groovy applications
+  gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
+  h2 (+)                              Adds the H2 driver and default config
+  mongo-sync                          Adds support for the MongoDB Synchronous Driver
+  mysql                               Adds the MySQL driver and default config
+  postgres                            Adds the PostgresSQL driver and default config
+  sqlserver                           Adds the SQL Server driver and default config
+  testcontainers                      Use Testcontainers to run a database or other software in a Docker container for tests
+
+  Development Tools
+  assertj                             AssertJ fluent assertions framework
+  hamcrest                            Hamcrest matchers for JUnit
+  jrebel                              Adds support for class reloading with JRebel (requires separate JRebel installation)
+  springloaded                        Adds support for class reloading with Spring Loaded
+
+  Documentation
+  asciidoctor                         Adds support for creating Asciidoctor documentation
+
+  Logging
+  logbackGroovy                       Gives you the ability to use groovy to configure logback instead of XML.
+
+  Management
+  grails-web-console                  A web-based Groovy console for interactive runtime application management and debugging
+
+  Other
+  geb (+)                             This plugins configure Geb for Grails framework to write automation tests.
+  grails-console (+)                  Starts the Grails console, which is an extended version of the regular Groovy console.
+  scaffolding (+)                     The Grails® framework Scaffolding plugin replicates much of the functionality from Grails 2, but uses the fields plugin instead.
+
+  Packaging
+  shade                               Adds the ability to build a Fat/Shaded JAR
+
+  Server
+  spring-boot-starter-jetty           spring-boot-starter-jetty
+  spring-boot-starter-tomcat (+)      spring-boot-starter-tomcat
+  spring-boot-starter-undertow        spring-boot-starter-undertow
+
+  Validation
+  hibernate-validator                 Adds support for the Hibernate Validator
+  mockito                             Mockito test mocking framework for JUnit
+
+  View Rendering
+  asset-pipeline-grails (+)           The Asset-Pipeline is a plugin used for managing and processing static assets in JVM applications primarily via Gradle (however not mandatory). Read more at https://github.com/bertramdev/asset-pipeline
+  grails-gsp (+)                      grails-gsp
+  views-json                          JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
+  views-markup                        Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
+----

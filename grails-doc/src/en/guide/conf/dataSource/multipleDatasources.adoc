@@ -1,0 +1,288 @@
+By default all domain classes share a single `DataSource` and a single database, but you have the option to partition your domain classes into two or more data sources.
+
+
+==== Configuring Additional DataSources
+
+
+The default `DataSource` configuration in `grails-app/conf/application.yml` looks something like this:
+
+[source,yaml]
+----
+dataSource:
+    pooled: true
+    jmxExport: true
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+
+environments:
+    development:
+        dataSource:
+            dbCreate: create-drop
+            url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+    test:
+        dataSource:
+            dbCreate: update
+            url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+    production:
+        dataSource:
+            dbCreate: update
+            url: jdbc:h2:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            properties:
+               jmxEnabled: true
+               initialSize: 5
+----
+
+This configures a single `DataSource` with the Spring bean named `dataSource`. To configure extra data sources, add a `dataSources` block (at the top level, in an environment block, or both, just like the standard `DataSource` definition) with a custom name. For example, this configuration adds a second `DataSource`, using MySQL in the development environment and Oracle in production:
+
+[source,yaml]
+----
+dataSource:
+    pooled: true
+    jmxExport: true
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+        
+dataSources:
+    lookup:
+        dialect: org.hibernate.dialect.MySQLInnoDBDialect
+        driverClassName: com.mysql.jdbc.Driver
+        username: lookup
+        password: secret
+        url: jdbc:mysql://localhost/lookup
+        dbCreate: update
+
+environments:
+    development:
+        dataSource:
+            dbCreate: create-drop
+            url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+    test:
+        dataSource:
+            dbCreate: update
+            url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+    production:
+        dataSource:
+            dbCreate: update
+            url: jdbc:h2:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            properties:
+                jmxEnabled: true
+                initialSize: 5
+                ...
+        dataSources:            
+            lookup:
+                dialect: org.hibernate.dialect.Oracle10gDialect
+                driverClassName: oracle.jdbc.driver.OracleDriver
+                username: lookup
+                password: secret
+                url: jdbc:oracle:thin:@localhost:1521:lookup
+                dbCreate: update
+----
+
+You can use the same or different databases as long as they're supported by Hibernate.
+
+If you need to inject the `lookup` datasource in a Grails artefact, you can do it like this:
+
+[source,groovy]
+----
+DataSource dataSource_lookup
+----
+
+
+NOTE: While defining multiple data sources, one of them **must** be named "dataSource". This is required because Grails determines which data source is the default by determining which one is named "dataSource".
+
+==== Configuring Domain Classes
+
+If a domain class has no `DataSource` configuration, it defaults to the standard `'dataSource'`. Set the `datasource` property in the `mapping` block to configure a non-default `DataSource`. For example, if you want to use the `ZipCode` domain to use the `'lookup'` `DataSource`, configure it like this:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasource 'lookup'
+   }
+}
+----
+
+A domain class can also use two or more data sources. Use the `datasources` property with a list of names to configure more than one, for example:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasources(['lookup', 'auditing'])
+   }
+}
+----
+
+If a domain class uses the default `DataSource` and one or more others, use the special name `'DEFAULT'` to indicate the default `DataSource`:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasources(['lookup', 'DEFAULT'])
+   }
+}
+----
+
+If a domain class uses all configured data sources, use the special value `'ALL'`:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasource 'ALL'
+   }
+}
+----
+
+
+==== Namespaces and GORM Methods
+
+
+If a domain class uses more than one `DataSource` then you can use the namespace implied by each `DataSource` name to make GORM calls for a particular `DataSource`. For example, consider this class which uses two data sources:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasources(['lookup', 'auditing'])
+   }
+}
+----
+
+The first `DataSource` specified is the default when not using an explicit namespace, so in this case we default to `'lookup'`. But you can call GORM methods on the 'auditing' `DataSource` with the `DataSource` name, for example:
+
+[source,groovy]
+----
+def zipCode = ZipCode.auditing.get(42)
+...
+zipCode.auditing.save()
+----
+
+As you can see, you add the `DataSource` to the method call in both the static case and the instance case.
+
+
+==== Hibernate Mapped Domain Classes
+
+
+You can also partition annotated Java classes into separate datasources. Classes using the default datasource are registered in `grails-app/conf/hibernate.cfg.xml`. To specify that an annotated class uses a non-default datasource, create a `hibernate.cfg.xml` file for that datasource with the file name prefixed with the datasource name.
+
+For example if the `Book` class is in the default datasource, you would register that in `grails-app/conf/hibernate.cfg.xml`:
+
+[source,xml]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+          '-//Hibernate/Hibernate Configuration DTD 3.0//EN'
+          'http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
+<hibernate-configuration>
+   <session-factory>
+      <mapping class='org.example.Book'/>
+   </session-factory>
+</hibernate-configuration>
+----
+
+and if the `Library` class is in the "ds2" datasource, you would register that in `grails-app/conf/ds2_hibernate.cfg.xml`:
+
+[source,xml]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+          '-//Hibernate/Hibernate Configuration DTD 3.0//EN'
+          'http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
+<hibernate-configuration>
+   <session-factory>
+      <mapping class='org.example.Library'/>
+   </session-factory>
+</hibernate-configuration>
+----
+
+The process is the same for classes mapped with hbm.xml files - just list them in the appropriate hibernate.cfg.xml file.
+
+
+==== Services
+
+
+Like Domain classes, by default Services use the default `DataSource` and `PlatformTransactionManager`. To configure a Service to use a different `DataSource`, use the static `datasource` property, for example:
+
+[source,groovy]
+----
+class DataService {
+
+   static datasource = 'lookup'
+
+   void someMethod(...) {
+      ...
+   }
+}
+----
+
+A transactional service can only use a single `DataSource`, so be sure to only make changes for domain classes whose `DataSource` is the same as the Service.
+
+Note that the datasource specified in a service has no bearing on which datasources are used for domain classes; that's determined by their declared datasources in the domain classes themselves. It's used to declare which transaction manager to use.
+
+If you have a `Foo` domain class in `dataSource1` and a `Bar` domain class in `dataSource2`, if `WahooService` uses `dataSource1`, a service method that saves a new `Foo` and a new `Bar` will only be transactional for `Foo` since they share the same datasource. The transaction won't affect the `Bar` instance. If you want both to be transactional you'd need to use two services and XA datasources for two-phase commit, e.g. with the Atomikos plugin.
+
+==== Transactions across multiple data sources
+
+Grails does not by default try to handle transactions that span multiple data sources.
+
+You can enable Grails to use the Best Effort 1PC pattern for handling transactions across multiple datasources. To do so you must set the `grails.transaction.chainedTransactionManager.enabled` setting to `true` in `application.yml`:
+
+[source,yaml]
+----
+grails:
+  transaction:
+    chainedTransactionManager:
+      enabled: true
+----
+
+The https://www.javaworld.com/article/2077963/open-source-tools/distributed-transactions-in-spring-with-and-without-xa.html[Best Efforts 1PC pattern] is fairly general but can fail in some circumstances that the developer must be aware of.
+
+This is a non-XA pattern that involves a synchronized single-phase commit of a number of resources. Because the <<ref-orgwiki-twophasecommit-2PC,2PC>> is not used, it can never be as safe as an <<ref-orgwiki-x-open-xa-XA,XA>> transaction, but is often good enough if the participants are aware of the compromises.
+
+The basic idea is to delay the commit of all resources as late as possible in a transaction so that the only thing that can go wrong is an infrastructure failure (not a business-processing error). Systems that rely on Best Efforts 1PC reason that infrastructure failures are rare enough that they can afford to take the risk in return for higher throughput. If business-processing services are also designed to be idempotent, then little can go wrong in practice.
+
+The BE1PC implementation was added in Grails 2.3.6. . Before this change additional datasources didn't take part in transactions initiated in Grails. The transactions in additional datasources were basically in auto commit mode. In some cases this might be the wanted behavior. One reason might be performance: on the start of each new transaction, the BE1PC transaction manager creates a new transaction to each datasource. It's possible to leave an additional datasource out of the BE1PC transaction manager by setting `transactional = false` in the respective configuration block of the additional dataSource. Datasources with `readOnly = true` will also be left out of the chained transaction manager (since 2.3.7).
+
+
+By default, the BE1PC implementation will add all beans implementing the Spring `link:{springapi}/org/springframework/transaction/PlatformTransactionManager.html[PlatformTransactionManager]` interface to the chained BE1PC transaction manager. For example, a possible `link:{springapi}/org/springframework/jms/connection/JmsTransactionManager.html[JMSTransactionManager]` bean in the Grails application context would be added to the Grails BE1PC transaction manager's chain of transaction managers.
+
+You can exclude transaction manager beans from the BE1PC implementation with this configuration option:
+
+[source,yaml]
+----
+grails:
+  transaction:
+    chainedTransactionManager:
+      enabled: true
+      blacklistPattern: '.*'
+----
+
+The exclude matching is done on the name of the transaction manager bean. The transaction managers of datasources with `transactional = false` or `readOnly = true` will be skipped and using this configuration option is not required in that case.
+
+
+==== XA and Two-phase Commit
+
+
+When the Best Efforts 1PC pattern isn't suitable for handling transactions across multiple transactional resources (not only datasources), there are several options available for adding XA/2PC support to Grails applications.
+
+The link:{springdocs}/transaction.html#transaction-application-server-integration[Spring transactions documentation] contains information about integrating the JTA/XA transaction manager of different application servers. In this case, you can configure a bean with the name `transactionManager` manually in `resources.groovy` or `resources.xml` file.

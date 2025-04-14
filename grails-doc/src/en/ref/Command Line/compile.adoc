@@ -1,0 +1,26 @@
+== compile
+
+
+
+=== Purpose
+
+
+The `compile` command executes the compile phase of the Grails pre-packaging process, which compiles Groovy and Java sources.
+
+
+=== Examples
+
+
+----
+grails compile
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails compile
+----

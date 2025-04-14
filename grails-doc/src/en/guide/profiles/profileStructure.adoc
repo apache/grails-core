@@ -1,0 +1,203 @@
+A profile is a simple directory that contains a `profile.yml` file and directories containing the "commands", "skeleton" and "templates" defined by the profile. Example:
+
+[source]
+----
+/web
+    commands/
+        create-controller.yml
+        run-app.groovy
+        ...
+    features/
+        asset-pipeline/
+            skeleton
+            feature.yml
+    skeleton/
+        grails-app/
+            controllers/
+            ...
+        build.gradle
+    templates/
+        artifacts/
+            Controller.groovy
+    profile.yml
+----
+
+The above example is a snippet of structure of the 'web' profile. The `profile.yml` file is used to describe the profile and control how the build is configured.
+
+
+==== Understanding the profile.yml descriptor
+
+
+The `profile.yml` can contain the following child elements.
+
+
+==== 1) repositories
+
+
+A list of Maven repositories to include in the generated build. Example:
+
+[source,yaml]
+----
+repositories:
+    - "https://repo.grails.org/grails/core"
+----
+
+
+==== 2) build.repositories
+
+
+A list of Maven repositories to include in the buildscript section of the generated build. Example:
+
+[source,yaml]
+----
+build:
+    repositories:
+        - "https://repo.grails.org/grails/core"
+----
+
+
+==== 3) build.plugins
+
+
+A list of Gradle plugins to configure in the generated build. Example:
+
+[source,yaml]
+----
+build:
+    plugins:
+        - eclipse
+        - idea
+        - org.grails.grails-core
+----
+
+
+==== 4) build.excludes
+
+
+A list of Gradle plugins to exclude from being inherited from the parent profile:
+
+[source,yaml]
+----
+build:
+    excludes:
+        - org.grails.grails-core
+----
+
+
+==== 5) dependencies
+
+
+A map of scopes and dependencies to configure. The `excludes` scope can be used to exclude from the parent profile. Example:
+
+[source,yaml]
+----
+dependencies:
+    - scope: excludes
+      coords: "org.grails:hibernate:*"
+    - scope: build
+      coords: "org.grails:grails-gradle-plugin:$grailsVersion"
+    - scope: compile
+      coords: "org.springframework.boot:spring-boot-starter-logging"
+    - scope: compile
+      coords: "org.springframework.boot:spring-boot-autoconfigure"
+----
+
+===== Excluding Transitive Dependencies
+
+To exclude transitive dependencies, define `excludes` key with a List of transitive dependencies Map of the dependency group, module, classifier, and `extension` as:
+
+[source,yaml]
+----
+dependencies:
+    - scope: testCompile
+      coords: org.spockframework:spock-core
+      excludes:
+        - group: org.codehaus.groovy
+          module: groovy-all
+----
+
+==== 6) features.defaults
+
+
+A default list of features to use if no explicit features are specified.
+
+[source,yaml]
+----
+features:
+    defaults: 
+        - hibernate
+        - asset-pipeline
+----
+
+
+==== 7) skeleton.excludes
+
+
+A list of files to exclude from parent profile's skeletons (supports wildcards).
+
+[source,groovy]
+----
+skeleton:
+    excludes:
+        - gradlew
+        - gradlew.bat
+        - gradle/
+----
+
+
+==== 8) skeleton.parent.target
+
+
+The target folder that parent profile's skeleton should be copied into. This can be used to create multi-project builds.
+
+[source,groovy]
+----
+skeleton:
+    parent:
+        target: app
+----
+
+
+==== 9) skeleton.binaryExtensions
+
+Which file extensions should be copied from the profile as binary. Inherited and combined from parent profiles.
+
+[source,groovy]
+----
+skeleton:
+    binaryExtensions: [exe, zip]
+----
+
+==== 10) skeleton.executable
+
+File patterns that should be marked as executable in the resulting application. Inherited and combined from parent profiles. The patterns are parsed with https://ant.apache.org/manual/dirtasks.html#patterns[Ant].
+
+[source,groovy]
+----
+skeleton:
+    executable:
+      - "**/gradlew*"
+      - "**/grailsw*"
+----
+
+==== 11) instructions
+
+
+Text to be displayed to the user after the application is created
+
+[source,groovy]
+----
+instructions: Here are some instructions
+----
+
+
+==== What happens when a profile is used?
+
+
+When the `create-app` command runs it takes the skeleton of the parent profiles and copies the skeletons into a new project structure. 
+
+The `build.gradle` file is generated is result of obtaining all of the dependency information defined in the `profile.yml` files and produces the required dependencies.
+
+The command will also merge any `build.gradle` files defined within a profile and its parent profiles.
+
+The `grails-app/conf/application.yml` file is also merged into a single YAML file taking into account the profile and all of the parent profiles.

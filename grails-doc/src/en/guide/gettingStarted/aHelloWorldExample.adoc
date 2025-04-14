@@ -1,0 +1,179 @@
+=== Step 1: Create a New Project
+
+Open your command prompt or terminal.
+
+Navigate to the directory where you want to create your Grails project:
+
+[source,console]
+$ cd your_project_directory
+
+Create a new Grails project with the following command:
+
+[source,console]
+$ grails create-app myapp
+
+=== Step 2: Access the Project Directory
+
+Change into the "myapp" directory, which you just created:
+
+[source,console]
+$ cd myapp
+
+=== Step 3: Start Grails Interactive Console
+
+Start the Grails interactive console by running the "grails" command:
+
+[source,console]
+$ grails
+
+=== Step 4: Create a Controller
+
+In the Grails interactive console, you can use auto-completion to create a controller. Type the following command to create a controller named "greeting":
+
+[source,console]
+grails> create-controller greeting
+
+This command will generate a new controller named "GreetingController.groovy" within the grails-app/controllers/myapp directory. You might wonder why there is an additional "myapp" directory. This structure aligns with conventions commonly used in Java development, where classes are organized into packages. Grails automatically includes the application name as part of the package structure. If you do not specify a package, Grails defaults to using the application name.
+
+For more detailed information on creating controllers, you can refer to the documentation on the link:../ref/Command%20Line/create-controller.html[create-controller] page.
+
+=== Step 5: Edit the Controller
+
+Open the "GreetingController.groovy" file located in the "grails-app/controllers/myapp" directory in a text editor.
+
+Add the following code to the "GreetingController.groovy" file:
+
+[source,groovy]
+----
+package myapp
+
+class GreetingController {
+
+    def index() {
+        render "Hello, Congratulations for your first Grails application!"
+    }
+}
+----
+
+The action is simply a method. In this particular case, it calls a special method provided by Grails to link:../ref/Controllers/render.html[render] the page.
+
+=== Step 6: Run the Application
+
+Grails framework now relies on Gradle tasks for running the application. To start the application, use the following Gradle `bootRun` command:
+
+[source,console]
+$ ./gradlew bootRun
+
+Your application will be hosted on port 8080 by default. You can access it in your web browser at:
+
+http://localhost:8080/
+
+Now, it's important to know that the welcome page is determined by the following URL mapping:
+
+[source,groovy]
+----
+class UrlMappings {
+    static mappings = {
+        "/$controller/$action?/$id?(.$format)?"{
+            constraints {
+                // apply constraints here
+            }
+        }
+
+        "/"(view:"/index")
+        "500"(view:'/error')
+        "404"(view:'/notFound')
+    }
+}
+----
+
+This mapping specifies that the root URL ("/") should display the "index.gsp" view, which is located at "grails-app/views/index.gsp." This "index.gsp" file serves as your welcome or landing page. The other entries in the mapping handle error pages for HTTP status codes 500 and 404.
+
+**Grails URL Convention Based on Controller and Action Name**
+
+Grails follows a URL convention that relies on the names of controllers and their actions. This convention simplifies the creation and access of various pages or functionalities within your web application.
+
+In the provided code example:
+
+[source,groovy]
+----
+package myapp
+
+class GreetingController {
+
+    def index() {
+        render "Hello, Congratulations for your first Grails application!"
+    }
+}
+----
+
+- The `GreetingController` class represents a controller in Grails.
+
+- Inside the controller, there's an `index` action defined as a method. In Grails, actions are essentially methods within a controller that handle specific tasks or respond to user requests.
+
+Now, let's understand how the Grails URL convention works based on this controller and action:
+
+1. *Controller Name in URL:*
+- The controller name, in this case, "GreetingController," is used in the URL. However, the convention capitalizes the first letter of the controller name and removes the "Controller" suffix. So, "GreetingController" becomes "greeting" in the URL.
+
+2. *Action Name in URL:*
+- By default, if you don't specify an action in the URL, Grails assumes the "index" action. So, in this example, accessing the URL `/greeting`
+
+See the end of the link:theWebLayer.html#understandingControllersAndActions[controllers and actions] section of the user guide to find out more on default actions.
+
+==== Optional: Set a Context Path
+
+If you want to set a context path for your application, create a configuration property in the "grails-app/conf/application.yml" file:
+
+[source,yaml]
+----
+server:
+    servlet:
+        context-path: /myapp
+----
+
+With this configuration, the application will be available at: http://localhost:8080/myapp/
+
+Alternatively, you can also set the context path via the command line:
+[source,bash]
+----
+grails> run-app -Dgrails.server.servlet.context-path=/helloworld
+----
+
+Alternatively, you can set the context path from the command line when using Gradle to run a Grails application. Here's how you can do it:
+
+[source,console]
+$ ./gradlew bootRun -Dgrails.server.servlet.context-path=/your-context-path
+
+Replace `/your-context-path` with the desired context path for your Grails application. This command sets the context path directly via the `-Dgrails.server.servlet.context-path` system property.
+
+For example, if you want your application to be available at "http://localhost:8080/myapp," you can use the following command:
+
+[source,console]
+$ ./gradlew bootRun -Dgrails.server.servlet.context-path=/myapp
+
+This allows you to configure the context path without modifying the application's configuration files, making it a flexible and convenient option when running your Grails application with Gradle.
+
+=== Optional: Change Server Port
+
+If port 8080 is already in use, you can start the server on a different port using the `grails.server.port` system-property:
+
+[source,console]
+$ ./gradlew bootRun -Dgrails.server.port=9090
+
+Replace "9090" with your preferred port.
+
+=== Note for Windows Users
+
+If you encounter an error related to the Java process or filename length, you can use the `--stacktrace` flag or add `grails { pathingJar = true }` to your "build.gradle" file.
+
+It may also be necessary to enclose the system properties in quotes on Windows:
+----
+./gradlew bootRun "-Dgrails.server.port=9090"
+----
+
+=== Conclusion
+
+Your Grails application will now display a "Hello, Congratulations on your first Grails application!" message when you access it in your web browser.
+
+Remember, you can create multiple controllers and actions to build more complex web applications with Grails. Each action corresponds to a different page accessible through unique URLs based on the controller and action names.

@@ -1,0 +1,31 @@
+== create-job
+
+=== Purpose
+
+
+The `create-job` command creates a new scheduled job for the given base name.
+
+
+=== Examples
+
+----
+grails create-job Scheduled
+grails create-job com.example.Scheduled
+----
+
+=== Description
+
+
+Creates a new Quartz scheduled job with an empty 'execute' method. The argument is required.
+
+The name of the job can include a Java package, such as `com.example` in the last example above, but if one is not provided a default is used. So the first example will create the file `grails-app/jobs/<appname>/ScheduledJob.groovy` whereas the second one will create `grails-app/jobs/com/example/ScheduledJob.groovy`. Note that the first letter of the job name is always upper-cased when determining the class name.
+
+If you want the command to default to a different package for jobs, provide a value for `grails.project.groupId` in the link:{guidePath}/conf.html#config[runtime configuration].
+
+Note that this command is just for convenience and you can also create jobs in your favourite text editor or IDE if you choose.
+
+Usage:
+[source,groovy]
+----
+grails create-job <<name>>
+----

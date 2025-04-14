@@ -1,0 +1,1 @@
+Dependency resolution is handled by the https://gradle.org[Gradle build tool], all dependencies are defined in the `build.gradle` file. Refer to the link:commandLine.html#gradleBuild[Gradle user guide] for more information.

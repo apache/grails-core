@@ -1,0 +1,20 @@
+Grails link:scaffolding.html[scaffolding] templates for controllers and views are fully i18n-aware. The GSPs use the link:{gspdocs}/ref/Tags/message.html[message] tag for labels, buttons etc. and controller `flash` messages use i18n to resolve locale-specific messages.
+
+The scaffolding includes locale specific labels for domain classes and domain fields. For example, if you have a `Book` domain class with a `title` field:
+
+[source,groovy]
+----
+class Book {
+    String title
+}
+----
+
+The scaffolding will use labels with the following keys:
+
+[source,groovy]
+----
+book.label = Libro
+book.title.label = Título del libro
+----
+
+You can use this property pattern if you'd like or come up with one of your own. There is nothing special about the use of the word `label` as part of the key other than it's the convention used by the scaffolding.

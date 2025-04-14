@@ -1,0 +1,39 @@
+URL Mappings also support Grails' unified link:validation.html#constraints[validation constraints] mechanism, which lets you further "constrain" how a URL is matched. For example, if we revisit the blog sample code from earlier, the mapping currently looks like this:
+
+[source,groovy]
+----
+static mappings = {
+   "/$blog/$year?/$month?/$day?/$id?"(controller:"blog", action:"show")
+}
+----
+
+This allows URLs such as:
+
+[source]
+----
+/graemerocher/2007/01/10/my_funky_blog_entry
+----
+
+However, it would also allow:
+
+[source]
+----
+/graemerocher/not_a_year/not_a_month/not_a_day/my_funky_blog_entry
+----
+
+This is problematic as it forces you to do some clever parsing in the controller code. Luckily, URL Mappings can be constrained to further validate the URL tokens:
+
+[source,groovy]
+----
+"/$blog/$year?/$month?/$day?/$id?" {
+     controller = "blog"
+     action = "show"
+     constraints {
+          year(matches:/\\\d{4}/)
+          month(matches:/\\\d{2}/)
+          day(matches:/\\\d{2}/)
+     }
+}
+----
+
+In this case the constraints ensure that the `year`, `month` and `day` parameters match a particular valid pattern thus relieving you of that burden later on.

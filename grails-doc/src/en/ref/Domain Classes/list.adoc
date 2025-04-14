@@ -1,0 +1,50 @@
+
+== list
+
+
+
+=== Purpose
+
+
+Lists instances of the domain class.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// list everything
+def results = Book.list()
+
+// list 10 results
+def results = Book.list(max: 10)
+
+// list 10 results, offset by 100
+def results = Book.list(max: 10, offset: 100)
+
+// list 10 results, offset by 100, orderd by title in descending order
+def results = Book.list(max: 10, offset: 100, sort: "title", order: "desc")
+
+// list all books, eagerly fetching the authors association
+def results = Book.list(fetch: [authors: "eager"])
+----
+
+When `max` is specified as a named argument this will return a https://gorm.grails.org/{gormVersion}/api/grails/orm/PagedResultList.html[PagedResultList] which has a getTotalCount() method to return the total number of matching records for pagination. Two queries are still run, but they're run for you and the results and total count are combined in the `PagedResultList`.
+
+
+=== Description
+
+
+Parameters:
+
+* `max` - The maximum number to list
+* `offset` - The offset from the first result to list from
+* `order` - How to order the list, either `"desc"` or `"asc"`
+* `sort` - The property name to sort by
+* `ignoreCase` - Whether to ignore the case when sorting. Default is `true`.
+* `fetch` - The fetch policy for the object's associations as a `Map`
+* `readOnly` - true if returned objects should not be automatically dirty-checked (simlar to `read()`)
+* `fetchSize` - number of rows fetched by the underlying JDBC driver per round trip
+* `flushMode` - Hibernate `FlushMode` override, defaults to `FlushMode.AUTO`
+* `timeout` - query timeout in seconds

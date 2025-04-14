@@ -1,0 +1,40 @@
+
+== forward
+
+
+
+=== Purpose
+
+
+Forwards a request from one controller to the next without issuing an HTTP redirect.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+forward action: "show"
+
+forward controller: "book", action: "list"
+
+forward action: "show", id: 4, params: [author: "Stephen King"]
+
+forward controller: "book", action: "show"
+----
+
+
+=== Description
+
+
+Forwards the current action to another action, optionally passing parameters and/or errors.
+
+
+=== Parameters
+
+
+* `controller` - The controller to redirect to; defaults to the current controller if not specified
+* `namespace` (optional) - the namespace of the controller to forward to
+* `action` - The action to redirect to, either a string name or a reference to an action within the current controller
+* `id` - The id to use in redirection
+* `params` - Parameters to pass to the action redirected to.

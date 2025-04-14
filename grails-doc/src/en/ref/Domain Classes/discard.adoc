@@ -1,0 +1,28 @@
+
+== discard
+
+
+
+=== Purpose
+
+
+Discards any changes that have been made to a persistent instance.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = Book.get(1)
+b.title = "Blah"
+b.discard() // changes won't be applied now
+----
+
+
+=== Description
+
+
+The `discard` method informs the persistence context that the instance should not be saved. The `discard` method is equivalent to using Hibernate's https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html#evict(java/lang/Object).html[evict] method.
+
+NOTE: Note that this method will not clean or reset the object with the original values; it will just prevent it from being automatically saved by Grails.

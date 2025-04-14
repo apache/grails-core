@@ -1,0 +1,145 @@
+Since Grails 2.3, GORM features an asynchronous programming model that works across all supported datastores (Hibernate, MongoDB etc.).
+
+NOTE: Although GORM executes persistence operations asynchronously, these operations still block as the underlying database drivers are not asynchronous. Asynchronous GORM is designed to allow you to isolate these blocking operations onto a separate thread you can scale and control allowing your controller layer to remain non-blocking.
+
+=== The AsyncEntity Trait
+
+Since Grails 3.3, the asynchronous part of GORM is optional. To enable it you first need to add the `grails-datastore-gorm-async` dependency to `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+implementation "org.grails:grails-datastore-gorm-async"
+----
+
+Then in your domain classes you wish to allow asynchronous processing you should use the `AsyncEntity` trait:
+
+[source,groovy]
+----
+import grails.gorm.async.*
+
+class MyEntity implements AsyncEntity<MyEntity> {
+   //...
+}
+----
+
+=== Async Namespace
+
+
+The `AsyncEntity` entity trait provides an `async` namespace that exposes all of the GORM methods in an asynchronous manner.
+
+For example, the following code listing reads 3 objects from the database asynchronously:
+
+[source,groovy]
+----
+import static grails.async.Promises.*
+
+def p1 = Person.async.get(1L)
+def p2 = Person.async.get(2L)
+def p3 = Person.async.get(3L)
+def results = waitAll(p1, p2, p3)
+----
+
+Using the `async` namespace, all the regular GORM methods are available (even dynamic finders), but instead of executing synchronously, the query is run in the background and a `Promise` instance is returned.
+
+The following code listing shows a few common examples of GORM queries executed asynchronously:
+
+[source,groovy]
+----
+import static grails.async.Promises.*
+
+Person.async.list().onComplete { List results ->
+  println "Got people = ${results}"
+}
+def p = Person.async.getAll(1L, 2L, 3L)
+List results = p.get()
+
+def p1 = Person.async.findByFirstName("Homer")
+def p2 = Person.async.findByFirstName("Bart")
+def p3 = Person.async.findByFirstName("Barney")
+results = waitAll(p1, p2, p3)
+----
+
+
+=== Async and the Session
+
+
+When using GORM async each promise is executed in a different thread. Since the Hibernate session is not concurrency safe, a new session is bound per thread.
+
+This is an important consideration when using GORM async (particularly with Hibernate as the persistence engine). The objects returned from asynchronous queries will be detached entities.
+
+This means you cannot save objects returned from asynchronous queries without first merging them back into session. For example the following will not work:
+
+[source,groovy]
+----
+def promise = Person.async.findByFirstName("Homer")
+def person = promise.get()
+person.firstName = "Bart"
+person.save()
+----
+
+Instead you need to merge the object with the session bound to the calling thread. The above code needs to be written as:
+
+[source,groovy]
+----
+def promise = Person.async.findByFirstName("Homer")
+def person = promise.get()
+person.merge()
+person.firstName = "Bart"
+----
+
+Note that `merge()` is called first because it may refresh the object from the cache or database, which would result in the change being lost. In general it is not recommended to read and write objects in different threads and you should avoid this technique unless absolutely necessary.
+
+Finally, another issue with detached objects is that association lazy loading *will not* work and you will encounter `LazyInitializationException` errors if you do so. If you plan to access the associated objects of those returned from asynchronous queries you should use eager queries (which is recommended anyway to avoid N+1 problems).
+
+
+=== Multiple Asynchronous GORM calls
+
+
+As discussed in the previous section you should avoid reading and writing objects in different threads as merging tends to be inefficient.
+
+However, if you wish to do more complex GORM work asynchronously then the GORM async namespace provides a `task` method that makes this possible. For example:
+
+[source,groovy]
+----
+def promise = Person.async.task {
+    withTransaction {
+       def person = findByFirstName("Homer")
+       person.firstName = "Bart"
+       person.save(flush:true)    
+    }
+}
+
+Person updatedPerson = promise.get()
+----
+
+Note that the GORM `task` method differs from the static `Promises.task` method in that it deals with binding a new session to the asynchronous thread for you. If you do not use the GORM version and do asynchronous work with GORM then you need to do this manually. Example:
+
+[source,groovy]
+----
+import static grails.async.Promises.*
+
+def promise = task {
+    Person.withNewSession {
+    	// your logic here
+    }
+}
+----
+
+
+=== Async DetachedCriteria
+
+
+The `DetachedCriteria` class also supports the `async` namespace. For example you can do the following:
+
+[source,groovy]
+----
+DetachedCriteria query = Person.where {
+    lastName == "Simpson"
+}
+
+def promise = query.async.list()
+----
+
+
+

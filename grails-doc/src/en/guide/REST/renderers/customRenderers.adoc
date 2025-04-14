@@ -1,0 +1,59 @@
+If you want even more control of the rendering or prefer to use your own marshalling techniques then you can implement your own `Renderer` instance. For example below is a simple implementation that customizes the rendering of the `Book` class:
+
+[source,groovy]
+----
+package myapp
+import grails.rest.render.*
+import grails.web.mime.MimeType
+
+class BookXmlRenderer extends AbstractRenderer<Book> {
+    BookXmlRenderer() {
+        super(Book, [MimeType.XML,MimeType.TEXT_XML] as MimeType[])
+    }
+
+    void render(Book object, RenderContext context) {
+        context.contentType = MimeType.XML.name
+
+        def xml = new groovy.xml.MarkupBuilder(context.writer)
+        xml.book(id: object.id, title:object.title)
+    }
+}
+----
+
+The `AbstractRenderer` super class has a constructor that takes the class that it renders and the `MimeType`(s) that are accepted (via the ACCEPT header or file extension) for the renderer.
+
+To configure this renderer, simply add it is a bean to `grails-app/conf/spring/resources.groovy`:
+
+[source,groovy]
+----
+beans = {
+    bookRenderer(myapp.BookXmlRenderer)
+}
+----
+
+The result will be that all `Book` instances will be rendered in the following format:
+
+[source,groovy]
+----
+<book id="1" title="The Stand"/>
+----
+
+NOTE: If you change the rendering to a completely different format like the above, then you also need to change the binding if you plan to support POST and PUT requests. Grails will not automatically know how to bind data from a custom XML format to a domain class otherwise. See the section on "Customizing Binding of Resources" for further information.
+
+
+==== Container Renderers
+
+
+A `grails.rest.render.ContainerRenderer` is a renderer that renders responses for containers of objects (lists, maps, collections etc.). The interface is largely the same as the `Renderer` interface except for the addition of the `getComponentType()` method, which should return the "contained" type. For example:
+
+[source,groovy]
+----
+class BookListRenderer implements ContainerRenderer<List, Book> {
+    Class<List> getTargetType() { List }
+    Class<Book> getComponentType() { Book }
+    MimeType[] getMimeTypes() { [ MimeType.XML] as MimeType[] }
+    void render(List object, RenderContext context) {
+        ....
+    }
+}
+----

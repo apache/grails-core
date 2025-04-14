@@ -1,0 +1,62 @@
+
+Use the `grails.testing.web.controllers.ControllerUnitTest` trait to unit
+test controllers.
+
+[source,groovy]
+.src/test/groovy/demo/DemoControllerSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/DemoControllerSpec.groovy[tags=basic_declaration,indent=0]
+----
+
+To test the simplest "Hello World"-style example you can do the following:
+
+[source,groovy]
+.grails-app/controllers/demo/DemoController.groovy
+----
+include::{functionalSourceDir}/demo33/grails-app/controllers/demo/DemoController.groovy[tags=basic_declaration;render_hello,indent=0]
+----
+
+[source,groovy]
+.src/test/groovy/demo/DemoControllerSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/DemoControllerSpec.groovy[tags=basic_declaration;test_render,indent=0]
+----
+<1> The `controller` property will be an instance of `DemoController`
+<2> The `status` property will contain the value of the response status
+<3> The `response` property will be a reference to the HTTP response object
+
+See the link:../api/grails/testing/web/controllers/ControllerUnitTest.html[`ControllerUnitTest`]
+docs for information on all of the available properties.
+
+NOTE: In an effort to make testing controllers that render JSON views easy, a change was made that required the controller variable used in the test code to be a proxy that delegates to the real controller instance. If for some reason that causes an issue with your test, it is possible to disable the creation of a proxy by overriding a method.
+
+[source,groovy]
+----
+class DemoControllerSpec implements ControllerUnitTest<DemoController> {
+
+    boolean disableControllerProxy() {
+        true
+    }
+}
+----
+
+By doing so, JSON views will not be rendered by default. To enable JSON views to render automatically as before, it is necessary to inform the `webRequest` object which action you are invoking.
+
+[source,groovy]
+----
+class DemoControllerSpec implements ControllerUnitTest<DemoController> {
+
+    void "test index"() {
+        when:
+        webRequest.actionName = 'index'
+        controller.index()
+
+        then:
+        ...
+    }
+
+    boolean disableControllerProxy() {
+        true
+    }
+}
+----

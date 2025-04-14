@@ -1,0 +1,35 @@
+
+== package-plugin
+
+
+
+=== Purpose
+
+
+Packages a plugin as a JAR archive which can then be installed into another application
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails package-plugin
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails package-plugin
+----
+
+The plugin archive will be built to the `build/libs` directory by default. You can also install the plugin to your local Maven repository with the `install` command:
+
+[source,groovy]
+----
+grails install
+----

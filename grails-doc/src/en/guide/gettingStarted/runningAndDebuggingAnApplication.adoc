@@ -1,0 +1,57 @@
+Grails applications can be run with the built in Tomcat server using the link:../ref/Command%20Line/run-app.html[run-app] command which will load a server on port 8080 by default:
+
+[source,bash]
+----
+grails run-app
+----
+
+You can specify a different port by using the `-port` argument:
+
+[source,bash]
+----
+grails run-app -port=8090
+----
+
+Note that it is better to start up the application in interactive mode since a container restart is much quicker:
+
+[source,bash]
+----
+$ grails
+grails> run-app
+| Grails application running at http://localhost:8080 in environment: development
+grails> stop-app
+| Shutting down application...
+| Application shutdown.
+grails> run-app
+| Grails application running at http://localhost:8080 in environment: development
+----
+
+You can debug a grails app by simply right-clicking on the `Application.groovy` class in your IDE and choosing the appropriate action (since Grails 3).
+
+Alternatively, you can run your app with the following command and then attach a remote debugger to it.
+
+[source,bash]
+----
+grails run-app --debug-jvm
+----
+
+More information on the link:../ref/Command%20Line/run-app.html[run-app] command can be found in the reference guide.
+
+
+
+Via Gradle, Grails applications can be executed using the built-in application server using the `bootRun` command. By default, it launches a server on port 8080:
+
+[source,console]
+$ ./gradlew bootRun
+
+To specify a different port, you can set the system property `-Dgrails.server.port` as follows:
+
+[source,console]
+$ ./gradlew bootRun -Dgrails.server.port=8081
+
+For debugging a Grails app, you have two options. You can either right-click on the `Application.groovy` class in your IDE and select the appropriate debugging action, or you can run the app with the following command and then connect a remote debugger to it:
+
+[source,console]
+$ ./gradlew bootRun --debug-jvm
+
+For more information on the `bootRun` command, please refer to the link:../ref/Command%20Line/bootRun.html[bootRun section of the Grails reference guide].

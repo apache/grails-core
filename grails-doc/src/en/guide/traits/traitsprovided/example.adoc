@@ -1,0 +1,41 @@
+{apiDocs}grails/web/api/WebAttributes.html[WebAttributes] is one of the traits provided by the framework.  Any Groovy class may implement this trait to inherit all of the properties and behaviors provided by the trait.
+
+[source,groovy]
+.src/main/groovy/demo/Helper.groovy
+----
+package demo
+
+import grails.web.api.WebAttributes
+
+class Helper implements WebAttributes {
+
+    List<String> getControllerNames() {
+        // There is no need to pass grailsApplication as an argument
+        // or otherwise inject the grailsApplication property.  The
+        // WebAttributes trait provides access to grailsApplication.
+        grailsApplication.getArtefacts('Controller')*.name
+    }
+}
+----
+
+The traits are compatible with static compilation...
+
+[source,groovy]
+.src/main/groovy/demo/Helper.groovy
+----
+package demo
+
+import grails.web.api.WebAttributes
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class Helper implements WebAttributes {
+
+    List<String> getControllerNames() {
+        // There is no need to pass grailsApplication as an argument
+        // or otherwise inject the grailsApplication property.  The
+        // WebAttributes trait provides access to grailsApplication.
+        grailsApplication.getArtefacts('Controller')*.name
+    }
+}
+----

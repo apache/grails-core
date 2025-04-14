@@ -1,0 +1,356 @@
+
+==== Using Constructor Arguments
+
+
+Constructor arguments can be defined using parameters to each bean-defining method. Put them after the first argument (the Class):
+[source,groovy]
+----
+bb.beans {
+    exampleBean(MyExampleBean, "firstArgument", 2) {
+        someProperty = [1, 2, 3]
+    }
+}
+----
+
+This configuration corresponds to a `MyExampleBean` with a constructor that looks like this:
+
+[source,groovy]
+----
+MyExampleBean(String foo, int bar) {
+   ...
+}
+----
+
+
+==== Configuring the BeanDefinition (Using factory methods)
+
+
+The first argument to the closure is a reference to the bean configuration instance, which you can use to configure factory methods and invoke any method on the {springapi}org/springframework/beans/factory/support/AbstractBeanDefinition.html[AbstractBeanDefinition] class:
+
+[source,groovy]
+----
+bb.beans {
+    exampleBean(MyExampleBean) { bean ->
+        bean.factoryMethod = "getInstance"
+        bean.singleton = false
+        someProperty = [1, 2, 3]
+    }
+}
+----
+
+As an alternative you can also use the return value of the bean defining method to configure the bean:
+
+[source,groovy]
+----
+bb.beans {
+    def example = exampleBean(MyExampleBean) {
+        someProperty = [1, 2, 3]
+    }
+    example.factoryMethod = "getInstance"
+}
+----
+
+
+==== Using Factory beans
+
+
+Spring defines the concept of factory beans and often a bean is created not directly from a new instance of a Class, but from one of these factories. In this case the bean has no Class argument and instead you must pass the name of the factory bean to the bean defining method:
+
+[source,groovy]
+----
+bb.beans {
+
+    myFactory(ExampleFactoryBean) {
+        someProperty = [1, 2, 3]
+    }
+
+    myBean(myFactory) {
+        name = "blah"
+    }
+}
+----
+
+Another common approach is provide the name of the factory method to call on the factory bean. This can be done using Groovy's named parameter syntax:
+
+[source,groovy]
+----
+bb.beans {
+
+    myFactory(ExampleFactoryBean) {
+        someProperty = [1, 2, 3]
+    }
+
+    myBean(myFactory: "getInstance") {
+        name = "blah"
+    }
+}
+----
+
+Here the `getInstance` method on the `ExampleFactoryBean` bean will be called to create the `myBean` bean.
+
+
+==== Creating Bean References at Runtime
+
+
+Sometimes you don't know the name of the bean to be created until runtime. In this case you can use a string interpolation to invoke a bean defining method dynamically:
+
+[source,groovy]
+----
+def beanName = "example"
+bb.beans {
+    "${beanName}Bean"(MyExampleBean) {
+        someProperty = [1, 2, 3]
+    }
+}
+----
+
+In this case the `beanName` variable defined earlier is used when invoking a bean defining method. The example has a hard-coded value but would work just as well with a name that is generated programmatically based on configuration, system properties, etc.
+
+Furthermore, because sometimes bean names are not known until runtime you may need to reference them by name when wiring together other beans, in this case using the `ref` method:
+
+[source,groovy]
+----
+def beanName = "example"
+bb.beans {
+
+    "${beanName}Bean"(MyExampleBean) {
+        someProperty = [1, 2, 3]
+    }
+
+    anotherBean(AnotherBean) {
+        example = ref("${beanName}Bean")
+    }
+}
+----
+
+Here the example property of `AnotherBean` is set using a runtime reference to the `exampleBean`. The `ref` method can also be used to refer to beans from a parent `ApplicationContext` that is provided in the constructor of the `BeanBuilder`:
+
+[source,groovy]
+----
+ApplicationContext parent = ...//
+def bb = new BeanBuilder(parent)
+bb.beans {
+    anotherBean(AnotherBean) {
+        example = ref("${beanName}Bean", true)
+    }
+}
+----
+
+Here the second parameter `true` specifies that the reference will look for the bean in the parent context.
+
+
+==== Using Anonymous (Inner) Beans
+
+
+You can use anonymous inner beans by setting a property of the bean to a block that takes an argument that is the bean type:
+
+[source,groovy]
+----
+bb.beans {
+
+    marge(Person) {
+        name = "Marge"
+        husband = { Person p ->
+            name = "Homer"
+            age = 45
+            props = [overweight: true, height: "1.8m"]
+        }
+        children = [ref('bart'), ref('lisa')]
+    }
+
+    bart(Person) {
+        name = "Bart"
+        age = 11
+    }
+
+    lisa(Person) {
+        name = "Lisa"
+        age = 9
+    }
+}
+----
+
+In the above example we set the `marge` bean's husband property to a block that creates an inner bean reference. Alternatively if you have a factory bean you can omit the type and just use the specified bean definition instead to setup the factory:
+
+[source,groovy]
+----
+bb.beans {
+
+    personFactory(PersonFactory)
+
+    marge(Person) {
+        name = "Marge"
+        husband = { bean ->
+            bean.factoryBean = "personFactory"
+            bean.factoryMethod = "newInstance"
+            name = "Homer"
+            age = 45
+            props = [overweight: true, height: "1.8m"]
+        }
+        children = [ref('bart'), ref('lisa')]
+    }
+}
+----
+
+
+==== Abstract Beans and Parent Bean Definitions
+
+
+To create an abstract bean definition define a bean without a `Class` parameter:
+
+[source,groovy]
+----
+class HolyGrailQuest {
+    def start() { println "lets begin" }
+}
+----
+
+[source,groovy]
+----
+class KnightOfTheRoundTable {
+
+    String name
+    String leader
+    HolyGrailQuest quest
+
+    KnightOfTheRoundTable(String name) {
+        this.name = name
+    }
+
+    def embarkOnQuest() {
+        quest.start()
+    }
+}
+----
+
+[source,groovy]
+----
+import grails.spring.BeanBuilder
+
+def bb = new BeanBuilder()
+bb.beans {
+    abstractBean {
+        leader = "Lancelot"
+    }
+    ...
+}
+----
+
+Here we define an abstract bean that has a `leader` property with the value of `"Lancelot"`. To use the abstract bean set it as the parent of the child bean:
+
+[source,groovy]
+----
+bb.beans {
+    ...
+    quest(HolyGrailQuest)
+
+    knights(KnightOfTheRoundTable, "Camelot") { bean ->
+        bean.parent = abstractBean
+        quest = ref('quest')
+    }
+}
+----
+
+NOTE: When using a parent bean you must set the parent property of the bean before setting any other properties on the bean!
+
+If you want an abstract bean that has a `Class` specified you can do it this way:
+
+[source,groovy]
+----
+import grails.spring.BeanBuilder
+
+def bb = new BeanBuilder()
+bb.beans {
+
+    abstractBean(KnightOfTheRoundTable) { bean ->
+        bean.'abstract' = true
+        leader = "Lancelot"
+    }
+
+    quest(HolyGrailQuest)
+
+    knights("Camelot") { bean ->
+        bean.parent = abstractBean
+        quest = quest
+    }
+}
+----
+
+In this example we create an abstract bean of type `KnightOfTheRoundTable` and use the bean argument to set it to abstract. Later we define a knights bean that has no `Class` defined, but inherits the `Class` from the parent bean.
+
+
+==== Using Spring Namespaces
+
+
+Since Spring 2.0, users of Spring have had easier access to key features via XML namespaces. You can use a Spring namespace in BeanBuilder by declaring it with this syntax:
+
+[source,groovy]
+----
+xmlns context:"http://www.springframework.org/schema/context"
+----
+
+and then invoking a method that matches the names of the Spring namespace tag and its associated attributes:
+
+[source,groovy]
+----
+context.'component-scan'('base-package': "my.company.domain")
+----
+
+You can do some useful things with Spring namespaces, such as looking up a JNDI resource:
+
+[source,groovy]
+----
+xmlns jee:"http://www.springframework.org/schema/jee"
+
+jee.'jndi-lookup'(id: "dataSource", 'jndi-name': "java:comp/env/myDataSource")
+----
+
+This example will create a Spring bean with the identifier `dataSource` by performing a JNDI lookup on the given JNDI name. With Spring namespaces you also get full access to all of the powerful AOP support in Spring from BeanBuilder. For example given these two classes:
+
+[source,groovy]
+----
+class Person {
+
+    int age
+    String name
+
+    void birthday() {
+        ++age;
+    }
+}
+----
+
+[source,groovy]
+----
+class BirthdayCardSender {
+
+    List peopleSentCards = []
+
+    void onBirthday(Person person) {
+        peopleSentCards << person
+    }
+}
+----
+
+You can define an aspect that uses a pointcut to detect whenever the `birthday()` method is called:
+
+[source,groovy]
+----
+xmlns aop:"http://www.springframework.org/schema/aop"
+
+fred(Person) {
+    name = "Fred"
+    age = 45
+}
+
+birthdayCardSenderAspect(BirthdayCardSender)
+
+aop {
+    config("proxy-target-class": true) {
+        aspect(id: "sendBirthdayCard", ref: "birthdayCardSenderAspect") {
+            after method: "onBirthday",
+            pointcut: "execution(void ..Person.birthday()) and this(person)"
+        }
+    }
+}
+----

@@ -1,0 +1,33 @@
+There are several ways to consume an event. The recommended way is to use the link:{asyncApi}/grails/events/annotation/Subscriber.html[Subscriber] annotation. Note that the class using this annotation needs to be a Spring bean.
+
+For example:
+
+[source,groovy]
+.TotalService.groovy
+----
+import grails.events.annotation.*
+...
+include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/annotation/PubSubSpec.groovy[tags=subscriber]
+----
+
+In this example, every time a `sum` event occurs the subscriber will be invoked.
+
+Once again the method name is used by default for the event id, although it can start with the word "on". In other words either a method name of `sum` or `onSum` would work for the above example. Or alternatively you can provide the event id to subscribe to:
+
+[source,groovy]
+----
+@Subscriber('myEvent')
+----
+
+If you wish to subscribe to events dynamically or need more flexibility, then another option is to interact with the `EventBus` directly. For example:
+
+[source,groovy]
+.TotalService.groovy
+----
+import grails.events.bus.EventBusAware
+import jakarta.annotation.PostConstruct
+...
+include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/ManualPubSubSpec.groovy[tags=subscriber]
+----
+
+In this example the `TotalService` calls `subscribe` and passes a closure within a method called `init`. The `init` method is annotated with the annotation `@PostConstruct` so that is called after the `EventBus` has been injected by Spring, ensuring it is only called once and the events are correctly subscribed to.

@@ -1,0 +1,118 @@
+== create-app
+
+=== Description
+
+The `create-app` command serves as the initial step in Grails application development. When invoked, this command generates a Grails application with a user-specified name. Subsequently, it creates a subdirectory based on the provided application name within the directory where the command is executed.
+
+=== Usage
+
+To create a Grails default web application, use the following command:
+
+[source,shell]
+----
+grails create-app [OPTIONS] name
+----
+
+- `NAME`: The desired name for the Grails application.
+
+Options include specifying features, configuring the GORM implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails plugin to your specific requirements using these options.
+
+=== Options
+
+Here are the available options for the create-app command:
+
+- `NAME`: The desired name for the application.
+- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, micronaut-inject-groovy, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties.
+- `-g, --gorm=GORM Implementation`: Specifies the GORM Implementation to configure, with options like hibernate, mongodb, neo4j.
+- `-i, --inplace`: Creates a service within the current directory.
+- `--jdk=<javaVersion>`: Specifies the JDK version for the project.
+- `-s, --servlet=Servlet Implementation`: Specifies the Servlet Implementation, with choices including none, tomcat, jetty, undertow.
+- `-t, --test=TEST`: Specifies the test framework, with options such as junit, spock.
+
+=== Examples
+
+Here are examples for the `create-app` command:
+
+1. Create an application within a directory named "bookstore":
++
+[source,bash]
+----
+$ grails create-app bookstore
+$ cd bookstore
+----
+
+2. Create an application directly in the current directory:
++
+[source,bash]
+----
+$ mkdir bookstore
+$ cd bookstore
+$ grails create-app --inplace
+----
+
+3. Customize the application by adding specific features (available since Grails 3.1):
++
+[source,bash]
+----
+$ grails create-app bookstore --features github-workflow-java-ci,asciidoctor
+----
+
+
+== Grails Forge create-app
+
+=== Description
+
+The `create-app` command serves as the initial step in Grails application development. When invoked, this command generates a Grails application with a user-specified name. Subsequently, it creates a subdirectory based on the provided application name within the directory where the command is executed.
+
+=== Usage
+
+To create a Grails default web application, use the following command:
+
+[source,console]
+----
+$ grails create-app [OPTIONS] name
+----
+
+- `NAME`: The desired name for the Grails application.
+
+Options include specifying features, configuring the GORM implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails application to your specific requirements using these options.
+
+=== Options
+
+Here are the available options for the create-app command:
+
+- `NAME`: The desired name for the application.
+- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties.
+- `-g, --gorm=<GORM Implementation>`: Specifies the GORM Implementation to configure, with options like hibernate, mongodb, neo4j.
+- `-i, --inplace`: Creates the application within the current directory.
+- `--jdk=<Java Version>`: Specifies the JDK version for the project.
+- `-s, --servlet=<Servlet Implementation>`: Specifies the Servlet Implementation, with choices including none, tomcat, jetty, undertow.
+- `-t, --test=<Test Framework>`: Specifies the test framework, with options such as junit, spock.
+
+=== Examples
+
+Here are examples for the `create-app` command:
+
+1. Create an application within a directory named "bookstore":
++
+[source,console]
+----
+$ grails create-app bookstore
+$ cd bookstore
+----
+
+2. Create an application directly in the current directory:
++
+[source,console]
+----
+$ mkdir bookstore
+$ cd bookstore
+$ grails create-app --inplace
+----
+
+3. Customize the application by adding specific features (available since Grails 3.1):
++
+[source,console]
+----
+$ grails create-app bookstore --features github-workflow-java-ci,asciidoctor
+----

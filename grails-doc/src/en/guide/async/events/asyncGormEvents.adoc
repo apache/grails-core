@@ -1,0 +1,35 @@
+GORM defines a https://gorm.grails.org/{gormVersion}/api/org/grails/datastore/mapping/engine/event/package-summary.html[number of useful events] that you can listen for.
+
+To subscribe for an event just define a `Subscriber` that receives the event type as an argument:
+
+[source,groovy]
+----
+import grails.events.annotation.*
+...
+    Collection<PreInsertEvent> insertEvents = new ConcurrentLinkedDeque<>()
+
+    @Subscriber
+    @SuppressWarnings('unused')
+    void beforeInsert(PreInsertEvent event) {
+        insertEvents.add(event)
+    }
+----
+
+NOTE: These events are triggered asynchronously, and so cannot cancel or manipulate the persistence operations.
+
+If you wish to a define a synchronous listener then you should instead use the `Listener` annotation:
+
+[source,groovy]
+----
+import grails.events.annotation.gorm.*
+...
+@Listener
+void tagFunnyBooks(PreInsertEvent event) {
+    String title = event.getEntityAccess().getPropertyValue("title")
+    if(title?.contains("funny")) {
+        event.getEntityAccess().setProperty("title", "Humor - ${title}".toString())
+    }
+}
+----
+
+TIP: If you plan to modify properties of an entity being inserted, use the `EntityAccess` object as shown above. If you set properties directly on the the entity it will be marked as dirty which will cause another update to be issued.

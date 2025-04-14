@@ -1,0 +1,245 @@
+Grails has built in support for http://en.wikipedia.org/wiki/Content_negotiation[Content negotiation] using either the HTTP `Accept` header, an explicit format request parameter or the extension of a mapped URI.
+
+
+==== Configuring Mime Types
+
+
+Before you can start dealing with content negotiation you need to tell Grails what content types you wish to support. By default Grails comes configured with a number of different content types within `grails-app/conf/application.yml` using the `grails.mime.types` setting:
+
+[source,yaml]
+----
+grails:
+    mime:
+        types:
+            all: '*/*'
+            atom: application/atom+xml
+            css: text/css
+            csv: text/csv
+            form: application/x-www-form-urlencoded
+            html:
+              - text/html
+              - application/xhtml+xml
+            js: text/javascript
+            json:
+              - application/json
+              - text/json
+            multipartForm: multipart/form-data
+            rss: application/rss+xml
+            text: text/plain
+            hal:
+              - application/hal+json
+              - application/hal+xml
+            xml:
+              - text/xml
+              - application/xml
+----
+
+The setting can also be done in `grails-app/conf/application.groovy` as shown below:
+
+[source,groovy]
+----
+grails.mime.types = [ // the first one is the default format
+    all:           '*/*', // 'all' maps to '*' or the first available format in withFormat
+    atom:          'application/atom+xml',
+    css:           'text/css',
+    csv:           'text/csv',
+    form:          'application/x-www-form-urlencoded',
+    html:          ['text/html','application/xhtml+xml'],
+    js:            'text/javascript',
+    json:          ['application/json', 'text/json'],
+    multipartForm: 'multipart/form-data',
+    rss:           'application/rss+xml',
+    text:          'text/plain',
+    hal:           ['application/hal+json','application/hal+xml'],
+    xml:           ['text/xml', 'application/xml']
+]
+----
+
+The above bit of configuration allows Grails to detect to format of a request containing either the 'text/xml' or 'application/xml' media types as simply 'xml'. You can add your own types by simply adding new entries into the map.
+The first one is the default format.
+
+
+==== Content Negotiation using the format Request Parameter
+
+
+Let's say a controller action can return a resource in a variety of formats: HTML, XML, and JSON. What format will the client get? The easiest and most reliable way for the client to control this is through a `format` URL parameter.
+
+So if you, as a browser or some other client, want a resource as XML, you can use a URL like this:
+
+[source]
+----
+http://my.domain.org/books.xml
+----
+
+NOTE: The request parameters `format` is allowed as well `http://my.domain.org/books?format=xml`, but the default Grails URL Mapping `get "/$controller(.$format)?"(action:"index")` will override the `format` parameter with null. So the default mapping should be updated to `get "/$controller"(action:"index")`.
+
+The result of this on the server side is a `format` property on the `response` object with the value `xml` .
+
+You can also define this parameter in the link:theWebLayer.html#urlmappings[URL Mappings] definition:
+
+[source,groovy]
+----
+"/book/list"(controller:"book", action:"list") {
+    format = "xml"
+}
+----
+
+You could code your controller action to return XML based on this property, but you can also make use of the controller-specific `withFormat()` method:
+
+NOTE: This example requires the addition of the `org.grails.plugins:converters` plugin
+
+[source,groovy]
+----
+import grails.converters.JSON
+import grails.converters.XML
+
+class BookController {
+
+    def list() {
+        def books = Book.list()
+
+        withFormat {
+            html bookList: books
+            json { render books as JSON }
+            xml { render books as XML }
+            '*' { render books as JSON }
+        }
+    }
+}
+----
+
+In this example, Grails will only execute the block inside `withFormat()` that matches the requested content type. So if the preferred format is `html` then Grails will execute the `html()` call only. Each 'block' can either be a map model for the corresponding view (as we are doing for 'html' in the above example) or a closure. The closure can contain any standard action code, for example it can return a model or render content directly.
+
+When no format matches explicitly, a `*` (wildcard) block can be used to handle all other formats.
+
+There is a special format, "all", that is handled differently from the explicit formats. If "all" is specified (normally this happens through the Accept header - see below), then the first block of `withFormat()` is executed when there isn't a `*` (wildcard) block available.
+
+You should not add an explicit "all" block. In this example, a format of "all" will trigger the `html` handler (`html` is the first block and there is no `*` block).
+
+[source,groovy]
+----
+withFormat {
+    html bookList: books
+    json { render books as JSON }
+    xml { render books as XML }
+}
+----
+
+NOTE: When using link:../ref/Controllers/withFormat.html[withFormat] make sure it is the last call in your controller action as the return value of the `withFormat` method is used by the action to dictate what happens next.
+
+
+==== Using the Accept header
+
+
+Every incoming HTTP request has a special http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html[Accept] header that defines what media types (or mime types) a client can "accept". In older browsers this is typically:
+
+[source]
+----
+*/*
+----
+
+which simply means anything. However, newer browsers send more interesting values such as this one sent by Firefox:
+
+[source]
+----
+text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, \
+    text/plain;q=0.8, image/png, */*;q=0.5
+----
+
+This particular accept header is unhelpful because it indicates that XML is the preferred response format whereas the user is really expecting HTML. That's why Grails ignores the accept header by default for browsers. However, non-browser clients are typically more specific in their requirements and can send accept headers such as
+
+[source,groovy]
+----
+application/json
+----
+
+As mentioned the default configuration in Grails is to ignore the accept header for browsers. This is done by the configuration setting `grails.mime.disable.accept.header.userAgents`, which is configured to detect the major rendering engines and ignore their ACCEPT headers. This allows Grails' content negotiation to continue to work for non-browser clients:
+
+[source,groovy]
+----
+grails.mime.disable.accept.header.userAgents = ['Gecko', 'WebKit', 'Presto', 'Trident']
+----
+
+For example, if it sees the accept header above ('application/json') it will set `format` to `json` as you'd expect. And of course this works with the `withFormat()` method in just the same way as when the `format` URL parameter is set (although the URL parameter takes precedence).
+
+An accept header of '\*/\*' results in a value of `all` for the `format` property.
+
+NOTE: If the accept header is used but contains no registered content types, Grails will assume a broken browser is making the request and will set the HTML format - note that this is different from how the other content negotiation modes work as those would activate the "all" format!
+
+
+
+==== Request format vs. Response format
+
+
+As of Grails 2.0, there is a separate notion of the _request_ format and the _response_ format. The request format is dictated by the `CONTENT_TYPE` header and is typically used to detect if the incoming request can be parsed into XML or JSON, whilst the response format uses the file extension, format parameter or ACCEPT header to attempt to deliver an appropriate response to the client.
+
+The link:../ref/Controllers/withFormat.html[withFormat] available on controllers deals specifically with the response format. If you wish to add logic that deals with the request format then you can do so using a separate `withFormat` method available on the request:
+
+[source,groovy]
+----
+request.withFormat {
+    xml {
+        // read XML
+    }
+    json {
+        // read JSON
+    }
+}
+----
+
+
+==== Content Negotiation with URI Extensions
+
+
+Grails also supports content negotiation using URI extensions. For example given the following URI:
+
+[source]
+----
+/book/list.xml
+----
+
+This works as a result of the default URL Mapping definition which is:
+
+[source,groovy]
+----
+"/$controller/$action?/$id?(.$format)?"{
+----
+
+Note the inclusion of the `format` variable in the path. If you do not wish to use content negotiation via the file extension then simply remove this part of the URL mapping:
+
+[source,groovy]
+----
+"/$controller/$action?/$id?"{
+----
+
+
+
+==== Testing Content Negotiation
+
+
+To test content negotiation in a unit or integration test (see the section on link:testing.html[Testing]) you can either manipulate the incoming request headers:
+
+[source,groovy]
+----
+void testJavascriptOutput() {
+    def controller = new TestController()
+    controller.request.addHeader "Accept",
+              "text/javascript, text/html, application/xml, text/xml, */*"
+
+    controller.testAction()
+    assertEquals "alert('hello')", controller.response.contentAsString
+}
+----
+
+Or you can set the format parameter to achieve a similar effect:
+
+[source,groovy]
+----
+void testJavascriptOutput() {
+    def controller = new TestController()
+    controller.params.format = 'js'
+
+    controller.testAction()
+    assertEquals "alert('hello')", controller.response.contentAsString
+}
+----

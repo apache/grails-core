@@ -1,0 +1,104 @@
+=== Running Tests
+
+To execute tests, you can use the Gradle check task:
+
+[source,shell]
+----
+./gradlew check
+----
+
+This command will execute all the Unit tests in src/main/groovy/com/example/ directory.
+
+
+=== Targeting Tests
+
+To selectively target tests for execution, you have several options:
+
+1. To run all tests for a controller named SimpleController, use this command:
++
+[source,shell]
+----
+./gradlew check --tests SimpleController
+----
+
+2. To test all classes ending in Controller, you can employ wildcards:
++
+[source,shell]
+----
+./gradlew check --tests *Controller
+----
+
+3. To specify package names:
++
+[source,shell]
+----
+./gradlew check --tests some.org.*Controller
+----
+
+4. To run all tests in a package:
++
+[source,shell]
+----
+./gradlew check --tests some.org.*
+----
+
+5. To run all tests in a package, including subpackages:
++
+[source,shell]
+----
+./gradlew check --tests some.org.**.*
+----
+
+6. To target specific test methods:
++
+[source,shell]
+----
+./gradlew check --tests SimpleController.testLogin
+----
+
+You can combine multiple patterns as needed:
+
+[source,shell]
+----
+./gradlew check --tests some.org.* SimpleController.testLogin BookController
+----
+
+NOTE: You might need to specify the package name before the class name and append "Spec" to it. For instance, to run the test for the ProductController, use ./gradlew test *.ProductControllerSpec. You can also use the star wildcard if you want to avoid typing the entire package hierarchy.
+
+=== Debugging
+
+To debug your tests using a remote debugger, you can add `--debug-jvm` after `./gradlew` in any commands, like so:
+
+[source,shell]
+----
+./gradlew check --debug-jvm
+----
+
+This will open the default Java remote debugging port, 5005, allowing you to attach a remote debugger from your code editor or integrated development environment.
+
+=== Targeting Test Phases / Running Unit & Integration Separately
+
+To execute "unit" tests, use this command:
+
+[source,shell]
+----
+./gradlew test
+----
+
+For "integration" tests, you would run:
+
+[source,shell]
+----
+./gradlew integrationTest
+----
+
+=== Targeting Tests When Using Phases
+
+You can combine test and phase targeting:
+
+[source,shell]
+----
+./gradlew test some.org.**.*
+----
+
+This command will run all tests in the unit phase within the some.org package or its subpackages. For more detailed information, it's recommended to consult the Gradle documentation on https://docs.gradle.org/current/userguide/java_testing.html[Testing in Java & JVM projects].

@@ -1,0 +1,18 @@
+Grails has a set of core settings that are worth knowing about. Their defaults are suitable for most projects, but it's important to understand what they do because you may need one or more of them later.
+
+
+
+=== Runtime settings
+
+
+On the runtime front, i.e. `grails-app/conf/application.yml`, there are quite a few more core settings:
+
+* `grails.enable.native2ascii` - Set this to false if you do not require native2ascii conversion of Grails i18n properties files (default: true).
+* `grails.views.default.codec` - Sets the default encoding regime for GSPs - can be one of 'none', 'html', or 'base64' (default: 'none'). To reduce risk of XSS attacks, set this to 'html'.
+* `grails.views.gsp.encoding` - The file encoding used for GSP source files (default: 'utf-8').
+* `grails.mime.file.extensions` - Whether to use the file extension to dictate the mime type in link:theWebLayer.html#contentNegotiation[Content Negotiation] (default: true).
+* `grails.mime.types` - A map of supported mime types used for link:theWebLayer.html#contentNegotiation[Content Negotiation].
+* `grails.serverURL` - A string specifying the server URL portion of absolute links, including server name e.g. grails.serverURL="http://my.yourportal.com". See link:{gspdocs}/ref/Tags/createLink.html[createLink]. Also used by redirects.
+* `grails.views.gsp.sitemesh.preprocess` - Determines whether SiteMesh preprocessing happens. Disabling this slows down page rendering, but if you need SiteMesh to parse the generated HTML from a GSP view then disabling it is the right option. Don't worry if you don't understand this advanced property: leave it set to true.
+* `grails.reload.excludes` and `grails.reload.includes` - Configuring these directives determines the reload behavior for project specific source files. Each directive takes a list of strings that are the class names for project source files that should be excluded from reloading behavior or included accordingly when running the application in development with the `bootRun` task. If the `grails.reload.includes` directive is configured, then only the classes in that list will be reloaded.
+

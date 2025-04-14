@@ -1,0 +1,51 @@
+In prior Grails versions mixins were used to implement unit tests.  The new unit tests libraries were designed to be compatible with this old mixin approach. There are some slight differences that you may encounter, however any required changes should be minimal.
+
+=== FreshRuntime Removed
+
+The `@FreshRuntime` annotation was removed due to the design of the new framework. The annotation allowed any metaclass changes to be sandboxed either at the method or class level. Spock provides a similar annotation to do the same thing, link:http://spockframework.org/spock/docs/1.1/all_in_one.html#_confinemetaclasschanges[@ConfineMetaClassChanges].
+
+In addition, the annotation caused the application context to be refreshed. Because the application context is refreshed between test classes automatically, the annotation is no longer necessary.
+
+=== Integration Tests
+
+The `@Integration` annotation was copied to the unit testing library so a dependency on the old framework is no longer necessary. The package has changed from `grails.test.mixin.integration.Integration` to `grails.testing.mixin.integration.Integration`. Everything about integration tests should work the same as before.
+
+=== Example Converted Test
+
+Here is an example test that may look like something in your project.
+
+[source,groovy]
+----
+@TestFor(AuthorController)
+@Mock(Author)
+class AuthorControllerTests {
+
+    @Test
+    void testIndex() {
+        controller.index()
+        assert response.text == 'Hello'
+    }
+}
+----
+
+To convert this test to the new framework, we must update it to use Spock as well as change the annotation usages to trait usages.
+
+[source,groovy]
+----
+import spock.lang.Specification
+import grails.testing.gorm.DomainUnitTest
+import grails.testing.web.controllers.ControllerUnitTest
+
+class AuthorControllerTests extends Specification implements ControllerUnitTest<AuthorController>, DomainUnitTest<Author> {
+
+    void testIndex() {
+        when:
+        controller.index()
+
+        then:
+        response.text == 'Hello'
+    }
+}
+----
+
+Obviously there are many use cases you may want to convert and it would be impossible to cover them all in this documentation. As a part of the testing of this new framework, all of the usages of the old framework were replaced in Grails core. You can view those changes by looking at link:https://github.com/apache/grails-core/commit/8c4f07743108bf1e4e5f69dbb57695cce0b2518d[this commit] to see the vast majority of examples you will need.

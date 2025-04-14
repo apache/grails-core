@@ -1,0 +1,44 @@
+
+== max
+
+
+
+=== Purpose
+
+
+Ensures a value does not exceed a maximum value.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+age max: new Date()
+price max: 999F
+----
+
+
+=== Description
+
+
+Sets the maximum value of a class that implements `java.lang.Comparable`. The type of the value must be the same as the property.
+
+Note that constraints are only evaluated once which may be relevant for a constraint that relies on a value like an instance of `java.util.Date`.
+
+[source,groovy]
+----
+class User {
+    ...
+
+    static constraints = {
+        // this Date object is created when the constraints are evaluated, not
+        // each time an instance of the User class is validated.
+        birthDate max: new Date()
+    }
+}
+----
+
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
+
+Error Code: `className.propertyName.max.exceeded`

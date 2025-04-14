@@ -1,0 +1,87 @@
+
+==== The Basics
+
+
+Grails plugins let you register dynamic methods with any Grails-managed or other class at runtime. This work is done in a `doWithDynamicMethods` method.
+
+NOTE: Note that Grails 3.x features newer features such as traits that are usable from code compiled with `CompileStatic`. It is recommended that dynamic behavior is only added for cases that are not possible with traits.
+
+[source,groovy]
+----
+class ExamplePlugin extends Plugin {
+    void doWithDynamicMethods() {
+        for (controllerClass in grailsApplication.controllerClasses) {
+             controllerClass.metaClass.myNewMethod = {-> println "hello world" }
+        }
+    }
+}
+----
+
+In this case we use the implicit application object to get a reference to all of the controller classes' MetaClass instances and add a new method called `myNewMethod` to each controller. If you know beforehand the class you wish the add a method to you can simply reference its `metaClass` property.
+
+For example we can add a new method `swapCase` to `java.lang.String`:
+
+[source,groovy]
+----
+class ExamplePlugin extends Plugin  {
+
+    @Override
+    void doWithDynamicMethods() {
+        String.metaClass.swapCase = {->
+             def sb = new StringBuilder()
+             delegate.each {
+                 sb << (Character.isUpperCase(it as char) ?
+                        Character.toLowerCase(it as char) :
+                        Character.toUpperCase(it as char))
+             }
+             sb.toString()
+        }
+
+        assert "UpAndDown" == "uPaNDdOWN".swapCase()
+    }
+}
+----
+
+
+==== Interacting with the ApplicationContext
+
+
+The `doWithDynamicMethods` closure gets passed the Spring `ApplicationContext` instance. This is useful as it lets you interact with objects within it. For example if you were implementing a method to interact with Hibernate you could use the `SessionFactory` instance in combination with a `HibernateTemplate`:
+
+[source,groovy]
+----
+import org.springframework.orm.hibernate3.HibernateTemplate
+
+class ExampleHibernatePlugin extends Plugin{
+
+   void doWithDynamicMethods() {
+
+       for (domainClass in grailsApplication.domainClasses) {
+
+           domainClass.metaClass.static.load = { Long id->
+                def sf = applicationContext.sessionFactory
+                def template = new HibernateTemplate(sf)
+                template.load(delegate, id)
+           }
+       }
+   }
+}
+----
+
+Also because of the autowiring and dependency injection capability of the Spring container you can implement more powerful dynamic constructors that use the application context to wire dependencies into your object at runtime:
+
+[source,groovy]
+----
+class MyConstructorPlugin {
+
+    void doWithDynamicMethods()
+         for (domainClass in grailsApplication.domainClasses) {
+              domainClass.metaClass.constructor = {->
+                  return applicationContext.getBean(domainClass.name)
+              }
+         }
+    }
+}
+----
+
+Here we actually replace the default constructor with one that looks up prototyped Spring beans instead!

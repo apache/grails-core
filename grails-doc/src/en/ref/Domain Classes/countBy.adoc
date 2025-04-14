@@ -1,0 +1,63 @@
+
+== countBy*
+
+
+
+=== Purpose
+
+
+Dynamic method that uses the properties of the domain class to  query for the count of the number of matching records
+
+
+=== Examples
+
+
+Given the domain class `Book`:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date releaseDate
+    String author
+}
+----
+
+The following are all possible:
+
+[source,groovy]
+----
+def c = Book.countByTitle("The Shining")
+c = Book.countByTitleAndAuthor("The Sum of All Fears", "Tom Clancy")
+c = Book.countByReleaseDateBetween(firstDate, new Date())
+c = Book.countByReleaseDateGreaterThanEquals(firstDate)
+c = Book.countByTitleLike("%Hobbit%")
+c = Book.countByTitleNotEqual("Harry Potter")
+c = Book.countByReleaseDateIsNull()
+c = Book.countByReleaseDateIsNotNull()
+----
+
+
+=== Description
+
+
+GORM supports the notion of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[Dynamic Finders]. The `countBy*` method counts the number of records for the given expression
+
+The following operator names can be used within the respective dynamic methods:
+
+* `LessThan`
+* `LessThanEquals`
+* `GreaterThan`
+* `GreaterThanEquals`
+* `Between`
+* `Like`
+* `Ilike` (i.e. ignorecase like)
+* `IsNotNull`
+* `IsNull`
+* `Not`
+* `Equal`
+* `NotEqual`
+* `And`
+* `Or`
+
+These names can be considered keywords, and you will have problems when querying domain classes that have one of these names as a property name. For more information on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[dynamic finders] refer to the user guide.

@@ -1,0 +1,46 @@
+
+== findAllWhere
+
+
+
+=== Purpose
+
+
+Uses named arguments corresponding to property names of the domain class to execute a query returning all matching results.
+
+
+=== Examples
+
+
+Given the domain class:
+
+[source,groovy]
+----
+class Book {
+
+   String title
+   Date releaseDate
+   String author
+
+   static constraints = {
+      releaseDate nullable: true
+   }
+}
+----
+
+You can query in the form:
+
+[source,groovy]
+----
+def books = Book.findAllWhere(author: "Stephen King", title: "The Stand")
+
+def unreleasedBooks = Book.findAllWhere(releaseDate: null)
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `queryParams` - A Map of key/value pairs to be used in the query

@@ -1,0 +1,30 @@
+
+== actionName
+
+
+
+=== Purpose
+
+
+Returns the name of the currently executing action.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        log.info "Executing action $actionName"
+
+        render(view: actionName)
+    }
+}
+----
+
+
+=== Description
+
+
+Returns the name of the currently executing action which is dictated by the URL mappings

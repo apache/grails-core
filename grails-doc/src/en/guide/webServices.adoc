@@ -1,0 +1,1 @@
+Web Services are all about providing a web API onto your web application and are typically implemented in either https://en.wikipedia.org/wiki/Representational_State_Transfer[REST] or https://en.wikipedia.org/wiki/SOAP[SOAP].

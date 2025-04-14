@@ -1,0 +1,16 @@
+If you include one of the aforementioned concrete `EventBus` implementations for RxJava or GPars then it is a matter of configuring the appropriate implementation.
+
+TIP: With RxJava 1.x this is done with link:{rxjavadocs}/rx/plugins/RxJavaHooks.html[RxJavaHooks], with RxJava 2.x with link:{rxjava2docs}/io/reactivex/plugins/RxJavaPlugins.html[RxJavaPlugins] and with GPars with link:{gparsdocs}/groovyx/gpars/GParsConfig.html[GParsConfig]
+
+If you use the default implementation then you can override the thread pool used by the `EventBus` by registering the appropriate bean in `grails-app/conf/spring/resources.groovy`:
+
+.grails-app/conf/spring/resources.groovy
+[source,groovy]
+----
+import org.grails.events.bus.*
+import java.util.concurrent.*
+
+beans = {
+    eventBus(ExecutorEventBus, Executors.newFixedThreadPool(5))
+}
+----

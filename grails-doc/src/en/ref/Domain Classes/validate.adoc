@@ -1,0 +1,47 @@
+
+== validate
+
+
+
+=== Purpose
+
+
+Validates a domain class against the applied constraints (see link:{guidePath}/validation.html[validation])
+
+
+=== Description
+
+
+The `validate` method validates a domain class based on its defined link:{guidePath}/validation.html#constraints[Constraints]. The errors are stored in the link:errors.html[errors] property of the domain class instance.
+
+The `validate` method accepts an optional `List` argument which contains the names of the properties to be validated. When a `List` of names is specified, only those properties will be validated.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = new Book(title: "The Shining")
+if (!b.validate()) {
+    b.errors.allErrors.each {
+        println it
+    }
+}
+----
+
+[source,groovy]
+----
+def a = new Album(artist: "Genesis", title: "Nursery Cryme", releaseDate: 1971)
+
+// only validate title and releaseDate
+if (!a.validate(["title", "releaseDate"])) {
+    a.errors.allErrors.each {
+        println it
+    }
+}
+----
+
+Parameters:
+
+* `deepValidate` (optional) - Whether associations of the domain instance should also be validated, i.e. whether validation cascades. This is `true` by default; set it to `false` to disable cascading validation.

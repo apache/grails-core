@@ -1,0 +1,154 @@
+==== Using the respond method to output JSON
+
+The `respond` method is the preferred way to return JSON and integrates with link:theWebLayer.html#contentNegotiation[Content Negotiation] and http://views.grails.org[JSON Views].
+
+The `respond` method provides content negotiation strategies to intelligently produce an appropriate response for the given client.
+
+For example given the following controller and action:
+
+.grails-app/controllers/example/BookController.groovy
+[source,groovy]
+----
+package example
+
+class BookController {
+    def index() {
+        respond Book.list()
+    }
+}
+----
+
+The `respond` method will take the followings steps:
+
+1. If the client `Accept` header specifies a media type (for example `application/json`) use that
+2. If the file extension of the URI (for example `/books.json`) includes a format defined in the `grails.mime.types` property of `grails-app/conf/application.yml` use the media type defined in the configuration
+
+The `respond` method will then look for an appriopriate link:{apiDocs}grails/rest/render/Renderer.html[Renderer] for the object and the calculated media type from the link:{apiDocs}grails/rest/render/RendererRegistry.html[RendererRegistry].
+
+Grails includes a number of pre-configured `Renderer` implementations that will produce default representations of JSON responses for the argument passed to `respond`. For example going to the `/book.json` URI will produce JSON such as:
+
+
+[source,json]
+----
+[
+    {id:1,"title":"The Stand"},
+    {id:2,"title":"Shining"}
+]
+----
+
+
+==== Controlling the Priority of Media Types
+
+By default if you define a controller there is no priority in terms of which format is sent back to the client and Grails assumes you wish to serve HTML as a response type.
+
+However if your application is primarily an API, then you can specify the priorty using the `responseFormats` property:
+
+.grails-app/controllers/example/BookController.groovy
+[source,groovy]
+----
+package example
+
+class BookController {
+    static responseFormats = ['json', 'html']
+    def index() {
+        respond Book.list()
+    }
+}
+----
+
+In the above example Grails will respond by default with `json` if the media type to respond with cannot be calculated from the `Accept` header or file extension.
+
+==== Using Views to Output JSON Responses
+
+If you define a view (either a GSP or a http://views.grails.org[JSON View]) then Grails will render the view when using the `respond` method by calculating a model from the argument passed to `respond`.
+
+For example, in the previous listing, if you were to define `grails-app/views/index.gson` and `grails-app/views/index.gsp` views, these would be used if the client requested `application/json` or `text/html` media types respectively. Thus allowing you to define a single backend capable of serving responses to a web browser or representing your application's API.
+
+When rendering the view, Grails will calculate a model to pass to the view based on the type of the value passed to the `respond` method.
+
+The following table summarizes this convention:
+
+[cols="3*", options="header"]
+|===
+|Example|Argument Type|Calculated Model Variable
+|`respond Book.list()`|`java.util.List`|`bookList`
+|`respond( [] )`|`java.util.List`|`emptyList`
+|`respond Book.get(1)` |`example.Book`|`book`
+|`respond( [1,2] )` |`java.util.List`|`integerList`
+|`respond( [1,2] as Set )` |`java.util.Set`|`integerSet`
+|`respond( [1,2] as Integer[] )` |`Integer[]`|`integerArray`
+|===
+
+Using this convention you can reference the argument passed to `respond` from within your view:
+
+.grails-app/views/book/index.gson
+[source,groovy]
+----
+@Field List<Book> bookList = []
+
+json bookList, { Book book ->
+    title book.title
+}
+----
+
+You will notice that if `Book.list()` returns an empty list then the model variable name is translated to `emptyList`. This is by design and you should provide a default value in the view if no model variable is specified, such as the `List` in the example above:
+
+.grails-app/views/book/index.gson
+[source,groovy]
+----
+// defaults to an empty list
+@Field List<Book> bookList = []
+...
+----
+
+There are cases where you may wish to be more explicit and control the name of the model variable. For example if you have a domain inheritance hierarchy where a call to `list()` my return different child classes relying on automatic calculation may not be reliable.
+
+In this case you should pass the model directly using `respond` and a map argument:
+
+[source,groovy]
+----
+respond bookList: Book.list()
+----
+
+TIP: When responding with any kind of mixed argument types in a collection, always use an explicit model name.
+
+If you simply wish to augment the calculated model then you can do so by passing a `model` argument:
+
+[source,groovy]
+----
+respond Book.list(), [model: [bookCount: Book.count()]]
+----
+
+The above example will produce a model like `[bookList:books, bookCount:totalBooks]`, where the calculated model is combined with the model passed in the `model` argument.
+
+==== Using the render method to output JSON
+
+The `render` method can also be used to output JSON, but should only be used for simple cases that don't warrant the creation of a JSON view:
+
+[source,groovy]
+----
+def list() {
+
+    def results = Book.list()
+
+    render(contentType: "application/json") {
+        books(results) { Book b ->
+            title b.title
+        }
+    }
+}
+----
+
+In this case the result would be something along the lines of:
+
+[source,json]
+----
+[
+    {"title":"The Stand"},
+    {"title":"Shining"}
+]
+----
+
+NOTE: This technique for rendering JSON may be ok for very simple responses, but in general you should favour the use of link:webServices.html#jsonViews[JSON Views] and use the view layer rather than embedding logic in your application.
+
+The same dangers with naming conflicts described above for XML also apply to JSON building.

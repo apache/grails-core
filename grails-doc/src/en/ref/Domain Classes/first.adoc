@@ -1,0 +1,47 @@
+
+== first
+
+
+
+=== Purpose
+
+
+Retrieves the first instance of the domain class.
+
+
+=== Examples
+
+
+Given the domain class:
+
+[source,groovy]
+----
+class Person {
+    String firstName
+    String lastName
+    Integer age
+}
+----
+
+[source,groovy]
+----
+// retrieve the first person ordered by the identifier
+def p = Person.first()
+
+// retrieve the first person ordered by the lastName property
+p = Person.first(sort: 'lastName')
+
+// retrieve the first person ordered by the lastName property
+p = Person.first('lastName')
+----
+
+Parameters:
+
+* `sort` (optional) - The name of the property to sort by
+
+See also:
+
+* link:last.html[last]
+
+NOTE: Note that the first() and last() methods are not supported on domain classes which use a composite primary key.
+

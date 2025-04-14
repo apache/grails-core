@@ -1,0 +1,37 @@
+
+== delete
+
+
+
+=== Purpose
+
+
+Deletes a persistent instance.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.delete()
+----
+
+
+=== Description
+
+
+The `delete` method informs the persistence context that a persistent instance should be deleted. Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html#delete(java/lang/Object).html[delete] method.
+
+WARNING: Calling `delete` on a transient instance will result in an error
+
+Parameters:
+
+* `flush` - If set to `true` the persistent context will be flushed resulting in the instance being deleted immediately. For example:
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.delete(flush: true)
+----

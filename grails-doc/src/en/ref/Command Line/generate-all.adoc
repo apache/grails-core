@@ -1,0 +1,125 @@
+
+== generate-all
+
+
+
+=== Purpose
+
+
+Generates a controller, views, and a controller unit test for the given domain class
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails generate-all
+grails generate-all org.bookstore.Book
+grails generate-all "*"
+----
+
+
+=== Description
+
+
+Grails supports a feature known as static scaffolding which involves the generation of a CRUD (Create/Read/Update/Delete) interface for a given domain class. Once generated, the controller and its views can be modified by you but they won't automatically update when you change the domain class.
+
+The generate-all command generates an implementation of CRUD including a controller and views for the given domain class. The argument is optional, but if you don't include it the command will ask you for the name of the domain class to scaffold. So for a domain class `org.bookstore.Book`, this command will generate the controller `grails-app/controllers/org/bookstore/BookController.groovy` and its associated views in `grails-app/views/book`.
+
+Usage:
+[source,groovy]
+----
+grails generate-all <<name>>
+----
+
+Arguments:
+
+* `name` - Either a domain class name (case-sensitive) or a wildcard (\*). If you specify the wildcard then controllers and views will be generated for _all_ domain classes.
+
+Flags:
+
+* `force` - Whether to overwrite existing files
+
+
+
+== Gradle runCommand `generate-all` Command
+
+=== Purpose
+
+The purpose of the `generate-all` command in Grails is to automate the creation of a controller, associated views, and a controller unit test for a specified domain class. This command simplifies the process of generating a CRUD (Create/Read/Update/Delete) interface for the domain class, saving developers time and effort.
+
+Here are some usage examples of the generate-all command:
+
+1. Generate CRUD artifacts for a specific domain class, such as org.bookstore.Book:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-all org.bookstore.Book"
+----
+
+2. Generate CRUD artifacts for all domain classes using a wildcard (*):
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-all *"
+----
+
+3. Generate CRUD artifacts with no specific domain class (interactive mode):
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-all"
+----
+
+=== Description
+
+Grails framework offers a powerful feature known as static scaffolding, which streamlines the generation of a complete CRUD interface for a specified domain class. This interface includes a controller responsible for handling CRUD operations and views for creating, reading, updating, and deleting records. However, it's important to note that once these artifacts are generated, they do not automatically update when changes are made to the underlying domain class.
+
+The `generate-all` command provides a solution to this by generating a comprehensive implementation of CRUD tailored to the given domain class. This implementation includes:
+
+- A controller: This controller handles HTTP requests and manages interactions with the domain class.
+- Associated views: These views are responsible for rendering the user interface for CRUD operations.
+
+You have the flexibility to provide the domain class name as an argument when executing the command. Alternatively, if you omit the argument, the command will interactively prompt you to enter the name of the domain class you wish to scaffold.
+
+For example, if your domain class is `org.bookstore.Book`, executing the `generate-all` command will create the following files:
+
+- Controller: `grails-app/controllers/org/bookstore/BookController.groovy`
+- Associated views: `grails-app/views/book`
+
+Usage:
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-all <<name>>"
+----
+
+=== Arguments
+
+The `generate-all` command accepts the following argument:
+
+* `name` - This argument specifies the name of the domain class for which you want to generate the CRUD interface. It is case-sensitive. Additionally, you can use a wildcard (`*`) as the argument to generate controllers and views for all domain classes within your Grails application.
+
+=== Flags
+
+The command supports the following flag:
+
+* `force` - This flag controls whether the command should overwrite existing files. If enabled, existing files will be replaced with the newly generated ones.
+
+=== Additional Examples
+
+1. Generate CRUD artifacts for the `Author` domain class:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-all org.bookstore.Author"
+----
+
+2. Generate CRUD artifacts for all domain classes while overwriting existing files:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-all * --force"
+----
+
+By using the `generate-all` command effectively, developers can quickly create the foundation for managing data through a web interface in Grails applications.

@@ -1,0 +1,2476 @@
+= The Grails framework
+Puneet Behl, Graeme Rocher, Peter Ledbrook, Marc Palmer, Jeff Brown, Luke Daley, Burt Beckwith, Lari Hotari:version:
+:source-highlighter: coderay
+:imagesdir: ./images
+
+[[introduction]]
+== Introduction
+
+include::introduction.adoc[]
+
+[[whatsNew]]
+=== What's new in Grails 7?
+
+include::introduction/whatsNew.adoc[]
+
+[[dependencyUpgrades]]
+==== Updated Dependencies
+
+include::introduction/whatsNew/dependencyUpgrades.adoc[]
+
+[[gettingStarted]]
+== Getting Started
+
+include::gettingStarted.adoc[]
+
+[[requirements]]
+=== Installation Requirements
+
+include::gettingStarted/requirements.adoc[]
+
+[[downloadingAndInstalling]]
+=== Downloading and Installing
+
+include::gettingStarted/downloadingAndInstalling.adoc[]
+
+[[creatingAnApplication]]
+=== Creating an Application
+
+include::gettingStarted/creatingAnApplication.adoc[]
+
+[[aHelloWorldExample]]
+=== A Hello World Example
+
+include::gettingStarted/aHelloWorldExample.adoc[]
+
+[[usingInteractiveMode]]
+=== Using Interactive Mode
+
+include::gettingStarted/usingInteractiveMode.adoc[]
+
+[[ide]]
+=== Getting Set Up in an IDE
+
+include::gettingStarted/ide.adoc[]
+
+[[conventionOverConfiguration]]
+=== Convention over Configuration
+
+include::gettingStarted/conventionOverConfiguration.adoc[]
+
+[[runningAndDebuggingAnApplication]]
+=== Running and Debugging an Application
+
+include::gettingStarted/runningAndDebuggingAnApplication.adoc[]
+
+[[testingAnApplication]]
+=== Testing an Application
+
+include::gettingStarted/testingAnApplication.adoc[]
+
+[[deployingAnApplication]]
+=== Deploying an Application
+
+include::gettingStarted/deployingAnApplication.adoc[]
+
+[[supportedJakartaEEContainers]]
+=== Supported Jakarta EE Containers
+
+include::gettingStarted/supportedJakartaEEContainers.adoc[]
+
+[[creatingArtefacts]]
+=== Creating Artefacts
+
+include::gettingStarted/creatingArtefacts.adoc[]
+
+[[generatingAnApplication]]
+=== Generating an Application
+
+include::gettingStarted/generatingAnApplication.adoc[]
+
+[[upgrading]]
+== Upgrading from previous versions of Grails
+
+[[upgrading50x]]
+=== Upgrading from Grails 5
+
+include::upgrading/upgrading50x.adoc[]
+
+[[upgrading40x]]
+=== Upgrading from Grails 4
+
+include::upgrading/upgrading40x.adoc[]
+
+[[upgrading33x]]
+=== Upgrading from Grails 3.3.x
+
+include::upgrading/upgrading33x.adoc[]
+
+[[conf]]
+== Configuration
+
+include::conf.adoc[]
+
+[[config]]
+=== Basic Configuration
+
+include::conf/config.adoc[]
+
+[[ymlOptions]]
+==== Options for the yml format Config
+
+include::conf/config/ymlOptions.adoc[]
+
+[[builtInOptions]]
+==== Built in options
+
+include::conf/config/builtInOptions.adoc[]
+
+[[logging]]
+==== Logging
+
+include::conf/config/logging.adoc[]
+
+[[loggerName]]
+===== Logger Names
+
+include::conf/config/logging/loggerName.adoc[]
+
+[[maskingRequestParametersFromStacktraceLogs]]
+===== Masking Request Parameters From Stacktrace Logs
+
+include::conf/config/logging/maskingRequestParametersFromStacktraceLogs.adoc[]
+
+[[externalLoggingConfiguration]]
+===== External Logging Configuration
+
+include::conf/config/logging/externalLoggingConfiguration.adoc[]
+
+[[configGORM]]
+==== GORM
+
+include::conf/config/configGORM.adoc[]
+
+[[applicationClass]]
+=== The Application Class
+
+include::conf/applicationClass.adoc[]
+
+[[executing]]
+==== Executing the Application Class
+
+include::conf/applicationClass/executing.adoc[]
+
+[[customizing]]
+==== Customizing the Application Class
+
+include::conf/applicationClass/customizing.adoc[]
+
+[[applicationLifeCycle]]
+==== The Application LifeCycle
+
+include::conf/applicationClass/applicationLifeCycle.adoc[]
+
+[[environments]]
+=== Environments
+
+include::conf/environments.adoc[]
+
+[[dataSource]]
+=== The DataSource
+
+include::conf/dataSource.adoc[]
+
+[[dataSourcesAndEnvironments]]
+==== DataSources and Environments
+
+include::conf/dataSource/dataSourcesAndEnvironments.adoc[]
+
+[[automaticDatabaseMigration]]
+==== Automatic Database Migration
+
+include::conf/dataSource/automaticDatabaseMigration.adoc[]
+
+[[transactionAwareDataSourceProxy]]
+==== Transaction-aware DataSource Proxy
+
+include::conf/dataSource/transactionAwareDataSourceProxy.adoc[]
+
+[[databaseConsole]]
+==== Database Console
+
+include::conf/dataSource/databaseConsole.adoc[]
+
+[[multipleDatasources]]
+==== Multiple Datasources
+
+include::conf/dataSource/multipleDatasources.adoc[]
+
+[[versioning]]
+=== Versioning
+
+include::conf/versioning.adoc[]
+
+[[docengine]]
+=== Project Documentation
+
+include::conf/docengine.adoc[]
+
+[[dependencyResolution]]
+=== Dependency Resolution
+
+include::conf/dependencyResolution.adoc[]
+
+[[commandLine]]
+== The Command Line
+
+include::commandLine.adoc[]
+
+[[interactiveMode]]
+=== Interactive Mode
+
+include::commandLine/interactiveMode.adoc[]
+
+[[creatingCustomScripts]]
+=== Creating Custom Scripts
+
+include::commandLine/creatingCustomScripts.adoc[]
+
+[[creatingCustomCommands]]
+=== Creating Custom Commands
+
+include::commandLine/creatingCustomCommands.adoc[]
+
+[[profiles]]
+== Application Profiles
+
+include::profiles.adoc[]
+
+[[creatingProfiles]]
+=== Creating Profiles
+
+include::profiles/creatingProfiles.adoc[]
+
+[[profileInheritance]]
+=== Profile Inheritance
+
+include::profiles/profileInheritance.adoc[]
+
+[[publishingProfiles]]
+=== Publishing Profiles
+
+include::profiles/publishingProfiles.adoc[]
+
+[[profileStructure]]
+=== Understanding Profiles
+
+include::profiles/profileStructure.adoc[]
+
+[[profileCommands]]
+=== Creating Profile Commands
+
+include::profiles/profileCommands.adoc[]
+
+[[profileFeatures]]
+=== Creating Profile Features
+
+include::profiles/profileFeatures.adoc[]
+
+[[GORM]]
+== Object Relational Mapping (GORM)
+
+include::GORM.adoc[]
+
+[[quickStartGuide]]
+=== Quick Start Guide
+
+include::GORM/quickStartGuide.adoc[]
+
+[[basicCRUD]]
+==== Basic CRUD
+
+include::GORM/quickStartGuide/basicCRUD.adoc[]
+
+[[furtherReading]]
+=== Further Reading on GORM
+
+include::GORM/furtherReading.adoc[]
+
+[[theWebLayer]]
+== The Web Layer
+
+include::theWebLayer.adoc[]
+
+[[controllers]]
+=== Controllers
+
+include::theWebLayer/controllers.adoc[]
+
+[[understandingControllersAndActions]]
+==== Understanding Controllers and Actions
+
+include::theWebLayer/controllers/understandingControllersAndActions.adoc[]
+
+[[controllersAndScopes]]
+==== Controllers and Scopes
+
+include::theWebLayer/controllers/controllersAndScopes.adoc[]
+
+[[modelsAndViews]]
+==== Models and Views
+
+include::theWebLayer/controllers/modelsAndViews.adoc[]
+
+[[redirectsAndChaining]]
+==== Redirects and Chaining
+
+include::theWebLayer/controllers/redirectsAndChaining.adoc[]
+
+[[dataBinding]]
+==== Data Binding
+
+include::theWebLayer/controllers/dataBinding.adoc[]
+
+[[xmlAndJSON]]
+==== XML and JSON Responses
+
+include::theWebLayer/controllers/xmlAndJSON.adoc[]
+
+[[moreOnJSONBuilder]]
+==== More on JSONBuilder
+
+include::theWebLayer/controllers/moreOnJSONBuilder.adoc[]
+
+[[uploadingFiles]]
+==== Uploading Files
+
+include::theWebLayer/controllers/uploadingFiles.adoc[]
+
+[[commandObjects]]
+==== Command Objects
+
+include::theWebLayer/controllers/commandObjects.adoc[]
+
+[[formtokens]]
+==== Handling Duplicate Form Submissions
+
+include::theWebLayer/controllers/formtokens.adoc[]
+
+[[typeConverters]]
+==== Simple Type Converters
+
+include::theWebLayer/controllers/typeConverters.adoc[]
+
+[[controllerExceptionHandling]]
+==== Declarative Controller Exception Handling
+
+include::theWebLayer/controllers/controllerExceptionHandling.adoc[]
+
+[[gsp]]
+=== Groovy Server Pages
+
+include::theWebLayer/gsp.adoc[]
+
+[[GSPBasics]]
+==== GSP Basics
+
+include::theWebLayer/gsp/GSPBasics.adoc[]
+
+[[variablesAndScopes]]
+===== Variables and Scopes
+
+include::theWebLayer/gsp/GSPBasics/variablesAndScopes.adoc[]
+
+[[logicAndIteration]]
+===== Logic and Iteration
+
+include::theWebLayer/gsp/GSPBasics/logicAndIteration.adoc[]
+
+[[pageDirectives]]
+===== Page Directives
+
+include::theWebLayer/gsp/GSPBasics/pageDirectives.adoc[]
+
+[[expressions]]
+===== Expressions
+
+include::theWebLayer/gsp/GSPBasics/expressions.adoc[]
+
+[[tags]]
+==== GSP Tags
+
+include::theWebLayer/gsp/tags.adoc[]
+
+[[tagVariablesAndScopes]]
+===== Variables and Scopes
+
+include::theWebLayer/gsp/tags/tagVariablesAndScopes.adoc[]
+
+[[tagLogicAndIteration]]
+===== Logic and Iteration
+
+include::theWebLayer/gsp/tags/tagLogicAndIteration.adoc[]
+
+[[searchAndFiltering]]
+===== Search and Filtering
+
+include::theWebLayer/gsp/tags/searchAndFiltering.adoc[]
+
+[[linksAndResources]]
+===== Links and Resources
+
+include::theWebLayer/gsp/tags/linksAndResources.adoc[]
+
+[[formsAndFields]]
+===== Forms and Fields
+
+include::theWebLayer/gsp/tags/formsAndFields.adoc[]
+
+[[tagsAsMethodCalls]]
+===== Tags as Method Calls
+
+include::theWebLayer/gsp/tags/tagsAsMethodCalls.adoc[]
+
+[[viewsAndTemplates]]
+==== Views and Templates
+
+include::theWebLayer/gsp/viewsAndTemplates.adoc[]
+
+[[layouts]]
+==== Layouts with Sitemesh
+
+include::theWebLayer/gsp/layouts.adoc[]
+
+[[resources]]
+==== Static Resources
+
+include::theWebLayer/gsp/resources.adoc[]
+
+[[sitemeshContentBlocks]]
+==== Sitemesh Content Blocks
+
+include::theWebLayer/gsp/sitemeshContentBlocks.adoc[]
+
+[[makingChangesToADeployedApplication]]
+==== Making Changes to a Deployed Application
+
+include::theWebLayer/gsp/makingChangesToADeployedApplication.adoc[]
+
+[[GSPDebugging]]
+==== GSP Debugging
+
+include::theWebLayer/gsp/GSPDebugging.adoc[]
+
+[[taglibs]]
+=== Tag Libraries
+
+include::theWebLayer/taglibs.adoc[]
+
+[[taglibVariablesAndScopes]]
+==== Variables and Scopes
+
+include::theWebLayer/taglibs/taglibVariablesAndScopes.adoc[]
+
+[[simpleTags]]
+==== Simple Tags
+
+include::theWebLayer/taglibs/simpleTags.adoc[]
+
+[[logicalTags]]
+==== Logical Tags
+
+include::theWebLayer/taglibs/logicalTags.adoc[]
+
+[[iterativeTags]]
+==== Iterative Tags
+
+include::theWebLayer/taglibs/iterativeTags.adoc[]
+
+[[namespaces]]
+==== Tag Namespaces
+
+include::theWebLayer/taglibs/namespaces.adoc[]
+
+[[usingJSPTagLibraries]]
+==== Using JSP Tag Libraries
+
+include::theWebLayer/taglibs/usingJSPTagLibraries.adoc[]
+
+[[tagReturnValue]]
+==== Tag return value
+
+include::theWebLayer/taglibs/tagReturnValue.adoc[]
+
+[[urlmappings]]
+=== URL Mappings
+
+include::theWebLayer/urlmappings.adoc[]
+
+[[mappingToControllersAndActions]]
+==== Mapping to Controllers and Actions
+
+include::theWebLayer/urlmappings/mappingToControllersAndActions.adoc[]
+
+[[restfulMappings]]
+==== Mapping to REST resources
+
+include::theWebLayer/urlmappings/restfulMappings.adoc[]
+
+[[redirectMappings]]
+==== Redirects In URL Mappings
+
+include::theWebLayer/urlmappings/redirectMappings.adoc[]
+
+[[embeddedVariables]]
+==== Embedded Variables
+
+include::theWebLayer/urlmappings/embeddedVariables.adoc[]
+
+[[mappingToViews]]
+==== Mapping to Views
+
+include::theWebLayer/urlmappings/mappingToViews.adoc[]
+
+[[mappingToResponseCodes]]
+==== Mapping to Response Codes
+
+include::theWebLayer/urlmappings/mappingToResponseCodes.adoc[]
+
+[[mappingHTTP]]
+==== Mapping to HTTP methods
+
+include::theWebLayer/urlmappings/mappingHTTP.adoc[]
+
+[[mappingWildcards]]
+==== Mapping Wildcards
+
+include::theWebLayer/urlmappings/mappingWildcards.adoc[]
+
+[[automaticLinkRewriting]]
+==== Automatic Link Re-Writing
+
+include::theWebLayer/urlmappings/automaticLinkRewriting.adoc[]
+
+[[applyingConstraints]]
+==== Applying Constraints
+
+include::theWebLayer/urlmappings/applyingConstraints.adoc[]
+
+[[namedMappings]]
+==== Named URL Mappings
+
+include::theWebLayer/urlmappings/namedMappings.adoc[]
+
+[[customizingUrlFormat]]
+==== Customizing URL Formats
+
+include::theWebLayer/urlmappings/customizingUrlFormat.adoc[]
+
+[[namespacedControllers]]
+==== Namespaced Controllers
+
+include::theWebLayer/urlmappings/namespacedControllers.adoc[]
+
+[[interceptors]]
+=== Interceptors
+
+include::theWebLayer/interceptors.adoc[]
+
+[[definingInterceptors]]
+==== Defining Interceptors
+
+include::theWebLayer/interceptors/definingInterceptors.adoc[]
+
+[[interceptorMatching]]
+==== Matching Requests with Interceptors
+
+include::theWebLayer/interceptors/interceptorMatching.adoc[]
+
+[[interceptorOrdering]]
+==== Ordering Interceptor Execution
+
+include::theWebLayer/interceptors/interceptorOrdering.adoc[]
+
+[[contentNegotiation]]
+=== Content Negotiation
+
+include::theWebLayer/contentNegotiation.adoc[]
+
+[[traits]]
+== Traits
+
+include::traits.adoc[]
+
+[[traitsprovided]]
+=== Traits Provided by Grails
+
+include::traits/traitsprovided.adoc[]
+
+[[example]]
+==== WebAttributes Trait Example
+
+include::traits/traitsprovided/example.adoc[]
+
+[[webServices]]
+== Web Services
+
+include::webServices.adoc[]
+
+[[REST]]
+=== REST
+
+include::webServices/REST.adoc[]
+
+[[domainResources]]
+==== Domain classes as REST resources
+
+include::webServices/REST/domainResources.adoc[]
+
+[[urlMappings]]
+==== Mapping to REST resources
+
+include::webServices/REST/urlMappings.adoc[]
+
+[[linkingToResources]]
+==== Linking to REST resources from GSP pages
+
+include::webServices/REST/linkingToResources.adoc[]
+
+[[versioningResources]]
+==== Versioning REST resources
+
+include::webServices/REST/versioningResources.adoc[]
+
+[[restfulControllers]]
+==== Implementing REST controllers
+
+include::webServices/REST/restfulControllers.adoc[]
+
+[[extendingRestfulController]]
+===== Extending the RestfulController super class
+
+include::webServices/REST/restfulControllers/extendingRestfulController.adoc[]
+
+[[restControllersStepByStep]]
+===== Implementing REST Controllers Step by Step
+
+include::webServices/REST/restfulControllers/restControllersStepByStep.adoc[]
+
+[[generatingRestControllers]]
+===== Generating a REST controller using scaffolding
+
+include::webServices/REST/restfulControllers/generatingRestControllers.adoc[]
+
+[[restProfile]]
+==== The REST Profile
+
+include::webServices/REST/restProfile.adoc[]
+
+[[angularProfile]]
+==== The Angular Profile
+
+include::webServices/REST/angularProfile.adoc[]
+
+[[jsonViews]]
+==== JSON Views
+
+include::webServices/REST/jsonViews.adoc[]
+
+[[jsonViewsSetup]]
+===== Getting Started
+
+include::webServices/REST/jsonViews/jsonViewsSetup.adoc[]
+
+[[jsonViewsCreating]]
+===== Creating JSON Views
+
+include::webServices/REST/jsonViews/jsonViewsCreating.adoc[]
+
+[[jsonViewsAndTemplates]]
+===== JSON View Templates
+
+include::webServices/REST/jsonViews/jsonViewsAndTemplates.adoc[]
+
+[[jsonViewsAndDomainClasses]]
+===== Rendering Domain Classes with JSON Views
+
+include::webServices/REST/jsonViews/jsonViewsAndDomainClasses.adoc[]
+
+[[jsonViewsTemplatesAndConventions]]
+===== JSON Views by Convention
+
+include::webServices/REST/jsonViews/jsonViewsTemplatesAndConventions.adoc[]
+
+[[renderers]]
+==== Customizing Response Rendering
+
+include::webServices/REST/renderers.adoc[]
+
+[[defaultRenderers]]
+===== Customizing the Default Renderers
+
+include::webServices/REST/renderers/defaultRenderers.adoc[]
+
+[[customRenderers]]
+===== Implementing a Custom Renderer
+
+include::webServices/REST/renderers/customRenderers.adoc[]
+
+[[gspRenderers]]
+===== Using GSP to Customize Rendering
+
+include::webServices/REST/renderers/gspRenderers.adoc[]
+
+[[hypermedia]]
+==== Hypermedia as the Engine of Application State
+
+include::webServices/REST/hypermedia.adoc[]
+
+[[hal]]
+===== HAL Support
+
+include::webServices/REST/hypermedia/hal.adoc[]
+
+[[atom]]
+===== Atom Support
+
+include::webServices/REST/hypermedia/atom.adoc[]
+
+[[vndError]]
+===== Vnd.Error Support
+
+include::webServices/REST/hypermedia/vndError.adoc[]
+
+[[binding]]
+==== Customizing Binding of Resources
+
+include::webServices/REST/binding.adoc[]
+
+[[RSSAndAtom]]
+=== RSS and Atom
+
+include::webServices/RSSAndAtom.adoc[]
+
+[[async]]
+== Asynchronous Programming
+
+include::async.adoc[]
+
+[[promises]]
+=== Promises
+
+include::async/promises.adoc[]
+
+[[events]]
+=== Events
+
+include::async/events.adoc[]
+
+[[consuming]]
+==== Consuming Events
+
+include::async/events/consuming.adoc[]
+
+[[notifying]]
+==== Event Notification
+
+include::async/events/notifying.adoc[]
+
+[[annotations]]
+==== Reactor Spring Annotations
+
+include::async/events/annotations.adoc[]
+
+[[gormEvents]]
+==== Events from GORM
+
+include::async/events/gormEvents.adoc[]
+
+[[springEvents]]
+==== Events from Spring
+
+include::async/events/springEvents.adoc[]
+
+[[asyncGorm]]
+=== Asynchronous GORM
+
+include::async/asyncGorm.adoc[]
+
+[[asyncRequests]]
+=== Asynchronous Request Handling
+
+include::async/asyncRequests.adoc[]
+
+[[asyncServletApi]]
+=== Servlet 6.0.0 Async
+
+include::async/asyncServletApi.adoc[]
+
+[[validation]]
+== Validation
+
+include::validation.adoc[]
+
+[[constraints]]
+=== Declaring Constraints
+
+include::validation/constraints.adoc[]
+
+[[validatingConstraints]]
+=== Validating Constraints
+
+include::validation/validatingConstraints.adoc[]
+
+[[sharingConstraints]]
+=== Sharing Constraints Between Classes
+
+include::validation/sharingConstraints.adoc[]
+
+[[validationOnTheClient]]
+=== Validation on the Client
+
+include::validation/validationOnTheClient.adoc[]
+
+[[validationAndInternationalization]]
+=== Validation and Internationalization
+
+include::validation/validationAndInternationalization.adoc[]
+
+[[validationNonDomainAndCommandObjectClasses]]
+=== Applying Validation to Other Classes
+
+include::validation/validationNonDomainAndCommandObjectClasses.adoc[]
+
+[[services]]
+== The Service Layer
+
+include::services.adoc[]
+
+[[declarativeTransactions]]
+=== Declarative Transactions
+
+include::services/declarativeTransactions.adoc[]
+
+[[transactionsMultiDataSource]]
+==== Transactions Multi-DataSource
+
+include::services/declarativeTransactions/transactionsMultiDataSource.adoc[]
+
+[[transactionsRollbackAndTheSession]]
+==== Transactions Rollback and the Session
+
+include::services/declarativeTransactions/transactionsRollbackAndTheSession.adoc[]
+
+[[scopedServices]]
+=== Scoped Services
+
+include::services/scopedServices.adoc[]
+
+[[dependencyInjectionServices]]
+=== Dependency Injection and Services
+
+include::services/dependencyInjectionServices.adoc[]
+
+[[staticTypeCheckingAndCompilation]]
+== Static Type Checking And Compilation
+
+include::staticTypeCheckingAndCompilation.adoc[]
+
+[[grailsCompileStatic]]
+=== The GrailsCompileStatic Annotation
+
+include::staticTypeCheckingAndCompilation/grailsCompileStatic.adoc[]
+
+[[grailsTypeChecked]]
+=== The GrailsTypeChecked Annotation
+
+include::staticTypeCheckingAndCompilation/grailsTypeChecked.adoc[]
+
+[[testing]]
+== Testing
+
+include::testing.adoc[]
+
+[[unitTesting]]
+=== Unit Testing
+
+include::testing/unitTesting.adoc[]
+
+[[unitTestingControllers]]
+==== Unit Testing Controllers
+
+include::testing/unitTesting/unitTestingControllers.adoc[]
+
+[[unitTestingTagLibraries]]
+==== Unit Testing Tag Libraries
+
+include::testing/unitTesting/unitTestingTagLibraries.adoc[]
+
+[[unitTestingDomains]]
+==== Unit Testing Domains
+
+include::testing/unitTesting/unitTestingDomains.adoc[]
+
+[[unitTestingFilters]]
+==== Unit Testing Filters
+
+include::testing/unitTesting/unitTestingFilters.adoc[]
+
+[[unitTestingURLMappings]]
+==== Unit Testing URL Mappings
+
+include::testing/unitTesting/unitTestingURLMappings.adoc[]
+
+[[mockingCollaborators]]
+==== Mocking Collaborators
+
+include::testing/unitTesting/mockingCollaborators.adoc[]
+
+[[mockingCodecs]]
+==== Mocking Codecs
+
+include::testing/unitTesting/mockingCodecs.adoc[]
+
+[[unitTestMetaprogramming]]
+==== Unit Test Metaprogramming
+
+include::testing/unitTesting/unitTestMetaprogramming.adoc[]
+
+[[integrationTesting]]
+=== Integration Testing
+
+include::testing/integrationTesting.adoc[]
+
+[[functionalTesting]]
+=== Functional Testing
+
+include::testing/functionalTesting.adoc[]
+
+[[i18n]]
+== Internationalization
+
+include::i18n.adoc[]
+
+[[understandingMessageBundles]]
+=== Understanding Message Bundles
+
+include::i18n/understandingMessageBundles.adoc[]
+
+[[changingLocales]]
+=== Changing Locales
+
+include::i18n/changingLocales.adoc[]
+
+[[readingMessages]]
+=== Reading Messages
+
+include::i18n/readingMessages.adoc[]
+
+[[scaffoldingAndI18n]]
+=== Scaffolding and i18n
+
+include::i18n/scaffoldingAndI18n.adoc[]
+
+[[security]]
+== Security
+
+include::security.adoc[]
+
+[[securingAgainstAttacks]]
+=== Securing Against Attacks
+
+include::security/securingAgainstAttacks.adoc[]
+
+[[xssPrevention]]
+=== Cross Site Scripting (XSS) Prevention
+
+include::security/xssPrevention.adoc[]
+
+[[codecs]]
+=== Encoding and Decoding Objects
+
+include::security/codecs.adoc[]
+
+[[authentication]]
+=== Authentication
+
+include::security/authentication.adoc[]
+
+[[securityPlugins]]
+=== Security Plugins
+
+include::security/securityPlugins.adoc[]
+
+[[springSecurity]]
+==== Spring Security
+
+include::security/securityPlugins/springSecurity.adoc[]
+
+[[shiro]]
+==== Shiro
+
+include::security/securityPlugins/shiro.adoc[]
+
+[[plugins]]
+== Plugins
+
+include::plugins.adoc[]
+
+[[creatingAndInstallingPlugins]]
+=== Creating and Installing Plugins
+
+include::plugins/creatingAndInstallingPlugins.adoc[]
+
+[[repositories]]
+=== Plugin Repositories
+
+include::plugins/repositories.adoc[]
+
+[[providingBasicArtefacts]]
+=== Providing Basic Artefacts
+
+include::plugins/providingBasicArtefacts.adoc[]
+
+[[evaluatingConventions]]
+=== Evaluating Conventions
+
+include::plugins/evaluatingConventions.adoc[]
+
+[[hookingIntoRuntimeConfiguration]]
+=== Hooking into Runtime Configuration
+
+include::plugins/hookingIntoRuntimeConfiguration.adoc[]
+
+[[addingMethodsAtCompileTime]]
+=== Adding Methods at Compile Time
+
+include::plugins/addingMethodsAtCompileTime.adoc[]
+
+[[addingDynamicMethodsAtRuntime]]
+=== Adding Dynamic Methods at Runtime
+
+include::plugins/addingDynamicMethodsAtRuntime.adoc[]
+
+[[participatingInAutoReloadEvents]]
+=== Participating in Auto Reload Events
+
+include::plugins/participatingInAutoReloadEvents.adoc[]
+
+[[understandingPluginLoadOrder]]
+=== Understanding Plugin Load Order
+
+include::plugins/understandingPluginLoadOrder.adoc[]
+
+[[artefactApi]]
+=== The Artefact API
+
+include::plugins/artefactApi.adoc[]
+
+[[queryingArtefacts]]
+==== Asking About Available Artefacts
+
+include::plugins/artefactApi/queryingArtefacts.adoc[]
+
+[[customArtefacts]]
+==== Adding Your Own Artefact Types
+
+include::plugins/artefactApi/customArtefacts.adoc[]
+
+[[spring]]
+== Grails and Spring
+
+include::spring.adoc[]
+
+[[theUnderpinningsOfGrails]]
+=== The Underpinnings of Grails
+
+include::spring/theUnderpinningsOfGrails.adoc[]
+
+[[springdslAdditional]]
+=== Configuring Additional Beans
+
+include::spring/springdslAdditional.adoc[]
+
+[[springdsl]]
+=== Runtime Spring with the Beans DSL
+
+include::spring/springdsl.adoc[]
+
+[[theBeanBuilderDSLExplained]]
+=== The BeanBuilder DSL Explained
+
+include::spring/theBeanBuilderDSLExplained.adoc[]
+
+[[propertyPlaceholderConfiguration]]
+=== Property Placeholder Configuration
+
+include::spring/propertyPlaceholderConfiguration.adoc[]
+
+[[propertyOverrideConfiguration]]
+=== Property Override Configuration
+
+include::spring/propertyOverrideConfiguration.adoc[]
+
+[[hibernate]]
+== Grails and Hibernate
+
+include::hibernate.adoc[]
+
+[[usingHibernateXMLMappingFiles]]
+=== Using Hibernate XML Mapping Files
+
+include::hibernate/usingHibernateXMLMappingFiles.adoc[]
+
+[[mappingWithHibernateAnnotations]]
+=== Mapping with Hibernate Annotations
+
+include::hibernate/mappingWithHibernateAnnotations.adoc[]
+
+[[addingConstraints]]
+=== Adding Constraints
+
+include::hibernate/addingConstraints.adoc[]
+
+[[scaffolding]]
+== Scaffolding
+
+include::scaffolding.adoc[]
+
+[[deployment]]
+== Deployment
+
+include::deployment.adoc[]
+
+[[deploymentStandalone]]
+=== Standalone
+
+include::deployment/deploymentStandalone.adoc[]
+
+[[deploymentContainer]]
+=== Container Deployment (e.g. Tomcat)
+
+include::deployment/deploymentContainer.adoc[]
+
+[[deploymentTasks]]
+=== Deployment Configuration Tasks
+
+include::deployment/deploymentTasks.adoc[]
+
+[[contributing]]
+== Contributing to Grails
+
+include::contributing.adoc[]
+
+[[reference]]
+== Reference
+
+[[ref-command-line]]
+=== Command Line
+
+[[ref-command-line-bug-report]]
+==== bug-report
+
+include::ref/Command Line/bug-report.adoc[]
+
+[[ref-command-line-clean]]
+==== clean
+
+include::ref/Command Line/clean.adoc[]
+
+[[ref-command-line-compile]]
+==== compile
+
+include::ref/Command Line/compile.adoc[]
+
+[[ref-command-line-console]]
+==== console
+
+include::ref/Command Line/console.adoc[]
+
+[[ref-command-line-create-app]]
+==== create-app
+
+include::ref/Command Line/create-app.adoc[]
+
+[[ref-command-line-create-command]]
+==== create-command
+
+include::ref/Command Line/create-command.adoc[]
+
+[[ref-command-line-create-controller]]
+==== create-controller
+
+include::ref/Command Line/create-controller.adoc[]
+
+[[ref-command-line-create-domain-class]]
+==== create-domain-class
+
+include::ref/Command Line/create-domain-class.adoc[]
+
+[[ref-command-line-create-functional-test]]
+==== create-functional-test
+
+include::ref/Command Line/create-functional-test.adoc[]
+
+[[ref-command-line-create-hibernate-cfg-xml]]
+==== create-hibernate-cfg-xml
+
+include::ref/Command Line/create-hibernate-cfg-xml.adoc[]
+
+[[ref-command-line-create-integration-test]]
+==== create-integration-test
+
+include::ref/Command Line/create-integration-test.adoc[]
+
+[[ref-command-line-create-interceptor]]
+==== create-interceptor
+
+include::ref/Command Line/create-interceptor.adoc[]
+
+[[ref-command-line-create-plugin]]
+==== create-plugin
+
+include::ref/Command Line/create-plugin.adoc[]
+
+[[ref-command-line-create-profile]]
+==== create-profile
+
+include::ref/Command Line/create-profile.adoc[]
+
+[[ref-command-line-create-script]]
+==== create-script
+
+include::ref/Command Line/create-script.adoc[]
+
+[[ref-command-line-create-service]]
+==== create-service
+
+include::ref/Command Line/create-service.adoc[]
+
+[[ref-command-line-create-taglib]]
+==== create-taglib
+
+include::ref/Command Line/create-taglib.adoc[]
+
+[[ref-command-line-create-unit-test]]
+==== create-unit-test
+
+include::ref/Command Line/create-unit-test.adoc[]
+
+[[ref-command-line-dependency-report]]
+==== dependency-report
+
+include::ref/Command Line/dependency-report.adoc[]
+
+[[ref-command-line-docs]]
+==== docs
+
+include::ref/Command Line/docs.adoc[]
+
+[[ref-command-line-generate-all]]
+==== generate-all
+
+include::ref/Command Line/generate-all.adoc[]
+
+[[ref-command-line-generate-controller]]
+==== generate-controller
+
+include::ref/Command Line/generate-controller.adoc[]
+
+[[ref-command-line-generate-views]]
+==== generate-views
+
+include::ref/Command Line/generate-views.adoc[]
+
+[[ref-command-line-help]]
+==== help
+
+include::ref/Command Line/help.adoc[]
+
+[[ref-command-line-install-templates]]
+==== install-templates
+
+include::ref/Command Line/install-templates.adoc[]
+
+[[ref-command-line-list-plugins]]
+==== list-plugins
+
+include::ref/Command Line/list-plugins.adoc[]
+
+[[ref-command-line-list-profiles]]
+==== list-profiles
+
+include::ref/Command Line/list-profiles.adoc[]
+
+[[ref-command-line-package-plugin]]
+==== package-plugin
+
+include::ref/Command Line/package-plugin.adoc[]
+
+[[ref-command-line-package]]
+==== package
+
+include::ref/Command Line/package.adoc[]
+
+[[ref-command-line-plugin-info]]
+==== plugin-info
+
+include::ref/Command Line/plugin-info.adoc[]
+
+[[ref-command-line-profile-info]]
+==== profile-info
+
+include::ref/Command Line/profile-info.adoc[]
+
+[[ref-command-line-run-app]]
+==== run-app
+
+include::ref/Command Line/run-app.adoc[]
+
+[[ref-command-line-run-command]]
+==== run-command
+
+include::ref/Command Line/run-command.adoc[]
+
+[[ref-command-line-run-script]]
+==== run-script
+
+include::ref/Command Line/run-script.adoc[]
+
+[[ref-command-line-schema-export]]
+==== schema-export
+
+include::ref/Command Line/schema-export.adoc[]
+
+[[ref-command-line-shell]]
+==== shell
+
+include::ref/Command Line/shell.adoc[]
+
+[[ref-command-line-stats]]
+==== stats
+
+include::ref/Command Line/stats.adoc[]
+
+[[ref-command-line-stop-app]]
+==== stop-app
+
+include::ref/Command Line/stop-app.adoc[]
+
+[[ref-command-line-test-app]]
+==== test-app
+
+include::ref/Command Line/test-app.adoc[]
+
+[[ref-command-line-war]]
+==== war
+
+include::ref/Command Line/war.adoc[]
+
+[[ref-constraints]]
+=== Constraints
+
+[[ref-constraints-attributes]]
+==== attributes
+
+include::ref/Constraints/attributes.adoc[]
+
+[[ref-constraints-bindable]]
+==== bindable
+
+include::ref/Constraints/bindable.adoc[]
+
+[[ref-constraints-blank]]
+==== blank
+
+include::ref/Constraints/blank.adoc[]
+
+[[ref-constraints-creditCard]]
+==== creditCard
+
+include::ref/Constraints/creditCard.adoc[]
+
+[[ref-constraints-email]]
+==== email
+
+include::ref/Constraints/email.adoc[]
+
+[[ref-constraints-inList]]
+==== inList
+
+include::ref/Constraints/inList.adoc[]
+
+[[ref-constraints-matches]]
+==== matches
+
+include::ref/Constraints/matches.adoc[]
+
+[[ref-constraints-max]]
+==== max
+
+include::ref/Constraints/max.adoc[]
+
+[[ref-constraints-maxSize]]
+==== maxSize
+
+include::ref/Constraints/maxSize.adoc[]
+
+[[ref-constraints-min]]
+==== min
+
+include::ref/Constraints/min.adoc[]
+
+[[ref-constraints-minSize]]
+==== minSize
+
+include::ref/Constraints/minSize.adoc[]
+
+[[ref-constraints-notEqual]]
+==== notEqual
+
+include::ref/Constraints/notEqual.adoc[]
+
+[[ref-constraints-nullable]]
+==== nullable
+
+include::ref/Constraints/nullable.adoc[]
+
+[[ref-constraints-range]]
+==== range
+
+include::ref/Constraints/range.adoc[]
+
+[[ref-constraints-scale]]
+==== scale
+
+include::ref/Constraints/scale.adoc[]
+
+[[ref-constraints-size]]
+==== size
+
+include::ref/Constraints/size.adoc[]
+
+[[ref-constraints-unique]]
+==== unique
+
+include::ref/Constraints/unique.adoc[]
+
+[[ref-constraints-url]]
+==== url
+
+include::ref/Constraints/url.adoc[]
+
+[[ref-constraints-validator]]
+==== validator
+
+include::ref/Constraints/validator.adoc[]
+
+[[ref-constraints-widget]]
+==== widget
+
+include::ref/Constraints/widget.adoc[]
+
+[[ref-controllers]]
+=== Controllers
+
+[[ref-controllers-actionName]]
+==== actionName
+
+include::ref/Controllers/actionName.adoc[]
+
+[[ref-controllers-allowedMethods]]
+==== allowedMethods
+
+include::ref/Controllers/allowedMethods.adoc[]
+
+[[ref-controllers-bindData]]
+==== bindData
+
+include::ref/Controllers/bindData.adoc[]
+
+[[ref-controllers-chain]]
+==== chain
+
+include::ref/Controllers/chain.adoc[]
+
+[[ref-controllers-controllerName]]
+==== controllerName
+
+include::ref/Controllers/controllerName.adoc[]
+
+[[ref-controllers-defaultAction]]
+==== defaultAction
+
+include::ref/Controllers/defaultAction.adoc[]
+
+[[ref-controllers-errors]]
+==== errors
+
+include::ref/Controllers/errors.adoc[]
+
+[[ref-controllers-flash]]
+==== flash
+
+include::ref/Controllers/flash.adoc[]
+
+[[ref-controllers-forward]]
+==== forward
+
+include::ref/Controllers/forward.adoc[]
+
+[[ref-controllers-grailsApplication]]
+==== grailsApplication
+
+include::ref/Controllers/grailsApplication.adoc[]
+
+[[ref-controllers-hasErrors]]
+==== hasErrors
+
+include::ref/Controllers/hasErrors.adoc[]
+
+[[ref-controllers-namespace]]
+==== namespace
+
+include::ref/Controllers/namespace.adoc[]
+
+[[ref-controllers-params]]
+==== params
+
+include::ref/Controllers/params.adoc[]
+
+[[ref-controllers-redirect]]
+==== redirect
+
+include::ref/Controllers/redirect.adoc[]
+
+[[ref-controllers-render]]
+==== render
+
+include::ref/Controllers/render.adoc[]
+
+[[ref-controllers-request]]
+==== request
+
+include::ref/Controllers/request.adoc[]
+
+[[ref-controllers-respond]]
+==== respond
+
+include::ref/Controllers/respond.adoc[]
+
+[[ref-controllers-response]]
+==== response
+
+include::ref/Controllers/response.adoc[]
+
+[[ref-controllers-responseFormats]]
+==== responseFormats
+
+include::ref/Controllers/responseFormats.adoc[]
+
+[[ref-controllers-scope]]
+==== scope
+
+include::ref/Controllers/scope.adoc[]
+
+[[ref-controllers-servletContext]]
+==== servletContext
+
+include::ref/Controllers/servletContext.adoc[]
+
+[[ref-controllers-session]]
+==== session
+
+include::ref/Controllers/session.adoc[]
+
+[[ref-controllers-withForm]]
+==== withForm
+
+include::ref/Controllers/withForm.adoc[]
+
+[[ref-controllers-withFormat]]
+==== withFormat
+
+include::ref/Controllers/withFormat.adoc[]
+
+[[ref-database-mapping]]
+=== Database Mapping
+
+[[ref-database-mapping-autoImport]]
+==== autoImport
+
+include::ref/Database Mapping/autoImport.adoc[]
+
+[[ref-database-mapping-autoTimestamp]]
+==== autoTimestamp
+
+include::ref/Database Mapping/autoTimestamp.adoc[]
+
+[[ref-database-mapping-batchSize]]
+==== batchSize
+
+include::ref/Database Mapping/batchSize.adoc[]
+
+[[ref-database-mapping-cache]]
+==== cache
+
+include::ref/Database Mapping/cache.adoc[]
+
+[[ref-database-mapping-cascade]]
+==== cascade
+
+include::ref/Database Mapping/cascade.adoc[]
+
+[[ref-database-mapping-column]]
+==== column
+
+include::ref/Database Mapping/column.adoc[]
+
+[[ref-database-mapping-comment]]
+==== comment
+
+include::ref/Database Mapping/comment.adoc[]
+
+[[ref-database-mapping-discriminator]]
+==== discriminator
+
+include::ref/Database Mapping/discriminator.adoc[]
+
+[[ref-database-mapping-dynamicInsert]]
+==== dynamicInsert
+
+include::ref/Database Mapping/dynamicInsert.adoc[]
+
+[[ref-database-mapping-dynamicUpdate]]
+==== dynamicUpdate
+
+include::ref/Database Mapping/dynamicUpdate.adoc[]
+
+[[ref-database-mapping-fetch]]
+==== fetch
+
+include::ref/Database Mapping/fetch.adoc[]
+
+[[ref-database-mapping-id]]
+==== id
+
+include::ref/Database Mapping/id.adoc[]
+
+[[ref-database-mapping-ignoreNotFound]]
+==== ignoreNotFound
+
+include::ref/Database Mapping/ignoreNotFound.adoc[]
+
+[[ref-database-mapping-indexColumn]]
+==== indexColumn
+
+include::ref/Database Mapping/indexColumn.adoc[]
+
+[[ref-database-mapping-insertable]]
+==== insertable
+
+include::ref/Database Mapping/insertable.adoc[]
+
+[[ref-database-mapping-joinTable]]
+==== joinTable
+
+include::ref/Database Mapping/joinTable.adoc[]
+
+[[ref-database-mapping-lazy]]
+==== lazy
+
+include::ref/Database Mapping/lazy.adoc[]
+
+[[ref-database-mapping-order]]
+==== order
+
+include::ref/Database Mapping/order.adoc[]
+
+[[ref-database-mapping-sort]]
+==== sort
+
+include::ref/Database Mapping/sort.adoc[]
+
+[[ref-database-mapping-table]]
+==== table
+
+include::ref/Database Mapping/table.adoc[]
+
+[[ref-database-mapping-type]]
+==== type
+
+include::ref/Database Mapping/type.adoc[]
+
+[[ref-database-mapping-updateable]]
+==== updateable
+
+include::ref/Database Mapping/updateable.adoc[]
+
+[[ref-database-mapping-version]]
+==== version
+
+include::ref/Database Mapping/version.adoc[]
+
+[[ref-domain-classes]]
+=== Domain Classes
+
+[[ref-domain-classes-addTo]]
+==== addTo
+
+include::ref/Domain Classes/addTo.adoc[]
+
+[[ref-domain-classes-attach]]
+==== attach
+
+include::ref/Domain Classes/attach.adoc[]
+
+[[ref-domain-classes-belongsTo]]
+==== belongsTo
+
+include::ref/Domain Classes/belongsTo.adoc[]
+
+[[ref-domain-classes-clearErrors]]
+==== clearErrors
+
+include::ref/Domain Classes/clearErrors.adoc[]
+
+[[ref-domain-classes-constraints]]
+==== constraints
+
+include::ref/Domain Classes/constraints.adoc[]
+
+[[ref-domain-classes-count]]
+==== count
+
+include::ref/Domain Classes/count.adoc[]
+
+[[ref-domain-classes-countBy]]
+==== countBy
+
+include::ref/Domain Classes/countBy.adoc[]
+
+[[ref-domain-classes-createCriteria]]
+==== createCriteria
+
+include::ref/Domain Classes/createCriteria.adoc[]
+
+[[ref-domain-classes-delete]]
+==== delete
+
+include::ref/Domain Classes/delete.adoc[]
+
+[[ref-domain-classes-discard]]
+==== discard
+
+include::ref/Domain Classes/discard.adoc[]
+
+[[ref-domain-classes-embedded]]
+==== embedded
+
+include::ref/Domain Classes/embedded.adoc[]
+
+[[ref-domain-classes-errors]]
+==== errors
+
+include::ref/Domain Classes/errors.adoc[]
+
+[[ref-domain-classes-executeQuery]]
+==== executeQuery
+
+include::ref/Domain Classes/executeQuery.adoc[]
+
+[[ref-domain-classes-executeUpdate]]
+==== executeUpdate
+
+include::ref/Domain Classes/executeUpdate.adoc[]
+
+[[ref-domain-classes-exists]]
+==== exists
+
+include::ref/Domain Classes/exists.adoc[]
+
+[[ref-domain-classes-fetchMode]]
+==== fetchMode
+
+include::ref/Domain Classes/fetchMode.adoc[]
+
+[[ref-domain-classes-find]]
+==== find
+
+include::ref/Domain Classes/find.adoc[]
+
+[[ref-domain-classes-findAll]]
+==== findAll
+
+include::ref/Domain Classes/findAll.adoc[]
+
+[[ref-domain-classes-findAllBy]]
+==== findAllBy
+
+include::ref/Domain Classes/findAllBy.adoc[]
+
+[[ref-domain-classes-findAllWhere]]
+==== findAllWhere
+
+include::ref/Domain Classes/findAllWhere.adoc[]
+
+[[ref-domain-classes-findBy]]
+==== findBy
+
+include::ref/Domain Classes/findBy.adoc[]
+
+[[ref-domain-classes-findOrCreateBy]]
+==== findOrCreateBy
+
+include::ref/Domain Classes/findOrCreateBy.adoc[]
+
+[[ref-domain-classes-findOrCreateWhere]]
+==== findOrCreateWhere
+
+include::ref/Domain Classes/findOrCreateWhere.adoc[]
+
+[[ref-domain-classes-findOrSaveBy]]
+==== findOrSaveBy
+
+include::ref/Domain Classes/findOrSaveBy.adoc[]
+
+[[ref-domain-classes-findOrSaveWhere]]
+==== findOrSaveWhere
+
+include::ref/Domain Classes/findOrSaveWhere.adoc[]
+
+[[ref-domain-classes-findWhere]]
+==== findWhere
+
+include::ref/Domain Classes/findWhere.adoc[]
+
+[[ref-domain-classes-first]]
+==== first
+
+include::ref/Domain Classes/first.adoc[]
+
+[[ref-domain-classes-get]]
+==== get
+
+include::ref/Domain Classes/get.adoc[]
+
+[[ref-domain-classes-getAll]]
+==== getAll
+
+include::ref/Domain Classes/getAll.adoc[]
+
+[[ref-domain-classes-getDirtyPropertyNames]]
+==== getDirtyPropertyNames
+
+include::ref/Domain Classes/getDirtyPropertyNames.adoc[]
+
+[[ref-domain-classes-getPersistentValue]]
+==== getPersistentValue
+
+include::ref/Domain Classes/getPersistentValue.adoc[]
+
+[[ref-domain-classes-hasErrors]]
+==== hasErrors
+
+include::ref/Domain Classes/hasErrors.adoc[]
+
+[[ref-domain-classes-hasMany]]
+==== hasMany
+
+include::ref/Domain Classes/hasMany.adoc[]
+
+[[ref-domain-classes-hasOne]]
+==== hasOne
+
+include::ref/Domain Classes/hasOne.adoc[]
+
+[[ref-domain-classes-ident]]
+==== ident
+
+include::ref/Domain Classes/ident.adoc[]
+
+[[ref-domain-classes-instanceOf]]
+==== instanceOf
+
+include::ref/Domain Classes/instanceOf.adoc[]
+
+[[ref-domain-classes-isAttached]]
+==== isAttached
+
+include::ref/Domain Classes/isAttached.adoc[]
+
+[[ref-domain-classes-isDirty]]
+==== isDirty
+
+include::ref/Domain Classes/isDirty.adoc[]
+
+[[ref-domain-classes-last]]
+==== last
+
+include::ref/Domain Classes/last.adoc[]
+
+[[ref-domain-classes-list]]
+==== list
+
+include::ref/Domain Classes/list.adoc[]
+
+[[ref-domain-classes-listOrderBy]]
+==== listOrderBy
+
+include::ref/Domain Classes/listOrderBy.adoc[]
+
+[[ref-domain-classes-load]]
+==== load
+
+include::ref/Domain Classes/load.adoc[]
+
+[[ref-domain-classes-lock]]
+==== lock
+
+include::ref/Domain Classes/lock.adoc[]
+
+[[ref-domain-classes-mappedBy]]
+==== mappedBy
+
+include::ref/Domain Classes/mappedBy.adoc[]
+
+[[ref-domain-classes-mapping]]
+==== mapping
+
+include::ref/Domain Classes/mapping.adoc[]
+
+[[ref-domain-classes-mapWith]]
+==== mapWith
+
+include::ref/Domain Classes/mapWith.adoc[]
+
+[[ref-domain-classes-merge]]
+==== merge
+
+include::ref/Domain Classes/merge.adoc[]
+
+[[ref-domain-classes-namedQueries]]
+==== namedQueries
+
+include::ref/Domain Classes/namedQueries.adoc[]
+
+[[ref-domain-classes-properties]]
+==== properties
+
+include::ref/Domain Classes/properties.adoc[]
+
+[[ref-domain-classes-read]]
+==== read
+
+include::ref/Domain Classes/read.adoc[]
+
+[[ref-domain-classes-refresh]]
+==== refresh
+
+include::ref/Domain Classes/refresh.adoc[]
+
+[[ref-domain-classes-removeFrom]]
+==== removeFrom
+
+include::ref/Domain Classes/removeFrom.adoc[]
+
+[[ref-domain-classes-save]]
+==== save
+
+include::ref/Domain Classes/save.adoc[]
+
+[[ref-domain-classes-transients]]
+==== transients
+
+include::ref/Domain Classes/transients.adoc[]
+
+[[ref-domain-classes-validate]]
+==== validate
+
+include::ref/Domain Classes/validate.adoc[]
+
+[[ref-domain-classes-where]]
+==== where
+
+include::ref/Domain Classes/where.adoc[]
+
+[[ref-domain-classes-whereAny]]
+==== whereAny
+
+include::ref/Domain Classes/whereAny.adoc[]
+
+[[ref-domain-classes-withCriteria]]
+==== withCriteria
+
+include::ref/Domain Classes/withCriteria.adoc[]
+
+[[ref-domain-classes-withNewSession]]
+==== withNewSession
+
+include::ref/Domain Classes/withNewSession.adoc[]
+
+[[ref-domain-classes-withSession]]
+==== withSession
+
+include::ref/Domain Classes/withSession.adoc[]
+
+[[ref-domain-classes-withTransaction]]
+==== withTransaction
+
+include::ref/Domain Classes/withTransaction.adoc[]
+
+[[ref-plug-ins]]
+=== Plug-ins
+
+[[ref-plug-ins-codecs]]
+==== codecs
+
+include::ref/Plug-ins/codecs.adoc[]
+
+[[ref-plug-ins-controllers]]
+==== controllers
+
+include::ref/Plug-ins/controllers.adoc[]
+
+[[ref-plug-ins-core]]
+==== core
+
+include::ref/Plug-ins/core.adoc[]
+
+[[ref-plug-ins-dataSource]]
+==== dataSource
+
+include::ref/Plug-ins/dataSource.adoc[]
+
+[[ref-plug-ins-domainClasses]]
+==== domainClasses
+
+include::ref/Plug-ins/domainClasses.adoc[]
+
+[[ref-plug-ins-hibernate]]
+==== hibernate
+
+include::ref/Plug-ins/hibernate.adoc[]
+
+[[ref-plug-ins-i18n]]
+==== i18n
+
+include::ref/Plug-ins/i18n.adoc[]
+
+[[ref-plug-ins-logging]]
+==== logging
+
+include::ref/Plug-ins/logging.adoc[]
+
+[[ref-plug-ins-scaffolding]]
+==== scaffolding
+
+include::ref/Plug-ins/scaffolding.adoc[]
+
+[[ref-plug-ins-services]]
+==== services
+
+include::ref/Plug-ins/services.adoc[]
+
+[[ref-plug-ins-servlets]]
+==== servlets
+
+include::ref/Plug-ins/servlets.adoc[]
+
+[[ref-plug-ins-URL mappings]]
+==== URL mappings
+
+include::ref/Plug-ins/URL mappings.adoc[]
+
+[[ref-services]]
+=== Services
+
+[[ref-services-scope]]
+==== scope
+
+include::ref/Services/scope.adoc[]
+
+[[ref-services-transactional]]
+==== transactional
+
+include::ref/Services/transactional.adoc[]
+
+[[ref-servlet-api]]
+=== Servlet API
+
+[[ref-servlet-api-request]]
+==== request
+
+include::ref/Servlet API/request.adoc[]
+
+[[ref-servlet-api-response]]
+==== response
+
+include::ref/Servlet API/response.adoc[]
+
+[[ref-servlet-api-servletContext]]
+==== servletContext
+
+include::ref/Servlet API/servletContext.adoc[]
+
+[[ref-servlet-api-session]]
+==== session
+
+include::ref/Servlet API/session.adoc[]
+
+[[ref-tag-libraries]]
+=== Tag Libraries
+
+[[ref-tag-libraries-actionName]]
+==== actionName
+
+include::ref/Tag Libraries/actionName.adoc[]
+
+[[ref-tag-libraries-controllerName]]
+==== controllerName
+
+include::ref/Tag Libraries/controllerName.adoc[]
+
+[[ref-tag-libraries-flash]]
+==== flash
+
+include::ref/Tag Libraries/flash.adoc[]
+
+[[ref-tag-libraries-pageScope]]
+==== pageScope
+
+include::ref/Tag Libraries/pageScope.adoc[]
+
+[[ref-tag-libraries-params]]
+==== params
+
+include::ref/Tag Libraries/params.adoc[]
+
+[[ref-tag-libraries-request]]
+==== request
+
+include::ref/Tag Libraries/request.adoc[]
+
+[[ref-tag-libraries-response]]
+==== response
+
+include::ref/Tag Libraries/response.adoc[]
+
+[[ref-tag-libraries-servletContext]]
+==== servletContext
+
+include::ref/Tag Libraries/servletContext.adoc[]
+
+[[ref-tag-libraries-session]]
+==== session
+
+include::ref/Tag Libraries/session.adoc[]
+
+[[ref-tags]]
+=== Tags
+
+[[ref-tags-actionSubmit]]
+==== actionSubmit
+
+include::ref/Tags/actionSubmit.adoc[]
+
+[[ref-tags-actionSubmitImage]]
+==== actionSubmitImage
+
+include::ref/Tags/actionSubmitImage.adoc[]
+
+[[ref-tags-applyLayout]]
+==== applyLayout
+
+include::ref/Tags/applyLayout.adoc[]
+
+[[ref-tags-checkBox]]
+==== checkBox
+
+include::ref/Tags/checkBox.adoc[]
+
+[[ref-tags-collect]]
+==== collect
+
+include::ref/Tags/collect.adoc[]
+
+[[ref-tags-cookie]]
+==== cookie
+
+include::ref/Tags/cookie.adoc[]
+
+[[ref-tags-country]]
+==== country
+
+include::ref/Tags/country.adoc[]
+
+[[ref-tags-countrySelect]]
+==== countrySelect
+
+include::ref/Tags/countrySelect.adoc[]
+
+[[ref-tags-createLink]]
+==== createLink
+
+include::ref/Tags/createLink.adoc[]
+
+[[ref-tags-createLinkTo]]
+==== createLinkTo
+
+include::ref/Tags/createLinkTo.adoc[]
+
+[[ref-tags-currencySelect]]
+==== currencySelect
+
+include::ref/Tags/currencySelect.adoc[]
+
+[[ref-tags-datePicker]]
+==== datePicker
+
+include::ref/Tags/datePicker.adoc[]
+
+[[ref-tags-each]]
+==== each
+
+include::ref/Tags/each.adoc[]
+
+[[ref-tags-eachError]]
+==== eachError
+
+include::ref/Tags/eachError.adoc[]
+
+[[ref-tags-else]]
+==== else
+
+include::ref/Tags/else.adoc[]
+
+[[ref-tags-elseif]]
+==== elseif
+
+include::ref/Tags/elseif.adoc[]
+
+[[ref-tags-external]]
+==== external
+
+include::ref/Tags/external.adoc[]
+
+[[ref-tags-field]]
+==== field
+
+include::ref/Tags/field.adoc[]
+
+[[ref-tags-fieldError]]
+==== fieldError
+
+include::ref/Tags/fieldError.adoc[]
+
+[[ref-tags-fieldValue]]
+==== fieldValue
+
+include::ref/Tags/fieldValue.adoc[]
+
+[[ref-tags-findAll]]
+==== findAll
+
+include::ref/Tags/findAll.adoc[]
+
+[[ref-tags-form]]
+==== form
+
+include::ref/Tags/form.adoc[]
+
+[[ref-tags-formatBoolean]]
+==== formatBoolean
+
+include::ref/Tags/formatBoolean.adoc[]
+
+[[ref-tags-formatDate]]
+==== formatDate
+
+include::ref/Tags/formatDate.adoc[]
+
+[[ref-tags-formatNumber]]
+==== formatNumber
+
+include::ref/Tags/formatNumber.adoc[]
+
+[[ref-tags-grep]]
+==== grep
+
+include::ref/Tags/grep.adoc[]
+
+[[ref-tags-hasErrors]]
+==== hasErrors
+
+include::ref/Tags/hasErrors.adoc[]
+
+[[ref-tags-header]]
+==== header
+
+include::ref/Tags/header.adoc[]
+
+[[ref-tags-hiddenField]]
+==== hiddenField
+
+include::ref/Tags/hiddenField.adoc[]
+
+[[ref-tags-if]]
+==== if
+
+include::ref/Tags/if.adoc[]
+
+[[ref-tags-img]]
+==== img
+
+include::ref/Tags/img.adoc[]
+
+[[ref-tags-include]]
+==== include
+
+include::ref/Tags/include.adoc[]
+
+[[ref-tags-isAvailable]]
+==== isAvailable
+
+include::ref/Tags/isAvailable.adoc[]
+
+[[ref-tags-isNotAvailable]]
+==== isNotAvailable
+
+include::ref/Tags/isNotAvailable.adoc[]
+
+[[ref-tags-javascript]]
+==== javascript
+
+include::ref/Tags/javascript.adoc[]
+
+[[ref-tags-join]]
+==== join
+
+include::ref/Tags/join.adoc[]
+
+[[ref-tags-layoutBody]]
+==== layoutBody
+
+include::ref/Tags/layoutBody.adoc[]
+
+[[ref-tags-layoutHead]]
+==== layoutHead
+
+include::ref/Tags/layoutHead.adoc[]
+
+[[ref-tags-layoutTitle]]
+==== layoutTitle
+
+include::ref/Tags/layoutTitle.adoc[]
+
+[[ref-tags-link]]
+==== link
+
+include::ref/Tags/link.adoc[]
+
+[[ref-tags-localeSelect]]
+==== localeSelect
+
+include::ref/Tags/localeSelect.adoc[]
+
+[[ref-tags-message]]
+==== message
+
+include::ref/Tags/message.adoc[]
+
+[[ref-tags-meta]]
+==== meta
+
+include::ref/Tags/meta.adoc[]
+
+[[ref-tags-pageProperty]]
+==== pageProperty
+
+include::ref/Tags/pageProperty.adoc[]
+
+[[ref-tags-paginate]]
+==== paginate
+
+include::ref/Tags/paginate.adoc[]
+
+[[ref-tags-passwordField]]
+==== passwordField
+
+include::ref/Tags/passwordField.adoc[]
+
+[[ref-tags-radio]]
+==== radio
+
+include::ref/Tags/radio.adoc[]
+
+[[ref-tags-radioGroup]]
+==== radioGroup
+
+include::ref/Tags/radioGroup.adoc[]
+
+[[ref-tags-render]]
+==== render
+
+include::ref/Tags/render.adoc[]
+
+[[ref-tags-renderErrors]]
+==== renderErrors
+
+include::ref/Tags/renderErrors.adoc[]
+
+[[ref-tags-resource]]
+==== resource
+
+include::ref/Tags/resource.adoc[]
+
+[[ref-tags-select]]
+==== select
+
+include::ref/Tags/select.adoc[]
+
+[[ref-tags-set]]
+==== set
+
+include::ref/Tags/set.adoc[]
+
+[[ref-tags-sortableColumn]]
+==== sortableColumn
+
+include::ref/Tags/sortableColumn.adoc[]
+
+[[ref-tags-submitButton]]
+==== submitButton
+
+include::ref/Tags/submitButton.adoc[]
+
+[[ref-tags-textArea]]
+==== textArea
+
+include::ref/Tags/textArea.adoc[]
+
+[[ref-tags-textField]]
+==== textField
+
+include::ref/Tags/textField.adoc[]
+
+[[ref-tags-timeZoneSelect]]
+==== timeZoneSelect
+
+include::ref/Tags/timeZoneSelect.adoc[]
+
+[[ref-tags-unless]]
+==== unless
+
+include::ref/Tags/unless.adoc[]
+
+[[ref-tags-uploadForm]]
+==== uploadForm
+
+include::ref/Tags/uploadForm.adoc[]
+
+[[ref-tags-while]]
+==== while
+
+include::ref/Tags/while.adoc[]
+

@@ -1,0 +1,31 @@
+== create-interceptor
+
+=== Purpose
+
+The `create-interceptor` command creates an interceptor and associated unit test for the given base name.
+
+=== Examples
+
+----
+grails create-interceptor
+grails create-interceptor Book
+grails create-interceptor org.bookstore.book
+----
+
+=== Description
+
+Creates a new interceptor with an empty `before`, `after` and `afterView` method definitions. The argument is optional, but if you don't include it the command will ask you for the name of the interceptor.
+
+A link:{guidePath}/theWebLayer.html#interceptors[interceptor] is responsible intercepting incoming web requests and performing actions such as authentication, logging and so on.
+
+The name of the interceptor can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `grails-app/controllers/<appname>/BookInterceptor.groovy` whereas the last one will create `grails-app/controllers/org/bookstore/BookInterceptor.groovy` directory. Note that the first letter of the interceptor name is always upper-cased when determining the class name.
+
+If you want the command to default to a different package for interceptors, provide a value for `grails.project.groupId` in the link:{guidePath}/conf.html[runtime configuration].
+
+Note that this command is just for convenience and you can also create interceptors in your favourite text editor or IDE if you choose.
+
+Usage:
+[source,groovy]
+----
+grails create-interceptor <<name>>
+----

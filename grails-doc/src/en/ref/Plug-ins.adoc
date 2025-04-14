@@ -1,0 +1,46 @@
+
+=== plugin Usage
+
+
+A plugin provides additional capability to the Grails runtime and is created with the link:../Command%20Line/create-plugin.html[create-plugin] command:
+
+[source,groovy]
+----
+grails create-plugin simple
+----
+
+This will create a plugin project which can then be packaged with link:../Command%20Line/package-plugin.html[package-plugin]:
+
+[source,groovy]
+----
+grails package-plugin
+----
+
+To install the plugin to your local Maven repository you can use the `install` command:
+
+[source,groovy]
+----
+grails install
+----
+
+Refer to the user guide topic on link:{guidePath}/plugins.html[plugins] for more information.
+
+
+
+=== Grails Forge Plugin Usage
+
+A plugin provides additional capability to the Grails runtime and is created with the link:../Command%20Line/create-plugin.html[create-plugin] command:
+
+[source,console]
+----
+grails create-plugin myplugin
+----
+
+This will create a plugin project which can then be packaged as a JAR file (build/libs/myplugin-0.1.jar) using the `jar` gradle task:
+
+[source,console]
+----
+./gradlew jar
+----
+
+Refer to the user guide topic on link:{guidePath}/plugins.html[plugins] for more information.

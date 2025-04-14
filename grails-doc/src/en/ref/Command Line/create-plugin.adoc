@@ -1,0 +1,105 @@
+== create-plugin
+
+=== Purpose
+
+The `create-plugin` command creates a Grails plugin project.
+
+=== Examples
+
+[source,groovy]
+----
+grails create-plugin simple
+----
+
+=== Description
+
+Creates a Grails plugin project. A Grails plugin project is just like an application project except it contains a plugin descriptor and can be packaged as a plugin and installed into other applications.
+
+Plugins are not just useful for plugin developers, but also as a way to modularize large Grails applications. Refer to the section on link:{guidePath}/plugins.html[Plugin Development] in the user guide for more information on developing plugins for Grails.
+
+Usage:
+
+[source,groovy]
+----
+grails create-plugin <<name>>
+----
+
+
+
+== Grails Forge `create-plugin`
+
+=== Description
+
+The `create-plugin` command is used to create a Grails plugin project. A Grails plugin project is similar to an application project but includes a plugin descriptor and can be packaged as a plugin to be installed into other Grails applications.
+
+Plugins are not only valuable for plugin developers but also serve as a means to modularize large Grails applications. They allow you to encapsulate functionality and easily reuse it across different projects. To learn more about developing plugins for Grails, refer to the section on link:{guidePath}/plugins.html[Plugin Development] in the Grails user guide.
+
+=== Usage
+
+To create a Grails plugin, use the following command:
+
+[source,shell]
+----
+grails create-plugin [OPTIONS] NAME
+----
+
+- `NAME`: The desired name for the Grails plugin.
+
+Options include specifying features, configuring the GORM implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails plugin to your specific requirements using these options.
+
+=== Options
+
+Here are the available options for the create-plugin command:
+
+- -f, --features=FEATURE[,FEATURE...]: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, spring-boot-starter-jetty, springloaded, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow,  github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
+- -g, --gorm=GORM Implementation: Specifies the GORM Implementation to configure for the plugin. Possible values are hibernate, mongodb, neo4j.
+- -h, --help: Displays the help message and exits.
+- -i, --inplace: Creates a service within the current directory.
+- --jdk=<javaVersion>: Specifies the JDK version the project should target.
+- -s, --servlet=Servlet Implementation: Specifies the Servlet Implementation to configure for the plugin. Possible values are none, tomcat, jetty, undertow.
+- -t, --test=TEST: Specifies the test framework to use for the plugin. Possible values are junit, spock.
+
+=== Examples
+
+To create a Grails plugin named "example-plugin" with specific features:
+
+[source,shell]
+----
+grails create-plugin example-plugin --features h2,gorm-hibernate5,asciidoctor
+----
+
+This command will generate a Grails plugin project named "example-plugin" with the specified features, making it ready for development and integration into other Grails applications.
+
+Here are additional examples for the `create-plugin` command:
+
+1. Create a minimal Grails plugin:
+
++
+[source,shell]
+----
+grails create-plugin minimal-plugin
+----
++
+This command will create a Grails plugin project named "minimal-plugin" with the default settings, suitable for starting a new plugin project from scratch.
+
+2. Create a plugin with MongoDB support:
+
++
+[source,shell]
+----
+grails create-plugin mongodb-plugin --gorm=mongodb
+----
++
+This command will generate a Grails plugin project named "mongodb-plugin" configured to use MongoDB as the GORM implementation.
+
+3. Create a plugin with embedded H2 database and view support:
+
++
+[source,shell]
+----
+grails create-plugin h2-views-plugin --features h2,views-markup
+----
++
+This command will create a Grails plugin project named "h2-views-plugin" with the H2 database and views markup feature enabled, making it useful for projects that require an embedded database and view rendering capabilities.
+
+These additional examples showcase different use cases for the `create-plugin` command, such as creating minimal plugins, customizing GORM implementations, and enabling specific features to meet project requirements.

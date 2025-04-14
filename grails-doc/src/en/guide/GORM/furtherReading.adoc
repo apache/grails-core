@@ -1,0 +1,1 @@
+For more information on using GORM see the https://gorm.grails.org[dedicated documentation] for the GORM project.

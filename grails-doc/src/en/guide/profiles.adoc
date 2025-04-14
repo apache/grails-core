@@ -1,0 +1,113 @@
+When you create a Grails application with the link:../ref/Command%20Line/create-app.html[create-app] command by default the "web" profile is used:
+
+[source,bash]
+----
+grails create-app myapp
+----
+
+You can specify a different profile with the profile argument:
+
+[source,bash]
+----
+grails create-app myapp --profile=rest-api
+----
+
+Profiles encapsulate the project commands, templates and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/grails-profiles[on Github], whilst the profiles themselves are published as JAR files to the Grails central repository.
+
+To find out what profiles are available use the link:../ref/Command%20Line/list-profiles.html[list-profiles] command:
+
+[source,bash]
+----
+$ grails list-profiles
+----
+
+For more information on a particular profile use the link:../ref/Command%20Line/profile-info.html[profile-info] command:
+
+[source,bash]
+----
+$ grails profile-info rest-api
+----
+
+NOTE: Commands such as `profile-info` or `list-profiles` are not available when you invoke the Grails CLI inside a grails project. 
+
+==== Profile Repositories
+
+
+By default Grails will resolve profiles from the https://repo.grails.org/grails/core/org/grails/profiles/[Grails central repository]. However, you can override what repositories will be searched by specifying repositories in the `USER_HOME/.grails/settings.groovy` file.
+
+If you want profiles to be resolved with a custom repository in addition to the Grails central repository, you must specify Grails central in the file as well:
+
+[source,groovy]
+----
+grails {
+  profiles {
+    repositories {
+      myRepo {
+        url = "http://foo.com/repo"
+        snapshotsEnabled = true
+      }
+      grailsCentral {
+        url = "https://repo.grails.org/grails/core"
+        snapshotsEnabled = true
+      }
+    }
+  }
+}
+----
+
+NOTE: Grails uses Aether to resolve profiles, as a Gradle instance is not yet available when the `create-app` command is executed. This means that you can also define repositories and more advanced configuration (proxies, authentication etc.) in your `USER_HOME/.m2/settings.xml` file if you wish.
+
+It is also possible to store simple credentials for profile repositories directly in the `USER_HOME/.grails/settings.groovy` file.
+
+[source,groovy]
+----
+grails {
+  profiles {
+    repositories {
+      myRepo {
+        url = "http://foo.com/repo"
+        snapshotsEnabled = true
+        username = "user"
+        password = "pass"
+      }
+      ...
+    }
+  }
+}
+----
+
+
+==== Profile Defaults
+
+
+To create an application that uses a custom profile, you must specify the full artifact.
+
+[source,bash]
+----
+$ grails create-app myapp --profile=com.mycompany.grails.profiles:myprofile:1.0.0
+----
+
+To make this process easier, you can define defaults for a given profile in the `USER_HOME/.grails/settings.groovy` file.
+
+[source,groovy]
+----
+grails {
+  profiles {
+    myprofile {
+      groupId = "com.mycompany.grails.profiles"
+      version = "1.0.0"
+    }
+    repositories {
+      ...
+    }
+  }
+}
+----
+
+With the default values specified, the command to create an application using that profile becomes:
+
+[source,bash]
+----
+$ grails create-app myapp --profile=myprofile
+----
+

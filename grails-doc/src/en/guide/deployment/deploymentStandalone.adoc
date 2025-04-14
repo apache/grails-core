@@ -1,0 +1,90 @@
+
+
+=== "grails run-app"
+
+
+You should be very familiar with this approach by now, since it is the most common method of running an application during the development phase. An embedded Tomcat server is launched that loads the web application from the development sources, thus allowing it to pick up any changes to application files.
+
+You can run the application in the production environment using:
+
+[source,groovy]
+----
+grails prod run-app
+----
+
+You can run the app using the `bootRun` Gradle task. The next command uses the https://docs.gradle.org/current/userguide/gradle_wrapper.html[Gradle Wrapper].
+
+`./gradlew bootRun`
+
+You can specify an environment supplying `grails.env` system property.
+
+`./gradlew -Dgrails.env=prod bootRun`
+
+=== Runnable WAR or JAR file
+
+Another way to deploy in Grails 3.0 or above is to use the new support for runnable JAR or WAR files. To create runnable archives, run `grails package`:
+
+[source,xml]
+----
+grails package
+----
+
+Alternatively, you could use the `assemble` Gradle task.
+
+`./gradlew assemble`
+
+You can then run either the WAR file or the JAR using your Java installation:
+
+[source,groovy]
+----
+java -Dgrails.env=prod -jar build/libs/mywar-0.1.war    (or .jar)
+----
+
+=== A TAR/ZIP distribution
+
+WARNING: Note: TAR/ZIP distribution assembly has been removed from Grails 3.1.
+
+
+=== "./gradlew bootRun"
+
+
+You should be very familiar with this approach by now, since it is the most common method of running an application during the development phase. An embedded Tomcat server is launched that loads the web application from the development sources, thus allowing it to pick up any changes to application files.
+
+You can run the application in the production environment using:
+
+[source,groovy]
+----
+./gradlew bootRun -Dgrails.env=prod
+----
+
+You can run the app using the `bootRun` Gradle task. The next command uses the https://docs.gradle.org/current/userguide/gradle_wrapper.html[Gradle Wrapper].
+
+`./gradlew bootRun`
+
+You can specify an environment supplying `grails.env` system property. 
+
+`./gradlew -Dgrails.env=prod bootRun`
+
+=== Runnable WAR or JAR file
+
+Another way to deploy in Grails 3.0 or above is to use the new support for runnable JAR or WAR files. To create runnable archives, run `grails package`:
+
+[source,xml]
+----
+grails package
+----
+
+Alternatively, you could use the `assemble` Gradle task.
+
+`./gradlew assemble`
+
+You can then run either the WAR file or the JAR using your Java installation:
+
+[source,groovy]
+----
+java -Dgrails.env=prod -jar build/libs/mywar-0.1.war    (or .jar)
+----
+
+=== A TAR/ZIP distribution
+
+WARNING: Note: TAR/ZIP distribution assembly has been removed from Grails 3.1.

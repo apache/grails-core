@@ -1,0 +1,98 @@
+
+==== SQL injection
+
+
+Hibernate, which is the technology underlying GORM domain classes, automatically escapes data when committing to database so this is not an issue. However it is still possible to write bad dynamic HQL code that uses unchecked request parameters. For example doing the following is vulnerable to HQL injection attacks:
+
+[source,groovy]
+----
+def vulnerable() {
+    def books = Book.find("from Book as b where b.title ='" + params.title + "'")
+}
+----
+
+or the analogous call using a GString:
+
+[source,groovy]
+----
+def vulnerable() {
+    def books = Book.find("from Book as b where b.title ='${params.title}'")
+}
+----
+
+Do *not* do this. Use named or positional parameters instead to pass in parameters:
+
+[source,groovy]
+----
+def safe() {
+    def books = Book.find("from Book as b where b.title = ?",
+                          [params.title])
+}
+----
+
+or
+
+[source,groovy]
+----
+def safe() {
+    def books = Book.find("from Book as b where b.title = :title",
+                          [title: params.title])
+}
+----
+
+
+==== Phishing
+
+
+This really a public relations issue in terms of avoiding hijacking of your branding and a declared communication policy with your customers. Customers need to know how to identify valid emails.
+
+
+==== XSS - cross-site scripting injection
+
+
+It is important that your application verifies as much as possible that incoming requests were originated from your application and not from another site. It is also important to ensure that all data values rendered into views are escaped correctly. For example when rendering to HTML or XHTML you must ensure that people cannot maliciously inject JavaScript or other HTML into data or tags viewed by others.
+
+Grails 2.3 and above include special support for automatically encoded data placed into GSP pages. See the documentation on <<xssPrevention,Cross Site Scripting (XSS) prevention>> for further information.
+
+You must also avoid the use of request parameters or data fields for determining the next URL to redirect the user to. If you use a `successURL` parameter for example to determine where to redirect a user to after a successful login, attackers can imitate your login procedure using your own site, and then redirect the user back to their own site once logged in, potentially allowing JavaScript code to then exploit the logged-in account on the site.
+
+
+==== Cross-site request forgery
+
+
+CSRF involves unauthorized commands being transmitted from a user that a website trusts. A typical example would be another website embedding a link to perform an action on your website if the user is still authenticated.
+
+The best way to decrease risk against these types of attacks is to use the `useToken` attribute on your forms. See link:theWebLayer.html#formtokens[Handling Duplicate Form Submissions] for more information on how to use it. An additional measure would be to not use remember-me cookies.
+
+
+==== HTML/URL injection
+
+
+This is where bad data is supplied such that when it is later used to create a link in a page, clicking it will not cause the expected behaviour, and may redirect to another site or alter request parameters.
+
+HTML/URL injection is easily handled with the <<codecs,codecs>> supplied by Grails, and the tag libraries supplied by Grails all use <<codecs,encodeAsURL>> where appropriate. If you create your own tags that generate URLs you will need to be mindful of doing this too.
+
+
+==== Denial of service
+
+
+Load balancers and other appliances are more likely to be useful here, but there are also issues relating to excessive queries for example where a link is created by an attacker to set the maximum value of a result set so that a query could exceed the memory limits of the server or slow the system down. The solution here is to always sanitize request parameters before passing them to dynamic finders or other GORM query methods:
+
+[source,groovy]
+----
+int limit = 100
+def safeMax = Math.min(params.max?.toInteger() ?: limit, limit) // limit to 100 results
+return Book.list(max:safeMax)
+----
+
+
+==== Guessable IDs
+
+
+Many applications use the last part of the URL as an "id" of some object to retrieve from GORM or elsewhere. Especially in the case of GORM these are easily guessable as they are typically sequential integers.
+
+Therefore you must assert that the requesting user is allowed to view the object with the requested id before returning the response to the user.
+
+Not doing this is "security through obscurity" which is inevitably breached, just like having a default password of "letmein" and so on.
+
+You must assume that every unprotected URL is publicly accessible one way or another.

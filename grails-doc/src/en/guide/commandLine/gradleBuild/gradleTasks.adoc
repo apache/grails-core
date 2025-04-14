@@ -1,0 +1,49 @@
+As mentioned previously the `grails` command uses an embedded version of Gradle and certain Grails commands that existed in previous versions of Grails map onto their Gradle equivalents. The following table shows which Grails command invoke which Gradle task:
+
+[format="csv", options="header"]
+|===
+
+*Grails Command*,*Gradle Task*
+clean,clean
+compile,classes
+package,assemble
+run-app,bootRun
+test-app,check
+test-app --unit,test
+test-app --integration,integrationTest
+war,assemble
+|===
+
+You can invoke any of these Grails commands using their Gradle equivalents if you prefer:
+
+[source,bash]
+----
+$ gradle test
+----
+
+Note however that you will need to use a version of Gradle compatible with Grails 3.1 (Gradle 2.2 or above). If you wish to invoke a Gradle task using the version of Gradle used by Grails you can do so with the `grails` command:
+
+[source,bash]
+----
+$ grails gradle compileGroovy
+----
+
+However, it is recommended you do this via interactive mode, as it greatly speeds up execution and provides TAB completion for the available Gradle tasks:
+
+[source,bash]
+----
+$ grails 
+| Enter a command name to run. Use TAB for completion:
+ grails> gradle compileGroovy
+ ...
+----
+
+To find out what Gradle tasks are available without using interactive mode TAB completion you can use the Gradle `tasks` task:
+
+[source,bash]
+----
+gradle tasks
+----
+
+
+

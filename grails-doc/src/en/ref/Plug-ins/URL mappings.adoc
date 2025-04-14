@@ -1,0 +1,43 @@
+
+== URLMappings
+
+
+
+=== Purpose
+
+
+The `URLMappings` plugin configures Grails' URL Mapping infrastructure.
+
+
+=== Examples
+
+
+An example `UrlMapping` class:
+
+[source,groovy]
+----
+class UrlMappings {
+
+    static mappings = {
+        "/$controller/$action?/$id?"{
+            constraints {
+                // apply constraints here
+            }
+        }
+
+        "/"(view:"/index")
+        "500"(view:'/error')
+    }
+}
+----
+
+
+=== Description
+
+Refer to the section on link:{guidePath}/theWebLayer.html#urlmappings[URL Mappings] in the Grails user guide which details Grails' URL mappings.
+
+Configured Spring Beans:
+
+* `grailsUrlMappingsHolderBean` - A {apiDocs}org/grails/web/mappings/UrlMappingsHolderFactoryBean.html[UrlMappingsHolderFactoryBean] factory bean that constructs a {apiDocs}grails/web/mapping/UrlMappingsHolder.html[grails.web.mapping.UrlMappingsHolder] instance that stores all of the URL mappings.
+* `urlMappingsTargetSource` - A Spring {springapi}org/springframework/aop/target/HotSwappableTargetSource.html[HotSwappableTargetSource] used in auto-reloading to automatically update URL mappings when changed.
+* `grailsUrlMappingsHolder` - A Spring {springapi}org/springframework/aop/framework/ProxyFactoryBean.html[ProxyFactoryBean] that proxies onto the actual `UrlMappingsHolder` instance using the `HotSwappableTargetSource`

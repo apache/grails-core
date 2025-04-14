@@ -1,0 +1,85 @@
+Within a domain class link:../ref/Domain%20Classes/constraints.html[constraints] are defined with the constraints property that is assigned a code block:
+
+[source,groovy]
+----
+class User {
+    String login
+    String password
+    String email
+    Integer age
+
+    static constraints = {
+      ...
+    }
+}
+----
+
+You then use method calls that match the property name for which the constraint applies in combination with named parameters to specify constraints:
+
+[source,groovy]
+----
+class User {
+    ...
+
+    static constraints = {
+        login size: 5..15, blank: false, unique: true
+        password size: 5..15, blank: false
+        email email: true, blank: false
+        age min: 18
+    }
+}
+----
+
+In this example we've declared that the `login` property must be between 5 and 15 characters long, it cannot be blank and must be unique. We've also applied other constraints to the `password`, `email` and `age` properties.
+
+NOTE: By default, all domain class properties are not nullable (i.e. they have an implicit `nullable: false` constraint).
+
+A complete reference for the available constraints can be found in the Quick Reference section under the Constraints heading.
+
+Note that constraints are only evaluated once which may be relevant for a constraint that relies on a value like an instance of `java.util.Date`.
+
+[source,groovy]
+----
+class User {
+    ...
+
+    static constraints = {
+        // this Date object is created when the constraints are evaluated, not
+        // each time an instance of the User class is validated.
+        birthDate max: new Date()
+    }
+}
+----
+
+
+=== A word of warning - referencing domain class properties from constraints
+
+
+It's very easy to attempt to reference instance variables from the static constraints block, but this isn't legal in Groovy (or Java). If you do so, you will get a `MissingPropertyException` for your trouble. For example, you may try
+[source,groovy]
+----
+class Response {
+    Survey survey
+    Answer answer
+
+    static constraints = {
+        survey blank: false
+        answer blank: false, inList: survey.answers
+    }
+}
+----
+
+See how the `inList` constraint references the instance property `survey`? That won't work. Instead, use a custom link:../ref/Constraints/validator.html[validator]:
+
+[source,groovy]
+----
+class Response {
+    ...
+    static constraints = {
+        survey blank: false
+        answer blank: false, validator: { val, obj -> val in obj.survey.answers }
+    }
+}
+----
+
+In this example, the `obj` argument to the custom validator is the domain _instance_ that is being validated, so we can access its `survey` property and return a boolean to indicate whether the new value for the `answer` property, `val`, is valid.

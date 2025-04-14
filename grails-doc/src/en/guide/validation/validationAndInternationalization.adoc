@@ -1,0 +1,111 @@
+Another important thing to note about errors in Grails is that error messages are not hard coded anywhere. The {springapi}org/springframework/validation/FieldError.html[FieldError] class in Spring resolves messages from message bundles using Grails' link:i18n.html[i18n] support.
+
+
+==== Constraints and Message Codes
+
+
+The codes themselves are dictated by a convention. For example consider the constraints we looked at earlier:
+
+[source,groovy]
+----
+package com.mycompany.myapp
+
+class User {
+    ...
+
+    static constraints = {
+        login size: 5..15, blank: false, unique: true
+        password size: 5..15, blank: false
+        email email: true, blank: false
+        age min: 18
+    }
+}
+----
+
+If a constraint is violated, Grails looks by convention for a message code: 
+
+[cols=2*,options="header"]
+|===
+|Constraint
+|Error Code
+
+|link:../ref/Constraints/blank.html[blank]
+|`className.propertyName.blank`
+
+|link:../ref/Constraints/creditCard.html[creditCard]
+|`className.propertyName.creditCard.invalid`
+
+|link:../ref/Constraints/email.html[email]
+|`className.propertyName.email.invalid`
+
+|link:../ref/Constraints/inList.html[inList]
+|`className.propertyName.not.inList`
+
+|link:../ref/Constraints/matches.html[matches]
+|`className.propertyName.matches.invalid`
+
+|link:../ref/Constraints/max.html[max]
+|`className.propertyName.max.exceeded`
+
+|link:../ref/Constraints/maxSize.html[maxSize]
+|`className.propertyName.maxSize.exceeded`
+
+|link:../ref/Constraints/min.html[min]
+|`className.propertyName.min.notmet`
+
+|link:../ref/Constraints/minSize.html[minSize]
+|`className.propertyName.minSize.notmet`
+
+|link:../ref/Constraints/notEqual.html[notEqual]
+|`className.propertyName.notEqual`
+
+|link:../ref/Constraints/nullable.html[nullable]
+|`className.propertyName.nullable`
+
+|link:../ref/Constraints/range.html[range]
+|`className.propertyName.range.toosmall` or `className.propertyName.range.toobig`
+
+|link:../ref/Constraints/size.html[size]
+|`className.propertyName.size.toosmall` or `className.propertyName.size.toobig`
+
+|link:../ref/Constraints/unique.html[unique]
+|`className.propertyName.unique`
+
+|link:../ref/Constraints/url.html[url]
+|`className.propertyName.url.invalid`
+
+|link:../ref/Constraints/validator.html[validator]
+|`classname.propertyName.` + String returned by Closure
+
+|===
+
+In the case of the `blank` constraint this would be `user.login.blank` so you would need a message such as the following in your `grails-app/i18n/messages.properties` file:
+
+[source,groovy]
+----
+user.login.blank=Your login name must be specified!
+----
+
+The class name is looked for both with and without a package, with the packaged version taking precedence. So for example, `com.mycompany.myapp.User.login.blank` will be used before `user.login.blank`. This allows for cases where your domain class message codes clash with a plugin's.
+
+For a reference on what codes are for which constraints refer to the reference guide for each constraint (e.g. link:../ref/Constraints/blank.html[blank]).
+
+
+==== Displaying Messages
+
+
+The link:{gspdocs}/ref/Tags/renderErrors.html[renderErrors] tag will automatically look up messages for you using the link:{gspdocs}/ref/Tags/message.html[message] tag. If you need more control of rendering you can handle this yourself:
+
+[source,xml]
+----
+<g:hasErrors bean="${user}">
+  <ul>
+   <g:eachError var="err" bean="${user}">
+       <li><g:message error="${err}" /></li>
+   </g:eachError>
+  </ul>
+</g:hasErrors>
+----
+
+In this example within the body of the link:{gspdocs}/ref/Tags/eachError.html[eachError] tag we use the link:{gspdocs}/ref/Tags/message.html[message] tag in combination with its `error` argument to read the message for the given error.
+

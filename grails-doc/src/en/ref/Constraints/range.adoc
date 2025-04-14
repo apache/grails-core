@@ -1,0 +1,28 @@
+
+== range
+
+
+
+=== Purpose
+
+
+Uses a Groovy range to ensure that a property's value is within a specified range
+
+
+=== Examples
+
+
+[source,groovy]
+----
+age range: 18..65
+----
+
+
+=== Description
+
+
+Set to a Groovy range which can contain numbers in the form of an `IntRange`, dates or any object that implements `Comparable` and provides `next` and `previous` methods for navigation.
+
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
+
+Error Code: `className.propertyName.range.toosmall` or `className.propertyName.range.toobig`

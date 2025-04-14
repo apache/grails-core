@@ -1,0 +1,207 @@
+
+=== Constraints Usage
+
+
+Constraints provide Grails with a declarative DSL for defining validation rules, schema generation and CRUD generation meta data. For example, consider these constraints:
+
+[source,groovy]
+----
+class User {
+    ...
+
+    static constraints = {
+        login size: 5..15, blank: false, unique: true
+        password size: 5..15, blank: false
+        email email: true, blank: false
+        age min: 18
+    }
+}
+----
+
+Refer to the user guide topic on link:{guidePath}/validation.html#constraints[Constraints] for more information.
+
+
+=== Global Constraints
+
+
+You can apply constraints globally inside `grails-app/conf/runtime.groovy` as follows:
+
+[source,groovy]
+----
+grails.gorm.default.constraints = {
+    '*'(nullable: true, size: 1..20)
+}
+----
+
+The wildcard signifies that the constraints apply to all properties. You can also define shared constraints:
+
+[source,groovy]
+----
+grails.gorm.default.constraints = {
+    myShared(nullable: true, size: 1..20)
+}
+----
+
+That can be reused in your class:
+
+[source,groovy]
+----
+class User {
+    ...
+
+    static constraints = {
+        login(shared: "myShared")
+    }
+}
+----
+
+
+=== Sharing Constraints
+
+
+Global constraints are one way of sharing constraints between different classes, for example between a domain class and a command object. This is no longer the only way. Grails 2 introduces a new syntax for the `constraints` block that allows you to reuse constraints directly from another class.
+
+Let's say you have a domain class like so:
+
+[source,groovy]
+----
+class User {
+    String firstName
+    String lastName
+    String passwordHash
+
+    static constraints = {
+        firstName blank: false, nullable: false
+        lastName blank: false, nullable: false
+        passwordHash blank: false, nullable: false
+    }
+}
+----
+
+You then want to create a command object, `UserCommand`, that shares some of the properties of the domain class and the corresponding constraints. You do this with the `importFrom()` method:
+
+[source,groovy]
+----
+class UserCommand {
+    String firstName
+    String lastName
+    String password
+    String confirmPassword
+
+    static constraints = {
+        importFrom User
+
+        password blank: false, nullable: false
+        confirmPassword blank: false, nullable: false
+    }
+}
+----
+
+This will import all the constraints from the `User` domain class and apply them to `UserCommand`. The import will ignore any constraints in the source class (`User`) that don't have corresponding properties in the importing class (`UserCommand`). In the above case, only the 'firstName' and 'lastName' constraints will be imported into `UserCommand`.
+
+If you want more control over which constraints are imported, use the `include` and `exclude` named arguments. Both of these accept a list of simple or regular expression strings that are matched against the property names in the source constraints. So for example, if you only wanted to import the 'lastName' constraint you would use:
+
+[source,groovy]
+----
+...
+static constraints = {
+    importFrom User, include: ["lastName"]
+    ...
+}
+----
+
+or if you wanted all constraints that ended with 'Name':
+
+[source,groovy]
+----
+...
+static constraints = {
+    importFrom User, include: [/.*Name/]
+    ...
+}
+----
+
+Of course, `exclude` does the reverse, specifying which constraints should _not_ be imported.
+
+
+=== Quick Reference
+
+|===
+|Constraint|Description|Example
+
+|blank|Validates that a String value is not blank|`login(blank:false)`
+|creditCard|Validates that a String value is a valid credit card number|`cardNumber(creditCard: true)`
+|email|Validates that a String value is a valid email address.|`homeEmail(email: true)`
+|inList|Validates that a value is within a range or collection of constrained values.|`name(inList: ["Joe", "Fred", "Bob"])`
+|matches|Validates that a String value matches a given regular expression.|`login(matches: "[a-zA-Z]+")`
+|max|Validates that a value does not exceed the given maximum value.|`age(max: new Date())` `price(max: 999F)`
+|maxSize|Validates that a value's size does not exceed the given maximum value.|`children(maxSize: 25)`
+|min|Validates that a value does not fall below the given minimum value.|`age(min: new Date())` `price(min: 0F)`
+|minSize|Validates that a value's size does not fall below the given minimum value.|`children(minSize: 25)`
+|notEqual|Validates that that a property is not equal to the specified value|`login(notEqual: "Bob")`
+|nullable|Allows a property to be set to `null` - defaults to `false`.|`age(nullable: true)`
+|range|Uses a Groovy range to ensure that a property's value occurs within a specified range|`age(range: 18..65)`
+|scale|Set to the desired scale for floating point numbers (i.e., the number of digits to the right of the decimal point).|`salary(scale: 2)`
+|size|Uses a Groovy range to restrict the size of a collection or number or the length of a String.|`children(size: 5..15)`
+|unique|Constrains a property as unique at the database level|`login(unique: true)`
+|url|Validates that a String value is a valid URL.|`homePage(url: true)`
+|validator|Adds custom validation to a field.|See documentation
+|===
+
+
+=== Scaffolding
+
+
+Some constraints have no impact on persistence but customize the scaffolding. It's not usually good practice to include UI information in your domain, but it's a great convenience if you use Grails' scaffolding extensively.
+
+|===
+|Constraint|Description
+
+|display|Boolean that determines whether the property is displayed in the scaffolding views. If `true` (the default), the property _is_ displayed.
+|editable|Boolean that determines whether the property can be edited from the scaffolding views. If `false`, the associated form fields are displayed in read-only mode.
+|format|Specify a display format for types that accept one, such as dates. For example, 'yyyy-MM-dd'.
+|password|Boolean indicating whether this is property should be displayed with a password field. Only works on fields that would normally be displayed with a text field.
+|widget|Controls what widget is used to display the property. For example, 'textarea' will force the scaffolding to use a <textArea> tag.
+|===
+
+
+=== Programmatic access
+
+
+You can access a domain's constraints programmatically in another context by accessing the `constrainedProperties` static property of a domain class. That property is an instance of `Map<String, {apiDocs}grails/validation/ConstrainedProperty.html[ConstrainedProperty]>`.
+
+[source,groovy]
+----
+class User {
+    String firstName
+    String middleName
+
+    static constraints = {
+        firstName blank: false, nullable: false
+        middleName blank: true, nullable: true
+    }
+}
+----
+
+In the example above, accessing `User.constrainedProperties.firstName.blank` would yield `false`, while
+`User.constrainedProperties.middleName.blank` would yield `true`.
+
+==== Command Objects
+
+Accessing the constraints on a command object is slightly different. You can access a command object's constraints programmatically in another context by accessing the `constraintsMap` static property of a class that implements {apiDocs}grails/validation/Validateable.html[Validateable]. That property is an instance of `Map<String, {apiDocs}grails/validation/ConstrainedProperty.html[ConstrainedProperty]>`
+
+[source,groovy]
+----
+class User implements Validateable {
+    String firstName
+    String middleName
+
+    static constraints = {
+        firstName blank: false, nullable: false
+        middleName blank: true, nullable: true
+    }
+}
+----
+
+In the example above, accessing `User.constraintsMap.firstName.blank` would yield `false`, while
+`User.constraintsMap.middleName.blank` would yield `true`.

@@ -1,0 +1,49 @@
+== run-app
+
+=== Purpose
+
+Runs a Grails application in an embedded servlet container
+
+WARNING: This target is _not_ intended to be used for application deployment. There are many optimizations implemented when  generating a WAR file for deployment that are not available to `run-app` since `run-app` is optimized for developer productivity, not performance.
+
+=== Examples
+
+[source,groovy]
+----
+grails run-app
+grails run-app -https // with HTTPS
+grails test run-app
+----
+
+=== Description
+
+Usage:
+
+[source,groovy]
+----
+grails <<env>>* run-app
+----
+
+Arguments:
+
+* `debug-jvm` - Run the application using a debug JVM (port 5005) in order to attach a remote debugger.
+* `port` - The port to use
+* `host` - The host to bind to
+* `https` - Start an HTTPS server (on port 8443 by default) alongside the main server. Just to be clear, the application will be accessible via HTTPS _and_ HTTP. A self-signed key will be generated. Intended for development use only.
+
+Supported system properties:
+
+* `grails.server.port.http`/`server.port` - Specifies the HTTP port to run the server on (defaults to 8080)
+* `grails.server.port.https` - Specifies the HTTPS port to run the server on (defaults to 8443)
+* `grails.server.host`/`server.host` - Specifies the host name to run the server on (defaults to localhost)
+
+
+This command starts Grails in an embedded servlet container that can serve HTTP requests. The default container is http://tomcat.apache.org[Tomcat] but alternative containers are supported by altering the Spring boot starter in `build.gradle`.
+
+[source,groovy]
+----
+// use Jetty
+runtime "org.springframework.boot:spring-boot-starter-jetty"
+----
+
+For more information see the Spring Boot documentation on {springBootReference}/html/howto-embedded-web-servers.html[Embedded Containers].

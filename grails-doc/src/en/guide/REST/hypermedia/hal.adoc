@@ -1,0 +1,350 @@
+http://stateless.co/hal_specification.html[HAL] is a standard exchange format commonly used when developing REST APIs that follow HATEOAS principals. An example HAL document representing a list of orders can be seen below:
+
+[source,javascript]
+----
+{
+    "_links": {
+        "self": { "href": "/orders" },
+        "next": { "href": "/orders?page=2" },
+        "find": {
+            "href": "/orders{?id}",
+            "templated": true
+        },
+        "admin": [{
+            "href": "/admins/2",
+            "title": "Fred"
+        }, {
+            "href": "/admins/5",
+            "title": "Kate"
+        }]
+    },
+    "currentlyProcessing": 14,
+    "shippedToday": 20,
+    "_embedded": {
+        "order": [{
+            "_links": {
+                "self": { "href": "/orders/123" },
+                "basket": { "href": "/baskets/98712" },
+                "customer": { "href": "/customers/7809" }
+            },
+            "total": 30.00,
+            "currency": "USD",
+            "status": "shipped"
+        }, {
+            "_links": {
+                "self": { "href": "/orders/124" },
+                "basket": { "href": "/baskets/97213" },
+                "customer": { "href": "/customers/12369" }
+            },
+            "total": 20.00,
+            "currency": "USD",
+            "status": "processing"
+        }]
+    }
+}
+----
+
+
+==== Exposing Resources Using HAL
+
+
+To return HAL instead of regular JSON for a resource you can simply override the renderer in `grails-app/conf/spring/resources.groovy` with an instance of `grails.rest.render.hal.HalJsonRenderer` (or `HalXmlRenderer` for the XML variation):
+
+[source,groovy]
+----
+import grails.rest.render.hal.*
+beans = {
+    halBookRenderer(HalJsonRenderer, rest.test.Book)
+}
+----
+
+You will also need to update the acceptable response formats for the resource so that the HAL format is included. Not doing so will result in a 406 - Not Acceptable response being returned from the server. 
+
+This can be done by setting the `formats` attribute of the `Resource` transformation:
+
+[source,groovy]
+----
+import grails.rest.*
+
+@Resource(uri='/books', formats=['json', 'xml', 'hal'])
+class Book {
+    ...
+}
+----
+
+Or by updating the `responseFormats` in the controller:
+
+[source,groovy]
+----
+class BookController extends RestfulController {
+    static responseFormats = ['json', 'xml', 'hal']
+
+    // ...
+}
+----
+
+With the bean in place requesting the HAL content type will return HAL:
+
+[source,groovy]
+----
+$ curl -i -H "Accept: application/hal+json" http://localhost:8080/books/1
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: application/hal+json;charset=ISO-8859-1
+
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/books/1",
+      "hreflang": "en",
+      "type": "application/hal+json"
+    }
+  },
+  "title": "\"The Stand\""
+}
+----
+
+To use HAL XML format simply change the renderer:
+
+[source,groovy]
+----
+import grails.rest.render.hal.*
+beans = {
+    halBookRenderer(HalXmlRenderer, rest.test.Book)
+}
+----
+
+
+==== Rendering Collections Using HAL
+
+
+To return HAL instead of regular JSON for a list of resources you can simply override the renderer in `grails-app/conf/spring/resources.groovy` with an instance of `grails.rest.render.hal.HalJsonCollectionRenderer`:
+
+[source,groovy]
+----
+import grails.rest.render.hal.*
+beans = {
+    halBookCollectionRenderer(HalJsonCollectionRenderer, rest.test.Book)
+}
+----
+
+With the bean in place requesting the HAL content type will return HAL:
+
+[source,groovy]
+----
+$ curl -i -H "Accept: application/hal+json" http://localhost:8080/books
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: application/hal+json;charset=UTF-8
+Transfer-Encoding: chunked
+Date: Thu, 17 Oct 2013 02:34:14 GMT
+
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/books",
+      "hreflang": "en",
+      "type": "application/hal+json"
+    }
+  },
+  "_embedded": {
+    "book": [
+      {
+        "_links": {
+          "self": {
+            "href": "http://localhost:8080/books/1",
+            "hreflang": "en",
+            "type": "application/hal+json"
+          }
+        },
+        "title": "The Stand"
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "http://localhost:8080/books/2",
+            "hreflang": "en",
+            "type": "application/hal+json"
+          }
+        },
+        "title": "Infinite Jest"
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "http://localhost:8080/books/3",
+            "hreflang": "en",
+            "type": "application/hal+json"
+          }
+        },
+        "title": "Walden"
+      }
+    ]
+  }
+}
+----
+
+Notice that the key associated with the list of `Book` objects in the rendered JSON is `book` which is derived from the type of objects in the collection, namely `Book`.  In order to customize the value of this key assign a value to the `collectionName` property on the `HalJsonCollectionRenderer` bean as shown below:
+
+[source,groovy]
+----
+import grails.rest.render.hal.*
+beans = {
+    halBookCollectionRenderer(HalCollectionJsonRenderer, rest.test.Book) {
+        collectionName = 'publications'
+    }
+}
+----
+
+With that in place the rendered HAL will look like the following:
+
+[source,groovy]
+----
+$ curl -i -H "Accept: application/hal+json" http://localhost:8080/books
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: application/hal+json;charset=UTF-8
+Transfer-Encoding: chunked
+Date: Thu, 17 Oct 2013 02:34:14 GMT
+
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/books",
+      "hreflang": "en",
+      "type": "application/hal+json"
+    }
+  },
+  "_embedded": {
+    "publications": [
+      {
+        "_links": {
+          "self": {
+            "href": "http://localhost:8080/books/1",
+            "hreflang": "en",
+            "type": "application/hal+json"
+          }
+        },
+        "title": "The Stand"
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "http://localhost:8080/books/2",
+            "hreflang": "en",
+            "type": "application/hal+json"
+          }
+        },
+        "title": "Infinite Jest"
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "http://localhost:8080/books/3",
+            "hreflang": "en",
+            "type": "application/hal+json"
+          }
+        },
+        "title": "Walden"
+      }
+    ]
+  }
+}
+----
+
+
+==== Using Custom Media / Mime Types
+
+
+If you wish to use a custom Mime Type then you first need to declare the Mime Types in `grails-app/conf/application.groovy`:
+
+[source,groovy]
+----
+grails.mime.types = [
+    all:      "*/*",
+    book:     "application/vnd.books.org.book+json",
+    bookList: "application/vnd.books.org.booklist+json",
+    ...
+]
+----
+
+WARNING: It is critical that place your new mime types after the 'all' Mime Type because if the Content Type of the request cannot be established then the first entry in the map is used for the response. If you have your new Mime Type at the top then Grails will always try and send back your new Mime Type if the requested Mime Type cannot be established.
+
+Then override the renderer to return HAL using the custom Mime Types:
+
+[source,groovy]
+----
+import grails.rest.render.hal.*
+import grails.web.mime.*
+
+beans = {
+    halBookRenderer(HalJsonRenderer, rest.test.Book, new MimeType("application/vnd.books.org.book+json", [v:"1.0"]))
+    halBookListRenderer(HalJsonCollectionRenderer, rest.test.Book, new MimeType("application/vnd.books.org.booklist+json", [v:"1.0"]))
+}
+----
+
+In the above example the first bean defines a HAL renderer for a single book instance that returns a Mime Type of `application/vnd.books.org.book+json`. The second bean defines the Mime Type used to render a collection of books (in this case `application/vnd.books.org.booklist+json`).
+
+NOTE: `application/vnd.books.org.booklist+json` is an example of a media-range (http://www.w3.org/Protocols/rfc2616/rfc2616.html - Header Field Definitions).  This example uses entity (book) and operation (list) to form the media-range values but in reality, it may not be necessary to create a separate Mime type for each operation.  Further, it may not be necessary to create Mime types at the entity level.  See the section on "Versioning REST resources" for further information about how to define your own Mime types.
+
+With this in place issuing a request for the new Mime Type returns the necessary HAL:
+
+[source,bash]
+----
+$ curl -i -H "Accept: application/vnd.books.org.book+json" http://localhost:8080/books/1
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: application/vnd.books.org.book+json;charset=ISO-8859-1
+
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/books/1",
+      "hreflang": "en",
+      "type": "application/vnd.books.org.book+json"
+    }
+  },
+  "title": "\"The Stand\""
+}
+----
+
+
+
+==== Customizing Link Rendering
+
+
+An important aspect of HATEOAS is the usage of links that describe the transitions the client can use to interact with the REST API. By default the `HalJsonRenderer` will automatically create links for you for associations and to the resource itself (using the "self" relationship).
+
+However you can customize link rendering using the `link` method that is added to all domain classes annotated with `grails.rest.Resource` or any class annotated with `grails.rest.Linkable`. For example, the `show` action can be modified as follows to provide a new link in the resulting output:
+
+[source,groovy]
+----
+def show(Book book) {
+    book.link rel:'publisher', href: g.createLink(absolute: true, resource:"publisher", params:[bookId: book.id])
+    respond book
+}
+----
+
+Which will result in output such as:
+
+[source,javascript]
+----
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/books/1",
+      "hreflang": "en",
+      "type": "application/vnd.books.org.book+json"
+    }
+    "publisher": {
+        "href": "http://localhost:8080/books/1/publisher",
+        "hreflang": "en"
+    }
+  },
+  "title": "\"The Stand\""
+}
+----
+
+The `link` method can be passed named arguments that match the properties of the `grails.rest.Link` class.

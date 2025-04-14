@@ -1,0 +1,36 @@
+
+=== Type Conversion Methods
+
+
+If you prefer to avoid the overhead of link:theWebLayer.html#dataBinding[data binding] and simply want to convert incoming parameters (typically Strings) into another more appropriate type the link:../ref/Controllers/params.html[params] object has a number of convenience methods for each type:
+
+[source,groovy]
+----
+def total = params.int('total')
+----
+
+The above example uses the `int` method, and there are also methods for `boolean`, `long`, `char`, `short` and so on. Each of these methods is null-safe and safe from any parsing errors, so you don't have to perform any additional checks on the parameters.
+
+Each of the conversion methods allows a default value to be passed as an optional second argument.  The default value will be returned if a corresponding entry cannot be found in the map or if an error occurs during the conversion.  Example:
+
+[source,groovy]
+----
+def total = params.int('total', 42)
+----
+
+These same type conversion methods are also available on the `attrs` parameter of GSP tags.
+
+
+=== Handling Multi Parameters
+
+
+A common use case is dealing with multiple request parameters of the same name. For example you could get a query string such as `?name=Bob&name=Judy`.
+
+In this case dealing with one parameter and dealing with many has different semantics since Groovy's iteration mechanics for `String` iterate over each character. To avoid this problem the link:../ref/Controllers/params.html[params] object provides a `list` method that always returns a list:
+
+[source,groovy]
+----
+for (name in params.list('name')) {
+    println name
+}
+----

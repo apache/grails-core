@@ -1,0 +1,28 @@
+
+== maxSize
+
+
+
+=== Purpose
+
+
+Ensures a value's size does not exceed a maximum value.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+children maxSize: 25
+----
+
+
+=== Description
+
+
+Sets the maximum size of a collection or number property.
+
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
+
+Error Code: `className.propertyName.maxSize.exceeded`

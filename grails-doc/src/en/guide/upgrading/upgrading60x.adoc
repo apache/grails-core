@@ -1,0 +1,120 @@
+### Upgrade Instructions for Grails and Related Dependencies
+
+To ensure compatibility with Grails {GrailsVersion}, you must update the following versions in your project:
+
+#### 1. Java 17 as baseline:
+
+Starting from Grails {GrailsVersion}, Java 17 serves as the baseline requirement for the framework. When upgrading to Grails {GrailsVersion}, ensure that your project is configured to use Java 17. This compatibility with Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
+
+Please make sure to update your project's Java version to 17 before proceeding with the Grails {GrailsVersion} upgrade. Doing so will ensure a seamless transition to the latest version of Grails and enable you to enjoy all the benefits that Java 17 has to offer.
+
+#### 2. Setting Grails Version and Grails Gradle Plugin:
+
+To upgrade to Grails {GrailsVersion}, it's important to configure the appropriate versions in the `gradle.properties` file as shown below:
+
+.gradle.properties
+[,,subs="attributes"]
+----
+grailsVersion={GrailsVersion}
+grailsGradlePluginVersion={grailsGradlePluginVersion}
+----
+
+By specifying the above versions, you'll gain access to the latest features, improvements, and bug fixes introduced in Grails {GrailsVersion}. Upgrading to this version empowers your application with enhanced performance and improved security. Additionally, it allows you to leverage the latest advancements in the Grails framework for a more efficient and secure development experience.
+
+#### 4. GORM Version
+
+If your project utilizes GORM, ensure to update the version in the `gradle.properties` file as demonstrated below:
+
+.gradle.properties
+[,,subs="attributes"]
+----
+gormVersion={gormVersion}
+----
+
+By upgrading to GORM {gormVersion}, you will benefit from essential updates and optimizations. This upgrade guarantees seamless interactions with your database and enhances your data management experience. Staying current with GORM allows you to take advantage of the latest database features and improvements, thereby optimizing the performance and functionality of your application.
+
+#### 5. Gradle Version:
+
+Grails {GrailsVersion} uses Gradle {gradleVersion} which offers performance improvements, bug fixes, and new features over previous versions. Upgrading to the latest Gradle version helps accelerate your build processes and ensures compatibility with other dependencies.
+
+##### 5.1. Upgrade to Gradle {gradleVersion}
+
+Run the following command to update the Gradle wrapper to the desired version (e.g., Gradle {gradleVersion}):
+
+[,console,subs="attributes"]
+----
+./gradlew wrapper --gradle-version {gradleVersion}
+----
+
+This command will download the specified Gradle version and update the Gradle wrapper settings in your project.
+
+##### 5.2. Check Gradle Version:
+
+After the command finishes, you can verify that the Gradle version has been updated by checking the `gradle-wrapper.properties` file located in the `gradle/wrapper` directory. The `distributionUrl` in the file should now point to the Gradle {gradleVersion} distribution:
+
+[,,subs="attributes"]
+----
+distributionUrl=https\://services.gradle.org/distributions/gradle-{gradleVersion}-bin.zip
+----
+
+
+##### 5.3. Build the Project:
+
+After updating the Gradle wrapper, you can now build your Grails project using the updated Gradle version:
+
+```console
+./gradlew build
+```
+
+This will initiate the build process with the new Gradle version.
+
+#### 6. Spring {springVersion}:
+
+Grails {GrailsVersion} is built on Spring {springVersion}. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
+
+Spring {springVersion} introduces enhancements and fixes to the Spring framework, providing you with the latest improvements in dependency injection, web frameworks, and other Spring-related functionalities.
+
+#### 7. Spring Boot {springBootVersion}:
+
+Grails {GrailsVersion} updates to Spring Boot {springBootVersion}. For more information, consult the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.3-Release-Notes[Spring Boot 3 Release Notes]
+
+Spring Boot {springBootVersion} comes with new features, performance enhancements, and compatibility improvements, making it a solid foundation for your Grails application.
+
+#### 8. Breaking changes
+
+Grails {GrailsVersion} introduces several breaking changes that may require updates to your application.
+
+#### 8.1. Removed libraries/classes
+- The `grails-web-fileupload` library, including its sole class `ContentLengthAwareCommonsMultipartResolver`, has been removed. This change was necessitated by the removal of the superclass `CommonsMultipartResolver` in Spring 6. The `ContentLengthAwareCommonsMultipartResolver` was originally introduced to address a bug in Safari back in 2007, but it is likely no longer needed. Spring has transitioned away from `CommonsMultipartResolver` and now recommends using the built-in support for multipart uploads provided by servlet containers. For more information on handling file uploads in Spring Boot, please refer to the relevant sections of the https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.multipart-file-uploads[Spring Boot documentation] and the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x#web-applications-1[Spring Framework 6 upgrade guide].
+- `org.grails.spring.beans.factory.OptimizedAutowireCapableBeanFactory` was deprecated and is now removed.
+
+#### 8.2. Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
+- This change was made based on community input: https://github.com/orgs/grails/discussions/13517
+- The removal of Micronaut enabled simplification of the Grails codebase and the return of Live Reload via https://github.com/HotswapProjects/HotswapAgent
+- The Micronaut Parent Context is no longer in Grails by default.
+- The following dependencies are no longer included in Grails or grails-bom: io.micronaut:micronaut-\*, io.micronaut.cache:micronaut-cache-core, io.micronaut.groovy:micronaut-runtime-groovy and io.micronaut.spring:micronaut-spring-*
+- Micronaut can be added via the Micronaut Spring Boot Starter: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter.
+- Using Micronaut Parent Context: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springParentContext
+- Using a Bean Post Processor: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#beanPostProcessor
+
+#### 8.3 hibernate-ehcache
+
+The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.grails.plugins:hibernate5` plugin. If
+your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
+
+Since `hibernate-ehcache` brings in a conflicting `javax` version of `org.hibernate:hibernate-core`, it is
+recommended to exclude `hibernate-core` from the `hibernate-ehcache` dependency to avoid conflicts:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+        // exclude javax variant of hibernate-core
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+}
+----

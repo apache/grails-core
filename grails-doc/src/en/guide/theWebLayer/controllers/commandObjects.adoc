@@ -1,0 +1,299 @@
+Grails controllers support the concept of command objects. A command object is a class that is used in conjunction with link:theWebLayer.html#dataBinding[data binding], usually to allow validation of data that may not fit into an existing domain class.
+
+TIP: A class is only considered to be a command object when it is used as a parameter of an action.
+
+
+==== Declaring Command Objects
+
+
+Command object classes are defined just like any other class.
+
+[source,groovy]
+----
+class LoginCommand implements grails.validation.Validateable {
+    String username
+    String password
+
+    static constraints = {
+        username(blank: false, minSize: 6)
+        password(blank: false, minSize: 6)
+    }
+}
+----
+
+In this example, the command object class implements the `Validateable` trait. The `Validateable` trait allows the definition of link:validation.html#constraints[Constraints] just like in link:GORM.html[domain classes]. If the command object is defined in the same source file as the controller that is using it, Grails will automatically make it `Validateable`. It is not required that command object classes be validateable.
+
+By default, all `Validateable` object properties which are not instances of `java.util.Collection` or `java.util.Map` are `nullable: false`.  Instances of `java.util.Collection` and `java.util.Map` default to `nullable: true`.  If you want a `Validateable` that has `nullable: true` properties by default, you can specify this by defining a `defaultNullable` method in the class:
+
+[source,groovy]
+----
+class AuthorSearchCommand implements grails.validation.Validateable {
+    String  name
+    Integer age
+
+    static boolean defaultNullable() {
+        true
+    }
+}
+----
+
+In this example, both `name` and `age` will allow null values during validation.
+
+
+==== Using Command Objects
+
+
+To use command objects, controller actions may optionally specify any number of command object parameters. The parameter types must be supplied so that Grails knows what objects to create and initialize.
+
+Before the controller action is executed Grails will automatically create an instance of the command object class and populate its properties by binding the request parameters.  If the command object class is marked with `Validateable` then the command object will be validated. For example:
+
+[source,groovy]
+----
+class LoginController {
+
+    def login(LoginCommand cmd) {
+        if (cmd.hasErrors()) {
+            redirect(action: 'loginForm')
+            return
+        }
+
+        // work with the command object data
+    }
+}
+----
+
+If the command object's type is that of a domain class and there is an `id` request parameter then instead of invoking the domain class constructor to create a new instance a call will be made to the static `get` method on the domain class and the value of the `id` parameter will be passed as an argument.
+
+Whatever is returned from that call to `get` is what will be passed into the controller action.  This means that if there is an `id` request parameter and no corresponding record is found in the database then the value of the command object will be `null`.  If an error occurs retrieving the instance from the database then `null` will be passed as an argument to the controller action and an error will be added the controller's `errors` property.
+
+If the command object's type is a domain class and there is no `id` request parameter or there is an `id` request parameter and its value is empty then `null` will be passed into the controller action unless the HTTP request method is "POST", in which case a new instance of the domain class will be created by invoking the domain class constructor.  For all of the cases where the domain class instance is non-null, data binding is only performed if the HTTP request method is "POST", "PUT" or "PATCH".
+
+
+==== Command Objects And Request Parameter Names
+
+
+Normally request parameter names will be mapped directly to property names in the command object.  Nested parameter names may be used to bind down the object graph in an intuitive way.
+
+In the example below a request parameter named `name` will be bound to the `name` property of the `Person` instance and a request parameter named `address.city` will be bound to the `city` property of the `address` property in the `Person`.
+
+[source,groovy]
+----
+class StoreController {
+    def buy(Person buyer) {
+        // ...
+    }
+}
+
+class Person {
+    String name
+    Address address
+}
+
+class Address {
+    String city
+}
+----
+
+A problem may arise if a controller action accepts multiple command objects which happen to contain the same property name.  Consider the following example.
+
+[source,groovy]
+----
+class StoreController {
+    def buy(Person buyer, Product product) {
+        // ...
+    }
+}
+
+class Person {
+    String name
+    Address address
+}
+
+class Address {
+    String city
+}
+
+class Product {
+    String name
+}
+----
+
+If there is a request parameter named `name` it isn't clear if that should represent the name of the `Product` or the name of the `Person`.  Another version of the problem can come up if a controller action accepts 2 command objects of the same type as shown below.
+
+[source,groovy]
+----
+class StoreController {
+    def buy(Person buyer, Person seller, Product product) {
+        // ...
+    }
+}
+
+class Person {
+    String name
+    Address address
+}
+
+class Address {
+    String city
+}
+
+class Product {
+    String name
+}
+----
+
+To help deal with this the framework imposes special rules for mapping parameter names to command object types.  The command object data binding will treat all parameters that begin with the controller action parameter name as belonging to the corresponding command object.
+
+For example, the `product.name` request parameter will be bound to the `name` property in the `product` argument, the `buyer.name` request parameter will be bound to the `name` property in the `buyer` argument the `seller.address.city` request parameter will be bound to the `city` property of the `address` property of the `seller` argument, etc...
+
+
+==== Command Objects and Dependency Injection
+
+
+Command objects can participate in dependency injection. This is useful if your command object has some custom validation logic which uses a Grails link:services.html[service]:
+
+[source,groovy]
+----
+class LoginCommand implements grails.validation.Validateable {
+
+    def loginService
+
+    String username
+    String password
+
+    static constraints = {
+        username validator: { val, obj ->
+            obj.loginService.canLogin(obj.username, obj.password)
+        }
+    }
+}
+----
+
+In this example the command object interacts with the `loginService` bean which is injected by name from the Spring `ApplicationContext`.
+
+
+==== Binding The Request Body To Command Objects
+
+
+When a request is made to a controller action which accepts a command object and the request contains a body, Grails will attempt to parse the body of the request based on the request content type and use the body to do data binding on the command object.  See the following example.
+
+[source,groovy]
+.grails-app/controllers/bindingdemo/DemoController.groovy
+----
+package bindingdemo
+
+class DemoController {
+
+    def createWidget(Widget w) {
+        render "Name: ${w?.name}, Size: ${w?.size}"
+    }
+}
+
+class Widget {
+    String name
+    Integer size
+}
+----
+
+[source,bash]
+----
+$ curl -H "Content-Type: application/json" -d '{"name":"Some Widget","42"}'[size] localhost:8080/demo/createWidget
+ Name: Some Widget, Size: 42
+
+$ curl -H "Content-Type: application/xml" -d '<widget><name>Some Other Widget</name><size>2112</size></widget>' localhost:8080/bodybind/demo/createWidget
+ Name: Some Other Widget, Size: 2112
+----
+
+[NOTE]
+====
+The request body will not be parsed under the following conditions:
+
+    * The request method is GET
+    * The request method is DELETE
+    * The content length is 0
+====
+
+Note that the body of the request is being parsed to make that work.  Any attempt to read the body of the request after that will fail since the corresponding input stream will be empty.  The controller action can either use a command object or it can parse the body of the request on its own (either directly, or by referring to something like request.JSON), but cannot do both.
+
+[source,groovy]
+.grails-app/controllers/bindingdemo/DemoController.groovy
+----
+package bindingdemo
+
+class DemoController {
+
+    def createWidget(Widget w) {
+        // this will fail because it requires reading the body,
+        // which has already been read.
+        def json = request.JSON
+
+        // ...
+
+    }
+}
+----
+
+
+==== Working with Lists of Command Objects
+
+
+A common use case for command objects is a Command Object that contains a collection of another:
+
+[source,groovy]
+----
+class DemoController {
+
+    def createAuthor(AuthorCommand command) {
+        // ...
+
+    }
+
+    class AuthorCommand {
+        String fullName
+        List<BookCommand> books
+    }
+
+    class BookCommand {
+        String title
+        String isbn
+    }
+}
+----
+
+On this example, we want to create an Author with multiple Books.
+
+In order to make this work from the UI layer, you can do the following in your GSP:
+
+[source,xml]
+----
+<g:form name="submit-author-books" controller="demo" action="createAuthor">
+    <g:fieldValue name="fullName" value=""/>
+    <ul>
+        <li>
+            <g:fieldValue name="books[0].title" value=""/>
+            <g:fieldValue name="books[0].isbn" value=""/>
+        </li>
+
+        <li>
+            <g:fieldValue name="books[1].title" value=""/>
+            <g:fieldValue name="books[1].isbn" value=""/>
+        </li>
+    </ul>
+</g:form>
+----
+
+There is also support for JSON, so you can submit the following with correct databinding
+
+[source,json]
+----
+{
+    "fullName": "Graeme Rocher",
+    "books": [{
+        "title": "The Definitive Guide to Grails",
+        "isbn": "1111-343455-1111"
+    }, {
+        "title": "The Definitive Guide to Grails 2",
+        "isbn": "1111-343455-1112"
+    }],
+}
+----

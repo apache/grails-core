@@ -1,0 +1,42 @@
+You can define templates starting with underscore `_`. For example given the following template called `_person.gson`:
+
+[source,groovy]
+----
+model {
+    Person person
+}
+json {
+    name person.name
+    age person.age
+}
+----
+
+You can render it with a view as follows:
+
+[source,groovy]
+----
+model {
+    Family family
+}
+json {
+    name family.father.name
+    age family.father.age
+    oldestChild g.render(template:"person", model:[person: family.children.max { Person p -> p.age } ])
+    children g.render(template:"person", collection: family.children, var:'person')
+}
+----
+
+Alternatively for a more concise way to invoke templates, using the tmpl variable:
+
+[source,groovy]
+----
+model {
+    Family family
+}
+json {
+    name family.father.name
+    age family.father.age
+    oldestChild tmpl.person( family.children.max { Person p -> p.age } ] )
+    children tmpl.person( family.children )
+}
+----

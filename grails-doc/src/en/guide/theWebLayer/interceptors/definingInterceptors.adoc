@@ -1,0 +1,42 @@
+By default interceptors will match the controllers with the same name. For example if you have an interceptor called `BookInterceptor` then all requests to the actions of the `BookController` will trigger the interceptor.
+
+An `Interceptor` implements the {apiDocs}grails/artefact/Interceptor.html[Interceptor] trait and provides 3 methods that can be used to intercept requests:
+
+[source,groovy]
+----
+/**
+ * Executed before a matched action
+ *
+ * @return Whether the action should continue and execute
+ */
+boolean before() { true }
+
+/**
+ * Executed after the action executes but prior to view rendering
+ *
+ * @return True if view rendering should continue, false otherwise
+ */
+boolean after() { true }
+
+/**
+ * Executed after view rendering completes
+ */
+void afterView() {}
+----
+
+As described above the `before` method is executed prior to an action and can cancel the execution of the action by returning `false`.
+
+The `after` method is executed after an action executes and can halt view rendering if it returns false. The `after` method can also modify the view or model using the `view` and `model` properties respectively:
+
+
+
+[source,groovy]
+----
+boolean after() {
+  model.foo = "bar" // add a new model attribute called 'foo'
+  view = 'alternate' // render a different view called 'alternate'
+  true
+}
+----
+
+The `afterView` method is executed after view rendering completes. If an exception occurs, the exception is available using the `throwable` property of the {apiDocs}grails/artefact/Interceptor.html[Interceptor] trait.

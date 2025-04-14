@@ -1,0 +1,12 @@
+URL mappings can also be configured to map based on the HTTP method (GET, POST, PUT or DELETE). This is very useful for RESTful APIs and for restricting mappings based on HTTP method.
+
+As an example the following mappings provide a RESTful API URL mappings for the `ProductController`:
+
+[source,groovy]
+----
+static mappings = {
+   "/product/$id"(controller:"product", action: "update", method: "PUT") 
+}
+----
+
+Note that if you specify a HTTP method other than GET in your URL mapping, you also have to specify it when creating the corresponding link by passing the `method` argument to `g:link` or `g:createLink` to get a link of the desired format.

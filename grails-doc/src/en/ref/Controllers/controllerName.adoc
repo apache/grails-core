@@ -1,0 +1,31 @@
+
+== controllerName
+
+
+
+=== Purpose
+
+
+Returns the name of the currently executing controller.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+
+    def list() {
+        log.info "Executing within controller $controllerName"
+
+        render(view: actionName)
+    }
+}
+----
+
+
+=== Description
+
+
+Returns the name of the currently executing controller which is dictated by the URL mappings

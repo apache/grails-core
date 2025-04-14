@@ -1,0 +1,37 @@
+
+== scope
+
+
+
+=== Purpose
+
+
+Changes the scope of a service
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookService {
+    static scope = "session"
+    ...
+}
+----
+
+
+=== Description
+
+
+By default services are "singleton" scoped which means that clients of a service only ever use a single instance (a singleton) of the service. This behaviour can be changed by specifying a `scope` attribute with on the following values:
+
+* `prototype` - A new service is created every time it is injected into another class
+* `request` - A new service will be created per request
+* `flash` - A new service will be created for the current and next request only
+* `flow` - In web flows the service will exist for the scope of the flow
+* `conversation` - In web flows the service will exist for the scope of the conversation. ie a root flow and its sub flows
+* `session` - A service is created for the scope of a user session
+* `singleton` (default) - Only one instance of the service ever exists
+
+See <<scopedServices,Scoped Services>> in the user guide for more information.

@@ -1,0 +1,69 @@
+
+== findBy*
+
+
+
+=== Purpose
+
+
+Dynamic method that uses the properties of the domain class to execute a query returning the first matching result.
+
+
+=== Examples
+
+
+Given the domain class `Book`:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date releaseDate
+    String author
+    Boolean paperback
+}
+----
+
+The following are all possible:
+
+[source,groovy]
+----
+def b = Book.findByTitle("The Shining")
+b = Book.findByTitleAndAuthor("The Sum of All Fears", "Tom Clancy")
+b = Book.findByReleaseDateBetween(firstDate, new Date())
+b = Book.findByReleaseDateGreaterThanEquals(firstDate)
+b = Book.findByReleaseDateLessThanEquals(firstDate)
+b = Book.findByTitleLike("%Hobbit%")
+b = Book.findByTitleIlike("%Hobbit%") // ignores case
+b = Book.findByTitleNotEqual("Harry Potter")
+b = Book.findByReleaseDateIsNull()
+b = Book.findByReleaseDateIsNotNull()
+b = Book.findPaperbackByAuthor("Douglas Adams")
+b = Book.findNotPaperbackByAuthor("Douglas Adams")
+b = Book.findByAuthorInList(["Douglas Adams", "Hunter S. Thompson"])
+----
+
+
+=== Description
+
+
+GORM supports the notion of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[Dynamic Finders]. The `findBy*` method finds the first result for the given method expression.
+
+The following operator names can be used within the respective dynamic methods:
+
+* `LessThan`
+* `LessThanEquals`
+* `GreaterThan`
+* `GreaterThanEquals`
+* `Between`
+* `Like`
+* `Ilike` (i.e. ignorecase like)
+* `IsNotNull`
+* `IsNull`
+* `Not`
+* `NotEqual`
+* `And`
+* `Or`
+* `InList`
+
+The above operator names can be considered keywords, and you will run into problems when querying domain classes that have one of these names used as property names. For more information on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[dynamic finders] refer to the user guide.

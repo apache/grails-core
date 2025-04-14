@@ -1,0 +1,40 @@
+Use the link:../api/grails/testing/web/interceptor/InterceptorUnitTest.html[`InterceptorUnitTest`] trait to unit test interceptors.
+
+The interceptor unit test trait provides methods to make testing interceptors easy.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/grails-app/controllers/demo/TestInterceptor.groovy[tags=declaration,indent=0]
+----
+
+==== withRequest
+
+You can use the `withRequest` method in combination with `interceptor.doesMatch()` to verify whether or not your interceptor matches the request.
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/TestInterceptorSpec.groovy[tags=with_request,indent=0]
+----
+
+==== withInterceptors
+
+You can use the `withInterceptors` method to execute code within the context of interceptor execution. This is typically done to call controller actions that rely on behavior from interceptors.
+
+Given this controller action:
+
+[source,groovy]
+.grails-app/controllers/demo/TestController.groovy
+----
+include::{functionalSourceDir}/demo33/grails-app/controllers/demo/TestController.groovy[tags=render_attribute,indent=0]
+----
+
+Here is how the action might be tested with `withInterceptors`:
+
+[source,groovy]
+----
+include::{functionalSourceDir}/demo33/src/test/groovy/demo/TestInterceptorSpec.groovy[tags=with_interceptors,indent=0]
+----
+
+
+Adding the `InterceptorUnitTest` trait to a test causes a new `interceptor` property to
+be automatically created for the Interceptor class under test.

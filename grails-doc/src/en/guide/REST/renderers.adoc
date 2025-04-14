@@ -1,0 +1,1 @@
+If you are looking for a more low-level API and JSON or Markup views don't suite your needs then you may want to consider implementing a custom renderer.

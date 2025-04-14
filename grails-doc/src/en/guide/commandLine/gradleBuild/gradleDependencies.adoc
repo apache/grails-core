@@ -1,0 +1,65 @@
+Dependencies for your project are defined in the `dependencies` block. In general, you can follow the http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
+
+The default dependencies for the Grails Web application can be seen below:
+
+[source,groovy]
+----
+dependencies {
+    profile "org.grails.profiles:web"
+    implementation "org.grails:grails-core"
+    implementation "org.grails:grails-logging"
+    implementation "org.grails:grails-plugin-databinding"
+    implementation "org.grails:grails-plugin-i18n"
+    implementation "org.grails:grails-plugin-interceptors"
+    implementation "org.grails:grails-plugin-rest"
+    implementation "org.grails:grails-plugin-services"
+    implementation "org.grails:grails-plugin-url-mappings"
+    implementation "org.grails:grails-web-boot"
+    implementation "org.grails.plugins:gsp"
+    implementation "org.grails.plugins:hibernate5"
+    implementation "org.grails.plugins:scaffolding"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation "org.springframework.boot:spring-boot-starter"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-logging"
+    implementation "org.springframework.boot:spring-boot-starter-tomcat"
+    implementation "org.springframework.boot:spring-boot-starter-validation"
+    console "org.grails:grails-console"
+    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
+    runtimeOnly "com.h2database:h2"
+    runtimeOnly "org.apache.tomcat:tomcat-jdbc"
+    runtimeOnly "org.fusesource.jansi:jansi"
+    integrationTestImplementation testFixtures("org.grails.plugins:geb")
+    testImplementation "org.grails:grails-gorm-testing-support"
+    testImplementation "org.grails:grails-web-testing-support"
+    testImplementation "org.spockframework:spock-core"
+}
+----
+
+Note that version numbers are not present in the majority of the dependencies.
+
+This is thanks to the Spring dependency management plugin which automatically configures `grails-bom` as a Maven BOM via the Grails Gradle Plugin.  This defines the default dependency versions for most commonly used dependencies and plugins.
+
+For a Grails App, applying `org.grails:grails-gradle-plugin` will automatically configure the `grails-bom`.  No other steps required.
+
+For Plugins and Projects which do not use `org.grails:grails-gradle-plugin`, you can apply the `grails-bom` in one of the following two ways.
+
+build.gradle, using Gradle Platforms:
+[source,groovy]
+----
+dependencies {
+    implementation platform("org.grails:grails-bom:$grailsVersion")
+    // all other dependencies
+}
+----
+
+build.gradle, using Spring dependency management plugin:
+[source,groovy]
+----
+dependencyManagement {
+    imports {
+        mavenBom 'org.grails:grails-bom:' + grailsVersion
+    }
+    applyMavenExclusions false
+}
+----

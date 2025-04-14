@@ -1,0 +1,47 @@
+
+== version
+
+
+
+=== Purpose
+
+
+Used to disable optimistic locking or change the column that holds the version.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    ...
+    static mapping = {
+        version false
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `version(string/boolean)`
+
+By default GORM is configured with https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#locking[optimistic locking] enabled. You can disable this by calling the `version` method with an argument of `false`:
+
+[source,groovy]
+----
+static mapping = {
+    version false
+}
+----
+
+You can pass the name to the `version` method to change the name of the database column:
+
+[source,groovy]
+----
+static mapping = {
+    version 'revision_number'
+}
+----

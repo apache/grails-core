@@ -1,0 +1,28 @@
+
+== minSize
+
+
+
+=== Purpose
+
+
+Ensures a value's size does not fall below a minimum value.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+children minSize: 25
+----
+
+
+=== Description
+
+
+Sets the minimum size of a collection or number property.
+
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
+
+Error Code: `className.propertyName.minSize.notmet`

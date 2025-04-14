@@ -1,0 +1,49 @@
+
+===== run-script
+
+
+
+===== Purpose
+
+
+Execute Groovy script(s) in the context of a Grails environment.
+
+WARNING: Groovy scripts intended to be executed this way cannot be located in `src/main/scripts` because that directory is reserved for CLI scripts created by link:create-script.html[create-script].
+
+
+===== Examples
+
+
+[source,bash]
+----
+// run a single script in the dev environment
+grails run-script scripts/helloWorld.groovy
+
+// run multiple scripts in the prod environment
+grails prod run-script scripts/hello.groovy scripts/world.groovy
+
+// run with Gradle
+./gradlew runScript -Pargs="scripts/helloWorld.groovy" -Dgrails.env=prod
+----
+
+The paths are resolved relative to the base project path
+
+
+===== Description
+
+
+Usage:
+[source,bash]
+----
+grails <<env>>* run-script <<scripts>>
+----
+
+Arguments:
+
+* `scripts` - Which scripts to run
+
+Variables:
+
+The `ctx` variable is injected into all scripts and is an instance of the `ApplicationContext`
+
+NOTE: Scripts are executed in the context of a persistent session. The default package is imported by default (`grails.codegen.defaultPackage`)

@@ -1,0 +1,28 @@
+
+== blank
+
+
+
+=== Purpose
+
+
+Validates that a String value is not blank.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+login blank: false
+----
+
+
+=== Description
+
+
+Set to `false` if a string value cannot be blank.
+
+Error Code: `className.propertyName.blank`
+
+NOTE: If the string is `null`, it won't validate with `blank: true`. In this case, set the link:nullable.html[nullable] constraint to `true`.

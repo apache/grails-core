@@ -1,0 +1,32 @@
+
+== comment
+
+
+
+=== Purpose
+
+
+Sets the comment to use when generating the table's creation SQL (DDL).
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+   static mapping = {
+      comment "your comment here"
+   }
+}
+----
+
+
+=== Description
+
+
+Usage: `comment(string)`
+
+Arguments:
+
+* `comment` - The comment

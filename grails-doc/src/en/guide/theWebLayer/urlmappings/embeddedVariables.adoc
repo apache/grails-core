@@ -1,0 +1,140 @@
+
+==== Simple Variables
+
+
+The previous section demonstrated how to map simple URLs with concrete "tokens". In URL mapping speak tokens are the sequence of characters between each slash, '/'. A concrete token is one which is well defined such as as `/product`. However, in many circumstances you don't know what the value of a particular token will be until runtime. In this case you can use variable placeholders within the URL for example:
+
+[source,groovy]
+----
+static mappings = {
+  "/product/$id"(controller: "product")
+}
+----
+
+In this case by embedding a $id variable as the second token Grails will automatically map the second token into a parameter (available via the link:../ref/Controllers/params.html[params] object) called `id`. For example given the URL `/product/MacBook`, the following code will render "MacBook" to the response:
+
+[source,groovy]
+----
+class ProductController {
+     def index() { render params.id }
+}
+----
+
+You can of course construct more complex examples of mappings. For example the traditional blog URL format could be mapped as follows:
+
+[source,groovy]
+----
+static mappings = {
+   "/$blog/$year/$month/$day/$id"(controller: "blog", action: "show")
+}
+----
+
+The above mapping would let you do things like:
+
+[source]
+----
+/graemerocher/2007/01/10/my_funky_blog_entry
+----
+
+The individual tokens in the URL would again be mapped into the link:../ref/Controllers/params.html[params] object with values available for `year`, `month`, `day`, `id` and so on.
+
+
+==== Dynamic Controller and Action Names
+
+
+Variables can also be used to dynamically construct the controller and action name. In fact the default Grails URL mappings use this technique:
+
+[source,groovy]
+----
+static mappings = {
+    "/$controller/$action?/$id?"()
+}
+----
+
+Here the name of the controller, action and id are implicitly obtained from the variables `controller`, `action` and `id` embedded within the URL.
+
+You can also resolve the controller name and action name to execute dynamically using a closure:
+
+[source,groovy]
+----
+static mappings = {
+    "/$controller" {
+        action = { params.goHere }
+    }
+}
+----
+
+
+==== Optional Variables
+
+
+Another characteristic of the default mapping is the ability to append a ? at the end of a variable to make it an optional token. In a further example this technique could be applied to the blog URL mapping to have more flexible linking:
+
+[source,groovy]
+----
+static mappings = {
+    "/$blog/$year?/$month?/$day?/$id?"(controller:"blog", action:"show")
+}
+----
+
+With this mapping all of these URLs would match with only the relevant parameters being populated in the link:../ref/Controllers/params.html[params] object:
+
+----
+/graemerocher/2007/01/10/my_funky_blog_entry
+/graemerocher/2007/01/10
+/graemerocher/2007/01
+/graemerocher/2007
+/graemerocher
+----
+
+
+==== Optional File Extensions
+
+
+If you wish to capture the extension of a particular path, then a special case mapping exists:
+
+[source,groovy]
+----
+"/$controller/$action?/$id?(.$format)?"()
+----
+
+By adding the `(.$format)?` mapping you can access the file extension using the `response.format` property in a controller:
+
+[source,groovy]
+----
+def index() {
+    render "extension is ${response.format}"
+}
+----
+
+
+==== Arbitrary Variables
+
+
+You can also pass arbitrary parameters from the URL mapping into the controller by just setting them in the block passed to the mapping:
+
+[source,groovy]
+----
+"/holiday/win" {
+     id = "Marrakech"
+     year = 2007
+}
+----
+
+This variables will be available within the link:../ref/Controllers/params.html[params] object passed to the controller.
+
+
+==== Dynamically Resolved Variables
+
+
+The hard coded arbitrary variables are useful, but sometimes you need to calculate the name of the variable based on runtime factors. This is also possible by assigning a block to the variable name:
+
+[source,groovy]
+----
+"/holiday/win" {
+     id = { params.id }
+     isEligible = { session.user != null } // must be logged in
+}
+----
+
+In the above case the code within the blocks is resolved when the URL is actually matched and hence can be used in combination with all sorts of logic.

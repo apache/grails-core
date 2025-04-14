@@ -1,0 +1,19 @@
+There are several ways to execute the `Application` class, if you are using an IDE then you can simply right click on the class and run it directly from your IDE which will start your Grails application.
+
+This is also useful for debugging since you can debug directly from the IDE without having to connect a remote debugger when using the `run-app --debug-jvm` or `./gradlew bootRun --debug-jvm` command from the command line.
+
+You can also package your application into a runnable WAR file, for example:
+
+[source,bash]
+----
+$ grails package
+$ java -jar build/libs/myapp-0.1.war
+----
+
+[source,bash]
+----
+$ ./gradlew bootWar
+$ java -jar build/libs/myapp-0.1.war
+----
+
+This is useful if you plan to deploy your application using a container-less approach.

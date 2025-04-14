@@ -1,0 +1,3 @@
+Every new Grails application features an `Application` class within the `grails-app/init` directory.
+
+The `Application` class subclasses the {apiDocs}grails/boot/config/GrailsAutoConfiguration.html[GrailsAutoConfiguration] class and features a `static void main` method, meaning it can be run as a regular application.

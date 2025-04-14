@@ -1,0 +1,64 @@
+
+=== Command Line Usage
+
+
+Grails incorporates the powerful build system https://gradle.org[Gradle].
+
+The basic usage scenario is:
+
+[source,groovy]
+----
+grails <<environment>>* <<command name>>
+----
+
+Grails searches in the following directories for Gant scripts to execute:
+
+* `USER_HOME/.grails/scripts`
+* `PROJECT_HOME/src/main/scripts/`
+* `PROJECT_HOME/plugins/*/scripts`
+* `GRAILS_HOME/scripts`
+
+If multiple matches are found Grails will give you a choice of which one to execute.
+
+You can specify the environment that the command executes in with an optional environment parameter, either with one of the built-in environment names:
+
+[source,groovy]
+----
+grails dev run-app
+grails test run-app
+grails prod run-app
+----
+
+Or using a -D argument if the name is not one of the three standard names:
+
+[source,groovy]
+----
+grails -Dgrails.env=uat run-app
+----
+
+Refer to the user guide section on link:{guidePath}/commandLine.html[The Command Line] for more information.
+
+
+=== Grails Forge Command Line Usage
+
+
+Grails incorporates a CLI and also uses the powerful build system https://gradle.org[Gradle].
+
+The basic usage scenario is:
+
+[source,console]
+----
+grails <<command name>> <<options>>*
+----
+
+When running Gradle tasks you can specify the environment that the command executes in with an optional grails.env parameter, either with one of the built-in environment names:
+
+[source,console]
+----
+./gradlew bootRun -Dgrails.env=dev
+./gradlew bootRun -Dgrails.env=test
+./gradlew bootRun -Dgrails.env=prod
+./gradlew bootRun -Dgrails.env=custom
+----
+
+Refer to the user guide section on link:{guidePath}/commandLine.html[The Command Line] for more information.

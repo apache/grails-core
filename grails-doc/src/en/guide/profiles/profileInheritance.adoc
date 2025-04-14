@@ -1,0 +1,28 @@
+One profile can extend one or many different parent profiles. To define profile inheritance you can modify the `build.gradle` of a profile and define the profile dependences. For example typically you want to extend the `base` profile:
+
+[source,groovy]
+----
+dependencies {
+    runtime "org.grails.profiles:base:$baseProfileVersion"
+}
+----
+
+By inheriting from a parent profile you get the following benefits:
+
+* When the link:../ref/Command%20Line/create-app.html[create-app] command is executed the parent profile's skeleton is copied first
+* Dependencies and `build.gradle` is merged from the parent(s)
+* The `application.yml` file is merged from the parent(s)
+* CLI commands from the parent profile are inherited
+* Features from the parent profile are inherited
+
+To define the order of inheritance ensure that your dependencies are declared in the correct order. For example:
+
+[source,groovy]
+----
+dependencies {
+    runtime "org.grails.profiles:plugin:$baseProfileVersion"
+    runtime "org.grails.profiles:web:$baseProfileVersion"
+}
+----
+
+In the above snippet the skeleton from the "plugin" profile is copied first, followed by the "web" profile. In addition, the "web" profile overrides commands from the "plugin" profile, whilst if the dependency order was reversed the "plugin" profile would override the "web" profile.

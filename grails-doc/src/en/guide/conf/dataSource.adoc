@@ -1,0 +1,167 @@
+Since Grails is built on Java technology setting up a data source requires some knowledge of JDBC (the technology that stands for Java Database Connectivity).
+
+If you use a database other than H2 you need a JDBC driver. For example for MySQL you would need https://www.mysql.com/downloads/connector/j/[Connector/J].
+
+Drivers typically come in the form of a JAR archive. It's best to use the dependency resolution to resolve the jar if it's available in a Maven repository, for example you could add a dependency for the MySQL driver like this:
+
+[source,groovy]
+----
+dependencies {
+    runtimeOnly 'mysql:mysql-connector-java:5.1.29'
+}
+----
+
+Once you have the JAR resolved you need to get familiar with how Grails manages its database configuration. The configuration can be maintained in either `grails-app/conf/application.groovy` or `grails-app/conf/application.yml`. These files contain the dataSource definition which includes the following settings:
+
+* `driverClassName` - The class name of the JDBC driver
+* `username` - The username used to establish a JDBC connection
+* `password` - The password used to establish a JDBC connection
+* `url` - The JDBC URL of the database
+* `dbCreate` - Whether to auto-generate the database from the domain model - one of 'create-drop', 'create', 'update', 'validate', or 'none'
+* `pooled` - Whether to use a pool of connections (defaults to true)
+* `logSql` - Enable SQL logging to stdout
+* `formatSql` - Format logged SQL
+* `dialect` - A String or Class that represents the Hibernate dialect used to communicate with the database. See the https://docs.jboss.org/hibernate/core/3.6/javadocs/org/hibernate/dialect/package-summary.html[org.hibernate.dialect] package for available dialects.
+* `readOnly` - If `true` makes the DataSource read-only, which results in the connection pool calling `setReadOnly(true)` on each `Connection`
+* `transactional` - If `false` leaves the DataSource's transactionManager bean outside the chained BE1PC transaction manager implementation. This only applies to additional datasources.
+* `persistenceInterceptor` - The default datasource is automatically wired up to the persistence interceptor, other datasources are not wired up automatically unless this is set to `true`
+* `properties` - Extra properties to set on the DataSource bean. See the http://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes[Tomcat Pool] documentation. There is also a Javadoc format https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html[documentation of the properties].
+* `jmxExport` - If `false`, will disable registration of JMX MBeans for all DataSources. By default JMX MBeans are added for DataSources with `jmxEnabled = true` in properties.
+* `type` - The connection pool class if you want to force Grails to use it when there are more than one available.
+
+A typical configuration for MySQL in `application.groovy` may be something like:
+
+[source,groovy]
+----
+dataSource {
+    pooled = true
+    dbCreate = "update"
+    url = "jdbc:mysql://localhost:3306/my_database"
+    driverClassName = "com.mysql.jdbc.Driver"
+    dialect = org.hibernate.dialect.MySQL5InnoDBDialect
+    username = "username"
+    password = "password"
+    type = "com.zaxxer.hikari.HikariDataSource"
+    properties {
+       jmxEnabled = true
+       initialSize = 5
+       maxActive = 50
+       minIdle = 5
+       maxIdle = 25
+       maxWait = 10000
+       maxAge = 10 * 60000
+       timeBetweenEvictionRunsMillis = 5000
+       minEvictableIdleTimeMillis = 60000
+       validationQuery = "SELECT 1"
+       validationQueryTimeout = 3
+       validationInterval = 15000
+       testOnBorrow = true
+       testWhileIdle = true
+       testOnReturn = false
+       jdbcInterceptors = "ConnectionState;StatementCache(max=200)"
+       defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED
+    }
+}
+----
+
+WARNING: When configuring the DataSource do not include the type or the def keyword before any of the configuration settings as Groovy will treat these as local variable definitions and they will not be processed. For example the following is invalid:
+
+[source,groovy]
+----
+dataSource {
+    boolean pooled = true // type declaration results in ignored local variable
+    ...
+}
+----
+
+Example of advanced configuration using extra properties:
+[source,groovy]
+----
+dataSource {
+    pooled = true
+    dbCreate = "update"
+    url = "jdbc:mysql://localhost:3306/my_database"
+    driverClassName = "com.mysql.jdbc.Driver"
+    dialect = org.hibernate.dialect.MySQL5InnoDBDialect
+    username = "username"
+    password = "password"
+    type = "com.zaxxer.hikari.HikariDataSource"
+    properties {
+       // Documentation for Tomcat JDBC Pool
+       // http://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes
+       // https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html
+       jmxEnabled = true
+       initialSize = 5
+       maxActive = 50
+       minIdle = 5
+       maxIdle = 25
+       maxWait = 10000
+       maxAge = 10 * 60000
+       timeBetweenEvictionRunsMillis = 5000
+       minEvictableIdleTimeMillis = 60000
+       validationQuery = "SELECT 1"
+       validationQueryTimeout = 3
+       validationInterval = 15000
+       testOnBorrow = true
+       testWhileIdle = true
+       testOnReturn = false
+       ignoreExceptionOnPreLoad = true
+       // http://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#JDBC_interceptors
+       jdbcInterceptors = "ConnectionState;StatementCache(max=200)"
+       defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED // safe default
+       // controls for leaked connections 
+       abandonWhenPercentageFull = 100 // settings are active only when pool is full
+       removeAbandonedTimeout = 120
+       removeAbandoned = true
+       // use JMX console to change this setting at runtime
+       logAbandoned = false // causes stacktrace recording overhead, use only for debugging
+       // JDBC driver properties
+       // Mysql as example
+       dbProperties {
+           // Mysql specific driver properties
+           // http://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html
+           // let Tomcat JDBC Pool handle reconnecting
+           autoReconnect=false
+           // truncation behaviour 
+           jdbcCompliantTruncation=false
+           // mysql 0-date conversion
+           zeroDateTimeBehavior='convertToNull'
+           // Tomcat JDBC Pool's StatementCache is used instead, so disable mysql driver's cache
+           cachePrepStmts=false
+           cacheCallableStmts=false
+           // Tomcat JDBC Pool's StatementFinalizer keeps track
+           dontTrackOpenResources=true
+           // performance optimization: reduce number of SQLExceptions thrown in mysql driver code
+           holdResultsOpenOverStatementClose=true
+           // enable MySQL query cache - using server prep stmts will disable query caching
+           useServerPrepStmts=false
+           // metadata caching
+           cacheServerConfiguration=true
+           cacheResultSetMetadata=true
+           metadataCacheSize=100
+           // timeouts for TCP/IP
+           connectTimeout=15000
+           socketTimeout=120000
+           // timer tuning (disable)
+           maintainTimeStats=false
+           enableQueryTimeouts=false
+           // misc tuning
+           noDatetimeStringSync=true
+       }
+    }
+}
+----
+
+
+==== More on dbCreate
+
+
+Hibernate can automatically create the database tables required for your domain model. You have some control over when and how it does this through the `dbCreate` property, which can take these values:
+
+* *create* - Drops the existing schema and creates the schema on startup, dropping existing tables, indexes, etc. first.
+* *create-drop* - Same as *create*, but also drops the tables when the application shuts down cleanly.
+* *update* - Creates missing tables and indexes, and updates the current schema without dropping any tables or data. Note that this can't properly handle many schema changes like column renames (you're left with the old column containing the existing data).
+* *validate* - Makes no changes to your database. Compares the configuration with the existing database schema and reports warnings.
+* any other value - does nothing
+
+Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://flywaydb.org/[Flyway] or http://www.liquibase.org/[Liquibase]. The https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#databaseMigration[Database Migration] plugin uses Liquibase.

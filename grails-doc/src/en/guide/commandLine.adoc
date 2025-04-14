@@ -1,0 +1,249 @@
+Grails 3.0's command line system differs greatly from previous versions of Grails and features APIs for invoking Gradle for build related tasks, as well as performing code generation.
+
+When you type:
+
+[source,groovy]
+----
+grails <<command name>>
+----
+
+Grails searches the https://central.sonatype.com/[profile repository] based on the profile of the current application. If the profile is for a web application then commands are read from the web profile and the base profile which it inherits from.
+
+Since command behavior is profile specific the web profile may provide different behavior for the `run-app` command then say a profile for running batch applications.
+
+When you type the following command:
+
+[source,groovy]
+----
+grails run-app
+----
+
+It will first search the application, and then the profile for commands:
+
+* `PROJECT_HOME/src/main/scripts/run-app.groovy`
+* `<<profile>>/commands/run-app.groovy`
+* `<<profile>>/commands/run-app.yml`
+
+To get a list of all commands and some help about the available commands type:
+
+[source,bash]
+----
+grails help
+----
+
+which outputs usage instructions and the list of commands Grails is aware of:
+
+[source,bash]
+----
+grails <<environment>>* <<target>> <<arguments>>*'
+
+| Examples:
+$ grails dev run-app
+$ grails create-app books
+
+| Available Commands (type grails help 'command-name' for more info):
+| Command Name                          Command Description
+----------------------------------------------------------------------------------------------------
+clean                                   Cleans a Grails application's compiled sources
+compile                                 Compiles a Grails application
+...
+----
+
+NOTE: Refer to the Command Line reference in the Quick Reference menu of the reference guide for more information about individual commands
+
+=== Arguments
+
+The `grails` command is a front to a `gradle` invocation, because of this there can be unexpected side-effects.
+For example, when executing `grails -Dapp.foo=bar run-app` the `app.foo` system property won't be available to your application. This is because `bootRun` in your `build.gradle` configures the system properties.
+To make this work you can simply append all `System.properties` to `bootRun` in `build.gradle` like:
+
+[source,groovy]
+----
+bootRun{
+    systemProperties System.properties // Please note not to use '=', because this will override all configured systemProperties. This will append them.
+}
+----
+
+Or if you only want to pass through a limited set, you can prefix your system properties using an arbitrary prefix and configure `bootRun` like:
+
+[source,groovy]
+----
+bootRun{
+    bootRun {
+        systemProperties System.properties.inject([:]){acc,item-> item.key.startsWith('boot.')?acc << [(item.key.substring('boot.'.length())):item.value]:acc }
+    }
+}
+----
+
+In this example only system properties starting with `boot.` are passed through.
+
+Application and JVM arguments should be specified in `bootRun` as well.
+
+[source,groovy]
+----
+bootRun{
+    bootRun {
+        jvmArgs('-Dspring.output.ansi.enabled=always')
+        args('--app.foo=bar','--app.bar=foo') // Override the `app.foo` and `app.bar` config options (`grailsApplication.config`)
+    }
+}
+----
+
+
+=== non-interactive mode
+
+
+When you run a script manually and it prompts you for information, you can answer the questions and continue running the script. But when you run a script as part of an automated process, for example a continuous integration build server, there's no way to "answer" the questions. So you can pass the `\--non-interactive` switch to the script command to tell Grails to accept the default answer for any questions, for example whether to install a missing plugin.
+
+For example:
+
+[source,groovy]
+----
+grails war --non-interactive
+----
+
+
+
+The Grails Forge New Command-Line Interface (CLI) has undergone significant changes compared to its previous versions, primarily focusing on code generation. One notable alteration is the removal of APIs for invoking Gradle for tasks related to building using Gradle Tooling APIs. This shift in responsibility aligns with the framework's evolution and its integration with the Gradle build system.
+
+=== Accessing the Grails CLI
+
+The Grails CLI (Command Line Interface) can be swiftly and effortlessly accessed by simply typing the following command into your terminal or command prompt:
+
+[source,shell]
+----
+grails
+----
+
+This command allows developers to quickly initiate the Grails CLI and begin working with the framework, making it an easy entry point for those looking to start their Grails projects.
+
+The New Grails CLI! is the preferred method for initiating new Grails projects. This command-line interface offers various options for creating projects, enabling you to select your preferred build tools, test frameworks, GORM implementation, and more. Additionally, the CLI provides commands for generating essential components like controllers and domain classes.
+
+=== The Grails Forge Website
+
+You can also begin your Grails application without the need to install the Grails CLI by visiting https://start.grails.org/[the Grails Forge website]. This web-based platform allows you to initiate Grails projects conveniently, bypassing the installation of the CLI.
+
+=== Understanding the New Grails Command-line Interface (CLI)
+
+Once the Grails CLI has been successfully installed, you can activate it using the "grails" command. For example:
+
+[source,shell]
+----
+grails create-app myapp
+----
+
+A Grails framework CLI project is recognizable by the presence of the "grails-cli.yml" file, which is automatically generated at the project's root if it was created using the CLI. This file contains information about the project's profile, default package, and other variables.
+
+Here is an example of a "grails-cli.yml" configuration for a default Grails web application:
+
+[source,yaml]
+----
+applicationType: web
+defaultPackage: com.example
+testFramework: spock
+sourceLanguage: groovy
+buildTool: gradle
+gormImpl: gorm-hibernate5
+servletImpl: spring-boot-starter-tomcat
+features:
+  - app-name
+  - asset-pipeline-grails
+  - base
+  - geb
+  - gorm-hibernate5
+  - gradle
+  - grails-application
+  - grails-console
+  - grails-dependencies
+  - grails-gorm-testing-support
+  - grails-gradle-plugin
+  - grails-gsp
+  - grails-url-mappings
+  - grails-web
+  - grails-web-testing-support
+  - h2
+  - logback
+  - readme
+  - scaffolding
+  - spock
+  - spring-boot-autoconfigure
+  - spring-boot-starter
+  - spring-boot-starter-tomcat
+  - yaml
+----
+
+This "grails-cli.yml" configuration sets the default values for various aspects of the Grails web application, including the application type, default package, test framework, source language, build tool, GORM implementation, servlet implementation, and a list of enabled features.
+
+=== Grails Default Package Configuration
+
+The project's default package is determined based on the project's name. For instance, running the following command:
+
+[source, shell]
+----
+grails create-app myapp
+----
+
+Will set the default package to `myapp`.
+
+If you wish to specify your own default package when creating the application, you can do so by prefixing the application name with the package like this:
+
+[source, shell]
+----
+grails create-app com.example.myapp
+----
+
+In this case, "com.example" becomes the default package for your project.
+
+=== Gradle Build Tool
+
+Grails now utilizes the Gradle Build System for project management. The project's build configuration is specified in the `build.gradle` file, where you define critical aspects of your project such as its version, required dependencies, and the repositories from which these dependencies should be sourced. Here's an example of how this is done:
+
+[source, groovy]
+----
+plugins {
+    id 'org.grails.grails-web' version 'x.y.z' // Grails plugin
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.grails:grails-core'
+    // Add more dependencies as needed...
+}
+
+grails {
+    pathingJar = true
+}
+----
+
+=== Utilizing Gradle Build Tool
+
+To interact with your Grails project and perform various tasks related to building and running it, you should employ Gradle commands. Here are a few examples:
+
+- Building the Grails application:
+
+[source, bash]
+----
+gradle build
+----
+
+- Running the Grails application:
+
+[source, bash]
+----
+gradle bootRun
+----
+
+- Listing available Gradle tasks:
+
+[source, bash]
+----
+gradle tasks
+----
+
+By invoking these Gradle commands, you can effectively manage your Grails application's lifecycle.
+
+It is important to remember that Grails leverages the power of Gradle for streamlined project management, including build automation and dependency resolution. This approach allows for greater flexibility and control over your Grails projects.

@@ -1,0 +1,95 @@
+==== Available Scopes
+
+
+Scopes are hash-like objects where you can store variables. The following scopes are available to controllers:
+
+* link:../ref/Controllers/servletContext.html[servletContext] - Also known as application scope, this scope lets you share state across the entire web application. The servletContext is an instance of {jakartaee}jakarta/servlet/ServletContext.html[ServletContext]
+* link:../ref/Controllers/session.html[session] - The session allows associating state with a given user and typically uses cookies to associate a session with a client. The session object is an instance of {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession]
+* link:../ref/Controllers/request.html[request] - The request object allows the storage of objects for the current request only. The request object is an instance of {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest]
+* link:../ref/Controllers/params.html[params] - Mutable map of incoming request query string or POST parameters
+* link:../ref/Controllers/flash.html[flash] - See below
+
+
+==== Accessing Scopes
+
+
+Scopes can be accessed using the variable names above in combination with Groovy's array index operator, even on classes provided by the Servlet API such as the {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest]:
+
+[source,groovy]
+----
+class BookController {
+    def find() {
+        def findBy = params["findBy"]
+        def appContext = request["foo"]
+        def loggedUser = session["logged_user"]
+    }
+}
+----
+
+You can also access values within scopes using the de-reference operator, making the syntax even more clear:
+
+[source,groovy]
+----
+class BookController {
+    def find() {
+        def findBy = params.findBy
+        def appContext = request.foo
+        def loggedUser = session.logged_user
+    }
+}
+----
+
+This is one of the ways that Grails unifies access to the different scopes.
+
+
+==== Using Flash Scope
+
+
+Grails supports the concept of link:../ref/Controllers/flash.html[flash] scope as a temporary store to make attributes available for this request and the next request only. Afterwards the attributes are cleared. This is useful for setting a message directly before redirecting, for example:
+
+[source,groovy]
+----
+def delete() {
+    def b = Book.get(params.id)
+    if (!b) {
+        flash.message = "User not found for id ${params.id}"
+        redirect(action:list)
+    }
+    ... // remaining code
+}
+----
+
+When the `delete` action is requested, the `message` value will be in scope and can be used to display an information message. It will be removed from the `flash` scope after this second request.
+
+Note that the attribute name can be anything you want, and the values are often strings used to display messages, but can be any object type.
+
+
+==== Scoped Controllers
+
+
+Newly created applications have the `grails.controllers.defaultScope` property set to a value of "singleton" in `application.yml`.  You may change this value to any
+of the supported scopes listed below.  If the property is not assigned a value at all, controllers will default to "prototype" scope.
+
+Supported controller scopes are:
+
+* `prototype` (default) - A new controller will be created for each request (recommended for actions as Closure properties)
+* `session` - One controller is created for the scope of a user session
+* `singleton` - Only one instance of the controller ever exists (recommended for actions as methods)
+
+To enable one of the scopes, add a static `scope` property to your class with one of the valid scope values listed above, for example
+
+[source,groovy]
+----
+static scope = "singleton"
+----
+
+You can define the default strategy in `application.yml` with the `grails.controllers.defaultScope` key, for example:
+
+[source,groovy]
+----
+grails:
+    controllers:
+        defaultScope: singleton
+----
+
+NOTE: Use scoped controllers wisely. For instance, we don't recommend having any properties in a singleton-scoped controller since they will be shared for _all_ requests.

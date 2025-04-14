@@ -1,0 +1,47 @@
+Many modern web frameworks in the Java space are more complicated than needed and don't embrace the Don't Repeat Yourself (DRY) principles.
+
+Dynamic frameworks like Rails and Django helped pave the way to a more modern way of thinking about web applications. Grails builds on these concepts and dramatically reduces the complexity of building web applications on the Java platform. What makes it different, however, is that it does so by building on already established Java technologies like Spring and Hibernate.
+
+Grails is a full stack framework and attempts to solve as many pieces of the web development puzzle through the core technology and its associated plugins. Included out the box are things like:
+
+* https://gorm.grails.org[GORM] - An easy-to-use Object Mapping library with support for https://gorm.grails.org/{gormVersion}/hibernate[SQL], https://gorm.grails.org/{gormVersion}/mongodb[MongoDB], https://gorm.grails.org/{gormVersion}/neo4j[Neo4j] and http://gorm.grails.org[more].
+* View technologies for https://gsp.grails.org[rendering HTML] as well as http://views.grails.org[JSON]
+* A controller layer built on https://spring.io/projects/spring-boot[Spring Boot]
+* A plugin system featuring http://plugins.grails.org[hundreds of plugins].
+* Flexible profiles to http://start.grails.org/#/index[create applications with AngularJS, React and more].
+* An interactive command line environment and build system based on http://gradle.org[Gradle]
+* An embedded http://tomcat.apache.org[Tomcat] container which is configured for on the fly reloading
+
+All of these are made easy to use through the power of the http://groovy-lang.org[Groovy] language and the extensive use of Domain Specific Languages (DSLs)
+
+This documentation will take you through getting started with Grails and building web applications with the Grails framework.
+
+In addition to this documentation there are http://guides.grails.org[comprehensive guides] that walk you through various aspects of the technology.
+
+Finally, Grails is far more than just a web framework and is made up of various sub-projects. The following table summarizes some other key projects in the eco-system with links to documentation.
+
+.Grails Ecosystem Projects
+|===
+|Project            | Description
+
+|https://gorm.grails.org/{gormVersion}/hibernate[GORM for Hibernate]
+|An Object Mapping implementation for SQL databases
+
+|https://gorm.grails.org/{gormVersion}/mongodb[GORM for MongoDB]
+|An Object Mapping implementation for the MongoDB Document Database
+
+|https://gorm.grails.org/{gormVersion}/neo4j[GORM for Neo4j]
+|An Object Mapping implementation for Neo4j Graph Database
+
+|http://views.grails.org[JSON Views]
+|A View technology for rendering JSON on the server side
+
+|http://gsp.grails.org[Groovy Server Pages]
+|A View technology for rendering HTML and other markup on the server
+
+|http://async.grails.org[Async Framework]
+|Asynchronous programming abstraction with support for RxJava, GPars and more
+
+
+|===
+

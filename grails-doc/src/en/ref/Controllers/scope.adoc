@@ -1,0 +1,36 @@
+
+== scope
+
+
+
+=== Purpose
+
+
+Changes the scope of a controller
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+
+    static scope = "session"
+
+    // ...
+}
+----
+
+
+=== Description
+
+
+Unless specified by the `grails.controllers.defaultScope` property in `application.yml`, controllers by default are "singleton" scoped which means that only one instance of the controller exists.
+This behaviour can be set for an individual controller by specifying a `scope` attribute with one of the following values:
+
+* `singleton` (default) - Only one instance of the controller ever exists (recommended for actions as methods)
+* `prototype` - A new controller will be created for each request (recommended for actions as Closure properties)
+* `session` - One controller is created for the scope of a user session
+
+See link:{guidePath}/theWebLayer.html#controllersAndScopes[Controllers and Scopes] in the user guide for more information.

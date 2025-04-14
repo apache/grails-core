@@ -1,0 +1,43 @@
+The testing framework provides and initializes a number of properties that
+are directly accessible unit tests.  The link:../api/index.html[javadocs] for the
+various traits describe those properties.  Some particular properties of interest:
+
+== Properties Available In All Unit Tests
+
+- link:../api/org/grails/testing/GrailsUnitTest.html#getMessageSource()[messageSource]
+- link:../api/org/grails/testing/GrailsUnitTest.html#getGrailsApplication()[grailsApplication]
+- link:../api/org/grails/testing/GrailsUnitTest.html#getApplicationContext()[applicationContext]
+- link:../api/org/grails/testing/GrailsUnitTest.html#getConfig()[config]
+
+== Properties Available In All Web Unit Tests (Controller, Interceptor, Taglib, UrlMappings)
+
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getRequest()[request]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getResponse()[response]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getServletContext()[servletContext]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getViews()[views]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getSession()[session]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getStatus()[status]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getParams()[params]
+- link:{gspApiDocs}/grails/testing/web/GrailsWebUnitTest.html#getFlash()[flash]
+
+== Controller Unit Test Properties
+
+- link:{gspApiDocs}/grails/testing/web/controllers/ControllerUnitTest.html#getController()[controller]
+- link:{gspApiDocs}/grails/testing/web/controllers/ControllerUnitTest.html#getView()[view]
+- link:{gspApiDocs}/grails/testing/web/controllers/ControllerUnitTest.html#getModel()[model]
+
+== Interceptor Unit Test Properties
+
+- link:{gspApiDocs}/grails/testing/web/interceptor/InterceptorUnitTest.html#getInterceptor()[interceptor]
+
+== Service Unit Test Properties
+
+- link:../api/grails/testing/services/ServiceUnitTest.html#getService()[service]
+
+== Tag Library Unit Test Properties
+
+- link:{gspApiDocs}/grails/testing/web/taglib/TagLibUnitTest.html#getTagLib()[tagLib]
+
+== Domain Class Unit Test Properties  
+
+- link:../api/grails/testing/gorm/DomainUnitTest.html#getDomain()[domain] 

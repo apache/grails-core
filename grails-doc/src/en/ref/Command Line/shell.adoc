@@ -1,0 +1,45 @@
+
+== shell
+
+
+
+=== Purpose
+
+
+Starts an instance of the Groovy terminal shell with an initialized Grails runtime.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails shell
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails <<environment>>* shell
+----
+
+Starts the Grails shell, which is an extended version of the regular Groovy shell. Within the binding of the shell there are a couple of useful variables:
+
+* `ctx` - The Spring ApplicationContext instance
+* `grailsApplication` - The GrailsApplication instance
+
+These are useful as they allow access to the conventions within Grails and Spring beans.
+
+Example Shell:
+
+[source,groovy]
+----
+Groovy Shell (1.8.0, JVM: 1.6.0_26)
+Type 'help' or '\h' for help.
+-----------------------------------
+groovy:000>
+----

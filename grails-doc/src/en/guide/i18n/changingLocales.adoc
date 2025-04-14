@@ -1,0 +1,50 @@
+By default, the user locale is detected from the incoming `Accept-Language` header. You can provide users the capability to switch locales by simply passing a parameter called `lang` to Grails as a request parameter:
+
+[source,groovy]
+----
+/book/list?lang=es
+----
+
+Grails will automatically switch the user's locale and subsequent requests will use the switched locale.
+
+By default, Grails uses {springapi}org/springframework/web/servlet/i18n/SessionLocaleResolver.html[SessionLocaleResolver] as the `localeResolver` bean.
+
+You can change the default locale easily: 
+
+[source,groovy]
+.grails-app/conf/spring/resources.groovy
+----
+import org.springframework.web.servlet.i18n.SessionLocaleResolver
+
+beans = {
+    localeResolver(SessionLocaleResolver) {
+        defaultLocale= new Locale('es')
+    }
+}
+----
+
+Other `localeResolver` are available. For example, you could use save the switched locale in a Cookie:
+
+[source,groovy]
+.grails-app/conf/spring/resources.groovy
+----
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
+
+beans = {
+    localeResolver(CookieLocaleResolver) {
+        defaultLocale= new Locale('es')
+    }
+}
+----
+
+Or fix the locale:
+
+[source,groovy]
+.grails-app/conf/spring/resources.groovy
+----
+import org.springframework.web.servlet.i18n.FixedLocaleResolver
+
+beans = {
+    localeResolver(FixedLocaleResolver, new Locale('de'))
+}
+----

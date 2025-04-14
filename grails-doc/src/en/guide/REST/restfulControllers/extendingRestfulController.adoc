@@ -1,0 +1,123 @@
+The easiest way to get started doing so is to create a new controller for your resource that extends the `grails.rest.RestfulController` super class. For example:
+
+[source,groovy]
+----
+class BookController extends RestfulController<Book> {
+    static responseFormats = ['json', 'xml']
+    BookController() {
+        super(Book)
+    }
+}
+----
+
+To customize any logic you can just override the appropriate action. The following table provides the names of the action names and the URIs they map to:
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URI,Controller Action
+GET,/books,index
+GET,/books/create,create
+POST,/books,save
+GET,/books/${id},show
+GET,/books/${id}/edit,edit
+PUT,/books/${id},update
+DELETE,/books/${id},delete
+|===
+
+NOTE: The `create` and `edit` actions are only needed if the controller exposes an HTML interface.
+
+As an example, if you have a link:theWebLayer.html#restfulMappings[nested resource] then you would typically want to query both the parent and the child identifiers. For example, given the following URL mapping:
+
+[source,groovy]
+----
+"/authors"(resources:'author') {
+    "/books"(resources:'book')
+}
+----
+
+You could implement the nested controller as follows:
+
+[source,groovy]
+----
+class BookController extends RestfulController {
+    static responseFormats = ['json', 'xml']
+    BookController() {
+        super(Book)
+    }
+
+    @Override
+    protected Book queryForResource(Serializable id) {
+        Book.where {
+            id == id && author.id == params.authorId
+        }.find()
+    }
+
+}
+----
+
+The example above subclasses `RestfulController` and overrides the protected `queryForResource` method to customize the query for the resource to take into account the parent resource.
+
+
+==== Customizing Data Binding In A RestfulController Subclass
+
+
+The RestfulController class contains code which does data binding for actions like `save` and `update`.  The class defines a `getObjectToBind()` method which returns a value which will be used as the source for data binding.  For example, the update action does something like this...
+
+[source,groovy]
+----
+class RestfulController<T> {
+
+    def update() {
+        T instance = // retrieve instance from the database...
+
+        instance.properties = getObjectToBind()
+
+        // ...
+    }
+
+    // ...
+}
+----
+
+By default the `getObjectToBind()` method returns the link:../ref/Controllers/request.html[request] object.  When the `request` object is used as the binding source, if the request has a body then the body will be parsed and its contents will be used to do the data binding, otherwise the request parameters will be used to do the data binding.  Subclasses of RestfulController may override the `getObjectToBind()` method and return anything that is a valid binding source, including a {javase}java.base/java/util/Map.html[Map] or a {apiDocs}grails/databinding/DataBindingSource.html[DataBindingSource].  For most use cases binding the request is appropriate but the `getObjectToBind()` method allows for changing that behavior where desired.
+
+
+==== Using custom subclass of RestfulController with Resource annotation
+
+
+You can also customize the behaviour of the controller that backs the Resource annotation.
+
+The class must provide a constructor that takes a domain class as its argument. The second constructor is required for supporting Resource annotation with readOnly=true.
+
+This is a template that can be used for subclassed RestfulController classes used in Resource annotations:
+[source,groovy]
+----
+class SubclassRestfulController<T> extends RestfulController<T> {
+    SubclassRestfulController(Class<T> domainClass) {
+        this(domainClass, false)
+    }
+
+    SubclassRestfulController(Class<T> domainClass, boolean readOnly) {
+        super(domainClass, readOnly)
+    }
+}
+----
+
+
+You can specify the super class of the controller that backs the Resource annotation with the `superClass` attribute.
+
+[source,groovy]
+----
+import grails.rest.*
+
+@Resource(uri='/books', superClass=SubclassRestfulController)
+class Book {
+
+    String title
+
+    static constraints = {
+        title blank:false
+    }
+}
+----

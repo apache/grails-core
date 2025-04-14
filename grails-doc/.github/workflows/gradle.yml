@@ -1,0 +1,53 @@
+name: "Java CI"
+on:
+  push:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  pull_request:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v4
+      - name: "🔀 Store current branch name"
+        run: |
+          TARGET_BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
+          echo "Target Branch: ${TARGET_BRANCH}"
+      - name: "📅 Set current date as env variable"
+        run: |
+          NOW=$(date +'%Y-%m-%dT%H%M%S')
+          echo "NOW=${NOW}" >> $GITHUB_ENV
+          echo "Current date: ${NOW}"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔨 Build Snapshot Documentation"
+        run: >
+          ./gradlew build
+          -PgithubBranch=${{ env.TARGET_BRANCH }}
+      - name: "📤 Upload Generated Docs to Workflow Result Page"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-docs-${{ env.NOW }}.zip
+          path: ./build/distributions/*.zip
+          compression-level: 0 # Already a zip
+      - name: "🚀 Publish to Github Pages"
+        if: github.event_name == 'push'
+        uses: apache/grails-github-actions/deploy-github-pages@asf
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          SOURCE_FOLDER: build/docs

@@ -1,0 +1,54 @@
+
+== assemble
+
+
+
+=== Purpose
+
+
+The `assemble` command creates a Web Application Archive (WAR) file which can be deployed on any Java EE compliant application server.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+./gradlew assemble
+./gradlew test assemble
+./gradlew -Dgrails.env=staging assemble
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+./gradlew <<environment>>* assemble <<arguments>>*
+----
+
+
+By default the `assemble` command creates a web application archive (WAR) file using the application name and version number. The `assemble` command is different from most commands since it runs in the production environment by default instead of development, but like any script the environment can be specified using the standard convention:
+
+[source,groovy]
+----
+./gradlew test assemble
+./gradlew dev assemble
+./gradlew prod assemble
+----
+
+Additionally, it is highlighted that upon execution, two files will be generated in the build/libs directory. One file with a 'plain' suffix is designed for be deployed on any Java EE compliant application server, while the other file is a WAR file that houses an embedded server, which can be run with the command java -jar <filename>.war.
+
+
+You can also specify a custom environment:
+
+[source,groovy]
+----
+./gradlew -Dgrails.env=UAT assemble
+----
+
+Once the WAR has been created you can deploy it to your container using its standard WAR deployment process.
+
+NOTE: Grails 2.x `war` command allowed you to supply the argument `nojars` - which packaged the WAR with no jar files. In Grails 3.x, this argument is no longer available. Instead, you may use Gradle capabilities to generate a WAR without jar files. One option would be to set your dependencies as `providedCompile` and `providedRuntime`. Those two configurations have the same scope as the respective compile and runtime configurations, except that they are not added to the WAR archive. Check https://docs.gradle.org/current/userguide/war_plugin.html[Gradle WAR Plugin] documentation for more information.

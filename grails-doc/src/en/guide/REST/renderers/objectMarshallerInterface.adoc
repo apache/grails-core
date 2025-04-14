@@ -1,0 +1,151 @@
+For more complex marshallers it is recommended you implement the {apiDocs}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] interface. For example given a domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+}
+----
+
+By default the output when using:
+
+[source,groovy]
+----
+render book as XML
+----
+
+Would look like:
+
+[source,xml]
+----
+<book id="1">
+   <title>The Stand</title>
+</book>
+----
+
+To write a custom marshaller you can do the following:
+
+[source,groovy]
+----
+class BookMarshaller implements ObjectMarshaller<XML> {
+
+  public boolean supports(Object object) {
+    return object instanceof Book
+  }
+
+  public void marshalObject(Object object, XML converter) {
+    Book book  = (Book)object
+    converter.chars book.title
+  }
+}
+----
+
+And then register the marshaller with:
+
+[source,groovy]
+----
+XML.registerObjectMarshaller(new BookMarshaller())
+----
+
+With the custom `ObjectMarshaller` in place, the output is now:
+
+[source,xml]
+----
+<book>The Stand</book>
+----
+
+
+==== Customizing the Name of the Root Element
+
+
+If you wish the customize the name of the surrounding element, you can implement {apiDocs}org/grails/web/converters/marshaller/NameAwareMarshaller.html[NameAwareMarshaller]:
+
+[source,groovy]
+----
+class BookMarshaller implements ObjectMarshaller<XML>,NameAwareMarshaller {
+
+  ...
+
+  String getElementName(Object o) {
+    return 'custom-book'
+  }
+
+}
+----
+
+With the above change the output would now be:
+
+[source,xml]
+----
+<custom-book>The Stand</custom-book>
+----
+
+
+==== Outputting Markup Using the Converters API or Builder
+
+
+With the passed Converter object you can explicitly code to the Converters API to stream markup to the response:
+
+[source,groovy]
+----
+public void marshalObject(Object object, XML converter) {
+  Book book = (Book)object
+
+  converter.attribute 'id', book.id.toString()
+  converter.attribute 'date-released', book.dateReleased.toString()
+
+  converter.startNode 'title'
+  converter.chars book.title
+  converter.end()
+
+}
+----
+
+The above code results in:
+
+[source,xml]
+----
+<book id="1" date-released="...">
+   <title>The Stand</title>
+</book>
+----
+
+You can also use a builder notation to achieve a similar result (although the builder notation does not work for `CompileStatic`):
+
+[source,groovy]
+----
+public void marshalObject(Object object, XML converter) {
+  Book b = (Book)object
+
+  converter.build {
+     book(id: b.id) {
+        title b.title
+     }
+  }
+}
+----
+
+
+==== Using the convertAnother Method to Recursively Convert Objects
+
+
+To create more complex responses you can use the `convertAnother` method to convert associations and other objects:
+
+[source,groovy]
+----
+public void marshalObject(Object object, XML converter) {
+  Book book = (Book)object
+
+  converter.startNode 'title'
+  converter.chars book.title
+  converter.end()
+
+  if (book.authors) {
+    converter.startNode 'authors'
+    for(author in book.authors) {
+      converter.convertAnother author
+    }
+    converter.end()
+  }
+}
+----

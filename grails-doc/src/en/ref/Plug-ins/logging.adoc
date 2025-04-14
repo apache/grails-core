@@ -1,0 +1,33 @@
+
+== logging
+
+
+
+=== Purpose
+
+
+The `logging` plugin configures Grails' support for link:{guidePath}/conf.html#logging[Logging] with logback.
+
+
+=== Examples
+
+
+Example log statements:
+
+[source,groovy]
+----
+log.info "Configuration data source"
+
+try {
+    ..
+}
+catch (Exception e) {
+    log.error "Error: ${e.message}", e
+}
+----
+
+
+=== Description
+
+
+Refer to the section on link:{guidePath}/conf.html#logging[Logging] in the Grails user guide which details Grails' logging support.

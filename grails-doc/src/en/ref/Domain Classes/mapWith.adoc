@@ -1,0 +1,24 @@
+
+== mapWith
+
+
+
+=== Purpose
+
+
+The `mapWith` static property adds the ability to control if a domain class is being persisted.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Airport {
+
+    static mapWith = "none"
+
+}
+----
+
+In this example the `Airport` class will not be persisted to the database.

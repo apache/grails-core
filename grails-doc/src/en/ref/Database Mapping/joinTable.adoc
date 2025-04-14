@@ -1,0 +1,115 @@
+
+== joinTable
+
+
+
+=== Purpose
+
+
+Customizes the join table used for undirectional one-to-many, many-to-many and primitive collection types.
+
+
+=== Examples
+
+
+Basic collection type:
+
+[source,groovy]
+----
+class Book {
+
+    static hasMany = [chapterPageCounts: Integer]
+
+    static mapping = {
+        chapterPageCounts indexColumn: [name: "chapter_number", type: Integer],
+                          joinTable: [column: "page_count"]
+
+}
+----
+
+Enum collection types:
+
+[source,groovy]
+----
+enum VehicleStatus { OFF, IDLING, ACCELERATING, DECELERATING }
+----
+
+[source,groovy]
+----
+class Truck {
+
+    static hasMany = [states: VehicleStatus]
+
+    static mapping = {
+        states joinTable: [name: 'VEHICLE_STATUS_LOG',
+                           key: 'TRUCK_ID', column: 'STATUS']
+    }
+}
+----
+
+Many-to-many:
+
+[source,groovy]
+----
+class Book {
+
+    String title
+
+    static belongsTo = Author
+
+    static hasMany = [authors: Author]
+
+    static mapping = {
+        authors joinTable: [name: "mm_author_books", key: 'mm_book_id' ]
+    }
+}
+----
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books joinTable: [name: "mm_author_books", key: 'mm_author_id']
+    }
+}
+----
+
+Unidirectional One-to-many:
+
+[source,groovy]
+----
+class Employee {
+
+    static hasMany = [projects: Project]
+
+    static mapping = {
+        projects joinTable: [name: 'EMP_PROJ',
+                             column: 'PROJECT_ID',
+                             key: 'EMPLOYEE_ID']
+    }
+}
+----
+
+[source,groovy]
+----
+class Project {  }
+----
+
+
+=== Description
+
+
+Usage: `association_name(joinTable:map)`
+
+Arguments:
+
+* `name` - The table name
+* `key` (optional) - The foreign key
+* `column` (optional) - The inverse column
+
+GORM has various strategies for mapping association types. Some of them, such as basic collection types and many-to-many associations, use a join table. You can customize how this join table is created using the `joinTable` argument.

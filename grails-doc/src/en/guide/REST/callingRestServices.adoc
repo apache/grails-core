@@ -1,0 +1,79 @@
+Calling Grails REST services - as well as third-party services - is very straightforward using the https://docs.micronaut.io/latest/guide/index.html#httpClient[Micronaut HTTP Client]. This HTTP client has both a low-level API and a higher level AOP-driven API, making it useful for both simple requests as well as building declarative, type-safe API layers.
+
+To use the Micronaut HTTP client you must have the `micronaut-http-client` and `micronaut-serde-jackson` dependencies on your classpath. Add the following dependency to your `build.gradle` file.
+
+.build.gradle
+[source,groovy]
+----
+implementation "io.micronaut:micronaut-http-client:4.6.6"
+implementation "io.micronaut.serde:micronaut-serde-jackson:2.11.0"
+----
+
+==== Low-level API
+
+The https://docs.micronaut.io/latest/api/io/micronaut/http/client/HttpClient.html[HttpClient] interface forms the basis for the low-level API. This interfaces declares methods to help ease executing HTTP requests and receive responses.
+
+The majority of the methods in the `HttpClient` interface returns Reactive Streams Publisher instances, and a sub-interface called RxHttpClient is included that provides a variation of the HttpClient interface that returns RxJava Flowable types. When using `HttpClient` in a blocking flow, you may wish to call `toBlocking()` to return an instance of https://docs.micronaut.io/latest/api/io/micronaut/http/client/BlockingHttpClient.html[BlockingHttpClient].
+
+There are a few ways by which you can obtain a reference to a https://docs.micronaut.io/latest/api/io/micronaut/http/client/HttpClient.html[HttpClient]. The most simple way is using the https://docs.micronaut.io/latest/api/io/micronaut/http/client/HttpClient.html#create-java.net.URL-[create] method
+
+.Creating an HTTP client
+[source, groovy]
+----
+    List<Album> searchWithApi(String searchTerm) {
+        String baseUrl = "https://itunes.apple.com/"
+
+        BlockingHttpClient client = HttpClient.create(baseUrl.toURL()).toBlocking() //<1>
+
+        HttpRequest request = HttpRequest.GET("/search?limit=25&media=music&entity=album&term=${searchTerm}")
+        HttpResponse<String> resp = client.exchange(request, String)
+        client.close() //<2>
+
+        String json = resp.body()
+        ObjectMapper objectMapper = new ObjectMapper() //<3>
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        SearchResult searchResult = objectMapper.readValue(json, SearchResult)
+        searchResult.results
+    }
+----
+<1> Create a new instance of `HttpClient` with the `create` method, and convert to an instance of `BlockingHttpClient` with `toBlocking()`,
+<2> The client should be closed using the `close` method to prevent thread leaking.
+<3> Jackson's https://fasterxml.github.io/jackson-databind/javadoc/2.9/com/fasterxml/jackson/databind/ObjectMapper.html[ObjectMapper] API can be used to map the raw JSON to POGOs, in this case `SearchResult`
+
+Consult the https://docs.micronaut.io/latest/guide/index.html#lowLevelHttpClient[Http Client section] of the https://docs.micronaut.io/latest/guide/index.html[Micronaut user guide] for more information on using the `HttpClient` low-level API.
+
+==== Declarative API
+
+A declarative HTTP client can be written by adding the https://docs.micronaut.io/latest/api/io/micronaut/http/client/annotation/Client.html[`@Client`] annotation to any interface or abstract class. Using Micronaut's AOP support (see the Micronaut user guide section on https://docs.micronaut.io/latest/guide/index.html#introductionAdvice[Introduction Advice]), the abstract or interface methods will be implemented for you at compilation time as HTTP calls. Declarative clients can return data-bound POGOs (or POJOs) without requiring special handling from the calling code.
+
+[source,groovy]
+----
+package example.grails
+
+import io.micronaut.http.annotation.Get
+import io.micronaut.http.client.annotation.Client
+
+
+@Client("https://start.grails.org")
+interface GrailsAppForgeClient {
+
+    @Get("/{version}/profiles")
+    List<Map> profiles(String version)
+}
+
+----
+
+Note that HTTP client methods are annotated with the appropriate HTTP method, such as `@Get` or `@Post`.
+
+To use a client like the one in the above example, simply inject an instance of the client into any bean using the `@Autowired` annotation.
+
+[source,groovy]
+----
+  @Autowired GrailsAppForgeClient appForgeClient
+
+    List<Map> profiles(String grailsVersion) {
+        respond appForgeClient.profiles(grailsVersion)
+    }
+----
+
+For more details on writing and using declarative clients, consult the https://docs.micronaut.io/latest/guide/index.html#clientAnnotation[Http Client section] of the https://docs.micronaut.io/latest/guide/index.html[Micronaut user guide].

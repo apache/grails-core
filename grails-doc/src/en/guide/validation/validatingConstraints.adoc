@@ -1,0 +1,57 @@
+
+==== Validation Basics
+
+
+Call the link:../ref/Domain%20Classes/validate.html[validate] method to validate a domain class instance:
+
+[source,groovy]
+----
+def user = new User(params)
+
+if (user.validate()) {
+    // do something with user
+}
+else {
+    user.errors.allErrors.each {
+        println it
+    }
+}
+----
+
+The `errors` property on domain classes is an instance of the Spring {springapi}org/springframework/validation/Errors.html[Errors] interface. The `Errors` interface provides methods to navigate the validation errors and also retrieve the original values.
+
+
+==== Validation Phases
+
+
+Within Grails there are two phases of validation, the first one being link:theWebLayer.html#dataBinding[data binding] which occurs when you bind request parameters onto an instance such as:
+
+[source,groovy]
+----
+def user = new User(params)
+----
+
+At this point you may already have errors in the `errors` property due to type conversion (such as converting Strings to Dates). You can check these and obtain the original input value using the `Errors` API:
+
+[source,groovy]
+----
+if (user.hasErrors()) {
+    if (user.errors.hasFieldErrors("login")) {
+        println user.errors.getFieldError("login").rejectedValue
+    }
+}
+----
+
+The second phase of validation happens when you call link:../ref/Domain%20Classes/validate.html[validate] or link:../ref/Domain%20Classes/save.html[save]. This is when Grails will validate the bound values against the link:../ref/Domain%20Classes/constraints.html[constraints] you defined. For example, by default the link:../ref/Domain%20Classes/save.html[save] method calls `validate` before executing, allowing you to write code like:
+
+[source,groovy]
+----
+if (user.save()) {
+    return user
+}
+else {
+    user.errors.allErrors.each {
+        println it
+    }
+}
+----

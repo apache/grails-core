@@ -1,0 +1,33 @@
+== create-controller
+
+=== Purpose
+
+
+The `create-controller` command creates a controller and associated unit test for the given base name.
+
+=== Examples
+
+----
+grails create-controller
+grails create-controller Book
+grails create-controller org.bookstore.book
+----
+
+=== Description
+
+
+Creates a new controller with an empty default action. The argument is optional, but if you don't include it the command will ask you for the name of the controller.
+
+A link:{guidePath}/theWebLayer.html#controllers[controller] is responsible for handling incoming web requests and performing actions such as redirects, rendering views and so on.
+
+The name of the controller can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `grails-app/controllers/<appname>/BookController.groovy` whereas the last one will create `grails-app/controllers/org/bookstore/BookController.groovy` directory. Note that the first letter of the controller name is always upper-cased when determining the class name.
+
+If you want the command to default to a different package for controllers, provide a value for `grails.project.groupId` in the link:{guidePath}/conf.html#config[runtime configuration].
+
+Note that this command is just for convenience and you can also create controllers in your favourite text editor or IDE if you choose.
+
+Usage:
+[source,groovy]
+----
+grails create-controller <<name>>
+----

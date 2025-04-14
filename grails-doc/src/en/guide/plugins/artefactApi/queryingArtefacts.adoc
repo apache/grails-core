@@ -1,0 +1,52 @@
+As a plugin developer, it can be important for you to find out about what domain classes, controllers, or other types of artefact are available in an application. For example, the https://github.com/grails/grails-elasticsearch[Elasticsearch plugin] needs to know what domain classes exist so it can check them for any `searchable` properties and index the appropriate ones. So how does it do it? The answer lies with the `grailsApplication` object, and instance of {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] that's available automatically in controllers and GSPs and can be link:services.html#dependencyInjectionServices[injected] everywhere else.
+
+The `grailsApplication` object has several important properties and methods for querying artefacts. Probably the most common is the one that gives you all the classes of a particular artefact type:
+
+[source,groovy]
+----
+for (cls in grailsApplication.<artefactType>Classes) {
+    ...
+}
+----
+
+In this case, `artefactType` is the property name form of the artefact type. With core Grails you have:
+
+* domain
+* controller
+* tagLib
+* service
+* codec
+* bootstrap
+* urlMappings
+
+So for example, if you want to iterate over all the domain classes, you use:
+
+[source,groovy]
+----
+for (cls in grailsApplication.domainClasses) {
+    ...
+}
+----
+
+and for URL mappings:
+
+[source,groovy]
+----
+for (cls in grailsApplication.urlMappingsClasses) {
+    ...
+}
+----
+
+You need to be aware that the objects returned by these properties are not instances of {javase}java.base/java/lang/Class.html[Class]. Instead, they are instances of {apiDocs}grails/core/GrailsClass.html[GrailsClass] that has some particularly useful properties and methods, including one for the underlying `Class`:
+
+* `shortName` - the class name of the artefact without the package (equivalent of `Class.simpleName`).
+* `logicalPropertyName` - the artefact name in property form without the 'type' suffix. So `MyGreatController` becomes 'myGreat'.
+* `isAbstract()` - a boolean indicating whether the artefact class is abstract or not.
+* `getPropertyValue(name)` - returns the value of the given property, whether it's a static or an instance one. This works best if the property is initialised on declaration, e.g. `static transactional = true`.
+
+The artefact API also allows you to fetch classes by name and check whether a class is an artefact:
+
+* get<type>Class(String name)
+* is<type>Class(Class clazz)
+
+The first method will retrieve the `GrailsClass` instance for the given name, e.g. 'MyGreatController'. The second will check whether a class is a particular type of artefact. For example, you can use `grailsApplication.isControllerClass(org.example.MyGreatController)` to check whether `MyGreatController` is in fact a controller.

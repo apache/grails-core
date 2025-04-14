@@ -1,0 +1,26 @@
+
+== get
+
+
+
+=== Purpose
+
+
+Retrieves an instance of the domain class for the specified id. `null` is returned if the row with the specified id doesn't exist.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = Book.get(1)
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `id` - The id of the object to retrieve

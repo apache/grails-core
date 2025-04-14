@@ -1,0 +1,61 @@
+To map a domain class with annotations, create a new class in `src/main/groovy/` and use the annotations defined as part of the EJB 3.0 spec (for more info on this see the http://annotations.hibernate.org/[Hibernate Annotations Docs]):
+
+[source,groovy]
+----
+package com.books;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+
+@Entity
+public class Book {
+    private Long id;
+    private String title;
+    private String description;
+    private Date date;
+
+    @Id
+    @GeneratedValue
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+}
+----
+
+Then register the class with the Hibernate `sessionFactory` by adding relevant entries to the `grails-app/conf/hibernate.cfg.xml` file as follows:
+
+[source,xml]
+----
+<!DOCTYPE hibernate-configuration SYSTEM
+  "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <mapping package="com.books" />
+        <mapping class="com.books.Book" />
+    </session-factory>
+</hibernate-configuration>
+----
+See the previous section for more information on the `hibernate.cfg.xml` file.
+
+When Grails loads it will register the necessary dynamic methods with the class. To see what else you can do with a Hibernate domain class see the section on link:scaffolding.html[scaffolding].

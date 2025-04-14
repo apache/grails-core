@@ -1,0 +1,49 @@
+
+== ignoreNotFound
+
+
+
+=== Purpose
+
+
+Specifies how foreign keys that reference missing rows are handled in many-to-one relationships.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class LegacyCdDomain {
+
+    String title
+    Thumbnail thumbnail
+
+    static mapping = {
+        thumbnail ignoreNotFound: true
+    }
+}
+----
+
+[source,groovy]
+----
+class Thumbnail {
+    byte[] data
+}
+----
+
+
+=== Description
+
+
+Usage: `association_name(ignoreNotFound: boolean)`
+
+When the data in the database is corrupt and a foreign key references a non existent record, Hibernate will complain with a "No row with the given identifier exists" message. For example, a `LegacyCdDomain` record may have a reference to a `Thumbnail` record with an ID of 1234, but the database may no longer contain a `Thumbnail` with that ID.
+
+One possible way to load such corrupt data is to use the `ignoreNotFound` mapping option. If you set it to `true`, Hibernate will treat a missing row as a `null` association. So in the above example, our `LegacyCdDomain` instance would load but its `thumbnail` property would be `null`. Specifying a value of `false` for `ignoreNotFound` will result in Hibernate throwing an `org.hibernate.ObjectNotFoundException`.
+
+WARNING: A dataset loaded with `ignoreNotFound: true` may throw an exception during `save()` because of the missing reference!
+
+The default value for this setting is `false`. It maps to Hibernate's `not-found` property.
+
+This settings can be useful if you have a legacy database with unusual behaviour when it comes to referential integrity.

@@ -1,0 +1,32 @@
+
+== scaffolding
+
+
+
+=== Purpose
+
+
+The `scaffolding` plugin configures Grails' support for CRUD via link:{guidePath}/scaffolding.html[scaffolding].
+
+
+=== Examples
+
+
+An example of enabling "dynamic" scaffolding:
+
+
+[source,groovy]
+----
+class BookController {
+   static scaffold = Book   // static scaffold = true  form is not supported in grails 3.0 and above
+}
+----
+
+
+
+
+
+=== Description
+
+
+Refer to the section on link:{guidePath}/scaffolding.html[scaffolding] in the Grails user guide which details Grails' scaffolding support.

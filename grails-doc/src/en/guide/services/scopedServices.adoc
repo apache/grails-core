@@ -1,0 +1,39 @@
+By default, access to service methods is not synchronised, so nothing prevents concurrent execution of those methods. In fact, because the service is a singleton and may be used concurrently, you should be very careful about storing state in a service. Or take the easy (and better) road and never store state in a service.
+
+You can change this behaviour by placing a service in a particular scope. The supported scopes are:
+
+* `prototype` - A new service is created every time it is injected into another class
+* `request` - A new service will be created per request
+* `flash` - A new service will be created for the current and next request only
+* `flow` - In web flows the service will exist for the scope of the flow
+* `conversation` - In web flows the service will exist for the scope of the conversation. ie a root flow and its sub flows
+* `session` - A service is created for the scope of a user session
+* `singleton` (default) - Only one instance of the service ever exists
+
+NOTE: If your service is `flash`, `flow` or `conversation` scoped it must implement `java.io.Serializable` and can only be used in the context of a Web Flow.
+
+To enable one of the scopes, add a static scope property to your class whose value is one of the above, for example
+
+[source,groovy]
+----
+static scope = "flow"
+----
+
+[NOTE]
+.Upgrading
+====
+Starting with Grails 2.3, new applications are generated with configuration that defaults the scope of controllers to `singleton`.
+If `singleton` controllers interact with `prototype` scoped services, the services effectively behave as per-controller singletons.
+If non-singleton services are required, controller scope should be changed as well.
+
+See link:theWebLayer.html#controllersAndScopes[Controllers and Scopes] in the user guide for more information.
+====
+
+==== Lazy initialization
+
+You can also configure whether the service is lazily initialized. By default, this is set to `true`, but you can disable this and make initialization eager with the `lazyInit` property: 
+
+[source,groovy]
+----
+static lazyInit = false
+----

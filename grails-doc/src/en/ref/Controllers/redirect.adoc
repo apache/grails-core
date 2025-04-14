@@ -1,0 +1,81 @@
+== redirect
+
+=== Purpose
+
+To redirect flow from one action to the next using an HTTP redirect.
+
+=== Examples
+
+[source,groovy]
+----
+redirect(action: "show")
+
+redirect(controller: "book", action: "list")
+
+redirect(controller: "book", action: "list", namespace: "publishing")
+
+redirect(controller: "book", action: "list", plugin: "publishingUtils")
+
+redirect(action: "show", id: 4, params: [author: "Stephen King"])
+
+redirect(controller: "book", action: "show", fragment: "profile")
+
+redirect(uri: "book/list")
+
+redirect(url: "https://www.blogjava.net/BlueSUN")
+
+redirect(Book.get(1))
+
+// For 302 Moved Temporarily
+redirect(action: "foo", permanent: false)
+
+// For 307 Temporary Redirect
+redirect(action: "foo", permanent: false, moved: false)
+
+// For 301 Moved Permanently Redirect (moved is default true)
+redirect(action: "foo", permanent: true)
+
+// For 308 Permanent Redirect
+redirect(action: "foo", permanent: true, moved: false)
+
+----
+
+=== Description
+
+Redirects the current action to another action, optionally passing parameters and/or errors. When issuing a redirect from a namespaced controller, the namespace for the target controller is implied to be that of the controller initiating the redirect. To issue a redirect from a namespaced controller to a controller that is not in a namespace, the namespace must be explicitly specified with a value of `null` as shown below.  By default, the redirect code will be MOVED_TEMPORARILY (302).
+
+[source,groovy]
+----
+class SomeController {
+    static namespace = 'someNamespace'
+
+    def index() {
+        // issue a redirect to PersonController which does not define a namespace
+        redirect action: 'list', controller: 'person', namespace: null
+    }
+}
+----
+
+=== Parameters
+
+`redirect(Map params)`
+
+* `action` (optional) - the name of the action to use in the link, if not specified the default action will be linked
+* `controller` (optional) - the name of the controller to use in the link, if not specified the current controller will be linked
+* `namespace` (optional) - the namespace of the controller to redirect to
+* `plugin` (optional) - the name of the plugin which provides the controller
+* `id` (optional) - the id to use in the link
+* `fragment` (optional) - The link fragment (often called anchor tag) to use
+* `mapping` (optional) - The <<namedMappings,named URL mapping>> to use to rewrite the link
+* `params` (optional) - a map containing request parameters
+* `url` (optional) - a map containing the action, controller, id, etc.
+* `absolute` (optional) - If `true` (default) will prefix the link target address with the value of the `grails.serverURL` property from `application.yml`, or http://localhost:<port> if there is no value in `application.yml` and not running in the production environment. If `false` a partial URI is generated for the `Location` header.
+* `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
+* `permanent` (optional) - Defaults to `false`.  If `true`, the redirect will be issued with a PERMANENT style HTTP status code. If `moved` is true: MOVED_PERMANENTLY (301). Otherwise, PERMANENT_REDIRECT (308).
+* `moved` (optional) - Defaults to `true`.  When `true`, the redirect will be issued with a MOVED style HTTP status code. If `permanent` is true: MOVED_PERMANTENTLY (301). Otherwise, MOVED_TEMPORARILY (302).
+
+=== Domain Class
+
+`redirect(Object domainClass)`
+
+A special case is if a domain class is passed into `redirect`, it will use the `LinkGenerator` to create the URL. For example, `redirect(Book.get(1))` will generate a redirect to `/book/show/1`.

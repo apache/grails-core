@@ -1,0 +1,28 @@
+
+
+=== Setting up HTTPS and SSL certificates for standalone deployment
+
+
+To configure an SSL certificate and to listen on an HTTPS port instead of HTTP, add properties like these to `application.yml`:
+
+[source,groovy]
+----
+server:
+    port: 8443                                             # The port to listen on
+    ssl:
+        enabled: true                                      # Activate HTTPS mode on the server port
+        key-store: <the-location-of-your-keystore>         # e.g. /etc/tomcat7/keystore/tomcat.keystore
+        key-store-password: <your-key-store-password>      # e.g. changeit
+        key-alias: <your-key-alias>                        # e.g. tomcat
+        key-password: <usually-the-same-as-your-key-store-password>
+----
+
+These settings control the embedded Tomcat container for a production deployment. Alternatively, the properties can be specified on the command-line. Example: `-Dserver.ssl.enabled=true -Dserver.ssl.key-store=/path/to/keystore`.
+
+NOTE: Configuration of both an HTTP and HTTPS connector via application properties is not supported. If you want to have both, then you'll need to configure one of them programmatically. (More information on how to do this can be found in the how-to guide below.)
+
+There are other relevant settings. Further reference:
+
+* https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-configure-ssl[Spring Boot: Embed Webservers - Configure SSL]
+* https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-enable-multiple-connectors-in-tomcat[Spring Book: Enable Multiple Connectors with Tomcat]
+* https://docs.spring.io/spring-boot/docs/current/reference/html/common-application-properties.html[Spring Boot: Common Application Properties]

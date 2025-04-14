@@ -1,0 +1,14 @@
+Throughout the documentation so far the convention used for URLs has been the default of `/controller/action/id`. However, this convention is not hard wired into Grails and is in fact controlled by a URL Mappings class located at `grails-app/controllers/mypackage/UrlMappings.groovy`.
+
+The `UrlMappings` class contains a single property called `mappings` that has been assigned a block of code:
+
+[source,groovy]
+----
+package mypackage
+
+class UrlMappings {
+    static mappings = {
+    }
+}
+----
+

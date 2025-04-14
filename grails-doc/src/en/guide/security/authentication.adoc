@@ -1,0 +1,57 @@
+Grails has no default mechanism for authentication as it is possible to implement authentication in many different ways. It is however, easy to implement a simple authentication mechanism using link:theWebLayer.html#interceptors[interceptors]. This is sufficient for simple use cases but it's highly preferable to use an established security framework, for example by using the <<springSecurity,Spring Security>> or the <<shiro,Shiro>> plugin.
+
+Interceptors let you apply authentication across all controllers or across a URI space. For example you can create a new set of filters in a class called `grails-app/controllers/SecurityInterceptor.groovy` by running:
+
+[source,groovy]
+----
+grails create-interceptor security
+----
+
+and implement your interception logic there:
+
+[source,groovy]
+----
+class SecurityInterceptor {
+
+    SecurityInterceptor() {
+        matchAll()
+        .except(controller:'user', action:'login')
+    }
+
+    boolean before() {
+        if (!session.user && actionName != "login") {
+            redirect(controller: "user", action: "login")
+            return false
+        }
+        return true
+    }
+
+}
+----
+
+Here the interceptor intercepts execution _before_ all actions except `login` are executed, and if there is no user in the session then redirect to the `login` action.
+
+The `login` action itself is simple too:
+
+[source,groovy]
+----
+def login() {
+    if (request.get) {
+        return // render the login view
+    }
+
+    def u = User.findByLogin(params.login)
+    if (u) {
+        if (u.password == params.password) {
+            session.user = u
+            redirect(action: "home")
+        }
+        else {
+            render(view: "login", model: [message: "Password incorrect"])
+        }
+    }
+    else {
+        render(view: "login", model: [message: "User not found"])
+    }
+}
+----

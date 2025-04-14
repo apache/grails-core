@@ -1,0 +1,22 @@
+
+== removeFrom*
+
+
+
+=== Purpose
+
+
+Opposite of the link:addTo.html[addTo] method in that it removes instances from an association.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def author = Author.findByName("Stephen King")
+
+def book = author.books.find { it.title == 'The Stand' }
+
+author.removeFromBooks(book)
+----

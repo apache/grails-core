@@ -1,0 +1,28 @@
+
+== inList
+
+
+
+=== Purpose
+
+
+Validates that a value is within a range or collection of constrained values.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+name inList: ["Joe", "Fred", "Bob"]
+----
+
+
+=== Description
+
+
+Constrains a value so that it must be contained within the given list.
+
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
+
+Error Code: `className.propertyName.not.inList`

@@ -1,0 +1,30 @@
+
+== clearErrors
+
+
+
+=== Purpose
+
+
+Resets the list of errors on a domain class.  This may be useful if a domain class contains errors because of binding problems or validation problems.  The errors may be corrected programatically.  Validation may continue to fail unless the errors are cleared.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = new Book(title: "The Shining")
+b.validate()
+if (b.hasErrors()) {
+
+    // clear the list of errors
+    b.clearErrors()
+
+    // fix the validation issues
+    b.author = "Stephen King"
+
+    // re-validate
+    b.validate()
+}
+----

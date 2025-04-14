@@ -1,0 +1,84 @@
+Spring Boot provides CORS support out of the box, but it is difficult to configure in a Grails application due to the way UrlMappings are used instead of annotations that define URLs. Starting with Grails 3.2.1, we have added a way to configure CORS that makes sense in a Grails application.
+
+Once enabled, the default setting is "wide open".
+
+[source,yaml]
+.application.yml
+----
+grails:
+    cors:
+        enabled: true
+----
+
+That will produce a mapping to all urls `/**` with:
+
+[width="40%"]
+|=======
+|allowedOrigins |`['*']`
+|allowedMethods |`['*']`
+|allowedHeaders |`['*']`
+|exposedHeaders |`null`
+|maxAge         |`1800`
+|allowCredentials |false
+|=======
+
+Some of these settings come directly from Spring Boot and can change in future versions. See {springapi}/org/springframework/web/cors/CorsConfiguration.html#applyPermitDefaultValues[Spring CORS Configuration Documentation]
+
+All of those settings can be easily overridden.
+
+[source,yaml]
+.application.yml
+----
+grails:
+    cors:
+        enabled: true
+        allowedOrigins:
+            - http://localhost:5000
+----
+
+In the example above, the `allowedOrigins` setting will replace `[*]`.
+
+You can also configure different URLs.
+
+[source,yaml]
+.application.yml
+----
+grails:
+    cors:
+        enabled: true
+        allowedHeaders:
+            - Content-Type
+        mappings:
+            '[/api/**]':
+                allowedOrigins:
+                    - http://localhost:5000
+                # Other configurations not specified default to the global config
+----
+
+Note that the mapping key must be made with bracket notation (see https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-Configuration-Binding#map-based-binding), which is a breaking change between Spring Boot 1.5 (Grails 3) and Spring Boot 2 (Grails 4).
+
+WARNING: Specifying at least one mapping will disable the creation of the global mapping (`/**`). If you wish to keep that setting, you should specify it along with your other mappings.
+
+The settings above will produce a single mapping of `/api/**` with the following settings:
+
+[width="40%"]
+|=======
+|allowedOrigins |`['http://localhost:5000']`
+|allowedMethods |`['*']`
+|allowedHeaders |`['Content-Type']`
+|exposedHeaders |`null`
+|maxAge         |`1800`
+|allowCredentials |false
+|=======
+
+If you don't wish to override any of the default settings, but only want to specify URLs, you can do so like this example:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    cors:
+        enabled: true
+        mappings:
+            '[/api/**]': inherit
+----

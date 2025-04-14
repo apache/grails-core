@@ -1,0 +1,54 @@
+
+== findOrSaveBy*
+
+
+
+=== Purpose
+
+
+Dynamic method that uses the properties of the domain class to create query method expressions that return the first result of the query. This method behaves like link:../Domain%20Classes/findBy.html[findBy] except that it will never return `null`.  If a matching instance cannot be found then a new instance will be created, populated with values represented in the query parameters, saved and returned. The difference between this method and link:../Domain%20Classes/findOrCreateBy.html[findOrCreateBy] is that this method will save any newly created instance where link:../Domain%20Classes/findOrCreateBy.html[findOrCreateBy] does not.
+
+
+=== Examples
+
+
+Given the domain class `Book`:
+
+[source,groovy]
+----
+class Book {
+   String title
+   String author
+}
+----
+
+The following are all possible:
+
+[source,groovy]
+----
+def b = Book.findOrSaveByTitleAndAuthor("The Sum of All Fears", "Tom Clancy")
+----
+
+The following are roughly equivalent:
+
+[source,groovy]
+----
+def b = Book.findOrSaveByTitleAndAuthor("The Sum of All Fears", "Tom Clancy")
+----
+
+[source,groovy]
+----
+def b = Book.findByTitleAndAuthor("The Sum of All Fears", "Tom Clancy")
+if (!b) {
+    b = new Book(title: "The Sum of All Fears", author: "Tom Clancy")
+    b.save()
+}
+----
+
+
+=== Description
+
+
+GORM supports the notion of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[Dynamic Finders]. The `findOrSaveBy*` method finds the first result for the given method expression.
+
+NOTE: Because this method potentially creates a new instance and populates properties on that instance, only exact match criteria are allowed.  For example, `Book.findOrSaveByTitle(authorValue)` is valid but `Book.findOrSaveByAuthorInList(listOfNames)` is not.

@@ -1,0 +1,54 @@
+
+== sort
+
+
+
+=== Purpose
+
+
+Customizes the default property to sort by for query results.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    ...
+    static mapping = {
+        sort "releaseDate"
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `sort(string/map)`
+
+By default results are sorted by creation date, and you can specify the column to order by in a query:
+
+[source,groovy]
+----
+def results = Book.list(sort:"title")
+----
+
+However, you can also configure the default sort property:
+
+[source,groovy]
+----
+static mapping = {
+    sort "title"
+}
+----
+
+in which case the `sort` argument is no longer needed. You can also control the sort order:
+
+[source,groovy]
+----
+static mapping = {
+    sort title: "desc" // or "asc"
+}
+----

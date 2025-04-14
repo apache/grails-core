@@ -1,0 +1,52 @@
+
+== table
+
+
+
+=== Purpose
+
+
+Customizes the name of the database table associated with the domain class
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    static mapping = {
+        table "book_catalog"
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `table(string/map)`
+
+Arguments:
+
+* `name` - The table name
+* `schema` (optional) - The table schema
+* `catalog` (optional) - The table catalog
+
+By default the table that Grails maps a domain class is based on the class name. Grails will take a class name and convert Java style camel-case names into table names with underscores. So for example `ProductReview` becomes `product_review`. You can override this with the `table` method:
+
+[source,groovy]
+----
+static mapping = {
+    table "book_catalog"
+}
+----
+
+You can also specify a schema and catalog:
+
+[source,groovy]
+----
+static mapping = {
+    table name: "book_catalog", schema: "dbo", catalog: "CRM"
+}
+----

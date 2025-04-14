@@ -1,0 +1,19 @@
+=== Quick Start with Grails Scaffolding
+
+To get started quickly with Grails it is often useful to use a feature called link:scaffolding.html[scaffolding] to generate the skeleton of an application. To do this use one of the `generate-*` commands such as link:../ref/Command%20Line/generate-all.html[generate-all], which will generate a link:theWebLayer.html#controllers[controller] (and its unit test) and the associated link:theWebLayer.html#gsp[views]:
+
+[source,groovy]
+----
+grails generate-all helloworld.Book
+----
+
+
+
+=== Gradle Quick Start with Grails Scaffolding
+
+To quickly initiate your Grails project, you can employ the `runCommand` Gradle task. This task allows you to generate the essential structure of an application swiftly. Specifically, when running the following command, you can create a link:theWebLayer.html#controllers[controller] (including its unit tests) and the associated link:theWebLayer.html#gsp[views] for your application:
+
+[source,console]
+----
+$ ./gradlew runCommand -Pargs="generate-all myapp.Book"
+----

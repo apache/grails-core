@@ -1,0 +1,57 @@
+
+== errors
+
+
+
+=== Purpose
+
+
+An instance of the Spring {springapi}org/springframework/validation/Errors.html[Errors] interface containing data binding and/or validation errors.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def user = new User(params)
+
+if (user.validate()) {
+    // do something with user
+}
+else {
+    user.errors.allErrors.each {
+        println it
+    }
+}
+----
+
+
+=== Description
+
+
+The `errors` property is used by Grails during link:{guidePath}/theWebLayer.html#dataBinding[data binding] to store type conversion errors and during link:{guidePath}validation.html[validation] when calling the link:validate.html[validate] or link:save.html[save] methods.
+
+You can also add your own errors using the {springapi}org/springframework/validation/Errors#reject(java/lang/String).html[reject] and {springapi}org/springframework/validation/Errors#rejectValue(java/lang/String,%20java/lang/String).html[rejectValue] methods:
+
+[source,groovy]
+----
+if (params.password != params.confirm_password) {
+
+    user.errors.reject(
+        'user.password.doesnotmatch',
+        ['password', 'class User'] as Object[],
+        '[Property [{0}] of class [{1}] does not match confirmation]')
+
+    // The following helps with field highlighting in your view
+    user.errors.rejectValue(
+        'password',
+        'user.password.doesnotmatch')
+
+    render(view: 'signup', model: [user: user])
+}
+----
+
+In the example of `reject` above, `'user.password.doesnotmatch'`, is the error code corresponding to a value in `grails-app/i18n/message.properties`, `\['password', 'class User'\] as Object\[\]` is a Groovy cast from a `List` to an `Object` array to match the expected signature, and `'\[Property \[{0}\] of class \[{1}\] does not match confirmation\]'` is the default mapping string.
+
+In the `rejectValue` example, `'password'` is the field in the view to highlight using a `<g:hasErrors>` tag and `'user.password.doesnotmatch'` is the i18n error code.

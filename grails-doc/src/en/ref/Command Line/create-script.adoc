@@ -1,0 +1,54 @@
+== create-script
+
+=== Purpose
+
+The `create-script` command creates a new Grails code generation script that can be run with the `grails` command from a terminal window.
+
+=== Examples
+
+The command:
+
+[source,groovy]
+----
+grails create-script my-script
+----
+
+Creates a script called `src/main/scripts/my-script.groovy` such as:
+
+[source,groovy]
+----
+description "Example description", "grails example-usage"
+
+println "Example Script"
+----
+
+The command can then be run with:
+
+[source,groovy]
+----
+grails my-script
+----
+
+=== Description
+
+Each script extends from the super class {apiDocs}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] which provides an API for achieving a number of different tasks.
+
+=== Invoking Gradle
+
+You can invoke Gradle using the `gradle` property:
+
+[source,groovy]
+----
+gradle.assemble()
+----
+
+You can run any other Grails scripts by simply invoking the method:
+
+[source,groovy]
+----
+testApp()
+----
+
+Code generation can be performed using the {apiDocs}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer API]
+
+For more information, see the section on link:{guidePath}/commandLine.html#creatingCustomScripts[creating custom scripts].

@@ -1,0 +1,21 @@
+
+==== Distributing Plugins in the Grails Central Plugin Repository
+
+
+The preferred way to distribute plugin is to publish to the official Grails Central Plugin Repository. This will make your plugin visible to the link:../ref/Command%20Line/list-plugins.html[list-plugins] command:
+
+[source,groovy]
+----
+grails list-plugins
+----
+
+which lists all plugins that are in the central repository. Your plugin will also be available to the link:../ref/Command%20Line/plugin-info.html[plugin-info] command:
+
+[source,groovy]
+----
+grails plugin-info [plugin-name]
+----
+
+which prints extra information about it, such as its description, who wrote, etc.
+
+NOTE: If you have created a Grails plugin and want it to be hosted in the central repository, you'll find instructions for getting an account on the http://plugins.grails.org/[plugin portal] website.

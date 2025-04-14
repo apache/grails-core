@@ -1,0 +1,107 @@
+
+== discriminator
+
+
+
+=== Purpose
+
+
+Customizes the discriminator column used in table-per-hierarchy inheritance mapping. Has no effect when using table-per-subclass inheritance mapping.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Content {
+    ...
+}
+----
+
+[source,groovy]
+----
+class PodCast extends Content {
+    ...
+    static mapping = {
+        discriminator "audio"
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `discriminator(string/map)`
+
+Arguments:
+
+* `column` (optional) - The column name to store the discriminator
+* `value` - The value to use for the discriminator
+* `formula` (optional) - an SQL expression that is executed to evaluate the type of class. Use this or `column` but not both
+* `type` (optional defaults to string) - the Hibernate type, used for the where clause condition to know if it needs to wrap it with '
+
+By default when mapping inheritance Grails uses a single-table model where all classes share the same table. A discriminator column is used to determine the type for each row, by default the full class name. You can use the `discriminator` method to customize what's stored:
+
+[source,groovy]
+----
+class Content {
+    ...
+}
+----
+
+[source,groovy]
+----
+class PodCast extends Content {
+    ...
+    static mapping = {
+        discriminator "audio"
+    }
+}
+----
+
+You can also customize the discriminator column name:
+
+[source,groovy]
+----
+class Content {
+    ...
+    static mapping = {
+        discriminator column: "content_type"
+    }
+}
+----
+
+[source,groovy]
+----
+class PodCast extends Content {
+    ...
+    static mapping = {
+        discriminator value: "audio"
+    }
+}
+----
+
+Or you can use a formula:
+
+[source,groovy]
+----
+class Content {
+    ...
+    static mapping = {
+        discriminator value: "1", type: "integer",
+            formula: "case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end",
+    }
+}
+----
+
+[source,groovy]
+----
+class PodCast extends Content {
+    ...
+    static mapping = {
+        discriminator value: "0"
+    }
+}
+----

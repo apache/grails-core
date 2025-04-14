@@ -1,0 +1,139 @@
+
+== help
+
+
+
+=== Purpose
+
+
+Displays Grails command line help
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails help
+grails help run-app
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails help [command_name]*
+----
+
+Arguments:
+
+* `command_name` - The command name to display help for
+
+
+
+== Grails Forge `--help` Syntax
+
+=== Purpose
+
+The `--help` syntax in Grails is used to request command-line help and detailed information about specific Grails commands.
+
+=== Examples
+
+Here are some usage examples of the `--help` syntax in Grails:
+
+1. Display general Grails command line help:
++
+[source,shell]
+----
+grails --help
+----
+
+2. Get help for a specific Grails command, such as `create-app`:
++
+[source,shell]
+----
+grails create-app --help
+----
+
+3. Request assistance for the `generate-controller` command:
++
+[source,shell]
+----
+grails generate-controller --help
+----
+
+=== Description
+
+The `--help` syntax in Grails is a powerful tool for obtaining comprehensive information about Grails commands and their usage. It allows users to understand how to execute specific commands effectively and provides details about available options, arguments, and usage examples.
+
+When you execute `grails --help`, you will receive a summary of Grails CLI capabilities, including application generation commands, global options, and a list of available commands. This output is designed to help users get started and navigate the Grails CLI effectively.
+
+Usage:
+
+To use the `--help` syntax, simply append it to a Grails command, as shown in the examples above. This triggers the display of detailed help and information related to the specified command.
+
+[source,shell]
+----
+grails> --help
+Usage: grails [-hvVx] [COMMAND]
+Grails CLI command line interface for generating projects and services.
+Application generation commands are:
+
+*  create-app NAME
+*  create-webapp NAME
+*  create-restapi NAME
+*  create-plugin NAME
+*  create-webplugin NAME
+
+Options:
+  -h, --help         Show this help message and exit.
+  -v, --verbose      Create verbose output.
+  -V, --version      Print version information and exit.
+  -x, --stacktrace   Show full stack trace when exceptions occur.
+
+Commands:
+  create-app         Creates an application
+  create-webapp      Creates an application
+  create-plugin      Creates an Grails Plugin
+  create-web-plugin  Creates an Grails Web Plugin
+  create-restapi     Creates an REST API
+----
+
+By using the `--help` syntax with specific command names, Grails developers can access in-depth documentation, making it easier to work with Grails commands and ensuring they are used correctly in their projects. Here is an example of using `--help` with the `grails create-app` command:
+
+[source,shell]
+----
+grails> create-app --help
+Usage: grails create-app [-hivVx] [--list-features] [-g=GORM Implementation] [--jdk=<javaVersion>]
+                         [-s=Servlet Implementation] [-t=TEST] [-f=FEATURE[,FEATURE...]]... [NAME]
+Creates an application
+      [NAME]            The name of the application to create.
+  -f, --features=FEATURE[,FEATURE...]
+                        The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
+                          spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat,
+                          micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
+                          mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
+                          assertj, mockito, spring-boot-starter-undertow,
+                          github-workflow-java-ci, jrebel, testcontainers, sqlserver,
+                          grails-console, views-markup, asset-pipeline-grails, views-json,
+                          gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console,
+                          logbackGroovy, mongo-sync, shade, geb, properties
+  -g, --gorm=GORM Implementation
+                        Which GORM Implementation to configure. Possible values: hibernate,
+                          mongodb, neo4j.
+  -h, --help            Show this help message and exit.
+  -i, --inplace         Create a service using the current directory
+      --jdk, --java-version=<javaVersion>
+                        The JDK version the project should target
+      --list-features   Output the available features and their descriptions
+  -s, --servlet=Servlet Implementation
+                        Which Servlet Implementation to configure. Possible values: none, tomcat,
+                          jetty, undertow.
+  -t, --test=TEST       Which test framework to use. Possible values: junit, spock.
+  -v, --verbose         Create verbose output.
+  -V, --version         Print version information and exit.
+  -x, --stacktrace      Show full stack trace when exceptions occur.
+----

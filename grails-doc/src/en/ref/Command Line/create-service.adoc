@@ -1,0 +1,33 @@
+== create-service
+
+=== Purpose
+
+The `create-service` command creates a Grails service class and associated unit test for the given base name.
+
+=== Examples
+
+[source,groovy]
+----
+grails create-service
+grails create-service book
+grails create-service org.bookstore.Book
+----
+
+=== Description
+
+Creates a service for the given base name. The argument is optional, but if you don't include it the command will ask you for the name of the service.
+
+A link:{guidePath}/services.html[service] encapsulates business logic and is delegated to by controllers to perform the core logic of a Grails application.
+
+The name of the service can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `grails-app/service/<appname>/BookService.groovy` whereas the last one will create `grails-app/services/org/bookstore/BookService.groovy` directory. Note that the first letter of the service name is always upper-cased when determining the class name.
+
+If you want the command to default to a different package for services, provide a value for `grails.project.groupId` in the link:{guidePath}/conf.html[runtime configuration].
+
+Note that this command is just for convenience and you can also create services in your favorite text editor or IDE if you choose.
+
+Usage:
+
+[source,groovy]
+----
+grails create-service <<name>>
+----

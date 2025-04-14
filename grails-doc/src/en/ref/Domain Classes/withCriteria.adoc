@@ -1,0 +1,55 @@
+
+== withCriteria
+
+
+
+=== Purpose
+
+
+Allows inline execution of Criteria queries. See the link:createCriteria.html[createCriteria] method for reference.
+
+
+=== Return value
+
+
+If no matching records are found, an empty List is returned.
+
+If a projection is specified:
+
+* returns a single value if it only contains one field
+* a List in case there are multiple fields in the projection
+
+Otherwise, it will return a List of matched instances of the class calling withCriteria.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def results = Book.withCriteria {
+    def now = new Date()
+    between('releaseDate', now-7, now)
+    like('title', '%Groovy%')
+}
+----
+
+
+=== Description
+
+
+The `withCriteria` method allows the inline definition of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#criteria[Criteria]. Arguments to the [https://apache.github.io/grails-data-mapping/latest/api/grails/orm/HibernateCriteriaBuilder.html] can be passed as the first parameter:
+
+[source,groovy]
+----
+def book = Book.withCriteria(uniqueResult: true) {
+    def now = new Date()
+    between('releaseDate', now-7, now)
+    like('title', '%Groovy%')
+}
+----
+
+Parameters:
+
+* `arguments` (optional) - A map of named arguments to be set on the Criteria instance
+* `closure` - A closure that defines the criteria

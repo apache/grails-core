@@ -1,0 +1,71 @@
+Functional tests involve making HTTP requests against the running application and verifying the resultant behaviour. This is useful for end-to-end testing scenarios, such as making REST calls against a JSON API.
+
+Grails by default ships with support for writing functional tests using the http://www.gebish.org[Geb framework]. To create a functional test you can use the `create-functional-test` command which will create a new functional test:
+
+[source,groovy]
+----
+$ grails create-functional-test MyFunctional
+----
+
+The above command will create a new Spock spec called `MyFunctionalSpec.groovy` in the `src/integration-test/groovy` directory. The test is annotated with the {apiDocs}grails/test/mixin/integration/Integration.html[Integration] annotation to indicate it is an integration test and extends the `GebSpec` super class:
+
+
+[source,groovy]
+----
+@Integration
+class HomeSpec extends GebSpec {
+
+    def setup() {
+    }
+
+    def cleanup() {
+    }
+
+    void "Test the home page renders correctly"() {
+        when:"The home page is visited"
+            go '/'
+
+        then:"The title is correct"
+            $('title').text() == "Welcome to Grails"
+    }
+}
+----
+
+When the test is run the application container will be loaded up in the background and you can send requests to the running application using the Geb API.
+
+Note that the application is only loaded once for the entire test run, so functional tests share the state of the application across the whole suite.
+
+In addition the application is loaded in the JVM as the test, this means that the test has full access to the application state and can interact directly with data services such as GORM to setup and cleanup test data.
+
+The `Integration` annotation supports an optional `applicationClass` attribute which may be used to specify the application class to use for the functional test.  The class must extend {apiDocs}grails/boot/config/GrailsAutoConfiguration.html[GrailsAutoConfiguration].
+
+[source,groovy]
+----
+@Integration(applicationClass=com.demo.Application)
+class HomeSpec extends GebSpec {
+
+    // ...
+
+}
+----
+
+If the `applicationClass` is not specified then the test runtime environment will attempt to locate the application class dynamically which can be problematic in multiproject builds where multiple application classes may be present.
+
+When running the server port by default will be randomly assigned. The `Integration` annotation adds a property of `serverPort` to the test class that you can use if you want to know what port the application is running on this isn't needed if you are extending the `GebSpec` as shown above but can be useful information.
+
+If you want to run the tests on a fixed port (defined by the `server.port` configuration property), you need to manually annotate your test with `@SpringBootTest`:
+
+[source,groovy]
+----
+import grails.testing.mixin.integration.Integration
+import org.springframework.boot.test.context.SpringBootTest
+import spock.lang.Specification
+
+@Integration
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+class MySpec extends Specification {
+
+    // ...
+
+}
+----

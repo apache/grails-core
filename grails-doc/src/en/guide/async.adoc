@@ -1,0 +1,11 @@
+With modern hardware featuring multiple cores, many programming languages have been adding asynchronous, parallel programming APIs, Groovy being no exception.
+
+Popular asynchronous libraries include:
+
+* RxJava - https://reactivex.io
+* GPars - http://gpars.org
+* Reactor - https://projectreactor.io
+
+By building on top of these various libraries the Async features of Grails aim to simplify concurrent programming within the framework, include the concept of Promises, and a unified event model.
+
+In general, since the Reactive programming model is an evolving space, Grails tries to provide generic support for integrating a range of asynchronous libraries and doesn't recommend any single library as they all have various advantages and disadvantages.

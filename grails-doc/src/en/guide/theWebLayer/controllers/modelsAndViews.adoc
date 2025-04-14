@@ -1,0 +1,202 @@
+
+==== Returning the Model
+
+
+A model is a Map that the view uses when rendering. The keys within that Map correspond to variable names accessible by the view. There are a couple of ways to return a model. First, you can explicitly return a Map instance:
+
+[source,groovy]
+----
+def show() {
+    [book: Book.get(params.id)]
+}
+----
+
+NOTE: The above does _not_ reflect what you should use with the scaffolding views - see the link:scaffolding.html[scaffolding section] for more details.
+
+A more advanced approach is to return an instance of the Spring {springapi}org/springframework/web/servlet/ModelAndView.html[ModelAndView] class:
+
+[source,groovy]
+----
+import org.springframework.web.servlet.ModelAndView
+
+def index() {
+    // get some books just for the index page, perhaps your favorites
+    def favoriteBooks = ...
+
+    // forward to the list view to show them
+    return new ModelAndView("/book/list", [ bookList : favoriteBooks ])
+}
+----
+
+One thing to bear in mind is that certain variable names can not be used in your model:
+
+* `attributes`
+* `application`
+
+Currently, no error will be reported if you do use them, but this will hopefully change in a future version of Grails.
+
+
+==== Selecting the View
+
+
+In both of the previous two examples there was no code that specified which <<gsp,view>> to render. So how does Grails know which one to pick? The answer lies in the conventions. Grails will look for a view at the location `grails-app/views/book/show.gsp` for this `show` action:
+
+[source,groovy]
+----
+class BookController {
+    def show() {
+         [book: Book.get(params.id)]
+    }
+}
+----
+
+To render a different view, use the link:../ref/Controllers/render.html[render] method:
+
+[source,groovy]
+----
+def show() {
+    def map = [book: Book.get(params.id)]
+    render(view: "display", model: map)
+}
+----
+
+In this case Grails will attempt to render a view at the location `grails-app/views/book/display.gsp`. Notice that Grails automatically qualifies the view location with the `book` directory of the `grails-app/views` directory. This is convenient, but to access shared views, you use an absolute path instead of a relative one:
+
+[source,groovy]
+----
+def show() {
+    def map = [book: Book.get(params.id)]
+    render(view: "/shared/display", model: map)
+}
+----
+
+In this case Grails will attempt to render a view at the location `grails-app/views/shared/display.gsp`.
+
+Grails also supports JSPs as views, so if a GSP isn't found in the expected location but a JSP is, it will be used instead.
+
+[NOTE]
+====
+Unlike GSPs, JSPs must be located in the directory path `/src/main/webapp/WEB-INF/grails-app/views`.
+
+Additionally, to ensure JSPs work as intended, don't forget to include the required dependencies for JSP and JSTL implementations in your `build.gradle` file.
+====
+
+==== Selecting Views For Namespaced Controllers
+
+
+If a controller defines a namespace for itself with the <<namespacedControllers,namespace>> property that will affect the root directory in which Grails will look for views which are specified with a relative path.  The default root directory for views rendered by a namespaced controller is `grails-app/views/<namespace name>/<controller name>/`.  If the view is not found in the namespaced directory then Grails will fallback to looking for the view in the non-namespaced directory.
+
+See the example below.
+
+[source,groovy]
+----
+class ReportingController {
+    static namespace = 'business'
+
+    def humanResources() {
+        // This will render grails-app/views/business/reporting/humanResources.gsp
+        // if it exists.
+
+        // If grails-app/views/business/reporting/humanResources.gsp does not
+        // exist the fallback will be grails-app/views/reporting/humanResources.gsp.
+
+        // The namespaced GSP will take precedence over the non-namespaced GSP.
+
+        [numberOfEmployees: 9]
+    }
+
+
+    def accountsReceivable() {
+        // This will render grails-app/views/business/reporting/numberCrunch.gsp
+        // if it exists.
+
+        // If grails-app/views/business/reporting/numberCrunch.gsp does not
+        // exist the fallback will be grails-app/views/reporting/numberCrunch.gsp.
+
+        // The namespaced GSP will take precedence over the non-namespaced GSP.
+
+        render view: 'numberCrunch', model: [numberOfEmployees: 13]
+    }
+}
+----
+
+
+==== Rendering a Response
+
+
+Sometimes it's easier (for example with Ajax applications) to render snippets of text or code to the response directly from the controller. For this, the highly flexible `render` method can be used:
+
+[source,groovy]
+----
+render "Hello World!"
+----
+
+The above code writes the text "Hello World!" to the response. Other examples include:
+
+[source,groovy]
+----
+// write some markup
+render {
+   for (b in books) {
+      div(id: b.id, b.title)
+   }
+}
+----
+
+[source,groovy]
+----
+// render a specific view
+render(view: 'show')
+----
+
+[source,groovy]
+----
+// render a template for each item in a collection
+render(template: 'book_template', collection: Book.list())
+----
+
+[source,groovy]
+----
+// render some text with encoding and content type
+render(text: "<xml>some xml</xml>", contentType: "text/xml", encoding: "UTF-8")
+----
+
+If you plan on using Groovy's `MarkupBuilder` to generate HTML for use with the `render` method be careful of naming clashes between HTML elements and Grails tags, for example:
+
+[source,groovy]
+----
+import groovy.xml.MarkupBuilder
+...
+def login() {
+    def writer = new StringWriter()
+    def builder = new MarkupBuilder(writer)
+    builder.html {
+        head {
+            title 'Log in'
+        }
+        body {
+            h1 'Hello'
+            form {
+            }
+        }
+    }
+
+    def html = writer.toString()
+    render html
+}
+----
+
+This will actually <<tagsAsMethodCalls,call the form tag>> (which will return some text that will be ignored by the `MarkupBuilder`). To correctly output a `<form>` element, use the following:
+
+[source,groovy]
+----
+def login() {
+    // ...
+    body {
+        h1 'Hello'
+        builder.form {
+        }
+    }
+    // ...
+}
+----

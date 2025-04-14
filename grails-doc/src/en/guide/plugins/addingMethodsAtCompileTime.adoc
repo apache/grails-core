@@ -1,0 +1,81 @@
+Grails 3.0 makes it easy to add new traits to existing artefact types from a plugin. For example say you wanted to add methods for manipulating dates to controllers. This can be done by defining a trait in `src/main/groovy`:
+
+[source,groovy]
+----
+package myplugin
+
+@Enhances("Controller")
+trait DateTrait {
+  Date currentDate() {
+    return new Date()
+  }
+}
+----
+
+The `@Enhances` annotation defines the types of artefacts that the trait should be applied to.
+
+As an alternative to using the `@Enhances` annotation above, you can implement a {apiDocs}grails/compiler/traits/TraitInjector.html[TraitInjector] to tell Grails which artefacts you want to inject the trait into at compile time:
+
+[source,groovy]
+----
+package myplugin
+
+@CompileStatic
+class ControllerTraitInjector implements TraitInjector {
+
+    @Override
+    Class getTrait() {
+        SomeTrait
+    }
+
+    @Override
+    String[] getArtefactTypes() {
+        ['Controller'] as String[]
+    }
+}
+----
+
+The above `TraitInjector` will add the `SomeTrait` to all controllers. The `getArtefactTypes` method defines the types of artefacts that the trait should be applied to.
+
+==== Applying traits conditionally
+A `TraitInjector` implementation can also implement the {apiDocs}grails/compiler/ast/SupportsClassNode.html[SupportsClassNode] interface to apply traits to only those artefacts which satisfy a custom requirement. 
+For example, if a trait should only be applied if the target artefact class has a specific annotation, it can be done as below
+
+
+[source,groovy]
+----
+package myplugin
+
+@CompileStatic
+class AnnotationBasedTraitInjector implements TraitInjector, SupportsClassNode {
+
+    @Override
+    Class getTrait() {
+        SomeTrait
+    }
+
+    @Override
+    String[] getArtefactTypes() {
+        ['Controller'] as String[]
+    }
+    
+    boolean supports(ClassNode classNode) {
+      return GrailsASTUtils.hasAnnotation(classNode, SomeAnnotation)
+    }
+}
+----
+
+Above `TraitInjector` will add the `SomeTrait` to only those controllers which has the `SomeAnnotation` declared.
+
+The framework discovers trait injectors by way of a `META-INF/grails.factories` descriptor that is in the .jar file.  This descriptor is automatically generated.  The descriptor generated for the code shown above would look like this:
+
+[source]
+----
+#Grails Factories File
+grails.compiler.traits.TraitInjector=
+myplugin.ControllerTraitInjector,myplugin.DateTraitTraitInjector
+----
+
+NOTE: Due to formatting issues, above code snippet includes a line break after equal sign.
+
+That file is generated automatically and added to the .jar file at build time.  If for any reason the application defines its own `grails.factories` file at `src/main/resources/META-INF/grails.factories`, it is important that the trait injectors be explicitly defined in that file.  The auto-generated metadata is only reliable if the application does not define its own `src/main/resources/META-INF/grails.factores` file.

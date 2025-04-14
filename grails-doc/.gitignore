@@ -1,0 +1,16 @@
+.DS_Store
+*.swp
+.gradle/
+dist/
+build/
+checkout/
+dist/
+output/
+/local.properties
+bin/
+tmp/
+.idea/
+*.iml
+.project
+.settings
+.classpath

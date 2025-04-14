@@ -1,0 +1,33 @@
+Another great feature of URL mappings is that they automatically customize the behaviour of the link:{gspdocs}/ref/Tags/link.html[link] tag so that changing the mappings don't require you to go and change all of your links.
+
+This is done through a URL re-writing technique that reverse engineers the links from the URL mappings. So given a mapping such as the blog one from an earlier section:
+
+[source,groovy]
+----
+static mappings = {
+   "/$blog/$year?/$month?/$day?/$id?"(controller:"blog", action:"show")
+}
+----
+
+If you use the link tag as follows:
+
+[source,xml]
+----
+<g:link controller="blog" action="show"
+        params="[blog:'fred', year:2007]">
+    My Blog
+</g:link>
+
+<g:link controller="blog" action="show"
+        params="[blog:'fred', year:2007, month:10]">
+    My Blog - October 2007 Posts
+</g:link>
+----
+
+Grails will automatically re-write the URL in the correct format:
+
+[source,xml]
+----
+<a href="/fred/2007">My Blog</a>
+<a href="/fred/2007/10">My Blog - October 2007 Posts</a>
+----

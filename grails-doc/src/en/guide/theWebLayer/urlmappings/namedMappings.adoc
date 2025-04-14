@@ -1,0 +1,102 @@
+URL Mappings also support named mappings, that is mappings which have a name associated with them. The name may be used to refer to a specific mapping when links are generated.
+
+The syntax for defining a named mapping is as follows:
+
+[source,groovy]
+----
+static mappings = {
+   name <mapping name>: <url pattern> {
+      // ...
+   }
+}
+----
+
+For example:
+
+[source,groovy]
+----
+static mappings = {
+    name personList: "/showPeople" {
+        controller = 'person'
+        action = 'list'
+    }
+    name accountDetails: "/details/$acctNumber" {
+        controller = 'product'
+        action = 'accountDetails'
+    }
+}
+----
+
+The mapping may be referenced in a link tag in a GSP.
+
+[source,xml]
+----
+<g:link mapping="personList">List People</g:link>
+----
+
+That would result in:
+
+[source,xml]
+----
+<a href="/showPeople">List People</a>
+----
+
+Parameters may be specified using the params attribute.
+
+[source,xml]
+----
+<g:link mapping="accountDetails" params="[acctNumber:'8675309']">
+    Show Account
+</g:link>
+----
+
+That would result in:
+
+[source,xml]
+----
+<a href="/details/8675309">Show Account</a>
+----
+
+Alternatively you may reference a named mapping using the link namespace.
+
+[source,xml]
+----
+<link:personList>List People</link:personList>
+----
+
+That would result in:
+
+[source,xml]
+----
+<a href="/showPeople">List People</a>
+----
+
+The link namespace approach allows parameters to be specified as attributes.
+
+[source,xml]
+----
+<link:accountDetails acctNumber="8675309">Show Account</link:accountDetails>
+----
+
+That would result in:
+
+[source,xml]
+----
+<a href="/details/8675309">Show Account</a>
+----
+
+To specify attributes that should be applied to the generated `href`, specify a `Map` value to the `attrs` attribute.  These attributes will be applied directly to the href, not passed through to be used as request parameters.
+
+[source,xml]
+----
+<link:accountDetails attrs="[class: 'fancy']" acctNumber="8675309">
+    Show Account
+</link:accountDetails>
+----
+
+That would result in:
+
+[source,xml]
+----
+<a href="/details/8675309" class="fancy">Show Account</a>
+----

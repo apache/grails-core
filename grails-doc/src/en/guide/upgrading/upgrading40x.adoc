@@ -1,0 +1,138 @@
+### Bump up Grails Version
+
+You will need to upgrade your Grails version defined in `gradle.properties` as:
+
+[source,groovy,subs="attributes"]
+.gradle.properties
+----
+...
+grailsVersion=5.2.0
+...
+----
+
+### Apache Groovy 3.0.7
+
+Grails 5.1.1 provide support for Groovy 3. We would recommend you to please check the https://groovy-lang.org/releasenotes/groovy-3.0.html[Release notes for Groovy 3] to update your application in case you are using a specific feature which might not work in Groovy 3.
+
+Define groovyVersion in `gradle.properties` to force the application to use Groovy 3.
+
+Grails 5.1 app's `gradle.properties`
+
+[source, properties]
+.gradle.properties
+----
+...
+groovyVersion=3.0.7
+...
+----
+
+### Bump up GORM Version
+
+If you were using http://gorm.grails.org[GORM], you will need to update the version defined in `gradle.properties` as:
+
+[source, properties]
+.gradle.properties
+----
+...
+gormVersion=7.2.0
+...
+----
+
+### Bump up gradle version
+
+Grails 5.2.x uses gradle 7.2
+
+[source, properties]
+.gradle-wrapper.properties
+----
+...
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.2-bin.zip
+...
+----
+
+Also you can run this command
+
+[source, properties]
+----
+./gradlew wrapper --gradle-version 7.2
+----
+
+### GORM for MonogDB Sync Driver
+
+The GORM for MongoDB is updated to support latest mongodb-driver-sync. If you are using GORM for MongoDB and doing something specific to MongoDB Driver or low level Mongo API then you might want to take a look at https://mongodb.github.io/mongo-java-driver/4.0/upgrading/[Upgrading to the 4.0 Driver]
+
+### Bump up Asset Pipeline plugin version
+
+The previous version of asset-pipeline is not supported with Grails 5.0 as it is compiled with a version of Groovy which is binary incompatible with Groovy 3. So, please update the plugin version to 3.2.4.
+
+### Disabled StringCharArrayAccessor by default
+
+The previous version of Grails use the `StringCharArrayAccessor` which is enabled by default and provides optimized access to `java.lang.String` internals. In Grails 5.0 it is disabled by default but you can enable it by setting a system property with name `stringchararrayaccessor.disabled` and value `false`.
+
+NOTE: Enabling StringCharArrayAccessor would show IllegalReflectiveAccess warnings as it uses reflection to do the optimizations.
+
+### Changes in profile.yml and feature.yml files in Grails Profiles
+
+The format of how dependencies are defined in features and profiles has been changed. See the section on link:profiles.html[Application Profiles] for more information.
+
+### Deprecation of dot navigation of Grails configuration
+
+In order to reduce complexity, improve performance, and increase maintainability, accessing configuration through dot notation (config.a.b.c) has been deprecated. This functionality will be removed in a future release.
+
+Also, you would see a warning message if you are accessing configuration through the dot notation.
+
+The recommended way to access configuration is:
+
+[source,groovy]
+----
+grailsApplication.config.getProperty("hola", String.class)
+----
+
+### Deprecated Classes
+
+* {apiDocs}org/grails/config/NavigableMap.html[org.grails.config.NavigableMap]
+* {apiDocs}org/grails/config/NavigableMapConfig.html[org.grails.config.NavigableMapConfig]
+* {apiDocs}org/grails/config/NavigableMapPropertySource.html[org.grails.config.NavigableMapPropertySource]
+
+### Spring 5.3
+
+Grails 5.0.0.RC1 is built on Spring 5.3.2 See the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-5.x#upgrading-to-version-53[Upgrading to Spring 5.3]  if you are using Spring specific features.
+
+### Spring Boot 2.4
+
+Grails 5.1.1 updates to Spring Boot 2.6. Please check https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.6-Release-Notes[Spring Boot 2.6 Release Notes] for more information.
+
+### Micronaut 3.2.0
+
+Grails 5.1.1 is shipped with Micronaut 3.2.0. Please check the https://docs.micronaut.io/3.2.0/guide/index.html#upgrading[Upgrading to Micronaut 3.x] if you are using a specific feature.
+
+### Micronaut for Spring 4.0.1
+
+Grails 5.1.1 is updated to Micronaut for Spring 4.0.1, please check out https://github.com/micronaut-projects/micronaut-spring/releases/tag/v4.0.1[release notes] for more information.
+
+### Gradle 7.x
+
+#### Compile dependency configuration as well as others have been removed from Gradle 7.x. In previous version they were deprecated.
+
+Replace configurations:
+[source, properties]
+.build.gradle
+----
+...
+ compile -> implementation
+ testCompile -> testImplementation
+ runtime -> runtimeOnly
+...
+----
+
+NOTE: More information in Gradle upgrade docs https://docs.gradle.org/current/userguide/upgrading_version_6.html#sec:configuration_removal[Gradle upgrade docs]
+
+#### Plugins in multi-project setup
+
+If you have grails plugins as part of multi-project builds you should also replace the `compile` with `implementation` configuration.
+
+Additionally if your main application relied on the dependencies declared by the plugin you need to apply further changes.
+
+To make the dependencies available again you have to declare them with `api` configuration. You also have to apply the `java-library` gradle plugin in your plugin project.
+
+NOTE: More information https://docs.gradle.org/current/userguide/java_library_plugin.html[gradle java-library-plugin]

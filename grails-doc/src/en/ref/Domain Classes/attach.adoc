@@ -1,0 +1,33 @@
+
+== attach
+
+
+
+=== Purpose
+
+
+Associates a "detached" domain instance with the current Hibernate session
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = Book.get(1)
+b.title = "Blah"
+b.save(flush:true)
+
+b.discard()
+
+...
+if (!b.isAttached()) {
+    b.attach()
+}
+----
+
+
+=== Description
+
+
+Hibernate manages persistent instances in a persistence Session. A new Session is created per request and is closed at the end of the request. If an object is retrieved from the Session and placed into a web scope such as the HttpSession it will be "detached" from the Hibernate Session once the Session is closed and discarded. You can use the `attach()` method to re-attach an existing persistent instance to the persistence Session of the current request.

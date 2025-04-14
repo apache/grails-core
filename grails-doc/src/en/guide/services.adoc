@@ -1,0 +1,26 @@
+Grails defines the notion of a service layer. The Grails team discourages the embedding of core application logic inside controllers, as it does not promote reuse and a clean separation of concerns.
+
+Services in Grails are the place to put the majority of the logic in your application, leaving controllers responsible for handling request flow with redirects and so on.
+
+
+==== Creating a Service
+
+
+You can create a Grails service by running the link:../ref/Command%20Line/create-service.html[create-service] command from the root of your project in a terminal window:
+
+[source,groovy]
+----
+grails create-service helloworld.simple
+----
+
+NOTE: If no package is specified with the create-service script, Grails automatically uses the `grails.defaultPackage` defined in `grails-app/conf/application.yml` as the package name.
+
+The above example will create a service at the location `grails-app/services/helloworld/SimpleService.groovy`. A service's name ends with the convention `Service`, other than that a service is a plain Groovy class:
+
+[source,groovy]
+----
+package helloworld
+
+class SimpleService {
+}
+----

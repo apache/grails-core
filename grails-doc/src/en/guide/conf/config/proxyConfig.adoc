@@ -1,0 +1,14 @@
+To setup Grails to use an HTTP proxy there are two steps. Firstly you need to configure the `grails` CLI to be aware of the proxy if you wish to use it to create applications and so on. This can be done using the `GRAILS_OPTS` environment variable, for example on Unix systems:
+
+[source,bash]
+----
+export GRAILS_OPTS="-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=3128 -Dhttp.proxyUser=test -Dhttp.proxyPassword=test"
+----
+
+NOTE: The default profile repository is resolved over HTTPS so `https.proxyPort` and `https.proxyUser` are used, however the username and password are specified with `http.proxyUser` and `http.proxyPassword`
+
+For Windows systems the environment variable can be configured under `My Computer/Advanced/Environment Variables`.
+
+With this configuration in place the `grails` command can connect and authenticate via a proxy.
+
+Secondly, since Grails uses Gradle as the build system, you need to configure Gradle to authenticate via the proxy. For instructions on how to do this see the https://docs.gradle.org/current/userguide/build_environment.html#sec:accessing_the_web_via_a_proxy[Gradle user guide section on the topic].

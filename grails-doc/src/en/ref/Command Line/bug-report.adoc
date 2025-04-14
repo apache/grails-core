@@ -1,0 +1,27 @@
+
+== bug-report
+
+
+
+=== Purpose
+
+
+The bug-report command packages up the sources of your application (excluding jars, static resources etc.) into a ZIP file. The file name includes the application name and a timestamp. This is useful for reporting issues to the https://github.com/apache/grails-core/issues[Grails Issue Tracker]
+
+=== Examples
+
+
+[source,groovy]
+----
+grails bug-report
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails bug-report
+----

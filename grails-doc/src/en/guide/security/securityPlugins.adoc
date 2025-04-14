@@ -1,0 +1,1 @@
+If you need more advanced functionality beyond simple authentication such as authorization, roles etc. then you should consider using the spring security core plugin.

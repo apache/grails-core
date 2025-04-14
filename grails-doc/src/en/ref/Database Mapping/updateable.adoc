@@ -1,0 +1,45 @@
+
+== updateable
+
+
+
+=== Purpose
+
+
+Determines whether a property's database column is updated when persistent instances are updated.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+
+    String title
+
+    static belongsTo = [author: Author]
+
+    static mapping = {
+        author insertable: false
+        author updateable: false
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `association_name(updateable: boolean)`
+
+Useful in general where you don't want to update a value (or include the column in the generated SQL) during a `save()`.
+
+In particular this is useful for one-to-many relationships. For example when you store the foreign key in the 'child' table, it's often efficient to save the child using only the foreign key of the parent. You do this by setting the parent object (and the parent foreign key) in the 'child' entity. Setting the attributes insertable:false and updateable:false for the 'belongsTo' parent object lets you insert and update using only the foreign key.
+
+[source,groovy]
+----
+static mapping = {
+    author updateable: false
+}
+----

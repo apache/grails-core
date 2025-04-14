@@ -1,0 +1,17 @@
+You can resolve a URL to a view without a controller or action involved. For example to map the root URL `/` to a GSP at the location `grails-app/views/index.gsp` you could use:
+
+[source,groovy]
+----
+static mappings = {
+    "/"(view: "/index")  // map the root URL
+}
+----
+
+Alternatively if you need a view that is specific to a given controller you could use:
+
+[source,groovy]
+----
+static mappings = {
+   "/help"(controller: "site", view: "help") // to a view for a controller
+}
+----

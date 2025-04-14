@@ -1,0 +1,78 @@
+== create-web-plugin
+
+=== Purpose
+
+The Grails Web Plugin simplifies the process of creating Grails plugins with a web layer. It streamlines the development of plugins that provide web-based functionality and can be easily integrated into Grails applications.
+
+=== Usage
+
+To create a Grails plugin with a web layer using the Grails Web Plugin, use the following command:
+
+[source,shell]
+----
+grails create-web-plugin [OPTIONS] NAME
+----
+
+- `NAME`: The desired name for the Grails plugin with a web layer.
+
+=== Options
+
+Here are the available options for the `create-web-plugin` command:
+
+- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, spring-boot-starter-jetty, springloaded, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
+
+- `-g, --gorm=GORM Implementation`: Specifies the GORM Implementation to configure for the plugin. Possible values are hibernate, mongodb, neo4j.
+
+- `-h, --help`: Displays the help message and exits.
+
+- `-i, --inplace`: Creates a service within the current directory.
+
+- `--jdk=<javaVersion>`: Specifies the JDK version the project should target.
+
+- `--list-features`: Outputs available features and their descriptions.
+
+- `-s, --servlet=Servlet Implementation`: Specifies the Servlet Implementation to configure for the plugin. Possible values are none, tomcat, jetty, undertow.
+
+- `-t, --test=TEST`: Specifies the test framework to use for the plugin. Possible values are junit, spock.
+
+=== Examples
+
+To create a Grails plugin with a web layer named "web-plugin-example" with specific features:
+
+[source,shell]
+----
+grails create-web-plugin web-plugin-example --features h2,views-markup
+----
+
+This command will generate a Grails web plugin project named "web-plugin-example" with the H2 database and views markup feature enabled, making it suitable for web-based plugin development.
+
+Here are additional examples for the `create-web-plugin` command:
+
+1. Create a minimal Grails web plugin:
++
+[source,shell]
+----
+grails create-web-plugin minimal-web-plugin
+----
++
+This command will create a Grails web plugin project named "minimal-web-plugin" with default settings, suitable for starting a new web-based plugin project.
+
+2. Create a web plugin with support for PostgreSQL and specific features:
++
+[source,shell]
+----
+grails create-web-plugin postgres-web-plugin --features postgres,views-json
+----
++
+This command will generate a Grails web plugin project named "postgres-web-plugin" configured to use PostgreSQL as the database and with the "views-json" feature enabled, making it ideal for developing web-based plugins with JSON views.
+
+3. Create a web plugin with in-place development:
++
+[source,shell]
+----
+grails create-web-plugin inplace-web-plugin --inplace
+----
++
+This command will create a Grails web plugin project named "inplace-web-plugin" within the current directory, allowing for in-place development and integration with an existing project.
+
+For more information on developing plugins with a web layer using the Grails Web Plugin, refer to the Grails user guide section on link:{guidePath}/plugins.html[Plugin Development].

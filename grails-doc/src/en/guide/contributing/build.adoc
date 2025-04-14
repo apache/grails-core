@@ -1,0 +1,121 @@
+If you're interested in contributing fixes and features to any part of grails, you will have to learn how to get hold of the project's source, build it and test it with your own applications. Before you start, make sure you have:
+
+* A JDK (11 or above)
+* A git client
+
+Once you have all the pre-requisite packages installed, the next step is to download the Grails source code, which is hosted at http://github.com[GitHub] in several repositories owned by the http://github.com/grails["grails" GitHub user]. This is a simple case of cloning the repository you're interested in. For example, to get the core framework run:
+
+[source,groovy]
+----
+git clone http://github.com/grails/grails-core.git
+----
+
+This will create a "grails-core" directory in your current working directory containing all the project source files. The next step is to get a Grails installation from the source.
+
+
+=== Creating a Grails installation
+
+
+If you look at the project structure, you'll see that it doesn't look much like a standard `GRAILS_HOME` installation. But, it's very simple to turn it into one. Just run this from the root directory of the project:
+
+[source,groovy]
+----
+./gradlew install
+----
+
+This will fetch all the standard dependencies required by Grails and then build a `GRAILS_HOME` installation. Note that this target skips the extensive collection of Grails test classes, which can take some time to complete.
+
+Once the above command has finished, simply set the `GRAILS_HOME` environment variable to the checkout directory and add the "bin" directory to your path. When you next type `grails` command to run, you'll be using the version you just built.
+
+If you are using http://sdkman.io[SDKMAN] then that can also be used to work with this local installation via the following:
+
+[source,groovy]
+----
+sdk install grails dev /path/to/grails-core
+----
+
+You will also need to publish your local installation to your local maven.
+----
+./gradlew pTML
+----
+
+Now you will have a dev version in your local which you can use to test your features.
+
+
+=== Running the test suite
+
+
+All you have to do to run the full suite of tests is:
+
+[source,groovy]
+----
+./gradlew test
+----
+
+These will take a while (15-30 mins), so consider running individual tests using the command line. For example, to run the test spec `BinaryPluginSpec` simply execute the following command:
+[source,groovy]
+----
+./gradlew :grails-core:test --tests *.BinaryPluginSpec
+----
+
+Note that you need to specify the sub-project that the test case resides in, because the top-level "test" target won't work....
+
+
+=== Developing in IntelliJ IDEA
+
+
+You need to run the following gradle task:
+[source,groovy]
+----
+./gradlew idea
+----
+
+Then open the project file which is generated in IDEA. Simple!
+
+
+=== Developing in STS / Eclipse
+
+
+You need to run the following gradle task:
+[source,groovy]
+----
+./gradlew cleanEclipse eclipse
+----
+
+Before importing projects to STS do the following action:
+
+* Edit grails-scripts/.classpath and remove the line "<classpathentry kind="src" path="../scripts"/>".
+
+Use "Import->General->Existing Projects into Workspace" to import all projects to STS. There will be a few build errors. To fix them do the following:
+
+* Add the springloaded-core JAR file in $GRAILS_HOME/lib/org.springsource.springloaded/springloaded-core/jars to grails-core's classpath.
+* Remove "src/test/groovy" from grails-plugin-testing's source path GRECLIPSE-1067
+* Add the jsp-api JAR file in $GRAILS_HOME/lib/javax.servlet.jsp/jsp-api/jars to the classpath of grails-web
+* Fix the source path of grails-scripts. Add linked source folder linking to "../scripts". If you get build errors in grails-scripts, do "../gradlew cleanEclipse eclipse" in that directory and edit the .classpath file again (remove the line "<classpathentry kind="src" path="../scripts"/>"). Remove possible empty "scripts" directory under grails-scripts if you are not able to add the linked folder.
+* Do a clean build for the whole workspace.
+* To use Eclipse GIT scm team provider: Select all projects (except "Servers") in the navigation and right click -> Team -> Share project (not "Share projects"). Choose "Git". Then check "Use or create repository in parent folder of project" and click "Finish".
+* Get the recommended code style settings from the http://grails.1312388.n4.nabble.com/Grails-development-code-style-IDE-formatting-settings-tp3854216p3854216.html[mailing list thread] (final style not decided yet, currently http://grails.1312388.n4.nabble.com/attachment/3854262/0/profile.xml[profile.xml]). Import the code style xml file to STS in Window->Preferences->Java->Code Style->Formatter->Import . Grails code uses spaces instead of tabs for indenting.
+
+
+=== Debugging Grails or a Grails application
+
+
+To enable debugging, run:
+
+[source,groovy]
+----
+grails run-app --debug-jvm
+----
+
+[source,groovy]
+----
+./gradlew bootRun --debug-jvm
+----
+
+By default Grails forks a JVM to run the application in. The `-debug-jvm` argument causes the debugger to be associated with the forked JVM.  In order to instead attach the debugger to the build system which is going to fork the JVM use the `-debug` option:
+
+[source,groovy]
+----
+grails -debug run-app
+----
+By default Grails forks a JVM to run the application in. The `-debug-jvm` argument causes the debugger to be associated with the forked JVM.

@@ -1,0 +1,94 @@
+
+== findAllBy*
+
+
+
+=== Purpose
+
+
+Dynamic method that uses the properties of the domain class to create query method expressions that return all matching instances of the domain class
+
+
+=== Examples
+
+
+Given this domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date releaseDate
+    String author
+    Boolean paperback
+}
+----
+
+The following are all possible:
+
+[source,groovy]
+----
+def results = Book.findAllByTitle("The Shining",
+                  [max: 10, sort: "title", order: "desc", offset: 100])
+
+results = Book.findAllByTitleAndAuthor("The Sum of All Fears", "Tom Clancy")
+
+results = Book.findAllByReleaseDateBetween(firstDate, new Date())
+
+results = Book.findAllByReleaseDateGreaterThanEquals(firstDate)
+
+results = Book.findAllByTitleLike("%Hobbit%")
+
+results = Book.findAllByTitleIlike("%Hobbit%") // ignore case
+
+results = Book.findAllByTitleNotEqual("Harry Potter")
+
+results = Book.findAllByReleaseDateIsNull()
+
+results = Book.findAllByReleaseDateIsNotNull()
+
+results = Book.findAllPaperbackByAuthor("Douglas Adams")
+
+results = Book.findAllNotPaperbackByAuthor("Douglas Adams")
+
+results = Book.findAllByAuthorInList(["Douglas Adams", "Hunter S. Thompson"])
+----
+
+
+=== Description
+
+
+GORM supports the notion of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[Dynamic Finders]. The `findAllBy*` method finds all the results for the given method expression.
+
+Parameters:
+
+* `metaParams` - A `Map` containing pagination parameters `max`, `order`, `offset` and `sort` and metaParameters `readOnly`, `timeout`, `fetchSize`, and `flushMode`
+
+Pagination and sorting parameters can be used as the last argument to a dynamic method:
+
+[source,groovy]
+----
+def results = Book.findAllByTitle("The Shining",
+                 [max: 10, sort: "title", order: "desc", offset: 100])
+----
+
+If no items meet the supplied criteria an empty list is returned.
+
+The following operator names can be used within the respective dynamic methods:
+
+* `LessThan`
+* `LessThanEquals`
+* `GreaterThan`
+* `GreaterThanEquals`
+* `Between`
+* `Like`
+* `Ilike` (i.e. ignorecase like)
+* `IsNotNull`
+* `IsNull`
+* `Not`
+* `NotEqual`
+* `And`
+* `Or`
+* `InList`
+
+These operator names can be considered keywords, and you will run into problems when querying domain classes that have one of these names as property names. For more information on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#finders[dynamic finders] refer to the user guide.

@@ -1,0 +1,687 @@
+
+==== Creating Plugins
+
+
+Creating a Grails plugin is a simple matter of running the command:
+
+[source,groovy]
+----
+grails create-plugin <<PLUGIN NAME>>
+----
+
+This will create a web-plugin project for the name you specify. For example running `grails create-plugin example` would create a new web-plugin project called `example`.
+
+In Grails 3.0 you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
+
+[source,groovy]
+----
+grails create-plugin <<PLUGIN NAME>> --profile=plugin
+----
+
+Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.
+
+Being a regular Grails project has a number of benefits in that you can immediately test your plugin by running (if the plugin targets the "web" profile):
+
+[source,groovy]
+----
+grails run-app
+----
+
+NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
+
+The structure of a Grails plugin is very nearly the same as a Grails application project's except that in the `src/main/groovy` directory under the plugin package structure you will find a plugin descriptor class (a class that ends in "GrailsPlugin"). For example:
+
+[source,groovy]
+----
+import grails.plugins.*
+
+class ExampleGrailsPlugin extends Plugin {
+   ...
+}
+----
+
+All plugins must have this class under the `src/main/groovy` directory, otherwise they are not regarded as a plugin. The plugin class defines metadata about the plugin, and optionally various hooks into plugin extension points (covered shortly).
+
+You can also provide additional information about your plugin using several special properties:
+
+* `title` - short one-sentence description of your plugin
+* `grailsVersion` - The version range of Grails that the plugin supports. eg. "1.2 > *" (indicating 1.2 or higher)
+* `author` - plugin author's name
+* `authorEmail` - plugin author's contact e-mail
+* `developers` - Any additional developers beyond the author specified above.
+* `description` - full multi-line description of plugin's features
+* `documentation` - URL of the plugin's documentation
+* `license` - License of the plugin
+* `issueManagement` - Issue Tracker of the plugin
+* `scm` - Source code management location of the plugin
+
+Here is a slimmed down example from the https://github.com/apache/grails-quartz[Quartz Grails plugin]:
+
+[source,groovy]
+----
+package quartz
+
+@Slf4j
+class QuartzGrailsPlugin extends Plugin {
+    // the version or versions of Grails the plugin is designed for
+    def grailsVersion = "3.0.0.BUILD-SNAPSHOT > *"
+    // resources that are excluded from plugin packaging
+    def pluginExcludes = [
+            "grails-app/views/error.gsp"
+    ]
+    def title = "Quartz" // Headline display name of the plugin
+    def author = "Jeff Brown"
+    def authorEmail = "zzz@yyy.com"
+    def description = '''\
+Adds Quartz job scheduling features
+'''
+    def profiles = ['web']
+    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
+    def documentation = "https://apache.github.io/grails-quartz/latest/"
+    def license = "APACHE"
+    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
+    def developers = [
+            [ name: "Joe Dev", email: "joedev@gmail.com" ]
+    ]
+    def scm = [ url: "https://github.com/apache/grails-quartz" ]
+
+    Closure doWithSpring()......
+----
+
+==== Plugin Configuration
+
+A Grails plugin can be configured in one of the following files:
+
+- `grails-app/conf/plugin.yml`
+- `grails-app/conf/plugin.groovy`
+
+These files will be included in the plugin package while the `application.*` files are only used internally when developing the plugin. See <<excludedArtefacts>>.
+
+==== Reading configuration properties
+
+Instead of directly accessing Grails configuration as `grailsApplication.config.mail.hostName`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}/org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
+
+./src/main/groovy/example/MailPluginConfiguration.groovy
+[source,groovy]
+----
+package example
+
+import org.springframework.boot.context.properties.ConfigurationProperties
+
+@ConfigurationProperties(prefix = "mail")
+class MailPluginConfiguration {
+
+    String hostName
+    int port
+    String from
+}
+----
+
+You can inject the `MailPluginConfiguration` bean into your bean like any other bean.
+
+./grails-app/services/example/MailService.groovy
+[source,groovy]
+----
+package example
+
+class MailService {
+
+    MailPluginConfiguration mailPluginConfiguration
+
+    void sendMail() {
+
+    }
+
+}
+----
+
+Please read the {springBootReference}/html/features.html#features.external-config[Spring Boot Externalized Configuration] section for more information.
+
+==== Installing Local Plugins
+
+In order to install the Grails plugin to your local Maven, you could use Gradle https://docs.gradle.org/current/userguide/publishing_maven.html[Maven Publish] plugin. You may also need to configure the publishing extension as:
+
+[source,groovy]
+----
+publishing {
+    publications {
+        maven(MavenPublication) {
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            from components.java
+        }
+    }
+}
+----
+
+NOTE: Please refer to the Gradle Maven Publish plugin documentation for up-to-date information.
+
+To make your plugin available for use in a Grails application run the `./gradlew publishToMavenLocal` command:
+
+[source,bash]
+----
+./gradlew publishToMavenLocal
+----
+
+This will install the plugin into your local Maven cache. Then to use the plugin within an application declare a dependency on the plugin in your `build.gradle` file and include `mavenLocal()` in your repositories hash:
+
+[source,groovy]
+----
+...
+repositories {
+    ...
+    mavenLocal()
+}
+...
+implementation "org.grails.plugins:quartz:0.1"
+----
+
+NOTE: In Grails 2.x plugins were packaged as ZIP files, however in Grails 3.x plugins are simple JAR files that can be added to the classpath of the IDE.
+
+
+
+==== Plugins and Multi-Project Builds
+
+
+If you wish to setup a plugin as part of a multi project build then follow these steps.
+
+*Step 1: Create the application and the plugin*
+
+Using the `grails` command create an application and a plugin:
+
+[source,groovy]
+----
+$ grails create-app myapp
+$ grails create-plugin myplugin
+----
+
+*Step 2: Create a settings.gradle file*
+
+In the same directory create a `settings.gradle` file with the following contents:
+
+[source,groovy]
+----
+include "myapp", "myplugin"
+----
+
+The directory structure should be as follows:
+
+[source,groovy]
+----
+PROJECT_DIR
+  - settings.gradle
+  - myapp
+    - build.gradle
+  - myplugin
+    - build.gradle
+----
+
+*Step 3: Declare a project dependency on the plugin*
+
+Within the `build.gradle` of the application declare a dependency on the plugin within the `plugins` block:
+
+[source,groovy]
+----
+grails {
+    plugins {
+        implementation project(':myplugin')
+    }
+}
+----
+
+NOTE: You can also declare the dependency within the `dependencies` block, however you will not get subproject reloading if you do this!
+
+*Step 4: Configure the plugin to enable reloading*
+
+In the plugin directory, add or modify the `gradle.properties` file. A new property `exploded=true` needs to be set in order for the plugin to add the exploded directories to the classpath.
+
+*Step 5: Run the application*
+
+Now run the application using the `grails run-app` command from the root of the application directory, you can use the `verbose` flag to see the Gradle output:
+
+[source,groovy]
+----
+$ cd myapp
+$ grails run-app -verbose
+----
+
+You will notice from the Gradle output that plugins sources are built and placed on the classpath of your application:
+
+[source,groovy]
+----
+:myplugin:compileAstJava UP-TO-DATE
+:myplugin:compileAstGroovy UP-TO-DATE
+:myplugin:processAstResources UP-TO-DATE
+:myplugin:astClasses UP-TO-DATE
+:myplugin:compileJava UP-TO-DATE
+:myplugin:configScript UP-TO-DATE
+:myplugin:compileGroovy
+:myplugin:copyAssets UP-TO-DATE
+:myplugin:copyCommands UP-TO-DATE
+:myplugin:copyTemplates UP-TO-DATE
+:myplugin:processResources
+:myapp:compileJava UP-TO-DATE
+:myapp:compileGroovy
+:myapp:processResources UP-TO-DATE
+:myapp:classes
+:myapp:findMainClass
+:myapp:bootRun
+Grails application running at http://localhost:8080 in environment: development
+----
+
+
+[[excludedArtefacts]]
+==== Notes on excluded Artefacts
+
+
+Although the link:../ref/Command%20Line/create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:../ref/Command%20Line/package-plugin.html[package-plugin]:
+
+* `grails-app/build.gradle` (although it is used to generate `dependencies.groovy`)
+* `grails-app/conf/logback.xml`
+* `grails-app/conf/logback-spring.xml`
+* `grails-app/conf/application.yml`
+* `grails-app/conf/application.groovy`
+* `grails-app/conf/spring/resources.groovy`
+* Everything within `/src/test/\*\*`
+* SCM management files within `\*\*/.svn/\*\*` and `\*\*/CVS/\*\*`
+
+
+==== Customizing the plugin contents
+
+
+When developing a plugin you may create test classes and sources that are used during the development and testing of the plugin but should not be exported to the application.
+
+To exclude test sources you need to modify the `pluginExcludes` property of the plugin descriptor AND exclude the resources inside your `build.gradle` file. For example say you have some classes under the `com.demo` package that are in your plugin source tree but should not be packaged in the application. In your plugin descriptor you should exclude these:
+
+[source,groovy]
+----
+// resources that should be loaded by the plugin once installed in the application
+  def pluginExcludes = [
+    '**/com/demo/**'
+  ]
+----
+
+And in your `build.gradle` you should exclude the compiled classes from the JAR file:
+
+[source,groovy]
+----
+jar {
+  exclude "com/demo/**/**"
+}
+----
+
+
+
+==== Inline Plugins in Grails 3.0
+
+
+In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, in Grails 3.x this functionality has been replaced by Gradle's multi-project build feature.
+
+To set up a multi project build create an appliation and a plugin in a parent directory:
+
+[source,groovy]
+----
+$ grails create-app myapp
+$ grails create-plugin myplugin
+----
+
+Then create a `settings.gradle` file in the parent directory specifying the location of your application and plugin:
+
+[source,groovy]
+----
+include 'myapp', 'myplugin'
+----
+
+Finally add a dependency in your application's `build.gradle` on the plugin:
+
+[source,groovy]
+----
+implementation project(':myplugin')
+----
+
+Using this technique you have achieved the equivalent of inline plugins from Grails 2.x.
+
+
+==== Grails Forge Creating Plugins
+
+
+Creating a Grails plugin is a simple matter of running the command:
+
+[source,groovy]
+----
+grails create-plugin <<PLUGIN NAME>>
+----
+
+This will create a web-plugin project for the name you specify. For example running `grails create-plugin example` would create a new web-plugin project called `example`.
+
+In Grails 3.0 you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
+
+[source,groovy]
+----
+grails create-plugin <<PLUGIN NAME>> --profile=plugin
+----
+
+Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.
+
+Being a regular Grails project has a number of benefits in that you can immediately test your plugin by running (if the plugin targets the "web" profile):
+
+[source,shell]
+----
+./gradlew bootRun
+----
+
+NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
+
+The structure of a Grails plugin is very nearly the same as a Grails application project's except that in the `src/main/groovy` directory under the plugin package structure you will find a plugin descriptor class (a class that ends in "GrailsPlugin"). For example:
+
+[source,groovy]
+----
+import grails.plugins.*
+
+class ExampleGrailsPlugin extends Plugin {
+   ...
+}
+----
+
+All plugins must have this class under the `src/main/groovy` directory, otherwise they are not regarded as a plugin. The plugin class defines metadata about the plugin, and optionally various hooks into plugin extension points (covered shortly).
+
+You can also provide additional information about your plugin using several special properties:
+
+* `title` - short one-sentence description of your plugin
+* `grailsVersion` - The version range of Grails that the plugin supports. eg. "1.2 > *" (indicating 1.2 or higher)
+* `author` - plugin author's name
+* `authorEmail` - plugin author's contact e-mail
+* `developers` - Any additional developers beyond the author specified above.
+* `description` - full multi-line description of plugin's features
+* `documentation` - URL of the plugin's documentation
+* `license` - License of the plugin
+* `issueManagement` - Issue Tracker of the plugin
+* `scm` - Source code management location of the plugin
+
+Here is a slimmed down example from the https://github.com/apache/grails-quartz[Quartz Grails plugin]:
+
+[source,groovy]
+----
+package quartz
+
+@Slf4j
+class QuartzGrailsPlugin extends Plugin {
+    // the version or versions of Grails the plugin is designed for
+    def grailsVersion = "3.0.0.BUILD-SNAPSHOT > *"
+    // resources that are excluded from plugin packaging
+    def pluginExcludes = [
+            "grails-app/views/error.gsp"
+    ]
+    def title = "Quartz" // Headline display name of the plugin
+    def author = "Jeff Brown"
+    def authorEmail = "zzz@yyy.com"
+    def description = '''\
+Adds Quartz job scheduling features
+'''
+    def profiles = ['web']
+    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
+    def documentation = "https://apache.github.io/grails-quartz/latest/"
+    def license = "APACHE"
+    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
+    def developers = [
+            [ name: "Joe Dev", email: "joedev@gmail.com" ]
+    ]
+    def scm = [ url: "https://github.com/apache/grails-quartz" ]
+
+    Closure doWithSpring()......
+----
+
+==== Plugin Configuration
+
+Instead of directly accessing Grails configuration as `grailsApplication.config.getProperty('mail.hostName', String)`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}/org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
+
+./src/main/groovy/example/MailPluginConfiguration.groovy
+[source,groovy]
+----
+package example
+
+import org.springframework.boot.context.properties.ConfigurationProperties
+
+@ConfigurationProperties(prefix = "mail")
+class MailPluginConfiguration {
+
+    String hostName
+    int port
+    String from
+}
+----
+
+You can inject the `MailPluginConfiguration` bean into your bean like any other bean.
+
+./grails-app/services/example/MailService.groovy
+[source,groovy]
+----
+package example
+
+class MailService {
+
+    MailPluginConfiguration mailPluginConfiguration
+
+    void sendMail() {
+
+    }
+
+}
+----
+
+Please read the {springBootReference}/html/features.html#features.external-config[Spring Boot Externalized Configuration] section for more information.
+
+==== Installing Local Plugins
+
+In order to install the Grails plugin to your local Maven, you could use Gradle https://docs.gradle.org/current/userguide/publishing_maven.html[Maven Publish] plugin. You may also need to configure the publishing extension as:
+
+[source,groovy]
+----
+publishing {
+    publications {
+        maven(MavenPublication) {
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            from components.java
+        }
+    }
+}
+----
+
+NOTE: Please refer to the Gradle Maven Publish plugin documentation for up-to-date information.
+
+To make your plugin available for use in a Grails application run the `./gradlew publishToMavenLocal` command:
+
+[source,bash]
+----
+./gradlew publishToMavenLocal
+----
+
+This will install the plugin into your local Maven cache. Then to use the plugin within an application declare a dependency on the plugin in your `build.gradle` file and include `mavenLocal()` in your repositories hash:
+
+[source,groovy]
+----
+...
+repositories {
+    ...
+    mavenLocal()
+}
+...
+implementation "org.grails.plugins:quartz:0.1"
+----
+
+NOTE: In Grails 2.x plugins were packaged as ZIP files, however in Grails 3.x plugins are simple JAR files that can be added to the classpath of the IDE.
+
+
+
+==== Plugins and Multi-Project Builds
+
+
+If you wish to setup a plugin as part of a multi project build then follow these steps.
+
+*Step 1: Create the application and the plugin*
+
+Using the `grails` command create an application and a plugin:
+
+[source,groovy]
+----
+$ grails create-app myapp
+$ grails create-plugin myplugin
+----
+
+*Step 2: Create a settings.gradle file*
+
+In the same directory create a `settings.gradle` file with the following contents:
+
+[source,groovy]
+----
+include "myapp", "myplugin"
+----
+
+The directory structure should be as follows:
+
+[source,groovy]
+----
+PROJECT_DIR
+  - settings.gradle
+  - myapp
+    - build.gradle
+  - myplugin
+    - build.gradle
+----
+
+*Step 3: Declare a project dependency on the plugin*
+
+Within the `build.gradle` of the application declare a dependency on the plugin within the `plugins` block:
+
+[source,groovy]
+----
+grails {
+    plugins {
+        implementation project(':myplugin')
+    }
+}
+----
+
+NOTE: You can also declare the dependency within the `dependencies` block, however you will not get subproject reloading if you do this!
+
+*Step 4: Configure the plugin to enable reloading*
+
+In the plugin directory, add or modify the `gradle.properties` file. A new property `exploded=true` needs to be set in order for the plugin to add the exploded directories to the classpath.
+
+*Step 5: Run the application*
+
+Now run the application using the `./gradlew bootRun` command from the root of the application directory, you can use the `verbose` flag to see the Gradle output:
+
+[source,groovy]
+----
+$ cd myapp
+$ ./gradlew bootRun --verbose
+----
+
+You will notice from the Gradle output that plugins sources are built and placed on the classpath of your application:
+
+[source,groovy]
+----
+:myplugin:compileAstJava UP-TO-DATE
+:myplugin:compileAstGroovy UP-TO-DATE
+:myplugin:processAstResources UP-TO-DATE
+:myplugin:astClasses UP-TO-DATE
+:myplugin:compileJava UP-TO-DATE
+:myplugin:configScript UP-TO-DATE
+:myplugin:compileGroovy
+:myplugin:copyAssets UP-TO-DATE
+:myplugin:copyCommands UP-TO-DATE
+:myplugin:copyTemplates UP-TO-DATE
+:myplugin:processResources
+:myapp:compileJava UP-TO-DATE
+:myapp:compileGroovy
+:myapp:processResources UP-TO-DATE
+:myapp:classes
+:myapp:findMainClass
+:myapp:bootRun
+Grails application running at http://localhost:8080 in environment: development
+----
+
+
+==== Notes on excluded Artefacts
+
+
+Although the link:../ref/Command%20Line/create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:../ref/Command%20Line/package-plugin.html[package-plugin]:
+
+* `grails-app/build.gradle` (although it is used to generate `dependencies.groovy`)
+* `grails-app/conf/logback.xml`
+* `grails-app/conf/logback-spring.xml`
+* `grails-app/conf/application.yml`
+* `grails-app/conf/application.groovy`
+* `grails-app/conf/spring/resources.groovy`
+* Everything within `/src/test/\*\*`
+* SCM management files within `\*\*/.svn/\*\*` and `\*\*/CVS/\*\*`
+
+
+==== Customizing the plugin contents
+
+
+When developing a plugin you may create test classes and sources that are used during the development and testing of the plugin but should not be exported to the application.
+
+To exclude test sources you need to modify the `pluginExcludes` property of the plugin descriptor AND exclude the resources inside your `build.gradle` file. For example say you have some classes under the `com.demo` package that are in your plugin source tree but should not be packaged in the application. In your plugin descriptor you should exclude these:
+
+[source,groovy]
+----
+// resources that should be loaded by the plugin once installed in the application
+  def pluginExcludes = [
+    '**/com/demo/**'
+  ]
+----
+
+And in your `build.gradle` you should exclude the compiled classes from the JAR file:
+
+[source,groovy]
+----
+jar {
+  exclude "com/demo/**/**"
+}
+----
+
+
+
+==== Inline Plugins in Grails 3.0
+
+
+In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, in Grails 3.x this functionality has been replaced by Gradle's multi-project build feature.
+
+To set up a multi project build create an appliation and a plugin in a parent directory:
+
+[source,groovy]
+----
+$ grails create-app myapp
+$ grails create-plugin myplugin
+----
+
+Then create a `settings.gradle` file in the parent directory specifying the location of your application and plugin:
+
+[source,groovy]
+----
+include 'myapp', 'myplugin'
+----
+
+Finally add a dependency in your application's `build.gradle` on the plugin:
+
+[source,groovy]
+----
+implementation project(':myplugin')
+----
+
+Using this technique you have achieved the equivalent of inline plugins from Grails 2.x.

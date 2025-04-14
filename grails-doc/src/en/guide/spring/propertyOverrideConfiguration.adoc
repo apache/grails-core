@@ -1,0 +1,26 @@
+Grails supports setting of bean properties via link:conf.html[configuration].
+
+You define a `beans` block with the names of beans and their values:
+
+[source,groovy]
+----
+beans {
+    bookService {
+        webServiceURL = "http://www.amazon.com"
+    }
+}
+----
+
+The general format is:
+
+[source,groovy]
+----
+<<bean name>>.<<property name>> = <<value>>
+----
+
+The same configuration in a Java properties file would be:
+
+[source,groovy]
+----
+beans.bookService.webServiceURL=http://www.amazon.com
+----

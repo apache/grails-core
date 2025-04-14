@@ -1,0 +1,44 @@
+Grails artefacts are automatically augmented with certain traits at compile time.
+
+
+==== Domain Class Traits
+
+
+* {apiDocs}grails/artefact/DomainClass.html[grails.artefact.DomainClass]
+* {apiDocs}grails/web/databinding/WebDataBinding.html[grails.web.databinding.WebDataBinding]
+* {gormApiDocs}/org/grails/datastore/gorm/GormEntity.html[org.grails.datastore.gorm.GormEntity]
+* {gormApiDocs}/org/grails/datastore/gorm/GormValidateable.html[org.grails.datastore.gorm.GormValidateable]
+
+
+==== Controller Traits
+
+* {gspApiDocs}grails/artefact/gsp/TagLibraryInvoker.html[grails.artefact.gsp.TagLibraryInvoker]
+* {apiDocs}grails/artefact/AsyncController.html[grails.artefact.AsyncController]
+* {apiDocs}grails/artefact/controller/RestResponder.html[grails.artefact.controller.RestResponder]
+* {apiDocs}grails/artefact/Controller.html[grails.artefact.Controller]
+
+
+==== Interceptor Trait
+
+* {apiDocs}grails/artefact/Interceptor.html[grails.artefact.Interceptor]
+
+
+==== Tag Library Trait
+
+* {gspApiDocs}grails/artefact/TagLibrary.html[grails.artefact.TagLibrary]
+
+
+Below is a list of other traits provided by the framework.  The javadocs provide more detail about methods and properties related to each trait.
+
+[format="csv", options="header"]
+|===
+
+*Trait*,*Brief Description*
+{apiDocs}grails/web/api/WebAttributes.html[grails.web.api.WebAttributes],Common Web Attributes
+{apiDocs}grails/web/api/ServletAttributes.html[grails.web.api.ServletAttributes],Servlet API Attributes
+{apiDocs}grails/web/databinding/DataBinder.html[grails.web.databinding.DataBinder],Data Binding API
+{apiDocs}grails/artefact/controller/support/RequestForwarder.html[grails.artefact.controller.support.RequestForwarder],Request Forwarding API
+{apiDocs}grails/artefact/controller/support/ResponseRedirector.html[grails.artefact.controller.support.ResponseRedirector],Response Redirecting API
+{apiDocs}grails/artefact/controller/support/ResponseRenderer.html[grails.artefact.controller.support.ResponseRenderer],Response Rendering API
+{apiDocs}grails/validation/Validateable.html[grails.validation.Validateable],Validation API
+|===

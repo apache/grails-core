@@ -1,0 +1,23 @@
+Plugins can easily provide their own artefacts so that they can easily find out what implementations are available and take part in reloading. All you need to do is create an `ArtefactHandler` implementation and register it in your main plugin class:
+
+[source,groovy]
+----
+class MyGrailsPlugin {
+    def artefacts = [ org.somewhere.MyArtefactHandler ]
+    ...
+}
+----
+
+The `artefacts` list can contain either handler classes (as above) or instances of handlers.
+
+So, what does an artefact handler look like? Well, put simply it is an implementation of the {apiDocs}grails/core/ArtefactHandler.html[ArtefactHandler] interface. To make life a bit easier, there is a skeleton implementation that can readily be extended: {apiDocs}grails/core/ArtefactHandlerAdapter.html[ArtefactHandlerAdapter].
+
+In addition to the handler itself, every new artefact needs a corresponding wrapper class that implements {apiDocs}grails/core/GrailsClass.html[GrailsClass]. Again, skeleton implementations are available such as {apiDocs}org/grails/core/AbstractInjectableGrailsClass.html[AbstractInjectableGrailsClass], which is particularly useful as it turns your artefact into a Spring bean that is auto-wired, just like controllers and services.
+
+The best way to understand how both the handler and wrapper classes work is to look at the Quartz plugin:
+
+* https://github.com/apache/grails-quartz/blob/master/src/main/groovy/grails/plugins/quartz/GrailsJobClass.java[GrailsJobClass]
+* https://github.com/apache/grails-quartz/blob/master/src/main/groovy/grails/plugins/quartz/DefaultGrailsJobClass.java[DefaultGrailsJobClass]
+* https://github.com/apache/grails-quartz/blob/master/src/main/groovy/grails/plugins/quartz/JobArtefactHandler.groovy[JobArtefactHandler]
+
+Another example is the http://github.com/pledbrook/grails-shiro[Shiro plugin] which adds a realm artefact.

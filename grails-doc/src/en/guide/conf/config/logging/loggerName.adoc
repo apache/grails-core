@@ -1,0 +1,60 @@
+Grails artifacts (controllers, services ...) get injected a `log` property automatically.
+
+Prior to Grails 3.3.0, the name of the
+logger for Grails Artifact followed the convention `grails.app.<type>.<className>`, where type is the
+type of the artifact, for example, `controllers` or `services`, and `className` is the fully
+qualified name of the artifact.
+
+Grails 3.3.x simplifies logger names. The next examples illustrate the changes:
+
+`BookController.groovy` located at `grails-app/controllers/com/company` NOT annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+
+[cols="2*"]
+|===
+|**Logger Name (Grails 3.3.x or higher)**
+|**Logger Name (Grails 3.2.x or lower)**
+|`com.company.BookController`
+|`grails.app.controllers.com.company.BookController`
+|===
+
+
+`BookController.groovy` located at `grails-app/controllers/com/company` annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+
+[cols="2*"]
+|===
+|**Logger Name (Grails 3.3.x or higher)**
+|**Logger Name (Grails 3.2.x or lower)**
+|`com.company.BookController`
+|`com.company.BookController`
+|===
+
+
+`BookService.groovy` located at `grails-app/services/com/company` NOT annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+
+[cols="2*"]
+|===
+|**Logger Name (Grails 3.3.x or higher)**
+|**Logger Name (Grails 3.2.x or lower)**
+|`com.company.BookService`
+|`grails.app.services.com.company.BookService`
+|===
+
+`BookService.groovy` located at `grails-app/services/com/company` annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+
+[cols="2*"]
+|===
+|**Logger Name (Grails 3.3.x or higher)**
+|**Logger Name (Grails 3.2.x or lower)**
+|`com.company.BookService`
+|`com.company.BookService`
+|===
+
+`BookDetail.groovy` located at `src/main/groovy/com/company` annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+
+[cols="2*"]
+|===
+|**Logger Name (Grails 3.3.x or higher)**
+|**Logger Name (Grails 3.2.x or lower)**
+|`com.company.BookDetail`
+|`com.company.BookDetail`
+|===

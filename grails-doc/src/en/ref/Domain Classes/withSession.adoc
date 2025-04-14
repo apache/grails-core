@@ -1,0 +1,28 @@
+
+== withSession
+
+
+
+=== Purpose
+
+
+Provides access to the underlying Hibernate `Session` object
+
+
+=== Examples
+
+
+[source,groovy]
+----
+Book.withSession { session ->
+    session.clear()
+}
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `closure` - A closure which accepts a `Session` argument

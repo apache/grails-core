@@ -1,0 +1,50 @@
+
+== unique
+
+
+
+=== Purpose
+
+
+Constrains a property as unique at the database level
+
+
+=== Examples
+
+
+[source,groovy]
+----
+username unique: true
+----
+
+
+=== Description
+
+
+Set to `true` if the property must be unique. This is a persistent call and will query the database.
+
+WARNING: It is possible (though unlikely in practice) for uniqueness validation to pass but for the subsequent save to fail. If another save or update happens to update the database between the Grails check and the actual save of your instance, the call will fail. The only way to prevent this would be to use a transaction at the `SERIALIZABLE` isolation level, but this is very bad for performance.
+
+You can also define multi-column `unique` constraints by declaring the other field(s) to be included as the parameter value. If there is one other field, specify its name, but if there are more than one use a List, for example:
+
+Example:
+
+[source,groovy]
+----
+group unique: 'department'
+----
+
+In this example the `group` name must be unique in one `department` but there might be groups with same name in different departments, i.e. the group name isn't unique by itself.
+
+Another example:
+
+[source,groovy]
+----
+username(unique: ['group', 'department'])
+----
+
+In this example `username` must be unique in `group` and `department`. There might be same logins in different groups or different departments.
+
+This constraint influences https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#constraints[schema generation].
+
+Error Code: `className.propertyName.unique`

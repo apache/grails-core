@@ -1,0 +1,55 @@
+
+== errors
+
+
+
+=== Purpose
+
+
+An instance of the Spring {springapi}org/springframework/validation/Errors.html[Errors] interface containing errors associated with this controller.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class DemoController {
+
+    static allowedMethods = [updatePerson: 'PUT']
+
+    def generateReport(int size) {
+        if(hasErrors()) {
+            errors.allErrors.each {
+                println it
+            }
+        }
+    }
+
+    def updatePerson(SomeDomainClass sdc) {
+        // if params.id is found then a call
+        // will have been made to SomeDomainClass.get(params.id)
+        // to retrieve the instance from the database.
+        // if no matching instance is found then
+        // sdc will be null and the controller
+        // will not have errors.  If params.id
+        // is found and an exception occurs while
+        // trying to retrieve the instance then
+        // sdc will be null and an error will
+        // be added to the controller
+        if(sdc == null && hasErrors()) {
+            errors.allErrors.each {
+                println it
+            }
+        }
+    }
+}
+----
+
+
+=== Description
+
+
+The `errors` property is used by Grails while processing a request.  Errors are generated when a type conversion happens while processing action parameters or if an exception is thrown while trying to retrieve a domain class command object from the database.
+
+See link:hasErrors.html[hasErrors].

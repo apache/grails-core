@@ -1,0 +1,35 @@
+
+== getAll
+
+
+
+=== Purpose
+
+
+Retrieves a `List` of instances of the domain class for the specified ids, ordered by the original ids list. If some of the provided ids are `null` or there are no instances with these ids, the resulting `List` will have `null` values in those positions.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// get a list which contains Book instances with ids 2, 1, 3 respectively
+def bookList = Book.getAll(2, 1, 3)
+
+// can take a list of ids as only argument, very
+// useful when the ids list is calculated in code
+def bookList = Book.getAll([1, 2, 3])
+
+// when called without arguments returns list of all objects
+def bookList = Book.getAll()
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `varargs`* - A variable argument list of ids
+* `ids`* - A list of ids

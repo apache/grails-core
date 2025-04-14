@@ -1,0 +1,26 @@
+
+==== Detecting Versions at Runtime
+
+
+You can detect the application version using Grails' support for application metadata using the {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] class. For example within link:theWebLayer.html#controllers[controllers] there is an implicit link:../ref/Controllers/grailsApplication.html[grailsApplication] variable that can be used:
+
+[source,groovy]
+----
+def version = grailsApplication.metadata.getApplicationVersion()
+----
+
+You can retrieve the version of Grails that is running with:
+
+[source,groovy]
+----
+def grailsVersion = grailsApplication.metadata.getGrailsVersion()
+----
+
+or the `GrailsUtil` class:
+
+[source,groovy]
+----
+import grails.util.GrailsUtil
+...
+def grailsVersion = GrailsUtil.grailsVersion
+----

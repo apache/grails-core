@@ -1,0 +1,24 @@
+Before installing Grails you will need a Java Development Kit (JDK) installed with the minimum version denoted in the table below. Download the appropriate JDK for your operating system, run the installer, and then set up an environment variable called `JAVA_HOME` pointing to the location of this installation.
+
+We recommend https://bell-sw.com/pages/downloads/#jdk-17-lts[Liberica JDK 17 LTS] based on https://spring.io/quickstart[Spring's JDK recommendation].
+
+[cols="1,1"]
+|===
+| Grails version | JDK version (minimum)
+
+| 7 | 17
+| 6 | 11
+| 5 | 8
+|===
+
+To automate the installation of Grails we recommend http://sdkman.io[SDKMAN] which greatly simplifies installing and managing multiple Grails versions.
+
+On some platforms (for example macOS) the Java installation is automatically detected. However in many cases you will want to manually configure the location of Java. For example, if you're using bash or another variant of the Bourne Shell:
+
+[source,bash]
+----
+export JAVA_HOME=/Library/Java/Home
+export PATH="$PATH:$JAVA_HOME/bin"
+----
+
+TIP: On Windows you would have to configure these environment variables in `My Computer/Advanced/Environment Variables`

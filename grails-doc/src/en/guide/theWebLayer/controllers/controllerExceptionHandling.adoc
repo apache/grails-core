@@ -1,0 +1,100 @@
+Grails controllers support a simple mechanism for declarative exception handling.  If a controller declares a method that accepts a single argument and the argument type is `java.lang.Exception` or some subclass of `java.lang.Exception`, that method will be invoked any time an action in that controller throws an exception of that type.  See the following example.
+
+[source,groovy]
+.grails-app/controllers/demo/DemoController.groovy
+----
+package demo
+
+class DemoController {
+
+    def someAction() {
+        // do some work
+    }
+
+    def handleSQLException(SQLException e) {
+        render 'A SQLException Was Handled'
+    }
+
+    def handleBatchUpdateException(BatchUpdateException e) {
+        redirect controller: 'logging', action: 'batchProblem'
+    }
+
+    def handleNumberFormatException(NumberFormatException nfe) {
+        [problemDescription: 'A Number Was Invalid']
+    }
+}
+----
+
+
+That controller will behave as if it were written something like this...
+
+
+[source,groovy]
+.grails-app/controllers/demo/DemoController.groovy
+----
+package demo
+
+class DemoController {
+
+    def someAction() {
+        try {
+            // do some work
+        } catch (BatchUpdateException e) {
+            return handleBatchUpdateException(e)
+        } catch (SQLException e) {
+            return handleSQLException(e)
+        } catch (NumberFormatException e) {
+            return handleNumberFormatException(e)
+        }
+    }
+
+    def handleSQLException(SQLException e) {
+        render 'A SQLException Was Handled'
+    }
+
+    def handleBatchUpdateException(BatchUpdateException e) {
+        redirect controller: 'logging', action: 'batchProblem'
+    }
+
+    def handleNumberFormatException(NumberFormatException nfe) {
+        [problemDescription: 'A Number Was Invalid']
+    }
+}
+----
+
+The exception handler method names can be any valid method name.  The name is not what makes the method an exception handler, the `Exception` argument type is the important part.
+
+The exception handler methods can do anything that a controller action can do including invoking `render`, `redirect`, returning a model, etc.
+
+One way to share exception handler methods across multiple controllers is to use inheritance.  Exception handler methods are inherited into subclasses so an application could define the exception handlers in an abstract class that multiple controllers extend from.  Another way to share exception handler methods across multiple controllers is to use a trait, as shown below...
+
+[source,groovy]
+.src/main/groovy/com/demo/DatabaseExceptionHandler.groovy
+----
+package com.demo
+
+trait DatabaseExceptionHandler {
+    def handleSQLException(SQLException e) {
+        // handle SQLException
+    }
+
+    def handleBatchUpdateException(BatchUpdateException e) {
+        // handle BatchUpdateException
+    }
+}
+----
+
+[source,groovy]
+.grails-app/controllers/com/demo/DemoController.groovy
+----
+package com.demo
+
+class DemoController implements DatabaseExceptionHandler {
+
+    // all of the exception handler methods defined
+    // in DatabaseExceptionHandler will be added to
+    // this class at compile time
+}
+----
+
+Exception handler methods must be present at compile time.  Specifically, exception handler methods which are runtime metaprogrammed onto a controller class are not supported.

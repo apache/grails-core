@@ -1,0 +1,30 @@
+There are a few useful conventions you can follow when creating JSON views. For example if you have a domain class called `Book`, then creating a template located at `grails-app/views/book/_book.gson` and using the link:../ref/Controllers/respond.html[respond] method will result in rendering the template:
+
+[source,groovy]
+----
+def show(Long id) {
+    respond Book.get(id)
+}
+----
+
+In addition if an error occurs during validation by default Grails will try to render a template called `grails-app/views/book/_errors.gson`, otherwise it will try to render `grails-app/views/errors/_errors.gson` if the former doesn't exist.
+
+This is useful because when persisting objects you can `respond` with validation errors to render these aforementioned templates:
+
+[source,groovy]
+----
+@Transactional
+def save(Book book) {
+    if (book.hasErrors()) {
+        transactionStatus.setRollbackOnly()
+        respond book.errors
+    }
+    else {
+        // valid object
+    }
+}
+----
+
+If a validation error occurs in the above example the `grails-app/views/book/_errors.gson` template will be rendered.
+
+For more information on JSON views (and Markup views), see the http://views.grails.org/latest/[JSON Views user guide].

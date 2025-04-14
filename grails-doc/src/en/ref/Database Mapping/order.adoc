@@ -1,0 +1,35 @@
+
+== order
+
+
+
+=== Purpose
+
+
+Customizes the default sort order of query results.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    ...
+    static mapping = {
+        order "desc"
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `order(string)`
+
+Arguments:
+
+* `direction` - Either "desc" or "asc" for descending and ascending respectively.
+
+By defaults results are sorted in ascending order. With the `order` method you can alter results to be sorted in descending order. See also the link:sort.html[sort] method.

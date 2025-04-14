@@ -1,0 +1,58 @@
+
+== docs
+
+
+
+=== Purpose
+
+
+Generates a user guide and Javadoc + Groovydoc API documentation for the current Grails project.
+
+
+=== Examples
+
+
+Add the plugin in your `build.gradle`:
+
+[source,groovy]
+----
+apply plugin: "org.grails.grails-doc"
+----
+
+Now run the command
+
+[source,groovy]
+----
+gradle docs
+----
+
+
+=== Description
+
+
+Some projects, particular plugins, benefit from documentation explaining how they work. Grails comes with its own documentation engine based on a wiki syntax that can generate both HTML and PDF versions of a user guide, just like the one you are currently reading. If you have the source for a user guide in `src/docs`, then this command will automatically generate the corresponding HTML and PDF documents.
+
+It's often useful to have API documentation as well. Since Grails is a mixed source framework, the command also generates both http://www.oracle.com/technetwork/java/javase/documentation/index-137868.html[Javadoc] (the standard format for Java documentation) and Groovydoc API references in HTML form.
+
+The documentation is generated to the following directories:
+
+* `docs/api` - Location of javadoc comments
+* `docs/gapi` - Location of groovydoc comments
+* `docs/guide` - Location of the user guide
+* `docs/ref` - Location of the reference section of the user guide
+
+Usage:
+[source,groovy]
+----
+grails doc
+----
+
+Arguments:
+
+* `\--init` - Create a template project documentation project (optional)
+* `\--pdf` - Create PDF output for project documentation (optional)
+
+Fired Events:
+
+* `DocStart` - Before documentation generation begins
+* `DocEnd` - After documentation generation completes

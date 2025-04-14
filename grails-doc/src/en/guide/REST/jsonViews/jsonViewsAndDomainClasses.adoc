@@ -1,0 +1,44 @@
+Typically your model may involve one or many domain instances. JSON views provide a render method for rendering these.
+
+For example given the following domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+}
+----
+
+And the following template:
+
+[source,groovy]
+----
+model {
+    Book book
+}
+
+json g.render(book)
+----
+
+The resulting output is:
+
+[source,groovy]
+----
+{id:1, title:"The Stand"}
+----
+
+You can customize the rendering by including or excluding properties:
+
+[source,groovy]
+----
+json g.render(book, [includes:['title']])
+----
+
+Or by providing a closure to add additional JSON output:
+
+[source,groovy]
+----
+json g.render(book) {
+    pages 1000
+}
+----

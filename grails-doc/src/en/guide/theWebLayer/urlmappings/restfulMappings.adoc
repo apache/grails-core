@@ -1,0 +1,202 @@
+Since Grails 2.3, it possible to create RESTful URL mappings that map onto controllers by convention. The syntax to do so is as follows:
+
+[source,groovy]
+----
+"/books"(resources:'book')
+----
+
+You define a base URI and the name of the controller to map to using the `resources` parameter. The above mapping will result in the following URLs:
+
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URI,Grails Action
+GET,/books,index
+GET,/books/create,create
+POST,/books,save
+GET,/books/${id},show
+GET,/books/${id}/edit,edit
+PUT,/books/${id},update
+DELETE,/books/${id},delete
+|===
+
+If you are not sure which mapping will be generated for your case just run the command `url-mappings-report` in your grails console. It will give you a really neat report for all the url mappings.
+
+If you wish to include or exclude any of the generated URL mappings you can do so with the `includes` or `excludes` parameter, which accepts the name of the Grails action to include or exclude:
+
+[source,groovy]
+----
+"/books"(resources:'book', excludes:['delete', 'update'])
+
+or 
+
+"/books"(resources:'book', includes:['index', 'show'])
+----
+
+
+==== Explicit REST Mappings
+
+
+As of Grails 3.1, if you prefer not to rely on a `resources` mapping to define your mappings then you can prefix any URL mapping with the HTTP method name (in lower case) to indicate the HTTP method it applies to. The following URL mapping:
+
+[source,groovy]
+----
+"/books"(resources:'book')
+----
+
+Is equivalent to:
+
+[source,groovy]
+----
+get "/books"(controller:"book", action:"index")
+get "/books/create"(controller:"book", action:"create")
+post "/books"(controller:"book", action:"save")
+get "/books/$id"(controller:"book", action:"show")
+get "/books/$id/edit"(controller:"book", action:"edit")
+put "/books/$id"(controller:"book", action:"update")
+delete "/books/$id"(controller:"book", action:"delete")
+----
+
+Notice how the HTTP method name is prefixed prior to each URL mapping definition.
+
+
+==== Single resources
+
+
+A single resource is a resource for which there is only one (possibly per user) in the system. You can create a single resource using the `single` parameter (as opposed to `resources`):
+
+[source,groovy]
+----
+"/book"(single:'book')
+----
+
+This results in the following URL mappings:
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URI,Grails Action
+GET,/book/create,create
+POST,/book,save
+GET,/book,show
+GET,/book/edit,edit
+PUT,/book,update
+DELETE,/book,delete
+|===
+
+The main difference is that the id is not included in the URL mapping.
+
+
+==== Nested Resources
+
+
+You can nest resource mappings to generate child resources. For example:
+
+[source,groovy]
+----
+"/books"(resources:'book') {
+  "/authors"(resources:"author")
+}
+----
+
+The above will result in the following URL mappings:
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URL,Grails Action
+GET,/books/${bookId}/authors,index
+GET,/books/${bookId}/authors/create,create
+POST,/books/${bookId}/authors,save
+GET,/books/${bookId}/authors/${id},show
+GET,/books/${bookId}/authors/edit/${id},edit
+PUT,/books/${bookId}/authors/${id},update
+DELETE,/books/${bookId}/authors/${id},delete
+|===
+
+You can also nest regular URL mappings within a resource mapping:
+
+[source,groovy]
+----
+"/books"(resources: "book") {
+    "/publisher"(controller:"publisher")
+}
+----
+
+This will result in the following URL being available:
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URL,Grails Action
+GET,/books/${bookId}/publisher,index
+|===
+
+To map a URI directly below a resource then use a collection block:
+
+[source,groovy]
+----
+"/books"(resources: "book") {
+    collection {
+        "/publisher"(controller:"publisher")    
+    }    
+}
+----
+
+This will result in the following URL being available (without the ID):
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URL,Grails Action
+GET,/books/publisher,index
+|===
+
+
+==== Linking to RESTful Mappings
+
+
+You can link to any URL mapping created with the `g:link` tag provided by Grails simply by referencing the controller and action to link to:
+
+[source,groovy]
+----
+<g:link controller="book" action="index">My Link</g:link>
+----
+
+As a convenience you can also pass a domain instance to the `resource` attribute of the `link` tag:
+
+[source,groovy]
+----
+<g:link resource="${book}">My Link</g:link>
+----
+
+This will automatically produce the correct link (in this case "/books/1" for an id of "1").
+
+
+The case of nested resources is a little different as they typically required two identifiers (the id of the resource and the one it is nested within). For example given the nested resources:
+
+[source,groovy]
+----
+"/books"(resources:'book') {
+  "/authors"(resources:"author")
+}
+----
+
+If you wished to link to the `show` action of the `author` controller, you would write:
+
+[source,groovy]
+----
+// Results in /books/1/authors/2
+<g:link controller="author" action="show" method="GET" params="[bookId:1]" id="2">The Author</g:link>
+----
+
+However, to make this more concise there is a `resource` attribute to the link tag which can be used instead:
+
+[source,groovy]
+----
+// Results in /books/1/authors/2
+<g:link resource="book/author" action="show" bookId="1" id="2">My Link</g:link>
+----
+
+The resource attribute accepts a path to the resource separated by a slash (in this case "book/author"). The attributes of the tag can be used to specify the necessary `bookId` parameter.

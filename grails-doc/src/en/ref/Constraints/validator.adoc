@@ -1,0 +1,116 @@
+
+== validator
+
+
+
+=== Purpose
+
+
+Adds custom validation to a field.
+
+
+=== Examples
+
+
+// Simple validator appending an 'invalid' error to the error object
+[source,groovy]
+----
+even validator: {
+    return (it % 2) == 0
+}
+
+// is equivalent to
+even validator: { val ->
+    return (val % 2) == 0
+}
+
+// Closure with two arguments, the second being the object itself
+password1 validator: { val, obj ->
+    obj.password2 == val
+}
+
+// Closure with three arguments, the third being the errors object
+password1 validator: { val, obj, errors ->
+    if (!(obj.password2 == val)) errors.rejectValue('password1', 'noMatch')
+}
+
+// Examples that pass arguments to the error message in message.properties
+
+// Example 1: Using the "implicit" argument 0 (property name)
+
+package demo
+
+class Person {
+
+    String name
+
+    static constraints = {
+        name validator: {
+	  if (!it) return ['entryMissing']
+       }
+}
+
+// This maps to a message
+// person.name.entryMissing=Please enter a name in the field {0}
+
+// Example 2: Using the "implicit" arguments 0 (property name) and 2 (property value)
+package demo
+
+class Person {
+
+    Integer yearOfBirth
+
+    static constraints = {
+        yearOfBirth validator: {
+	  if (yearOfBirth>2013) return ['yearTooBig']
+       }
+}
+
+// This maps to a message
+person.yearOfBirth.yearTooBig=The value {2} entered in the field {0} is not valid because it lies in the future.
+// arguments are [property, class, value]. e.g. [yearOfBirth,class demo.Person, 2017]
+// You will note when using this kind of message on Integers that years are displayed as 1,990 instead of 1990.
+// This is addressed in the next example.
+
+// Example 3: Much more complex
+package demo
+
+class Astronaut {
+
+    Integer yearOfBirth
+    Integer yearOfFirstSpaceTravel
+
+    static constraints = {
+        yearOfFirstSpaceTravel validator: { Integer val, Astronaut obj ->
+            if (val < obj.yearOfBirth) {
+                return ['datePriorTo', val.toString(), obj.yearOfBirth.toString()]
+            } else if (val < (obj.yearOfBirth+18)) {
+                ['maybeABitTooYoung', (val - obj.yearOfBirth)]
+            }
+        }
+    }
+}
+
+// Respective messages
+// Note that argument 3 is the property value converted toString to avoid the unwanted formatting as described before.
+astronaut.yearOfFirstSpaceTravel.datePriorTo=The value {3} entered for the year of the first space travel is prior to the year of birth ({4}). Please correct the value.
+// For yearOfBirth: 2017 and yearOfFirstSpaceTravel: 2012 arguments will be [yearOfFirstSpaceTravel,class demo.Astronaut,2012,2012,2017] 
+astronaut.yearOfFirstSpaceTravel.maybeABitTooYoung={3} years seems a bit young for travelling to space, dude!
+// For yearOfBirth: 2012 and yearOfFirstSpaceTravel: 2017 arguments will be [yearOfFirstSpaceTravel,class demo.Astronaut,2017,5] 
+----
+
+=== Description
+
+
+A custom validator is implemented by a Closure that takes up to three parameters. If the Closure accepts zero or one parameter, the parameter value will be the one being validated ("it" in the case of a zero-parameter Closure). If it accepts two parameters the first is the value and the second is the domain class instance being validated. This is useful when your validation needs access to other fields, for example when checking that two entered passwords are the same. If it accepts three parameters the first is the value, the second is the instance, and the third is the Spring `Errors` object.
+
+The closure can return:
+
+* `null` or `true` (or no return value) to indicate that the value is valid
+* `false` to indicate an invalid value and use the default message code
+* a string to indicate the error code to append to the `classname.propertyName`. string used to resolve the error message. If a field-specific message cannot be resolved, the error code itself will be resolved allowing for global error messages.
+* a list containing a string as above, and then any number of arguments following it, which are used as formatted message arguments in the `grails-app/i18n/message.properties` file. The mapping of the arguments is as follows: Parameters 0 to 2 are automatically mapped to 0: property name, 1: class name, 2: property value. Additional parameters are mapped starting at parameter 3.
+Please note that in the final error message, the label for this property will be used if it is defined in the message.properties file. Otherwise, the property name as defined in the class is used.
+
+When explicitly passing error codes, it is usually not necessary to return the error code using the "return" keyword, because if the validator returns from the closure, it will check if any errors have been attached to the errors object.
+This can be especially seen in the case of a three-parameter Closure where it is expected that the `Errors` object will be updated directly.

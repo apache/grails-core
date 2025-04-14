@@ -1,0 +1,26 @@
+
+== matches
+
+
+
+=== Purpose
+
+
+Validates that a String value matches a given regular expression.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+login matches: "[a-zA-Z]+"
+----
+
+
+=== Description
+
+
+Applies a regular expression against a string value.
+
+Error Code: `className.propertyName.matches.invalid`

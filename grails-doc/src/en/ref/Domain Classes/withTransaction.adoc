@@ -1,0 +1,55 @@
+
+== withTransaction
+
+
+
+=== Purpose
+
+
+Allows programmatic transactions using Spring's Transaction abstraction.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+Account.withTransaction { status ->
+
+    def source = Account.get(params.from)
+    def dest = Account.get(params.to)
+
+    int amount = params.amount.toInteger()
+    if (source.active) {
+        source.balance -= amount
+
+        if (dest.active) {
+            dest.amount += amount
+        }
+        else {
+            status.setRollbackOnly()
+        }
+    }
+}
+----
+
+Named arguments may optionally be passed as an argument to control attributes of the transaction.
+
+[source,groovy]
+----
+// the keys in the Map must correspond to properties
+// of org.springframework.transaction.support.DefaultTransactionDefinition
+
+Account.withTransaction([propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW,
+                         isolationLevel: TransactionDefinition.ISOLATION_REPEATABLE_READ]) {
+    // ...
+}
+----
+
+
+=== Description
+
+
+The `withTransaction` method accepts a Closure with a {springapi}org/springframework/transaction/TransactionStatus.html[TransactionStatus] argument. The `TransactionStatus` object can be used to programmatically control rollback of the transaction.
+
+Refer to the user guide section of https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#programmaticTransactions[Programmatic Transactions] for more information.

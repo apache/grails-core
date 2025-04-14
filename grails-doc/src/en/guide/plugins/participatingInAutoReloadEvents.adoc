@@ -1,0 +1,75 @@
+
+==== Monitoring Resources for Changes
+
+
+Often it is valuable to monitor resources for changes and perform some action when they occur. This is how Grails implements advanced reloading of application state at runtime. For example, consider this simplified snippet from the Grails `ServicesPlugin`:
+
+[source,groovy]
+----
+class ServicesGrailsPlugin extends Plugin {
+    ...
+    def watchedResources = "file:./grails-app/services/**/*Service.groovy"
+
+    ...
+    void onChange( Map<String, Object> event) {
+        if (event.source) {
+            def serviceClass = grailsApplication.addServiceClass(event.source)
+            def serviceName = "${serviceClass.propertyName}"
+            beans {
+                "$serviceName"(serviceClass.getClazz()) { bean ->
+                    bean.autowire =  true
+                }
+            }
+        }
+    }
+}
+----
+
+First it defines `watchedResources` as either a String or a List of strings that contain either the references or patterns of the resources to watch. If the watched resources specify a Groovy file, when it is changed it will automatically be reloaded and passed into the `onChange` closure in the `event` object.
+
+The `event` object defines a number of useful properties:
+
+* `event.source` - The source of the event, either the reloaded `Class` or a Spring `Resource`
+* `event.ctx` - The Spring `ApplicationContext` instance
+* `event.plugin` - The plugin object that manages the resource (usually `this`)
+* `event.application` - The `GrailsApplication` instance
+* `event.manager` - The `GrailsPluginManager` instance
+
+These objects are available to help you apply the appropriate changes based on what changed. In the "Services" example above, a new service bean is re-registered with the `ApplicationContext` when one of the service classes changes.
+
+
+==== Influencing Other Plugins
+
+
+In addition to reacting to changes, sometimes a plugin needs to "influence" another.
+
+Take for example the Services and Controllers plugins. When a service is reloaded, unless you reload the controllers too, problems will occur when you try to auto-wire the reloaded service into an older controller Class.
+
+To get around this, you can specify which plugins another plugin "influences". This means that when one plugin detects a change, it will reload itself and then reload its influenced plugins. For example consider this snippet from the `ServicesGrailsPlugin`:
+
+[source,groovy]
+----
+def influences = ['controllers']
+----
+
+
+==== Observing other plugins
+
+
+If there is a particular plugin that you would like to observe for changes but not necessary watch the resources that it monitors you can use the "observe" property:
+
+[source,groovy]
+----
+def observe = ["controllers"]
+----
+
+In this case when a controller is changed you will also receive the event chained from the controllers plugin.
+
+It is also possible for a plugin to observe all loaded plugins by using a wildcard:
+
+[source,groovy]
+----
+def observe = ["*"]
+----
+
+The Logging plugin does exactly this so that it can add the `log` property back to _any_ artefact that changes while the application is running.

@@ -1,0 +1,96 @@
+== create-restapi
+
+=== Purpose
+
+The `create-restapi` command is a fundamental step in Grails application development, specifically tailored for creating Grails applications designed to serve as RESTful APIs. When invoked, this command generates a Grails application with a user-specified name and configures it to be a REST API. Subsequently, it creates a subdirectory based on the provided application name within the directory where the command is executed.
+
+=== Usage
+
+To create a Grails RESTful API, use the following command:
+
+[source,console]
+----
+$ grails create-restapi [OPTIONS] NAME
+----
+
+- `NAME`: The desired name for the Grails plugin with a web layer.
+
+=== Options
+
+The `create-restapi` command accepts the following options:
+
+- `NAME`: The desired name for the REST API application.
+
+- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties.
+
+- `-g, --gorm=GORM Implementation`: Specifies the GORM Implementation to configure, with options like hibernate, mongodb, neo4j.
+
+- `-h, --help`: Displays the help message and exits.
+
+- `-i, --inplace`: Creates a service within the current directory.
+
+- `--jdk=<javaVersion>`: Specifies the JDK version for the project.
+
+- `-s, --servlet=Servlet Implementation`: Specifies the Servlet Implementation, with choices including none, tomcat, jetty, undertow.
+
+- `-t, --test=TEST`: Specifies the test framework, with options such as junit, spock.
+
+
+These options allow you to customize your Grails REST API application according to your specific requirements and preferences.
+
+=== Examples
+
+To illustrate its usage, here are some examples:
+
+1. Create a REST API application named "bookstore":
++
+[source,shell]
+----
+$ grails create-rest-api bookstore
+$ cd bookstore
+----
+
+2. Create a REST API application directly in the current directory:
++
+[source,shell]
+----
+$ mkdir bookstore
+$ cd bookstore
+$ grails create-rest-api --inplace
+----
+
+3. Customize the REST API application by adding specific features (available since Grails 3.1):
++
+[source,shell]
+----
+$ grails create-rest-api bookstore --features github-workflow-java-ci,asciidoctor
+----
+
+4. Create a minimal Grails REST API application:
++
+[source,shell]
+----
+grails create-rest-api minimal-api
+----
++
+This command will create a minimal Grails REST API application named "minimal-api" with default settings, ideal for starting a new REST API project.
+
+5. Create a REST API application with support for PostgreSQL and specific features:
++
+[source,shell]
+----
+grails create-rest-api postgres-api --features postgres
+----
++
+This command will generate a Grails REST API application named "postgres-api" configured to use PostgreSQL as the database. It's suitable for developing REST APIs with PostgreSQL as the data store.
+
+6. Create a REST API application with in-place development:
++
+[source,shell]
+----
+grails create-rest-api inplace-api --inplace
+----
++
+This command will create a Grails REST API application named "inplace-api" within the current directory, allowing for in-place development and integration with an existing project.
+
+These examples demonstrate various scenarios for using the `create-rest-api` command to create Grails REST API applications. You can customize the REST API application by specifying features, database configurations, and development options to meet your project's specific requirements.

@@ -1,0 +1,47 @@
+
+== merge
+
+
+
+=== Purpose
+
+
+Merges a domain class instance back into the current persistence context and returns a new merged instance.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = new Book(title: "The Shining")
+b = b.merge()
+----
+
+
+=== Description
+
+
+The `merge` method is similar in function to the link:save.html[save] method, but not in behaviour. `merge` allows the merging of "detached" instances such as those stored in the HTTP link:../Controllers/session.html[session]. Each persistent instance is associated with a persistence context. A new persistence context is created for each link:../Controllers/request.html[request]. The result is that objects stored in the HTTP session lose their persistence context on subsequent requests. In this case you can't simply call link:save.html[save] as the domain class is not associated with a current context.
+
+The `merge` method on the other hand lets you merge a detached object's state back into the current Hibernate session. Unlike the `save` method this method returns a new instance of the class representing the re-attached object. In other words you *must* write code like this:
+
+[source,groovy]
+----
+book = book.merge()
+----
+
+If you don't use the return value of the `merge` method then you still have access to the original unmodified detached instance and you will get errors such as lazy initialization exceptions.
+
+The `merge` method is defined in the Hibernate documentation as follows:
+
+____
+Copy the state of the given object onto the persistent object with the same identifier. If there is no persistent instance currently associated with the session, it will be loaded. If the given instance is unsaved, save a copy of and return it as a newly persistent instance.
+____
+
+The `merge` method is equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html#merge(java/lang/Object).html[merge] method.
+
+Parameters:
+
+* `validate` (optional) - Set to `false` if validation should be skipped
+* `flush` (optional) - When set to `true` flushes the persistence context, hence persisting the object immediately

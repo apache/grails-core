@@ -1,0 +1,20 @@
+The `link` tag offers an easy way to link to any domain class resource:
+
+[source,xml]
+----
+<g:link resource="${book}">My Link</g:link>
+----
+
+However, currently you cannot use g:link to link to the DELETE action and most browsers do not support sending the DELETE method directly.
+
+The best way to accomplish this is to use a form submit:
+
+[source,xml]
+----
+<form action="/book/2" method="post">
+ 	<input type="hidden" name="_method" value="DELETE"/>
+</form>
+----
+
+Grails supports overriding the request method via the hidden `_method` parameter. This is for browser compatibility purposes. This is useful when using restful resource mappings to create powerful web interfaces.
+To make a link fire this type of event, perhaps capture all click events for links with a `data-method` attribute and issue a form submit via JavaScript.

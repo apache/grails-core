@@ -1,0 +1,44 @@
+
+== lazy
+
+
+
+=== Purpose
+
+
+Configures whether to use proxies and lazy loading for one-to-one and many-to-one associations.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+
+    static belongsTo = [author: Author]
+
+    static mapping = {
+        author lazy: false
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `association_name(lazy: boolean)`
+
+By default GORM single-ended associations are lazy in that when you load a domain instance, an associated domain is not loaded until accessed. Hibernate creates a dynamic proxy by subclassing the domain class and proxying all methods and property access.
+
+This can have some strange side effects (see https://www.hibernate.org/280.html[this page] on proxies at the Hibernate site) particularly in relation to inheritance. You can tell Hibernate not use proxies for single-ended associations by using the `lazy` argument:
+
+[source,groovy]
+----
+static mapping = {
+    author lazy: false
+}
+----
+
+See the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.

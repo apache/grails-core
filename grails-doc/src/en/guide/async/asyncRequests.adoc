@@ -1,0 +1,90 @@
+If you are deploying to a Servlet 3.0 container such as Tomcat 7 and above then it is possible to deal with responses asynchronously.
+
+In general for controller actions that execute quickly there is little benefit in handling requests asynchronously. However, for long running controller actions it is extremely beneficial.
+
+The reason being that with an asynchronous / non-blocking response, the one thread == one request == one response relationship is broken. The container can keep a client response open and active, and at the same time return the thread back to the container to deal with another request, improving scalability.
+
+For example, if you have 70 available container threads and an action takes a minute to complete, if the actions are not executed in a non-blocking fashion the likelihood of all 70 threads being occupied and the container not being able to respond is quite high and you should consider asynchronous request processing.
+
+Since Grails 2.3, Grails features a simplified API for creating asynchronous responses built on the `Promise` mechanism discussed previously.
+
+The implementation is based on Servlet 3.0 async. So, to enable the async features you need to set your servlet target version to 3.0 in application.yml:
+
+[source,groovy]
+----
+grails:
+    servlet:
+        version: 3.0
+----
+
+
+==== Async Models
+
+
+A typical activity in a Grails controller is to produce a model (a map of key/value pairs) that can be rendered by a view.
+
+If the model takes a while to produce then the server could arrive at a blocking state, impacting scalability. You tell Grails to build the model asynchronously by returning a `grails.async.PromiseMap` via the `Promises.tasks` method:
+
+[source,groovy]
+----
+import static grails.async.web.WebPromises.*
+...
+def index() {
+   tasks books: Book.async.list(),
+         totalBooks: Book.async.count(),
+         otherValue: {
+           // do hard work
+         }
+}
+----
+
+Grails will handle the response asynchronously, waiting for the promises to complete before rendering the view. The equivalent synchronous action of the above is:
+
+[source,groovy]
+----
+def index() {
+    def otherValue = ...
+	[ books: Book.list() ,
+	  totalBooks: Book.count(),
+	  otherValue: otherValue  ]
+}
+----
+
+You can even render different view by passing the `PromiseMap` to the `model` attribute of the `render` method:
+
+[source,groovy]
+----
+import static grails.async.web.WebPromises.*
+//...
+def index() {
+   render view:"myView", model: tasks( one:{ 2 * 2 },
+                                       two:{ 3 * 3 } )
+}
+----
+
+
+==== Async Response Rendering
+
+
+You can also write to the response asynchronously using promises in Grails 2.3 and above:
+
+[source,groovy]
+----
+import static grails.async.web.WebPromises.*
+
+class StockController {
+
+    def stock(String ticker) {
+       task {
+           ticker = ticker ?: 'GOOG'
+           def url = new URL("http://download.finance.yahoo.com/d/quotes.csv?s=${ticker}&f=nsl1op&e=.csv")
+           Double price = url.text.split(',')[-1] as Double
+           render "ticker: $ticker, price: \$price"
+       }
+    }
+}
+----
+
+The above example using Yahoo Finance to query stock prices, executing asynchronously and only rendering the response once the result has been obtained. This is done by returning a `Promise` instance from the controller action.
+
+If the Yahoo URL is unresponsive the original request thread will not be blocked and the container will not become unresponsive.

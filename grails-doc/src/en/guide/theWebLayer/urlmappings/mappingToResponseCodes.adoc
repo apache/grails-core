@@ -1,0 +1,69 @@
+Grails also lets you map HTTP response codes to controllers, actions, views or URIs. Just use a method name that matches the response code you are interested in:
+
+[source,groovy]
+----
+static mappings = {
+   "403"(controller: "errors", action: "forbidden")
+   "404"(controller: "errors", action: "notFound")
+   "500"(controller: "errors", action: "serverError")
+}
+----
+
+Or you can specify custom error pages:
+
+[source,groovy]
+----
+static mappings = {
+   "403"(view: "/errors/forbidden")
+   "404"(view: "/errors/notFound")
+   "500"(view: "/errors/serverError")
+}
+----
+
+You can also specify custom URIs:
+
+[source,groovy]
+----
+static mappings = {
+   "403"(uri: "/errors/forbidden")
+   "404"(uri: "/errors/notFound")
+   "500"(uri: "/errors/serverError")
+}
+----
+
+
+==== Declarative Error Handling
+
+
+In addition you can configure handlers for individual exceptions:
+
+[source,groovy]
+----
+static mappings = {
+   "403"(view: "/errors/forbidden")
+   "404"(view: "/errors/notFound")
+   "500"(controller: "errors", action: "illegalArgument",
+         exception: IllegalArgumentException)
+   "500"(controller: "errors", action: "nullPointer",
+         exception: NullPointerException)
+   "500"(controller: "errors", action: "customException",
+         exception: MyException)
+   "500"(view: "/errors/serverError")
+}
+----
+
+With this configuration, an `IllegalArgumentException` will be handled by the `illegalArgument` action in `ErrorsController`, a `NullPointerException` will be handled by the `nullPointer` action, and a `MyException` will be handled by the `customException` action. Other exceptions will be handled by the catch-all rule and use the `/errors/serverError` view.
+
+You can access the exception from your custom error handling view or controller action using the request's `exception` attribute like so:
+
+[source,groovy]
+----
+class ErrorsController {
+    def handleError() {
+        def exception = request.exception
+        // perform desired processing to handle the exception
+    }
+}
+----
+
+WARNING: If your error-handling controller action throws an exception as well, you'll end up with a `StackOverflowException`.

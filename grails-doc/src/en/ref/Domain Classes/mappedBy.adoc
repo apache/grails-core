@@ -1,0 +1,61 @@
+
+== mappedBy
+
+
+
+=== Purpose
+
+
+The `mappedBy` static property allows you to control whether an association is mapped as unidirectional or bidirectional, and which properties form the reverse direction in the case of bidirectional associations.
+
+
+=== Examples
+
+
+In this example the `Airport` class defines two bidirectional one-to-many associations. Without defining `mappedBy` this is impossible as GORM cannot differentiate which of the two properties on the other end of the association (either `departureAirport` or `destinationAirport` in the `Route` class) each one-to-many should be associated with.
+
+The solution is to define `mappedBy` which tells the `Airport` class how each association relates to the other side.
+
+[source,groovy]
+----
+class Airport {
+
+    static mappedBy = [outgoingFlights: 'departureAirport',
+                       incomingFlights: 'destinationAirport']
+
+    static hasMany = [outgoingFlights: Route,
+                      incomingFlights: Route]
+}
+----
+
+[source,groovy]
+----
+class Route {
+    Airport departureAirport
+    Airport destinationAirport
+}
+----
+
+Separate example for many-to-one relationships:
+
+[source,groovy]
+----
+class Person {
+    String name
+    Person parent
+
+    static belongsTo = [ supervisor: Person ]
+
+    static mappedBy = [ supervisor: "none", parent: "none" ]
+
+    static constraints = { supervisor nullable: true }
+}
+----
+
+
+=== Description
+
+
+Grails needs to know whether associations are unidirectional or bidirectional, and in the case of the latter, which properties are involved from both sides. Normally it can infer this information, but when there are multiple properties with the same type its guess can sometimes be wrong. The `mappedBy` property is a simple map of property name pairs, where the key is the name of an association property in the current domain class and the value is the name of an association property in the domain class on the other side of the association (which may be itself). The examples above should clarify this.
+
+You can also specify a value of "none" in the map, which indicates that the association is unidirectional. However, this won't work if you actually have a domain property called "none" in the target class!

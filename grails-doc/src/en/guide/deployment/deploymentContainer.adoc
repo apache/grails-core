@@ -1,0 +1,29 @@
+Grails apps can be deployed to a Servlet Container or Application Server.
+
+
+=== WAR file
+
+
+A common approach to Grails application deployment in production is to deploy to an existing Servlet container via a WAR file. Containers allow multiple applications to be deployed on the same port with different paths.
+
+Creating a WAR file is as simple as executing the link:../ref/Command%20Line/war.html[war] command:
+
+[source,groovy]
+----
+grails war
+----
+
+This will produce a WAR file that can be deployed to a container, in the `build/libs` directory.
+
+Note that by default Grails will include an embeddable version of Tomcat inside the WAR file so that it is runnable (see the previous section), this can cause problems if you deploy to a different version of Tomcat. If you don't intend to use the embedded container then you should either remove the Tomcat dependencies or change the scope to `testImplementation` prior to deploying to your production container in `build.gradle`:
+
+[source,groovy]
+----
+testImplementation "org.springframework.boot:spring-boot-starter-tomcat"
+----
+
+
+
+== Application servers
+
+The Grails framework requires that runtime containers support Servlet 6.0.0 and above. By default, Grails framework applications are bundled with an embeddable Tomcat and testing is primarily done with Tomcat.  Any servlet container meeting the minimum requirements should be able to run Grails framework applications, but some workarounds may be required for container-specific bugs or configurations.

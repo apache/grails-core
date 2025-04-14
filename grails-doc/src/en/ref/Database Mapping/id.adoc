@@ -1,0 +1,77 @@
+== id
+
+
+=== Purpose
+
+
+Customizes the way the identifier for a domain class is generated
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+    String id
+    String title
+    static mapping = {
+        id generator: 'uuid'
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `id(map)`
+
+Arguments:
+
+* `generator` (optional) - The name of the generator to use. Can be `increment`, `identity`, `sequence`, `seqhilo`, `uuid`, `uuid2`, `assigned`, `select`, `foreign`, `sequence-identity`, `enhanced-sequence` or `enhanced-table`. See {hibernateReference}#identifiers-generators[Hibernate reference documentation] for more information.
+
+WARNING: `hilo` generator was removed in Hibernate 5. See https://github.com/hibernate/hibernate-orm/blob/5.0/migration-guide.adoc[Hibernate 5 Migration Guide].
+
+* `composite` (optional) - Takes a list of property names to use that form the composite identifier
+* `name` (optional) - The property name to use as the identifier
+* `params` (optional) - Any parameters to pass to the defined identity generator
+* `column` (optional) - The column name to map the identifier to. The remaining link:column.html[column] definition properties are also available.
+
+By default, GORM uses the native strategy to generate a database identifier for each entity (typically an auto-incrementing column or a sequence). You can alter this with the `id` method's `generator` argument:
+
+[,groovy]
+----
+static mapping = {
+    id generator: 'uuid'
+}
+----
+
+You can also use the method to define a composite identifier:
+
+[,groovy]
+----
+static mapping = {
+    id composite: ['title', 'author']
+}
+----
+
+or change the name of the property that defines the identifier:
+
+[,groovy]
+----
+static mapping = {
+    id name: 'title'
+}
+----
+
+You can also alter the column definition:
+
+[,groovy]
+----
+static mapping = {
+    id column: 'book_id', type: 'integer'
+}
+----
+
+See the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#identity[Custom Database Identity] in the user guide for more information.

@@ -1,0 +1,65 @@
+A profile can define new commands that apply only to that profile using YAML or Groovy scripts. Below is an example of the link:../ref/Command%20Line/create-controller.html[create-controller] command defined in YAML:
+
+[source,yaml]
+----
+description:
+    - Creates a controller
+    - usage: 'create-controller <<controller name>>'
+    - completer: org.grails.cli.interactive.completers.DomainClassCompleter
+    - argument: "Controller Name"
+      description: "The name of the controller"
+steps:
+ - command: render
+   template: templates/artifacts/Controller.groovy
+   destination: grails-app/controllers/`artifact.package.path`/`artifact.name`Controller.groovy
+ - command: render
+   template: templates/testing/Controller.groovy
+   destination: src/test/groovy/`artifact.package.path`/`artifact.name`ControllerSpec.groovy
+ - command: mkdir
+   location: grails-app/views/`artifact.propertyName`
+----
+
+Commands defined in YAML must define one or many steps. Each step is a command in itself. The available step types are:
+
+* `render` - To render a template to a given destination (as seen in the previous example)
+* `mkdir` - To make a directory specified by the `location` parameter
+* `execute` - To execute a command specified by the `class` parameter. Must be a class that implements the {apiDocs}org/grails/cli/profile/Command.html[Command] interface.
+* `gradle` - To execute one or many Gradle tasks specified by the `tasks` parameter.
+
+For example to invoke a Gradle task, you can define the following YAML:
+
+[source,yaml]
+----
+description: Creates a WAR file for deployment to a container (like Tomcat)
+minArguments: 0
+usage: |
+ war
+steps:
+ - command: gradle
+   tasks:
+     - war
+----
+
+If you need more flexibility than what the declarative YAML approach provides you can create Groovy script commands. Each Command script is extends from the {apiDocs}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] class and hence has all of the methods of that class available to it.
+
+The following is an example of the link:../ref/Command%20Line/create-script.html[create-script] command written in Groovy:
+
+[source,groovy]
+----
+description( "Creates a Grails script" ) {
+  usage "grails create-script <<SCRIPT NAME>>"
+  argument name:'Script Name', description:"The name of the script to create"
+  flag name:'force', description:"Whether to overwrite existing files"
+}
+
+def scriptName = args[0]
+def model = model(scriptName)
+def overwrite = flag('force') ? true : false
+
+render  template: template('artifacts/Script.groovy'),
+        destination: file("src/main/scripts/${model.lowerCaseName}.groovy"),
+        model: model,
+        overwrite: overwrite
+----
+
+For more information on creating CLI commands see the section on link:commandLine.html#creatingCustomScripts[creating custom scripts] in the Command Line section of the user guide.

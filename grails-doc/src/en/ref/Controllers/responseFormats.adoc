@@ -1,0 +1,31 @@
+
+== responseFormats
+
+
+
+=== Purpose
+
+
+Statically defines the supported response formats used by the link:respond.html[respond] method.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+    static responseFormats = ['xml', 'json']
+
+    def show(Long id) {
+        respond Book.get(id)
+    }
+}
+----
+
+
+=== Description
+
+
+The `responseFormats` property is used to define the response formats supported by a controller and in turn used by the `respond` method. The `respond` method uses link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on link:{guidePath}/webServices.html#REST[REST support] for more information.
+

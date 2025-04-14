@@ -1,0 +1,123 @@
+
+==== Controlling Plugin Dependencies
+
+
+Plugins often depend on the presence of other plugins and can adapt depending on the presence of others. This is implemented with two properties. The first is called `dependsOn`. For example, take a look at this snippet from the Hibernate plugin:
+
+[source,groovy]
+----
+class HibernateGrailsPlugin {
+
+    def version = "1.0"
+
+    def dependsOn = [dataSource: "1.0",
+                     domainClass: "1.0",
+                     i18n: "1.0",
+                     core: "1.0"]
+}
+----
+
+The Hibernate plugin is dependent on the presence of four plugins: the `dataSource`, `domainClass`, `i18n` and `core` plugins.
+
+The dependencies will be loaded before the Hibernate plugin and if all dependencies do not load, then the plugin will not load.
+
+The `dependsOn` property also supports a mini expression language for specifying version ranges. A few examples of the syntax can be seen below:
+
+[source,groovy]
+----
+def dependsOn = [foo: "* > 1.0"]
+def dependsOn = [foo: "1.0 > 1.1"]
+def dependsOn = [foo: "1.0 > *"]
+----
+
+When the wildcard * character is used it denotes "any" version. The expression syntax also excludes any suffixes such as -BETA, -ALPHA etc. so for example the expression "1.0 > 1.1" would match any of the following versions:
+
+* 1.1
+* 1.0
+* 1.0.1
+* 1.0.3-SNAPSHOT
+* 1.1-BETA2
+
+
+==== Controlling Load Order
+
+
+Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the plugin will give up and won't load.  It is possible though to have a weaker dependency using the `loadAfter` and `loadBefore` properties:
+
+[source,groovy]
+----
+def loadAfter = ['controllers']
+----
+
+Here the plugin will be loaded after the `controllers` plugin if it exists, otherwise it will just be loaded. The plugin can then adapt to the presence of the other plugin, for example the Hibernate plugin has this code in its `doWithSpring` closure:
+
+[source,groovy]
+----
+if (manager?.hasGrailsPlugin("controllers")) {
+    openSessionInViewInterceptor(OpenSessionInViewInterceptor) {
+        flushMode = HibernateAccessor.FLUSH_MANUAL
+        sessionFactory = sessionFactory
+    }
+    grailsUrlHandlerMapping.interceptors << openSessionInViewInterceptor
+}
+----
+
+Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the {apiDocs}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
+
+You can also use the `loadBefore` property to specify one or more plugins that your plugin should load before:
+
+[source,groovy]
+----
+def loadBefore = ['rabbitmq']
+----
+
+
+==== Scopes and Environments
+
+
+It's not only plugin load order that you can control. You can also specify which environments your plugin should be loaded in and which scopes (stages of a build). Simply declare one or both of these properties in your plugin descriptor:
+
+[source,groovy]
+----
+def environments = ['development', 'test', 'myCustomEnv']
+def scopes = [excludes:'war']
+----
+
+In this example, the plugin will only load in the 'development' and 'test' environments. Nor will it be packaged into the WAR file, because it's excluded from the 'war' phase. This allows `development-only` plugins to not be packaged for production use.
+
+The full list of available scopes are defined by the enum {apiDocs}grails/util/BuildScope.html[BuildScope], but here's a summary:
+
+* `test` - when running tests
+* `functional-test` - when running functional tests
+* `run` - for run-app and run-war
+* `war` - when packaging the application as a WAR file
+* `all` - plugin applies to all scopes (default)
+
+Both properties can be one of:
+
+* a string - a sole inclusion
+* a list - a list of environments or scopes to include
+* a map - for full control, with 'includes' and/or 'excludes' keys that can have string or list values
+
+For example,
+
+[source,groovy]
+----
+def environments = "test"
+----
+
+will only include the plugin in the test environment, whereas
+
+[source,groovy]
+----
+def environments = ["development", "test"]
+----
+
+will include it in both the development _and_ test environments. Finally,
+
+[source,groovy]
+----
+def environments = [includes: ["development", "test"]]
+----
+
+will do the same thing.

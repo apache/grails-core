@@ -1,0 +1,35 @@
+
+== attributes
+
+
+
+=== Purpose
+
+
+Adds custom attributes to scaffolding tags.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+birthDate attributes: [years: 2000..2011]
+----
+
+
+=== Description
+
+
+Adds extra attributes to the GSP tag used to display the edit field for the specified domain class property. For example, the rendered tag in scaffolding for the `birthDate` property above would look like:
+
+[source,xml]
+----
+<g:datePicker name="birthDate" ... years="2000..2011" ... />
+----
+
+Hence, the scaffolded view would limit a user to the years 2000-2011, as dictated by the g:datePicker tag.
+
+NOTE: This constraint only works for boolean (checkbox), date (datePicker), and collection (*select) properties.
+
+Error Code: This constraint only impacts the scaffolding and does not create errors.

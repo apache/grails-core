@@ -1,0 +1,54 @@
+== respond
+
+=== Purpose
+
+Attempts to return the most appropriate type for the requested content type (specified by either the `Accept` header or file extension)
+
+=== Examples
+
+
+[source,groovy]
+----
+// pick the best content type to respond with
+respond Book.get(1)
+
+// pick the best content type to respond with from the given formats
+respond Book.get(1), formats: ['xml', 'json']
+----
+
+
+=== Description
+
+
+The respond method uses link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on  link:{guidePath}/webServices.html#REST[REST support] for more information.
+
+If a view is picked for rendering then a model will automatically be calculated to pass to the view.
+
+The following table summarizes this convention:
+
+[cols="3*", options="header"]
+|===
+|Example|Argument Type|Calculated Model Variable
+|`respond Book.list()`|`java.util.List`|`bookList`
+|`respond Book.get(1)` |`example.Book`|`book`
+|`respond( [1,2] )` |`java.util.List`|`integerList`
+|`respond( [1,2] as Set )` |`java.util.Set`|`integerSet`
+|`respond( [1,2] as Integer[] )` |`Integer[]`|`integerArray`
+|===
+
+Parameters:
+
+* `object` - The object to render
+* `arguments` - Named arguments.
+
+Supported `arguments`:
+
+* `view` - The view to use in case of HTML rendering
+* `model` - The model to use in case of HTML rendering
+* `status` - The response status
+* `formats` - A list of formats to respond with
+* `includes` - Properties to include if rendering with the converters API
+* `excludes` - Properties to exclude if rendering with the converters API
+
+WARNING: Due to the way Groovy works, while responding with a Map and arguments it is important to respond in this manner `respond([:], status: 200)` instead of this manner `respond([:], [status: 200])`. Failure to do so will result in the arguments being reversed.
+

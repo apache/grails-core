@@ -1,0 +1,59 @@
+
+== indexColumn
+
+
+
+=== Purpose
+
+
+Customizes the index column definition of an indexed collection such as a `List` or `Map`
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Neo {
+
+    static hasMany = [matrix: Integer]
+
+    static mapping = {
+        matrix indexColumn: [name: "the_matrix", type: Integer]
+    }
+}
+----
+
+[source,groovy]
+----
+def neo = new Neo()
+neo.matrix = [(1): 30, (2): 42, (3): 23]
+neo.save(flush: true)
+----
+
+
+=== Description
+
+
+Usage: `association_name(indexColumn:map)`
+
+Arguments:
+
+* `name` - The name of the column as a String
+* `type` (optional) - The Hibernate link:type.html[type].
+* `sqlType` (optional) - The underlying SQL type
+* `enumType` (optional) - The enum type in for type-safe Enum properties. Either `ordinal` or `string`.
+* `index` (optional) - The index name
+* `unique` (optional) - Whether it is unique
+* `length` (optional) - The length of the column
+* `precision` (optional) - The precision of the column
+* `scale` (optional) - The scale of the column
+
+By default when mapping an indexed collection such as a `Map` or `List` the index is stored in a column called `association_name_idx` which is an `integer` type in the case of lists and a String in the case of maps. You can alter how the index column is mapped using the `indexColumn` argument:
+
+[source,groovy]
+----
+static mapping = {
+    matrix indexColumn: [name: "the_matrix", type: Integer]
+}
+----

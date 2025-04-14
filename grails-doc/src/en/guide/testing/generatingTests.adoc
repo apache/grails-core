@@ -1,0 +1,10 @@
+When you use the `create-*` and `generate-*` commands, Grails automatically generates `unit` or `integration` tests. For example, running the link:../ref/Command%20Line/create-controller.html[create-controller] command as follows:
+
+[source,groovy]
+----
+grails create-controller com.acme.app.simple
+----
+
+Grails generates a controller at `grails-app/controllers/com/acme/app/SimpleController.groovy`, and a corresponding unit test at `src/test/groovy/com/acme/app/SimpleControllerSpec.groovy`. It's important to note that Grails only creates the test structure; you need to implement the test logic.
+
+NOTE: The default class name suffix is `Spec` as of Grails 3.x.

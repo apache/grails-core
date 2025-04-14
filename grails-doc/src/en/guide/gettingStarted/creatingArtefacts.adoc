@@ -1,0 +1,25 @@
+Grails provides a set of useful CLI commands for various tasks, including the creation of essential artifacts such as controllers and domain classes. These commands simplify the development process, although you can achieve similar results using your preferred Integrated Development Environment (IDE) or text editor.
+
+For instance, to create the foundation of an application, you typically need to generate a domain model using Grails Commands:
+
+[source,console]
+----
+$ grails create-app myapp
+$ cd myapp
+$ grails create-domain-class book
+----
+
+Executing these commands will result in the creation of a domain class located at `grails-app/domain/myapp/Book.groovy`, as shown in the following code:
+
+[source,groovy]
+----
+package myapp
+
+class Book {
+}
+----
+
+The Grails CLI offers numerous other commands that you can explore in the Grails command line reference guide.
+
+NOTE: Using interactive mode enhances the development experience by providing auto-complete and making the process smoother.
+

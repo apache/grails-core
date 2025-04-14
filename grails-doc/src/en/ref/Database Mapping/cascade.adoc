@@ -1,0 +1,86 @@
+
+== cascade
+
+
+
+=== Purpose
+
+
+Configures the cascading behavior of an association.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Author {
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books cascade: 'all-delete-orphan'
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `association_name(cascade:string)`
+
+Arguments:
+
+* `cascade` - The cascading behavior to define. Can be one or more (comma-separated) of `all`, `merge`, `save-update`, `delete`, `lock`, `refresh`, `evict`, `replicate` or `all-delete-orphan` (one-to-many associations only).
+
+By default GORM configures a cascading policy of "all" in the case where one entity "belongs to" another. For example:
+
+[source,groovy]
+----
+class Book {
+    static belongsTo = [author: Author]
+}
+----
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+}
+----
+
+Here all persistence operations will cascade from the `Author` domain to the `Book` domain. So when an `Author` is deleted so will all the associated books.
+
+If the association doesn't define an owner (a "belongs to" relationship):
+
+[source,groovy]
+----
+class Book {
+}
+----
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+}
+----
+
+then GORM uses a cascading policy of "save-update" by default. So if an `Author` is deleted the `Book` associated domains won't be deleted. Use the `cascade` argument on an association to customize this behavior:
+
+[source,groovy]
+----
+class Author {
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books cascade: 'all-delete-orphan'
+    }
+}
+----
+
+Using this configuration a `Book` will also be deleted if it is removed (orphaned) from an `Author`'s `books` association.
+
+See the section on https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/objectstate.html#objectstate-transitive[transitive persistence] in the Hibernate user guide.

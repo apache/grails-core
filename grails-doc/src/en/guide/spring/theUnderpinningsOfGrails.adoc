@@ -1,0 +1,24 @@
+Grails is actually a http://projects.spring.io/spring-boot/[Spring Boot] application in disguise. Spring Boot is the Spring framework's built-in MVC web application framework. Although Spring Boot suffers from some difficulties in terms of its ease of use, it is superbly designed and architected. For Grails, it was the perfect framework to build another framework on top of.
+
+Grails leverages Spring Boot in the following areas:
+
+* Basic controller logic - Grails subclasses Spring's {springapi}org/springframework/web/servlet/DispatcherServlet.html[DispatcherServlet] and uses it to delegate to Grails link:theWebLayer.html#controllers[controllers]
+* Data Binding and Validation - Grails' link:validation.html[validation] and link:theWebLayer.html#dataBinding[data binding] capabilities are built on those provided by Spring
+* Runtime configuration - Grails' entire runtime convention based system is wired together by a Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext]
+* Transactions - Grails uses Spring's transaction management in link:GORM.html[GORM]
+
+In other words Grails has Spring embedded running all the way through it.
+
+
+==== The Grails ApplicationContext
+
+
+Spring developers are often keen to understand how the Grails `ApplicationContext` instance is constructed. The basics of it are as follows.
+
+* GrailsAutoConfiguration registers GrailsApplicationPostProcessor bean. This bean configures the {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] instance and the {apiDocs}grails/plugins/GrailsPluginManager.html[GrailsPluginManager].
+
+* GrailsApplicationPostProcessor also implements `BeanDefinitionRegistryPostProcessor`, during `postProcessBeanDefinitionRegistry` it  executes `grails-app/conf/spring/resources.groovy` from the current application and then invokes the `doWithSpring` method for each plugin to ensure all the bean definitions are registered with application context.
+
+==== Configured Spring Beans
+
+Most of Grails' configuration happens at runtime. Each link:plugins.html[plugin] may configure Spring beans that are registered in the `ApplicationContext`. For a reference as to which beans are configured, refer to the reference guide which describes each of the Grails plugins and which beans they configure.

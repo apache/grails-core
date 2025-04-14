@@ -1,0 +1,37 @@
+Grails ships with a lot of command line functionality out of the box that you may find useful in your own scripts (See the command line reference in the reference guide for info on all the commands). 
+
+Any script you create can invoke another Grails script simply by invoking a method:
+
+[source,groovy]
+----
+testApp()
+----
+
+The above will invoke the `test-app` command. You can also pass arguments using the method arguments:
+
+[source,groovy]
+----
+testApp('--debug-jvm')
+----
+
+
+==== Invoking Gradle 
+
+
+Instead of invoking another Grails CLI command you can invoke Gradle directory using the `gradle` property.
+
+[source,groovy]
+----
+gradle.compileGroovy()
+----
+
+
+==== Invoking Ant
+
+
+You can also invoke Ant tasks from scripts which can help if you need to writing code generation and automation tasks:
+
+[source,groovy]
+----
+ant.mkdir(dir:"path")
+----

@@ -1,0 +1,78 @@
+The idea behind creating a new profile is that you can setup a default set of commands and plugins that are tailored to a particular technology or organisation.
+
+To create a new profile you can use the link:../ref/Command%20Line/create-profile.html[create-profile] command which will create a new empty profile that extends the base profile:
+
+[source,bash]
+----
+$ grails create-profile mycompany
+----
+
+The above command will create a new profile in the "mycompany" directory where the command is executed. If you start interactive mode within the directory you will get a set of commands for creating profiles:
+
+[source,bash]
+----
+$ cd mycompany
+$ grails
+| Enter a command name to run. Use TAB for completion:
+grails>
+
+create-command      create-creator-command      create-feature      create-generator-command    create-gradle-command   create-template
+----
+
+The commands are as follows:
+
+* `create-command` - creates a new command that will be available from the Grails CLI when the profile is used
+* `create-creator-command` - creates a command available to the CLI that renders a template (Example: create-controller)
+* `create-generator-command` - creates a command available to the CLI that renders a template based on a domain class (Example: generate-controller)
+* `create-feature` - creates a feature that can be used with this profile
+* `create-gradle-command` - creates a CLI command that can invoke gradle
+* `create-template` - creates a template that can be rendered by a command
+
+
+To customize the dependencies for your profile you can specify additional dependencies in `profile.yml`.
+
+Below is an example `profile.yml` file:
+
+[source,yaml]
+----
+features:
+    defaults:
+        - hibernate
+        - asset-pipeline
+build:
+    plugins:
+        - org.grails.grails-web
+    excludes:
+        - org.grails.grails-core
+dependencies:
+    - scope: compile
+      coords: "org.mycompany:myplugin:1.0.1"
+    - scope: testCompile
+      coords: org.spockframework:spock-core
+      excludes:
+        - group: org.codehaus.groovy
+          module: groovy-all
+----
+
+With the above configuration in place you can publish the profile to your local repository with `gradle install`:
+
+[source,bash]
+----
+$ gradle install
+----
+
+Your profile is now usable with the `create-app` command:
+
+[source,bash]
+----
+$ grails create-app myapp --profile mycompany
+----
+
+With the above command the application will be created with the "mycompany" profile which includes an additional dependency on the "myplugin" plugin and also includes the "hibernate" and "asset-pipeline" features (more on features later).
+
+Note that if you customize the dependency coordinates of the profile (group, version etc.) then you may need to use the fully qualified coordinates to create an application:
+
+[source,bash]
+----
+$ grails create-app myapp --profile com.mycompany:mycompany:1.0.1
+----

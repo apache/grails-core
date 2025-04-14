@@ -1,0 +1,66 @@
+
+== embedded
+
+
+
+=== Purpose
+
+
+Supports embedding domain components into domain classes - otherwise known as https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#gormComposition[composition].
+
+
+=== Examples
+
+
+Given these domain classes:
+
+[source,groovy]
+----
+class Person {
+
+    String name
+    Country bornInCountry
+    Country livesInCountry
+
+    static embedded = ['bornInCountry', 'livesInCountry']
+}
+
+// If you don't want an associated table created for this class, either
+// define it in the same file as Person or put Country.groovy under the
+// src/main/groovy directory.
+class Country {
+    String iso3
+    String name
+}
+----
+
+Grails will generate a `person` database table that looks like:
+
+[format="csv", options="header"]
+|===
+
+*Column*,*Type*
+NAME,VARCHAR(255)
+BORN_IN_COUNTRY_ISO3,VARCHAR(255)
+BORN_IN_COUNTRY_NAME,VARCHAR(255)
+LIVES_IN_COUNTRY_ISO3,VARCHAR(255)
+LIVES_IN_COUNTRY_NAME,VARCHAR(255)
+|===
+
+
+=== Description
+
+
+An embedded component does not store its data in its own table as a regular domain class relationship does. Instead, the data is included in the owner's table. So in the above example, the `Country` fields appear in the `person` table. This means that queries are faster because there is no join required, but you may end up with duplicate data across tables.
+
+The embedded component class is typically declared in the same source file as the owning class or in its own file under `src/main/groovy`. You _can_ put the component class under `grails-app/domain`, but if you do so Grails will automatically create a dedicated table for it. Putting the class under `src/main/groovy` is usually the best option because you can then share the component across multiple domain classes.
+
+Querying on embedded properties is no different from querying on regular relationships, so you can for example still do:
+
+[source,groovy]
+----
+Person.findAllByBornInCountry(brazil)
+Person.findAllByLivesInCountry(france)
+----
+
+where `brazil` and `france` are instances of `Country`.

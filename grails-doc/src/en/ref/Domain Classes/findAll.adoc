@@ -1,0 +1,108 @@
+
+== findAll
+
+
+
+=== Purpose
+
+
+Finds all of domain class instances matching the specified query
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// everything
+Book.findAll()
+
+// with a positional parameter
+Book.findAll("from Book as b where b.author=?", ['Dan Brown'])
+
+// 10 books from Dan Brown staring from 5th book ordered by release date
+Book.findAll("from Book as b where b.author=? order by b.releaseDate",
+             ['Dan Brown'], [max: 10, offset: 5])
+
+// examples with max/offset usage
+def query = "from Book as b where b.author='Dan Brown' order by b.releaseDate"
+
+// first 10 books
+Book.findAll(query, [max: 10])
+
+// 10 books starting from 5th
+Book.findAll(query, [max: 10, offset: 5])
+
+// examples with named parameters
+Book.findAll("from Book as b where b.author=:author",
+             [author: 'Dan Brown'])
+Book.findAll("from Book as b where b.author=:author",
+             [author: 'Dan Brown'], [max: 10, offset: 5])
+Book.findAll("from Book as b where b.author in (:authors)",
+             [authors: ['Dan Brown', 'Jack London']])
+
+// examples with tables join
+Book.findAll("from Book as b where not exists " +
+                "(from Borrow as br where br.book = b)")
+
+// query by example
+def example = new Book(author: "Dan Brown")
+Book.findAll(example)
+
+// Use where criteria (since Grails 2.0)
+def results = Person.findAll {
+     lastName == "Simpson"
+}
+def results = Person.findAll(sort:"firstName") {
+     lastName == "Simpson"
+}
+----
+
+
+=== Description
+
+
+The `findAll` method allows querying with Hibernate's query language https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#hql[HQL] and querying by example, returning all matching instances. Pagination can be controlled using the `max` and `offset` parameters:
+
+[source,groovy]
+----
+Book.findAll("from Book as b where b.author=:author",
+             [author: 'Dan Brown'], [max: 10, offset: 5])
+----
+
+The `findAll` method supports the 2nd level cache:
+
+[source,groovy]
+----
+Book.findAll("from Book as b where b.author=:author",
+             [author:'Dan Brown'], [max: 10, offset: 5, cache: true])
+----
+
+The basic syntax for the method is:
+
+[source,groovy]
+----
+Book.findAll()
+Book.findAll(String query)
+Book.findAll(String query, Collection positionalParams)
+Book.findAll(String query, Collection positionalParams, Map queryParams)
+Book.findAll(String query, Map namedParams)
+Book.findAll(String query, Map namedParams, Map queryParams)
+Book.findAll(Book example)
+Book.findAll(Closure whereCriteria)
+Book.findAll(Map queryParams, Closure whereCriteria)
+----
+
+NOTE: If you have a join in your HQL, the method will return a `List` of `Array`s containing domain class instances. You may wish to use link:executeQuery.html[executeQuery] in this case so you have more flexibility in specifying what gets returned.
+
+Parameters:
+
+* `query` - An HQL query
+* `positionalParams` - A `List` of parameters for a positional parametrized HQL query
+* `namedParams` - A `Map` of named parameters a HQL query
+* `queryParams` - A `Map` containing parameters 'max', and/or 'offset' and/or 'cache'
+* `example` - An instance of the domain class for query by example
+* `readOnly` - `true` if returned objects should not be automatically dirty-checked (simlar to `read()`)
+* `fetchSize` - number of rows fetched by the underlying JDBC driver per round trip
+* `flushMode` - Hibernate `FlushMode` override, defaults to `FlushMode.AUTO`
+* `timeout` - query timeout in seconds

@@ -1,0 +1,26 @@
+
+== creditCard
+
+
+
+=== Purpose
+
+
+Validates that a String value is a valid credit card number
+
+
+=== Examples
+
+
+[source,groovy]
+----
+cardNumber creditCard: true
+----
+
+
+=== Description
+
+
+Set to `true` if a string must be a credit card number. Internally uses the `org.apache.commons.validator.CreditCardValidator` class.
+
+Error Code: `className.propertyName.creditCard.invalid`

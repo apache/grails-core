@@ -1,0 +1,48 @@
+
+== findWhere
+
+
+
+=== Purpose
+
+
+Uses named arguments corresponding to domain class property names to execute a query returning the first matching result.
+
+
+=== Examples
+
+
+Given the domain class:
+
+[source,groovy]
+----
+class Book {
+
+   String title
+   Date releaseDate
+   String author
+
+   static constraints = {
+      releaseDate nullable: true
+   }
+}
+----
+
+You can query in the form:
+
+[source,groovy]
+----
+def book = Book.findWhere(author: "Stephen King", title: "The Stand")
+
+boolean isReleased = Book.findWhere(author: "Stephen King",
+                                    title: "The Stand",
+                                    releaseDate: null) != null
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `queryParams` - A `Map` of key/value pairs to be used in the query

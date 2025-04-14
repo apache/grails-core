@@ -1,0 +1,28 @@
+
+== isAttached
+
+
+
+=== Purpose
+
+
+Returns whether the domain instance is attached to a currently active Hibernate session. This method is often used on conjunction with the link:merge.html[merge] or link:attach.html[attach] methods.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+Book b = session.book
+...
+if (!b.isAttached()) {
+    b.attach()
+}
+----
+
+
+=== Description
+
+
+Persistent instances are associated with a persistence Session. A new Session is created for each request and is closed at the end of the request. If an object is read from the session and placed into a web scope such as the HttpSession it is seen as detached, since the persistence session has been closed. You can use the link:attach.html[attach] method to re-attach an existing persistent instance to the persistence session of the current request.

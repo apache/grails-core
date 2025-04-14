@@ -1,0 +1,48 @@
+
+== bindData
+
+
+
+=== Purpose
+
+
+Allows fine-grained control of binding request parameters from strings onto objects and the necessary types (data binding).
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// binds request parameters to a target object
+bindData(target, params)
+
+// exclude firstName and lastName
+bindData(target, params, [exclude: ['firstName', 'lastName']])
+
+// only use parameters starting with "author." e.g. author.email
+bindData(target, params, "author")
+bindData(target, params, [exclude: ['firstName', 'lastName']], "author")
+
+// using inclusive map
+bindData(target, params, [include: ['firstName', 'lastName']], "author")
+----
+
+
+=== Description
+
+
+Usage: `bindData(target, params, includesExcludes*, prefix*)`
+
+Arguments:
+
+* `target` - The target object to bind to
+* `params` - A `Map` of source parameters, often the link:params.html[params] object when used in a controller
+* `includesExcludes` - (Optional) A map with 'include' and/or 'exclude' lists containing the names of properties to either include or exclude.
+* `prefix` - (Optional) A string representing a prefix to use to filter parameters. The method will automatically append a '.' when matching the prefix to parameters, so you can use 'author' to filter for parameters such as 'author.name'.
+
+NOTE: Note that if an empty List or no List is provided as a value for the `include` parameter then all statically typed instance properties will be subject to binding if they are not explicitly excluded. See the link:../Constraints/bindable.html[bindable] constraint documentation for more information on how to control what is bindable and what is not.
+
+The underlying implementation uses Spring's Data Binding framework. If the target is a domain class, type conversion errors are stored in the `errors` property of the domain class.
+
+Refer to the section on link:{guidePath}/theWebLayer.html#dataBinding[data binding] in the user guide for more information.

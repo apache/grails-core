@@ -1,0 +1,191 @@
+
+== namedQueries
+
+_namedQueries are deprecated. Use https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#whereQueries[where] queries instead._
+
+=== Purpose
+
+
+The `namedQueries` static property defines named queries.  Named queries support the criteria builder syntax.  See the section on the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#criteria[Criteria Builder] in the user guide for more information.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Publication {
+
+   String title
+   String author
+   Date datePublished
+   Integer numberOfPages
+
+   static namedQueries = {
+       recentPublications {
+           def now = new Date()
+           gt 'datePublished', now - 365
+       }
+
+       oldPublicationsLargerThan { pageCount ->
+           def now = new Date()
+           lt 'datePublished', now - 365
+           gt 'numberOfPages', pageCount
+       }
+
+       publicationsWithBookInTitle {
+           like 'title', '%Book%'
+       }
+
+       recentPublicationsWithBookInTitle {
+           // calls to other named queries...
+           recentPublications()
+           publicationsWithBookInTitle()
+      }
+   }
+}
+----
+
+[source,groovy]
+----
+// get all recent publications...
+def recentPubs = Publication.recentPublications.list()
+
+// get up to 10 recent publications, skip the first 5...
+def recentPubs = Publication.recentPublications.list(max: 10, offset: 5)
+
+// get a single recent publication
+def recentPub = Publication.recentPublications.get()
+
+// get the number of recent publications...
+def numberOfRecentPubs = Publication.recentPublications.count()
+
+// get a recent publication with a specific id...
+def pub = Publication.recentPublications.get(42)
+
+// get all recent publications where title = 'Some Title'
+def pubs = Publication.recentPublications.findAllWhere(title: 'Some Title')
+
+// get a recent publication where title = 'Some Title'
+def pub = Publication.recentPublications.findWhere(title: 'Some Title')
+
+// dynamic finders are supported
+def pubs = Publication.recentPublications.findAllByTitle('Some Title')
+
+// get all old publications with more than 350 pages
+def pubs = Publication.oldPublicationsLargerThan(350).list()
+
+// get all old publications with more than 350 pages
+// and the word 'Grails' in the title
+def pubs = Publication.oldPublicationsLargerThan(350).findAllByTitleLike('%Grails%')
+
+// get all recent publications with 'Book' in their title
+def pubs = Publication.recentPublicationsWithBookInTitle().list()
+----
+
+The `list` method on named queries supports the same attributes as the static `list` method added to domain classes (sort, order, ignoreCase, fetch etc...).  See the link:list.html[list] docs for details.
+
+NOTE: Note that calling something like `Publication.recentPublications.get(42)` is not the same as calling something like `Publication.get(42)`.  The former will only return a `Publication` if the `Publication` with id 42 meets all the criteria defined in the `recentPublications` named query.
+
+Named criteria support `listDistinct()`:
+
+[source,groovy]
+----
+class PlantCategory {
+
+    Set plants
+    String name
+
+    static hasMany = [plants: Plant]
+
+    static namedQueries = {
+        withPlantsInPatch {
+            plants {
+                eq 'goesInPatch', true
+            }
+        }
+    }
+}
+----
+
+[source,groovy]
+----
+class Plant {
+    boolean goesInPatch
+    String name
+}
+----
+
+[source,groovy]
+----
+PlantCategory.withPlantsInPatch.listDistinct()
+----
+
+Named criteria support additional criteria being supplied at invocation time in the form of a criteria closure:
+
+[source,groovy]
+----
+// get all recent publications with author names beginning with Tony or Phil...
+def books = Publication.recentPublications {
+    or {
+        like 'author', 'Tony%'
+        like 'author', 'Phil%'
+    }
+}
+
+// get the number of recent publications with
+// author names beginning with Tony or Phil...
+def numberOfBooks = Publication.recentPublications.count {
+    or {
+        like 'author', 'Tony%'
+        like 'author', 'Phil%'
+    }
+}
+----
+
+Named criteria may be chained together.  When criteria are chained together, the query will be generated as if all of the chained criteria had been combined in a single criteria closure.
+
+[source,groovy]
+----
+// recent publications with 'Book' in the title
+def books = Publication.recentPublications.publicationsWithBookInTitle.list()
+
+// old publications with more than 500 pages and with 'Book' in the title
+def books = Publication.oldPublicationsLargerThan(500)
+                       .publicationsWithBookInTitle
+                       .list()
+----
+
+When a named query involves a domain class relationship and the relationship class defines a named query, that named query may be accessed directly as a method call.  An example:
+
+[source,groovy]
+----
+class Author {
+
+    static hasMany = [publications: Publication]
+
+    static namedQueries = {
+         authorsWithRecentPublications {
+             publications {
+                 // invoking a named query defined in the Publication class...
+                 recentPublications()
+             }
+         }
+    }
+}
+----
+
+[source,groovy]
+----
+class Publication {
+
+    Author author
+
+    static namedQueries = {
+        recentPublications {
+            def now = new Date()
+            gt 'datePublished', now - 10
+        }
+    }
+}
+----

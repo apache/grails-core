@@ -1,0 +1,39 @@
+
+== fetchMode
+
+
+
+=== Purpose
+
+
+Allows the configuration of an associations fetch strategy. Default to lazy: true, other options are lazy: false or fetch: 'join'
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books lazy: false
+    }
+}
+----
+
+In this example the `book` association should be fetching eagerly
+
+
+=== Description
+
+
+By default associations in Grails are fetched lazily (each record is read from the database only when it is first accessed from the collection). This makes sense for most cases, however in the case where you have a small number of records to fetch and/or are repeatedly required to load lazy associations (resulting in N+1 queries) it makes sense to use eager fetching.
+
+In the case of eager fetching and a one-to-many association, the instance as well as the association will be initialized when they are loaded (eagerly). However, caution should be observed when using eager fetching, since being too eager can result in your entire database being loaded into memory!
+
+For more information see the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/#fetchingDSL[Eager and Lazy Fetching] in the user guide.

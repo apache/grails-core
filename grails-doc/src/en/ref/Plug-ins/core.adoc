@@ -1,0 +1,21 @@
+
+== core
+
+
+
+=== Purpose
+
+
+The core plugin adds methods and beans that other plugins rely upon
+
+
+=== Description
+
+
+This plugin configures Grails to use Spring MVC at its core to deal with web requests. The plugin configures the `GrailsDispatcherServlet` and necessary Spring beans (see below) for controllers, tag libraries and Groovy Server Pages (GSP)
+
+Configured Spring Beans:
+
+* `classLoader` - A bean that refers to the GroovyClassLoader used to load this GrailsApplication
+* `classEditor` - A PropertyEditor that populates classes with String data
+* `customEditors` - An instance of {springapi}org/springframework/beans/factory/config/CustomEditorConfigurer.html[CustomEditorConfigurer], that uses allows the `classEditor` bean to be used as a `PropertyEditor`

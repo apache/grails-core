@@ -1,0 +1,28 @@
+
+=== Controller Usage
+
+
+A controller fulfills the C in the Model View Controller (MVC) pattern and is responsible for handling web requests. In Grails a controller is a class with a name that ends in the convention "Controller" and lives in the `grails-app/controllers` directory. A controller can be created with the link:../Command%20Line/create-controller.html[create-controller] command:
+
+[source,groovy]
+----
+grails create-controller org.bookstore.hello
+----
+
+or with your favourite IDE or text editor.
+
+[source,groovy]
+----
+package org.bookstore
+
+class HelloController {
+
+    def world() {
+        render "Hello World!"
+    }
+}
+----
+
+Each action in the controller is a method or a Closure and it has access to a number of implicit variables and methods.
+
+Refer to the user guide topic on link:{guidePath}/theWebLayer.html#controllers[Controllers] for more information.

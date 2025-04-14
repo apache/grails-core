@@ -1,0 +1,36 @@
+
+===== run-command
+
+
+
+===== Purpose
+
+
+Execute Grails Commands defined in `grails-app/commands` or in plugins.
+
+
+===== Examples
+
+
+[source,java]
+----
+grails run-command hello-world
+
+./gradlew runCommand -Pargs="helloWorld"
+----
+
+The above scripts will expect `grails-app/commands/HelloWorldCommand.groovy` to exist in the application or in a plugin your application depends on.
+
+
+===== Description
+
+
+Usage:
+[source,java]
+----
+grails <<env>>* run-command <<command>>
+----
+
+Arguments:
+
+* `command` - Which command to run

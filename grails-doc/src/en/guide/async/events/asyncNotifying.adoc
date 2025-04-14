@@ -1,0 +1,34 @@
+The simplest way to trigger event notification is via the link:{asyncApi}/grails/events/annotation/Publisher.html[Publisher] annotation.
+
+For example:
+
+[source,groovy]
+.SumService.groovy
+----
+import grails.events.annotation.*
+...
+include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/annotation/PubSubSpec.groovy[tags=publisher]
+----
+
+What the above does is take the return value of the method and publish an event using an event `id` that is the same as the method name.
+
+If you wish to change the event `id` you can provide a value to `@Publisher`:
+
+[source,groovy]
+----
+@Publisher('myEvent')
+----
+
+If you want more flexiblity then you could simulate the behaviour of annotation by writing the following code:
+
+[source,groovy]
+.SumService.groovy
+----
+import grails.events.*
+...
+include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/ManualPubSubSpec.groovy[tags=publisher]
+----
+
+Notice in the above example, the link:{asyncApi}/grails/events/EventPublisher.html[EventPublisher] trait is explicitly implemented.
+
+Although generally the annotation approach is recommended because it is simpler and more concise, the `EventPublisher` trait does provide more flexibility in terms of being able to publish multiple events in a single method and so on.

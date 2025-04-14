@@ -1,0 +1,34 @@
+
+== dynamicInsert
+
+
+
+=== Purpose
+
+
+Whether to dynamically build `INSERT` queries
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+
+    ...
+    static mapping = {
+        dynamicInsert true
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `dynamicInsert(boolean)`
+
+By default Hibernate generates all queries at startup and caches them. This helps performance since insert, update, and delete queries don't have to be dynamically generated at runtime. However, there are certain circumstances where dynamic queries are useful.
+
+For example if you were using custom `UserType` to hash passwords, every time an UPDATE occurred, the password would get re-hashed. The `dynamicInsert` method lets you turn off the dynamic creation of queries that uses only the properties that are needed to perform the insert.

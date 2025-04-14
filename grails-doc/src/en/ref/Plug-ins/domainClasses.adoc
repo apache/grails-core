@@ -1,0 +1,37 @@
+
+== domainClass
+
+
+
+=== Purpose
+
+
+The `domainClass` plugin configures Grails domain classes as prototyped beans in the Spring `ApplicationContext`
+
+
+=== Examples
+
+
+An example domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date releaseDate
+    Author author
+}
+----
+
+
+=== Description
+
+
+Refer to the section on link:https://gorm.grails.org/{gormVersion}/hibernate/manual/[GORM] in the Grails user guide which details how to create Grails domain classes.
+
+Configured Spring Beans given a domain class of `Book`:
+
+* `BookValidator` - A {apiDocs}org/grails/validation/GrailsDomainClassValidator.html[GrailsDomainClassValidator] that validates a domain class' defined link:validation.html#constraints[Constraints].
+* `BookPersistentClass` - The `Class` for the domain class `Book`
+* `BookDomainClass` - The {apiDocs}grails/core/GrailsDomainClass.html[GrailsDomainClass] instance which understands the conventions defined within a domain class and is used by link:../../guide/GORM.html[GORM] to perform ORM mapping.
+* `Book` - A prototyped bean that will create a new instance of `Book` every time requested. This bean is used to perform auto-wiring of domain classes when constructed with the `new` operator.

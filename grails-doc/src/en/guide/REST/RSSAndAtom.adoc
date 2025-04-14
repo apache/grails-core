@@ -1,0 +1,1 @@
+No direct support is provided for RSS or Atom within Grails. You could construct RSS or ATOM feeds with the link:../ref/Controllers/render.html[render] method's XML capability.

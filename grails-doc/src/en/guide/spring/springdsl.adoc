@@ -1,0 +1,164 @@
+This Bean builder in Grails aims to provide a simplified way of wiring together dependencies that uses Spring at its core.
+
+In addition, Spring's regular way of configuration (via XML and annotations) is static and difficult to modify and configure at runtime, other than programmatic XML creation which is both error prone and verbose. Grails' {apiDocs}grails/spring/BeanBuilder.html[BeanBuilder] changes all that by making it possible to programmatically wire together components at runtime, allowing you to adapt the logic based on system properties or environment variables.
+
+This enables the code to adapt to its environment and avoids unnecessary duplication of code (having different Spring configs for test, development and production environments)
+
+
+==== The BeanBuilder class
+
+
+Grails provides a {apiDocs}grails/spring/BeanBuilder.html[grails.spring.BeanBuilder] class that uses dynamic Groovy to construct bean definitions. The basics are as follows:
+
+[source,groovy]
+----
+import org.apache.commons.dbcp.BasicDataSource
+import org.grails.orm.hibernate.ConfigurableLocalSessionFactoryBean
+import org.springframework.context.ApplicationContext
+import grails.spring.BeanBuilder
+
+def bb = new BeanBuilder()
+
+bb.beans {
+
+    dataSource(BasicDataSource) {
+        driverClassName = "org.h2.Driver"
+        url = "jdbc:h2:mem:grailsDB"
+        username = "sa"
+        password = ""
+    }
+
+    sessionFactory(ConfigurableLocalSessionFactoryBean) {
+        dataSource = ref('dataSource')
+        hibernateProperties = ["hibernate.hbm2ddl.auto": "create-drop",
+                               "hibernate.show_sql":     "true"]
+    }
+}
+
+ApplicationContext appContext = bb.createApplicationContext()
+----
+
+NOTE: Within link:plugins.html[plugins] and the `grails-app/conf/spring/resources.groovy` file you don't need to create a new instance of `BeanBuilder`. Instead the DSL is implicitly available inside the `doWithSpring` and `beans` blocks respectively.
+
+This example shows how you would configure Hibernate with a data source with the `BeanBuilder` class.
+
+Each method call (in this case `dataSource` and `sessionFactory` calls) maps to the name of the bean in Spring. The first argument to the method is the bean's class, whilst the last argument is a block. Within the body of the block you can set properties on the bean using standard Groovy syntax.
+
+Bean references are resolved automatically using the name of the bean. This can be seen in the example above with the way the `sessionFactory` bean resolves the `dataSource` reference.
+
+Certain special properties related to bean management can also be set by the builder, as seen in the following code:
+
+[source,groovy]
+----
+sessionFactory(ConfigurableLocalSessionFactoryBean) { bean ->
+    // Autowiring behaviour. The other option is 'byType'. <<autowire>>
+    bean.autowire = 'byName'
+    // Sets the initialisation method to 'init'. [init-method]
+    bean.initMethod = 'init'
+    // Sets the destruction method to 'destroy'. [destroy-method]
+    bean.destroyMethod = 'destroy'
+    // Sets the scope of the bean. <<scope>>
+    bean.scope = 'request'
+    dataSource = ref('dataSource')
+    hibernateProperties = ["hibernate.hbm2ddl.auto": "create-drop",
+                           "hibernate.show_sql":     "true"]
+}
+----
+
+The strings in square brackets are the names of the equivalent bean attributes in Spring's XML definition.
+
+
+==== Using BeanBuilder with Spring MVC
+
+
+Include the `grails-spring-<version>.jar` file in your classpath to use BeanBuilder in a regular Spring MVC application. Then add the following `<context-param>` values to your `/WEB-INF/web.xml` file:
+
+[source,xml]
+----
+<context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>/WEB-INF/applicationContext.groovy</param-value>
+</context-param>
+
+<context-param>
+    <param-name>contextClass</param-name>
+    <param-value>
+      grails.web.servlet.context.GrailsWebApplicationContext
+    </param-value>
+</context-param>
+----
+
+Then create a `/WEB-INF/applicationContext.groovy` file that does the rest:
+
+[source,groovy]
+----
+import org.apache.commons.dbcp.BasicDataSource
+
+beans {
+    dataSource(BasicDataSource) {
+        driverClassName = "org.h2.Driver"
+        url = "jdbc:h2:mem:grailsDB"
+        username = "sa"
+        password = ""
+    }
+}
+----
+
+
+==== Loading Bean Definitions from the File System
+
+
+You can use the `BeanBuilder` class to load external Groovy scripts that define beans using the same path matching syntax defined here. For example:
+
+[source,groovy]
+----
+def bb = new BeanBuilder()
+bb.loadBeans("classpath:*SpringBeans.groovy")
+
+def applicationContext = bb.createApplicationContext()
+----
+
+Here the `BeanBuilder` loads all Groovy files on the classpath ending with `SpringBeans.groovy` and parses them into bean definitions. An example script can be seen below:
+
+[source,groovy]
+----
+import org.apache.commons.dbcp.BasicDataSource
+import org.grails.orm.hibernate.ConfigurableLocalSessionFactoryBean
+
+beans {
+
+    dataSource(BasicDataSource) {
+        driverClassName = "org.h2.Driver"
+        url = "jdbc:h2:mem:grailsDB"
+        username = "sa"
+        password = ""
+    }
+
+    sessionFactory(ConfigurableLocalSessionFactoryBean) {
+        dataSource = dataSource
+        hibernateProperties = ["hibernate.hbm2ddl.auto": "create-drop",
+                               "hibernate.show_sql":     "true"]
+    }
+}
+----
+
+
+==== Adding Variables to the Binding (Context)
+
+
+If you're loading beans from a script you can set the binding to use by creating a Groovy `Binding`:
+
+[source,groovy]
+----
+def binding = new Binding()
+binding.maxSize = 10000
+binding.productGroup = 'finance'
+
+def bb = new BeanBuilder()
+bb.binding = binding
+bb.loadBeans("classpath:*SpringBeans.groovy")
+
+def ctx = bb.createApplicationContext()
+----
+
+Then you can access the `maxSize` and `productGroup` properties in your DSL files.

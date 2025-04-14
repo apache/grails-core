@@ -1,0 +1,59 @@
+
+== fetch
+
+
+
+=== Purpose
+
+
+Configures the fetching behavior of an association.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Author {
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books fetch: 'join'
+    }
+}
+----
+
+
+=== Description
+
+
+Usage: `association_name(fetch:string)`
+
+Arguments:
+
+* `fetchStrategy` - The fetching strategy to use. Either `join` or `select`.
+
+By default GORM assumes fetching of associations is done using a `SELECT` when the association is accessed. If you prefer that the association be fetched eagerly at the same time then you can override the behavior:
+
+[source,groovy]
+----
+class Author {
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books fetch: 'join'
+    }
+}
+----
+
+Here the `books` association will be fetched using a join at the same time the author is retrieved, for example:
+
+[source,groovy]
+----
+def author = Author.get(1)
+// the books collection is pre-initialized - no risk of lazy loading exceptions
+----
+
+Note that excessive use of joins can be a performance bottleneck. See the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.

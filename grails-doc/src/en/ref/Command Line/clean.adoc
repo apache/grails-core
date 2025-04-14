@@ -1,0 +1,27 @@
+== clean
+
+
+
+=== Purpose
+
+
+The `clean` command deletes all compiled resources from the application. Since Groovy is a compiled language, as with Java, this is sometimes useful to clear old instances of classes and ensure correct compilation. It's also a good idea to run this script before running tests or creating a WAR file to ensure a full compilation occurs.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails clean
+----
+
+
+=== Description
+
+
+Usage:
+[source,groovy]
+----
+grails clean
+----

@@ -1,0 +1,101 @@
+
+== generate-views
+
+
+
+=== Purpose
+
+
+Generates GSP views for the given domain class
+
+
+=== Examples
+
+
+[source,groovy]
+----
+grails generate-views
+grails generate-views org.bookstore.Book
+grails generate-views "*"
+----
+
+
+=== Description
+
+
+Grails supports a feature known as static scaffolding which involves the generation of a CRUD (Create/Read/Update/Delete) interface for a given domain class. Once generated, the controller and its views can be modified by you but they won't automatically update when you change the domain class.
+
+The `generate-views` command generates just the GSP views that implement CRUD for the given domain class. The argument is optional, but if you don't include it the command will ask you for the name of the domain class to scaffold. So for a domain class `org.bookstore.Book`, the command will generate the appropriate 'list', 'show', 'create' and 'edit' views in `grails-app/views/book`.
+
+Usage:
+
+[source,groovy]
+----
+grails generate-views <<domain class name>>
+----
+
+Arguments:
+
+* `domain class name` - Either a domain class name (case-sensitive) or a wildcard (\*). If you specify the wildcard then views will be generated for _all_ domain classes.
+
+
+
+== Gradle runCommand `generate-views` Command
+
+=== Purpose
+
+The purpose of the `generate-views` command in Grails is to generate GSP (Groovy Server Pages) views for a specified domain class.
+
+=== Examples
+
+Here are some usage examples of the `generate-views` command:
+
+1. Generate GSP views for a specific domain class, such as `org.bookstore.Book`, using Gradle's `runCommand`:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-views org.bookstore.Book"
+----
+
+2. Generate GSP views for all domain classes using a wildcard (`*`), again using Gradle's `runCommand`:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-views *"
+----
+
+3. Generate GSP views interactively, allowing the user to specify the domain class name, with Gradle's `runCommand`:
++
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-views"
+----
+
+=== Description
+
+Grails incorporates a feature known as static scaffolding, simplifying the creation of a CRUD (Create/Read/Update/Delete) interface for a given domain class. This interface usually includes GSP views for listing, displaying details, creating, and editing records. However, it's important to note that once these views are generated, they do not automatically update when changes are made to the underlying domain class.
+
+The `generate-views` command addresses this issue by generating only the necessary GSP views required to implement CRUD functionality for the specified domain class. You can provide the domain class name as an argument. If you omit the argument, the command will interactively prompt you to enter the name of the domain class you want to scaffold.
+
+For instance, if your domain class is `org.bookstore.Book`, executing the `generate-views` command will create the following views:
+
+- List View: Displays a list of records.
+- Show View: Displays the details of a single record.
+- Create View: Provides a form for creating new records.
+- Edit View: Provides a form for editing existing records.
+
+These views will be generated in the appropriate directory within your Grails project.
+
+Usage:
+[source,shell]
+----
+./gradlew runCommand -Pargs="generate-views <<domain class name>>"
+----
+
+=== Arguments
+
+The `generate-views` command accepts the following argument:
+
+* `domain class name` - Specifies the name of the domain class for which you want to generate the GSP views. This argument is case-sensitive. Additionally, you can use a wildcard (`*`) as the argument to generate views for all domain classes within your Grails application.
+
+By utilizing the `generate-views` command, Grails developers can efficiently create GSP views tailored to specific domain classes or generate them for all classes within their application. This facilitates the presentation and interaction with data through a web interface while allowing for customization of views as needed.

@@ -1,0 +1,51 @@
+In addition to the higher level async features discussed earlier in the section, you can access the raw Servlet 3.0 asynchronous API from a Grails application.
+
+
+==== Servlet 3.0 Asynchronous Rendering
+
+To do so your should first implement the `grails.async.web.AsyncController` trait in your controller:
+
+[source,groovy]
+----
+import grails.async.web.*
+
+...
+class BookController implements AsyncController {
+    ...
+}
+----
+
+You can render content (templates, binary data etc.) in an asynchronous manner by calling the `startAsync` method which returns an instance of the Servlet 3.0 `AsyncContext`. Once you have a reference to the `AsyncContext` you can use Grails' regular render method to render content:
+
+[source,groovy]
+----
+def index() {
+    def ctx = startAsync()
+    ctx.start {
+        new Book(title:"The Stand").save()
+        render template:"books", model:[books:Book.list()]
+        ctx.complete()
+    }
+}
+----
+
+Note that you must call the `complete()` method to terminate the connection. 
+
+
+==== Resuming an Async Request
+
+
+You resume processing of an async request (for example to delegate to view rendering) by using the `dispatch` method of the `AsyncContext` class:
+
+[source,groovy]
+----
+def index() {
+    def ctx = startAsync()
+    ctx.start {
+        // do working
+        ...
+        // render view
+        ctx.dispatch()
+    }
+}
+----

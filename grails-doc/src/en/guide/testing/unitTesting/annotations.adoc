@@ -1,0 +1,43 @@
+
+=== @RunOnce
+
+The `grails.testing.spock.RunOnce` annotation may be applied to any Spock test
+fixture method that you wish to be executed only once.  This is useful when
+applied in conjunction with a fixture annnotation like `@Before` as shown below.
+
+[source,groovy]
+.src/test/groovy/grails/testing/spock/RunOnceSpec.groovy
+----
+include::{sourcedir}/grails-testing-support/src/test/groovy/grails/testing/spock/RunOnceSpec.groovy[indent=0]
+----
+
+Applying both the `@RunOnce` and `@Before` annotations to a method will yield
+behavior similar to the behavior associated with Spock's `setupSpec` method but
+an important difference is that `setupSpec` is run before the test instance is
+subjected to dependency injection while `@Before` methods are run after the
+test instance is subjected to dependency injection.  This means that the
+`setupSpec` method will not have access to injected variables but methods marked
+with `@Before` will have access to injected variables.  If a test has some one
+time setup logic that needs to be executed after dependency injection happens,
+the `RunOnce` annotation can help accomplish that.
+
+=== @OnceBefore
+
+The `grails.testing.spock.OnceBefore` annotation is a shorthand way of
+accomplishing the same behavior that would be accomplished by applying both the
+`@RunOnce` and `@Before` annotations to a fixture method.
+
+[source,groovy]
+.src/test/groovy/grails/testing/spock/OnceBeforeSpec.groovy
+----
+include::{sourcedir}/grails-testing-support/src/test/groovy/grails/testing/spock/OnceBeforeSpec.groovy[indent=0]
+----
+
+This is useful in the context of an integration test which wants to reference
+dependency injected values during setup as shown below.
+
+[source,groovy]
+.src/integration-test/groovy/demo/DependencyInjectionSpec.groovy
+----
+include::{functionalSourceDir}/demo33/src/integration-test/groovy/demo/DependencyInjectionSpec.groovy[indent=0]
+----

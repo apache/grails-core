@@ -1,0 +1,47 @@
+
+== codecs
+
+
+
+=== Purpose
+
+
+Provides the facility to register encoders and decoders of textual data as methods on any object
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class HTMLCodec {
+    static encode = { theTarget ->
+        HtmlUtils.htmlEscape(theTarget.toString())
+    }
+    static decode = { theTarget ->
+        HtmlUtils.htmlUnescape(theTarget.toString())
+    }
+}
+assert "&lt;p&gt;Hello World!&lt;/p&gt;" == "<p>Hello World!</p>".encodeAsHTML()
+assert "<p>Hello World!</p>" == "&lt;p&gt;Hello World!&lt;/p&gt;".decodeHTML()
+----
+
+
+=== Description
+
+
+This plugin searches for classes with names that end in the convention `Codec` and dynamically registers `encodeAs<<Codec>>` and `decode<<Codec>>` methods on `java.lang.Object` so that any data can be encoded and decoded. For more information refer to the section of link:{guidePath}/security.html#codecs[Encoding and Decoding Objects] in the user guide.
+
+Provided Codecs:
+
+* `HTMLCodec` - encodes/decodes HTML mark-up
+* `URLCodec` - encodes/decodes URLs
+* `JavascriptCodec` - encodes (escapes) JavaScript
+* `Base64Codec` - encodes/decodes Base64 data
+* `HexCodec` - encodes a byte array or list of integers into a hex string, and decodes hex strings into byte array
+* `MD5Codec` - encodes a byte array or list of integers, or the characters of a string (using default system encoding) into an MD5 digest as a hex string
+* `MD5BytesCodec` - encodes a byte array or list of integers, or the characters of a string (using default system encoding) into an MD5 digest as a byte array
+* `SHA1Codec` - encodes a byte array or list of integers, or the characters of a string (using default system encoding) into an SHA1 digest as a hex string
+* `SHA1BytesCodec` - encodes a byte array or list of integers, or the characters of a string (using default system encoding) into an SHA1 digest as a byte array
+* `SHA256Codec` - encodes a byte array or list of integers, or the characters of a string (using default system encoding) into an SHA256 digest as a hex string
+* `SHA256BytesCodec` - encodes byte array or list of integers, or the characters of a string (using default system encoding) into an SHA256 digest as a byte array

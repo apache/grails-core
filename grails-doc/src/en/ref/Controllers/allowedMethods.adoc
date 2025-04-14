@@ -1,0 +1,82 @@
+
+== allowedMethods
+
+
+
+=== Purpose
+
+
+Limits access to controller actions based on the HTTP request method, sending a 405 (Method Not Allowed) error code when an incorrect HTTP method is used.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class PersonController {
+    // action1 may be invoked from a POST
+    // action2 has no restrictions
+    // action3 may be invoked from a POST or DELETE
+    static allowedMethods = [action1:'POST',
+                             action3:['POST', 'DELETE']]
+    def action1() { ... }
+    def action2() { ... }
+    def action3() { ... }
+}
+----
+
+
+=== Description
+
+
+The `allowedMethods` property provides a simple declarative syntax to specify which HTTP methods are allowed for your controller actions. By default, all request methods are allowed for all controller actions. The `allowedMethods` property is optional and only needs to be defined if the controller has actions to be restricted to certain request methods.
+
+You can do these checks programmatically in the controller actions and send a 405 error code yourself, but this tends to clutter the controller methods which should focus more on application logic and routing. This approach might not be sufficient in more complex scenarios, and in those cases it's fine to handle things yourself.
+
+The `allowedMethods` property is a Map, where the keys are the names of actions to be restricted and the values are either a `String` or a `List` of `String`. If the value is a `String`, it represents the only request method that may be used to invoke that action. If it is a `List` of `String`, it represents all of the request methods that may be used to invoke that action. If the specified restrictions are violated then a 405 error code is returned in the response.
+
+For example this code prevents the `delete` action from being invoked using an HTTP GET:
+
+[source,groovy]
+----
+class PersonController {
+    def delete() {
+        if (request.method == 'GET') {
+            // redirect to the list action
+            redirect(action: list)
+        } else {
+            // the rest of the delete action goes here
+        }
+    }
+}
+----
+
+It could instead return a 405 error code rather than redirecting:
+
+[source,groovy]
+----
+class PersonController {
+    def delete() {
+        if (request.method == 'GET') {
+            response.sendError(405)
+        } else {
+            // the rest of the delete action goes here
+        }
+    }
+}
+----
+
+But the cleanest solution is to use `allowedMethods`:
+
+[source,groovy]
+----
+class PersonController {
+
+    static allowedMethods = [save: "POST", update: "POST", delete: "POST"]
+
+    def delete() {
+        // the delete logic goes here
+    }
+}
+----

@@ -1,0 +1,20 @@
+
+== properties
+
+
+
+=== Purpose
+
+
+Allows access to the domain class properties as a Map and is typically used for link:{guidePath}/theWebLayer.html#dataBinding[data binding] to perform type conversions allowing properties to be set from request parameters or other Maps.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = new Book(title: "The Shining")
+b.properties = params
+b.save()
+----

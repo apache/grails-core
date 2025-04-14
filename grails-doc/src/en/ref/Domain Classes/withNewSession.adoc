@@ -1,0 +1,28 @@
+
+== withNewSession
+
+
+
+=== Purpose
+
+
+Provides a way to execute code within the context of a new Hibernate session which shares the same transactional (JDBC Connection) resource as the currently bound session.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+Book.withNewSession { session ->
+    // do work
+}
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `closure` - A closure which accepts a `Session` argument

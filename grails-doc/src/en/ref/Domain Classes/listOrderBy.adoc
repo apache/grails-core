@@ -1,0 +1,35 @@
+
+== listOrderBy*
+
+
+
+=== Purpose
+
+
+Lists all of the instances of the domain class ordered by the property in the method expression
+
+
+=== Examples
+
+
+[source,groovy]
+----
+// everything
+def results = Book.listOrderByAuthor()
+
+// 10 results
+def results = Book.listOrderByTitle(max: 10)
+
+// 10 results, offset from 100
+def results = Book.listOrderByTitle(max: 10, offset: 100, order: "desc")
+----
+
+
+=== Description
+
+
+Parameters:
+
+* `max` - The maximum number to list
+* `offset` - The offset from the first result to list from
+* `order` - The order to list by, either `"desc"` or `"asc"`

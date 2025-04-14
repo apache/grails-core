@@ -1,0 +1,74 @@
+
+== belongsTo
+
+
+
+=== Purpose
+
+
+Defines a "belongs to" relationship where the class specified by `belongsTo` assumes ownership of the relationship. This has the effect of controlling how saves and deletes cascade. The exact behaviour depends on the type of relationship:
+
+* Many-to-one/one-to-one: saves and deletes cascade from the owner to the dependant (the class with the `belongsTo`).
+* One-to-many: saves always cascade from the one side to the many side, but if the many side has `belongsTo`, then deletes also cascade in that direction.
+* Many-to-many: only saves cascade from the "owner" to the "dependant", not deletes.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class Book {
+   String title
+
+   static belongsTo = [author: Author]
+}
+----
+
+In this example the `Book` class specifies that it belongs to the `Author` class, hence when an `Author` instance is deleted so are all its associated `Book` instances.
+
+
+=== Description
+
+
+The `belongsTo` property abstracts the nature of the cascading behaviour in Hibernate. If you want one class to belong to another but not have a back reference, then you can specify a class or a list of classes as the value:
+
+[source,groovy]
+----
+class Book {
+    static belongsTo = Author
+}
+----
+
+or:
+
+[source,groovy]
+----
+class Book {
+    static belongsTo = [Author, Library]
+}
+----
+
+Back references, i.e. properties linking back to the owner, can be added in one of two ways:
+
+[source,groovy]
+----
+class Book {
+    Author author
+
+    static belongsTo = Author
+}
+----
+
+or:
+
+[source,groovy]
+----
+class Book {
+    static belongsTo = [author: Author]
+}
+----
+
+In these examples, both techniques create an `Author` property named `author`. Also, the Map property can specify multiple properties and types if the class belongs to more than one owner.
+
+The `belongsTo` property is simple and means you don't have to worry about the Hibernate cascading strategies, but if you need more control over cascading you can use the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#ormdsl[ORM DSL]. This allows fine grained control of cascading updates and deletes.

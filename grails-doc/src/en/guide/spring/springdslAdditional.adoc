@@ -1,0 +1,188 @@
+
+==== Using the Spring Bean DSL
+
+
+You can easily register new (or override existing) beans by configuring them in `grails-app/conf/spring/resources.groovy` which uses the Grails <<springdsl,Spring DSL>>. Beans are defined inside a `beans` property (a Closure):
+
+[source,groovy]
+----
+beans = {
+    // beans here
+}
+----
+
+As a simple example you can configure a bean with the following syntax:
+
+[source,groovy]
+----
+import my.company.MyBeanImpl
+
+beans = {
+    myBean(MyBeanImpl) {
+        someProperty = 42
+        otherProperty = "blue"
+    }
+}
+----
+
+Once configured, the bean can be auto-wired into Grails artifacts and other classes that support dependency injection (for example `BootStrap.groovy` and integration tests) by declaring a public field whose name is your bean's name (in this case `myBean`):
+
+[source,groovy]
+----
+class ExampleController {
+
+     def myBean
+     ...
+}
+----
+
+Using the DSL has the advantage that you can mix bean declarations and logic, for example based on the link:conf.html#environments[environment]:
+
+[source,groovy]
+----
+import grails.util.Environment
+import my.company.mock.MockImpl
+import my.company.MyBeanImpl
+
+beans = {
+    switch(Environment.current) {
+        case Environment.PRODUCTION:
+            myBean(MyBeanImpl) {
+                someProperty = 42
+                otherProperty = "blue"
+            }
+            break
+
+        case Environment.DEVELOPMENT:
+            myBean(MockImpl) {
+                someProperty = 42
+                otherProperty = "blue"
+            }
+            break
+    }
+}
+----
+
+The `GrailsApplication` object can be accessed with the `application` variable and can be used to access the Grails configuration (amongst other things):
+
+[source,groovy]
+----
+import grails.util.Environment
+import my.company.mock.MockImpl
+import my.company.MyBeanImpl
+
+beans = {
+    if (application.config.getProperty('my.company.mockService')) {
+        myBean(MockImpl) {
+            someProperty = 42
+            otherProperty = "blue"
+        }
+    } else {
+        myBean(MyBeanImpl) {
+            someProperty = 42
+            otherProperty = "blue"
+        }
+    }
+}
+----
+
+NOTE: If you define a bean in `resources.groovy` with the same name as one previously registered by Grails or an installed plugin, your bean will replace the previous registration. This is a convenient way to customize behavior without resorting to editing plugin code or other approaches that would affect maintainability.
+
+
+==== Using XML
+
+
+Beans can also be configured using a `grails-app/conf/spring/resources.xml`. In earlier versions of Grails this file was automatically generated for you by the `run-app` script, but the DSL in `resources.groovy` is the preferred approach now so it isn't automatically generated now. But it is still supported - you just need to create it yourself.
+
+This file is typical Spring XML file and the Spring documentation has an http://docs.spring.io/spring/docs/4.0.x/spring-framework-reference/html/beans.html#beans-basics[excellent reference] on how to configure Spring beans.
+
+The `myBean` bean that we configured using the DSL would be configured with this syntax in the XML file:
+
+[source,xml]
+----
+<bean id="myBean" class="my.company.MyBeanImpl">
+    <property name="someProperty" value="42" />
+    <property name="otherProperty" value="blue" />
+</bean>
+----
+
+Like the other bean it can be auto-wired into any class that supports dependency injection:
+
+[source,groovy]
+----
+class ExampleController {
+
+     def myBean
+}
+----
+
+
+==== Referencing Existing Beans
+
+
+Beans declared in `resources.groovy` or `resources.xml` can reference other beans by convention. For example if you had a `BookService` class its Spring bean name would be `bookService`, so your bean would reference it like this in the DSL:
+
+[source,groovy]
+----
+beans = {
+    myBean(MyBeanImpl) {
+        someProperty = 42
+        otherProperty = "blue"
+        bookService = ref("bookService")
+    }
+}
+----
+
+or like this in XML:
+
+[source,xml]
+----
+<bean id="myBean" class="my.company.MyBeanImpl">
+    <property name="someProperty" value="42" />
+    <property name="otherProperty" value="blue" />
+    <property name="bookService" ref="bookService" />
+</bean>
+----
+
+The bean needs a public setter for the bean reference (and also the two simple properties), which in Groovy would be defined like this:
+
+[source,groovy]
+----
+package my.company
+
+class MyBeanImpl {
+    Integer someProperty
+    String otherProperty
+    BookService bookService
+}
+----
+
+or in Java like this:
+
+[source,groovy]
+----
+package my.company;
+
+class MyBeanImpl {
+
+    private BookService bookService;
+    private Integer someProperty;
+    private String otherProperty;
+
+    public void setBookService(BookService theBookService) {
+        this.bookService = theBookService;
+    }
+
+    public void setSomeProperty(Integer someProperty) {
+        this.someProperty = someProperty;
+    }
+
+    public void setOtherProperty(String otherProperty) {
+        this.otherProperty = otherProperty;
+    }
+}
+----
+
+Using `ref` (in XML or the DSL) is very powerful since it configures a runtime reference, so the referenced bean doesn't have to exist yet. As long as it's in place when the final application context configuration occurs, everything will be resolved correctly.
+
+For a full reference of the available beans see the plugin reference in the reference guide.

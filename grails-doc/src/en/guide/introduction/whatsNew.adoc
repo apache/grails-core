@@ -1,0 +1,40 @@
+This section covers all the new features introduced in Grails 7
+
+=== Overview
+
+Grails framework {GrailsVersion} updates Spring Boot to version {springBootVersion}. We recommend checking the following Spring technologies release notes for more information.
+
+* https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.4]
+
+The minimum Java version required to run Grails {GrailsVersion} has been updated to Java 17.
+
+=== Ubiquitous Containerized Browser Testing with Geb
+
+The https://github.com/apache/grails-geb[Grails Geb Plugin] has received a significant update, introducing test fixtures that enable ubiquitous containerized browser testing.
+
+This new approach is now the recommended way to write functional tests in Grails. However, the previous method using WebDriver binaries remains supported for backward compatibility.
+
+==== Key Features
+
+By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://www.testcontainers.org[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.
+
+==== Requirements
+
+To use `ContainerGebSpec`, ensure that you have a compatible container runtime installed. Supported options include:
+
+- **Docker Desktop**
+- **OrbStack** (macOS only)
+- **Rancher Desktop**
+- **Podman Desktop**
+- **Colima** (macOS and Linux)
+
+==== How It Works
+
+Once a compatible container runtime is installed, no additional configuration is needed. Simply extend your test classes with `ContainerGebSpec` (instead of `GebSpec`), and the following will happen:
+
+1. A container will be started automatically when you run your integration tests.
+2. The container will be configured to launch a browser capable of accessing your application under test.
+
+With this setup, you gain the benefits of containerized testing, such as isolation, reproducibility, and reduced setup complexity.
+
+

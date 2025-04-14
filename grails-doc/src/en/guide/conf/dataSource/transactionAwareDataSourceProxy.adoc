@@ -1,0 +1,3 @@
+The actual `dataSource` bean is wrapped in a transaction-aware proxy so you will be given the connection that's being used by the current transaction or Hibernate `Session` if one is active.
+
+If this were not the case, then retrieving a connection from the `dataSource` would be a new connection, and you wouldn't be able to see changes that haven't been committed yet (assuming you have a sensible transaction isolation setting, e.g. `READ_COMMITTED` or better).

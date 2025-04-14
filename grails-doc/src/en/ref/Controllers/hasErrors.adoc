@@ -1,0 +1,29 @@
+
+== hasErrors
+
+
+
+=== Purpose
+
+
+Check if a controller has errors associated with it.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class DemoController {
+
+    def generateReport(int size) {
+        if(hasErrors()) {
+            errors.allErrors.each {
+                println it
+            }
+        }
+    }
+}
+----
+
+See link:errors.html[errors].

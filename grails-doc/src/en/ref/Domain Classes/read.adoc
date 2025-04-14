@@ -1,0 +1,28 @@
+
+== read
+
+
+
+=== Purpose
+
+
+Retrieves an instance of the domain class for the specified id in a read-only state. `null` is returned if the row with the specified id doesn't exist.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+def b = Book.read(1)
+----
+
+
+=== Description
+
+
+The `read` method is similar to the link:get.html[get] method except that automatic dirty detection is disabled. The instance isn't truly read-only - you can modify it - but if it isn't explicitly saved but has been modified, it won't be updated in the database during a flush. But you can explicitly call `save()` and it will be updated. There is one exception to this though - any associated collections, for example an `Author`'s `books` collection, will participate in automatic flushing and dirty detection. This is because mapped collections are treated differently than regular properties and they manage their own dirty checking indepenent of the containing domain class.
+
+Parameters:
+
+* `id` - The id of the object to retrieve

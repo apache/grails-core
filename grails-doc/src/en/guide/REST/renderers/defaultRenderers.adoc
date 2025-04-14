@@ -1,0 +1,54 @@
+The default renderers for XML and JSON can be found in the `grails.rest.render.xml` and `grails.rest.render.json` packages respectively. These use the Grails converters (`grails.converters.XML` and `grails.converters.JSON`) by default for response rendering. 
+
+You can easily customize response rendering using these default renderers. A common change you may want to make is to include or exclude certain properties from rendering. 
+
+
+==== Including or Excluding Properties from Rendering
+
+
+As mentioned previously, Grails maintains a registry of `grails.rest.render.Renderer` instances. There are some default configured renderers and the ability to register or override renderers for a given domain class or even for a collection of domain classes. To include a particular property from rendering you need to register a custom renderer by defining a bean in `grails-app/conf/spring/resources.groovy`:
+
+[source,groovy]
+----
+import grails.rest.render.xml.*
+
+beans = {
+    bookRenderer(XmlRenderer, Book) {
+        includes = ['title']
+    }
+}
+----
+
+
+NOTE: The bean name is not important (Grails will scan the application context for all registered renderer beans), but for organizational and readability purposes it is recommended you name it something meaningful.
+
+To exclude a property, the `excludes` property of the `XmlRenderer` class can be used:
+
+[source,groovy]
+----
+import grails.rest.render.xml.*
+
+beans = {
+    bookRenderer(XmlRenderer, Book) {
+        excludes = ['isbn']
+    }
+}
+----
+
+
+==== Customizing the Converters
+
+
+As mentioned previously, the default renders use the `grails.converters` package under the covers. In other words, under the covers they essentially do the following:
+
+[source,groovy]
+----
+import grails.converters.*
+
+...
+render book as XML
+
+// or render book as JSON
+----
+
+Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use http://wiki.fasterxml.com/JacksonHome[Jackson], http://code.google.com/p/google-gson/[Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.
