@@ -101,7 +101,7 @@ tasks.register('assemble', Zip) {
             include 'bin/grails', 'bin/grails.bat', 'lib/', 'media/', 'samples/', 'scripts/', 'LICENSE', 'INSTALL'
             exclude 'ant/bin', 'src/grails', 'src/war'
         }
-        from(tasks.docs) {
+        from(tasks.aggregateGroovydoc) {
             into 'doc/api'
         }
         from(homeDistDir) {
