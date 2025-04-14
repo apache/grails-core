@@ -4,7 +4,7 @@ buildscript {
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.apache.grails:grails-gradle-plugins:${project['grails-gradle-plugins.version']}"
+        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
     }
 }
 

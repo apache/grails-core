@@ -1,6 +1,5 @@
 package grails.io
 
-import grails.util.BuildSettings
 import spock.lang.Specification
 
 
@@ -8,8 +7,8 @@ class IOUtilsSpec extends Specification{
 
     void "Test findClassResource finds a class resource"() {
         expect:
-        IOUtils.findClassResource(BuildSettings)
-        IOUtils.findClassResource(BuildSettings).path.contains('grails-bootstrap')
+        IOUtils.findClassResource(ResourceUtils)
+        IOUtils.findClassResource(ResourceUtils).path.contains('grails-bootstrap')
     }
 
     void "Test findJarResource finds a JAR resource"() {
