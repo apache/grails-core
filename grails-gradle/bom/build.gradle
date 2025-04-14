@@ -1,5 +1,3 @@
-import org.gradle.internal.extensibility.DefaultExtraPropertiesExtension
-
 plugins {
     id 'java-platform'
     id 'maven-publish'

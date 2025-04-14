@@ -1,53 +1,11 @@
-group "org.apache.grails"
-version project.projectVersion
-
-ext.isReleaseVersion = !version.endsWith("-SNAPSHOT")
-ext."signing.keyId" = project.findProperty("signing.keyId") ?: System.getenv('SIGNING_KEY')
-ext."signing.password" = project.findProperty("signing.password") ?: System.getenv('SIGNING_PASSPHRASE')
-ext."signing.secretKeyRingFile" = project.findProperty("signing.secretKeyRingFile") ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
-
-ext.pomInfo = {
-    delegate.url 'https://github.com/apache/grails-core'
-
-    delegate.licenses {
-        delegate.license {
-            delegate.name 'The Apache Software License, Version 2.0'
-            delegate.url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-            delegate.distribution 'repo'
-        }
-    }
-
-    delegate.scm {
-        delegate.url "scm:git@github.com:apache/grails-core.git"
-        delegate.connection "scm:git@github.com:apache/grails-core.git"
-        delegate.developerConnection "scm:git@github.com:apache/grails-core.git"
-    }
-
-    delegate.developers {
-        delegate.developer {
-            delegate.id 'graemerocher'
-            delegate.name 'Graeme Rocher'
-        }
-        delegate.developer {
-            delegate.id 'jeffscottbrown'
-            delegate.name 'Jeff Brown'
-        }
-        delegate.developer {
-            delegate.id 'puneetbehl'
-            delegate.name 'Puneet Behl'
-        }
-    }
+plugins {
+    id 'groovy'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
 }
 
-apply plugin: 'idea'
-apply plugin: 'java-gradle-plugin'
-apply plugin: 'groovy'
-apply plugin: 'maven-publish'
-
-if (isReleaseVersion) {
-    apply plugin: "io.github.gradle-nexus.publish-plugin"
-    apply plugin: 'signing'
-}
+version = project.projectVersion
+group = "org.apache.grails"
 
 dependencies {
     implementation platform(project(":grails-gradle-bom"))
@@ -55,7 +13,7 @@ dependencies {
     // compile grails-gradle-plugin with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
+    compileOnly "org.codehaus.groovy:groovy"
 
     implementation project(':grails-gradle-model'), {
         exclude group: 'org.apache.groovy'
@@ -139,41 +97,6 @@ tasks.withType(Copy) {
     }
 }
 
-if (isReleaseVersion) {
-    afterEvaluate {
-        signing {
-            required { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
-            Publication[] publications = new Publication[publishing.publications.size()]
-            publishing.publications.findAll().toArray(publications)
-            sign(publications)
-        }
-    }
-
-    tasks.withType(Sign) {
-        onlyIf { isReleaseVersion }
-    }
-}
-
-tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
-    shouldRunAfter(tasks.withType(Sign))
-}
-
-if (isReleaseVersion) {
-    nexusPublishing {
-        repositories {
-            sonatype {
-                def ossUser = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
-                def ossPass = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
-                def ossStagingProfileId = System.getenv("SONATYPE_STAGING_PROFILE_ID") ?: project.hasProperty("sonatypeOssStagingProfileId") ? project.sonatypeOssStagingProfileId : ''
-                nexusUrl = uri("https://s01.oss.sonatype.org/service/local/")
-                username = ossUser
-                password = ossPass
-                stagingProfileId = ossStagingProfileId
-            }
-        }
-    }
-}
-
 publishing {
     if (!isReleaseVersion) {
         repositories {
@@ -186,14 +109,6 @@ publishing {
                 }
                 url System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
-        }
-    }
-
-    // publishAllPublicationsToTestCaseMavenRepoRepository
-    repositories {
-        maven {
-            name = "TestCaseMavenRepo"
-            url = layout.buildDirectory.dir('local-maven')
         }
     }
 
@@ -233,17 +148,6 @@ publishing {
                         name = 'Puneet Behl'
                     }
                 }
-            }
-        }
-    }
-}
-
-project.afterEvaluate {
-    project.publishing.publications.each { MavenPublication publication ->
-        if (publication.name != "pluginMaven") {
-            publication.pom.withXml {
-                def xml = asNode()
-                xml.children().last() + pomInfo
             }
         }
     }

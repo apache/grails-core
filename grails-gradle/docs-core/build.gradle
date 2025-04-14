@@ -1,6 +1,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'maven-publish'
 }
 
 version = projectVersion
@@ -64,6 +65,64 @@ jar.dependsOn docFilesJar
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    //TODO: from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+
+publishing {
+    if (!isReleaseVersion) {
+        repositories {
+            maven {
+                credentials {
+                    def u = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
+                    def p = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
+                    username = u
+                    password = p
+                }
+                url System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+            }
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            from components.java
+
+            pom {
+                name = "Grails Gradle Plugin"
+                description = "A Gradle plugin for Grails which provides a bunch of useful plugins"
+
+                url = 'https://github.com/apache/grails-core'
+
+                licenses {
+                    license {
+                        name = 'The Apache Software License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution = 'repo'
+                    }
+                }
+
+                scm {
+                    url = "scm:git@github.com:apache/grails-core.git"
+                    connection = "scm:git@github.com:apache/grails-core.git"
+                    developerConnection = "scm:git@github.com:apache/grails-core.git"
+                }
+
+                developers {
+                    developer {
+                        id = 'graemerocher'
+                        name = 'Graeme Rocher'
+                    }
+                    developer {
+                        id = 'jeffscottbrown'
+                        name = 'Jeff Brown'
+                    }
+                    developer {
+                        id = 'puneetbehl'
+                        name = 'Puneet Behl'
+                    }
+                }
+            }
+        }
+    }
 }

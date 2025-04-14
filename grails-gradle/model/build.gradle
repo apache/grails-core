@@ -65,20 +65,13 @@ publishing {
         }
     }
 
-    // publishAllPublicationsToTestCaseMavenRepoRepository
-    repositories {
-        maven {
-            name = "TestCaseMavenRepo"
-            url = layout.buildDirectory.dir('local-maven')
-        }
-    }
-
     publications {
         maven(MavenPublication) {
             groupId = project.group
             artifactId = project.name
             
             from components.java
+
             pom {
                 name = "Grails Gradle Model"
                 description = "Classes to support the Grails Gradle Plugins"

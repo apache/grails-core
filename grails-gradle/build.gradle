@@ -17,8 +17,6 @@ allprojects {
     apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
 }
 
-//apply plugin: 'maven-publish'
-
 ext {
     ext.isReleaseVersion = !projectVersion.endsWith("-SNAPSHOT")
     ext."signing.keyId" = project.findProperty("signing.keyId") ?: System.getenv('SIGNING_KEY')
@@ -26,21 +24,39 @@ ext {
     ext."signing.secretKeyRingFile" = project.findProperty("signing.secretKeyRingFile") ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
     isCiBuild = System.getenv().get('CI') as Boolean
 }
-//
-//if (project.ext.isReleaseVersion) {
-//    apply plugin: "io.github.gradle-nexus.publish-plugin"
-//    apply plugin: 'signing'
-//    nexusPublishing {
-//        repositories {
-//            sonatype {
-//                def ossUser = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
-//                def ossPass = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
-//                def ossStagingProfileId = System.getenv("SONATYPE_STAGING_PROFILE_ID") ?: project.hasProperty("sonatypeOssStagingProfileId") ? project.sonatypeOssStagingProfileId : ''
-//                nexusUrl = uri("https://s01.oss.sonatype.org/service/local/")
-//                username = ossUser
-//                password = ossPass
-//                stagingProfileId = ossStagingProfileId
-//            }
-//        }
-//    }
-//}
+if (project.ext.isReleaseVersion) {
+    apply plugin: "io.github.gradle-nexus.publish-plugin"
+    apply plugin: 'signing'
+
+    nexusPublishing {
+        repositories {
+            sonatype {
+                def ossUser = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
+                def ossPass = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
+                def ossStagingProfileId = System.getenv("SONATYPE_STAGING_PROFILE_ID") ?: project.hasProperty("sonatypeOssStagingProfileId") ? project.sonatypeOssStagingProfileId : ''
+                nexusUrl = uri("https://s01.oss.sonatype.org/service/local/")
+                username = ossUser
+                password = ossPass
+                stagingProfileId = ossStagingProfileId
+            }
+        }
+    }
+
+    afterEvaluate {
+        signing {
+            required { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
+            Publication[] publications = new Publication[publishing.publications.size()]
+            publishing.publications.findAll().toArray(publications)
+            sign(publications)
+        }
+    }
+
+    tasks.withType(Sign) {
+        onlyIf { isReleaseVersion }
+    }
+
+    tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
+        shouldRunAfter(tasks.withType(Sign))
+    }
+}
+
