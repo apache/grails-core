@@ -1,5 +1,5 @@
 plugins {
-    id 'com.gradle.develocity' version '3.19.2' // Do not upgrade to v4 until Groovy can build with it: https://lists.apache.org/thread/z3ohqxxmdm9p1y18j6mk1cpp6fvnz6k7
+    id 'com.gradle.develocity' version '4.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
