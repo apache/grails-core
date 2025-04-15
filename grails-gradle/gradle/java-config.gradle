@@ -7,8 +7,8 @@ extensions.configure(JavaPluginExtension) {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.deprecation = true
-    it.options.debug = true
+    options.deprecation = true
+    options.debug = true
 }
 
 tasks.withType(GroovyCompile).configureEach {
