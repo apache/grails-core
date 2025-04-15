@@ -138,7 +138,7 @@ tasks.register('publishGuide', grails.doc.gradle.PublishGuide) {
                 'gspApiDocs'               : "https://gsp.grails.org/${gspVersion}/api/",
                 'gormApiDocs'              : "https://gorm.grails.org/${gormVersion}/api/",
                 'hibernateReference'       : 'https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html',
-                'springapi'                : "https://docs.spring.io/spring/docs/${resolveSpringVersion.resolved}/javadoc-api/",
+                'springapi'                : "https://docs.spring.io/spring/docs/${springVersion}/javadoc-api/",
                 'springbootapi'            : "https://docs.spring.io/spring-boot/docs/${springBootVersion}/api",
                 'springBootReference'      : "https://docs.spring.io/spring-boot/docs/${springBootVersion}/reference",
                 'springBootVersion'        : springBootVersion,
