@@ -15,8 +15,8 @@ dependencies {
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // when used by grails-gradle-plugin
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly "org.codehaus.groovy:groovy"
-    compileOnly "org.codehaus.groovy:groovy-xml"
+    compileOnly 'org.codehaus.groovy:groovy'
+    compileOnly 'org.codehaus.groovy:groovy-xml'
 
     testImplementation 'org.codehaus.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -24,18 +24,20 @@ dependencies {
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
-    implementation "org.springframework:spring-context"
-    implementation "org.springframework.boot:spring-boot-autoconfigure" // required for org.springframework.boot.env.YamlPropertySourceLoader
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure' // required for org.springframework.boot.env.YamlPropertySourceLoader
 
-    compileOnly "jline:jline" // for profile compilation
+    compileOnly 'jline:jline' // for profile compilation
 
-    api "org.yaml:snakeyaml"
+    api 'org.yaml:snakeyaml'
 
     // Logging
     api 'org.slf4j:slf4j-api'
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
+    testImplementation 'org.codehaus.groovy:groovy'
+    testImplementation 'org.codehaus.groovy:groovy-xml'
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation('org.spockframework:spock-core') { transitive = false }
     // Required by Spock's Mocking
@@ -55,12 +57,10 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    def u = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
-                    def p = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
-                    username = u
-                    password = p
+                    username = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
+                    password = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
                 }
-                url System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
     }

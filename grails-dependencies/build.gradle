@@ -12,19 +12,19 @@ ext {
 
 def configurations = [
         'api': [
-                ":grails-core",
-                ":grails-rest-transforms",
-                ":grails-databinding",
-                ":grails-i18n",
-                ":grails-services",
-                ":grails-url-mappings",
-                ":grails-interceptors",
-                ":grails-async-plugin",
-                ":grails-events-plugin",
-                "org.apache.grails:grails-gsp",
+                ':grails-core',
+                ':grails-rest-transforms',
+                ':grails-databinding',
+                ':grails-i18n',
+                ':grails-services',
+                ':grails-url-mappings',
+                ':grails-interceptors',
+                ':grails-async-plugin',
+                ':grails-events-plugin',
+                'org.apache.grails:grails-gsp',
         ],
         'runtimeOnly': [
-                "com.h2database:h2",
+                'com.h2database:h2',
         ]
 ]
 

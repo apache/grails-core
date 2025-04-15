@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class IOUtils extends SpringIOUtils {
      */
     static String toString(Reader reader) {
         def writer = new StringWriter()
-        org.grails.io.support.SpringIOUtils.copy reader, writer
+        copy(reader, writer)
         writer.toString()
     }
 
@@ -90,7 +90,7 @@ class IOUtils extends SpringIOUtils {
      */
     static void copy(InputStream input, Writer output, String encoding = null) {
         def reader = encoding ? new InputStreamReader(input, encoding) : new InputStreamReader(input)
-        org.grails.io.support.SpringIOUtils.copy(reader, output)
+        copy(reader, output)
     }
 
     /**

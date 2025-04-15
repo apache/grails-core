@@ -21,19 +21,19 @@ tasks.named('groovydoc', Groovydoc) {
     includeAuthor = true
     includeMainForScripts = false
     processScripts = false
-}
-
-configure([groovydoc]) {
     destinationDir = project.file('build/docs/api')
 }
 
-configure([javadoc]) {
-    options.encoding 'UTF-8'
-    options.docEncoding 'UTF-8'
-    options.charSet 'UTF-8'
-    options.jFlags '-Xms64M', '-Xmx512M'
+tasks.named('javadoc', Javadoc) {
+    (options as StandardJavadocDocletOptions).with {
+        encoding = 'UTF-8'
+        docEncoding = 'UTF-8'
+        charSet = 'UTF-8'
+        addStringOption('-Xms64M')
+        addStringOption('-Xmx512M')
+    }
 }
 
-tasks.named('build').configure {
+tasks.named('build') {
     finalizedBy('groovydoc')
 }
