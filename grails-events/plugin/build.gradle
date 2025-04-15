@@ -30,7 +30,6 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'org.apache.grails.gradle:grails-gradle-model'
-    testRuntimeOnly project(':grails-core')
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }
 
