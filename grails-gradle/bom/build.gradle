@@ -16,7 +16,7 @@ ext {
 }
 
 dependencies {
-    api platform(bomPlatformDependencies['spring_boot_bom']), {
+    api platform(bomPlatformDependencies['spring-boot-bom']), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
         exclude group: 'com.fasterxml.jackson'
@@ -24,28 +24,28 @@ dependencies {
 
     // Because gradle uses groovy 3, we must use groovy 3 compatible versions for the grails-gradle-bom
     api platform("org.codehaus.groovy:groovy-bom:${GroovySystem.version}")
-    api platform(bomPlatformDependencies['gradle_spock_bom'])
+    api platform(bomPlatformDependencies['gradle-spock-bom'])
 
     constraints {
         api bomDependencies['ant']
-        api bomDependencies['ant_junit']
+        api bomDependencies['ant-junit']
         api bomDependencies['asciidoctorj']
-        api bomDependencies['asciidoctorj_gradle_jvm']
-        api bomDependencies['asset_pipeline_gradle']
-        api bomDependencies['byte_buddy']
-        api bomDependencies['commons_text']
-        api bomDependencies['directory_watcher']
-        api bomDependencies['flying_saucer_pdf_openpdf']
-        api bomDependencies['grails_gdoc_engine']
+        api bomDependencies['asciidoctorj-gradle-jvm']
+        api bomDependencies['asset-pipeline-gradle']
+        api bomDependencies['byte-buddy']
+        api bomDependencies['commons-text']
+        api bomDependencies['directory-watcher']
+        api bomDependencies['flying-saucer-pdf-openpdf']
+        api bomDependencies['grails-gdoc-engine']
         api bomDependencies['jansi']
-        api bomDependencies['javaparser_core']
+        api bomDependencies['javaparser-core']
         api bomDependencies['jline']
         api bomDependencies['jna']
         api bomDependencies['jsoup']
         api bomDependencies['objenesis']
-        api bomDependencies['gradle_nexus_publish_plugin']
-        api bomDependencies['spring_boot_cli']
-        api bomDependencies['spring_boot_gradle']
+        api bomDependencies['gradle-nexus-publish-plugin']
+        api bomDependencies['spring-boot-cli']
+        api bomDependencies['spring-boot-gradle']
         api bomDependencies['springloaded']
 
         for (Project subproject : rootProject.subprojects) {
@@ -88,7 +88,7 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
     }
 
     Map<String, String> versions = bomDependencyVersions
-    String possibleKey = found.key.replace('_', '-')
+    String possibleKey = found.key.toString()
     while(possibleKey != null) {
         String propertyName = "${possibleKey}.version" as String
         if(versions.containsKey(propertyName)) {

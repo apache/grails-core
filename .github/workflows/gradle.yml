@@ -54,7 +54,6 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         working-directory: 'grails-gradle'
-        id: build
         run: ./gradlew build assemble --continue --stacktrace
   build:
     name: 'Build Grails-Core'
@@ -108,7 +107,7 @@ jobs:
         run: ./gradlew build -PonlyFunctionalTests --stacktrace
   publish:
     if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    needs: [buildGradle, build, functional]
+    needs: [ skip_check, buildGradle, build, functional]
     permissions:
       contents: read # limit to read access
     runs-on: ubuntu-latest
@@ -137,7 +136,7 @@ jobs:
           ./gradlew publish -Dorg.gradle.internal.publish.checksums.insecure=true
   docs:
     if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    needs: publish
+    needs: [skip_check, publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
