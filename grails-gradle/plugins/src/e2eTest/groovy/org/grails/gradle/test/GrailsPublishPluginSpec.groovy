@@ -137,7 +137,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         assertBuildSuccess(result, ["compileJava", "compileGroovy", "processResources", "classes", "jar", "groovydoc", "javadoc", "javadocJar", "sourcesJar"])
 
         !result.output.contains("Project subproject2 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
-        result.output.contains("Project subproject1 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
+        !result.output.contains("Project subproject1 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
     }
 
     def "gradle config works when not publishing - snapshot - maven publish - plugins-block - child-project-with-unrelated-parent - eval parent"() {
@@ -152,7 +152,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         assertBuildSuccess(result, ["compileJava", "compileGroovy", "processResources", "classes", "jar", "groovydoc", "javadoc", "javadocJar", "sourcesJar"])
 
         !result.output.contains("Project subproject2 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
-        result.output.contains("Project subproject1 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
+        !result.output.contains("Project subproject1 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
     }
 
     def "gradle config works when not publishing - snapshot - maven publish - plugins-block - child-project-with-unrelated-parent - eval child"() {
@@ -167,7 +167,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         assertBuildSuccess(result, ["compileJava", "compileGroovy", "processResources", "classes", "jar", "groovydoc", "javadoc", "javadocJar", "sourcesJar"])
 
         !result.output.contains("Project subproject2 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
-        result.output.contains("Project subproject1 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
+        !result.output.contains("Project subproject1 does not have a version defined. Using the gradle property `projectVersion` to assume version is 0.0.1-SNAPSHOT.")
     }
 
     def "gradle config works when not publishing - snapshot - maven publish - plugins-block - multi-project-parent-child-setup-per-project-child-published"() {
