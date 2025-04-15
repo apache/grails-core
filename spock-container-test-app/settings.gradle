@@ -10,7 +10,7 @@ develocity {
     server = 'https://ge.grails.org'
     buildScan {
         tag('grails')
-        tag('grails/geb')
+        tag('grails-geb')
         publishing.onlyIf { it.authenticated }
         uploadInBackground = isLocal
     }
