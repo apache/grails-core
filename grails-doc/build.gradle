@@ -151,7 +151,7 @@ tasks.register('publishGuide', grails.doc.gradle.PublishGuide) {
                 'grailsGradlePluginVersion': getVersion("grails-gradle-plugins"),
                 'sourcedir'                : rootProject.layout.projectDirectory.asFile,
                 'functionalSourceDir'      : rootProject.layout.projectDirectory.asFile,
-                'gparsdocs'                : 'https://gpars.org/1.2.1/groovydoc',
+                'gparsdocs'                : "https://gpars.org/$gparsVersion/groovydoc",
                 'rxjavadocs'               : 'https://reactivex.io/RxJava/1.x/javadoc',
                 'rxjava2docs'              : 'https://reactivex.io/RxJava/2.x/javadoc'
         ]
