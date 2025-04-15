@@ -53,7 +53,7 @@ jobs:
       - name: "🔨 Build project"
         working-directory: 'grails-gradle'
         id: build
-        run: ./gradlew build assemble --continue
+        run: ./gradlew build assemble --continue --stacktrace
   build:
     name: 'Build Grails-Core'
     needs: skip_check
@@ -79,7 +79,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         id: build
-        run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue
+        run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue --stacktrace
   functional:
     name: "Functional Tests"
     needs: skip_check
@@ -103,7 +103,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Functional Tests"
-        run: ./gradlew build -PonlyFunctionalTests
+        run: ./gradlew build -PonlyFunctionalTests --stacktrace
   publish:
     if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
     needs: [buildGradle, build, functional]

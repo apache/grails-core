@@ -107,7 +107,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
     @Override
     void apply(Project project) {
-        project.rootProject.logger.lifecycle("Applying Grails Publish Gradle Plugin for `${project.name}`...");
+        project.rootProject.logger.info("Applying Grails Publish Gradle Plugin for `${project.name}`...");
         if (project.extensions.findByName('grailsPublish') == null) {
             project.extensions.add('grailsPublish', new GrailsPublishExtension())
         }
@@ -139,7 +139,12 @@ Note: if project properties are used, the properties must be defined prior to ap
                 throw new IllegalStateException("Project ${project.name} has an unspecified version (neither `version` or the property `projectVersion` is defined). Release state cannot be determined.")
             }
             if (project.version == Project.DEFAULT_VERSION) {
-                project.rootProject.logger.warn("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
+                if(isRelease) {
+                    project.rootProject.logger.warn("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
+                }
+                else {
+                    project.rootProject.logger.info("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
+                }
             }
             project.rootProject.logger.info("Version $detectedVersion detected for project ${project.name}")
 
