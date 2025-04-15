@@ -1,0 +1,33 @@
+def debugArguments = [
+        '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
+        '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
+]
+def java17moduleReflectionCompatibilityArguments = [
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED'
+]
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    jvmArgs += java17moduleReflectionCompatibilityArguments
+    develocity {
+        testRetry {
+            maxRetries = 2
+            maxFailures = 20
+            failOnPassedAfterRetry = true
+        }
+    }
+    testLogging {
+        events('passed', 'skipped', 'failed')
+        showExceptions = true
+        exceptionFormat = 'full'
+        showCauses = true
+        showStackTraces = true
+    }
+    excludes = ['**/*TestCase.class', '**/*$*.class']
+    maxParallelForks = isCiBuild ? 2 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1
+    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    if (System.getProperty('debug.tests')) {
+        jvmArgs += debugArguments
+    }
+}

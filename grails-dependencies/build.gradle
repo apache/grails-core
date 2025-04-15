@@ -12,26 +12,32 @@ ext {
 
 def configurations = [
         'api': [
-                "org.apache.grails.bootstrap:grails-bootstrap:$version",
-                "org.apache.grails:grails-rest-transforms:$version",
-                "org.apache.grails:grails-databinding:$version",
-                "org.apache.grails:grails-i18n:$version",
-                "org.apache.grails:grails-services:$version",
-                "org.apache.grails:grails-url-mappings:$version",
-                "org.apache.grails:grails-interceptors:$version",
-                "org.apache.grails:grails-async:$version",
-                "org.apache.grails:grails-events:$version",
-                "org.apache.grails:grails-gsp:${property('gsp.version')}",
+                ':grails-core',
+                ':grails-rest-transforms',
+                ':grails-databinding',
+                ':grails-i18n',
+                ':grails-services',
+                ':grails-url-mappings',
+                ':grails-interceptors',
+                ':grails-async-plugin',
+                ':grails-events-plugin',
+                'org.apache.grails:grails-gsp',
         ],
         'runtimeOnly': [
-                "com.h2database:h2:${property('h2.version')}",
+                'com.h2database:h2',
         ]
 ]
 
 dependencies {
+    implementation platform(project(':grails-bom'))
     configurations.each { String configuration, List<String> deps ->
         deps.each {
-            add(configuration, it)
+            if(it.startsWith(':')) {
+                add(configuration, project(it))
+            }
+            else {
+                add(configuration, it)
+            }
         }
     }
 }

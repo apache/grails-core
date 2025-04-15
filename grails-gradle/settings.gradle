@@ -1,0 +1,40 @@
+plugins {
+	id 'com.gradle.develocity' version '4.0'
+	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
+}
+
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isAuthenticated = System.getenv().containsKey('GRAILS_DEVELOCITY_ACCESS_KEY')
+
+develocity {
+	server = 'https://ge.grails.org'
+	buildScan {
+		tag('grails')
+		tag('grails-gradle-plugins')
+		publishing.onlyIf { isAuthenticated }
+		uploadInBackground = isLocal
+	}
+}
+
+buildCache {
+	local { enabled = isLocal }
+	remote(develocity.buildCache) {
+		push = isCI && isAuthenticated
+		enabled = true
+	}
+}
+
+rootProject.name = 'grails-gradle'
+
+include 'grails-gradle-plugins'
+project(':grails-gradle-plugins').projectDir = file('plugins')
+
+include 'grails-gradle-bom'
+project(':grails-gradle-bom').projectDir = file('bom')
+
+include 'grails-gradle-model'
+project(':grails-gradle-model').projectDir = file('model')
+
+include 'grails-docs-core'
+project(':grails-docs-core').projectDir = file('docs-core')

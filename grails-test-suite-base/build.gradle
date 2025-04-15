@@ -11,14 +11,14 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(':grails-bootstrap'),
-        project(':grails-core'),
-        project(':grails-spring'),
-        project(':grails-web-core'),
-        project(':grails-test-core'),
-        project(':grails-domain-class')
-
+    api project(':grails-bootstrap')
+    api project(':grails-core')
+    api project(':grails-spring')
+    api project(':grails-web-core')
+    api project(':grails-test-core')
+    api project(':grails-domain-class')
     api project(":grails-converters")
+
     api "org.apache.groovy:groovy:$groovyVersion"
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

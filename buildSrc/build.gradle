@@ -16,10 +16,11 @@ repositories {
 }
 
 dependencies {
-    implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:$gradleProperties.gradleLicensePluginVersion", {
+    implementation platform("org.apache.grails:grails-gradle-bom:${gradleProperties.projectVersion}")
+    implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:${gradleProperties.gradleLicensePluginVersion}", {
         // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
         exclude group: 'org.springframework', module: 'spring-core'
     }
-    implementation "io.github.gradle-nexus:publish-plugin:$gradleProperties.gradleNexusPublishPluginVersion"
-    implementation "org.apache.grails:grails-gradle-plugins:${gradleProperties['grails-gradle-plugins.version']}"
+    implementation "io.github.gradle-nexus:publish-plugin"
+    implementation "org.apache.grails:grails-gradle-plugins"
 }

@@ -1,0 +1,151 @@
+plugins {
+    id 'java-platform'
+    id 'maven-publish'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+javaPlatform {
+    allowDependencies()
+}
+
+ext {
+    isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
+    isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
+}
+
+dependencies {
+    api platform(bomPlatformDependencies['spring-boot-bom']), {
+        exclude group: 'org.apache.groovy'
+        exclude group: 'org.spockframework'
+        exclude group: 'com.fasterxml.jackson'
+    }
+
+    // Because gradle uses groovy 3, we must use groovy 3 compatible versions for the grails-gradle-bom
+    api platform("org.codehaus.groovy:groovy-bom:${GroovySystem.version}")
+    api platform(bomPlatformDependencies['gradle-spock-bom'])
+
+    constraints {
+        api bomDependencies['ant']
+        api bomDependencies['ant-junit']
+        api bomDependencies['asciidoctorj']
+        api bomDependencies['asset-pipeline-gradle']
+        api bomDependencies['byte-buddy']
+        api bomDependencies['commons-text']
+        api bomDependencies['directory-watcher']
+        api bomDependencies['flying-saucer-pdf-openpdf']
+        api bomDependencies['grails-gdoc-engine']
+        api bomDependencies['jansi']
+        api bomDependencies['javaparser-core']
+        api bomDependencies['jline']
+        api bomDependencies['jna']
+        api bomDependencies['jsoup']
+        api bomDependencies['objenesis']
+        api bomDependencies['gradle-nexus-publish-plugin']
+        api bomDependencies['spring-boot-cli']
+        api bomDependencies['spring-boot-gradle']
+        api bomDependencies['springloaded']
+
+        for (Project subproject : rootProject.subprojects) {
+            if(subproject.path == project.path) {
+                continue // ignore self
+            }
+
+            api project(":${subproject.path}")
+        }
+    }
+}
+
+tasks.register('validateNoSnapshotDependencies') {
+    doLast {
+        configurations.each { config ->
+            config.allDependencies.each { dep ->
+                if (dep.version && dep.version.contains('-SNAPSHOT')) {
+                    throw new GradleException("Releases cannot have a snapshot dependency: ${dep.group}:${dep.name} (${dep.version})")
+                }
+            }
+        }
+    }
+}
+
+if(ext.isReleaseBuild && ext.isPublishedExternal) {
+    tasks.named('generateMetadataFileForMavenPublication').configure {
+        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+    }
+    tasks.named('generatePomFileForMavenPublication').configure {
+        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+    }
+}
+
+Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
+    Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
+
+    Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
+    if(!found) {
+        return null
+    }
+
+    Map<String, String> versions = bomDependencyVersions
+    String possibleKey = found.key.toString()
+    while(possibleKey != null) {
+        String propertyName = "${possibleKey}.version" as String
+        if(versions.containsKey(propertyName)) {
+            return propertyName
+        }
+
+        int lastIndex = possibleKey.lastIndexOf('-')
+        possibleKey = lastIndex > 0 ? possibleKey.substring(0, lastIndex) : null
+    }
+
+    throw new GradleException("Could not determine artifact property key for $groupId:$artifactId:$version")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.javaPlatform
+
+            pom.withXml { xml ->
+                def root = xml.asNode()
+
+                def propertiesNode = root.properties ? root.properties[0] : root.appendNode('properties')
+
+                def depMgmt = root.dependencyManagement?.getAt(0)
+                def deps = depMgmt?.dependencies?.getAt(0)
+                if (deps) {
+                    Map<String, String> pomProperties = [:]
+                    deps.dependency.each { dep ->
+                        String groupId = dep.groupId.text().trim()
+                        String artifactId = dep.artifactId.text().trim()
+                        boolean isBom = dep.scope.text().trim() == 'import'
+
+                        String inlineVersion = dep.version.text().trim()
+                        if(inlineVersion == 'null') {
+                            inlineVersion = null
+                        }
+
+                        if (inlineVersion) {
+                            String propertyName = determinePropertyName(groupId, artifactId, inlineVersion, isBom)
+                            if(propertyName) {
+                                // Replace the version in the pom with a property reference
+                                String propertyReference = "\${${propertyName}}"
+                                dep.version[0].value = propertyReference
+
+                                // Add an entry in the <properties> node with the actual version number
+                                pomProperties.put(propertyName, inlineVersion)
+                            }
+                        }
+                        else if(!inlineVersion) {
+                            throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
+                        }
+                    }
+
+                    for (Map.Entry<String, String> property : pomProperties.entrySet()) {
+                        propertiesNode.appendNode(property.key, property.value)
+                    }
+                }
+            }
+        }
+    }
+}

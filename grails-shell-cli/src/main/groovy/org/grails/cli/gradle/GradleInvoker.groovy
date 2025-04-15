@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 original authors
+ * Copyright 2014-2025 original authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,10 @@
 package org.grails.cli.gradle
 
 import grails.util.Environment
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.gradle.tooling.BuildLauncher
 import org.grails.build.parsing.CommandLine
 import org.grails.cli.profile.ExecutionContext
-
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.FutureTask
-
 
 /**
  * Allow dynamic invocation of Gradle tasks

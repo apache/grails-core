@@ -1,0 +1,17 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+apply {
+    from file('../dependencies.gradle')
+}
+
+repositories {
+    // mavenLocal()
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+dependencies {
+    implementation "${bomDependencies['gradle-nexus-publish-plugin']}"
+}

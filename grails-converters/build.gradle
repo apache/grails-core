@@ -17,7 +17,6 @@ dependencies {
 
     implementation 'org.apache.commons:commons-lang3'
     implementation 'org.apache.grails.data:grails-datamapping-core'
-    implementation project(':grails-bootstrap')
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.apache.grails.data:grails-datastore-core'

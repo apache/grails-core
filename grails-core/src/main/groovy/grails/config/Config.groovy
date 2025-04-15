@@ -1,6 +1,5 @@
-
 /*
- * Copyright 2014 original authors
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +23,7 @@ import org.springframework.core.env.PropertyResolver
  * @author Graeme Rocher
  * @since 3.0
  */
-public interface Config extends PropertyResolver, ConfigMap {
+interface Config extends PropertyResolver, ConfigMap {
 
     /**
      * @return The flat version of the config

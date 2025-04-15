@@ -1,0 +1,1 @@
+## grails-gradle-model

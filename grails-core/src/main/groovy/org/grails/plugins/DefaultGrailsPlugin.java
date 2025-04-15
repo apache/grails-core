@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2023 the original author or authors.
+ * Copyright 2004-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@ import grails.util.GrailsArrayUtils;
 import grails.util.GrailsClassUtils;
 import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
 import org.grails.core.io.SpringResource;
-import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.spring.RuntimeSpringConfiguration;
 import grails.plugins.exceptions.PluginException;
 import org.grails.plugins.support.WatchPattern;

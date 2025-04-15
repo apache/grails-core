@@ -1,3 +1,6 @@
+pluginManagement {
+    includeBuild('./grails-gradle')
+}
 plugins {
     id 'com.gradle.develocity' version '4.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
@@ -37,7 +40,6 @@ include (
         'grails-databinding-core',
         'grails-databinding',
         'grails-datasource',
-        'grails-docs-core',
         'grails-domain-class',
         'grails-encoder',
         'grails-i18n',
@@ -68,9 +70,6 @@ include (
         'grails-test-suite-persistence',
         'grails-test-suite-uber',
         'grails-test-suite-web',
-
-        // Gradle Plugin
-        'grails-gradle-model',
 
         // events
         'grails-events-core',
@@ -152,3 +151,11 @@ project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-tes
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 // project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
 // project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')
+
+includeBuild ('./grails-gradle') {
+    dependencySubstitution {
+        substitute module('org.apache.grails:grails-gradle-bom') using project(':grails-gradle-bom')
+        substitute module('org.apache.grails.gradle:grails-gradle-model') using project(':grails-gradle-model')
+    }
+}
+

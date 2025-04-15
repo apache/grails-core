@@ -1,0 +1,36 @@
+def e2eTest = sourceSets.create('e2eTest')
+def e2eTestTask = tasks.register('e2eTest', Test) {
+    group = 'verification'
+    testClassesDirs = sourceSets.e2eTest.output.classesDirs
+    classpath = sourceSets.e2eTest.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty("localMavenPath", project.layout.buildDirectory.dir('local-maven').get().asFile.absolutePath)
+    systemProperty("grailsGradlePluginVersion", project.version)
+    systemProperty("groovyVersion", e2eGroovyVersion)
+
+    testLogging {
+        exceptionFormat = 'full'
+        events 'passed', 'skipped', 'failed', 'standardOut', 'standardError'
+    }
+    beforeTest { descriptor -> logger.quiet " -- $descriptor" }
+
+    dependsOn "publishAllPublicationsToTestCaseMavenRepoRepository"
+}
+
+tasks.named("check") {
+    dependsOn e2eTestTask
+}
+
+gradlePlugin {
+    testSourceSets e2eTest
+}
+
+dependencies {
+    // Note: must use a groovy 3 compatible version of Spock
+    e2eTestImplementation "org.spockframework:spock-core:${bomDependencyVersions['gradle-spock.version']}", {
+        exclude group: 'org.apache.groovy'
+    }
+    e2eTestImplementation 'commons-io:commons-io:2.18.0'
+    e2eTestImplementation gradleTestKit()
+    e2eTestRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

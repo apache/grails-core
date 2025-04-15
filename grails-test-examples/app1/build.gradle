@@ -6,8 +6,9 @@ buildscript {
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.apache.grails:grails-gradle-plugins:${project['grails-gradle-plugins.version']}"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:${project['asset-pipeline-gradle.version']}"
+        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
+        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
     }
 }
 

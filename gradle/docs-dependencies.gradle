@@ -1,6 +1,6 @@
 configurations.register('documentation')
 dependencies {
-    add('documentation', platform(project(':grails-bom')))
+    add('documentation', platform("org.apache.grails:grails-gradle-bom:${projectVersion}"))
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')

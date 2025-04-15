@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.grails.cli
 import grails.build.logging.GrailsConsole
 import grails.build.proxy.SystemPropertiesAuthenticator
 import grails.config.ConfigMap
-import grails.io.support.SystemOutErrCapturer
 import grails.io.support.SystemStreamsRedirector
 import grails.util.BuildSettings
 import grails.util.Environment

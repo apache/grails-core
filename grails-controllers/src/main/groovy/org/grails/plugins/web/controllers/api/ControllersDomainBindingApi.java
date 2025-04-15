@@ -16,11 +16,9 @@
 package org.grails.plugins.web.controllers.api;
 
 import grails.core.GrailsApplication;
-import grails.core.GrailsDomainClass;
 import grails.util.Environment;
 import grails.util.Holders;
 import grails.web.databinding.DataBindingUtils;
-import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;

@@ -1,4 +1,7 @@
 // Copyright 2024 the original author or authors.
+buildscript {
+    apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+}
 
 plugins {
     id 'java-platform'
@@ -12,118 +15,154 @@ javaPlatform {
     allowDependencies()
 }
 
-def versions = new Properties()
-versions.load(new StringReader(new File("$projectDir.parentFile/gradle.properties").text))
+
 
 ext {
     isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
+}
 
-    // When making changes in the dependencyVersions, remember to also update the Grails BOM Documentation:
-    // https://docs.grails.org/snapshot/ref/Dependency%20Versions/Grails%20BOM.html
-    // Grails dependencies are listed in SCOTTL format:
-    // groupId:artifactId-prefixes:artifactId-suffixes:version:versionNameOverride
-    // version name = versionNameOverride ?: artifactId-prefixes[0]
-    dependenciesOverview = """\
-        com.bertramlabs.plugins:asset-pipeline-gradle::
-        com.bertramlabs.plugins:asset-pipeline-grails::
-        com.fasterxml.jackson:jackson-bom:::jackson
-        com.github.javaparser:javaparser-core::
-        com.h2database:h2::
-        commons-codec:commons-codec::
-        io.methvin:directory-watcher::
-        io.reactivex.rxjava2:rxjava:::rxjava2
-        io.reactivex.rxjava3:rxjava:::rxjava3
-        io.reactivex:rxjava:::rxjava
-        jline:jline::
-        net.bytebuddy:byte-buddy::
-        net.java.dev.jna:jna::
-        org.apache.ant:ant:,junit:
-        org.apache.commons:commons-text::
-        org.apache.grails.data:grails-data:hibernate5-core,mongodb-core,mongodb-ext,mongodb-bson,simple::grails-datastore
-        org.apache.grails:grails-data:hibernate5,hibernate5-dbmigration,hibernate5-spring-boot,mongodb,mongodb-spring-boot,mongodb-gson-templates::grails-datastore
-        org.apache.grails.data:grails-datamapping:core,core-test,async,support,rx,validation,tck-tests::grails-datastore
-        org.apache.grails.data:grails-datastore:async,core,web::grails-datastore
-        org.apache.grails:grails-testing-support-datamapping:::grails-datastore
-        org.apache.grails.views:grails:gsp,gsp-core,web-gsp,web-taglib::gsp
-        org.apache.grails:grails:gsp,web-testing-support,testing-support-views-gson,testing-support-web::gsp
-        org.apache.grails:grails:fields,scaffolding,views-gson,views-markup::gsp
-        org.apache.grails:grails-gradle-plugins::
-        org.apache.grails:grails:cache::grails-cache
-        org.apache.grails:grails:geb::grails-geb
-        org.apache.groovy:groovy:bom:::
-        org.asciidoctor:asciidoctorj::
-        org.fusesource.jansi:jansi::
-        org.gebish:geb-spock::
-        org.grails.profiles:base,plugin,profile,web,rest-api,web-plugin,rest-api-plugin,react,vue,angular:::profiles
-        org.grails:grails-gdoc-engine::
-        org.jsoup:jsoup::
-        org.liquibase.ext:liquibase-hibernate5:::liquibase-hibernate5
-        org.liquibase:liquibase-cdi,liquibase-core:::liquibase-hibernate5
-        org.mongodb:bson:,record-codec::mongodb
-        org.mongodb:mongodb-driver:core,sync::mongodb
-        org.objenesis:objenesis::
-        org.spockframework:spock-core,spock-spring:::spock
-        org.springframework.boot:spring-boot-cli,spring-boot-gradle-plugin:::spring-boot
-        org.springframework:springloaded::
-        org.webjars.npm:bootstrap-icons::
-        org.webjars.npm:bootstrap::
-        org.webjars.npm:jquery::
-        org.xhtmlrenderer:flying-saucer-pdf-openpdf::
-    """.stripIndent(true).trim().readLines().collect {
-        def info = it.toString().split(':', -1)
-        def dep = [group: info[0], names: info[1].split(','), modules: info[2].split(','), version: info.length >= 4? info[3] : null]
-        dep.name = info.length == 5? info[4] : dep.names[0] // allow name override
-        dep.version = dep.version ?: versions.get("${dep.name}.version".toString()) ?: '\t\t\t\t*** UNDEFINED **'
-        dep
-    }.collectEntries {
-        def depList = GroovyCollections
-                .combinations(it.names, it.modules)
-                .collect { it.join('-') }
-                .collect { it.endsWith('-') ? it[0..-2] : it }
-        [(it):depList]
+dependencies {
+    api platform("org.apache.grails:grails-gradle-bom:${projectVersion}"), {
+        exclude group: 'org.codehaus.groovy'
+        exclude group: 'org.spockframework'
     }
 
-    dependencyList = dependenciesOverview.collectMany { dependency, artifacts ->
-        artifacts.collect { artifactId ->
-            [groupId: dependency.group, artifactId: artifactId,
-             versionValue: dependency.version, name: dependency.name]
+    api platform(bomPlatformDependencies['groovy-bom'])
+    api platform(bomPlatformDependencies['spock-bom'])
+    api platform(bomPlatformDependencies['jackson-bom'])
+
+    constraints {
+        api bomDependencies['asset-pipeline-grails']
+        api bomDependencies['bootstrap']
+        api bomDependencies['bootstrap-icons']
+        api bomDependencies['commons-codec']
+        api bomDependencies['fields']
+        api bomDependencies['geb-spock']
+        api bomDependencies['grails-cache']
+        api bomDependencies['grails-data-hibernate5']
+        api bomDependencies['grails-data-hibernate5-core']
+        api bomDependencies['grails-data-hibernate5-dbmigration']
+        api bomDependencies['grails-data-hibernate5-spring-boot']
+        api bomDependencies['grails-data-mongodb']
+        api bomDependencies['grails-data-mongodb-bson']
+        api bomDependencies['grails-data-mongodb-core']
+        api bomDependencies['grails-data-mongodb-ext']
+        api bomDependencies['grails-data-mongodb-gson-templates']
+        api bomDependencies['grails-data-mongodb-spring-boot']
+        api bomDependencies['grails-data-simple']
+        api bomDependencies['grails-datamapping-async']
+        api bomDependencies['grails-datamapping-core']
+        api bomDependencies['grails-datamapping-core-test']
+        api bomDependencies['grails-datamapping-rx']
+        api bomDependencies['grails-datamapping-support']
+        api bomDependencies['grails-datamapping-tck-tests']
+        api bomDependencies['grails-datamapping-validation']
+        api bomDependencies['grails-datastore-async']
+        api bomDependencies['grails-datastore-core']
+        api bomDependencies['grails-datastore-web']
+        api bomDependencies['grails-geb']
+        api bomDependencies['grails-gsp']
+        api bomDependencies['grails-gsp-core']
+        api bomDependencies['grails-profiles-angular']
+        api bomDependencies['grails-profiles-base']
+        api bomDependencies['grails-profiles-plugin']
+        api bomDependencies['grails-profiles-profile']
+        api bomDependencies['grails-profiles-react']
+        api bomDependencies['grails-profiles-rest-api']
+        api bomDependencies['grails-profiles-rest-api-plugin']
+        api bomDependencies['grails-profiles-vue']
+        api bomDependencies['grails-profiles-web']
+        api bomDependencies['grails-profiles-web-plugin']
+        api bomDependencies['grails-testing-support-datamapping']
+        api bomDependencies['grails-testing-support-views-gson']
+        api bomDependencies['grails-testing-support-web']
+        api bomDependencies['grails-web-gsp']
+        api bomDependencies['grails-web-taglib']
+        api bomDependencies['h2']
+        api bomDependencies['jquery']
+        api bomDependencies['liquibase-hibernate5']
+        api bomDependencies['liquibase-hibernate5-cdi']
+        api bomDependencies['liquibase-hibernate5-core']
+        api bomDependencies['liquibase-hibernate5-ext']
+        api bomDependencies['mongodb-bson']
+        api bomDependencies['mongodb-driver-core']
+        api bomDependencies['mongodb-driver-sync']
+        api bomDependencies['mongodb-record-codec']
+        api bomDependencies['rxjava']
+        api bomDependencies['rxjava2']
+        api bomDependencies['rxjava3']
+        api bomDependencies['scaffolding']
+        api bomDependencies['views-gson']
+        api bomDependencies['views-markup']
+
+        for (Project subproject : rootProject.subprojects) {
+            if(subproject.path == project.path || subproject.name in testProjects) {
+                continue // ignore self & test projects
+            }
+
+            api project(":${subproject.path}")
         }
     }
 
-    dependenciesVersions = dependencyList.sort { it.name }
-            .groupBy { it.name }.collect { it.value.first() } // remove duplicates
+}
 
-    allDependencies = dependencyList.sort { it.name + it.artifactId }
-    allDependencies.each { it << [version: "${it.name}.version"] }
+tasks.register('validateNoSnapshotDependencies') {
+    doLast {
+        configurations.each { config ->
+            config.allDependencies.each { dep ->
+                if (dep.version && dep.version.contains('-SNAPSHOT')) {
+                    throw new GradleException("Releases cannot have a snapshot dependency: ${dep.group}:${dep.name} (${dep.version})")
+                }
+            }
+        }
+    }
 }
 
 if(ext.isReleaseBuild && ext.isPublishedExternal) {
-    allDependencies.each {
-        if (version.endsWith("-SNAPSHOT")) {
-            throw new GradleException("Releases cannot have a snapshot dependency: $it.groupId:$it.name ($it.version)")
-        }
+    tasks.named('generateMetadataFileForMavenPublication').configure {
+        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+    }
+    tasks.named('generatePomFileForMavenPublication').configure {
+        dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
 }
 
-// Generate a valid gradle constraint as well as the pom that's generated so we can use either platform()
-// or the spring dependency management plugin
-dependencies {
-    api platform("org.springframework.boot:spring-boot-dependencies:${project['spring-boot.version']}")
-    api platform("org.apache.groovy:groovy-bom:${project['groovy.version']}")
-    api platform("com.fasterxml.jackson:jackson-bom:${project['jackson.version']}")
+Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
+    Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
 
-    constraints {
-        allDependencies.each {
-            api "${it.groupId}:${it.artifactId}:${it.versionValue}"
-        }
-
-        project.parent.subprojects.each {
-            if (it.name == 'grails-bom' || it.name in testProjects) return null
-
-            api project(it.path)
-        }
+    Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
+    if(!found) {
+        return null
     }
+
+    Map<String, String> versions = bomDependencyVersions
+
+    //TODO: this isn't the correct way to do this, but with project mergers it may not matter
+    String possibleKey = found.key.toString()
+            .replace('grails-datamapping', 'grails-data')
+            .replace('grails-datastore', 'grails-data')
+            .replace('grails-testing-support-datamapping', 'grails-data')
+            .replace('grails-gsp', 'gsp')
+            .replace('grails-web-gsp', 'gsp')
+            .replace('grails-web-taglib', 'gsp')
+            .replace('scaffolding', 'gsp')
+            .replace('fields', 'gsp')
+            .replace('grails-testing-support-views-gson', 'gsp')
+            .replace('grails-testing-support-web', 'gsp')
+            .replace('views-markup', 'gsp')
+            .replace('views-gson', 'gsp')
+    while(possibleKey != null) {
+        String propertyName = "${possibleKey}.version" as String
+        if(versions.containsKey(propertyName)) {
+            return propertyName
+        }
+
+        int lastIndex = possibleKey.lastIndexOf('-')
+        possibleKey = lastIndex > 0 ? possibleKey.substring(0, lastIndex) : null
+    }
+
+    throw new GradleException("Could not determine artifact property key for $groupId:$artifactId:$version")
 }
 
 ext {
@@ -131,101 +170,43 @@ ext {
     pomCustomization = { ->
         def root = asNode()
 
-        def propsNode = root.appendNode('properties')
-        dependenciesVersions.each {
-            propsNode.appendNode(it.version, it.versionValue)
-        }
+        def propertiesNode = root.properties ? root.properties[0] : root.appendNode('properties')
 
-        def appendNodes = { node, attrs ->
-            attrs.each {
-                node.appendNode(it.key, it.value)
+        def depMgmt = root.dependencyManagement?.getAt(0)
+        def deps = depMgmt?.dependencies?.getAt(0)
+        if (deps) {
+            Map<String, String> pomProperties = [:]
+            deps.dependency.each { dep ->
+                String groupId = dep.groupId.text().trim()
+                String artifactId = dep.artifactId.text().trim()
+                boolean isBom = dep.scope.text().trim() == 'import'
+
+                String inlineVersion = dep.version.text().trim()
+                if(inlineVersion == 'null') {
+                    inlineVersion = null
+                }
+
+                if (inlineVersion) {
+                    String propertyName = determinePropertyName(groupId, artifactId, inlineVersion, isBom)
+                    if(propertyName) {
+                        // Replace the version in the pom with a property reference
+                        String propertyReference = "\${${propertyName}}"
+                        dep.version[0].value = propertyReference
+
+                        // Add an entry in the <properties> node with the actual version number
+                        pomProperties.put(propertyName, inlineVersion)
+                    }
+                }
+                else if(!inlineVersion) {
+                    throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
+                }
             }
-        }
 
-        def dpm = root.appendNode('dependencyManagement')
-        def deps = dpm.appendNode('dependencies')
-
-        appendNodes(deps.appendNode('dependency'), [
-                groupId: 'org.apache.groovy',
-                artifactId: 'groovy-bom',
-                version: '${groovy.version}',
-                type: 'pom',
-                scope: 'import'
-        ])
-
-        appendNodes(deps.appendNode('dependency'), [
-                groupId: 'com.fasterxml.jackson',
-                artifactId: 'jackson-bom',
-                version: '${jackson.version}',
-                type: 'pom',
-                scope: 'import'
-        ])
-
-        appendNodes(deps.appendNode('dependency'), [
-                groupId: 'org.springframework.boot',
-                artifactId: 'spring-boot-dependencies',
-                version: '${spring-boot.version}',
-                type: 'pom',
-                scope: 'import'
-        ])
-
-        project.parent.subprojects.findResults {
-            if (it.name == 'grails-bom' || it.name in testProjects) return null
-            return [
-                    groupId: it.group,
-                    artifactId: it.findProperty('pomArtifactId') ?: it.name,
-                    version: it.version
-            ]
-        }.each {
-            appendNodes(deps.appendNode('dependency'), it)
-        }
-
-        allDependencies.collect { def m = it.subMap('groupId', 'artifactId', 'version')
-            m + [version: "\${${m.version}}"]
-        }.each {
-            if(it.artifactId !in ['groovy-bom', 'jackson-bom']) {
-                appendNodes(deps.appendNode('dependency'), it)
+            for (Map.Entry<String, String> property : pomProperties.entrySet()) {
+                propertiesNode.appendNode(property.key, property.value)
             }
         }
     }
-}
-
-tasks.register('syncProps') {
-    doLast {
-        def gradlePropertiesFile = rootProject.layout.projectDirectory.file('gradle.properties').asFile
-        String oldProperties = gradlePropertiesFile.text
-        gradlePropertiesFile.write(oldProperties.substring(0, oldProperties.indexOf("# Generated on")) + """\
-                    # Generated on ${new Date()} by: ./gradlew :grails-bom:${name}
-                    # Only version value modifications allowed after this point. Do not insert or change version names. 
-                    ${dependenciesVersions.collect { "$it.version=$it.versionValue" }.join('\n                    ')}
-                    """.stripIndent(true).trim())
-        println "${gradlePropertiesFile} updated."
-    }
-}
-
-tasks.register('dependabotBuild') {
-    doLast {
-        def dependabotBuildFile = rootProject.layout.projectDirectory.file('dependabot/build.gradle').asFile
-        dependabotBuildFile.parentFile.mkdirs()
-        dependabotBuildFile.write("""\
-                    // Generated on ${new Date()} by: ./gradlew :grails-bom:${name}
-                    plugins {
-                        id 'java-library'
-                    }
-                
-                    dependencies {
-                    ${allDependencies.collect { "    api \"${it.groupId}:${it.artifactId}:\${project['${it.version}']}\"" }.join('\n                    ')}
-                    }
-                    """.stripIndent(true).trim())
-        println "${dependabotBuildFile} created."
-    }
-}
-
-tasks.register('dependabot') {
-    group = 'Dependency Management'
-    description = 'This task updates the dependabot/build.gradle and gradle.properties files by syncing them with the latest external dependencies listed in the Grails BOM (Bill of Materials). This ensures that Dependabot can monitor these dependencies and automatically create pull requests when newer versions become available.'
-
-    dependsOn 'syncProps', 'dependabotBuild'
 }
 
 apply {

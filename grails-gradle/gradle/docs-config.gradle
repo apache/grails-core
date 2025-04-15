@@ -1,0 +1,39 @@
+configurations.register('documentation')
+dependencies {
+    add('documentation', platform(project(':grails-gradle-bom')))
+    add('documentation', 'org.fusesource.jansi:jansi')
+    add('documentation', 'jline:jline')
+    add('documentation', 'com.github.javaparser:javaparser-core')
+    add('documentation', "org.codehaus.groovy:groovy")
+    add('documentation', "org.codehaus.groovy:groovy-ant")
+    add('documentation', "org.codehaus.groovy:groovy-docgenerator")
+    add('documentation', "org.codehaus.groovy:groovy-templates")
+}
+
+ext {
+    includeInApiDocs = true
+}
+
+tasks.named('groovydoc', Groovydoc) {
+    classpath = configurations.documentation
+    groovyClasspath = configurations.documentation
+    access = GroovydocAccess.PROTECTED
+    includeAuthor = true
+    includeMainForScripts = false
+    processScripts = false
+    destinationDir = project.file('build/docs/api')
+}
+
+tasks.named('javadoc', Javadoc) {
+    (options as StandardJavadocDocletOptions).with {
+        encoding = 'UTF-8'
+        docEncoding = 'UTF-8'
+        charSet = 'UTF-8'
+        addStringOption('-Xms64M')
+        addStringOption('-Xmx512M')
+    }
+}
+
+tasks.named('build') {
+    finalizedBy('groovydoc')
+}

@@ -1,0 +1,5 @@
+apply plugin: 'java-library'
+apply plugin: 'groovy'
+dependencies {
+    implementation "org.apache.groovy:groovy:$groovyVersion"
+}

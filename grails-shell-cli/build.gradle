@@ -72,7 +72,7 @@ dependencies {
     runtimeOnly "org.apache.groovy:groovy-xml"
 
     api project(":grails-bootstrap")
-    api project(":grails-gradle-model")
+    api "org.apache.grails.gradle:grails-gradle-model"
     api "org.apache.ant:ant"
     api "org.fusesource.jansi:jansi"
     api "jline:jline"

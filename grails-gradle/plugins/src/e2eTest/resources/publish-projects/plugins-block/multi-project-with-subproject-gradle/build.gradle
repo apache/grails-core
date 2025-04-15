@@ -1,0 +1,25 @@
+buildscript {
+    repositories {
+        maven { url "${System.getenv('LOCAL_MAVEN_PATH')}" }
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+    dependencies {
+        classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
+    }
+}
+
+allprojects {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+}
+
+version "${projectVersion}"
+group "org.grails.example"
+
+subprojects { project ->
+    version "${projectVersion}"
+    group "org.grails.example"
+}

@@ -1,0 +1,30 @@
+compileJava.options.release = javaVersion.toInteger()
+
+extensions.configure(JavaPluginExtension) {
+    // Explicit `it` is required here
+    it.withJavadocJar()
+    it.withJavadocJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.deprecation = true
+    options.debug = true
+}
+
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.encoding = 'UTF-8'
+    options.encoding = 'UTF-8'
+    options.fork = true
+    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx1G']
+}
+
+tasks.withType(Jar).configureEach {
+    manifest.attributes(
+            'Built-By': System.properties['user.name'],
+            'Created-By': System.properties['java.vm.version'] + ' (' + System.properties['java.vm.vendor'] + ')',
+            'Implementation-Title': 'Grails',
+            'Implementation-Version': projectVersion,
+            'Implementation-Vendor': 'grails.org'
+    )
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}

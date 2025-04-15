@@ -1,0 +1,62 @@
+buildscript {
+    repositories {
+        maven { url "${System.getenv('LOCAL_MAVEN_PATH')}" }
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+    dependencies {
+        classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
+    }
+}
+
+allprojects {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+}
+
+version "${projectVersion}"
+group "org.grails.example"
+
+apply plugin: 'java-library'
+apply plugin: 'groovy'
+
+sourceSets {
+    other {
+        groovy {
+            compileClasspath += configurations.compileClasspath
+        }
+    }
+    main {
+        compileClasspath += sourceSets.other.output
+    }
+    test {
+        compileClasspath += sourceSets.other.output
+    }
+}
+
+def copyOtherClasses = project.tasks.register('copyOtherClasses', Copy) {
+    it.from sourceSets.other.output
+    it.into project.layout.buildDirectory.dir("classes/groovy/main")
+}
+
+def taskContainer = project.tasks
+taskContainer.named('classes').configure { it.dependsOn(copyOtherClasses) }
+
+taskContainer.withType(JavaExec).configureEach {
+    it.classpath += sourceSets.other.output
+}
+
+apply plugin: 'org.apache.grails.gradle.grails-publish'
+grailsPublish {
+    githubSlug = 'apache/grails-cores'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Grails Gradle Plugin - Example Project'
+    desc = 'A testing project for the grails gradle plugin'
+    developers = [
+            jdaugherty: 'James Daugherty',
+    ]
+}

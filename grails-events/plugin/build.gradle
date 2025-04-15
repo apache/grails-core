@@ -24,12 +24,12 @@ dependencies {
 
     // As this is a plugin these dependencies will be provided by the Grails application
     // This removes circular dependencies
-    compileOnly project(':grails-bootstrap')
+    compileOnly 'org.apache.grails.gradle:grails-gradle-model'
     compileOnly project(':grails-core')
 
     testImplementation 'org.spockframework:spock-core'
 
-    testRuntimeOnly project(':grails-bootstrap')
+    testRuntimeOnly 'org.apache.grails.gradle:grails-gradle-model'
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }
 

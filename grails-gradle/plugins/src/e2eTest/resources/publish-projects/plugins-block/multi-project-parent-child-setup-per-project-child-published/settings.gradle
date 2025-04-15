@@ -1,0 +1,3 @@
+rootProject.name = 'subproject1'
+
+include 'subproject2'
