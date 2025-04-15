@@ -258,6 +258,20 @@ spring:
   propertyOverrideConfiguration: Property Override Configuration
   actuators: Spring Boot Actuators
 scaffolding: Scaffolding
+cache:
+  title: Grails Cache
+  cacheUsage:
+    title: Usage
+    cacheConfiguration: Configuration
+    cacheAnnotations:
+      title: Cache Annotations
+      cacheUnitTests: Unit Testing
+    cacheManager: The CacheManager
+  cacheTags: Caching Tags
+  grailsCacheAdminService:
+    title: The Cache Admin Service
+    clearingCaches: Clearing Caches
+  cacheImplementation: Implementation Details
 deployment:
   title: Deployment
   deploymentStandalone: Standalone

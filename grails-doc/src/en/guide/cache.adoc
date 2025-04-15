@@ -1,3 +1,1 @@
 The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.
-
-IMPORTANT: Cache version 8.0.0 and higher requires Grails 7 or later.
