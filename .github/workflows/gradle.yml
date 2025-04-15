@@ -9,6 +9,8 @@ on:
       - '[4-9]+.[0-9]+.x'
       - '[3-9]+.[3-9]+.x'
   workflow_dispatch:
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   skip_check:
     runs-on: ubuntu-latest

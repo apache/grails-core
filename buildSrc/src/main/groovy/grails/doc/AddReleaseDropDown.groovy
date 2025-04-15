@@ -106,6 +106,13 @@ class AddReleaseDropDown extends DefaultTask {
         URL url = new URL(GITHUB_API_BASE_URL + "/repos/" + repoSlug + "/tags")
         URLConnection connection = url.openConnection()
         connection.setRequestProperty("User-Agent", "apache/grails-core")
+
+        // See https://github.com/orgs/community/discussions/42748#discussioncomment-4709316
+        String token = System.getenv('GITHUB_TOKEN')
+        if(token) {
+            connection.setRequestProperty("Authorization", "Bearer ${token}")
+        }
+
         final String json = connection.inputStream.text
 
         def result = new JsonSlurper().parseText(json)
