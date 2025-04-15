@@ -138,6 +138,11 @@ Note: if project properties are used, the properties must be defined prior to ap
             if (detectedVersion == Project.DEFAULT_VERSION) {
                 throw new IllegalStateException("Project ${project.name} has an unspecified version (neither `version` or the property `projectVersion` is defined). Release state cannot be determined.")
             }
+            project.rootProject.logger.info("Version $detectedVersion detected for project ${project.name}")
+
+            isSnapshot = detectedVersion.endsWith('SNAPSHOT')
+            isRelease = !isSnapshot
+
             if (project.version == Project.DEFAULT_VERSION) {
                 if(isRelease) {
                     project.rootProject.logger.warn("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
@@ -146,10 +151,6 @@ Note: if project properties are used, the properties must be defined prior to ap
                     project.rootProject.logger.info("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
                 }
             }
-            project.rootProject.logger.info("Version $detectedVersion detected for project ${project.name}")
-
-            isSnapshot = detectedVersion.endsWith('SNAPSHOT')
-            isRelease = !isSnapshot
         }
 
         if (isSnapshot) {
