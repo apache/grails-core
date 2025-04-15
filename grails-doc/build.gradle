@@ -147,7 +147,7 @@ tasks.register('publishGuide', grails.doc.gradle.PublishGuide) {
                 'GrailsVersion'            : projectVersion,
                 'version'                  : projectVersion,
                 'gormVersion'              : gormVersion,
-                'cacheExampleSourceDir'    : rootProject.layout.projectDirectory.dir('TODO').asFile, // TODO
+                'cacheExampleSourceDir'    : rootProject.layout.projectDirectory.dir('grails-test-examples/cache').asFile,
                 'hibernateVersion'         : getVersion("hibernate-core-jakarta"),
                 'spockVersion'             : getVersion("spock-core"),
                 'testingSupportVersion'    : getVersion("grails-testing-support-core"),
