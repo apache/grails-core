@@ -11,8 +11,8 @@ group = 'functional.tests.plugin'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation project(':grails-views-gson')
-    implementation project(':grails-rest-transforms')
+    implementation 'org.apache.grails:grails-views-gson'
+    implementation 'org.apache.grails:grails-rest-transforms'
     compileOnly 'org.slf4j:slf4j-nop' // Used for getting rid of warning about missing slf4j implementation during compileGsonViews task
 }
 
