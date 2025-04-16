@@ -1,3 +1,4 @@
+import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
 
 Properties props = new Properties()
 file('../gradle.properties').withInputStream {
@@ -51,7 +52,7 @@ if (isReleaseVersion) {
         onlyIf { isReleaseVersion }
     }
 
-    tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
+    tasks.withType(InitializeNexusStagingRepository).configureEach {
         shouldRunAfter(tasks.withType(Sign))
     }
 }
