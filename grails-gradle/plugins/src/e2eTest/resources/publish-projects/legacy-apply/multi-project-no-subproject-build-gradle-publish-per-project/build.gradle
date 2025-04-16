@@ -28,7 +28,7 @@ subprojects { project ->
         implementation "org.apache.groovy:groovy:$groovyVersion"
     }
 
-    if(project.name == "subproject1") {
+    if (project.name == "subproject1") {
         apply plugin: 'org.apache.grails.gradle.grails-publish'
         grailsPublish {
             githubSlug = 'apache/grails-cores'

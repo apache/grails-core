@@ -21,7 +21,7 @@ subprojects { project ->
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
 
-    if(project.name == "subproject1") {
+    if (project.name == "subproject1") {
         apply plugin: 'org.apache.grails.gradle.grails-publish'
         grailsPublish {
             githubSlug = 'apache/grails-cores'
