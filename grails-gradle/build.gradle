@@ -19,11 +19,15 @@ allprojects {
 
 ext {
     isReleaseVersion = Boolean.parseBoolean(System.getenv('GRAILS_PUBLISH_RELEASE'))
-    ext.'signing.keyId' = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
-    ext.'signing.password' = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
-    ext.'signing.secretKeyRingFile' = project.findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
-    isCiBuild = System.getenv().get('CI') as Boolean
+    isCiBuild = System.getenv().containsKey('CI')
 }
+ext.set('signing.keyId', findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
+ext.set('signing.password', findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE'))
+ext.set('signing.secretKeyRingFile',
+        findProperty('signing.secretKeyRingFile') ?:
+        "${System.getProperty('user.home')}${File.separator}.gnupg${File.separator}secring.gpg"
+)
+
 if (isReleaseVersion) {
     apply plugin: 'io.github.gradle-nexus.publish-plugin'
     apply plugin: 'signing'
