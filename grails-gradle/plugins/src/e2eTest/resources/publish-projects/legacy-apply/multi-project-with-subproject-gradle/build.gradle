@@ -15,13 +15,13 @@ allprojects {
     }
 }
 
-version "${projectVersion}"
-group "org.grails.example"
+version = "${projectVersion}"
+group = "org.grails.example"
 
 subprojects { project ->
     apply plugin: 'java-library'
     apply plugin: 'groovy'
 
-    version "${projectVersion}"
-    group "org.grails.example"
+    version = "${projectVersion}"
+    group = "org.grails.example"
 }

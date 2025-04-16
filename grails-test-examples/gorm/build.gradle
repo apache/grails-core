@@ -10,8 +10,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "gorm"
+version = "0.1"
+group = "gorm"
 
 apply plugin: "org.apache.grails.gradle.grails-web"
 

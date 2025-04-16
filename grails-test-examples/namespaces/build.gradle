@@ -11,8 +11,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "namespaces"
+version = "0.1"
+group = "namespaces"
 
 apply plugin: "asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"

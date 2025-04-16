@@ -12,8 +12,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "functionaltests"
+version = "0.1"
+group = "functionaltests"
 
 apply plugin: "asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"

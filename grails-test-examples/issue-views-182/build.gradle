@@ -9,8 +9,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "issueviews182"
+version = "0.1"
+group = "issueviews182"
 
 apply plugin:"org.apache.grails.gradle.grails-web"
 

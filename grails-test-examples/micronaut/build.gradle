@@ -11,8 +11,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "micronaut"
+version = "0.1"
+group = "micronaut"
 
 apply plugin:"org.apache.grails.gradle.grails-web"
 apply plugin:"com.bertramlabs.asset-pipeline"

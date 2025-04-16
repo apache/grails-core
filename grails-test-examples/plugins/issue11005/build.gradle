@@ -13,8 +13,8 @@ apply plugin: "java-library"
 apply plugin: "org.apache.grails.gradle.grails-plugin"
 apply plugin: "org.apache.grails.gradle.grails-gsp"
 
-version "0.1-SNAPSHOT"
-group "com.example.grails.plugins"
+version = "0.1-SNAPSHOT"
+group = "com.example.grails.plugins"
 
 dependencies {
     implementation platform(project(':grails-bom'))

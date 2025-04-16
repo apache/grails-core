@@ -11,8 +11,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "issue11102"
+version = "0.1"
+group = "issue11102"
 
 apply plugin: "asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"

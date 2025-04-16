@@ -16,8 +16,8 @@ allprojects {
     }
 }
 
-version "${projectVersion}"
-group "org.grails.example"
+version = "${projectVersion}"
+group = "org.grails.example"
 
 apply plugin: 'java-library'
 

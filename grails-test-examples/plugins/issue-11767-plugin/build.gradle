@@ -8,7 +8,7 @@ buildscript {
     }
 }
 
-version "0.1-SNAPSHOT"
+version = "0.1-SNAPSHOT"
 group 'issue11767.plugin'
 
 apply plugin: 'org.apache.grails.gradle.grails-plugin'

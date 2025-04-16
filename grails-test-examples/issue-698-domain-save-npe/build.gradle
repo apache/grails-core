@@ -9,8 +9,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "grails301.domain.save.npe"
+version = "0.1"
+group = "grails301.domain.save.npe"
 
 apply plugin: "org.apache.grails.gradle.grails-web"
 

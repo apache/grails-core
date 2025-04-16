@@ -1,5 +1,3 @@
-import org.apache.tools.ant.taskdefs.condition.Os
-
 plugins {
     id 'base'
     id 'org.asciidoctor.jvm.convert'
@@ -179,24 +177,16 @@ tasks.register('generateBomDocumentation') {
     }
 
     doLast {
-        def lines = [
-                "== Grails BOM Dependency Documentation",
-                "",
-                "This document provides information about the dependencies mentioned in the Grails BOM categorized into Group ID, Artifact, and Version. Since the `grails-bom` imports other BOMs, the last column indicates the source of the dependency ",
-                ""
-        ]
-        lines << '[cols="1,1,1,1", options="header"]'
-        lines << '|==='
-        lines << '| Group | Artifact | Version | Source'
-
-        Map<String, Tuple4<String, String, String, String>> constraints = rootProject.tasks.getByPath(':grails-bom:extractConstraints').bomConstraints
-        constraints.values().sort { a, b -> a.v1 <=> b.v1 ?: a.v2 <=> b.v2 }.each {
-            lines << "| ${it.v1} | ${it.v2} | ${it.v3} | ${it.v4} "
-        }
-        lines << '|==='
-
         def outputFile = project.layout.projectDirectory.file('src/en/ref/Dependency Versions/Grails BOM.adoc').asFile
-        outputFile.text = lines.join('\n')
+        outputFile.withWriter { writer ->
+            writer.writeLine '== Grails BOM Dependency Documentation'
+            writer.writeLine ''
+            writer.writeLine 'This document provides information about the dependencies mentioned in the Grails BOM categorized into Group ID, Artifact, and Version. Since the `grails-bom` imports other BOMs, the last column indicates the source of the dependency.'
+            writer.writeLine ''
+            writer.write(project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc').get().asFile.text)
+            writer.writeLine ''
+        }
+
         project.logger.lifecycle "BOM Dependency Page generated to: ${outputFile.absolutePath}"
     }
 }

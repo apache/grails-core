@@ -17,7 +17,7 @@ plugins {
 }
 
 version = projectVersion
-group "functionaltests"
+group = "functionaltests"
 
 apply plugin: "org.apache.grails.gradle.grails-web"
 apply plugin: "org.apache.grails.gradle.grails-gsp"

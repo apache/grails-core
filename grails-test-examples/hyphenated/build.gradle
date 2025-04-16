@@ -11,8 +11,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "hyphenated"
+version = "0.1"
+group = "hyphenated"
 
 apply plugin: "asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"

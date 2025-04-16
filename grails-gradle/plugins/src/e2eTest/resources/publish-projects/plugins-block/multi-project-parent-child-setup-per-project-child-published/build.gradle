@@ -21,14 +21,14 @@ allprojects {
     }
 }
 
-version "${projectVersion}"
-group "org.grails.example"
+version = "${projectVersion}"
+group = "org.grails.example"
 
 dependencies {
     implementation "org.apache.groovy:groovy:$groovyVersion"
 }
 
 subprojects { project ->
-    version "${projectVersion}"
-    group "org.grails.example"
+    version = "${projectVersion}"
+    group = "org.grails.example"
 }

@@ -9,8 +9,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "app3"
+version = "0.1"
+group = "app3"
 
 apply plugin: "org.apache.grails.gradle.grails-web"
 
