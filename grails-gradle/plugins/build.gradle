@@ -102,10 +102,13 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    username = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
-                    password = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
+                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
+                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
                 }
-                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+                url = uri(
+                        System.getenv('MAVEN_PUBLISH_URL') ?:
+                        'https://repository.apache.org/content/repositories/snapshots'
+                )
             }
         }
     }
