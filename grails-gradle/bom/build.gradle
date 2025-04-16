@@ -114,6 +114,15 @@ publishing {
         }
     }
 
+    // used for e2e testing
+    // publishAllPublicationsToTestCaseMavenRepoRepository
+    repositories {
+        maven {
+            name = "TestCaseMavenRepo"
+            url = rootProject.layout.buildDirectory.dir('local-maven')
+        }
+    }
+
     publications {
         maven(MavenPublication) {
             from components.javaPlatform

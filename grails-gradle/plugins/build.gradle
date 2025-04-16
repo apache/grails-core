@@ -115,7 +115,7 @@ publishing {
     repositories {
         maven {
             name = "TestCaseMavenRepo"
-            url = layout.buildDirectory.dir('local-maven')
+            url = rootProject.layout.buildDirectory.dir('local-maven')
         }
     }
 
