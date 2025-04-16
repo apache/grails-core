@@ -15,7 +15,7 @@ ext {
 }
 
 dependencies {
-    implementation platform(":grails-bom")
+    implementation platform(project(":grails-bom"))
     api project(':grails-fields')
     api project(':grails-rest-transforms')
 
