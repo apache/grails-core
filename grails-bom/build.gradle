@@ -15,15 +15,13 @@ javaPlatform {
     allowDependencies()
 }
 
-
-
 ext {
     isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
 }
 
 dependencies {
-    api platform("org.apache.grails:grails-gradle-bom:${projectVersion}"), {
+    api platform("org.apache.grails:grails-gradle-bom:$projectVersion"), {
         exclude group: 'org.codehaus.groovy'
         exclude group: 'org.spockframework'
     }
@@ -100,11 +98,9 @@ dependencies {
             if (subproject.path == project.path || subproject.name in testProjects) {
                 continue // ignore self & test projects
             }
-
-            api project(":${subproject.path}")
+            api project(":$subproject.path")
         }
     }
-
 }
 
 tasks.register('validateNoSnapshotDependencies') {
@@ -120,10 +116,10 @@ tasks.register('validateNoSnapshotDependencies') {
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
-    tasks.named('generateMetadataFileForMavenPublication').configure {
+    tasks.named('generateMetadataFileForMavenPublication') {
         dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
-    tasks.named('generatePomFileForMavenPublication').configure {
+    tasks.named('generatePomFileForMavenPublication') {
         dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
 }
@@ -166,7 +162,7 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 }
 
 ext {
-    pomDescription = "Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects"
+    pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
     pomCustomization = { ->
         def root = asNode()
 

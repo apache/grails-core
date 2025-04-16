@@ -56,7 +56,7 @@ dependencies {
     testImplementation 'org.objenesis:objenesis'
   }
 
-tasks.named('compileTestGroovy').configure {
+tasks.named('compileTestGroovy') {
   dependsOn tasks.named('jar')
 }
 

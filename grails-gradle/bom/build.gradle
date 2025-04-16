@@ -70,10 +70,10 @@ tasks.register('validateNoSnapshotDependencies') {
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
-    tasks.named('generateMetadataFileForMavenPublication').configure {
+    tasks.named('generateMetadataFileForMavenPublication') {
         dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
-    tasks.named('generatePomFileForMavenPublication').configure {
+    tasks.named('generatePomFileForMavenPublication') {
         dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
 }

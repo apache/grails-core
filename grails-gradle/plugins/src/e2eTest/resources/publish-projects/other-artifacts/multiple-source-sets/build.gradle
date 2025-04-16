@@ -16,8 +16,8 @@ allprojects {
     }
 }
 
-version "${projectVersion}"
-group "org.grails.example"
+version = projectVersion
+group = 'org.grails.example'
 
 apply plugin: 'java-library'
 apply plugin: 'groovy'
@@ -36,19 +36,21 @@ sourceSets {
     }
 }
 
-def copyOtherClasses = project.tasks.register('copyOtherClasses', Copy) {
-    it.from sourceSets.other.output
-    it.into project.layout.buildDirectory.dir("classes/groovy/main")
+tasks.register('copyOtherClasses', Copy) {
+    from sourceSets.other.output
+    into project.layout.buildDirectory.dir('classes/groovy/main')
 }
 
-def taskContainer = project.tasks
-taskContainer.named('classes').configure { it.dependsOn(copyOtherClasses) }
+tasks.named('classes') {
+    dependsOn(tasks.named('copyOtherClasses'))
+}
 
-taskContainer.withType(JavaExec).configureEach {
-    it.classpath += sourceSets.other.output
+tasks.withType(JavaExec).configureEach {
+    classpath += sourceSets.other.output
 }
 
 apply plugin: 'org.apache.grails.gradle.grails-publish'
+
 grailsPublish {
     githubSlug = 'apache/grails-cores'
     license {
