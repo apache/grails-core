@@ -4,7 +4,7 @@ def e2eTestTask = tasks.register('e2eTest', Test) {
     testClassesDirs = sourceSets.e2eTest.output.classesDirs
     classpath = sourceSets.e2eTest.runtimeClasspath
     useJUnitPlatform()
-    systemProperty("localMavenPath", project.layout.buildDirectory.dir('local-maven').get().asFile.absolutePath)
+    systemProperty("localMavenPath", rootProject.layout.buildDirectory.dir('local-maven').get().asFile.absolutePath)
     systemProperty("grailsGradlePluginVersion", project.version)
     systemProperty("groovyVersion", e2eGroovyVersion)
 
@@ -14,7 +14,7 @@ def e2eTestTask = tasks.register('e2eTest', Test) {
     }
     beforeTest { descriptor -> logger.quiet " -- $descriptor" }
 
-    dependsOn "publishAllPublicationsToTestCaseMavenRepoRepository"
+    dependsOn "publishAllPublicationsToTestCaseMavenRepoRepository", ":grails-gradle-bom:publishAllPublicationsToTestCaseMavenRepoRepository"
 }
 
 tasks.named("check") {
