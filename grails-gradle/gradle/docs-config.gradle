@@ -29,8 +29,8 @@ tasks.named('javadoc', Javadoc).configure { Javadoc it ->
         encoding = 'UTF-8'
         docEncoding = 'UTF-8'
         charSet = 'UTF-8'
-        addStringOption('-Xms64M')
-        addStringOption('-Xmx512M')
+        addStringOption('Xms64M')
+        addStringOption('Xmx512M')
     }
 }
 
