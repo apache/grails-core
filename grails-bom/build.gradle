@@ -23,9 +23,10 @@ ext {
 }
 
 dependencies {
-    api platform("org.apache.grails:grails-gradle-bom:${projectVersion}"), {
-        exclude group: 'org.codehaus.groovy'
+    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
+        exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
+        exclude group: 'com.fasterxml.jackson'
     }
 
     api platform(bomPlatformDependencies['groovy-bom'])
@@ -33,67 +34,12 @@ dependencies {
     api platform(bomPlatformDependencies['jackson-bom'])
 
     constraints {
-        api bomDependencies['asset-pipeline-grails']
-        api bomDependencies['bootstrap']
-        api bomDependencies['bootstrap-icons']
-        api bomDependencies['commons-codec']
-        api bomDependencies['fields']
-        api bomDependencies['geb-spock']
-        api bomDependencies['grails-data-hibernate5']
-        api bomDependencies['grails-data-hibernate5-core']
-        api bomDependencies['grails-data-hibernate5-dbmigration']
-        api bomDependencies['grails-data-hibernate5-spring-boot']
-        api bomDependencies['grails-data-mongodb']
-        api bomDependencies['grails-data-mongodb-bson']
-        api bomDependencies['grails-data-mongodb-core']
-        api bomDependencies['grails-data-mongodb-ext']
-        api bomDependencies['grails-data-mongodb-gson-templates']
-        api bomDependencies['grails-data-mongodb-spring-boot']
-        api bomDependencies['grails-data-simple']
-        api bomDependencies['grails-datamapping-async']
-        api bomDependencies['grails-datamapping-core']
-        api bomDependencies['grails-datamapping-core-test']
-        api bomDependencies['grails-datamapping-rx']
-        api bomDependencies['grails-datamapping-support']
-        api bomDependencies['grails-datamapping-tck-tests']
-        api bomDependencies['grails-datamapping-validation']
-        api bomDependencies['grails-datastore-async']
-        api bomDependencies['grails-datastore-core']
-        api bomDependencies['grails-datastore-web']
-        api bomDependencies['grails-geb']
-        api bomDependencies['grails-gsp']
-        api bomDependencies['grails-gsp-core']
-        api bomDependencies['grails-profiles-angular']
-        api bomDependencies['grails-profiles-base']
-        api bomDependencies['grails-profiles-plugin']
-        api bomDependencies['grails-profiles-profile']
-        api bomDependencies['grails-profiles-react']
-        api bomDependencies['grails-profiles-rest-api']
-        api bomDependencies['grails-profiles-rest-api-plugin']
-        api bomDependencies['grails-profiles-vue']
-        api bomDependencies['grails-profiles-web']
-        api bomDependencies['grails-profiles-web-plugin']
-        api bomDependencies['grails-testing-support-datamapping']
-        api bomDependencies['grails-testing-support-views-gson']
-        api bomDependencies['grails-testing-support-web']
-        api bomDependencies['grails-web-gsp']
-        api bomDependencies['grails-web-taglib']
-        api bomDependencies['h2']
-        api bomDependencies['jquery']
-        api bomDependencies['liquibase-hibernate5']
-        api bomDependencies['liquibase-hibernate5-cdi']
-        api bomDependencies['liquibase-hibernate5-core']
-        api bomDependencies['liquibase-hibernate5-ext']
-        api bomDependencies['mongodb-bson']
-        api bomDependencies['mongodb-driver-core']
-        api bomDependencies['mongodb-driver-sync']
-        api bomDependencies['mongodb-record-codec']
-        api bomDependencies['rxjava']
-        api bomDependencies['rxjava2']
-        api bomDependencies['rxjava3']
-        api bomDependencies['scaffolding']
-        api bomDependencies['views-gson']
-        api bomDependencies['views-markup']
+        for (def entry : gradleBomDependencies.entrySet()) {
+            api entry.value
+        }
+        for (def entry : bomDependencies.entrySet()) {
+            api entry.value
+        }
 
         for (Project subproject : rootProject.subprojects) {
             if (subproject.path == project.path || subproject.name in testProjects || subproject.name == 'grails-doc') {
@@ -102,6 +48,11 @@ dependencies {
 
             api project(":${subproject.path}")
         }
+
+        // TODO: since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
+        api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
+        api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
+        api "org.apache.grails:grails-docs-core:${projectVersion}"
     }
 }
 
@@ -177,17 +128,10 @@ tasks.register('extractConstraints') {
             String bomCoordinates = "${bomGroup}:${bomName}" as String
             List<Tuple2<String, String>> excluded = allExclusions.get(bomCoordinates)
 
-            File bomPomFile
-            if(bomGroup == 'org.apache.grails' && bomName == 'grails-gradle-bom') {
-                // the pom won't exist for projects that aren't published yet, so fetch the generated one
-                // TODO: If we make this a reusable task, we should only apply this in this project
-                bomPomFile = rootProject.layout.projectDirectory.file('grails-gradle/bom/build/publications/maven/pom-default.xml').asFile
-            } else {
-                // fetc hthe BOM as a pom file so it can be expanded
-                def bomDependency = dependencies.create("${bomGroup}:${bomName}:${bomVersion}@pom") // TODO Blows up on
-                def bomConf = configurations.detachedConfiguration(bomDependency)
-                bomPomFile = bomConf.singleFile
-            }
+            // fetc hthe BOM as a pom file so it can be expanded
+            def bomDependency = dependencies.create("${bomGroup}:${bomName}:${bomVersion}@pom") // TODO Blows up on
+            def bomConf = configurations.detachedConfiguration(bomDependency)
+            File bomPomFile = bomConf.singleFile
 
             def reader = new MavenXpp3Reader()
             def model = reader.read(new FileReader(bomPomFile))
@@ -248,16 +192,7 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
     }
 }
 
-Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
-    Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
-
-    Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
-    if (!found) {
-        return null
-    }
-
-    Map<String, String> versions = bomDependencyVersions
-
+Closure determinePossibleKey = { Map.Entry<String, String> found, Map versions ->
     //TODO: this isn't the correct way to do this, but with project mergers it may not matter
     String possibleKey = found.key.toString()
             .replace('grails-datamapping', 'grails-data')
@@ -280,6 +215,31 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 
         int lastIndex = possibleKey.lastIndexOf('-')
         possibleKey = lastIndex > 0 ? possibleKey.substring(0, lastIndex) : null
+    }
+}
+
+Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
+    Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
+    Map<String, String> toSearchGradle = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
+
+    Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
+    if(!found) {
+        found = toSearchGradle.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
+        if(!found) {
+            return null
+        }
+    }
+
+    Map<String, String> versions = bomDependencyVersions
+
+    //TODO: this isn't the correct way to do this, but with project mergers it may not matter
+    String propertyName = determinePossibleKey(found, versions)
+    if(!propertyName) {
+        propertyName = determinePossibleKey(found, gradleBomDependencyVersions)
+    }
+
+    if(propertyName) {
+        return propertyName
     }
 
     throw new GradleException("Could not determine artifact property key for $groupId:$artifactId:$version")

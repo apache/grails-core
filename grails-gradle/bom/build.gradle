@@ -16,7 +16,7 @@ ext {
 }
 
 dependencies {
-    api platform(bomPlatformDependencies['spring-boot-bom']), {
+    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
         exclude group: 'com.fasterxml.jackson'
@@ -24,29 +24,12 @@ dependencies {
 
     // Because gradle uses groovy 3, we must use groovy 3 compatible versions for the grails-gradle-bom
     api platform("org.codehaus.groovy:groovy-bom:${GroovySystem.version}")
-    api platform(bomPlatformDependencies['gradle-spock-bom'])
+    api platform(gradleBomPlatformDependencies['gradle-spock-bom'])
 
     constraints {
-        api bomDependencies['ant']
-        api bomDependencies['ant-junit']
-        api bomDependencies['asciidoctorj']
-        api bomDependencies['asciidoctorj-gradle-jvm']
-        api bomDependencies['asset-pipeline-gradle']
-        api bomDependencies['byte-buddy']
-        api bomDependencies['commons-text']
-        api bomDependencies['directory-watcher']
-        api bomDependencies['flying-saucer-pdf-openpdf']
-        api bomDependencies['grails-gdoc-engine']
-        api bomDependencies['jansi']
-        api bomDependencies['javaparser-core']
-        api bomDependencies['jline']
-        api bomDependencies['jna']
-        api bomDependencies['jsoup']
-        api bomDependencies['objenesis']
-        api bomDependencies['gradle-nexus-publish-plugin']
-        api bomDependencies['spring-boot-cli']
-        api bomDependencies['spring-boot-gradle']
-        api bomDependencies['springloaded']
+        for (def entry : gradleBomDependencies.entrySet()) {
+            api entry.value
+        }
 
         for (Project subproject : rootProject.subprojects) {
             if(subproject.path == project.path) {
@@ -80,14 +63,14 @@ if(ext.isReleaseBuild && ext.isPublishedExternal) {
 }
 
 Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
-    Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
+    Map<String, String> toSearch = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
 
     Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
     if(!found) {
         return null
     }
 
-    Map<String, String> versions = bomDependencyVersions
+    Map<String, String> versions = gradleBomDependencyVersions
     String possibleKey = found.key.toString()
     while(possibleKey != null) {
         String propertyName = "${possibleKey}.version" as String
@@ -112,6 +95,15 @@ publishing {
                 }
                 url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
+        }
+    }
+
+    // used for e2e testing
+    // publishAllPublicationsToTestCaseMavenRepoRepository
+    repositories {
+        maven {
+            name = "TestCaseMavenRepo"
+            url = rootProject.layout.buildDirectory.dir('local-maven')
         }
     }
 

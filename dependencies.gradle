@@ -4,6 +4,62 @@
 // This file provides the 'grails-bom' dependencies, while grails-gradle/dependencies.gradle provides the 'grails-gradle-bom' dependencies
 // These files are split to facilitate separation of build vs application dependencies. These are the application dependencies.
 ext {
+    gradleBomDependencyVersions = [
+            'ant.version'                        : '1.10.15',
+            'asciidoctor-gradle-jvm.version'     : '4.0.4',
+            'asciidoctorj.version'               : '3.0.0',
+            'asset-pipeline-gradle.version'      : '5.0.8',
+            'byte-buddy.version'                 : '1.15.5',
+            'commons-text.version'               : '1.12.0',
+            'directory-watcher.version'          : '0.18.0',
+            'flying-saucer-pdf-openpdf.version'  : '9.4.0',
+            'gradle-nexus-publish-plugin.version': '2.0.0',
+            'gradle-spock.version'               : '2.3-groovy-3.0',
+            'grails-gdoc-engine.version'         : '1.0.1',
+            'jansi.version'                      : '1.18',
+            'javaparser-core.version'            : '3.26.2',
+            'jline.version'                      : '2.14.6',
+            'jna.version'                        : '5.16.0',
+            'jquery.version'                     : '3.7.1',
+            'jsoup.version'                      : '1.18.3',
+            'objenesis.version'                  : '3.4',
+            'profiles.version'                   : '10.0.2',
+            'gradle-spock.version'               : '2.3-groovy-3.0',
+            'gradle-nexus-publish-plugin.version': '2.0.0',
+            'spring-boot.version'                : '3.4.2',
+            'springloaded.version'               : '1.2.8.RELEASE',
+    ]
+
+    // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
+    gradleBomPlatformDependencies = [
+            'spring-boot-bom' : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
+            'gradle-spock-bom': "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
+    ]
+
+    // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
+    gradleBomDependencies = [
+            'ant'                        : "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}",
+            'ant-junit'                  : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
+            'asciidoctorj-gradle-jvm'    : "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
+            'asciidoctorj'               : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
+            'asset-pipeline-gradle'      : "com.bertramlabs.plugins:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
+            'byte-buddy'                 : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
+            'commons-text'               : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
+            'directory-watcher'          : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
+            'flying-saucer-pdf-openpdf'  : "org.xhtmlrenderer:flying-saucer-pdf-openpdf:${gradleBomDependencyVersions['flying-saucer-pdf-openpdf.version']}",
+            'gradle-nexus-publish-plugin': "io.github.gradle-nexus:publish-plugin:${gradleBomDependencyVersions['gradle-nexus-publish-plugin.version']}",
+            'grails-gdoc-engine'         : "org.grails:grails-gdoc-engine:${gradleBomDependencyVersions['grails-gdoc-engine.version']}",
+            'jansi'                      : "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}",
+            'javaparser-core'            : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
+            'jline'                      : "jline:jline:${gradleBomDependencyVersions['jline.version']}",
+            'jna'                        : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
+            'jsoup'                      : "org.jsoup:jsoup:${gradleBomDependencyVersions['jsoup.version']}",
+            'objenesis'                  : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
+            'spring-boot-cli'            : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
+            'spring-boot-gradle'         : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
+            'springloaded'               : "org.springframework:springloaded:${gradleBomDependencyVersions['springloaded.version']}",
+    ]
+
     bomDependencyVersions = [
             'asset-pipeline-grails.version': '5.0.9',
             'bootstrap-icons.version'      : '1.11.3',

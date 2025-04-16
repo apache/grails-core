@@ -105,9 +105,9 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Functional Tests"
         run: ./gradlew build -PonlyFunctionalTests --stacktrace
-  publish:
+  publishGradle:
     if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    needs: [ skip_check, buildGradle, build, functional]
+    needs: [ skip_check, buildGradle ]
     permissions:
       contents: read # limit to read access
     runs-on: ubuntu-latest
@@ -123,7 +123,35 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "📤 Publish Snapshot Artifacts"
+      - name: "📤 Publish Gradle Snapshot Artifacts"
+        id: publish
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
+        working-directory: 'grails-gradle'
+        run: >
+          ./gradlew publish -Dorg.gradle.internal.publish.checksums.insecure=true
+  publish:
+    if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
+    needs: [ skip_check, publishGradle, build, functional]
+    permissions:
+      contents: read # limit to read access
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "📤 Publish Grails-Core Snapshot Artifacts"
         id: publish
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -131,9 +159,7 @@ jobs:
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         run: >
-          ./gradlew publish &&
-          cd grails-gradle && 
-          ./gradlew publish -Dorg.gradle.internal.publish.checksums.insecure=true
+          ./gradlew publish
   docs:
     if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
     needs: [skip_check, publish]

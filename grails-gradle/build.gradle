@@ -13,7 +13,7 @@ allprojects {
 
     props.forEach { k, v -> project.ext.set(k as String, v) }
 
-    apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+    apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
 }
 
 ext {

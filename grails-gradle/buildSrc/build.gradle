@@ -3,7 +3,7 @@ plugins {
 }
 
 apply {
-    from file('../dependencies.gradle')
+    from file('../../dependencies.gradle')
 }
 
 repositories {
@@ -13,5 +13,5 @@ repositories {
 }
 
 dependencies {
-    implementation "${bomDependencies['gradle-nexus-publish-plugin']}"
+    implementation "${gradleBomDependencies['gradle-nexus-publish-plugin']}"
 }
