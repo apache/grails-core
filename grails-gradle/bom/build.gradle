@@ -102,6 +102,18 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 }
 
 publishing {
+    if (!isReleaseVersion) {
+        repositories {
+            maven {
+                credentials {
+                    username = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
+                    password = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
+                }
+                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+            }
+        }
+    }
+
     publications {
         maven(MavenPublication) {
             from components.javaPlatform
