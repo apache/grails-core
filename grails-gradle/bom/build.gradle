@@ -38,11 +38,6 @@ dependencies {
 
             api project(":${subproject.path}")
         }
-
-        // TODO: since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
-        api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
-        api "org.apache.grails:grails-docs-core:${projectVersion}"
     }
 }
 
