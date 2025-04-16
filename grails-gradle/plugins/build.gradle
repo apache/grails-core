@@ -5,85 +5,85 @@ plugins {
 }
 
 version = project.projectVersion
-group = "org.apache.grails"
+group = 'org.apache.grails'
 
 dependencies {
-    implementation platform(project(":grails-gradle-bom"))
+    implementation platform(project(':grails-gradle-bom'))
 
     // compile grails-gradle-plugin with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly "org.codehaus.groovy:groovy"
+    compileOnly 'org.codehaus.groovy:groovy'
 
     implementation project(':grails-gradle-model'), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
     }
 
-    implementation "io.github.gradle-nexus:publish-plugin"
-    implementation "org.springframework.boot:spring-boot-gradle-plugin"
-    implementation "org.springframework.boot:spring-boot-loader-tools"
-    implementation "io.spring.gradle:dependency-management-plugin"
+    implementation 'io.github.gradle-nexus:publish-plugin'
+    implementation 'org.springframework.boot:spring-boot-gradle-plugin'
+    implementation 'org.springframework.boot:spring-boot-loader-tools'
+    implementation 'io.spring.gradle:dependency-management-plugin'
 }
 
 gradlePlugin {
     plugins {
         grailsCore {
-            displayName = "Grails Core Gradle Plugin"
+            displayName = 'Grails Core Gradle Plugin'
             description = 'The main Grails gradle plugin implementation'
             id = 'org.apache.grails.gradle.grails-app'
             implementationClass = 'org.grails.gradle.plugin.core.GrailsGradlePlugin'
         }
         grailsDoc {
-            displayName = "Grails Doc Gradle Plugin"
+            displayName = 'Grails Doc Gradle Plugin'
             description = 'Adds Grails doc publishing support'
             id = 'org.apache.grails.gradle.grails-docs'
             implementationClass = 'org.grails.gradle.plugin.doc.GrailsDocGradlePlugin'
         }
         grailsGsp {
-            displayName = "Grails GSP Gradle Plugin"
+            displayName = 'Grails GSP Gradle Plugin'
             description = 'A plugin that adds support for compiling Groovy Server Pages (GSP)'
             id = 'org.apache.grails.gradle.grails-gsp'
             implementationClass = 'org.grails.gradle.plugin.views.gsp.GroovyPagePlugin'
         }
         grailsGson {
-            displayName = "Grails GSON Gradle Plugin"
+            displayName = 'Grails GSON Gradle Plugin'
             description = 'A plugin that adds support for compiling Groovy Json Views (GSON)'
             id = 'org.apache.grails.gradle.grails-gson'
             implementationClass = 'org.grails.gradle.plugin.views.json.GrailsGsonViewsPlugin'
         }
         grailsMarkup {
-            displayName = "Grails Markup Gradle Plugin"
+            displayName = 'Grails Markup Gradle Plugin'
             description = 'A plugin that adds support for compiling Markup Views'
             id = 'org.apache.grails.gradle.grails-markup'
             implementationClass = 'org.grails.gradle.plugin.views.markup.GrailsMarkupViewsPlugin'
         }
         grailsPlugin {
-            displayName = "Grails-Plugin Gradle Plugin"
+            displayName = 'Grails-Plugin Gradle Plugin'
             description = 'A Gradle plugin for Grails plugins'
             id = 'org.apache.grails.gradle.grails-plugin'
             implementationClass = 'org.grails.gradle.plugin.core.GrailsPluginGradlePlugin'
         }
         grailsProfile {
-            displayName = "Grails Profile Gradle Plugin"
+            displayName = 'Grails Profile Gradle Plugin'
             description = 'A plugin that is capable of compiling a Grails profile into a JAR file for distribution'
             id = 'org.apache.grails.gradle.grails-profile'
             implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfileGradlePlugin'
         }
         grailsWeb {
-            displayName = "Grails Web Gradle Plugin"
+            displayName = 'Grails Web Gradle Plugin'
             description = 'Adds web specific extensions'
             id = 'org.apache.grails.gradle.grails-web'
             implementationClass = 'org.grails.gradle.plugin.web.GrailsWebGradlePlugin'
         }
         grailsPublish {
-            displayName = "Grails Publish Gradle Plugin"
+            displayName = 'Grails Publish Gradle Plugin'
             description = 'A plugin to assist in publishing Grails related artifacts'
             id = 'org.apache.grails.gradle.grails-publish'
             implementationClass = 'org.grails.gradle.plugin.publishing.GrailsPublishGradlePlugin'
         }
         grailsProfilePublish {
-            displayName = "Grails Profile Publish Plugin"
+            displayName = 'Grails Profile Publish Plugin'
             description = 'A plugin for publishing profiles'
             id = 'org.apache.grails.gradle.grails-publish-profile'
             implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfilePublishGradlePlugin'
@@ -114,7 +114,7 @@ publishing {
     // publishAllPublicationsToTestCaseMavenRepoRepository
     repositories {
         maven {
-            name = "TestCaseMavenRepo"
+            name = 'TestCaseMavenRepo'
             url = rootProject.layout.buildDirectory.dir('local-maven')
         }
     }
@@ -122,11 +122,9 @@ publishing {
     publications {
         pluginMaven(MavenPublication) {
             pom {
-                name = "Grails Gradle Plugin"
-                description = "A Gradle plugin for Grails which provides a bunch of useful plugins"
-
+                name = 'Grails Gradle Plugin'
+                description = 'A Gradle plugin for Grails which provides a bunch of useful plugins'
                 url = 'https://github.com/apache/grails-core'
-
                 licenses {
                     license {
                         name = 'The Apache Software License, Version 2.0'
@@ -134,13 +132,11 @@ publishing {
                         distribution = 'repo'
                     }
                 }
-
                 scm {
-                    url = "scm:git@github.com:apache/grails-core.git"
-                    connection = "scm:git@github.com:apache/grails-core.git"
-                    developerConnection = "scm:git@github.com:apache/grails-core.git"
+                    url = 'scm:git@github.com:apache/grails-core.git'
+                    connection = 'scm:git@github.com:apache/grails-core.git'
+                    developerConnection = 'scm:git@github.com:apache/grails-core.git'
                 }
-
                 developers {
                     developer {
                         id = 'graemerocher'

@@ -4,10 +4,10 @@ dependencies {
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-    add('documentation', "org.codehaus.groovy:groovy")
-    add('documentation', "org.codehaus.groovy:groovy-ant")
-    add('documentation', "org.codehaus.groovy:groovy-docgenerator")
-    add('documentation', "org.codehaus.groovy:groovy-templates")
+    add('documentation', 'org.codehaus.groovy:groovy')
+    add('documentation', 'org.codehaus.groovy:groovy-ant')
+    add('documentation', 'org.codehaus.groovy:groovy-docgenerator')
+    add('documentation', 'org.codehaus.groovy:groovy-templates')
 }
 
 ext {

@@ -19,22 +19,24 @@ dependencies {
 
     // grails-docs classes are used in Gradle builds,
     // so we must compile with Groovy 3 until Gradle upgrades to Groovy 4.
-    compileOnly "org.codehaus.groovy:groovy"
-    compileOnly "org.codehaus.groovy:groovy-ant"
+    compileOnly 'org.codehaus.groovy:groovy'
+    compileOnly 'org.codehaus.groovy:groovy-ant'
 
-    api "org.apache.commons:commons-text"
-    api "org.slf4j:jcl-over-slf4j"
-    api "org.apache.ant:ant"
-    api "org.grails:grails-gdoc-engine"
-    api "org.yaml:snakeyaml"
+    api 'org.apache.commons:commons-text'
+    api 'org.slf4j:jcl-over-slf4j'
+    api 'org.apache.ant:ant'
+    api 'org.grails:grails-gdoc-engine'
+    api 'org.yaml:snakeyaml'
 
-    api "org.asciidoctor:asciidoctorj"
-    implementation "org.xhtmlrenderer:flying-saucer-pdf-openpdf"
+    api 'org.asciidoctor:asciidoctorj'
+    implementation 'org.xhtmlrenderer:flying-saucer-pdf-openpdf'
 
-    runtimeOnly "org.slf4j:slf4j-api"
+    runtimeOnly 'org.slf4j:slf4j-api'
 
-    api "org.jsoup:jsoup"
-    testImplementation("org.spockframework:spock-core") { transitive = false }
+    api 'org.jsoup:jsoup'
+    testImplementation('org.spockframework:spock-core') {
+        transitive = false
+    }
 
     testImplementation 'org.codehaus.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -49,11 +51,11 @@ sourceSets {
     }
 }
 
-tasks.register("docFilesJar", Jar) {
+tasks.register('docFilesJar', Jar) {
     description = 'Package up files used for generating documentation.'
     archiveVersion = null
-    archiveFileName = "grails-doc-files.jar"
-    from "src/main/template"
+    archiveFileName = 'grails-doc-files.jar'
+    from 'src/main/template'
 }
 
 tasks.named('jar', Jar) {
@@ -85,13 +87,10 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-
             pom {
-                name = "Grails Gradle Plugin"
-                description = "A Gradle plugin for Grails which provides a bunch of useful plugins"
-
+                name = 'Grails Gradle Plugin'
+                description = 'A Gradle plugin for Grails which provides a bunch of useful plugins'
                 url = 'https://github.com/apache/grails-core'
-
                 licenses {
                     license {
                         name = 'The Apache Software License, Version 2.0'
@@ -99,13 +98,11 @@ publishing {
                         distribution = 'repo'
                     }
                 }
-
                 scm {
-                    url = "scm:git@github.com:apache/grails-core.git"
-                    connection = "scm:git@github.com:apache/grails-core.git"
-                    developerConnection = "scm:git@github.com:apache/grails-core.git"
+                    url = 'scm:git@github.com:apache/grails-core.git'
+                    connection = 'scm:git@github.com:apache/grails-core.git'
+                    developerConnection = 'scm:git@github.com:apache/grails-core.git'
                 }
-
                 developers {
                     developer {
                         id = 'graemerocher'
