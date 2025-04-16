@@ -52,7 +52,7 @@ if (isReleaseVersion) {
         }
     }
 
-    tasks.withType(Sign) {
+    tasks.withType(Sign).configureEach {
         onlyIf { isReleaseVersion }
     }
 

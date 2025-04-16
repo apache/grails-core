@@ -91,7 +91,7 @@ gradlePlugin {
     }
 }
 
-tasks.withType(Copy) {
+tasks.withType(Copy).configureEach {
     configure {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
