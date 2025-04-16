@@ -8,10 +8,6 @@ plugins {
 version = "0.0.1"
 group = 'functional.tests.plugin'
 
-ext {
-    testForked = true
-}
-
 dependencies {
     implementation platform(project(':grails-bom'))
 
