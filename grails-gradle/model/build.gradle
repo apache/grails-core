@@ -25,7 +25,9 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
     implementation 'org.springframework:spring-context'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure' // required for org.springframework.boot.env.YamlPropertySourceLoader
+    implementation 'org.springframework.boot:spring-boot', {
+        // impl: YamlPropertySourceLoader
+    }
 
     compileOnly 'jline:jline' // for profile compilation
 
