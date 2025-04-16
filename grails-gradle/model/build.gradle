@@ -41,7 +41,10 @@ dependencies {
     testImplementation 'org.codehaus.groovy:groovy'
     testImplementation 'org.codehaus.groovy:groovy-xml'
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
+    testImplementation 'org.spockframework:spock-core', {
+        transitive = false
+    }
+
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
