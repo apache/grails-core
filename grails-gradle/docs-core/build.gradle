@@ -59,10 +59,9 @@ tasks.register('docFilesJar', Jar) {
 }
 
 tasks.named('jar', Jar) {
-    from docFilesJar
+    from tasks.named('docFilesJar')
 }
 
-jar.dependsOn docFilesJar
 publishing {
     if (!isReleaseVersion) {
         repositories {
