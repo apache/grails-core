@@ -49,7 +49,8 @@ dependencies {
             api project(":${subproject.path}")
         }
 
-        // TODO: since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
+        // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
+        // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
         api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
         api "org.apache.grails:grails-docs-core:${projectVersion}"
@@ -254,7 +255,7 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 }
 
 ext {
-    pomDescription = "Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects"
+    pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
     pomCustomization = { ->
         def root = asNode()
 

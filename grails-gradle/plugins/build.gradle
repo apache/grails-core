@@ -102,10 +102,10 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    username = System.getenv("MAVEN_PUBLISH_USERNAME")
-                    password = System.getenv("MAVEN_PUBLISH_PASSWORD")
+                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
+                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
                 }
-                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+                url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
     }
@@ -114,7 +114,7 @@ publishing {
     // publishAllPublicationsToTestCaseMavenRepoRepository
     repositories {
         maven {
-            name = "TestCaseMavenRepo"
+            name = 'TestCaseMavenRepo'
             url = rootProject.layout.buildDirectory.dir('local-maven')
         }
     }
@@ -122,8 +122,8 @@ publishing {
     publications {
         pluginMaven(MavenPublication) {
             pom {
-                name = "Grails Gradle Plugin"
-                description = "A Gradle plugin for Grails which provides a bunch of useful plugins"
+                name = 'Grails Gradle Plugin'
+                description = 'A Gradle plugin for Grails which provides a bunch of useful plugins'
 
                 url = 'https://github.com/apache/grails-core'
 
@@ -136,9 +136,9 @@ publishing {
                 }
 
                 scm {
-                    url = "scm:git@github.com:apache/grails-core.git"
-                    connection = "scm:git@github.com:apache/grails-core.git"
-                    developerConnection = "scm:git@github.com:apache/grails-core.git"
+                    url = 'scm:git@github.com:apache/grails-core.git'
+                    connection = 'scm:git@github.com:apache/grails-core.git'
+                    developerConnection = 'scm:git@github.com:apache/grails-core.git'
                 }
 
                 developers {

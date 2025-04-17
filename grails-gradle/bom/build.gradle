@@ -90,10 +90,10 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    username = System.getenv("MAVEN_PUBLISH_USERNAME")
-                    password = System.getenv("MAVEN_PUBLISH_PASSWORD")
+                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
+                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
                 }
-                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+                url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
     }
@@ -102,7 +102,7 @@ publishing {
     // publishAllPublicationsToTestCaseMavenRepoRepository
     repositories {
         maven {
-            name = "TestCaseMavenRepo"
+            name = 'TestCaseMavenRepo'
             url = rootProject.layout.buildDirectory.dir('local-maven')
         }
     }
@@ -141,7 +141,7 @@ publishing {
                                 pomProperties.put(propertyName, inlineVersion)
                             }
                         } else if (!inlineVersion) {
-                            throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
+                            throw new GradleException('Dependency $groupId:$artifactId does not have a version.')
                         }
                     }
 
