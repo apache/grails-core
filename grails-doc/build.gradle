@@ -118,10 +118,10 @@ tasks.register('publishGuide', grails.doc.gradle.PublishGuide) {
         propertiesFiles = [rootProject.layout.projectDirectory.file('gradle.properties').asFile]
         asciidoc = true
 
-        ext.springVersion = getVersion("spring-core")
-        ext.springBootVersion = getVersion("spring-boot")
-        ext.gspVersion = getVersion("grails-gsp")
-        ext.gormVersion = getVersion("grails-datamapping-core")
+        def springVersion = getVersion("spring-core")
+        def springBootVersion = getVersion("spring-boot")
+        def gspVersion = getVersion("grails-gsp")
+        def gormVersion = getVersion("grails-datamapping-core")
 
         properties = [
                 'api'                      : '../../api',
