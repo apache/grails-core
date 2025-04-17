@@ -97,9 +97,9 @@ class DefaultDateHelperSpec extends Specification {
         'FULL' | '8:00:00 AM UTC'
     }
 
-    @IgnoreIf({ jvm.isJava8() })
+    @Requires({ Jvm.current.isJava17() })
     @Unroll
-    void "Full getTimeFormat for style #style returns #expected"(String style, String expected) {
+    void "Java 17 - Full getTimeFormat for style #style returns #expected"(String style, String expected) {
         given:
         DateTimeFormatter format
 
@@ -136,9 +136,9 @@ class DefaultDateHelperSpec extends Specification {
         null      | null      | '1/5/41 8:00 AM'
     }
 
-    @IgnoreIf({ jvm.isJava8() })
+    @Requires({ Jvm.current.isJava17() })
     @Unroll("for getDateTimeFormat(#dateStyle, #timeStyle) => #expected")
-    void "test getDateTimeFormat"(String dateStyle, String timeStyle, String expected) {
+    void "Java 17 - test getDateTimeFormat"(String dateStyle, String timeStyle, String expected) {
         given:
         DateTimeFormatter format
 
