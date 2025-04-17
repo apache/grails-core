@@ -30,7 +30,7 @@ dependencies {
     testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation project(':grails-testing-support-web')
-    testImplementation 'org.javassist:javassist:3.29.0-GA'
+    testImplementation 'org.javassist:javassist:3.30.2-GA'
     testImplementation("org.jodd:jodd-wot:$joddWotVersion") {
         exclude module: 'slf4j-api'
         exclude module: 'asm'
