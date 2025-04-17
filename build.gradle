@@ -70,3 +70,14 @@ apply {
     from layout.projectDirectory.file('gradle/assemble-root-config.gradle')
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
 }
+
+// For debugging the gradle task graph: Uncomment to show task dependencies when a task is run
+gradle.taskGraph.whenReady {taskGraph ->
+    logger.lifecycle("Found ${taskGraph.allTasks.size()} tasks.")
+    taskGraph.allTasks.forEach { task ->
+        logger.lifecycle("${task}")
+        task.dependsOn.forEach { dep ->
+            logger.lifecycle("\t- ${dep}")
+        }
+    }
+}
