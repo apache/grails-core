@@ -177,8 +177,8 @@ tasks.register('generateBomDocumentation') {
     }
 
     doLast {
-        def outputFile = project.layout.projectDirectory.file('src/en/ref/Dependency Versions/Grails BOM.adoc').asFile
-        outputFile.withWriter { writer ->
+        def bomDocument = project.layout.projectDirectory.file('src/en/ref/Dependency Versions/Grails BOM.adoc').asFile
+        bomDocument.withWriter { writer ->
             writer.writeLine '== Grails BOM Dependency Documentation'
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies mentioned in the Grails BOM categorized into Group ID, Artifact, and Version. Since the `grails-bom` imports other BOMs, the last column indicates the source of the dependency.'
@@ -187,7 +187,7 @@ tasks.register('generateBomDocumentation') {
             writer.writeLine ''
         }
 
-        project.logger.lifecycle "BOM Dependency Page generated to: ${outputFile.absolutePath}"
+        project.logger.lifecycle "BOM Dependency Page generated to: ${bomDocument.absolutePath}"
     }
 }
 
