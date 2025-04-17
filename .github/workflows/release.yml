@@ -560,14 +560,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "🔀 Get Target Branch name"
-        run: |
-          TARGET_BRANCH="${GITHUB_REF:11}"
-          echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
-          echo "Target Branch: $TARGET_BRANCH"
       - name: "📖 Generate Documentation"
-        working-directory: 'grails-doc'
-        run: ../gradlew build -PgithubBranch=${{ env.TARGET_BRANCH }}
+        run: ../gradlew grails-doc:build -PgithubBranch=${{ needs.publish.outputs.target_branch }}
       - name: "🚀 Publish to Github Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
