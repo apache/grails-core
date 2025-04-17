@@ -2,6 +2,7 @@ package org.grails.web.taglib
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnJre
+import org.junit.jupiter.api.condition.EnabledOnJre
 import org.junit.jupiter.api.condition.JRE
 
 import static org.junit.jupiter.api.Assertions.assertEquals
@@ -12,7 +13,7 @@ class FormRenderingTagLibTests extends AbstractGrailsTagTests {
 
     // TODO: #14200 Java 21 has different date requirements and needs fixed
     @Test
-    @DisabledOnJre(JRE.JAVA_17)
+    @EnabledOnJre(JRE.JAVA_17)
     void testTimeZoneSelect() {
         def template = '<g:timeZoneSelect name="foo" locale="en_US"/>'
 
