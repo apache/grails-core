@@ -1,10 +1,6 @@
 package org.grails.gradle.plugin.views
 
 import grails.util.GrailsNameUtils
-import org.gradle.api.file.Directory
-import org.gradle.api.provider.Provider
-import org.grails.gradle.plugin.core.GrailsExtension
-import org.grails.gradle.plugin.util.SourceSets
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.apache.tools.ant.taskdefs.condition.Os
@@ -12,10 +8,15 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
+import org.grails.gradle.plugin.core.GrailsExtension
+import org.grails.gradle.plugin.core.IntegrationTestGradlePlugin
+import org.grails.gradle.plugin.util.SourceSets
 
 /**
  * Abstract implementation of a plugin that compiles views
@@ -83,11 +84,19 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
         tasks.named('resolveMainClassName').configure { Task task ->
             task.dependsOn(templateCompileTask)
         }
-        tasks.named('compileIntegrationTestGroovy').configure { Task task ->
-            task.dependsOn(templateCompileTask)
-        }
-        tasks.named('integrationTest').configure { Task task ->
-            task.dependsOn(templateCompileTask)
+        if(project.plugins.hasPlugin(IntegrationTestGradlePlugin)) {
+            project.plugins.withType(IntegrationTestGradlePlugin).configureEach { plugin ->
+                if(tasks.names.contains('compileIntegrationTestGroovy')) {
+                    tasks.named('compileIntegrationTestGroovy').configure { Task task ->
+                        task.dependsOn(templateCompileTask)
+                    }
+                }
+                if(tasks.names.contains('integrationTest')) {
+                    tasks.named('integrationTest').configure { Task task ->
+                        task.dependsOn(templateCompileTask)
+                    }
+                }
+            }
         }
     }
 
