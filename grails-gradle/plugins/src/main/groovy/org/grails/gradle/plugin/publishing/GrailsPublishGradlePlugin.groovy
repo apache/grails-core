@@ -221,17 +221,11 @@ Note: if project properties are used, the properties must be defined prior to ap
             final ExtensionContainer extensionContainer = project.extensions
 
             validateProjectPublishable(project as Project)
+
+            final def mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: System.getenv('MAVEN_PUBLISH_URL') ?: ''
+
             project.publishing {
                 if (useMavenPublish) {
-                    final def mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: System.getenv('MAVEN_PUBLISH_URL') ?: ''
-
-                    // Validate as part of the task since we only want to fail the build when the publish actions are in the taskGraph
-                    registerValidationTask(project, "requireMavenPublishUrl") {
-                        // the maven publish url can technically be a directory so do not force to String type
-                        if (!mavenPublishUrl) {
-                            throw new RuntimeException('Could not locate a project property of `mavenPublishUrl` or an environment variable of `MAVEN_PUBLISH_URL`. A URL is required for maven publishing.')
-                        }
-                    }
                     System.setProperty('org.gradle.internal.publish.checksums.insecure', true as String)
 
                     repositories {
@@ -400,6 +394,16 @@ Note: if project properties are used, the properties must be defined prior to ap
                         }
                     }
                 }
+
+                if(useMavenPublish) {
+                    // Validate as part of the task since we only want to fail the build when the publish actions are in the taskGraph
+                    registerValidationTask(project, "requireMavenPublishUrl") {
+                        // the maven publish url can technically be a directory so do not force to String type
+                        if (!mavenPublishUrl) {
+                            throw new RuntimeException('Could not locate a project property of `mavenPublishUrl` or an environment variable of `MAVEN_PUBLISH_URL`. A URL is required for maven publishing.')
+                        }
+                    }
+                }
             }
 
             if (isRelease) {
@@ -434,18 +438,23 @@ Note: if project properties are used, the properties must be defined prior to ap
     }
 
     protected void registerValidationTask(Project project, String taskName, Closure c) {
-        project.plugins.withId(MAVEN_PUBLISH_PLUGIN_ID) {
-            TaskProvider<? extends Task> publishTask = project.tasks.named("publish")
-
-            TaskProvider validateTask = project.tasks.register(taskName)
+        project.plugins.withId(MAVEN_PUBLISH_PLUGIN_ID) {plugin ->
+            TaskProvider<Task> validateTask = project.tasks.register(taskName)
             validateTask.configure {
-                it.doLast {
+                it.doFirst {
                     c.call()
+                }
+
+                it.outputs.upToDateWhen {
+                    false
                 }
             }
 
-            publishTask.configure {
-                it.dependsOn validateTask
+            project.tasks.names.findAll { it.startsWith("publish")}.each { String name ->
+                TaskProvider<? extends Task> relatedTask = project.tasks.named(name)
+                relatedTask.configure { it ->
+                    it.dependsOn validateTask
+                }
             }
         }
     }
