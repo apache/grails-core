@@ -29,9 +29,9 @@ dependencies {
         exclude group: 'com.fasterxml.jackson'
     }
 
-    api platform(bomPlatformDependencies['groovy-bom'])
-    api platform(bomPlatformDependencies['spock-bom'])
-    api platform(bomPlatformDependencies['jackson-bom'])
+    for (def entry  : bomPlatformDependencies.entrySet()) {
+        api platform(entry.value)
+    }
 
     constraints {
         for (def entry : gradleBomDependencies.entrySet()) {
@@ -64,7 +64,7 @@ configurations.register('bomDependencies').configure {
     it.extendsFrom(configurations.named('api').get())
 }
 
-String resolveMavenPomVersion(String dynamicVersion, Map properties, int maxIterations = 10) {
+String resolveMavenProperty(String errorDescription, String dynamicVersion, Map properties, int maxIterations = 10) {
     def dynamicPattern = ~/\$\{([^}]+)\}/
     String expandedVersion = dynamicVersion
 
@@ -78,7 +78,7 @@ String resolveMavenPomVersion(String dynamicVersion, Map properties, int maxIter
     }
 
     if ((expandedVersion =~ dynamicPattern).find()) {
-        logger.warn("Reached max iterations while resolving properties in: ${dynamicVersion}")
+        logger.warn("Reached max iterations for ${errorDescription} while resolving properties in: ${dynamicVersion}")
     }
 
     expandedVersion
@@ -132,44 +132,8 @@ tasks.register('extractConstraints') {
             String bomCoordinates = "${bomGroup}:${bomName}" as String
             List<Tuple2<String, String>> excluded = allExclusions.get(bomCoordinates)
 
-            // fetc hthe BOM as a pom file so it can be expanded
-            def bomDependency = dependencies.create("${bomGroup}:${bomName}:${bomVersion}@pom") // TODO Blows up on
-            def bomConf = configurations.detachedConfiguration(bomDependency)
-            File bomPomFile = bomConf.singleFile
-
-            def reader = new MavenXpp3Reader()
-            def model = reader.read(new FileReader(bomPomFile))
-
-            if (model.dependencyManagement && model.dependencyManagement.dependencies) {
-                model.dependencyManagement.dependencies.each { depItem ->
-
-                    String coordinates = "${depItem.groupId}:${depItem.artifactId}" as String
-                    if (!bomConstraints.containsKey(coordinates)) {
-                        boolean isExcluded = excluded.any {
-                            if (it.v1 && it.v2) {
-                                return coordinates == "${it.v1}:${it.v2}" as String
-                            }
-
-                            if (it.v1 && !it.v2) {
-                                return depItem.groupId == it.v1
-                            }
-
-                            if (!it.v1 && it.v2) {
-                                return depItem.artifactId == it.v2
-                            }
-
-                            false
-                        }
-                        if (!isExcluded) {
-                            String version = resolveMavenPomVersion(depItem.version, model.properties)
-                            bomConstraints.put(coordinates, new Tuple4<>(depItem.groupId, depItem.artifactId, version, bomName))
-                        }
-                    }
-                }
-            } else {
-                // Do not allow us to include boms that are invalid
-                throw new GradleException("BOM ${bomGroup}:${bomName}:${bomVersion} has no dependencyManagement section.")
-            }
+            // fetch the BOM as a pom file so it can be expanded
+            populatePlatformDependencies(bomGroup, bomName, bomVersion, bomConstraints, excluded)
         }
 
         List lines = []
@@ -187,6 +151,77 @@ tasks.register('extractConstraints') {
             writer.writeLine '|==='
         }
     }
+}
+
+private Properties populatePlatformDependencies(String bomGroup, String bomName, String bomVersion,
+                                          Map<String, Tuple4<String, String, String, String>> bomConstraints,
+                                          List<Tuple2<String, String>> excluded, boolean error = true, int level = 0) {
+    def bomDependency = dependencies.create("${bomGroup}:${bomName}:${bomVersion}@pom")
+    def bomConf = configurations.detachedConfiguration(bomDependency)
+    File bomPomFile = bomConf.singleFile
+
+    def reader = new MavenXpp3Reader()
+    def model = reader.read(new FileReader(bomPomFile))
+
+    Properties versionProperties = new Properties()
+    if(model.parent) {
+        // Need to populate the parent bom if it's present first
+        populatePlatformDependencies(model.parent.groupId, model.parent.artifactId, model.parent.version, bomConstraints, excluded, false, level + 1)?.entrySet()?.each {
+            versionProperties.put(it.key, it.value)
+        }
+    }
+    model.properties.entrySet().each {
+        versionProperties.put(it.key, it.value)
+    }
+    versionProperties.put('project.groupId', bomGroup)
+    versionProperties.put('project.version', bomVersion)
+
+    if (model.dependencyManagement && model.dependencyManagement.dependencies) {
+        model.dependencyManagement.dependencies.each { depItem ->
+            String baseCoordinates = "${depItem.groupId}:${depItem.artifactId}" as String
+            String artifactId = resolveMavenProperty(baseCoordinates, depItem.artifactId, versionProperties)
+            String groupId = resolveMavenProperty(baseCoordinates, depItem.groupId, versionProperties)
+
+            String resolvedCoordinates = "${groupId}:${artifactId}" as String
+            if (!bomConstraints.containsKey(resolvedCoordinates)) {
+                boolean isExcluded = excluded.any {
+                    if (it.v1 && it.v2) {
+                        return resolvedCoordinates == "${it.v1}:${it.v2}" as String
+                    }
+
+                    if (it.v1 && !it.v2) {
+                        return depItem.groupId == it.v1
+                    }
+
+                    if (!it.v1 && it.v2) {
+                        return depItem.artifactId == it.v2
+                    }
+
+                    false
+                }
+                if (!isExcluded) {
+
+                    String version = resolveMavenProperty(resolvedCoordinates, depItem.version, versionProperties)
+
+                    if(depItem.scope == 'import') {
+                        bomConstraints.put(resolvedCoordinates, new Tuple4<String, String, String, String>(groupId, artifactId, version, bomName))
+                        populatePlatformDependencies(groupId, artifactId, version, bomConstraints, excluded, error, level + 1)
+                    }
+                    else {
+                        bomConstraints.put(resolvedCoordinates, new Tuple4<>(groupId, artifactId, version, bomName))
+                    }
+                }
+            }
+        }
+    } else {
+        if(error) {
+            // only the boms we directly include need to error since we expect a dependency management;
+            // parent boms are sometimes use to share properties so we need to not error on these cases
+            throw new GradleException("BOM ${bomGroup}:${bomName}:${bomVersion} has no dependencyManagement section.")
+        }
+    }
+
+    return versionProperties
 }
 
 tasks.register('validateNoSnapshotDependencies') {
