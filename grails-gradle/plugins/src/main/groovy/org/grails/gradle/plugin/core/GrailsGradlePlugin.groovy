@@ -219,6 +219,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             Provider<RegularFile> targetConfigFile = project.layout.buildDirectory.file("groovyCompilerConfiguration/${uniqueScriptName}Config.groovy")
             task.outputs.file(targetConfigFile)
+            task.inputs.files(project.configurations.named('runtimeClasspath'))
             task.dependsOn('cleanGroovyCompilerConfig')
 
             task.doLast {
