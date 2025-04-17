@@ -67,7 +67,6 @@ tasks.register('clean', Delete) {
 }
 
 apply {
-    from layout.projectDirectory.file('gradle/docs-root-config.gradle')
     from layout.projectDirectory.file('gradle/assemble-root-config.gradle')
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
 }

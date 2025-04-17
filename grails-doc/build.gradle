@@ -33,6 +33,32 @@ dependencies {
     implementation 'org.apache.grails:grails-gradle-plugins'
 }
 
+// this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
+apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+tasks.register('aggregateGroovydoc', Groovydoc) {
+    group = 'documentation'
+    def srcDirs = rootProject.subprojects
+            .findAll { it.findProperty('includeInApiDocs') }
+            .collect { it.sourceSets.main.allSource.srcDirs }
+            .flatten()
+    source(srcDirs)
+    exclude('META-INF/**')
+    classpath = configurations.documentation
+    groovyClasspath = configurations.documentation
+    destinationDir = rootProject.layout.buildDirectory.dir('docs/api').get().asFile
+    windowTitle = "Grails $grailsVersion"
+    docTitle = "Grails $grailsVersion"
+    access = GroovydocAccess.PROTECTED
+    includeAuthor = true
+    includeMainForScripts = false
+    processScripts = false
+    inputs.files(srcDirs)
+    outputs.dir(destinationDir)
+    doLast {
+        delete(rootProject.layout.buildDirectory.dir('tmp'))
+    }
+}
+
 // use jsoup in PdfBuilder for cleaning input html
 System.setProperty('grails.docs.clean.html', 'true')
 // creates single.html.before.xml and single.html.after.xml files for debugging pdf input when enabled
@@ -54,7 +80,7 @@ asciidoctor {
             'sourcedir': rootProject.projectDir.absolutePath
 }
 
-asciidoctor.dependsOn(":aggregateGroovydoc")
+asciidoctor.dependsOn("aggregateGroovydoc")
 
 tasks.withType(org.gradle.api.tasks.javadoc.Groovydoc) {
     configure {
@@ -100,7 +126,7 @@ String getVersion(String artifact) {
 }
 
 tasks.register('publishGuide', grails.doc.gradle.PublishGuide) {
-    dependsOn(['generateBomDocumentation', ':aggregateGroovydoc', 'jar', 'resolveGroovyVersion', 'processTestResources', 'compileTestJava', 'compileTestGroovy', 'test'])
+    dependsOn(['generateBomDocumentation', 'aggregateGroovydoc', 'jar', 'resolveGroovyVersion', 'processTestResources', 'compileTestJava', 'compileTestGroovy', 'test'])
     targetDir = project.layout.buildDirectory.dir("manual").get().asFile
 
     doFirst {
@@ -197,7 +223,7 @@ tasks.register('publishPdf', grails.doc.gradle.PublishPdf) {
 }
 
 tasks.register("docs", Copy) {
-    dependsOn ":aggregateGroovydoc", "publishGuide", "createReleaseDropdown", "publishPdf"
+    dependsOn "aggregateGroovydoc", "publishGuide", "createReleaseDropdown", "publishPdf"
 
     def manualDocsDir = publishGuide.targetDir
     def apiDocsDir = rootProject.layout.buildDirectory.dir('docs')
@@ -221,5 +247,4 @@ tasks.register("docs", Copy) {
 artifacts {
     archives dist
 }
-
 
