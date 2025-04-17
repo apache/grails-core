@@ -202,7 +202,7 @@ jobs:
         if: github.event_name == 'push'
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
-          GH_TOKEN: ${{ secrets.GRAILS_BUILD_GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GRAILS_GH_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'
           SOURCE_FOLDER: grails-doc/build/docs
           TARGET_REPOSITORY: 'apache/grails-doc'

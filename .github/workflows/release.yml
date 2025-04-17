@@ -571,7 +571,7 @@ jobs:
       - name: "🚀 Publish to Github Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
-          GH_TOKEN: ${{ secrets.GRAILS_BUILD_GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GRAILS_GH_TOKEN }}
           TARGET_REPOSITORY: 'apache/grails-doc'
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: grails-doc/build/docs
