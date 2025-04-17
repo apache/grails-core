@@ -1,0 +1,57 @@
+
+== resource
+
+
+
+=== Purpose
+
+
+Generates a link (URI) string. Can be used in an href, JavaScript, Ajax call, etc.
+
+This tag is aware of the Resources plugin, and if it's installed the tag will correctly generate links to static resources processed by the plugin.
+
+
+=== Examples
+
+
+Example usages for the "shop" app:
+
+[,xml]
+----
+<!-- generates "/shop/css/main.css" -->
+<g:resource dir="css" file="main.css" />
+
+<!-- generates "https://portal.mygreatsite.com/css/main.css" -->
+<g:resource dir="css" file="main.css" absolute="true" />
+
+<!-- generates "https://admin.mygreatsite.com/css/main.css" -->
+<g:resource dir="css" file="main.css" base="https://admin.mygreatsite.com"/>
+----
+
+Example as a method call in GSP only:
+
+[source,xml]
+----
+<link type="text/css" href="${resource(dir: 'css', file: 'main.css')}" />
+----
+
+Results in:
+
+[source,xml]
+----
+<link type="text/css" href="/shop/css/main.css" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
+* `contextPath` (optional) - the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+* `dir` (optional) - the name of the directory containing the resource
+* `file` (optional) - the name of the resource file
+* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:<port> if there is no setting in the config and not running in production.
+* `plugin` (optional) - The plugin to look for the resource in
+

@@ -1,0 +1,7 @@
+model {
+    Integer age
+}
+json {
+    name "Fred"
+    age age
+}

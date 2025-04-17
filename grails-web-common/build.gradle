@@ -11,24 +11,24 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(":grails-core"), {
+    api project(':grails-core'), {
         exclude group:'org.apache.grails', module:'grails-spring'
     }
-    api project(":grails-databinding-core")
-    api project(":grails-encoder")
-    compileOnly "org.apache.grails.views:grails-gsp-core", {
+    api project(':grails-databinding-core')
+    api project(':grails-encoder')
+    compileOnly 'org.apache.grails.views:grails-gsp-core', {
         exclude group:'org.apache.grails', module: 'grails-encoder'
         exclude group:'org.apache.grails', module: 'grails-core'
     }
 
-    api "org.apache.groovy:groovy:$groovyVersion"
-    api "org.apache.groovy:groovy-templates"
-    compileOnly "jakarta.servlet:jakarta.servlet-api"
-    testCompileOnly "org.springframework:spring-test"
+    api 'org.apache.groovy:groovy'
+    api 'org.apache.groovy:groovy-templates'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    testCompileOnly 'org.springframework:spring-test'
 
-    api "org.springframework:spring-webmvc"
-    api "org.springframework:spring-context-support"
-    implementation "com.github.ben-manes.caffeine:caffeine"
+    api 'org.springframework:spring-webmvc'
+    api 'org.springframework:spring-context-support'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -57,9 +57,10 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

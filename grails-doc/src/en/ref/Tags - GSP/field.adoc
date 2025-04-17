@@ -1,0 +1,76 @@
+
+== field
+
+
+
+=== Purpose
+
+
+Specifies an input field where the user can enter data.  An implicit `id` attribute is given the same value as the name unless you explicitly specify one.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:field type="number" name="isbn" min="5" max="10" required="" value="${bookInstance?.isbn}"/>
+
+<g:field type="password" name="password" value="${userInstance?.password}"/>
+
+<g:field type="url" name="url" value="${productInstance?.url}"/>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the field
+* `type` (required) - Specifies the type of element to display (button, checkbox, color, date, datetime, datetime-local, email, file, hidden, image, month, number, password, radio, range, reset, search, submit, tel, text, time, url, week)
+* `accept` (optional) - Specifies the types of files that the server accepts (only for type="file")
+* `alt` (optional) - Specifies an alternate text for images (only for type="image")
+* `autocomplete` (optional) - Specifies whether the field should have autocomplete enabled
+* `autofocus` (optional) - Specifies that the field should automatically get focus when the page loads
+* `checked` (optional) - Specifies that the field should be pre-selected when the page loads (for type="checkbox" or type="radio")
+* `disabled` (optional) - Specifies that the field element should be disabled
+* `height` (optional) - Specifies the height of the field (only for type="image")
+* `list` (optional) - Refers to a <datalist> element that contains pre-defined options for the field
+* `max` (optional) - Specifies the maximum value for the field
+* `maxlength` (optional) - Specifies the maximum number of characters allowed in the field
+* `min` (optional) - Specifies a minimum value for the field
+* `multiple` (optional) - Specifies that a user can enter more than one value in the field
+* `pattern` (optional) - Specifies a regular expression that the field's value is checked against
+* `placeholder` (optional) - Specifies a short hint that describes the expected value for the field
+* `readonly` (optional) - Specifies that the field is read-only
+* `required` (optional) - Specifies that the field must be filled out before submitting the form
+* `size` (optional) - Specifies the width, in characters, of the field
+* `src` (optional) - Specifies the URL of the image to use as a submit button (only for type="image")
+* `step` (optional) - Specifies the legal number intervals for the field
+* `value` (optional) - Specifies the value of the field
+* `width` (optional) - Specifies the width of the field (only for type="image")
+
+
+=== Configuration
+
+
+Some attributes can be defined as Boolean values, but the html specification
+mandates the attribute must have the same value as its name. For example,
+`disabled`, `readonly` and `checked`. It may be desirable to have additional attributes
+(like `required`) behave the same way. This can be controlled with the following config value:
+
+[source,yml]
+----
+grails:
+    tags:
+        booleanToAttributes:
+            - disabled
+            - checked
+            - readonly
+            - required
+----
+
+Defaults are `disabled`, `checked`, `readonly`
+
+

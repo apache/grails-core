@@ -1,0 +1,10 @@
+
+import functional.tests.User
+
+model {
+    User user
+}
+
+json g.render(user, [includes: ['publicId']]) {
+    username user.username
+}

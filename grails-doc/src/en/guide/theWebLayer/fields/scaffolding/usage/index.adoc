@@ -1,0 +1,23 @@
+== Usage
+
+To render markup, inject the link:api/org/grails/scaffolding/markup/DomainMarkupRenderer.html[DomainMarkupRenderer].
+
+[source,groovy,indent=1]
+DomainMarkupRenderer domainMarkupRenderer
+
+Then execute one of the methods provided:
+
+* `renderOutput` (Show page)
+* `renderInput` (Edit/Create page)
+* `renderListOutput` (List page)
+
+A string containing all of the markup will be returned.
+
+Each of the methods requires a link:http://gorm.grails.org/latest/api/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity] that represents the given domain class. To retrieve the link:http://gorm.grails.org/latest/api/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity], inject the mapping context and pass in the fully qualified domain class name.
+
+[source,groovy,indent=1]
+----
+MappingContext grailsDomainClassMappingContext
+
+grailsDomainClassMappingContext.getPersistentEntity("test.foo.Bar")
+----

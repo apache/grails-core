@@ -1,0 +1,7 @@
+When opening `.gson` files in Intellij they should be opened with the regular Groovy editor.
+
+The plugin includes an https://github.com/apache/grails-core/blob/{githubBranch}/grails-views/gson/src/main/resources/dsdl/gson.gdsl[IntelliJ GDSL file] that provides code completion when using IntelliJ IDEA.
+
+https://confluence.jetbrains.com/display/GRVY/Scripting+IDE+for+DSL+awareness[Intellij GDSL] is a way to describe the available methods and properties so that code completion is available to the developer when opening `.gson` files.
+
+The GDSL file is generally kept up-to-date with the codebase, however if any variation is spotted please https://github.com/apache/grails-core/issues[raise an issue].

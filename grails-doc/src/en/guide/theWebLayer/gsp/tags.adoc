@@ -1,0 +1,48 @@
+Now that the less attractive JSP heritage has been set aside, the following sections cover GSP's built-in tags, which are the preferred way to define GSP pages.
+
+NOTE: The section on xref:taglibs.adoc[Tag Libraries] covers how to add your own custom tag libraries.
+
+All built-in GSP tags start with the prefix `g:`. Unlike JSP, you don't specify any tag library imports. If a tag starts with `g:` it is automatically assumed to be a GSP tag. An example GSP tag would look like:
+
+[source,xml]
+----
+<g:example />
+----
+
+GSP tags can also have a body such as:
+
+[source,xml]
+----
+<g:example>
+   Hello world
+</g:example>
+----
+
+Expressions can be passed into GSP tag attributes, if an expression is not used it will be assumed to be a String value:
+
+[source,xml]
+----
+<g:example attr="${new Date()}">
+   Hello world
+</g:example>
+----
+
+Maps can also be passed into GSP tag attributes, which are often used for a named parameter style syntax:
+
+[source,xml]
+----
+<g:example attr="${new Date()}" attr2="[one:1, two:2, three:3]">
+   Hello world
+</g:example>
+----
+
+Note that within the values of attributes you must use single quotes for Strings:
+
+[source,xml]
+----
+<g:example attr="${new Date()}" attr2="[one:'one', two:'two']">
+   Hello world
+</g:example>
+----
+
+With the basic syntax out the way, the next sections look at the tags that are built into Grails by default.

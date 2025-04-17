@@ -1,0 +1,6 @@
+
+inherits template: 'levelTwo'
+
+json {
+    levelOne true
+}

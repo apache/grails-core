@@ -1,0 +1,50 @@
+Although it is useful to decorate an entire page sometimes you may find the need to decorate independent sections of your site. To do this you can use content blocks. To get started, partition the page to be decorated using the `<content>` tag:
+
+[,xml]
+----
+<content tag="navbar">
+... draw the navbar here...
+</content>
+
+<content tag="header">
+... draw the header here...
+</content>
+
+<content tag="footer">
+... draw the footer here...
+</content>
+
+<content tag="body">
+... draw the body here...
+</content>
+----
+
+Then within the layout you can reference these components and apply individual layouts to each:
+
+[source,xml]
+----
+<html>
+    <body>
+        <div id="header">
+            <g:applyLayout name="headerLayout">
+                <g:pageProperty name="page.header" />
+            </g:applyLayout>
+        </div>
+        <div id="nav">
+            <g:applyLayout name="navLayout">
+                <g:pageProperty name="page.navbar" />
+            </g:applyLayout>
+        </div>
+        <div id="body">
+            <g:applyLayout name="bodyLayout">
+                <g:pageProperty name="page.body" />
+            </g:applyLayout>
+        </div>
+        <div id="footer">
+            <g:applyLayout name="footerLayout">
+                <g:pageProperty name="page.footer" />
+            </g:applyLayout>
+        </div>
+    </body>
+</html>
+----

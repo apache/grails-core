@@ -2,7 +2,7 @@ If you are using the REST application or REST or AngularJS profiles, then the JS
 
 [source,groovy]
 ----
-implementation 'org.grails.plugins:views-json:1.0.0' // or whatever is the latest version
+implementation 'org.apache.grails:grails-views-gson:7.0.0' // or whatever is the latest version
 ----
 
 TIP: The https://github.com/apache/grails-views[source code repository for JSON views] can be found on Github if you are looking for more documentation and contributions
@@ -15,18 +15,19 @@ buildscript {
     ...
     dependencies {
         ...
-        classpath "org.grails.plugins:views-gradle:1.0.0"
+        classpath platform("org.apache.grails:grails-gradle-bom:{version}")
+        classpath "org.apache.grails:grails-gradle-plugins"
     }
 }
 ----
 
-Then apply the `org.grails.plugins.views-json` Gradle plugin after any Grails core gradle plugins:
+Then apply the `org.apache.grails.views-json` Gradle plugin after any Grails core gradle plugins:
 
 [source,groovy]
 ----
 ...
 apply plugin: "org.grails.grails-web"
-apply plugin: "org.grails.plugins.views-json"
+apply plugin: "org.apache.grails.views-json"
 ----
 
 This will add a `compileGsonViews` task to Gradle, which is invoked prior to creating the production JAR or WAR file.

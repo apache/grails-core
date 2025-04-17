@@ -1,0 +1,99 @@
+
+== render
+
+
+
+=== Purpose
+
+
+Applies an inbuilt or user-defined Groovy template against a model so that templates can be shared and reused
+
+
+=== Examples
+
+
+Example domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    String author
+}
+----
+
+Example template:
+
+[,xml]
+----
+<p>${it.title}</p>
+<p>${it.author}</p>
+----
+
+This template can now be reused whether you have a `List` of ``Book``s or a single `Book`. For a `List` the template will be repeated for each instance:
+
+[source,xml]
+----
+<g:render template="displaybook" collection="${books}" />
+----
+
+and for a single instance the template is rendered once:
+
+[source,xml]
+----
+<g:render template="displaybook" bean="${book}" />
+----
+
+You can also create a template for a particular type of model. For example this template:
+
+[,xml]
+----
+<p>${book.title}</p>
+<p>${author.fullName}</p>
+----
+
+could be used with this model:
+
+[source,xml]
+----
+<g:render template="displaybook" model="['book':book,'author':author]" />
+----
+
+The disadvantage of this approach is that the template is less reusable.
+
+It is also possible to define the name of the variable to be used by the template in the render tag:
+
+Example template:
+
+[,xml]
+----
+<p>${myBook.title}</p>
+<p>${myBook.author}</p>
+----
+
+Example render tag call for the above template
+
+[source,xml]
+----
+<g:render template="displaybook" collection="${books}" var="myBook"/>
+----
+
+
+=== Description
+
+
+Note that if the value of the template attribute starts with a '/' it will be resolved relative to the `views` directory. This is useful for sharing templates between views. Without the leading '/' it will be first be resolved relative to the current controller's view directory then, failing that, the top level views directory. In either case the template file must be named with a leading underscore ('_') but referenced in the template attribute without that underscore or the '.gsp' suffix.
+
+Attributes
+
+* `contextPath` (optional) - the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+* `template` (required) - The name of the template to apply
+* `bean` (optional) - The bean to apply the template against
+* `model` (optional) - The model to apply the template against as a `java.util.Map`
+* `collection` (optional) - A collection of model objects to apply the template to
+* `var` (optional) - The variable name of the bean to be referenced in the template
+* `plugin` (optional) - The plugin to look for the template in
+
+See xref:../ref/Controllers/render.adoc[render] in the Grails user guide for more information.
+
+

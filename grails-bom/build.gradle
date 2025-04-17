@@ -49,7 +49,8 @@ dependencies {
             api project(":${subproject.path}")
         }
 
-        // TODO: since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
+        // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
+        // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
         api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
         api "org.apache.grails:grails-docs-core:${projectVersion}"
@@ -85,29 +86,32 @@ String resolveMavenPomVersion(String dynamicVersion, Map properties, int maxIter
 
 //TODO: This really should be a gradle task that we export so others can use.
 tasks.register('extractConstraints') {
-    dependsOn(gradle.includedBuild('grails-gradle').task(':grails-gradle-bom:generatePomFileForMavenPublication'))
+    it.inputs.files(configurations.named('bomDependencies'))
+    it.outputs.file(project.layout.buildDirectory.file('grails-bom-constraints.adoc'))
+
+    dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
     doLast {
         def conf = configurations.detachedConfiguration()
-        conf.transitive(true)
+        conf.transitive = true
 
         Map<String, Tuple4<String, String, String, String>> bomConstraints = [:]
-        Configuration apiConfiguration = configurations.named('api').get()
+        Configuration apiConfiguration = configurations.named('bomDependencies').get()
 
         // Explicit constraints
         apiConfiguration.getAllDependencyConstraints().all { constraint ->
             bomConstraints.put("${module.group}:${module.name}" as String,
-                    new Tuple4<>(
-                            constraint.module.group,
-                            constraint.module.name,
-                            constraint.version,
-                            "grails-bom"
+                    new Tuple4<String, String, String, String>(
+                            constraint.module.group as String,
+                            constraint.module.name as String,
+                            constraint.version as String,
+                            'grails-bom'
                     )
             )
         }
 
         // Build an exclusion list so parsing the pom we can exclude any dependencies as they are matched
-        Map<String, List<Tuple2<String, String>>> allExclusions = [:].withDefault{ [] }
-        configurations.api.allDependencies.each { dep ->
+        Map<String, List<Tuple2<String, String>>> allExclusions = [:].withDefault { [] }
+        apiConfiguration.allDependencies.each { dep ->
             if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
                 String coordinates = "${dep.group}:${dep.name}" as String
 
@@ -119,7 +123,7 @@ tasks.register('extractConstraints') {
         }
 
         // Find inherited libraries via platform() usage
-        configurations.bomDependencies.incoming.resolutionResult.allDependencies.each { ResolvedDependencyResult dep ->
+        apiConfiguration.incoming.resolutionResult.allDependencies.each { ResolvedDependencyResult dep ->
             // Any non-constraint via api dependency should *always* be a platform dependency, so expand each of those
             String bomGroup = dep.requested.group
             String bomName = dep.requested.module
@@ -140,23 +144,23 @@ tasks.register('extractConstraints') {
                 model.dependencyManagement.dependencies.each { depItem ->
 
                     String coordinates = "${depItem.groupId}:${depItem.artifactId}" as String
-                    if(!bomConstraints.containsKey(coordinates)) {
+                    if (!bomConstraints.containsKey(coordinates)) {
                         boolean isExcluded = excluded.any {
-                            if(it.v1 && it.v2) {
+                            if (it.v1 && it.v2) {
                                 return coordinates == "${it.v1}:${it.v2}" as String
                             }
 
-                            if(it.v1 && !it.v2) {
+                            if (it.v1 && !it.v2) {
                                 return depItem.groupId == it.v1
                             }
 
-                            if(!it.v1 && it.v2) {
+                            if (!it.v1 && it.v2) {
                                 return depItem.artifactId == it.v2
                             }
 
                             false
                         }
-                        if(!isExcluded) {
+                        if (!isExcluded) {
                             String version = resolveMavenPomVersion(depItem.version, model.properties)
                             bomConstraints.put(coordinates, new Tuple4<>(depItem.groupId, depItem.artifactId, version, bomName))
                         }
@@ -167,7 +171,21 @@ tasks.register('extractConstraints') {
                 throw new GradleException("BOM ${bomGroup}:${bomName}:${bomVersion} has no dependencyManagement section.")
             }
         }
-        ext.bomConstraints = bomConstraints
+
+        List lines = []
+        bomConstraints.values().sort { a, b -> a.v1 <=> b.v1 ?: a.v2 <=> b.v2 }.each {
+            lines << "| ${it.v1} | ${it.v2} | ${it.v3} | ${it.v4} "
+        }
+
+        project.layout.buildDirectory.file('grails-bom-constraints.adoc').get().asFile.withWriter { writer ->
+            writer.writeLine '[cols="1,1,1,1", options="header"]'
+            writer.writeLine '|==='
+            writer.writeLine '| Group | Artifact | Version | Source'
+            lines.each { line ->
+                writer.writeLine(line)
+            }
+            writer.writeLine '|==='
+        }
     }
 }
 
@@ -198,15 +216,6 @@ Closure determinePossibleKey = { Map.Entry<String, String> found, Map versions -
             .replace('grails-datamapping', 'grails-data')
             .replace('grails-datastore', 'grails-data')
             .replace('grails-testing-support-datamapping', 'grails-data')
-            .replace('grails-gsp', 'gsp')
-            .replace('grails-web-gsp', 'gsp')
-            .replace('grails-web-taglib', 'gsp')
-            .replace('scaffolding', 'gsp')
-            .replace('fields', 'gsp')
-            .replace('grails-testing-support-views-gson', 'gsp')
-            .replace('grails-testing-support-web', 'gsp')
-            .replace('views-markup', 'gsp')
-            .replace('views-gson', 'gsp')
     while (possibleKey != null) {
         String propertyName = "${possibleKey}.version" as String
         if (versions.containsKey(propertyName)) {
@@ -223,9 +232,9 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
     Map<String, String> toSearchGradle = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
 
     Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
-    if(!found) {
+    if (!found) {
         found = toSearchGradle.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
-        if(!found) {
+        if (!found) {
             return null
         }
     }
@@ -234,11 +243,11 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 
     //TODO: this isn't the correct way to do this, but with project mergers it may not matter
     String propertyName = determinePossibleKey(found, versions)
-    if(!propertyName) {
+    if (!propertyName) {
         propertyName = determinePossibleKey(found, gradleBomDependencyVersions)
     }
 
-    if(propertyName) {
+    if (propertyName) {
         return propertyName
     }
 
@@ -246,7 +255,7 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 }
 
 ext {
-    pomDescription = "Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects"
+    pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
     pomCustomization = { ->
         def root = asNode()
 

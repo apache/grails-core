@@ -1,0 +1,28 @@
+
+== currencySelect
+
+
+
+=== Purpose
+
+
+Generates an HTML select tag with currency symbols (e.g. 'EUR', 'USD', etc.)
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:currencySelect name="myCurrency" value="${currency}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `from` (optional) - The currency symbols to select from, defaults to the major ones if not specified
+* `value` (optional) - The currency value as the currency code. Defaults to the currency for the current {javase}java.base/java/util/Locale.html[Locale] if not specified
+

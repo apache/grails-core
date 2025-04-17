@@ -64,12 +64,13 @@ tasks.register('createCombinedReport', TestReport) {
     )
 }
 
-tasks.named('test', Test) {
+tasks.named('test', Test).configure {
     configure(defaultTestConfig)
     excludes.addAll(isolatedTests)
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

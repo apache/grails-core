@@ -1,0 +1,52 @@
+[[tagsAsMethodCalls,Tags as method calls]]
+One major different between GSP tags and other tagging technologies is that GSP tags can be called as either regular tags or as method calls from xref:theWebLayer/controllers.adoc[controllers], xref:taglibs.adoc[tag libraries] or GSP views.
+
+
+==== Tags as method calls from GSPs
+
+
+Tags return their results as a String-like object (a `StreamCharBuffer` which has all of the same methods as String) instead of writing directly to the response when called as methods. For example:
+
+[source,gsp]
+----
+Static Resource: ${createLinkTo(dir: "images", file: "logo.jpg")}
+----
+
+This is particularly useful for using a tag within an attribute:
+
+[source,xml]
+----
+<img src="${createLinkTo(dir: 'images', file: 'logo.jpg')}" />
+----
+
+In view technologies that don't support this feature you have to nest tags within tags, which becomes messy quickly and often has an adverse effect of WYSIWYG tools that attempt to render the mark-up as it is not well-formed:
+
+[,xml]
+----
+<img src="<g:createLinkTo dir='images' file='logo.jpg'/>" />
+----
+
+
+==== Tags as method calls from Controllers and Tag Libraries
+
+
+You can also invoke tags from controllers and tag libraries. Tags within the default `g:` <<namespaces,namespace>> can be invoked without the prefix and a `StreamCharBuffer` result is returned:
+
+[source,groovy]
+----
+def imageLocation = createLinkTo(dir:"images", file:"logo.jpg").toString()
+----
+
+Prefix the namespace to avoid naming conflicts:
+
+[source,groovy]
+----
+def imageLocation = g.createLinkTo(dir:"images", file:"logo.jpg").toString()
+----
+
+For tags that use a <<namespaces,custom namespace>>, use that prefix for the method call. For example (from the https://github.com/stefanogualdi/grails-ckeditor[CK Editor plugin]):
+
+[source,groovy]
+----
+def editor = ckeditor.editor(name: "text", width: "100%", height: "400")
+----

@@ -1,0 +1,22 @@
+For template development, the following configuration attribute should be placed in the development environment section of your application's Config.groovy:
+
+.application.groovy
+[source,groovy]
+----
+grails.plugin.fields.disableLookupCache = true
+----
+
+or
+
+.application.yml
+[source,yml]
+----
+environments:
+    development:
+        grails:
+            plugin:
+                fields:
+                    disableLookupCache: true
+----
+
+After the template development has finished, it is recommended to re-enable the template lookup cache in order to have a performant page rendering even during development.

@@ -1,0 +1,10 @@
+
+import functional.tests.Book
+
+model {
+    Book book
+}
+
+json g.render(book) {
+    paramsFromTemplate params
+}

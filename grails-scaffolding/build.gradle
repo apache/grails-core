@@ -1,0 +1,33 @@
+plugins {
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Scaffolding Plugin'
+    pomDescription = 'Provides scaffolding for Grails applications'
+    pomDevelopers = [puneetbehl: 'Puneet Behl']
+    testForked = true
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+    api project(':grails-fields')
+    api project(':grails-rest-transforms')
+
+    compileOnly 'jline:jline'
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

@@ -1,0 +1,29 @@
+If you have collections of objects you often need to sort and filter them. Use the xref:../../../../ref/Tags%20-%20GSP/findAll.adoc[findAll] and xref:../../../../ref/Tags%20-%20GSP/grep.adoc[grep] tags for these tasks:
+
+[,xml]
+----
+Stephen King's Books:
+<g:findAll in="${books}" expr="it.author == 'Stephen King'">
+     <p>Title: ${it.title}</p>
+</g:findAll>
+----
+
+The `expr` attribute contains a Groovy expression that can be used as a filter. The xref:../../../../ref/Tags%20-%20GSP/grep.adoc[grep] tag does a similar job, for example filtering by class:
+
+[source,xml]
+----
+<g:grep in="${books}" filter="NonFictionBooks.class">
+     <p>Title: ${it.title}</p>
+</g:grep>
+----
+
+Or using a regular expression:
+
+[source,xml]
+----
+<g:grep in="${books.title}" filter="~/.*?Groovy.*?/">
+     <p>Title: ${it}</p>
+</g:grep>
+----
+
+The above example is also interesting due to its usage of GPath. GPath is an XPath-like language in Groovy. The `books` variable is a collection of `Book` instances. Since each `Book` has a `title`, you can obtain a list of Book titles using the expression `books.title`. Groovy will auto-magically iterate the collection, obtain each title, and return a new list!

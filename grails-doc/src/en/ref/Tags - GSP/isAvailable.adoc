@@ -1,0 +1,38 @@
+
+== isAvailable
+
+
+
+=== Purpose
+
+
+Renders its body if and only if a named plugin is installed in the current project. Note that it uses the 'plugin' namespace.
+
+
+=== Examples
+
+
+[,xml]
+----
+<plugin:isAvailable name="spring-security-core">
+You have Spring Security installed!
+</plugin:isAvailable>
+
+<plugin:isAvailable name="resources" version="1.2">
+  <%-- Do something that requires version 1.2 of Resources plugin --%>
+</plugin:isAvailable>
+----
+
+
+=== Description
+
+
+Sometimes you want to only display something in a view if a plugin is installed, particularly if you're developing another plugin, and you can't know whether another plugin is installed or not. For example, your plugin may provide a tag cloud, and you want it to integrate with, but not require, the Taggable plugin. In that case, you can use this tag to selectively include code or markup in your views, partial templates, etc.
+
+Attributes
+
+* `name` - the name of the plugin you're testing for.
+* `version` (optional) - the version of the plugin that you're testing for. This doesn't support version ranges, so be careful using it.
+
+
+

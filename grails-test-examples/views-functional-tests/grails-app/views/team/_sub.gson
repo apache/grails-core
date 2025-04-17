@@ -1,0 +1,11 @@
+
+assert response != null
+assert hal != null
+assert json != null
+assert request != null
+assert locale != null
+
+response.contentType "application/hal+json"
+json {
+    foo "bar"
+}

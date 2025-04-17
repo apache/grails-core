@@ -1,0 +1,8 @@
+
+import groovy.transform.Field
+
+@Field String one
+
+json {
+    message one
+}

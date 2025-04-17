@@ -1,0 +1,49 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Fields Plugin'
+    pomDescription = 'Customizable form-field rendering based on overrideable GSP template'
+    pomDevelopers = [robfletcher: 'Rob Fletcher', graemerocher: 'Graeme Rocher', sdelamo: 'Sergio del Amo', sbglasius: 'Søren Berg Glasius']
+    testForked = true
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation project(':grails-gsp')
+    compileOnly project(':grails-controllers')
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly 'org.springframework.boot:spring-boot-starter-actuator'
+    compileOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+    compileOnly 'org.springframework.boot:spring-boot-starter-logging'
+
+    testImplementation 'org.apache.groovy:groovy-dateutil'
+    testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+    testImplementation project(':grails-testing-support-web')
+    testImplementation 'org.javassist:javassist:3.29.0-GA'
+    testImplementation("org.jodd:jodd-wot:$joddWotVersion") {
+        exclude module: 'slf4j-api'
+        exclude module: 'asm'
+    }
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

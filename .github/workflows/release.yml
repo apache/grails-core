@@ -561,7 +561,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
-        run: ../gradlew grails-doc:build -PgithubBranch=${{ needs.publish.outputs.target_branch }}
+        run: ./gradlew grails-doc:build -PgithubBranch=${{ needs.publish.outputs.target_branch }}
       - name: "🚀 Publish to Github Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:

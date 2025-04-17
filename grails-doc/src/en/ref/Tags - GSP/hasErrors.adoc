@@ -1,0 +1,76 @@
+
+== hasErrors
+
+
+
+=== Purpose
+
+
+Checks whether a bean, request scope, or model reference has any errors and if so invokes the body of the tag. Typically used in conjunction with either xref:eachError.adoc[eachError] or xref:renderErrors.adoc[renderErrors]
+
+
+=== Examples
+
+
+Checks whether there are any errors for any bean throughout the request scope:
+
+[source,xml]
+----
+<g:hasErrors>
+    <g:eachError><p><g:message error="${it}"/></p></g:eachError>
+</g:hasErrors>
+----
+
+Checks whether there are any errors for the specified bean
+
+[source,xml]
+----
+<g:hasErrors bean="${book}">
+    <g:eachError><p><g:message error="${it}"/></p></g:eachError>
+</g:hasErrors>
+----
+
+Checks whether there are any errors for the field "title" of the specified "book" bean:
+
+[source,xml]
+----
+<g:hasErrors bean="${book}" field="title">
+    <div class="errors">
+       <g:renderErrors bean="${book}" field="title" as="list" />
+    </div>
+</g:hasErrors>
+----
+
+As a method call in GSP:
+
+[source,xml]
+----
+<div class="prop ${hasErrors(bean:user,field:'login', 'errors')}">
+    <label>Login: <input type="text" name="login" /></label>
+</div>
+----
+
+In this case we check for a field error on a particular field and set a CSS class on the surrounding div thus allowing us to highlight the error with a red border by appending the `errors` CSS class.
+
+Checking for errors inside a nested object:
+
+[source,xml]
+----
+<div class="prop ${hasErrors(bean:parent, field:'child.name', 'errors')}">
+    <label>Child name:
+        <input type="text" name="child.name"
+           value="${fieldValue(bean: parent, field: 'child.name'}" />
+    </label>
+</div>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `bean` (optional) - The bean to check for errors
+* `model` (optional) - The name of the model reference to check for errors
+* `field` (optional) - Check if a field of the bean or model reference has errors
+

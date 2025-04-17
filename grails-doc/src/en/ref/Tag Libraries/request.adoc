@@ -1,0 +1,32 @@
+
+== request
+
+
+
+=== Purpose
+
+
+The xref:../ref/Servlet%20API/request.adoc[request] object is an instance of the Servlet API's {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] class
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        log.info "User agent: ${request.getHeader("User-Agent")}"
+
+        render(view: actionName)
+    }
+}
+----
+
+
+=== Description
+
+
+The {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] class is useful for, amongst other things, obtaining request headers, storing request scoped attributes and establishing information about the client. Refer to the Servlet API's javadocs for further information.
+
+NOTE: The additional methods added to the xref:../ref/Servlet%20API/request.adoc[request] object are documented in the Grails Servlet API reference guide

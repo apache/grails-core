@@ -1,0 +1,57 @@
+==== f:all
+
+===== Purpose
+
+Renders fields for all properties of an object by using `f:field` for each property.
+
+The `id`, `version`, `dateCreated` and `lastUpdated` properties are skipped on domain classes. Additionally any property with a `display: false` constraint set will be skipped.
+
+
+===== Attributes
+
+.Attributes for f:all
+[options="header",cols="1,1,3"]
+
+|===
+|Name | Required | Description
+
+|*bean*
+|if not inside `f:with`
+|The bean whose property is being rendered. This can be the object itself or the name of a page-scope variable.
+
+|*except*
+| N/A
+|A comma-separated list of properties that should be skipped (in addition to the defaults).
+
+|*order*
+| N/A
+|A comma-separated list of properties which represents the order in which the tag should generate fields.
+
+|*prefix*
+|String
+|A string (including the trailing period) that should be appended before the input name such as `name="${prefix}propertyName"`.  The label is also modified.
+
+|*theme*
+|String
+|Theme to use if available.
+|===
+
+
+
+===== Extra attributes (Since version 2.1.4)
+
+
+You can pass extra attributes to the *all* tag that will be propagated to the inner fields.
+
+
+===== Example
+
+
+[source,groovy]
+----
+<f:all bean="person" wrapper="someWrapper"/>
+----
+
+In that way all the fields are going to be executed as if they were executed with the extra attribute on them.
+
+NOTE: Remember that if you want to use some of those attributes in the *widget* templates you need to prefix them with the *widget-* word (unless you have configured another prefix)

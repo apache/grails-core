@@ -1,0 +1,75 @@
+== each
+
+=== Purpose
+
+Uses a `for(var in collection)` loop to iterate over each element of the specified object.
+
+=== Examples
+
+
+[source,xml]
+----
+<g:each in="${books}">
+    <p>Title: ${it.title}</p>
+    <p>Author: ${it.author}</p>
+</g:each>
+----
+
+With a named item:
+
+[source,xml]
+----
+<g:each var="book" in="${books}">
+    <p>Title: ${book.title}</p>
+    <p>Author: ${book.author}</p>
+</g:each>
+----
+
+With a range literal - note how the literal must be enclosed in parentheses:
+
+[source,xml]
+----
+<ul>
+  <g:each var="i" in="${ (0..<100) }">
+    <li>Item ${i}</li>
+  </g:each>
+</ul>
+----
+
+Another example, where a named item is necessary (otherwise the access to the title property will fail):
+
+[source,xml]
+----
+<g:each in="${itemList}" var="item">
+    <g:link action="show" id="${item.id}">${item.title}</g:link>
+</g:each>
+----
+
+Using the status parameter to alternate the coloring of a table's rows:
+
+[source,xml]
+----
+<tbody>
+  <g:each status="i" in="${itemList}" var="item">
+    <!-- Alternate CSS classes for the rows. -->
+    <tr class="${ (i % 2) == 0 ? 'a' : 'b'}">
+      <td>${item.id?.encodeAsHTML()}</td>
+      <td>${item.parentId?.encodeAsHTML()}</td>
+      <td>${item.type?.encodeAsHTML()}</td>
+      <td>${item.status?.encodeAsHTML()}</td>
+    </tr>
+  </g:each>
+</tbody>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `in` - The object to iterate over
+* `status` (optional) - The name of a variable to store the iteration index in. Starts with 0 and increments for each iteration. If this parameter is used, then `var` is required.
+* `var` (optional) - The name of the item, defaults to "it".
+
+NOTE: Note that `var` attribute must be specified when the iterator value is to be used from within the body of a GSP Dynamic Tag, such as in `<g:link>`.

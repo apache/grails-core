@@ -1,0 +1,10 @@
+
+import functional.tests.Book
+
+model {
+    Book book
+}
+json {
+    api 'version 1.0 (Non-Namespaced)'
+    title book.title
+}

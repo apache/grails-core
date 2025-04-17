@@ -6,8 +6,8 @@ buildscript {
     }
     dependencies {
         classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
-        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
+        classpath 'org.apache.grails:grails-gradle-plugins'
     }
 }
 
@@ -24,8 +24,7 @@ apply plugin: 'org.apache.grails.gradle.grails-gson'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation platform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
@@ -50,7 +49,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 }
 
-tasks.named('compileTestGroovy') {
+tasks.named('compileTestGroovy').configure {
     dependsOn 'compileGsonViews'
 }
 

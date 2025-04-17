@@ -1,0 +1,39 @@
+
+== radio
+
+
+
+=== Purpose
+
+
+Generates a radio button
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:radio name="myGroup" value="1"/>
+<g:radio name="myGroup" value="2" checked="true"/>
+----
+
+results in:
+
+[source,html]
+----
+<input type="radio" name="myGroup" value="1" />
+<input type="radio" name="myGroup" checked="checked" value="2" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `value` (required) - The value of the radio button
+* `name` (required) - The name of the radio button
+* `checked` (optional) - boolean to indicate that the radio button should be checked
+
+

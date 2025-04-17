@@ -1,0 +1,15 @@
+def gdslScriptContext = context(scope: scriptScope(), filetypes: ["gml"])
+
+contributor([gdslScriptContext]) {
+    // scopes
+    property name: "response", type: "grails.views.api.HttpView.Response"
+    property name: "request", type: "grails.views.api.HttpView.Request"
+    property name: "g", type: "grails.views.api.GrailsViewHelper"
+    property name: "mappingContext", type: "org.grails.datastore.mapping.model.MappingContext"
+    property name: "messageSource", type: "org.springframework.context.MessageSource"
+    property name: "controllerNamespace", type: "java.lang.String"
+    property name: "controllerName", type: "java.lang.String"
+    property name: "actionName", type: "java.lang.String"
+    property name: "templateEngine", type: "grails.plugin.markup.view.MarkupViewTemplateEngine"
+    property name: "mimeUtility", type: "grails.web.mime.MimeUtility"
+}

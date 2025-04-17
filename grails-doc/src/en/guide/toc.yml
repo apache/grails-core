@@ -98,6 +98,68 @@ theWebLayer:
     controllerExceptionHandling: Declarative Controller Exception Handling
   gsp:
     title: Groovy Server Pages
+    GSPBasics:
+      title: GSP Basics
+      variablesAndScopes: Variables and Scopes
+      logicAndIteration: Logic and Iteration
+      pageDirectives: Page Directives
+      expressions: Expressions
+    tags:
+      title: GSP Tags
+      tagVariablesAndScopes: Variables and Scopes
+      tagLogicAndIteration: Logic and Iteration
+      searchAndFiltering: Search and Filtering
+      linksAndResources: Links and Resources
+      formsAndFields: Forms and Fields
+      tagsAsMethodCalls: Tags as Method Calls
+    viewsAndTemplates: Views and Templates
+    layouts:
+      title: Layouts with Sitemesh
+      sitemeshContentBlocks: Sitemesh Content Blocks
+    resources: Static Resources
+    makingChangesToADeployedApplication: Making Changes to a Deployed Application
+    taglibs:
+      title: Tag Libraries
+      taglibVariablesAndScopes: Variables and Scopes
+      simpleTags: Simple Tags
+      logicalTags: Logical Tags
+      iterativeTags: Iterative Tags
+      namespaces: Tag Namespaces
+      usingJSPTagLibraries: Using JSP Tag Libraries
+      tagReturnValue: Tag return value
+  fields:
+    title: Fields Plugin
+    fieldsInstallation: Installation
+    fieldsUsage: Usage
+    customizingFieldRendering: Customizing Field Rendering
+    fieldsEmbeddedProperties: Embedded Properties
+    fieldsThemes: Themes
+    includingTemplatesInPlugins: Including Templates in Plugins
+    fieldsPerformance: Performance
+    fieldsScaffolding: Scaffolding
+  gson:
+    title: JSON Views
+    jsonInstallation: Installation
+    gsonTemplates: Templates
+    gsonRendering: Rendering Domain Classes
+    jsonViewApi: JSON View API
+    gsonModelNaming: Model Naming
+    gsonContentNegotiation: Content Negotiation
+    gsonHal: HAL Support
+    jsonapi: JSON API Support
+    templateEngine: The JsonTemplateEngine
+    staticCompilation: Static Compilation
+    gsonTesting: Testing
+    pluginSupport: Plugin Support
+    jsonConfiguration: Configuration
+    converters: Custom Converters
+    gsonIntellij: IntelliJ Support
+    gsonDebugging: Debugging Views
+  markup:
+    title: Markup Views
+    markupInstallation: Installation
+    markupViewApi: Markup View API
+    markupConfiguration: Configuration
   urlmappings:
     title: URL Mappings
     mappingToControllersAndActions: Mapping to Controllers and Actions

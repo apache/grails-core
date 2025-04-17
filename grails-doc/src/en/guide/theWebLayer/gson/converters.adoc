@@ -1,0 +1,34 @@
+It is possible to register custom converters to change how a given class is rendered with json views. To do so, create a class that implements link:groovydoc/grails/plugin/json/builder/JsonGenerator.Converter.html[Converter]. Then you must register the class in `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`.
+
+[source,groovy]
+----
+package foo
+
+class MyConverter implements JsonGenerator.Converter {
+
+    @Override
+    boolean handles(Class<?> type) {
+        CustomClass.isAssignableFrom(type)
+    }
+
+    @Override
+    Object convert(Object value, String key) {
+        ((CustomClass)value).name
+    }
+}
+
+
+class CustomClass {
+    String name
+}
+----
+
+Because plugins could potentially provide converters, you can also determine the order by implementing the http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/Ordered.html[Ordered] interface in your converter.
+
+[source]
+.src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter
+----
+foo.MyCustomConverter
+----
+
+NOTE: If you have multiple classes to register, put each one on it's own line

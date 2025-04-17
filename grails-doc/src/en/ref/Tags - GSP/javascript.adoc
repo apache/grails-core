@@ -1,0 +1,37 @@
+
+== javascript
+
+
+
+=== Purpose
+
+
+Includes JavaScript libraries and scripts as well as providing a shorthand for inline JavaScript.
+
+
+=== Examples
+
+
+[,xml]
+----
+<!-- actually imports '/app/js/myscript.js' -->
+<g:javascript src="myscript.js" />
+
+<g:javascript>alert('hello')</g:javascript>
+----
+
+
+=== Description
+
+
+If you do not include a "src" attribute but instead provide a body, the result is an inline script.
+
+If you use this tag to render inline JavaScript code, it is recommended that you use the Resources plugin's `<r:script>` tag to produce inline script that is included at the end of the body, or in the head if necessary - rather than inline. For more control use the Resources plugin's <r:script> tag directly.
+
+Attributes
+
+* `contextPath` (optional) - the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+* `src` (optional) - The name of the JavaScript file to import. Will look in /appname/js directory
+* `plugin` (optional) - The plugin to look for the JavaScript in
+
+

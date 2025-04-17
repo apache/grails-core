@@ -25,7 +25,9 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
     implementation 'org.springframework:spring-context'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure' // required for org.springframework.boot.env.YamlPropertySourceLoader
+    implementation 'org.springframework.boot:spring-boot-autoconfigure', {
+        // impl: org.springframework.boot.env.YamlPropertySourceLoader
+    }
 
     compileOnly 'jline:jline' // for profile compilation
 
@@ -39,7 +41,9 @@ dependencies {
     testImplementation 'org.codehaus.groovy:groovy'
     testImplementation 'org.codehaus.groovy:groovy-xml'
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
+    testImplementation('org.spockframework:spock-core') {
+        transitive = false
+    }
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
@@ -49,7 +53,6 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    //TODO: from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
 
 publishing {
@@ -57,10 +60,10 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    username = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
-                    password = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
+                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
+                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
                 }
-                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+                url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
     }
@@ -69,12 +72,12 @@ publishing {
         maven(MavenPublication) {
             groupId = project.group
             artifactId = project.name
-            
+
             from components.java
 
             pom {
-                name = "Grails Gradle Model"
-                description = "Classes to support the Grails Gradle Plugins"
+                name = 'Grails Gradle Model'
+                description = 'Classes to support the Grails Gradle Plugins'
 
                 url = 'https://github.com/apache/grails-core'
 
@@ -87,9 +90,9 @@ publishing {
                 }
 
                 scm {
-                    url = "scm:git@github.com:apache/grails-core.git"
-                    connection = "scm:git@github.com:apache/grails-core.git"
-                    developerConnection = "scm:git@github.com:apache/grails-core.git"
+                    url = 'scm:git@github.com:apache/grails-core.git'
+                    connection = 'scm:git@github.com:apache/grails-core.git'
+                    developerConnection = 'scm:git@github.com:apache/grails-core.git'
                 }
 
                 developers {

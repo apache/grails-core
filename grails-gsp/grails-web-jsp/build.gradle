@@ -1,0 +1,98 @@
+plugins {
+    id 'groovy'
+    id 'project-report'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.views'
+
+ext {
+    pomTitle = 'Groovy Server Pages (GSP)'
+    pomDescription = 'Groovy Server Pages (GSP) - A server-side view rendering technology based on Groovy'
+    pomDevelopers = ['graemerocher': 'Graeme Rocher']
+    testForked = true
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+    api project(':grails-web-common')
+    api project(':grails-web-gsp')
+
+    // Required for JSP support
+    compileOnly "jakarta.servlet.jsp:jakarta.servlet.jsp-api:$jspApiVersion"
+    compileOnly "jakarta.el:jakarta.el-api:$elApiVersion"
+
+//    api project(':grails-web-gsp'), { // GroovyPagesServlet is used in public API (used in servlet context attribute value)
+//        // API dependencies in grails-web-gsp
+//        exclude group: 'org.apache.grails.views', module: 'grails-gsp-core'
+//        exclude group: 'org.apache.grails.web', module: 'grails-web-common'
+//        exclude group: 'org.apache.grails.web', module: 'grails-web-taglib'
+//    }
+//
+//    implementation project(':grails-gsp-core'), { // GroovyPage
+//        // API dependencies in grails-gsp
+//        //exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap' // Resource is used
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        exclude group: 'org.apache.groovy', module: 'groovy-templates'
+//        // Implementation dependencies in grails-gsp
+//        exclude group: 'org.apache.grails.web', module: 'grails-taglib'
+//    }
+//    implementation project(':grails-taglib'), { // GrailsTagLibClass, TagLibArtefactHandler, GrailsTagException
+//        // API dependencies in grails-taglib
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        exclude group: 'org.springframework', module: 'spring-core'
+//    }
+//    implementation project(':grails-core'), { // Holders
+//        // API dependencies in grails-core
+//        exclude group: 'org.apache.groovy', module: 'groovy'
+//        exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+//        exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+//        exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+//        //exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap' // Resource is used
+//        //exclude group: 'org.apache.grails.data', module: 'grails-datastore-core' // MappingContext
+//        exclude group: 'org.apache.grails', module: 'grails-spring'
+//        exclude group: 'org.slf4j', module: 'jcl-over-slf4j'
+//        exclude group: 'org.slf4j', module: 'slf4j-api'
+//        exclude group: 'org.yaml', module: 'snakeyaml'
+//        exclude group: 'org.springframework', module: 'spring-beans'
+//        exclude group: 'org.springframework', module: 'spring-core'
+//        exclude group: 'org.springframework', module: 'spring-context'
+//        exclude group: 'org.springframework', module: 'spring-tx'
+//        exclude group: 'org.springframework.boot', module: 'spring-boot'
+//        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+//    }
+//    implementation 'org.apache.grails.web:grails-encoder', { // StreamCharBuffer, FastStringWriter
+//        // API dependencies in grails-encoder
+//        exclude group: 'org.apache.groovy', module: 'groovy'
+//        exclude group: 'org.apache.groovy', module: 'groovy-json'
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.slf4j', module: 'jcl-over-slf4j'
+//        exclude group: 'org.slf4j', module: 'slf4j-api'
+//        exclude group: 'org.springframework', module: 'spring-web'
+//    }
+//    implementation project(':grails-web-common'), { // GrailsWebRequest
+//        // API dependencies in grails-web-common
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.apache.grails', module: 'grails-databinding'
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        exclude group: 'org.apache.groovy', module: 'groovy-templates'
+//        //exclude group: 'org.springframework', module: 'spring-webmvc' // DispatcherServletWebRequest
+//        exclude group: 'org.springframework', module: 'spring-context-support'
+//    }
+//
+//    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided by servlet container
+//    compileOnly "jakarta.servlet.jsp:jakarta.servlet.jsp-api:$jspApiVersion" // Provided by servlet container
+//    compileOnly "jakarta.el:jakarta.el-api:$elApiVersion" // Provided by servlet container
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

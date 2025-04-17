@@ -1,0 +1,10 @@
+== Installation
+
+To start using this library, there are only a couple simple steps:
+
+. Import the library in your `build.gradle`
+[source,groovy,subs="attributes",indent=1]
+compile "org.grails:scaffolding-core:{version}"
+. Register the scaffolding core bean configuration link:api/org/grails/scaffolding/ScaffoldingBeanConfiguration.html[ScaffoldingBeanConfiguration]
+[source,groovy,indent=1]
+scaffoldingBeanConfiguration(ScaffoldingBeanConfiguration)

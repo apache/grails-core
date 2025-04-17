@@ -1,0 +1,4 @@
+grails:
+    profile: web-plugin
+    codegen:
+        defaultPackage: functional.tests.plugin

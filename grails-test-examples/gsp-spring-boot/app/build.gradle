@@ -1,0 +1,53 @@
+buildscript {
+    repositories {
+        // mavenLocal()
+        maven { url 'https://repo.grails.org/grails/core/' }
+        maven {
+            name = 'ASF Snapshot repo'
+            url = 'https://repository.apache.org/content/repositories/snapshots'
+        }
+    }
+    dependencies {
+        classpath platform("org.apache.grails:grails-gradle-bom:$grailsVersion")
+        classpath 'org.apache.grails:grails-gradle-plugins'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'war'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+    id "groovy"
+}
+
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'ASF Snapshot repo'
+        url = 'https://repository.apache.org/content/repositories/snapshots'
+    }
+    maven { url 'https://repo.grails.org/grails/core/' }
+}
+
+jar {
+    processResources.exclude('**/*.gsp')
+}
+
+compileGroovyPages {
+    source = project.file("${project.projectDir}/src/main/resources/templates")
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+    implementation project(':grails-gsp-spring-boot')
+
+    implementation 'org.hibernate.validator:hibernate-validator:8.0.0.Final' // validation
+
+    implementation project(':grails-web-jsp')
+
+    implementation 'org.apache.tomcat.embed:tomcat-embed-jasper' // jsp
+    implementation 'org.apache.tomcat.embed:tomcat-embed-el'
+}

@@ -1,0 +1,14 @@
+In GSP the `<%= %>` syntax introduced earlier is rarely used due to the support for GSP expressions. A GSP expression is similar to a JSP EL expression or a Groovy GString and takes the form `${expr}`:
+
+[source,xml]
+----
+<html>
+  <body>
+    Hello ${params.name}
+  </body>
+</html>
+----
+
+However, unlike JSP EL you can have any Groovy expression within the `${..}` block.
+
+WARNING: Embedding data received from user input has the risk of making your application vulnerable to a Cross Site Scripting (XSS) attack. Please read the documentation under link:security.html#xssPrevention[XSS prevention] for information on how to prevent XSS attacks.

@@ -1,0 +1,17 @@
+GSP also features tags to help you manage linking to controllers and actions. The xref:../../../../ref/Tags%20-%20GSP/link.adoc[link] tag lets you specify controller and action name pairing and it will automatically work out the link based on the xref:theWebLayer/urlmappings.adoc[URL Mappings], even if you change them! For example:
+
+[,xml]
+----
+<g:link action="show" id="1">Book 1</g:link>
+
+<g:link action="show" id="${currentBook.id}">${currentBook.name}</g:link>
+
+<g:link controller="book">Book Home</g:link>
+
+<g:link controller="book" action="list">Book List</g:link>
+
+<g:link url="[action: 'list', controller: 'book']">Book List</g:link>
+
+<g:link params="[sort: 'title', order: 'asc', author: currentBook.author]"
+        action="list">Book List</g:link>
+----

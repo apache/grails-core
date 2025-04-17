@@ -2,7 +2,7 @@ import org.gradle.api.internal.plugins.StartScriptGenerator
 import org.gradle.api.internal.plugins.UnixStartScriptGenerator
 import org.gradle.api.internal.plugins.WindowsStartScriptGenerator
 
-tasks.register('collectCliDependencies') {
+tasks.register('collectCliDependencies').configure {
     ext {
         baseCachesDir = "$gradle.gradleUserHomeDir/caches"
         cacheDir = "$baseCachesDir/modules-2"
@@ -26,14 +26,14 @@ tasks.register('collectCliDependencies') {
     }
 }
 
-tasks.register('syncCliDependencies', Sync) {
+tasks.register('syncCliDependencies', Sync).configure {
     dependsOn 'collectCliDependencies'
     into homeLibDir
     includeEmptyDirs = false
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-tasks.register('grailsCreateStartScripts', GrailsCreateStartScripts) {
+tasks.register('grailsCreateStartScripts', GrailsCreateStartScripts).configure {
     description = 'Creates OS specific scripts to run grails-shell as a JVM application.'
     mainClass = 'org.grails.cli.GrailsCli'
     applicationName = 'grails'
@@ -66,7 +66,7 @@ class GrailsCreateStartScripts extends CreateStartScripts {
         generator.classpath = projectArtifacts + getClasspath().resolvedConfiguration.resolvedArtifacts.collect { artifact ->
             def dependency = artifact.moduleVersion.id
             String installedFile = "lib/$dependency.group/$dependency.name/jars/$artifact.file.name"
-            if (dependency.group == 'org.apache.grails' && !project.file(installedFile).exists()) {
+            if (dependency.group.startsWith('org.apache.grails') && !project.file(installedFile).exists()) {
                 installedFile = "dist/$artifact.file.name"
             }
             installedFile
@@ -77,7 +77,7 @@ class GrailsCreateStartScripts extends CreateStartScripts {
     }
 }
 
-tasks.register('install') { task ->
+tasks.register('install').configure { task ->
     dependsOn 'syncCliDependencies', 'grailsCreateStartScripts'
     subprojects { Project subproject ->
         if (!(subproject.name in testProjects) && subproject.name != 'grails-doc') {
@@ -86,7 +86,7 @@ tasks.register('install') { task ->
     }
 }
 
-tasks.register('assemble', Zip) {
+tasks.register('assemble', Zip).configure {
     group = 'build'
     dependsOn 'install'
     destinationDirectory = rootProject.layout.buildDirectory.dir('distributions')
@@ -99,10 +99,7 @@ tasks.register('assemble', Zip) {
         from(rootProject.layout.projectDirectory) {
             // Some of these are probably not needed as they are not present in the project folder
             include 'bin/grails', 'bin/grails.bat', 'lib/', 'media/', 'samples/', 'scripts/', 'LICENSE', 'INSTALL'
-            exclude 'ant/bin', 'src/grails', 'src/war'
-        }
-        from(tasks.aggregateGroovydoc) {
-            into 'doc/api'
+            exclude 'ant/bin', 'src/grails', 'src/war', 'grails-doc'
         }
         from(homeDistDir) {
             into 'dist'

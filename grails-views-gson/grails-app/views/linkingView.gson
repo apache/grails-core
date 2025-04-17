@@ -1,0 +1,4 @@
+json.person {
+    name "bob"
+    homepage g.link(controller:"person")
+}

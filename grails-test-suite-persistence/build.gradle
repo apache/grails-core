@@ -23,20 +23,20 @@ dependencies {
                 project(':grails-bootstrap'),
                 project(':grails-spring')
 
-    testImplementation "org.apache.grails.data:grails-datamapping-validation"
-    testImplementation "org.apache.grails.data:grails-data-hibernate5-core"
+    testImplementation 'org.apache.grails.data:grails-datamapping-validation'
+    testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
 
-    api "org.apache.tomcat:tomcat-jdbc"
-    api "org.apache.groovy:groovy:$groovyVersion"
+    api 'org.apache.tomcat:tomcat-jdbc'
+    api 'org.apache.groovy:groovy'
 
-    testRuntimeOnly "com.h2database:h2"
+    testRuntimeOnly 'com.h2database:h2'
 
     //    // Required for AspectJ support
-    testRuntimeOnly "org.springframework:spring-aspects"
-    testRuntimeOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
+    testRuntimeOnly 'org.springframework:spring-aspects'
+    testRuntimeOnly 'org.aspectj:aspectjrt', 'org.aspectj:aspectjweaver'
 
     testImplementation project(':grails-async-plugin')
-    testImplementation "org.apache.grails:grails-testing-support-datamapping", {
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
         exclude module:'grails-testing-support-core'
     }
     testImplementation project(':grails-testing-support-core')
@@ -92,6 +92,7 @@ task testIsolatedPersistentOne(type: Test) {
 test.dependsOn testGrailsDomainBinder, testIsolatedPersistentOne
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

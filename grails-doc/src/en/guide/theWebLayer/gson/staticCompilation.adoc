@@ -1,0 +1,20 @@
+JSON views are statically compiled. You can disable static compilation if you prefer by setting `grails.views.json.compileStatic`:
+
+[source,yaml]
+grails:
+    views:
+        json:
+            compileStatic: false
+
+NOTE: If you disable static compilation rendering performance will suffer.
+
+For model variables you need to declare the types otherwise you will get a compilation error:
+
+[source,groovy]
+model {
+    Person person
+}
+json {
+    name person.name
+    age person.age
+}

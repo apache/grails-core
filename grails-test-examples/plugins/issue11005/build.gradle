@@ -1,37 +1,38 @@
 buildscript {
     repositories {
         // mavenLocal()
-        maven { url = "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
+        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
+        classpath 'org.apache.grails:grails-gradle-plugins'
     }
 }
 
-apply plugin: "java-library"
-apply plugin: "org.apache.grails.gradle.grails-plugin"
-apply plugin: "org.apache.grails.gradle.grails-gsp"
+apply plugin: 'java-library'
+apply plugin: 'org.apache.grails.gradle.grails-plugin'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
-version "0.1-SNAPSHOT"
-group "com.example.grails.plugins"
+version = '0.1-SNAPSHOT'
+group = 'com.example.grails.plugins'
 
 dependencies {
     implementation platform(project(':grails-bom'))
 
     api 'org.springframework.boot:spring-boot-starter-logging'
-    api "org.springframework.boot:spring-boot-starter-actuator"
-    api "org.springframework.boot:spring-boot-autoconfigure"
-    api "org.springframework.boot:spring-boot-starter-tomcat"
+    api 'org.springframework.boot:spring-boot-starter-actuator'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+    api 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    api "org.apache.grails.web:grails-web-boot"
-    api "org.apache.grails:grails-dependencies"
-    api "jakarta.servlet:jakarta.servlet-api"
+    api 'org.apache.grails.web:grails-web-boot'
+    api 'org.apache.grails:grails-dependencies'
+    api 'jakarta.servlet:jakarta.servlet-api'
 
-    testImplementation "org.apache.grails:grails-testing-support-web"
-    testImplementation "org.apache.grails:grails-testing-support-datamapping"
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    console "org.apache.grails:grails-console"
+    console 'org.apache.grails:grails-console'
 }
 
 apply {

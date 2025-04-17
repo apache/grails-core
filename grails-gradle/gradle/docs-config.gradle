@@ -4,17 +4,17 @@ dependencies {
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-    add('documentation', "org.codehaus.groovy:groovy")
-    add('documentation', "org.codehaus.groovy:groovy-ant")
-    add('documentation', "org.codehaus.groovy:groovy-docgenerator")
-    add('documentation', "org.codehaus.groovy:groovy-templates")
+    add('documentation', 'org.codehaus.groovy:groovy')
+    add('documentation', 'org.codehaus.groovy:groovy-ant')
+    add('documentation', 'org.codehaus.groovy:groovy-docgenerator')
+    add('documentation', 'org.codehaus.groovy:groovy-templates')
 }
 
 ext {
     includeInApiDocs = true
 }
 
-tasks.named('groovydoc', Groovydoc) {
+tasks.named('groovydoc', Groovydoc).configure {
     classpath = configurations.documentation
     groovyClasspath = configurations.documentation
     access = GroovydocAccess.PROTECTED
@@ -24,16 +24,16 @@ tasks.named('groovydoc', Groovydoc) {
     destinationDir = project.file('build/docs/api')
 }
 
-tasks.named('javadoc', Javadoc) {
-    (options as StandardJavadocDocletOptions).with {
+tasks.named('javadoc', Javadoc).configure { Javadoc it ->
+    (it.options as StandardJavadocDocletOptions).with {
         encoding = 'UTF-8'
         docEncoding = 'UTF-8'
         charSet = 'UTF-8'
-        addStringOption('-Xms64M')
-        addStringOption('-Xmx512M')
+        addStringOption('Xms64M')
+        addStringOption('Xmx512M')
     }
 }
 
-tasks.named('build') {
+tasks.named('build').configure {
     finalizedBy('groovydoc')
 }

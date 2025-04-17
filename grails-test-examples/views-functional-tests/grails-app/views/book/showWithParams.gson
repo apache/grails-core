@@ -1,0 +1,11 @@
+
+import functional.tests.Book
+
+model {
+    Book book
+}
+
+json {
+    paramsFromView params
+    book tmpl.'/book/bookWithParams'(book)
+}

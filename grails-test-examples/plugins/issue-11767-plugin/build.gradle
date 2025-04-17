@@ -4,11 +4,12 @@ buildscript {
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
+        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
+        classpath 'org.apache.grails:grails-gradle-plugins'
     }
 }
 
-version "0.1-SNAPSHOT"
+version = '0.1-SNAPSHOT'
 group 'issue11767.plugin'
 
 apply plugin: 'org.apache.grails.gradle.grails-plugin'

@@ -1,0 +1,218 @@
+http://jsonapi.org/[JSON API] is a standard format for representing JSON.
+
+The JSON views plugin for Grails provides JSON API support out-of-the-box. All JSON views have access to the `jsonapi` instance which implements link:{api}/grails/plugin/json/view/api/JsonApiViewHelper.html[JsonApiViewHelper].
+
+Grails views makes a best effort to conform to the JSON API standard, however that only applies to the format of the data. The specification makes many assertions about response codes, url conventions, and other server related concepts that are overreaching.
+
+The JSON API support in Grails also only applies to domain classes. Because the specification relies on concepts of relationships and identifiers, there is no clear way to determine how those concepts would apply to conventional Groovy classes. As a result, normal Groovy classes are not supported.
+
+The simplest example of using JSON API simply passes a domain class to the `render` method of the `jsonapi` object.
+
+For example:
+
+[source,groovy]
+model {
+    Book book
+}
+json jsonapi.render(book)
+
+
+In the example where `Book` looks like the following:
+
+[source,groovy]
+class Book {
+    String title
+    Author author
+}
+
+This is what an example `Book` instance rendered with JSON API might look like.
+
+[source,json]
+{
+  "data": {
+    "type": "book",
+    "id": "3",
+    "attributes": {
+      "title": "The Return of the King"
+    },
+    "relationships": {
+      "author": {
+        "links": {
+          "self": "/author/9"
+        },
+        "data": {
+          "type": "author",
+          "id": "9"
+        }
+      }
+    }
+  },
+  "links": {
+    "self": "http://localhost:8080/book/3"
+  }
+}
+
+
+== JSON API Object
+
+To include the link:http://jsonapi.org/format/#document-jsonapi-object[JSON API Object] in the response, include a `jsonApiObject` argument to the `render` method.
+
+[source,groovy]
+model {
+    Book book
+}
+json jsonapi.render(book, [jsonApiObject: true])
+
+The response will contain `"jsonapi":{"version":"1.0"}` as the first key in the resulting object.
+
+== Meta Object
+
+To add link:http://jsonapi.org/format/#document-meta[metadata] to your response, the `meta` argument can be passed to render with the value being the object that should be rendered. If this functionality is used in addition to `jsonApiObject: true`, the metadata will be rendered as the "meta" property of the "jsonapi" object.
+
+[source,groovy]
+model {
+    Book book
+}
+json jsonapi.render(book, [meta: [name: "Metadata Information"]])
+
+The response will contain `"meta":{"name":"Metadata Information"}` as the first key in the resulting object.
+
+== Rendering Errors
+
+The JSON API specification has link:http://jsonapi.org/format/#errors[instructions on how to render errors]. In the case of the Grails implementation, this applies to both exceptions and validation errors.
+
+=== Exceptions
+
+If an exception is passed to the `render` method, it will be rendered within the specification.
+
+In the example of an exception `new RuntimeException("oops!")`, the following will be rendered:
+
+[source,json]
+{
+  "errors": [
+    {
+      "status": 500,
+      "title": "java.lang.RuntimeException",
+      "detail": "oops!",
+      "source": {
+        "stacktrace": [
+          //An array of information relating to the stacktrace
+        ]
+      }
+    }
+  ]
+}
+
+=== Validation Errors
+
+In the case of validation errors, the response will look like the following when a `name` property fails the blank constraint:
+
+[source,json]
+{
+  "errors": [
+    {
+      "code": "blank",
+      "detail": "Property [name] of class [class com.foo.Bar] cannot be blank",
+      "source": {
+        "object": "com.foo.Bar",
+        "field": "name",
+        "rejectedValue": "",
+        "bindingError": false
+      }
+    }
+  ]
+}
+
+== Links
+
+In general, links for relationships will be provided when the relationship has a value.
+
+Example output for a has one relationship where the value is null:
+
+[source,json]
+"captain": {
+  "data": null
+}
+
+And when the value is not null:
+
+[source,json]
+"author": {
+  "links": {
+    "self": "/author/9"
+  },
+  "data": {
+    "type": "author",
+    "id": "9"
+  }
+}
+
+Currently links are not supported in the case of to many relationships.
+
+== Pagination
+
+The JSON API specification has a section which explains http://jsonapi.org/format/#fetching-pagination[pagination]. The Grails implementation follows that specification as it is written.
+
+To enable pagination links in your output you must be rendering a collection and also include some arguments in addition to the collection being rendered. There are two required arguments: total and resource. The default offset is 0 and max is 10.
+
+[source,groovy]
+model {
+    List<Book> books
+    Integer bookTotal
+}
+json jsonapi.render(books, [pagination: [total: bookTotal, resource: Book]])
+
+Example links output if `bookTotal == 20`:
+
+[source,json]
+"links": {
+  "self": "/books",
+  "first": "http://localhost:8080/books?offset=0&max=10",
+  "next": "http://localhost:8080/books?offset=10&max=10",
+  "last": "http://localhost:8080/books?offset=10&max=10"
+}
+
+By default the values for `offset`, `sort`, `max`, and `order` will come from the parameters with the same names. You can override their values by passing the corresponding argument in the pagination Map.
+
+[source,groovy]
+model {
+    List<Book> books
+    Integer bookTotal
+}
+json jsonapi.render(books, [pagination: [total: bookTotal, resource: Book, max: 20, sort: params.myCustomSortArgument]])
+
+== Associations
+
+The JSON API specification details how relationships should be rendered. The first way is through a relationships object described http://jsonapi.org/format/#document-resource-object-relationships[here]. By default that is now relationships will be rendered in json views.
+
+If you do not wish to render the relationships at all, the `associations` argument can be passed to `render` with the value of false.
+
+[source,groovy]
+model {
+    Book book
+}
+json jsonapi.render(book, [associations: false])
+
+The specification also has a section that describes http://jsonapi.org/format/#document-compound-documents[compound documents]. If you want one or more of your relationships to be rendered in that manner, you can include the `expand` argument.
+
+[source,groovy]
+model {
+    Book book
+}
+json jsonapi.render(book, [expand: "author"]) //can also be a list of strings
+
+== Includes / Excludes
+
+The JSON API implementation in Grails supports the same includes and excludes support as normal json views. Please see the section on link:gsonRendering[rendering] for details.
+
+== Identifier Rendering
+
+Grails provides a way to customize the rendering of your domain class identifiers. To override the default behavior, register a bean that implements link:groovydoc/grails/plugin/json/view/api/jsonapi/JsonApiIdRenderStrategy.html[JsonApiIdRenderStrategy].
+
+[source,groovy]
+.grails-app/conf/spring/resources.groovy
+----
+beans = {
+    jsonApiIdRenderStrategy(MyCustomImplementation)
+}
+----

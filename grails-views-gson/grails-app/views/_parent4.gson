@@ -1,0 +1,7 @@
+import groovy.transform.Field
+
+@Field Object object
+
+json {
+    bar "foo"
+}

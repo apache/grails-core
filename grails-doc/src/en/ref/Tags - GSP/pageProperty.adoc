@@ -1,0 +1,127 @@
+
+== pageProperty
+
+
+
+=== Purpose
+
+
+Used in layouts to output the contents a property of the decorated page. Equivalent to the SiteMesh `<decorator:getProperty/>` tag.
+
+
+=== Examples
+
+
+Example decorated page:
+
+[source,html]
+----
+<html>
+    <head>
+        <meta name="layout" content="myLayout" />
+        <script src="myscript.js"></script>
+    </head>
+    <body onload="alert('hello');">Page to be decorated</body>
+</html>
+----
+Example decorator layout:
+
+[source,html]
+----
+<html>
+   <head>
+        <script src="global.js"></script>
+        <g:layoutHead />
+   </head>
+   <body onload="${pageProperty(name:'body.onload')}"><g:layoutBody /></body>
+</html>
+----
+Results in:
+
+[source,html]
+----
+<html>
+   <head>
+        <script src="global.js"></script>
+        <script src="myscript.js"></script>
+   </head>
+   <body onload="alert('hello');">Page to be decorated</body>
+</html>
+----
+
+Another example with more options used is below:
+
+We have a layout gsp file `container.gsp`
+
+[source,xml]
+----
+<section>
+    <header>
+        <g:pageProperty name="page.title"/>
+    </header>
+
+    <section>
+        <g:layoutBody />
+    </section>
+</section>
+----
+
+The layout is applied to a sub-part of the `gsp` file using `applyLayout` tag.
+
+[source,xml]
+----
+<html>
+<head>
+    <title>Title 1</title>
+</head>
+
+<body>
+   <section class="major-part left-part">
+      <g:applyLayout name="container">
+         <content tag="title">
+            Title 2
+         </content>
+         Some other things
+      </g:applyLayout>
+   </section>
+</body>
+</html>
+----
+
+This will result in the below page.
+
+[source,xml]
+----
+<html>
+<head>
+    <title>Title 1</title>
+</head>
+
+<body>
+   <section class="major-part left-part">
+      <section>
+         <header>
+            Title 2
+         </header>
+
+         <section>
+            Some other things
+         </section>
+      </section>
+   </section>
+</body>
+</html>
+----
+
+Notice how "Title 2" from the `content` tag was picked via `page.title` and the rest was picked up by `<g:layoutBody />`. You can have any number of such `content` tags with different tag values (e.g. `tag="grails"`) and then use them in your layouts via the `pageProperty` tag.
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The property name
+* `default` (optional) - The default value to use if the property is null. (defaults to null)
+* `writeEntireProperty` (optional) - If true, writes the property in the form 'foo = "bar"', otherwise renders 'bar'. (defaults to false)
+

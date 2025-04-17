@@ -1,0 +1,60 @@
+
+== eachError
+
+
+
+=== Purpose
+
+
+Loops through each error of the specified bean or model. If no arguments are specified it will loop through all model attributes and check for errors.
+
+
+=== Examples
+
+
+Loop through each error in the `book` bean:
+
+[source,xml]
+----
+<g:eachError bean="${book}">
+    <li>${it}</li>
+</g:eachError>
+----
+
+Loop through each error in the title field of the `book` bean:
+
+[source,xml]
+----
+<g:eachError bean="${book}" field="title">
+    <li>${it}</li>
+</g:eachError>
+----
+
+Loop through each error in model:
+
+[source,xml]
+----
+<g:eachError model="${[book1: book1, book2: book2]}" field="title">
+    <li>${it}</li>
+</g:eachError>
+----
+
+Loop through each error displaying its i18n message:
+
+[source,xml]
+----
+<g:eachError bean="${book}">
+    <li><g:message error="${it}"/></li>
+</g:eachError>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `bean` (optional) - The instance of the bean to check for errors
+* `model` (optional) - The name of the model Map to check for errors
+* `field` (optional) - The field within the bean or model to check for errors for
+

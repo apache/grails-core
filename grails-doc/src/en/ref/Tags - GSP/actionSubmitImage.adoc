@@ -1,0 +1,31 @@
+
+== actionSubmitImage
+
+
+
+=== Purpose
+
+
+Generates a submit button using the input type="image" with the indicated value. JavaScript event handlers can be added using the same attribute names as in HTML.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:actionSubmitImage value="Update" action="update"
+                     src="${resource(dir: 'images', file: 'update.gif')}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `value` - The caption of the button and name of action when not explicitly defined
+* `src` - The source of the image to use
+* `action` (optional) - The name of the action to be executed
+
+WARNING: You cannot use multiple actionSubmitImage tags within the same form and have it work in Internet Explorer 6 or 7 unless you add some custom JavaScript. See https://www.quirksmode.org/bugreports/archives/2006/07/Namevalue_pairs_arent_submitted_for_image_submit_b.html[this page] for a bit more information and a workaround.

@@ -1,0 +1,28 @@
+
+== submitButton
+
+
+
+=== Purpose
+
+
+Creates a submit button using the indicated value as the caption. JavaScript event handlers can be added using the same parameter names as in HTML.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:submitButton name="update" value="Update" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the button
+* `value` (required) - The title of the button and name of action when not explicitly defined.
+

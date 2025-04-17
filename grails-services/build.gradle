@@ -11,11 +11,11 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api "org.springframework:spring-tx"
+    api 'org.springframework:spring-tx'
 
-    api project(":grails-core")
-    api project(":grails-datasource")
-    api "org.apache.groovy:groovy:$groovyVersion"
+    api project(':grails-core')
+    api project(':grails-datasource')
+    api 'org.apache.groovy:groovy'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -44,8 +44,9 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

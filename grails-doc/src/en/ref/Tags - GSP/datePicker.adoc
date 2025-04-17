@@ -1,0 +1,53 @@
+
+== datePicker
+
+
+
+=== Purpose
+
+
+Creates a date picker which renders as HTML select tags for the day, month, year, hour and second of the day.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:datePicker name="myDate" value="${new Date()}"
+              noSelection="['':'-Choose-']"/>
+
+<g:datePicker name="myDate" value="${new Date()}"
+              precision="day" years="${1930..1970}"/>
+
+<g:datePicker name="myDate" value="${new Date()}"
+              precision="day" years="[1930, 1940, 1950, 1960, 1970]"/>
+
+<g:datePicker name="myDate" value="${new Date()}" precision="month"
+              noSelection="['':'-Choose-']" relativeYears="[-2..7]"/>
+
+<g:datePicker name="myDate" value="${myDomainClass?.myDateField}"
+              default="${new Date().plus(7)}"/>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the date picker field set
+* `value` (optional) - The current value of the date picker; defaults to either the value specified by the `default` attribute or _now_ if no `default` is set.
+* `default` (optional) - A {javase}java.base/java/util/Date.html[Date] or parsable date string (see {javase}java.base/java/text/DateFormat.html[DateFormat]) that will be used if there is no `value`
+* `precision` (optional) - The desired granularity of the date to be rendered
+** Valid values are 'year', 'month', 'day', 'hour', or 'minute'
+** Defaults to 'minute' if not specified
+** Uses default values for the non-rendered date components.  Default values...
+*** month = January
+*** day = 1st day of the month
+*** hour = 00
+*** minute = 00
+* `noSelection` (optional) - A single-entry Map detailing the key and value to use for the "no selection made" choice in the select box. If there is no current selection this will be shown as it is first in the list, and if submitted with this selected, the key that you provide will be submitted. Typically, this will be blank.
+* `years` (optional) - A list or range of years to display, in the order specified. i.e. specify 2007..1900 for a reverse order list going back to 1900. If this attribute is not specified, a range of years from the current year + 100 to current year - 100 will be shown.
+* `relativeYears` (optional) - A range of int representing  values relative to `value`.  For example, a `relativeYears` of [-2..7] and a `value` of today will render a list of 10 years starting with 2 years ago through 7 years in the future.  This can be useful for things like credit card expiration dates or birth dates which should be bound relative to today.
+* `locale` (optional) - The locale to use for display formatting. Defaults to the locale of the current request. If no request locale is specified, it will then fall back to the system's default locale. A {javase}java.base/java/util/Locale.html[Locale] or parsable locale String ('en_US') value.

@@ -13,26 +13,18 @@ dependencies {
 
     api project(':grails-core')
     api project(':grails-web-core')
-    api "org.apache.groovy:groovy:$groovyVersion"
-    api "org.springframework.boot:spring-boot-autoconfigure"
+    api 'org.apache.groovy:groovy'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
 
     testImplementation project(':grails-codecs')
 
     testImplementation project(':grails-test-suite-base')
-    testImplementation "org.apache.grails:grails-testing-support-web", {
-        exclude module:'grails-rest-transforms'
-        exclude module:'grails-interceptors'
-        exclude module:'grails-test-core'
-        exclude module:'grails-core'
-        exclude module:'grails-async'
-        exclude module:'grails-gsp-core'
-        exclude module:'grails-testing-support-core'
-    }
+    testImplementation project(':grails-testing-support-web')
     testImplementation project(':grails-testing-support-core')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
-      // MockHttpServletRequest/Response/Context used in many classes
+        // MockHttpServletRequest/Response/Context used in many classes
     }
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
@@ -54,16 +46,17 @@ dependencies {
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
-  }
+}
 
 tasks.named('compileTestGroovy').configure {
-  dependsOn tasks.named('jar')
+    dependsOn tasks.named('jar')
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

@@ -11,11 +11,12 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(":grails-core")
-    api "org.apache.groovy:groovy:$groovyVersion"
-    api "org.apache.groovy:groovy-json"
-    // HtmlUtils is used from spring-web
-    api "org.springframework:spring-web"
+    api project(':grails-core')
+    api 'org.apache.groovy:groovy'
+    api 'org.apache.groovy:groovy-json'
+    api 'org.springframework:spring-web', {
+        // HtmlUtils is used from spring-web
+    }
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -36,9 +37,10 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

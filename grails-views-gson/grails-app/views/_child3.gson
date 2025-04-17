@@ -1,0 +1,8 @@
+import grails.plugin.json.view.Player
+import groovy.transform.Field
+
+inherits(template: 'parent3')
+
+@Field Player player
+
+json g.render(player, [includes:'name'])

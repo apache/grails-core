@@ -1,0 +1,13 @@
+
+import functional.tests.*
+
+model {
+    Test test
+    Test child
+}
+
+json.test {
+    name test.name
+    child g.render(template:"child", model:[test: child])
+    children g.render(template:"child", collection:[child], var:'test')
+}

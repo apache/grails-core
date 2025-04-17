@@ -1,0 +1,100 @@
+== Basics of Domain Class Rendering
+
+Typically your model may involve one or many domain instances. JSON views provide a `render` method for rendering these.
+  
+For example given the following domain class:
+
+[source,groovy]
+class Book {
+    String title
+}
+    
+And the following template: 
+ 
+[source,groovy]
+model {
+    Book book
+}    
+json g.render(book) 
+
+The resulting output is:
+
+[source,javascript]
+{"id":1,"title":"The Stand"}
+    
+You can customize the rendering by including or excluding properties:
+    
+[source,groovy]    
+json g.render(book, [includes:['title']])
+    
+Or by providing a closure to provide additional JSON output:
+    
+[source,groovy]    
+json g.render(book) {
+    pages 1000
+}  
+
+Or combine the two approaches:
+
+[source,groovy]    
+json g.render(book, [includes:['title']]) {
+    pages 1000
+}
+
+== Deep Rendering of Domain Classes
+
+Typically the `g.render(..)` method will only render objects one level deep. In other words if you have a domain class such as:
+
+[source,groovy]
+class Book {
+    String title
+    Author author
+}
+
+The resulting output will be something like:
+
+[source,javascript]
+{"id":1,"title":"The Stand","author":{id:1}}
+
+If you wish for the `author` to be included as part of the rendering, there are two requirements, first you must make sure the association is initialized.
+
+If the `render` method encounters a proxy, it will not traverse into the relationship to avoid N+1 query performance problems.
+
+NOTE: The same applies to one-to-many collection associations. If the association has not been initialized the `render` method will not traverse through the collection!
+
+So you must make sure your query uses a join:
+
+[source,groovy]
+Book.findByTitle("The Stand", [fetch:[author:"join"]])
+
+Secondly when calling the `render` method you should pass the `deep` argument:
+
+[source,groovy]
+json g.render(book, [deep:true])
+
+Alternatively, to only expand a single association you can use the `expand` argument:
+
+[source,groovy]
+json g.render(book, [expand:['author']])
+
+NOTE: request parameters can also be used to expand associations (eg. `?expand=author`), if you do not want to allow this, then use `includes` or `excludes` to include only the properties you want.
+
+Finally, if you prefer to handle the rendering yourself you can do by excluding the property:
+
+[source,groovy]
+json g.render(book, [excludes:['author']]) {
+    author {
+        name book.author.name
+    }
+}
+
+== Domain Class Rendering and Templates
+
+An alternative to the default behaviour of the `render` method is to rely on templates.
+
+In other words if you create a `/author/_author.gson` template and then use the `g.render` method on an instance of `book`:
+
+[source,groovy]
+json g.render(book)
+
+Whenever the `author` association is encountered the `g.render` method will automatically render the `/author/_author.gson` template instead.

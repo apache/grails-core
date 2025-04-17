@@ -1,0 +1,7 @@
+Since version 2.1.4 It is possible to create themes to provide set of templates for different css frameworks or form layouts.
+For example, a bootstrap-fields plugin can provide different themes (eg bs-horizontal, bs-vertical) to support horizontal and vertical form layouts. And another plugin can provide theme for purecss framework.
+
+Themes are put under directory `_fields/themes/*themeName*/`.
+
+All of the field tags supports theme attribute which accepts the name of the theme. When a theme name is specified, widget, wrapper, and display templates will be searched in theme directory first as described in <<customizingFieldRendering,Customizing Field Rendering>>.
+

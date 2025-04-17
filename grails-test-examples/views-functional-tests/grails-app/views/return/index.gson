@@ -1,0 +1,11 @@
+import functional.tests.DomainObject
+
+model {
+    DomainObject one
+    DomainObject two
+}
+
+json g.render([one, two])
+
+
+

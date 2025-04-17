@@ -1,0 +1,8 @@
+
+model {
+    String one
+}
+
+json {
+    name one.ubstring(0)
+}

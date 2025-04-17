@@ -27,13 +27,13 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
-    testImplementation "org.apache.grails:grails-gsp"
+    testImplementation project(':grails-gsp')
     testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-rest-transforms'
     }
-    testImplementation 'org.apache.grails:grails-testing-support-web', {
+    testImplementation project(':grails-testing-support-web'), {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-rest-transforms'
@@ -90,7 +90,7 @@ isolatedTestPatterns.keySet().each { taskName ->
     }
 }
 
-tasks.named('isolatedTestsTwo', Test) {
+tasks.named('isolatedTestsTwo', Test).configure {
     maxParallelForks = 1
     forkEvery = 100
 }
@@ -104,7 +104,7 @@ tasks.withType(Test).configureEach {
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
 
-tasks.named('test', Test) {
+tasks.named('test', Test).configure {
     filter.excludePatterns = isolatedTestPatterns.values().flatten()
     dependsOn(provider {
         tasks.findAll({
@@ -114,5 +114,6 @@ tasks.named('test', Test) {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }

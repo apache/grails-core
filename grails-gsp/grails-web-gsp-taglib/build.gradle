@@ -1,0 +1,49 @@
+plugins {
+    id 'groovy'
+    id 'project-report'
+    id 'java-library'
+}
+
+version = project.projectVersion
+group = 'org.apache.grails.views'
+
+ext {
+    pomTitle = 'Groovy Server Pages (GSP)'
+    pomDescription = 'Groovy Server Pages (GSP) - A server-side view rendering technology based on Groovy'
+    pomDevelopers = ['graemerocher': 'Graeme Rocher']
+    testForked = true
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+    api project(':grails-web-jsp')
+
+//    api project(':grails-taglib'), { // GrailsTagLibClass
+//        // API dependencies in grails-taglib
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        exclude group: 'org.springframework', module: 'spring-core'
+//    }
+//    api project(':grails-web-gsp'), { // GroovyPagesTemplateRenderer
+//        // API dependencies in grails-web-gsp
+//        //exclude group: 'org.apache.grails.views', module: 'grails-gsp-core' // GroovyPagesTemplateEngine
+//        //exclude group: 'org.apache.grails.web', module: 'grails-web-common' // GrailsApplicationAttributes
+//        exclude group: 'org.apache.grails.web', module: 'grails-web-taglib'
+//    }
+//
+//    implementation project(':grails-web-taglib'), { // TagLib
+//        // API dependencies in grails-web-taglib
+//        exclude group: 'org.apache.grails.web', module: 'grails-taglib'
+//        //exclude group: 'org.apache.grails.web', module: 'grails-web-common' // WebAttributes
+//    }
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

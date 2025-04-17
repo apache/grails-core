@@ -1,0 +1,66 @@
+
+== set
+
+
+
+=== Purpose
+
+
+Sets the value of a variable accessible with the GSP page.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:set var="tomorrow" value="${new Date() + 1}" />
+
+<g:set var="counter" value="${1}" />
+<g:each in="${list}">
+    ${counter}.&nbsp; ${it} -> ${counter % 2 == 0 ? 'even' : 'odd'}
+    <g:set var="counter" value="${counter + 1}" /><br/>
+</g:each>
+----
+
+Using scopes:
+
+[,xml]
+----
+<g:set var="foo" value="${new Date()}" scope="page" />
+<g:set var="bar" value="${new Date() - 7}" scope="session" />
+----
+
+Using the body contents:
+
+[source,xml]
+----
+<g:set var="foo">Hello!</g:set>
+----
+
+Get a bean from the applicationContext by name:
+
+[source,xml]
+----
+<g:set var="bookService" bean="bookService"/>
+----
+
+Get a bean from the applicationContext by type:
+
+[,xml]
+----
+<%@ page import="org.springframework.context.MessageSource" %>
+<g:set var="messageSource" bean="${MessageSource}"/>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `var` - The name of the variable
+* `value` - The initial value
+* `bean` -  The name or the type of a bean in the applicationContext; the type can be an interface or superclass
+* `scope` - Scope to set variable in, one of `request`, `page`, `flash` or `session`. Defaults to `page`.
+

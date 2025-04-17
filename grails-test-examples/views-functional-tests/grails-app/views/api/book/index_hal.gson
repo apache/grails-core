@@ -1,0 +1,9 @@
+model {
+    functional.tests.Book book
+}
+
+json {
+    hal.links(book)
+    api 'version 1.0 (Namespaced HAL)'
+    title book.title
+}

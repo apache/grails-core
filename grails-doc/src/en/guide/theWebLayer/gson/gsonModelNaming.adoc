@@ -1,0 +1,164 @@
+Grails Framework supports a convention for the model names in your JSON views. If the convention does not meet your needs, model variables can be explicitly defined.
+
+NOTE: Some model names are _reserved_ since there are properties of the same name injected into the view:
+`locale`, `response`, `request`, `page`, `controllerNamespace`, `controllerName`, `actionName`, `config`, `generator`, `json`
+
+== Explicit Model Naming
+
+Given a view:
+[source,groovy]
+.grails-app/views/hello/index.gson
+model {
+    String message
+}
+json.message {
+    hello message
+}
+
+Then the controller has to specify the name to be used in the view:
+
+[source,groovy]
+.grails-app/controllers/HelloController.groovy
+def index() {
+    respond(message: "Hello World")
+    //or [message: "Hello World"]
+}
+
+When using a template:
+
+[source,groovy]
+.grails-app/views/hello/_msg.gson
+model {
+    String message
+}
+json.message {
+    hello message
+}
+
+In the view you can use the `tmpl` namespace:
+
+[source,groovy]
+json {
+    message tmpl.msg([message: message])
+    // or g.render(template:'msg', model:[message: message])
+    // or g.render(template:'msg', model: message, var:'message')
+}
+
+
+Using collections:
+
+[source,groovy]
+model {
+    List<String> messages
+}
+json {
+    messages tmpl.msg('message', messages)
+    // or g.render(template:'msg', collection: messages, var: 'message')
+}
+
+
+== Model By Convention
+
+=== Property Type
+
+When rendering a non iterable object, the property name of the type is used when a name is not specified.
+
+[source,groovy]
+.grails-app/views/hello/index.gson
+model {
+    String string
+}
+json.message {
+    hello string
+}
+
+The variable can be passed in directly to `respond`.
+
+[source,groovy]
+.grails-app/controllers/HelloController.groovy
+def index() {
+    respond("Hello World")
+}
+
+This also applies when rendering templates with `tmpl`.
+
+[source,groovy]
+.grails-app/views/hello/_msg.gson
+model {
+    String string
+}
+json.message {
+    hello string
+}
+
+[source,groovy]
+.grails-app/views/hello/index.gson
+model {
+    String someString
+}
+json tmpl.msg(someString)
+
+If a collection is rendered, the property name of the component type is appended with the property name of the collection type. The component type is based on the first item in the list.
+
+`List<String>`  -> `stringList`
+
+`Set<String>`  -> `stringSet`
+
+`Bag<String>`  -> `stringCollection`
+
+If the collection is empty, `emptyCollection` will be used as the default model name. This is due to not being able to inspect the first object's type.
+
+
+[source,groovy]
+.grails-app/views/hello/index.gson
+model {
+    String stringList
+}
+json {
+    strings stringList
+}
+
+The variable can be passed in directly to `respond`.
+
+[source,groovy]
+.grails-app/controllers/HelloController.groovy
+def index() {
+    respond(["Hello", "World"])
+}
+
+NOTE: The component+collection convention does not apply when rendering collections with `tmpl` inside a view.
+
+=== Template Name
+
+When using a template, unless specified, the model name is based on the template name.
+
+Given the following template:
+[source,groovy]
+.grails-app/views/hello/_msg.gson
+model {
+    String msg // or String string
+}
+json.message {
+    hello msg
+}
+
+To render a single message from another view using the template:
+
+[source,groovy]
+.grails-app/views/hello/index.gson
+json.message tmpl.msg(message)
+
+To render a collection of messages from another view using the template:
+
+[source,groovy]
+.grails-app/views/hello/index.gson
+model {
+    List<String> stringList
+}
+json {
+    messages tmpl.msg(stringList)
+}
+
+In both cases the convention of the variable name matching the template name is used.
+
+

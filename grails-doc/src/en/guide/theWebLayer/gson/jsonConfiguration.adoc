@@ -1,0 +1,120 @@
+JSON views configuration can be altered within `grails-app/conf/application.yml`. Any of the properties within the link:groovydoc/grails/plugin/json/view/JsonViewConfiguration.html[JsonViewConfiguration] interface can be set. The json view configuration extends link:groovydoc/grails/views/GenericViewConfiguration.html[GenericViewConfiguration], therefore any properties in that interface can be set as well.
+
+ For example:
+
+[source,yaml]
+grails:
+    views:
+        json:
+            compileStatic: true
+            cache: true
+            ...
+
+Alternatively you can register a new `JsonViewConfiguration` bean using the bean name `jsonViewConfiguration` in `grails-app/conf/resources.groovy`.
+
+The same settings in `grails-app/conf/application.yml` will also be used by the Gradle plugin for production compilation. 
+
+The Gradle plugin compiles views using a forked compiler. You can configure the forked compilation task in Gradle as follows:
+
+[source,groovy]
+compileGsonViews {
+    compileOptions.forkOptions.memoryMaximumSize = '512mb'
+}
+
+See the API for https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/compile/GroovyForkOptions.html[GroovyForkOptions] for more information.  
+
+== Changing the view base class
+
+All JSON views subclass the link:groovydoc/grails/plugin/json/view/JsonViewTemplate.html[JsonViewTemplate] class by default.
+
+You can however change the subclass (which should be a subclass of `JsonViewTemplate`) using configuration:
+
+[source,yaml]
+grails:
+    views:
+        json:
+            compileStatic: true
+            baseTemplateClass: com.example.MyCustomJsonViewTemplate
+
+== Adding New Helper Methods via Traits
+
+Alternatively, rather than modifying the base class, you can instead just add new methods via traits.
+
+For example the link:groovydoc/grails/views/api/HttpView.html[HttpView] uses the `Enhances` annotation to add the `page` object to all views:
+
+[source,groovy]
+----
+import grails.artefact.Enhances
+import grails.views.Views
+
+@Enhances(Views.TYPE)
+trait HttpView {
+
+    /**
+     * @return The response object
+     */
+    Response response
+    ...
+}
+----
+
+The result is all JSON views have a `response` object that can be used to control the HTTP response:
+
+[source,groovy]
+response.header "Token", "foo"
+
+NOTE: The trait cannot be defined in the same project as you are compilation as it needs to be on the classpath of the project you are compiling. You will need to create a Grails plugin and use a multi-project build in this scenario.
+
+== Default Mime Types
+
+The mime types that will be accepted by default for JSON view rendering is configurable.
+
+[source,yaml]
+grails:
+    views:
+        json:
+            mimeTypes:
+              - application/json
+              - application/hal+json
+
+== Unicode Escaping
+
+By default, unicode characters will not be escaped. If you would like unicode characters to be escaped in your output, set the following configuration.
+
+[source,yaml]
+grails:
+    views:
+        json:
+            generator:
+                escapeUnicode: true
+
+== Default Date Format
+
+The default format for `java.util.Date` can be configured.
+
+[source,yaml]
+grails:
+    views:
+        json:
+            generator:
+                dateFormat: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+
+In addition, the default locale can also be specified.
+
+[source,yaml]
+grails:
+    views:
+        json:
+            generator:
+                locale: "en/US"
+
+== Default Time Zone
+
+The default time zone can be configured. The value here will be passed to `TimeZone.getTimeZone(...)`
+
+[source,yaml]
+grails:
+    views:
+        json:
+            generator:
+                timeZone: "GMT"

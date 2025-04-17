@@ -1,0 +1,6 @@
+import functional.tests.plugin.Author
+import groovy.transform.Field
+
+@Field Iterable<Author> authorList = null
+
+json tmpl.author(authorList ?: [])

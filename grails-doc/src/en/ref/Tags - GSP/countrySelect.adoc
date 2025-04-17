@@ -1,0 +1,54 @@
+
+== countrySelect
+
+
+
+=== Purpose
+
+
+Generates an HTML select tag with Country names.
+
+
+=== Examples
+
+
+[,xml]
+----
+<!-- create a select for all countries -->
+<g:countrySelect name="user.country" value="${country}"
+                 noSelection="['':'-Choose your country-']"/>
+
+<!-- create select from a list of ISO3166_3 country codes -->
+<g:countrySelect name="user.country"
+                 from="['gbr', 'usa', 'deu']"
+                 value="${user?.country}"/>
+
+<!--
+create country select with internationalized labels
+expected properties in messages.properties:
+countryname.gbr=My United Kingdom
+countryname.usa=Home of the brave
+countryname.deu=Germany
+-->
+<g:countrySelect name="user.country"
+                 from="['gbr', 'usa', 'deu']"
+                 valueMessagePrefix="countryname" />
+----
+
+
+=== Description
+
+
+This class renders a select box with one option for every ISO3166_3 country code, or for the list of country codes supplied in `from`.
+
+The 3-letter ISO codes are used in lowercase format.
+
+Attributes
+
+* `from` (optional) - The list or range to select from
+* `value` (optional) - The current selected value that evaluates `equals()` to `true` for one of the elements in the from list.
+* `default` (optional) - The ISO code of the default country to display if `value` is not set
+* `noSelection` (optional) - A single-entry Map detailing the key and value to use for the "no selection made" choice in the select box. If there is no current selection this will be shown as it is first in the list, and if submitted with this selected, the key that you provide will be submitted. Typically, this will be blank - but you can also use 'null' in the case that you're passing the ID of an object
+* `valueMessagePrefix` (optional) - By default the value "option" element will be the internal English name of the country according to the ISO3166_3 standard. Setting this allows the value to be resolved from the I18n messages. The valueMessagePrefix will be suffixed with a dot ('.') and then the country code of the option to resolve the message. If the message could not be resolved, the prefix plus country code is presented.
+
+

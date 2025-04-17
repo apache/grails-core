@@ -1,0 +1,10 @@
+
+import functional.tests.Person
+
+inherits template: '/personInheritance/index1'
+
+model {
+    Person person
+}
+
+json g.render(person, [includes: ['firstName']])

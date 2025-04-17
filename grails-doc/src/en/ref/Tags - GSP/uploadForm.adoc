@@ -1,0 +1,34 @@
+
+== uploadForm
+
+
+
+=== Purpose
+
+
+Creates a form that can submit multi-part data for file uploads.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:uploadForm name="myUpload">
+    <input type="file" name="myFile" />
+</g:uploadForm>
+----
+
+
+=== Description
+
+
+Identical to the standard xref:form.adoc[form] tag except that it sets the `enctype` attribute to `"multipart/form-data"` automatically.
+
+Attributes
+
+* `action` (optional) - the name of the action to use in the link; if not specified the default action will be linked
+* `controller` (optional) - the name of the controller to use in the link; if not specified the current controller will be linked
+* `id` (optional) - The id to use in the link
+* `url` (optional) - A map containing the action, controller, id etc.
+

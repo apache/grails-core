@@ -1,0 +1,11 @@
+
+import functional.tests.*
+
+model {
+    Test test
+}
+
+json.child{
+    name test.name
+    age 10
+}

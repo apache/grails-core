@@ -32,7 +32,7 @@ dependencies {
         }
 
         for (Project subproject : rootProject.subprojects) {
-            if(subproject.path == project.path) {
+            if (subproject.path == project.path) {
                 continue // ignore self
             }
 
@@ -53,7 +53,7 @@ tasks.register('validateNoSnapshotDependencies') {
     }
 }
 
-if(ext.isReleaseBuild && ext.isPublishedExternal) {
+if (ext.isReleaseBuild && ext.isPublishedExternal) {
     tasks.named('generateMetadataFileForMavenPublication').configure {
         dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
@@ -66,15 +66,15 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
     Map<String, String> toSearch = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
 
     Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
-    if(!found) {
+    if (!found) {
         return null
     }
 
     Map<String, String> versions = gradleBomDependencyVersions
     String possibleKey = found.key.toString()
-    while(possibleKey != null) {
+    while (possibleKey != null) {
         String propertyName = "${possibleKey}.version" as String
-        if(versions.containsKey(propertyName)) {
+        if (versions.containsKey(propertyName)) {
             return propertyName
         }
 
@@ -90,10 +90,10 @@ publishing {
         repositories {
             maven {
                 credentials {
-                    username = System.getenv("MAVEN_PUBLISH_USERNAME") ?: ''
-                    password = System.getenv("MAVEN_PUBLISH_PASSWORD") ?: ''
+                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
+                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
                 }
-                url = System.getenv("MAVEN_PUBLISH_URL") ?: 'https://repository.apache.org/content/repositories/snapshots'
+                url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
         }
     }
@@ -102,7 +102,7 @@ publishing {
     // publishAllPublicationsToTestCaseMavenRepoRepository
     repositories {
         maven {
-            name = "TestCaseMavenRepo"
+            name = 'TestCaseMavenRepo'
             url = rootProject.layout.buildDirectory.dir('local-maven')
         }
     }
@@ -126,13 +126,13 @@ publishing {
                         boolean isBom = dep.scope.text().trim() == 'import'
 
                         String inlineVersion = dep.version.text().trim()
-                        if(inlineVersion == 'null') {
+                        if (inlineVersion == 'null') {
                             inlineVersion = null
                         }
 
                         if (inlineVersion) {
                             String propertyName = determinePropertyName(groupId, artifactId, inlineVersion, isBom)
-                            if(propertyName) {
+                            if (propertyName) {
                                 // Replace the version in the pom with a property reference
                                 String propertyReference = "\${${propertyName}}"
                                 dep.version[0].value = propertyReference
@@ -140,9 +140,8 @@ publishing {
                                 // Add an entry in the <properties> node with the actual version number
                                 pomProperties.put(propertyName, inlineVersion)
                             }
-                        }
-                        else if(!inlineVersion) {
-                            throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
+                        } else if (!inlineVersion) {
+                            throw new GradleException('Dependency $groupId:$artifactId does not have a version.')
                         }
                     }
 

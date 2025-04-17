@@ -1,0 +1,64 @@
+
+== radioGroup
+
+
+
+=== Purpose
+
+
+Generates radio button groups
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:radioGroup name="myGroup" values="[1,2,3]" value="1">
+<p><g:message code="${it.label}" />: ${it.radio}</p>
+</g:radioGroup>
+----
+
+results in:
+
+[source,html]
+----
+<p>Radio 1: <input type="radio" name="myGroup" value="1" checked="checked" /></p>
+<p>Radio 2: <input type="radio" name="myGroup" value="2" /></p>
+<p>Radio 3: <input type="radio" name="myGroup" value="3" /></p>
+----
+
+[source,xml]
+----
+<g:radioGroup name="lovesGrails"
+              labels="['Yes!','Of course!','Always!']"
+              values="[1,2,3]">
+<p>${it.label} ${it.radio}</p>
+</g:radioGroup>
+----
+
+results in:
+
+[source,html]
+----
+<p>Yes! <input type="radio" name="lovesGrails" value="1" /></p>
+<p>Of course! <input type="radio" name="lovesGrails" value="2" /></p>
+<p>Always! <input type="radio" name="lovesGrails" value="3" /></p>
+----
+
+
+=== Description
+
+
+The body of the tag contains the GSP to render for each value. Two variables are provided for use:
+
+* `it.label` - the label for the current value
+* `it.radio` - the radio button <input> tag for the current value
+
+Attributes
+
+* `name` (required) - The name of the group
+* `values` (required) - The list of values for the radio buttons
+* `value` (optional) - The selected value
+* `labels` (optional) - Labels for each value contained in the `values` list. If this is omitted the label property on the iterator variable (see below) will default to 'Radio ' + value.
+

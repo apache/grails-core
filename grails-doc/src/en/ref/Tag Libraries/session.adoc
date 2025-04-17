@@ -1,0 +1,35 @@
+
+== session
+
+
+
+=== Purpose
+
+
+The {grailsdocs}ref/Servlet%20API/session.html[session] object is an instance of the Servlet API's {javaee}javax/servlet/http/HttpSession.html[HttpSession] class
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class UserController {
+
+    def logout() {
+        log.info "User agent: " + request.getHeader("User-Agent")
+        session.invalidate()
+        redirect(action: "login")
+    }
+
+    def login() {}
+}
+----
+
+
+=== Description
+
+
+The {javaee}javax/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
+
+NOTE: The additional methods added to the xref:../ref/Servlet%20API/session.adoc[session] object are documented in the Grails Servlet API reference guide

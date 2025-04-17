@@ -1,0 +1,26 @@
+Using the `<% %>` syntax you can embed loops and so on using this syntax:
+
+[,xml]
+----
+<html>
+   <body>
+      <% [1,2,3,4].each { num -> %>
+         <p><%="Hello ${num}!" %></p>
+      <%}%>
+   </body>
+</html>
+----
+
+As well as logical branching:
+
+[,xml]
+----
+<html>
+   <body>
+      <% if (params.hello == 'true')%>
+      <%="Hello!"%>
+      <% else %>
+      <%="Goodbye!"%>
+   </body>
+</html>
+----

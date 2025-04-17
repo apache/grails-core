@@ -1,0 +1,32 @@
+
+== formatBoolean
+
+
+
+=== Purpose
+
+
+Outputs the given boolean as the specified text label.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:formatBoolean boolean="${myBoolean}" />
+<g:formatBoolean boolean="${myBoolean}" true="True!" false="False!" />
+----
+
+
+=== Description
+
+
+Outputs the given boolean as the specified text label. If the `true` and `false` options are not given, the boolean is output using the default label.
+
+Attributes:
+
+`boolean` - the boolean to output
+`true` (optional) - text label for boolean `true` value. `boolean.true` or `default.boolean.true` key is looked up from the Message Source / ResourceBundle (i18n/*.properties) if this attribute is not given.
+`false` (optional) - text label for boolean `false` value. `boolean.false` or `default.boolean.false` key is looked up from the Message Source / ResourceBundle (i18n/*.properties) if this attribute is not given.
+

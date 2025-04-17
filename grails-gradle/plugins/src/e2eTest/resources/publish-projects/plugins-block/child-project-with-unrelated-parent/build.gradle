@@ -20,8 +20,8 @@ repositories {
     maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
 }
 
-version "${projectVersion}"
-group "org.grails.example"
+version = "${projectVersion}"
+group = "org.grails.example"
 
 dependencies {
     implementation "org.apache.groovy:groovy:$groovyVersion"

@@ -4,7 +4,7 @@ ext {
     includeInApiDocs = true
 }
 
-tasks.named('groovydoc', Groovydoc) {
+tasks.named('groovydoc', Groovydoc).configure {
     classpath = configurations.documentation
     groovyClasspath = configurations.documentation
     access = GroovydocAccess.PROTECTED

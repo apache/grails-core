@@ -1,0 +1,5 @@
+==== f:input (DEPRECATED)
+
+===== Deprecated since version 1.5
+
+Use link:widget.html[f:widget] tag instead

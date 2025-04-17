@@ -1,0 +1,24 @@
+import functional.tests.Product
+
+model {
+    Iterable<Product> productList
+    Integer productCount
+    Integer max
+    Integer offset
+    String sort
+    String order
+}
+
+response.contentType "application/hal+json"
+
+json {
+    hal.paginate(Product, productCount, offset, max, sort, order)
+    _embedded {
+        products g.render(productList ?: [])
+    }
+    count productCount
+    max max
+    offset offset
+    sort sort
+    order order
+}

@@ -1,0 +1,8 @@
+
+import functional.tests.Team
+
+model {
+    List<Team> teamList
+}
+
+json tmpl.team(teamList)

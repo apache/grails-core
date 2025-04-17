@@ -1,0 +1,29 @@
+
+== while
+
+
+
+=== Purpose
+
+
+Executes a condition in a loop until the condition returns `false`
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:while test="${i < 5}">
+    <%i++%>
+    <p>Current i = ${i}</p>
+</g:while>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `test` - The conditional expression

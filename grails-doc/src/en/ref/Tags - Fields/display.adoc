@@ -1,0 +1,106 @@
+==== f:display
+
+===== Purpose
+
+`f:display` renders a property for display. If there is no `_displayWrapper` template in scope the tag will simply render the property value.
+
+`f:display` template will look for a `_displayWrapper` for the wrapper itself and a `_displayWidget` for the widget used inside the wrapper template.
+
+If the `f:display` tag has a body its output is used as the value passed as the `value` model to the `_display` template. If there is no body then the 'raw' property value is passed to `g:fieldValue`, `g:formatDate` or `g:formatBoolean` depending on its type and the result is passed as the `value` model to the `_display` template.
+
+NOTE: In version 1.5 new attributes were added:
+Since then you can specify the folders where the templates are located. You can do this for the wrapper folder, the widget folder ot both (if they are located on the same folder).
+
+
+===== Examples
+
+
+[source,groovy]
+----
+<f:display bean="person"/>
+
+<f:display bean="person" displayStyle="table"/>
+
+<f:display bean="person" property="name"/>
+
+// renders widget and wrapper from subdirectory of _fields/_themes/purecss if defined
+<f:display bean="person" property="name" theme="purecss"/>
+
+// renders _fields/bootstrap3/_displayWrapper.gsp:
+<f:display bean="person" property="name" wrapper="bootstrap3"/>
+
+// renders _fields/maskedInput/_displayWidget.gsp:
+<f:display bean="person" property="name" widget="maskedInput"/>
+
+// renders _fields/maskedInput/_displayWrapper.gsp and _fields/maskedInput/_displayWidget.gsp:
+<f:display bean="person" property="name" templates="maskedInput"/>
+
+<f:display bean="person" property="dateOfBirth">
+    <g:formatDate format="dd MMM yyyy" date="${value}"/>
+</f:display>
+----
+
+
+===== Attributes
+
+.Attributes for f:display
+[options="header",cols="1,1 ,3"]
+|===
+|Name | Required | Description
+
+|*bean*
+|if not inside `f:with`
+|The bean whose property is being rendered. This can be the object itself or the name of a page-scope variable.
+
+|*property*
+| No
+|The path to the property. This can include any level of nesting and numeric or string indexes. For example `employees[0].address[home].street` is a valid path. If absent, all properties will be displayed via the `grails-app/views/templates/_fields/_list.gsp` (see the template code below).
+
+|*value*
+|No
+|Overrides the actual value of the property.
+
+|*default*
+| No
+| A default value for the property that will be used if the actual property value is `false`.
+
+|*label*
+|No
+|Overrides the field label passed to the template. This value may either be an i18n key or a literal string.
+
+|*displayStyle*
+|No
+|When specified and different from the string `default`, this tag will try to use a `_display-${displayStyle}` template with a `_display template as fallback. `displayStyle="table"` will render embedded components by default with `toString()` instead of rendering all nested properties.
+
+|*except*
+|No
+|A comma-separated list of properties that should be skipped.
+
+|*order*
+|No
+|A comma-separated list of properties which represents the order in which the tag should display them.
+
+|*theme*
+| No
+| Theme to use if available. The theme can define a new directory structure in /_fields/_themes/<themename> which will take priority over templates, wrapper and widget if they are specified, as it is injecting the search path first in the list.
+
+|*templates*
+| No
+| Specify the folder inside _fields where to look up for the wrapper and widget template.
+
+|*widget*
+| No
+| Specify the folder inside _fields where to look up for the widget template.
+
+|*wrapper*
+| No
+| Specify the folder inside _fields where to look up for the wrapper template.
+
+|===
+
+
+Any additional attributes are passed to the rendered template.
+
+==== Special case for rendering all properties of a bean
+
+When `f:display` is used without a `property` then all bean properties are rendered. This is done with the `grails-app/views/templates/_fields/_list.gsp` template. The default template can be found link:https://github.com/grails-fields-plugin/grails-fields/blob/master/grails-app/views/templates/_fields/_list.gsp[on GitHub]

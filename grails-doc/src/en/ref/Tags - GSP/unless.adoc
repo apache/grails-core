@@ -1,0 +1,39 @@
+
+== unless
+
+
+
+=== Purpose
+
+
+Renders its body conditionally, based on an expression and/or current environment. The tag renders its body unless all the specified conditions (test and/or environment) are `true`. Does the opposite of what the xref:if.adoc[if] tag does.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:unless test="${name == 'fred'}">
+    Hello ${name}!
+</g:unless>
+
+<g:unless env="production">
+    debug: $someDebug
+</g:unless>
+
+<g:unless env="production" test="${cacheEnabled}">
+    $cache.getContent('1234')
+</g:unless>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `test` - The expression to test
+* `env` - An environment name
+
+At least one of the attributes must be supplied. If both are supplied, they are combined using AND.

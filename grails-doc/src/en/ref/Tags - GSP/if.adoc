@@ -1,0 +1,39 @@
+
+== if
+
+
+
+=== Purpose
+
+
+The logical if tag to switch on an expression and/or current environment.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:if test="${name == 'fred'}">
+     Hello ${name}!
+</g:if>
+
+<g:if env="development">
+     Dev mode - debug: $someDebug
+</g:if>
+
+<g:if env="production" test="${cacheEnabled}">
+     $cache.getContent('1234')
+</g:if>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `test` - The expression to test
+* `env` - An environment name
+
+At least one of the attributes must be supplied. If both are supplied they are combined using AND.

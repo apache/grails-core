@@ -11,7 +11,7 @@ ext {
 }
 
 def configurations = [
-        'api': [
+        'api'        : [
                 ':grails-core',
                 ':grails-rest-transforms',
                 ':grails-databinding',
@@ -21,7 +21,7 @@ def configurations = [
                 ':grails-interceptors',
                 ':grails-async-plugin',
                 ':grails-events-plugin',
-                'org.apache.grails:grails-gsp',
+                ':grails-gsp',
         ],
         'runtimeOnly': [
                 'com.h2database:h2',
@@ -32,10 +32,9 @@ dependencies {
     implementation platform(project(':grails-bom'))
     configurations.each { String configuration, List<String> deps ->
         deps.each {
-            if(it.startsWith(':')) {
+            if (it.startsWith(':')) {
                 add(configuration, project(it))
-            }
-            else {
+            } else {
                 add(configuration, it)
             }
         }
@@ -43,6 +42,7 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

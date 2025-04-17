@@ -1,0 +1,8 @@
+applicationType: web_plugin
+defaultPackage: org.sitemesh.grails.plugins.sitemesh3
+testFramework: spock
+sourceLanguage: groovy
+buildTool: gradle
+gormImpl: gorm-hibernate5
+servletImpl: spring-boot-starter-tomcat
+features: [app-name, asset-pipeline-grails, base, gorm-hibernate5, gradle, grails-application, grails-console, grails-dependencies, grails-gorm-testing-support, grails-gradle-plugin, grails-gsp, grails-url-mappings, grails-web, grails-web-testing-support, h2, logback, micronaut-inject-groovy, readme, scaffolding, spock, spring-boot-autoconfigure, spring-boot-starter, spring-boot-starter-tomcat, yaml]

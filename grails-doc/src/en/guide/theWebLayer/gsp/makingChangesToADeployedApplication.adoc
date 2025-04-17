@@ -1,0 +1,34 @@
+One of the main issues with deploying a Grails application (or typically any servlet-based application) is that any change to the views requires that you redeploy your whole application. If all you want to do is fix a typo on a page, or change an image link, it can seem like a lot of unnecessary work. For such simple requirements, Grails does have a solution: the  `grails.gsp.view.dir`  configuration setting.
+
+How does this work? The first step is to decide where the GSP files should go. Let's say we want to keep them unpacked in a  `/var/www/grails/my-app`  directory. We add these two properties to the application configuration:
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails.gsp.enable.reload: true
+grails.gsp.view.dir: /var/www/grails/my-app/
+----
+The first line tells Grails that modified GSP files should be reloaded at runtime. If you don't have this setting, you can make as many changes as you like, but they won't be reflected in the running application until you restart. The second line tells Grails where to load the views and layouts from.
+
+NOTE: The trailing slash on the  `grails.gsp.view.dir`  value is important! Without it, Grails will look for views in the parent directory.
+
+Setting `grails.gsp.view.dir` is optional. If it's not specified, you can update files directly to the application server's deployed war directory. Depending on the application server, these files might get overwritten when the server is restarted. Most application servers support "exploded war deployment" which is recommended in this case.
+
+With those settings in place, all you need to do is copy the views from your web application to the external directory. On a Unix-like system, this would look something like this:
+----
+mkdir -p /var/www/grails/my-app/grails-app/views
+cp -R grails-app/views/* /var/www/grails/my-app/grails-app/views
+----
+The key point here is that you must retain the view directory structure, including the  `grails-app/views`  bit. So you end up with the path  `/var/www/grails/my-app/grails-app/views/...` .
+
+One thing to bear in mind with this technique is that every time you modify a GSP, it uses up permgen space. So at some point you will eventually hit "out of permgen space" errors unless you restart the server. So this technique is not recommended for frequent or large changes to the views.
+
+There are also some system properties to control GSP reloading:
+[cols=3, options="header"]
+|===
+|Name|Description|Default
+|grails.gsp.enable.reload|system property for enabling the GSP reload mode (alternative to adding it in the file-based application configuration|
+|grails.gsp.reload.interval|interval between checking the lastmodified time of the gsp source file, unit is milliseconds|5000
+|grails.gsp.reload.granularity|the number of milliseconds leeway to give before deciding a file is out of date. this is needed because different roundings usually cause a 1000ms difference in lastmodified times|1000
+|===
+
+GSP reloading is supported for precompiled GSPs since Grails 1.3.5.

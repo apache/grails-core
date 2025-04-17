@@ -1,0 +1,34 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Web Testing Support'
+    pomDescription = 'Support for writing concise expressive tests for Grails Web Artifacts'
+    pomDevelopers = [jeffscottbrown: 'Jeff Brown', jameskleeh: 'James Kleeh']
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-gsp')
+    api project(':grails-rest-transforms')
+    api project(':grails-interceptors')
+    api 'jakarta.servlet:jakarta.servlet-api'
+
+    api project(':grails-testing-support-core')
+    api "org.javassist:javassist:${javassistVersion}"
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

@@ -1,0 +1,63 @@
+
+== external
+
+
+
+=== Purpose
+
+
+Renders the appropriate HTML linking markup for an external resource such as a CSS file, a JavaScript file, or a favicon.
+
+This is a convenience that takes the boilerplate out of the often verbose `<link>` and `<script>` tags, with auto-sensing of file types.
+
+This tag is aware of the Resources plugin, and if it's installed it will correctly generate links to static resources processed by the plugin.
+
+
+=== Examples
+
+
+Example usages for the "shop" app:
+
+[,xml]
+----
+<g:external dir="css" file="main.css" />
+Output: <link href="/shop/css/main.css" type="text/css"
+              rel="stylesheet" media="screen, projector"/>
+
+<g:external uri="/images/icons/favicon.ico"/>
+Output: <link href="/shop/images/icons/favicon.ico" rel="favicon"/>
+
+<g:external uri="/images/icons/favicon.png"/>
+Output: <link href="/shop/images/icons/favicon.gif" rel="favicon"/>
+
+<g:external dir="images/icons" file="iphone.png" type="appleicon"/>
+Output: <link href="/shop/images/icons/favicon.gif" rel="apple-touch-icon"/>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
+* `contextPath` (optional) - the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+* `dir` (optional) - the name of the directory containing the resource
+* `file` (optional) - the name of the resource file
+* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:<port> if there is no setting in the config and not running in production.
+* `plugin` (optional) - The plugin to look for the resource in
+* `type` (optional) - The type of the link. Normally this is auto-detected by file extension, but you can override it. Each type name has an associated set of default attributes and tag type.
+* `uri` (optional) - The app-relative URI of the resource, as an alternative to dir/file
+
+Any extra attributes supplied will override values provided as a default for the type.
+
+The types supported are:
+
+* css - Sets type="text/css", rel="stylesheet", media="screen, projector"
+* js - Sets type="text/javascript", writer="js"
+* gif - Sets rel="shortcut icon"
+* jpg - Sets rel="shortcut icon"
+* ico - Sets rel="shortcut icon"
+* png - Sets rel="shortcut icon"
+* appleicon - Sets rel="apple-touch-icon"
+

@@ -1,0 +1,41 @@
+
+== pageScope
+
+
+
+=== Purpose
+
+
+A reference to the binding of the GSP that the tag library is being executed within. Allows access to variables set with the xref:../Tags%20-%20GSP/set.adoc[set] tag and those passed to the page from the controller model.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookTagLib {
+
+   def parent = { attrs, body ->
+       pageScope.parent = "John"
+       out << body()
+   }
+
+   def child = { attrs, body ->
+       out << "My parent is ${pageScope.parent}"
+   }
+}
+----
+
+[source,xml]
+----
+<g:parent>
+    <g:child /> // Outputs "My parent is John"
+</g:parent>
+----
+
+
+=== Description
+
+
+The `pageScope` variable contains a reference to the underlying model being manipulated by the page. It can also be used to pass variables from parent to child tags.

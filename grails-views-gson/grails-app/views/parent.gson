@@ -1,0 +1,13 @@
+model {
+    Integer age
+}
+json {
+    name "Joe"
+    age age
+    child g.render(template:"child", model:[age:4])
+    children g.render(template:"child", collection:[1,2,3], var:'age')
+
+    // now test template namespace
+    child2 tmpl.child(age:6)
+    children2 tmpl.child('age', [1,2,3])
+}

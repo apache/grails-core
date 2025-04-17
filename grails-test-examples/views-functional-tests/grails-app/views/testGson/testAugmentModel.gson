@@ -1,0 +1,10 @@
+
+model {
+    functional.tests.Test test
+    Integer age
+}
+
+json.test {
+    name test.name
+    age age
+}

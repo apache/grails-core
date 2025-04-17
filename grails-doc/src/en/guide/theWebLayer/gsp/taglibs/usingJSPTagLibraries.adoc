@@ -1,0 +1,58 @@
+In addition to the simplified tag library mechanism provided by GSP, you can also use JSP tags from GSP.
+
+In order to use JSP support you must ensure you have the `grails-web-jsp` dependency on your classpath by adding it to your `build.gradle` file:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+    //...
+    runtimeOnly "org.grails:grails-web-jsp:{version}"
+}
+----
+
+
+Then you will need to declare the JSP taglib to use with the `taglib` directive at the top of your GSP file:
+
+[,xml]
+----
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+----
+
+Besides this you have to configure Grails to scan for the JSP tld files.
+This is configured with the `grails.gsp.tldScanPattern` setting. It accepts a comma separated String value. Spring's PathMatchingResourcePatternResolver is used to resolve the patterns.
+
+For example, you could scan for all available tld files by adding this to `application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    gsp:
+        tldScanPattern: 'classpath*:/META-INF/*.tld,/WEB-INF/tld/*.tld'
+----
+
+JSTL standard library is no longer added as a dependency by default. In case you are using JSTL, you should also add these dependencies to `build.gradle`:
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    //...
+    runtimeOnly 'javax.servlet:jstl:1.1.2'
+    runtimeOnly 'taglibs:standard:1.1.2'
+}
+----
+
+Then you can use JSP tags like any other tag:
+
+[source,xml]
+----
+<fmt:formatNumber value="${10}" pattern=".00"/>
+----
+
+With the added bonus that you can invoke JSP tags like methods:
+
+[source,gsp]
+----
+${fmt.formatNumber(value:10, pattern:".00")}
+----

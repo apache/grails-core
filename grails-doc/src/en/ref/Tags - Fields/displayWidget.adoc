@@ -1,0 +1,23 @@
+==== f:displayWidget
+
+===== Purpose
+
+`f:displayWidget` renders an appropriate widget for a display property, for example an `<span>${value}</span>` element for a `String` property.
+
+NOTE: Using `f:displayWidget` directly will only be necessary for very specialized cases, usually it will be invoked via `f:display`.
+
+
+===== Attributes
+
+`f:displayWidget` accepts exactly the same attributes as the link:display.html[f:display] tag (except for `wrapper` and `templates` attributes).
+
+===== Example of a `_displayWidget.gsp`
+
+If you have a domain class with a `java.time.LocalDate` you might want to format it specially:
+
+.grails-app/views/_fields/localDate/_displayWidget.gsp
+----
+<%@ page import="java.time.format.DateTimeFormatter" %>
+<g:set var="localDatePattern" value="${message(code: 'default.localDate.format',default: 'yyyy-MM-dd')}"/>
+${value?.format(DateTimeFormatter.ofPattern(localDatePattern, request.getLocale()))}
+----

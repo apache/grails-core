@@ -11,34 +11,35 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    compileOnly "org.aspectj:aspectjrt", "org.aspectj:aspectjweaver"
-    api "jakarta.inject:jakarta.inject-api"
-    api "jakarta.persistence:jakarta.persistence-api"
-    api "jakarta.annotation:jakarta.annotation-api"
+    compileOnly 'org.aspectj:aspectjrt'
+    compileOnly 'org.aspectj:aspectjweaver'
+    api 'jakarta.inject:jakarta.inject-api'
+    api 'jakarta.persistence:jakarta.persistence-api'
+    api 'jakarta.annotation:jakarta.annotation-api'
 
-    implementation "com.github.ben-manes.caffeine:caffeine"
-    api "org.apache.groovy:groovy:$groovyVersion"
-    api("org.springframework.boot:spring-boot")
-    api "org.springframework:spring-core"
-    api "org.springframework:spring-tx"
-    api "org.springframework:spring-beans"
-    api "org.springframework:spring-context"
-    api "org.springframework.boot:spring-boot-autoconfigure"
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+    api 'org.apache.groovy:groovy'
+    api 'org.springframework.boot:spring-boot'
+    api 'org.springframework:spring-core'
+    api 'org.springframework:spring-tx'
+    api 'org.springframework:spring-beans'
+    api 'org.springframework:spring-context'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
 
-    compileOnly "org.springframework:spring-test"
-    compileOnly "org.apache.groovy:groovy-templates"
+    compileOnly 'org.springframework:spring-test'
+    compileOnly 'org.apache.groovy:groovy-templates'
 
-    api project(":grails-bootstrap")
-    api project(":grails-spring")
+    api project(':grails-bootstrap')
+    api project(':grails-spring')
 
-    api "org.apache.grails.data:grails-datastore-core"
+    api 'org.apache.grails.data:grails-datastore-core'
 
-    testImplementation "org.springframework:spring-jdbc"
+    testImplementation 'org.springframework:spring-jdbc'
 
-    testImplementation "org.hamcrest:hamcrest"
+    testImplementation 'org.hamcrest:hamcrest'
 
-    testRuntimeOnly "com.h2database:h2"
-    testRuntimeOnly "com.fasterxml.jackson.core:jackson-databind"
+    testRuntimeOnly 'com.h2database:h2'
+    testRuntimeOnly 'com.fasterxml.jackson.core:jackson-databind'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -60,17 +61,18 @@ dependencies {
 
 def writeProps = tasks.register('writeGrailsProperties', WriteProperties) {
     outputFile = file("${buildDir}/grails.build.properties")
-    property("grails.version", project.version)
+    property('grails.version', project.version)
 }
 
-tasks.named('processResources') {
+tasks.named('processResources').configure {
     from writeProps
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

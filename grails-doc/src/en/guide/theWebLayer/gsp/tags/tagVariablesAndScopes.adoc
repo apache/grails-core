@@ -1,0 +1,37 @@
+Variables can be defined within a GSP using the xref:../../../../ref/Tags%20-%20GSP/set.adoc[set] tag:
+
+[source,xml]
+----
+<g:set var="now" value="${new Date()}" />
+----
+
+Here we assign a variable called `now` to the result of a GSP expression (which simply constructs a new `java.util.Date` instance). You can also use the body of the `<g:set>` tag to define a variable:
+
+[source,xml]
+----
+<g:set var="myHTML">
+   Some re-usable code on: ${new Date()}
+</g:set>
+----
+
+The assigned value can also be a bean from the applicationContext:
+
+[source,xml]
+----
+<g:set var="bookService" bean="bookService" />
+----
+
+Variables can also be placed in one of the following scopes:
+
+* `page` - Scoped to the current page (default)
+* `request` - Scoped to the current request
+* `flash` - Placed within xref:../../../../ref/Controllers/flash.adoc[flash] scope and hence available for the next request
+* `session` - Scoped for the user session
+* `application` - Application-wide scope.
+
+To specify the scope, use the `scope` attribute:
+
+[source,xml]
+----
+<g:set var="now" value="${new Date()}" scope="request" />
+----

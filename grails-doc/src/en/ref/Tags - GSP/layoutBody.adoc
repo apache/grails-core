@@ -1,0 +1,54 @@
+
+== layoutBody
+
+
+
+=== Purpose
+
+
+Used in layouts to output the contents of the body tag of the decorated page.
+
+
+=== Examples
+
+
+Example decorated page:
+
+[source,html]
+----
+<html>
+   <head>
+        <meta name="layout" content="myLayout" />
+        <script src="myscript.js"></script>
+   </head>
+   <body>Page to be decorated</body>
+</html>
+----
+
+Example decorator layout:
+
+[source,html]
+----
+<html>
+   <head>
+        <script src="global.js"></script>
+        <g:layoutHead />
+   </head>
+   <body><g:layoutBody /></body>
+</html>
+----
+
+Results in:
+
+[source,html]
+----
+<html>
+   <head>
+        <script src="global.js"></script>
+        <script src="myscript.js"></script>
+   </head>
+   <body>Page to be decorated</body>
+</html>
+----
+
+

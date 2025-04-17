@@ -1,0 +1,27 @@
+Since version 3, Grails integrates with the https://github.com/bertramdev/asset-pipeline[Asset Pipeline plugin] to provide sophisticated static asset management. This plugin is installed by default in new Grails applications.
+
+The basic way to include a link to a static asset in your application is to use the xref:../../../ref/Tags%20-%20GSP/resource.adoc[resource] tag. This simple approach creates a URI pointing to the file.
+
+However, modern applications with dependencies on multiple JavaScript and CSS libraries and frameworks (as well as dependencies on multiple Grails plugins) require something more powerful.
+
+The issues that the Asset-Pipeline plugin tackles are:
+
+* Reduced Dependence - The plugin has compression, minification, and cache-digests built in.
+* Easy Debugging - Makes for easy debugging by keeping files separate in development mode.
+* Asset Bundling using require http://asset-pipeline.com/manual/index.html#directives[directives].
+* Web application performance tuning is difficult.
+* The need for a standard way to expose static assets in plugins and applications.
+* The need for extensible processing to make languages like LESS or Coffee first class citizens.
+
+The asset-pipeline allows you to define your javascript or css requirements right at the top of the file, and they get compiled on War creation.
+
+Take a look at the http://asset-pipeline.com/manual[documentation] for the asset-pipeline to get started.
+
+If you do not want to use the Asset-Pipeline plugin, you can serve the static assets from directories `src/main/resources/public` or `src/main/webapp`, but the latter one only gets included in WAR packaging but not in JAR packaging.
+
+For example, if you had a file stored at `/src/main/resources/public/images/example.jpg` and your Grails application was running on port 8080, then you could access the file by navigating to http://localhost:8080/static/images/example.jpg[http://localhost:8080/static/images/example.jpg].
+
+==== Cache Configuration for Static Resources
+
+By default, files under `src/main/resources/public` or `src/main/webapp` are served with an HTTP response header of `Cache-Control: no-store`.
+To have them be cached by the browser, you can set the configuration setting `grails.resources.cachePeriod: number` in `application.yml` so that they are served with a response header of `Cache-Control: max-age=number` indicating to the browser how many seconds the file should be considered fresh.

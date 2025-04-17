@@ -1,0 +1,32 @@
+
+== country
+
+
+
+=== Purpose
+
+
+Renders the default English name for a given ISO3166_3 3-letter country code
+
+
+=== Examples
+
+
+[,xml]
+----
+Country: <g:country code="${user.country}"/>
+Supported countries: <g:country code="gbr"/>, <g:country code="deu"/>
+----
+
+
+=== Description
+
+
+Uses the internal ISO3166_3 country code date that the xref:countrySelect.adoc[countrySelect] tag is based upon, to quickly render the name of a country given the code.
+
+For internationalized versions of the country names, define these in your message bundles and use the `<g:message>` tag instead.
+
+Attributes
+
+* `code` - The 3-letter lowercase ISO3166 country code
+

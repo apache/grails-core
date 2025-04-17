@@ -11,14 +11,14 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(":grails-web-common")
-    api "org.apache.groovy:groovy:$groovyVersion"
+    api project(':grails-web-common')
+    api 'org.apache.groovy:groovy'
 
-    testImplementation project(":grails-controllers")
+    testImplementation project(':grails-controllers')
 
-    testImplementation "org.apache.tomcat.embed:tomcat-embed-core"
-    testRuntimeOnly project(":grails-i18n")
-    testRuntimeOnly project(":grails-url-mappings")
+    testImplementation 'org.apache.tomcat.embed:tomcat-embed-core'
+    testRuntimeOnly project(':grails-i18n')
+    testRuntimeOnly project(':grails-url-mappings')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -47,9 +47,9 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

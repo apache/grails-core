@@ -1,0 +1,8 @@
+
+import functional.tests.Customer
+
+model {
+    Customer customer
+}
+
+json g.render(customer, [deep: true])

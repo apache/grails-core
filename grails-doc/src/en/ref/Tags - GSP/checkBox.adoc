@@ -1,0 +1,32 @@
+
+== checkBox
+
+
+
+=== Purpose
+
+
+Generates a checkbox form field. All the usual HTML elements apply.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:checkBox name="myCheckbox" value="${true}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` - The name of the checkbox
+* `value` (optional) - The value of the checkbox
+* `checked` (optional) - Expression if evaluates to `true` sets to checkbox to checked
+
+The `checkBox` tag typically only requires the `name` and `value` attributes and will infer whether the checkbox should be checked from the value. The `checked` attribute can be used to override this behaviour for fine-grained control.
+
+

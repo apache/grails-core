@@ -1,0 +1,29 @@
+Markup Views are written in Groovy, end with the file extension `gml` and reside in the `grails-app/views` directory.
+
+The Markup Views plugin uses Groovy's http://docs.groovy-lang.org/docs/latest/html/documentation/template-engines.html#_the_markuptemplateengine[MarkupTemplateEngine] and you can mostly use the http://docs.groovy-lang.org/docs/latest/html/documentation/template-engines.html#_the_markuptemplateengine[Groovy user guide] as a reference for the syntax.
+
+Example Markup View:
+
+[source,groovy]
+model {
+    Iterable<Map> cars
+}
+xmlDeclaration()
+cars {
+    cars.each {
+        car(make: it.make, model: it.model)
+    }
+}
+
+This produces the following output given a model such as `[cars:[[make:"Audi", model:"A5"]]]`:
+
+[source,xml]
+<?xml version='1.0'?>
+<cars><car make='Audi' model='A5'/></cars>
+
+For further examples see Groovy's http://docs.groovy-lang.org/docs/latest/html/documentation/template-engines.html#_the_markuptemplateengine[MarkupTemplateEngine] documentation.
+
+All Markup views subclass the link:api/grails/plugin/markup/view/MarkupViewTemplate.html[MarkupViewTemplate] class by default.
+
+The `MarkupViewTemplate` superclass implements the link:api/grails/plugin/markup/view/api/MarkupView.html[MarkupView] trait which in turn extends the the link:api/grails/views/api/GrailsView.html[GrailsView] trait.
+

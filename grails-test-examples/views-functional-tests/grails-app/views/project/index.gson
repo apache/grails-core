@@ -1,0 +1,7 @@
+import functional.tests.Project
+
+model {
+    Project project
+}
+
+json g.render(project, [deep: true])

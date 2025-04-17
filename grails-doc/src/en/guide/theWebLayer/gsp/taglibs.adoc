@@ -1,0 +1,79 @@
+Like https://www.oracle.com/java/technologies/jspt.html[Java Server Pages] (JSP), GSP supports the concept of custom tag libraries. Unlike JSP, Grails' tag library mechanism is simple, elegant and completely reloadable at runtime.
+
+Quite simply, to create a tag library create a Groovy class that ends with the convention `TagLib` and place it within the `grails-app/taglib` directory:
+
+[source,groovy]
+----
+class SimpleTagLib {
+
+}
+----
+
+Now to create a tag create a Closure property that takes two arguments: the tag attributes and the body content:
+
+[source,groovy]
+----
+class SimpleTagLib {
+    def simple = { attrs, body ->
+
+    }
+}
+----
+
+The `attrs` argument is a Map of the attributes of the tag, whilst the `body` argument is a Closure that returns the body content when invoked:
+
+[source,groovy]
+----
+class SimpleTagLib {
+    def emoticon = { attrs, body ->
+       out << body() << (attrs.happy == 'true' ? " :-)" : " :-(")
+    }
+}
+----
+
+As demonstrated above there is an implicit `out` variable that refers to the output `Writer` which you can use to append content to the response. Then you can reference the tag inside your GSP; no imports are necessary:
+
+[source,xml]
+----
+<g:emoticon happy="true">Hi John</g:emoticon>
+----
+
+NOTE: To help IDEs like Spring Tool Suite (STS) and others autocomplete tag attributes, you should add Javadoc comments to your tag closures with `@attr` descriptions. Since taglibs use Groovy code it can be difficult to reliably detect all usable attributes.
+
+For example:
+
+[source,groovy]
+----
+class SimpleTagLib {
+
+    /**
+     * Renders the body with an emoticon.
+     *
+     * @attr happy whether to show a happy emoticon ('true') or
+     * a sad emoticon ('false')
+     */
+    def emoticon = { attrs, body ->
+       out << body() << (attrs.happy == 'true' ? " :-)" : " :-(")
+    }
+}
+----
+
+and any mandatory attributes should include the REQUIRED keyword, e.g.
+
+[source,groovy]
+----
+class SimpleTagLib {
+
+    /**
+     * Creates a new password field.
+     *
+     * @attr name REQUIRED the field name
+     * @attr value the field value
+     */
+    def passwordField = { attrs ->
+        attrs.type = "password"
+        attrs.tagName = "passwordField"
+        fieldImpl(out, attrs)
+    }
+}
+----

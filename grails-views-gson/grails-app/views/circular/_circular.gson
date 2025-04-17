@@ -1,0 +1,6 @@
+import grails.plugin.json.view.Circular
+import groovy.transform.Field
+
+@Field Circular circular
+
+json g.render(circular)

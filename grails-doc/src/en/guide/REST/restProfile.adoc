@@ -54,6 +54,6 @@ $ grails create-domain-class my.api.Book
 $ ./gradlew runCommand -Pargs="generate-all my.api.Book"
 ----
 
-NOTE: The generate-* commands are only available after adding the `org.grails.plugins:scaffolding` dependency to your project. They are not available by default in a REST application. Also, they will no longer produce *.gson files as that was a feature of the REST API-profile.
+NOTE: The generate-* commands are only available after adding the `org.apache.grails:grails-scaffolding` dependency to your project. They are not available by default in a REST application. Also, they will no longer produce *.gson files as that was a feature of the REST API-profile.
 
 Instead of CRUD HTML interface a REST endpoint is generated that produces JSON responses. In addition, the generated functional and unit tests by default test the REST endpoint. 

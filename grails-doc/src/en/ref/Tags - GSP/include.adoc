@@ -1,0 +1,82 @@
+
+== include
+
+
+
+=== Purpose
+
+
+Includes the response of another controller/action or view in the current response
+
+NOTE: The  `g:include` tag will not generate a separate request. The response from the `include` action will be merged into the response for the original request.
+
+
+=== Examples
+
+
+Example controller for an application called "shop":
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        [books: Book.list(params)]
+    }
+
+    def show() {
+        [book: Book.get(params.id)]
+    }
+}
+----
+
+Example usages for above controller:
+
+[,xml]
+----
+<g:include action="show" id="1" />
+
+<g:include action="show" id="${currentBook.id}" />
+
+<g:include controller="book" />
+
+<g:include controller="book" action="list" />
+
+<g:include action="list" params="[sort: 'title', order: 'asc',
+                                  author: currentBook.author]" />
+----
+
+Example as a method call in a controller, tag library or GSP:
+
+[source,groovy]
+----
+def content = g.include(action: 'list', controller: 'book')
+----
+
+If using nested includes with params it is advisable to use unique parameter names as they are all attached to the same web request.
+[,xml]
+----
+<g:include controller="outer" action="list" params="[outerPage:1, outerSize:5]"/>
+<g:include controller="inner" action="list" params="[innerPage:2, innerSize:10]"/>
+----
+If non-unique names are used like the following
+[,xml]
+----
+<g:include controller="outer" action="list" params="[page:1, size:5]"/>
+<g:include controller="inner" action="list" params="[page:2, size:10]"/>
+----
+request.params will contain a list `params.page=[2,1]` and `params.size=[10,5]`
+
+=== Description
+
+
+Attributes
+
+* `action` (optional) - the name of the action to use in the include
+* `controller` (optional) - the name of the controller to use in the include
+* `id` (optional) - the id to use in the include
+* `view` (optional) - The name of the view to use in the include
+* `params` (optional) - a Map of request parameters
+* `model` (optional) - Any request attributes (the model) to pass to the view to be included
+
+
+

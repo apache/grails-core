@@ -1,0 +1,94 @@
+Grails also has the concept of templates. These are useful for partitioning your views into maintainable chunks, and combined with <<layouts,Layouts>> provide a highly re-usable mechanism for structured views.
+
+
+==== Template Basics
+
+
+Grails uses the convention of placing an underscore before the name of a view to identify it as a template. For example, you might have a template that renders Books located at `grails-app/views/book/_bookTemplate.gsp`:
+
+[source,xml]
+----
+<div class="book" id="${book?.id}">
+   <div>Title: ${book?.title}</div>
+   <div>Author: ${book?.author?.name}</div>
+</div>
+----
+
+Use the xref:../../ref/Tags%20-%20GSP/render.adoc[render] tag to render this template from one of the views in `grails-app/views/book`:
+
+[source,xml]
+----
+<g:render template="bookTemplate" model="[book: myBook]" />
+----
+
+Notice how we pass into a model to use using the `model` attribute of the `render` tag. If you have multiple `Book` instances you can also render the template for each `Book` using the render tag with a `collection` attribute:
+
+[source,xml]
+----
+<g:render template="bookTemplate" var="book" collection="${bookList}" />
+----
+
+
+==== Shared Templates
+
+
+In the previous example we had a template that was specific to the `BookController` and its views at `grails-app/views/book`. However, you may want to share templates across your application.
+
+In this case you can place them in the root views directory at grails-app/views or any subdirectory below that location, and then with the template attribute use an absolute location starting with `/` instead of a relative location. For example if you had a template called `grails-app/views/shared/_mySharedTemplate.gsp`, you would reference it as:
+
+[source,xml]
+----
+<g:render template="/shared/mySharedTemplate" />
+----
+
+You can also use this technique to reference templates in any directory from any view or controller:
+
+[source,xml]
+----
+<g:render template="/book/bookTemplate" model="[book: myBook]" />
+----
+
+
+==== The Template Namespace
+
+
+Since templates are used so frequently there is template namespace, called `tmpl`, available that makes using templates easier. Consider for example the following usage pattern:
+
+[source,xml]
+----
+<g:render template="bookTemplate" model="[book:myBook]" />
+----
+
+This can be expressed with the `tmpl` namespace as follows:
+
+[source,xml]
+----
+<tmpl:bookTemplate book="${myBook}" />
+----
+
+
+==== Templates in Controllers and Tag Libraries
+
+
+You can also render templates from controllers using the xref:../../../ref/Controllers/render.adoc[render] controller method. This is useful for JavaScript heavy applications where you generate small HTML or data responses to partially update the current page instead of performing new request:
+
+[source,groovy]
+----
+def bookData() {
+    def b = Book.get(params.id)
+    render(template:"bookTemplate", model:[book:b])
+}
+----
+
+The link:xref:../ref/Controllers/render.adoc[render] controller method writes directly to the response, which is the most common behaviour. To instead obtain the result of template as a String you can use the xref:../ref/Tags%20-%20GSP/render.adoc[render] tag:
+
+[source,groovy]
+----
+def bookData() {
+    def b = Book.get(params.id)
+    String content = g.render(template:"bookTemplate", model:[book:b])
+    render content
+}
+----
+
+Notice the usage of the `g` namespace which tells Grails we want to use the xref:tags/tagsAsMethodCalls.adoc[tag as method call] instead of the xref:../../../ref/Controllers/render.adoc[render] method.

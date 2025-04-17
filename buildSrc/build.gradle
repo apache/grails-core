@@ -24,8 +24,8 @@ dependencies {
         // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
         exclude group: 'org.springframework', module: 'spring-core'
     }
-    implementation "io.github.gradle-nexus:publish-plugin"
-    implementation "org.apache.grails:grails-gradle-plugins"
-    implementation "org.apache.grails:grails-docs-core"
-    implementation "org.asciidoctor:asciidoctor-gradle-jvm"
+    implementation 'io.github.gradle-nexus:publish-plugin'
+    implementation 'org.apache.grails:grails-gradle-plugins'
+    implementation 'org.apache.grails:grails-docs-core'
+    implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
 }

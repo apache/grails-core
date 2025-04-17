@@ -1,0 +1,14 @@
+Scaffolding templates based on the _Fields_ plugin are quite powerful as they will pick up field and input rendering templates from your application and any plugins that provide them. This means that the useful life of scaffolding templates should be much longer as you do not need to replace the entire _create.gsp_ and/or _edit.gsp_ template just because you want to do something different with a certain property of one particular class.
+
+The plugin makes the _renderEditor.template_ file used by standard Grails scaffolding redundant. This template was very limited because it could not be extended by plugins or applications (only replaced) and was unable to support embedded properties of domain classes.
+
+The _Fields_ plugin includes scaffolding templates you can use in your application by running:
+
+[source,groovy]
+----
+grails install-form-fields-templates
+----
+
+This will overwrite any _create.gsp_ and _edit.gsp_ files you have in `src/templates/scaffolding`.
+
+Alternatively, it's very easy to modify your existing scaffolding templates to use the _f:all_ tag or multiple _f:field_ tags.

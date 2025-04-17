@@ -1,0 +1,35 @@
+
+== grep
+
+
+
+=== Purpose
+
+
+Uses the Groovy JDK `grep` method to iterate over each element of the specified object that match the
+specified "filter" attribute. The filter can be different instances such as classes, regex patterns etc.
+
+
+=== Examples
+
+
+[,xml]
+----
+Stephen King's non-fiction Books:
+<g:grep in="${books}" filter="NonFictionBooks.class">
+     <p>Title: ${it.title}</p>
+</g:grep>
+
+<g:grep in="${books.title}" filter="~/.*Groovy.*/">
+     <p>Title: ${it}</p>
+</g:grep>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `in` - The object to iterative over
+* `filter` - The filter instance such as a class, regular expression or anything that implements `isCase`

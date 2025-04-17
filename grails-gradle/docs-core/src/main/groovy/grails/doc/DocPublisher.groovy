@@ -16,10 +16,13 @@
 package grails.doc
 
 import grails.doc.asciidoc.AsciiDocEngine
-import grails.doc.internal.*
+import grails.doc.internal.FileResourceChecker
+import grails.doc.internal.StringEscapeCategory
+import grails.doc.internal.UserGuideNode
+import grails.doc.internal.YamlTocStrategy
+import groovy.ant.AntBuilder
 import groovy.io.FileType
 import groovy.text.Template
-
 import org.apache.commons.logging.LogFactory
 import org.radeox.api.engine.WikiRenderEngine
 import org.radeox.engine.context.BaseInitialRenderContext
@@ -27,7 +30,6 @@ import org.radeox.engine.context.BaseRenderContext
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
-import groovy.ant.AntBuilder
 
 /**
  * Coordinated the DocEngine the produce documentation based on the gdoc format.
@@ -243,8 +245,9 @@ class DocPublisher {
                         replace(File.separator as char, '/' as char)
             }
 
-            if (!verifyToc(guideSrcDir, files, guide)) {
-                throw new RuntimeException("Encountered errors while building table of contents. Aborting.")
+            def errors = verifyToc(guideSrcDir, files, guide)
+            if (errors) {
+                throw new RuntimeException("Encountered the following errors while building table of contents. Aborting.\n${errors.join("\n")}")
             }
 
             for (ch in guide.children) {
@@ -621,8 +624,8 @@ class DocPublisher {
      * duplicate section/alias names and invalid file paths.
      * @return <code>false</code> if any errors are detected.
      */
-    protected verifyToc(File baseDir, gdocFiles, toc) {
-        def hasErrors = false
+    protected List<String> verifyToc(File baseDir, gdocFiles, toc) {
+        List<String> errors = []
         def sectionsFound = [] as Set
         def gdocsNotInToc = gdocFiles as Set
 
@@ -630,7 +633,10 @@ class DocPublisher {
         if (gdocsNotInToc.is(gdocFiles)) gdocsNotInToc = new HashSet(gdocFiles)
 
         for (ch in toc.children) {
-            hasErrors |= verifyTocInternal(baseDir, ch, sectionsFound, gdocsNotInToc, [])
+            List<String> internalErrors = verifyTocInternal(baseDir, ch, sectionsFound, gdocsNotInToc, [])
+            if(internalErrors) {
+                errors.addAll(internalErrors)
+            }
         }
 
         if (gdocsNotInToc) {
@@ -639,23 +645,25 @@ class DocPublisher {
             }
         }
 
-        return !hasErrors
+        return errors
     }
 
-    private verifyTocInternal(File baseDir, section, existing, gdocFiles, pathElements) {
-        def hasErrors = false
+    private List<String> verifyTocInternal(File baseDir, section, existing, gdocFiles, pathElements) {
+        List<String> errors = []
         def fullName = pathElements ? "${pathElements.join('/')}/${section.name}" : section.name
 
         // Has this section name already been used?
         if (section.name in existing) {
-            hasErrors = true
-            output.error "Duplicate section name: ${fullName}"
+            def duplicateError = "Duplicate section name: ${fullName}" as String
+            errors << duplicateError
+            output.error duplicateError
         }
 
         // Does the file path for the gdoc exist?
         if (!section.file || !new File(baseDir, section.file).exists()) {
-            hasErrors = true
-            output.error "No file found for '${fullName}'"
+            def noFileError = "No file found for '${fullName}'" as String
+            errors << noFileError
+            output.error noFileError
         }
         else {
             // Found this gdoc file in the TOC.
@@ -665,10 +673,13 @@ class DocPublisher {
         existing << section.name
 
         for (s in section.children) {
-            hasErrors |= verifyTocInternal(baseDir, s, existing, gdocFiles, pathElements + section.name)
+            List<String> internalErrors = verifyTocInternal(baseDir, s, existing, gdocFiles, pathElements + section.name)
+            if(internalErrors) {
+                errors.addAll(internalErrors)
+            }
         }
 
-        return hasErrors
+        return errors
     }
 
     private String calculateLanguageDir(startPath, endPath = '') {

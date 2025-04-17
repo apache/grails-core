@@ -1,0 +1,7 @@
+
+import functional.tests.Book
+import groovy.transform.Field
+
+@Field List<Book> books
+
+json tmpl.bookv3(books, [additionalProp: true])

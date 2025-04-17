@@ -1,0 +1,31 @@
+== join
+
+=== Purpose
+
+
+Uses the Groovy JDK {groovyjdk}java/lang/Iterable.html#join(java.lang.String)[join] method to concatenate the `toString()` representation of each item in this collection with the given separator.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:join in="['Grails', 'Groovy', 'Gradle']" delimiter="_"/>
+----
+
+That would result in output like this:
+
+----
+Grails_Groovy_Gradle
+----
+
+
+=== Description
+
+
+Attributes
+
+* `in` - The collection to iterate over
+* `delimiter` (optional) - The value of the delimiter to use during the join. If no delimiter is specified then ", " (a comma followed by a space) will be used
+

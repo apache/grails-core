@@ -81,15 +81,16 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
         dependencies.add(INTEGRATION_TEST_IMPLEMENTATION_CONFIGURATION_NAME, testSourceSetOutput)
 
         final ConfigurationContainer configurations = project.configurations
-        configurations.named(INTEGRATION_TEST_IMPLEMENTATION_CONFIGURATION_NAME) {
+        configurations.named(INTEGRATION_TEST_IMPLEMENTATION_CONFIGURATION_NAME).configure {
             it.extendsFrom(configurations.named(TEST_IMPLEMENTATION_CONFIGURATION_NAME).get())
         }
-        configurations.named(INTEGRATION_TEST_RUNTIME_ONLY_CONFIGURATION_NAME) {
+        configurations.named(INTEGRATION_TEST_RUNTIME_ONLY_CONFIGURATION_NAME).configure {
             it.extendsFrom(configurations.named(TEST_RUNTIME_ONLY_CONFIGURATION_NAME).get())
         }
 
         final TaskContainer tasks = project.tasks
-        final TaskProvider<Test> integrationTestTask = tasks.register(INTEGRATION_TEST_TASK_NAME, Test) {
+        final TaskProvider<Test> integrationTestTask = tasks.register(INTEGRATION_TEST_TASK_NAME, Test)
+        integrationTestTask.configure {
             it.group = LifecycleBasePlugin.VERIFICATION_GROUP
             it.testClassesDirs = integrationTest.output.classesDirs
             it.classpath = integrationTest.runtimeClasspath
@@ -101,7 +102,7 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
                 events "passed"
             }
         }
-        tasks.named("check") {
+        tasks.named("check").configure {
             it.dependsOn(integrationTestTask)
         }
 

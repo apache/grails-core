@@ -11,20 +11,20 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(":grails-core")
-    api project(":grails-web-core")
+    api project(':grails-core')
+    api project(':grails-web-core')
     api project(':grails-mimetypes')
     api project(':grails-validation')
     api project(':grails-domain-class')
 
-    api "org.apache.groovy:groovy:$groovyVersion"
-    api("org.springframework.boot:spring-boot-autoconfigure")
-    compileOnlyApi "jakarta.servlet:jakarta.servlet-api"
+    api 'org.apache.groovy:groovy'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnlyApi 'jakarta.servlet:jakarta.servlet-api'
 
     runtimeOnly project(':grails-i18n')
 
-    testRuntimeOnly "jline:jline"
-    testRuntimeOnly "org.fusesource.jansi:jansi"
+    testRuntimeOnly 'jline:jline'
+    testRuntimeOnly 'org.fusesource.jansi:jansi'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -53,9 +53,10 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

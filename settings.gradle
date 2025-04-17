@@ -43,18 +43,25 @@ include (
         'grails-datasource',
         'grails-domain-class',
         'grails-encoder',
+        'grails-fields',
         'grails-i18n',
         'grails-interceptors',
         'grails-logging',
         'grails-mimetypes',
         'grails-rest-transforms',
+        'grails-scaffolding',
         'grails-services',
         'grails-shell-cli',
         'grails-spring',
         'grails-test-core',
         'grails-testing-support-core',
+        'grails-testing-support-views-gson',
+        'grails-testing-support-web',
         'grails-url-mappings',
         'grails-validation',
+        'grails-views-core',
+        'grails-views-gson',
+        'grails-views-markup',
         'grails-web-core',
         'grails-web-common',
         'grails-web-boot',
@@ -93,6 +100,16 @@ include (
         'grails-async-rxjava2',
         'grails-async-rxjava3',
         'grails-async-plugin',
+
+        // gsp
+        'grails-gsp-core',
+        'grails-gsp',
+        'grails-sitemesh3',
+        'grails-taglib',
+        'grails-web-gsp',
+        'grails-web-gsp-taglib',
+        'grails-web-jsp',
+        'grails-web-taglib',
 )
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
@@ -114,6 +131,15 @@ project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
 project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async-plugin').projectDir = file('grails-async/plugin')
 
+project(':grails-gsp-core').projectDir = file('grails-gsp/core')
+project(':grails-gsp').projectDir = file('grails-gsp/plugin')
+project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
+project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
+project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
+project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
+project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
+project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
+
 // Functional Tests
 include (
         'grails-test-examples-async-events-pubsub-demo',
@@ -123,6 +149,8 @@ include (
         'grails-test-examples-datasources',
         'grails-test-examples-namespaces',
         'grails-test-examples-gorm',
+        'grails-test-examples-gsp-sitemesh3',
+        'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-views-182',
@@ -136,6 +164,8 @@ include (
         // 'grails-test-examples-issue-11767', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
         // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
         'grails-test-examples-cache',
+        'grails-test-examples-views-functional-tests',
+        'grails-test-examples-views-functional-tests-plugin'
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
@@ -144,6 +174,8 @@ project(':grails-test-examples-app3').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
+project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
+project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
@@ -157,11 +189,8 @@ project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-te
 // project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
 // project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
+project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
+project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 
-includeBuild ('./grails-gradle') {
-    dependencySubstitution {
-        substitute module('org.apache.grails:grails-gradle-bom') using project(':grails-gradle-bom')
-        substitute module('org.apache.grails.gradle:grails-gradle-model') using project(':grails-gradle-model')
-    }
-}
+includeBuild ('./grails-gradle')
 

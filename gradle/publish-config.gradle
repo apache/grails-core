@@ -7,6 +7,6 @@ extensions.configure(GrailsPublishExtension) {
     it.license.name = 'Apache-2.0'
     it.title = findProperty('pomTitle') ?: 'Grails® framework'
     it.desc = findProperty('pomDescription') ?: 'Grails Web Application Framework'
-    it.developers = findProperty('pomDevelopers') as Map<String,String> ?: [graemerocher: 'Graeme Rocher']
+    it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher']
     it.pomCustomization = findProperty('pomCustomization') as Closure
 }

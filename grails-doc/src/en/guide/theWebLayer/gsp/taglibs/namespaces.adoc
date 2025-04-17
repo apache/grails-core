@@ -1,0 +1,30 @@
+By default, tags are added to the default Grails namespace and are used with the `g:` prefix in GSP pages. However, you can specify a different namespace by adding a static property to your `TagLib` class:
+
+[source,groovy]
+----
+class SimpleTagLib {
+    static namespace = "my"
+
+    def example = { attrs ->
+        //...
+    }
+}
+----
+
+Here we have specified a `namespace` of `my` and hence the tags in this tag lib must then be referenced from GSP pages like this:
+
+[source,xml]
+----
+<my:example name="..." />
+----
+
+where the prefix is the same as the value of the static `namespace` property. Namespaces are particularly useful for plugins.
+
+Tags within namespaces can be invoked as methods using the namespace as a prefix to the method call:
+
+[source,groovy]
+----
+out << my.example(name:"foo")
+----
+
+This works from GSP, controllers or tag libraries

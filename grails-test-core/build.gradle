@@ -11,31 +11,31 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api "org.springframework:spring-tx"
+    api 'org.springframework:spring-tx'
 
-    api "org.springframework.boot:spring-boot-test"
+    api 'org.springframework.boot:spring-boot-test'
     // Testing
-    api "org.apache.groovy:groovy-test-junit5"
-    api("org.apache.groovy:groovy-test")
-    api("org.spockframework:spock-core") { transitive = false }
-    api "org.junit.platform:junit-platform-runner"
+    api 'org.apache.groovy:groovy-test-junit5'
+    api('org.apache.groovy:groovy-test')
+    api('org.spockframework:spock-core') { transitive = false }
+    api 'org.junit.platform:junit-platform-runner'
 
 
-    api project(":grails-mimetypes")
-    api project(":grails-web-core")
-    api project(":grails-converters")
-    api "org.apache.groovy:groovy:$groovyVersion"
+    api project(':grails-mimetypes')
+    api project(':grails-web-core')
+    api project(':grails-converters')
+    api 'org.apache.groovy:groovy'
 
     // command line requirements
-    api  "jline:jline"
-    api "org.fusesource.jansi:jansi"
+    api  'jline:jline'
+    api 'org.fusesource.jansi:jansi'
 
     // Ant
-    api "org.apache.ant:ant"
-    api "org.apache.ant:ant-junit"
+    api 'org.apache.ant:ant'
+    api 'org.apache.ant:ant-junit'
 
     // needed for Spock
-    api "org.objenesis:objenesis"
+    api 'org.objenesis:objenesis'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -64,8 +64,9 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

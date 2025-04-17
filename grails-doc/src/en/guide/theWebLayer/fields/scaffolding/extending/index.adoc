@@ -1,0 +1,59 @@
+== Extending
+
+All aspects of the way markup is created can be changed.
+
+=== Which properties are rendered
+
+The link:api/org/grails/scaffolding/model/DomainModelService.html[DomainModelService] is responsible for returning which properties should be rendered for any given view. To override the default behavior, register a bean with the name "domainModelService" that implements the link:api/org/grails/scaffolding/model/DomainModelService.html[DomainModelService] interface. You can extend the default implementation link:api/org/grails/scaffolding/model/DomainModelServiceImpl.html[DomainModelServiceImpl] if you wish.
+
+=== How the different contexts are rendered
+
+The link:api/org/grails/scaffolding/markup/ContextMarkupRenderer.html[ContextMarkupRenderer] is responsible for rendering all of the contexts. To override the default behavior, register a bean with the name "contextMarkupRenderer" that implements the link:api/org/grails/scaffolding/markup/ContextMarkupRenderer.html[ContextMarkupRenderer] interface. You can extend the default implementation link:api/org/grails/scaffolding/markup/ContextMarkupRendererImpl.html[ContextMarkupRendererImpl] if you wish.
+
+=== How properties are rendered
+
+The link:api/org/grails/scaffolding/markup/PropertyMarkupRenderer.html[PropertyMarkupRenderer] is responsible for rendering all of domain properties. To override the default behavior, register a bean with the name "propertyMarkupRenderer" that implements the link:api/org/grails/scaffolding/markup/PropertyMarkupRenderer.html[PropertyMarkupRenderer] interface. You can extend the default implementation link:api/org/grails/scaffolding/markup/PropertyMarkupRendererImpl.html[PropertyMarkupRendererImpl] if you wish.
+
+The default implementation simply defers to a domain output or input registry. The most convenient way to control how a specific type of property will be rendered is to register an input or ouput renderer to the registry.
+
+NOTE: All of the default renderers in the registry have a priority of < 0, so registering a custom one with a priority of > 0 will ensure it is used over the default
+
+==== Input Rendering
+
+Input renders must implement the link:api/org/grails/scaffolding/registry/DomainInputRenderer.html[DomainInputRenderer] interface. Implementations must define 2 methods.
+
+* `Boolean supports(DomainProperty domainProperty)`
+    Return true if your renderer supports the given property. See the link:api/org/grails/scaffolding/model/property/DomainProperty.html[DomainProperty] and link:http://gorm.grails.org/latest/api/org/grails/datastore/mapping/model/PersistentProperty.html[PersistentProperty] interfaces to see what data is available on the domain property instance.
+* `Closure renderInput(Map defaultAttributes, DomainProperty property)`
+    Return a closure to be passed to a link:http://docs.groovy-lang.org/latest/html/api/groovy/xml/MarkupBuilder.html[MarkupBuilder] that renders your property
+
+NOTE: The default attributes passed to `renderInput` are created by the link:api/org/grails/scaffolding/markup/PropertyMarkupRenderer.html#getStandardAttributes(org.grails.scaffolding.model.property.DomainProperty)[PropertyMarkupRenderer#getStandardAttributes] method.
+
+To register your renderer, inject the "domainInputRendererRegistry" bean and execute `registerDomainRenderer`, passing along your renderer and its priority.
+
+[source,groovy,indent=1]
+----
+DomainInputRendererRegistry domainInputRendererRegistry
+
+domainInputRendererRegistry.registerDomainRenderer(new MyCustomDomainInputRenderer(), 1)
+----
+
+==== Output Rendering
+
+Output renders must implement the link:api/org/grails/scaffolding/registry/DomainOutputRenderer.html[DomainOutputRenderer] interface. Implementations must define 3 methods.
+
+* `Boolean supports(DomainProperty domainProperty)`
+    Return true if your renderer supports the given property. See the link:api/org/grails/scaffolding/model/property/DomainProperty.html[DomainProperty] and link:http://gorm.grails.org/latest/api/org/grails/datastore/mapping/model/PersistentProperty.html[PersistentProperty] interfaces to see what data is available on the domain property instance.
+* `Closure renderListOutput(DomainProperty property)`
+    Return a closure to be passed to a link:http://docs.groovy-lang.org/latest/html/api/groovy/xml/MarkupBuilder.html[MarkupBuilder] that renders your property in the context of a list of domain class instances
+* `Closure renderOutput(DomainProperty property)`
+    Return a closure to be passed to a link:http://docs.groovy-lang.org/latest/html/api/groovy/xml/MarkupBuilder.html[MarkupBuilder] that renders your property in the context of a single domain class instance
+
+To register your renderer, inject the "domainOutputRendererRegistry" bean and execute `registerDomainRenderer`, passing along your renderer and its priority.
+
+[source,groovy,indent=1]
+----
+DomainOutputRendererRegistry domainOutputRendererRegistry
+
+domainOutputRendererRegistry.registerDomainRenderer(new MyCustomDomainOutputRenderer(), 1)
+----

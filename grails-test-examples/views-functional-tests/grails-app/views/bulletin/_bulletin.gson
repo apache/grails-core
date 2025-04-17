@@ -1,0 +1,11 @@
+
+import functional.tests.Bulletin
+
+model {
+    Bulletin bulletin
+}
+
+json g.render(bulletin, [includes: ['content']]) {
+    contactUsers tmpl.'/user/userMinimumInfo'(bulletin.contactUsers)
+    targetUsers tmpl.'/user/userMinimumInfo'(bulletin.targetUsers)
+}

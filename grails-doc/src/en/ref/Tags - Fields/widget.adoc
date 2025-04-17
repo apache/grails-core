@@ -1,0 +1,86 @@
+==== f:widget
+
+===== Purpose
+
+`f:widget` renders an appropriate widget for a property, for example an `<input type="text">` element for a `String` property or a `<select>` for an enum.
+
+NOTE: Using `f:widget` directly will only be necessary for very specialized cases, usually it will be invoked via `f:field`.
+
+===== Attributes
+
+`f:widget` accepts exactly the same attributes as the link:field.html[f:field] tag (except for `wrapper` and `templates` attributes).
+
+===== Default rendering
+
+The `<f:widget/>` tag will will by default use sensible defaults when rendering `String`, `Number`, `Boolean`, `URL`, `Enum`, `Date` and associations like `oneToOne`, `oneToMany`, `manyToOne` and `manyToMany`.
+
+In a few cases it is possible to control which default widget to use, by specifying it in the beans `constraints`.
+
+The following happens with these types:
+
+====== String
+By default, properties instance of `String` renders a `<g:field type="text">` type field, but the `constraints` in the bean will alter this in these cases:
+[cols="1,2"]
+|====
+|*`constraint`*|*Rendered Widget type*
+|`inList`|`<g:select/>`. If the field is not required, a `noSelection` is added to the `select`
+|`password: true`|`<g:field type="password"/>`
+|`email: true`|`<g:field type="email"/>`
+|`url: true`|`<g:field type="url"/>`
+|`widget: 'textarea'`|`<g:textArea/>`
+|====
+
+====== Numeric and primitive types
+By default, properties instance of `Number` renders a `<g:field type="number">` or `<:field type="number decimal"/>` type field, but the `constraints` in the bean will alter this in these cases:
+
+[cols="1,2"]
+|====
+|*`constraint`*|*Affects the rendered widget*
+|`scale`|Sets the `step` attribute on the input field
+|`min`|Set the `min` attribute on the input field
+|`max`|Set the `max` attribute on the input field
+|====
+
+By default, the value is formatted with the default `numberFormatter` based on the request locale.
+
+This behavior can be turned off in the configuration by setting:
+```
+grails:
+    plugin:
+        fields:
+            localizeNumbers: false
+```
+
+===== Boolean
+Renders a `<g:checkBox/>`
+
+===== URL
+Renders a `<g:field type="url"/>`
+
+===== Enum
+`enum` types always renders a `<g:select/>` with all the values in the  type. To render a subset of `enum` values, the `inList` constraint can be used.
+
+===== Date, Calendar, java.sql.Date and java.sql.Time
+Renders a `<g:datePicker/>`. If `Date`, `Calendar`, or `java.sql.Date` then `precision` is set to `day`, if `java.sql.Time` then `minute`
+
+===== byte[], Byte[], Blob
+Renders a `<g:field type="file"/>`
+
+===== `oneToOne`, `manyToOne` or `manyToMany` associations
+All these associations renders a `<g:select/>` and if association has a `nullable: true` constraint, then a `noSelection` attribute is added.
+
+For the `manyToMany` association, the `multiple` attribute is set.
+
+`oneToOne and `manyToOne` renders a
+
+===== 'oneToMany' association
+The `oneToMany` association does not render an input type field, but does instead render a list of links to the associated objects.
+
+===== Example of overriding a `_widget.gsp`
+
+If you want to override a `f:widget` for a `String`, then create a file with content like this:
+
+.grails-app/views/_fields/string/_widget.gsp
+----
+<g:textField name="${property}" value="${value}" required="${required}" class="form-control"/>
+----

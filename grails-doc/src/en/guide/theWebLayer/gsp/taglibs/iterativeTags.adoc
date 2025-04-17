@@ -1,0 +1,58 @@
+Iterative tags are easy too, since you can invoke the body multiple times:
+
+[source,groovy]
+----
+def repeat = { attrs, body ->
+    attrs.times?.toInteger()?.times { num ->
+        out << body(num)
+    }
+}
+----
+
+In this example we check for a `times` attribute and if it exists convert it to a number, then use Groovy's `times` method to iterate the specified number of times:
+
+[source,xml]
+----
+<g:repeat times="3">
+<p>Repeat this 3 times! Current repeat = ${it}</p>
+</g:repeat>
+----
+
+Notice how in this example we use the implicit `it` variable to refer to the current number. This works because when we invoked the body we passed in the current value inside the iteration:
+
+[source,groovy]
+----
+out << body(num)
+----
+
+That value is then passed as the default variable `it` to the tag. However, if you have nested tags this can lead to conflicts, so you should instead name the variables that the body uses:
+
+[source,groovy]
+----
+def repeat = { attrs, body ->
+    def var = attrs.var ?: "num"
+    attrs.times?.toInteger()?.times { num ->
+        out << body((var):num)
+    }
+}
+----
+
+Here we check if there is a `var` attribute and if there is use that as the name to pass into the body invocation on this line:
+
+[source,groovy]
+----
+out << body((var):num)
+----
+
+NOTE: Note the usage of the parenthesis around the variable name. If you omit these Groovy assumes you are using a String key and not referring to the variable itself.
+
+Now we can change the usage of the tag as follows:
+
+[source,xml]
+----
+<g:repeat times="3" var="j">
+<p>Repeat this 3 times! Current repeat = ${j}</p>
+</g:repeat>
+----
+
+Notice how we use the `var` attribute to define the name of the variable `j` and then we are able to reference that variable within the body of the tag.

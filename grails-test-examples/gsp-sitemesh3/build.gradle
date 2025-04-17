@@ -1,0 +1,55 @@
+buildscript {
+    repositories {
+        // mavenLocal()
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    }
+    dependencies {
+        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
+        classpath 'org.apache.grails:grails-gradle-plugins'
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    }
+}
+
+version = '0.0.1'
+group = 'org.sitemesh.grails.plugins.sitemesh3'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+apply plugin: 'com.bertramlabs.asset-pipeline'
+
+ext {
+    testForked = true
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-sitemesh3'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-controllers'
+    implementation 'org.apache.grails:grails-rest-transforms'
+
+    runtimeOnly 'org.apache.grails:grails-gsp'
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'org.fusesource.jansi:jansi'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
+    runtimeOnly 'org.apache.grails:grails-i18n'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    // JSP support
+    runtimeOnly 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api'
+    runtimeOnly 'org.apache.tomcat.embed:tomcat-embed-jasper'
+    runtimeOnly 'org.glassfish.web:jakarta.servlet.jsp.jstl'
+
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

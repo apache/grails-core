@@ -179,7 +179,7 @@ repositories {
     mavenLocal()
 }
 ...
-implementation "org.grails.plugins:quartz:0.1"
+implementation "org.apache.grails:grails-quartz:0.1"
 ----
 
 NOTE: In Grails 2.x plugins were packaged as ZIP files, however in Grails 3.x plugins are simple JAR files that can be added to the classpath of the IDE.
@@ -519,7 +519,7 @@ repositories {
     mavenLocal()
 }
 ...
-implementation "org.grails.plugins:quartz:0.1"
+implementation "org.apache.grails:grails-quartz:0.1"
 ----
 
 NOTE: In Grails 2.x plugins were packaged as ZIP files, however in Grails 3.x plugins are simple JAR files that can be added to the classpath of the IDE.

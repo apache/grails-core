@@ -1,0 +1,36 @@
+
+== headers
+
+
+
+=== Purpose
+
+
+Obtains the value of a named header
+
+
+=== Examples
+
+
+Reading a header's value:
+
+[,xml]
+----
+Format: <g:header name="Content-Type" />
+----
+
+Or testing for existence:
+
+[source,xml]
+----
+<g:if test="${header(name: 'User-Agent')}">Hello</g:if>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` - The name of the header
+

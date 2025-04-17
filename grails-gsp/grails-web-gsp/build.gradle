@@ -1,0 +1,117 @@
+plugins {
+    id 'groovy'
+    id 'project-report'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.views'
+
+ext {
+    pomTitle = 'Groovy Server Pages (GSP)'
+    pomDescription = 'Groovy Server Pages (GSP) - A server-side view rendering technology based on Groovy'
+    pomDevelopers = ['graemerocher': 'Graeme Rocher']
+    testForked = true
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+    compileOnly 'org.apache.ant:ant'
+    api project(':grails-gsp-core')
+    api project(':grails-web-common')
+    api project(':grails-web-taglib')
+
+//    api 'org.apache.grails:grails-core', { // GrailsDomainClass, CacheEntry, Environment, GrailsStringUtils, GrailsApplication, GrailsControllerClass, GrailsApplicationAware, ControllerArtefactHandler, GrailsPluginManager, GrailsFactoriesLoader
+//        // API dependencies in grails-core
+//        exclude group: 'org.apache.groovy', module: 'groovy'
+//        exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+//        exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+//        exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+//        exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+//        //exclude group: 'org.apache.grails.data', module: 'grails-datastore-core' // MappingContext
+//        //exclude group: 'org.apache.grails', module: 'grails-spring' // RuntimeSpringConfiguration
+//        exclude group: 'org.slf4j', module: 'jcl-over-slf4j'
+//        exclude group: 'org.slf4j', module: 'slf4j-api'
+//        exclude group: 'org.yaml', module: 'snakeyaml'
+//        exclude group: 'org.springframework', module: 'spring-beans'
+//        exclude group: 'org.springframework', module: 'spring-core'
+//        exclude group: 'org.springframework', module: 'spring-context'
+//        exclude group: 'org.springframework', module: 'spring-tx'
+//        exclude group: 'org.springframework.boot', module: 'spring-boot'
+//        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+//    }
+//    api project(':grails-gsp-core'), { // GroovyPage, GroovyPageBinding, GroovyPageMetaInfo, GroovyPagesTemplateEngine, GroovyPageScriptSource, DefaultGroovyPageLocator, GroovyPageScriptSource, GroovyPageCompiledScriptSource, GroovyPageResourceScriptSource
+//        // API dependencies in grails-gsp
+//        exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        exclude group: 'org.apache.groovy', module: 'groovy-templates'
+//        // Implementation dependencies in grails-gsp
+//        exclude group: 'org.apache.grails.web', module: 'grails-taglib'
+//    }
+//    api project(':grails-taglib'), { // GrailsTagException, TemplateVariableBinding, OutputEncodingSettings, WithCodecHelper
+//        // API dependencies in grails-taglib
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        exclude group: 'org.springframework', module: 'spring-core'
+//    }
+//    api project(':grails-web-common'), { // GrailsWebRequest, GrailsApplicationAttributes, MimeType, MimeTypeResolver, GroovyPagesUriService, DefaultGroovyPagesUriService, AbstractGrailsView, GrailsViewResolver
+//        // API dependencies in grails-web-common
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.apache.grails', module: 'grails-databinding'
+//        exclude group: 'org.apache.grails', module: 'grails-encoder'
+//        //exclude group: 'org.apache.groovy', module: 'groovy-templates' // TemplateEngine needed downstream
+//        exclude group: 'org.springframework', module: 'spring-webmvc'
+//        exclude group: 'org.springframework', module: 'spring-context-support'
+//    }
+//    api 'org.springframework:spring-beans' // InitializingBean, Autowired
+//    api 'org.springframework:spring-context' // ScriptSource
+//    api 'org.springframework:spring-web' // WebApplicationContext, RequestAttributes, RequestContextHolder, ServletRequestAttributes, WebUtils
+//    api 'org.springframework:spring-webmvc' // FrameworkServlet, View, InternalResourceViewResolver, AbstractUrlBasedView
+//
+//    implementation 'org.apache.groovy:groovy-templates' // Template
+//    implementation project(':grails-bootstrap'), { // GrailsNameUtils, GrailsResourceUtils
+//        // API dependencies in grails-bootstrap
+//        exclude group: 'org.yaml', module: 'snakeyaml'
+//    }
+//    implementation 'org.apache.grails.web:grails-encoder', { // CodecPrintWriter, FastStringWriter, EncodedAppenderWriterFactory, Encoder, StreamingEncoder, StreamingEncoderWriter
+//        // API dependencies in grails-encoder
+//        exclude group: 'org.apache.groovy', module: 'groovy'
+//        exclude group: 'org.apache.groovy', module: 'groovy-json'
+//        exclude group: 'org.apache.grails', module: 'grails-core'
+//        exclude group: 'org.slf4j', module: 'jcl-over-slf4j'
+//        exclude group: 'org.slf4j', module: 'slf4j-api'
+//        exclude group: 'org.springframework', module: 'spring-web'
+//    }
+//    implementation 'org.springframework:spring-core' // ByteArrayResource, Assert, ReflectionUtils
+//
+//    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+//    compileOnly 'org.apache.ant:ant' // BuildException, DirectoryScanner, MatchingTask, Path, Reference
+//    compileOnly 'org.apache.groovy:groovy'
+//
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'net.bytebuddy:byte-buddy'
+    testImplementation project(':grails-web-common'), { // GrailsWebMockUtil
+        // API dependencies in grails-web-common
+        exclude group: 'org.apache.grails', module: 'grails-core'
+        exclude group: 'org.apache.grails', module: 'grails-databinding'
+        exclude group: 'org.apache.grails', module: 'grails-encoder'
+        exclude group: 'org.apache.groovy', module: 'groovy-templates'
+        exclude group: 'org.springframework', module: 'spring-webmvc'
+        exclude group: 'org.springframework', module: 'spring-context-support'
+    }
+    testImplementation 'org.apache.groovy:groovy-xml'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test' // MockHttpServletRequest is transitively used by GrailsWebMockUtils in grails-web-common
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

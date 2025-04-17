@@ -1,0 +1,31 @@
+
+== fieldError
+
+
+
+=== Purpose
+
+
+Renders an error message for the given bean and field.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:fieldError bean="${book}" field="title" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `bean` (required) - The bean to check for errors
+* `field` (required) - The field of the bean or model reference to check
+* `message` (optional) -The object to resolve the message for. Objects must implement {springapi}org/springframework/context/MessageSourceResolvable.html[MessageSourceResolvable] interface.
+* `encodeAs` (optional) - The name of a codec to apply, i.e. HTML, JavaScript, URL etc.
+* `locale` (optional) -  override locale to use instead of the one detected.
+

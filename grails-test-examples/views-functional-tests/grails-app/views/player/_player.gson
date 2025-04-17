@@ -1,0 +1,10 @@
+
+import functional.tests.Player
+
+model {
+    Player player
+}
+
+json g.render(player) {
+    sport "football"
+}

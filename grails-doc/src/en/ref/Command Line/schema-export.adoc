@@ -1,16 +1,16 @@
 
-= schema-export
+== schema-export
 
 
 
-== Purpose
+=== Purpose
 
 
 Uses Hibernate's SchemaExport tool to generate DDL or export the schema.
 NOTE: As of Grails 3, the Hibernate plugin is not by default on the build classpath. You need to add it to the build classpath to get the command working.
 
 
-== Examples
+=== Examples
 
 
 [source,groovy]
@@ -36,7 +36,7 @@ grails prod schema-export stdout
 ----
 
 
-== Description
+=== Description
 
 
 Usage:
@@ -56,13 +56,13 @@ Arguments:
 
 
 
-= Gradle runCommand `schema-export` Command
+== Gradle runCommand `schema-export` Command
 
-== Purpose
+=== Purpose
 
 The `schema-export` command uses Hibernate's SchemaExport tool to generate Data Definition Language (DDL) or export the schema. You need to add it to the build classpath for this command to work properly.
 
-== Examples
+=== Examples
 
 [source,groovy,subs="attributes+"]
 build.gradle
@@ -87,7 +87,7 @@ $ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export export --datasour
 $ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export stdout"
 ----
 
-== Description
+=== Description
 
 Usage:
 

@@ -1,0 +1,9 @@
+
+model {
+    functional.tests.Test test
+}
+
+json.test {
+    name test.name
+    age 60
+}

@@ -1,5 +1,5 @@
 rootProject.subprojects
-        .findAll {!(it.name in testProjects) && it.name != 'grails-doc' }
+        .findAll { !(it.name in testProjects) && it.name != 'grails-doc' }
         .each { project.evaluationDependsOn(it.path) }
 
 configurations.configureEach {
@@ -12,8 +12,7 @@ configurations.configureEach {
                 def substitutedArtifact = "$possibleProject.group:$artifactId"
                 if (possibleProject.name == 'grails-bom') {
                     substitute module(substitutedArtifact) using platform(project(':grails-bom'))
-                }
-                else {
+                } else {
                     substitute module(substitutedArtifact) using project(":$possibleProject.name")
                 }
             }
@@ -22,25 +21,44 @@ configurations.configureEach {
 }
 
 // work around for parallel builds due to https://github.com/bertramdev/asset-pipeline/issues/177
-if('assetCompile' in tasks.names) {
-    tasks.named('assetCompile') { Task task ->
+if ('assetCompile' in tasks.names) {
+    tasks.named('assetCompile').configure { Task task ->
         task.outputs.dir rootProject.layout.buildDirectory.dir('asset-serialize')
     }
 }
 
+def debugArguments = [
+        '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
+        '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
+]
 tasks.withType(Test).configureEach {
     onlyIf { !project.hasProperty('skipFunctionalTests') }
     useJUnitPlatform()
     testLogging {
-        events('passed', 'skipped', 'failed')
+        events('passed', 'skipped', 'failed', 'standardOut', 'standardError')
         showExceptions = true
         exceptionFormat = 'full'
         showCauses = true
         showStackTraces = true
     }
+    if (findProperty('testForked')) {
+        if (isCiBuild) {
+            maxParallelForks = findProperty('testMaxParallelFork') ?: 2
+            forkEvery = findProperty('testForkEvery') ?: 0
+        } else {
+            maxParallelForks = findProperty('testMaxParallelFork') ?: 4
+            forkEvery = findProperty('testForkEvery') ?: 0
+        }
+    }
+    if (findProperty('testJvmArgs')) {
+        jvmArgs = findProperty('testJvmArgs')
+    }
+    if (System.getProperty('debug.tests')) {
+        jvmArgs += debugArguments
+    }
 }
 
-tasks.named('groovydoc') {
+tasks.named('groovydoc').configure {
     // We don't need to generate docs for test projects
     enabled = false
 }

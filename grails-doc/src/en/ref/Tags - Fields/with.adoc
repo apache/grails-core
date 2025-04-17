@@ -1,0 +1,64 @@
+==== f:with
+
+===== Purpose
+
+Places a bean in scope so that the bean attribute can be omitted on contained tags.
+
+===== Example
+
+[source,groovy]
+----
+<f:with bean="person">
+    <f:field property="name"/>
+    <f:field property="address.city"/>
+</f:with>
+----
+
+===== Attributes
+
+[format="csv", options="header"]
+|===
+
+*Name*,*Required?*,*Description*
+*bean*,yes,The bean whose property is being rendered. This can be the object itself or the name of a page-scope variable.
+*prefix*,String,A string (including the trailing period) that should be appended before the input name such as `name="${prefix}propertyName"`.  The label is also modified.
+|===
+
+
+===== Extra attributes (Since version 2.1.4)
+
+You can pass any number of extra attributes to the *with* tag that will be propagated to the inner fields and displays.
+
+[source,groovy]
+----
+<f:with bean="person" wrapper="someWrapper">
+ <f:field property="name"/>
+ <f:field property="address.city"/>
+</f:with>
+----
+
+That way you don't need to repeat the same attribute over and over.
+The code above is the same as:
+
+[source,groovy]
+----
+<f:with bean="person">
+ <f:field property="name" wrapper="someWrapper"/>
+ <f:field property="address.city" wrapper="someWrapper"/>
+</f:with>
+----
+
+===== Override extra attributes
+
+You can override the extra attributes on any field just changing the attribute value on the popper field or display
+
+[source,groovy]
+----
+<f:with bean="person" wrapper="someWrapper">
+ <f:field property="name"/>
+ <f:field property="address.city"/>
+ <f:field property="address.zip" wrapper="differentWrapper"/>
+</f:with>
+----
+
+NOTE: Remember that if you want to use some of those attributes in the *widget* or *displayWidget* templates you need to prefix them with the *widget-* word (unless you have configured another prefix)

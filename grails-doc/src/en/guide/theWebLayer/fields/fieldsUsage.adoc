@@ -1,0 +1,146 @@
+The plugin provides a set of tags you can use to render the fields in a form.
+
+In the simplest case you can use `f:all` to render a field for every property of a bean (the domain object or command the form will bind to):
+
+[source,groovy]
+----
+<g:form…>
+    <f:all bean="person"/>
+</g:form>
+----
+
+To render individual fields you use the `f:field` tag:
+
+[source,groovy]
+----
+<g:form…>
+    <f:field bean="person" property="name"/>
+    <f:field bean="person" property="address"/>
+    <f:field bean="person" property="dateOfBirth"/>
+</g:form>
+----
+
+The `f:field` tag will automatically handle embedded domain properties recursively:
+
+[source,groovy]
+----
+<f:field bean="person" property="address"/>
+----
+
+If there is no bean object backing a form but you still want to render the surrounding field markup you can give `f:field` a body:
+
+[source,groovy]
+----
+<f:field property="password">
+    <g:password name="password"/>
+</f:field>
+----
+
+It should be an unusual case but to render just the widget without its surrounding container you can use the `f:widget` tag:
+
+[source,groovy]
+----
+<f:widget bean="person" property="name"/>
+----
+
+To make it more convenient when rendering lots of properties of the same `bean` you can use the `f:with` tag to avoid having to specify `bean` on any tags nested inside:
+
+[source,groovy]
+----
+<g:form…>
+    <f:with bean="person">
+        <f:field property="name"/>
+        <f:field property="address"/>
+        <f:field property="dateOfBirth"/>
+    </f:with>
+</g:form>
+----
+
+If you need to render a property for display purposes you can use `f:display`. It will internally use `g:fieldValue`, `g:formatBoolean` or `g:formatDate` to format the value.
+
+[source,groovy]
+----
+<f:display bean="person" property="name"/>
+----
+
+If you need to render the value in a different way you can give `f:display` a body instead.
+
+[source,groovy]
+----
+<f:display bean="person" property="dateOfBirth">
+    <g:formatDate format="dd MMM yyyy" date="${value}"/>
+</f:display>
+----
+
+By default `f:display` simply renders the property value but if you supply a `\_display.gsp` template you can render the value in some structured markup, e.g. a table cell or list item. See the <<customizingFieldRendering,Customizing Field Rendering>> section for how to override templates. For example to render values in a definition list you could use a template like this:
+
+[source,groovy]
+----
+<dt>${label}</dt>
+<dd>${value}</dd>
+----
+
+
+=== Extra attributes (Since version 2.1.4)
+
+
+You can pass any number of extra attributes to the `f:with` and `f:all` tags that will be propagated to the inner fields and displays.
+See their individual tags sections for more information.
+
+
+=== Breaking changes
+
+
+
+=== Templates
+
+The names of the templates were changed for more adequate ones:
+
+* `_field` to `_wrapper`
+* `_input` to `_widget`
+* `_display` to `_displayWrapper`
+* `_displayWidget` was added
+
+To use the old names (for backwards compatibility), configure the following in `Config.groovy`
+
+[source,groovy]
+----
+grails.plugin.fields.wrapper = "field"
+grails.plugin.fields.displayWrapper = "display"
+grails.plugin.fields.widget = "input"
+----
+
+
+=== Widget attributes
+
+To pass additional attributes to widgets, prefix them with 'widget-'.
+
+Example:
+[source,groovy]
+----
+<f:field property="birthDate" widget-format="dd/MM/yyyy"/>
+----
+
+To use the old prefix (for backwards compatibility), configure the following in `Config.groovy`:
+[source,groovy]
+----
+grails.plugin.fields.widgetPrefix = "input-"
+----
+
+
+=== Changes in tags
+
+* The `f:input` tag was deprecated because the name was confusing. Use the new `f:widget` tag instead.
+* The `f:displayWidget` tag was added. It outputs the widget for display purposes, without the wrapper (similar to the `widget` tag).
+
+
+=== Localized numbers
+
+All numbers are now rendered localized. This means that when using `Locale.ENGLISH` the number 1000.50 is represented
+as `1,000.50` but with `Locale.GERMAN` is represented as `1.000,50`. To use the old behavior (for backwards compatibility)
+without localizing the numbers, configure the following in `Config.groovy`:
+[source,groovy]
+----
+grails.plugin.fields.localizeNumbers = false
+----
+

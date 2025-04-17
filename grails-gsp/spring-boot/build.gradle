@@ -1,0 +1,18 @@
+plugins {
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+apply plugin: 'org.apache.grails.gradle.grails-plugin'
+
+ext {
+    pomTitle = 'GSP Spring Boot Plugin'
+    pomDescription = 'Provides GSP for Spring Boot Applications'
+    pomDevelopers = ['graemerocher': 'Graeme Rocher', lhotari: 'Lari Hotari', codeconsole: 'Scott Murphy Heiberg']
+}
+
+dependencies {
+    api project(':grails-sitemesh3')
+}

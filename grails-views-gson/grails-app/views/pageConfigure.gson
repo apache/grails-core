@@ -1,0 +1,6 @@
+response.header(foo:"bar")
+response.contentType "application/hal+json"
+
+json.person {
+    name "Bob"
+}

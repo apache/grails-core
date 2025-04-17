@@ -1,0 +1,170 @@
+
+==== Creating Layouts
+
+
+Grails leverages https://github.com/sitemesh[Sitemesh], a decorator engine, to support view layouts. Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
+
+[source,xml]
+----
+<html>
+    <head>
+        <title><g:layoutTitle default="An example decorator" /></title>
+        <g:layoutHead />
+    </head>
+    <body onload="${pageProperty(name:'body.onload')}">
+        <div class="menu"><!--my common menu goes here--></div>
+        <div class="body">
+            <g:layoutBody />
+        </div>
+    </body>
+</html>
+----
+
+The key elements are the xref:../../../ref/Tags%20-%20GSP/layoutHead.adoc[layoutHead], xref:../../../ref/Tags%20-%20GSP/layoutTitle.adoc[layoutTitle] and xref:../../../ref/Tags%20-%20GSP/layoutBody.adoc[layoutBody] tag invocations:
+
+* `layoutTitle` - outputs the target page's title
+* `layoutHead` - outputs the target page's head tag contents
+* `layoutBody` - outputs the target page's body tag contents
+
+The previous example also demonstrates the xref:../../../ref/Tags%20-%20GSP/pageProperty.adoc[pageProperty] tag which can be used to inspect and return aspects of the target page.
+
+
+==== Triggering Layouts
+
+
+There are a few ways to trigger a layout. The simplest is to add a meta tag to the view:
+
+[source,xml]
+----
+<html>
+    <head>
+        <title>An Example Page</title>
+        <meta name="layout" content="main" />
+    </head>
+    <body>This is my content!</body>
+</html>
+----
+
+In this case a layout called `grails-app/views/layouts/main.gsp` will be used to lay out the page. If we were to use the layout from the previous section the output would resemble this:
+
+[source,xml]
+----
+<html>
+    <head>
+        <title>An Example Page</title>
+    </head>
+    <body onload="">
+        <div class="menu"><!--my common menu goes here--></div>
+        <div class="body">
+            This is my content!
+        </div>
+    </body>
+</html>
+----
+
+
+==== Specifying A Layout In A Controller
+
+
+Another way to specify a layout is to specify the name of the layout by assigning a value to the "layout" property in a controller. For example, if you have a controller such as:
+
+[source,groovy]
+----
+class BookController {
+    static layout = 'customer'
+
+    def list() { /*...*/ }
+}
+----
+
+You can create a layout called `grails-app/views/layouts/customer.gsp` which will be applied to all views that the `BookController` delegates to.  The value of the `layout` property may contain a directory structure relative to the `grails-app/views/layouts/` directory.  For example:
+
+[source,groovy]
+----
+class BookController {
+    static layout = 'custom/customer'
+
+    def list() { /*...*/ }
+}
+----
+
+Views rendered from that controller would be decorated with the `grails-app/views/layouts/custom/customer.gsp` template.
+
+
+==== Layout by Convention
+
+
+Another way to associate layouts is to use "layout by convention". For example, if you have this controller:
+
+[source,groovy]
+----
+class BookController {
+    def list() { /*...*/ }
+}
+----
+
+You can create a layout called `grails-app/views/layouts/book.gsp`, which will be applied to all views that the `BookController` delegates to.
+
+Alternatively, you can create a layout called `grails-app/views/layouts/book/list.gsp` which will only be applied to the `list` action within the `BookController`.
+
+If you have both the above-mentioned layouts in place the layout specific to the action will take precedence when the list action is executed.
+
+If a layout is not located using any of those conventions, the convention of last resort is to look for the application default layout which
+is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.sitemesh.default.layout`
+in the application configuration as follows:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails.sitemesh.default.layout: myLayoutName
+----
+
+With that property in place, the application default layout will be `grails-app/views/layouts/myLayoutName.gsp`.
+
+
+==== Inline Layouts
+
+
+Grails' also supports Sitemesh's concept of inline layouts with the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag. This can be used to apply a layout to a template, URL or arbitrary section of content. This lets you even further modularize your view structure by "decorating" your template includes.
+
+Some examples of usage can be seen below:
+
+[,xml]
+----
+<g:applyLayout name="myLayout" template="bookTemplate" collection="${books}" />
+
+<g:applyLayout name="myLayout" url="https://www.google.com" />
+
+<g:applyLayout name="myLayout">
+The content to apply a layout to
+</g:applyLayout>
+----
+
+
+==== Server-Side Includes
+
+
+While the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag is useful for applying layouts to external content, if you simply want to include external content in the current page you use the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag:
+
+[source,xml]
+----
+<g:include controller="book" action="list" />
+----
+
+You can even combine the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag and the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag for added flexibility:
+
+[source,xml]
+----
+<g:applyLayout name="myLayout">
+   <g:include controller="book" action="list" />
+</g:applyLayout>
+----
+
+Finally, you can also call the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag from a controller or tag library as a method:
+
+[source,groovy]
+----
+def content = include(controller:"book", action:"list")
+----
+
+The resulting content will be provided via the return value of the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag.

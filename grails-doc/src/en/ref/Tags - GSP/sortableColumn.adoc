@@ -1,0 +1,46 @@
+
+== sortableColumn
+
+
+
+=== Purpose
+
+
+Renders a sortable column to support sorting in tables.
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:sortableColumn property="title" title="Title" />
+
+<g:sortableColumn property="title" title="Title"
+                  style="width: 200px" />
+
+<g:sortableColumn property="title" titleKey="book.title" />
+
+<g:sortableColumn property="releaseDate"
+                  defaultOrder="desc" title="Release Date" />
+
+<g:sortableColumn property="releaseDate" defaultOrder="desc"
+                  title="Release Date" titleKey="book.releaseDate" />
+----
+
+
+=== Description
+
+
+Either the `title` or `titleKey` attribute is required. `titleKey` takes precedence when both attributes are specified resulting in the title caption being resolved against the message source. In the case when the message can not be resolved, the title is used as the title caption.
+
+Attributes
+
+* `property` - name of the property relating to the field
+* `defaultOrder` (optional) - default order for the property; choose between 'asc' (default if not provided) and 'desc'
+* `title` (optional) - title caption for the column
+* `titleKey` (optional) - title key to use for the column, resolved against the message source
+* `params` (optional) - a Map containing request parameters
+* `action` (optional) - the name of the action to use in the link; if not specified the `list` action will be used
+* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc[named URL mapping] to use to rewrite the link
+

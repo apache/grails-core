@@ -9,7 +9,7 @@ The way for an application to express a dependency on the scaffolding plugin is 
 ----
 dependencies {
         // ...
-        implementation "org.grails.plugins:scaffolding"
+        implementation "org.apache.grails:grails-scaffolding:{version}"
         // ...
     }
 ----

@@ -1,0 +1,36 @@
+
+== cookie
+
+
+
+=== Purpose
+
+
+Obtains the value of a named cookie
+
+
+=== Examples
+
+
+Reading a cookie's value:
+
+[,xml]
+----
+Hello <g:cookie name="myCookie" />
+----
+
+Or testing for existence:
+
+[source,xml]
+----
+<g:if test="${cookie(name:'myCookie')}">Hello</g:if>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` - The name of the cookie
+

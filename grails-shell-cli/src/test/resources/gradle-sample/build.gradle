@@ -1,5 +1,5 @@
 apply plugin:'java'
 
 subprojects {
-    task hello << {println "Hello World!"}
+    task hello << {println 'Hello World!'}
 }

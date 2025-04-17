@@ -1,0 +1,37 @@
+As demonstrated in the previous example it is easy to write simple tags that have no body and just output content. Another example is a `dateFormat` style tag:
+
+[source,groovy]
+----
+def dateFormat = { attrs, body ->
+    out << new java.text.SimpleDateFormat(attrs.format).format(attrs.date)
+}
+----
+
+The above uses Java's `SimpleDateFormat` class to format a date and then write it to the response. The tag can then be used within a GSP as follows:
+
+[source,xml]
+----
+<g:dateFormat format="dd-MM-yyyy" date="${new Date()}" />
+----
+
+With simple tags sometimes you need to write HTML mark-up to the response. One approach would be to embed the content directly:
+
+[source,groovy]
+----
+def formatBook = { attrs, body ->
+    out << "<div id=\"${attrs.book.id}\">"
+    out << "Title : ${attrs.book.title}"
+    out << "</div>"
+}
+----
+
+Although this approach may be tempting it is not very clean. A better approach would be to reuse the xref:../../../../ref/Tags%20-%20GSP/render.adoc[render] tag:
+
+[source,groovy]
+----
+def formatBook = { attrs, body ->
+    out << render(template: "bookTemplate", model: [book: attrs.book])
+}
+----
+
+And then have a separate GSP template that does the actual rendering.

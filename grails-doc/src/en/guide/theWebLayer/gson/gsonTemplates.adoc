@@ -1,0 +1,200 @@
+== Template Basics
+
+You can define templates starting with underscore `_`. For example given the following template called `_person.gson`:
+
+[source,groovy]
+.`grails-app/views/person/_person.gson`
+model {
+    Person person
+}
+json {
+    name person.name
+    age person.age
+}
+
+You can render the template with the `g.render` method:
+
+[source,groovy] 
+.`grails-app/views/person/show.gson`   
+model {
+    Person person
+}
+json g.render(template:"person", model:[person:person])
+
+The above assumes the view is in the same directory as the template. If this is not the case you may need to use a relative URI to the template:
+
+[source,groovy] 
+.`grails-app/views/family/show.gson`   
+model {
+    Person person
+}
+json g.render(template:"/person/person", model:[person:person])
+    
+== Template Namespace
+
+The previous example can be simplified using the template namespace:
+
+[source,groovy] 
+.`grails-app/views/person/show.gson`   
+model {
+    Person person
+}
+json tmpl.person(person)
+
+In this example, the name of the method call (`person` in this case) is used to dictate which template to render.
+
+The argument to the template becomes the model. The name of the model variable is the same as the template name. If you wish to alter this you can pass a map instead:
+
+[source,groovy] 
+.`grails-app/views/person/show.gson`   
+model {
+    Person person
+}
+json tmpl.person(individual:person)
+
+In the above example the model variable passed to the `_person.gson` template is called `individual`. 
+
+This technique may also be used when you want to render a template using a relative path:
+
+[source,groovy] 
+.`grails-app/views/person/show.gson`   
+model {
+    Person person
+}
+json tmpl.'/person/person'(person:person)
+
+The template namespace even accepts a collection (or any `Iterable` object):
+
+[source,groovy] 
+.`grails-app/views/person/show.gson`   
+model {
+    List<Person> people = []
+}
+json tmpl.person(people)
+
+In this case the output is a JSON array. For example:
+
+[source,javascript]
+    [{"name":"Fred",age:10},{"name":"Bob",age:12}]
+
+When rendering an `Iterable`, you can also specify the model name:
+
+[source,groovy]
+.`grails-app/views/person/show.gson`
+model {
+    List<Person> people = []
+}
+json tmpl.person("owner", people)
+
+The `person` template would have a field defined: `Person owner`
+
+If you need additional data that will be static over each iteration of the template, you can also pass in a model:
+
+[source,groovy]
+.`grails-app/views/person/show.gson`
+model {
+    List<Person> people = []
+}
+json tmpl.person(people, [relationship: "Father"])
+
+The `person` template could have a field defined: `String relationship`
+
+By passing in a collection the plugin will iterate over each element on the collection and render the template as a JSON array. If you do not want this to happen then use the variation of the method that takes a map instead:
+
+[source,groovy] 
+.`grails-app/views/person/show.gson`   
+model {
+    List<Person> people = []
+}
+json tmpl.person(people:people)
+
+== More Ways to Render Templates
+
+The `g.render` method is flexible, you can render templates in many forms:
+
+[source,groovy]
+model {
+    Family family
+}
+json {
+    name family.father.name
+    age family.father.age
+    oldestChild g.render(template:"person", model:[person: family.children.max { Person p -> p.age } ])
+    children g.render(template:"person", collection: family.children, var:'person')
+}
+
+However, most of these use cases are more concise with the template namespace:
+
+[source,groovy]
+model {
+    Family family
+}
+json {
+    name family.father.name
+    age family.father.age
+    oldestChild tmpl.person( family.children.max { Person p -> p.age } ] )
+    children tmpl.person( family.children )
+}
+
+== Template Inheritance
+
+JSON templates can inherit from a parent template. For example consider the following parent template:
+
+
+[source,groovy]
+.`grails-app/views/_parent.gson`
+model {
+    Object object
+}
+json {
+    hal.links(object)
+    version "1.0"
+}
+
+A child template can inherit from the above template by using the `inherits` method:
+
+[source,groovy]
+.`grails-app/views/_person.gson`
+inherits template:"parent"
+model {
+    Person person
+}
+json {
+    name person.name
+}
+
+The JSON from the parent and the child template will be combined so that the output is:
+
+[source,json]
+ {
+   "_links": {
+     "self": {
+       "href": "http://localhost:8080/person/1",
+       "hreflang": "en",
+       "type": "application/hal+json"
+     }
+   },
+   "version": "1.0",
+   "name": "Fred"
+ }
+
+The parent template's model will be formulated from the child templates model and the super class name. For example if the model is `Person person` where `Person` extends from `Object` then the final model passed to the parent template will look like:
+
+[source,groovy]
+-----
+[person:person, object:person]
+-----
+
+If the `Person` class extended from a class called `Mammal` then the model passed to the parent would be:
+
+[source,groovy]
+-----
+[person:person, mammal:person]
+-----
+
+This allows you to design your templates around object inheritance.
+
+You can customize the model passed to the parent template using the `model` argument:
+
+[source,groovy]
+inherits template:"parent", model:[person:person]

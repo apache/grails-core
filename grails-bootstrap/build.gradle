@@ -12,8 +12,8 @@ group = 'org.apache.grails.bootstrap'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation "org.springframework:spring-context"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
     api 'org.apache.grails.gradle:grails-gradle-model', {
         exclude group: 'org.codehaus.groovy'
@@ -26,17 +26,17 @@ dependencies {
     compileOnly "org.codehaus.groovy:groovy-xml:$GroovySystem.version"
     compileOnly "org.codehaus.groovy:groovy-ant:$GroovySystem.version"
 
-    compileOnly "io.methvin:directory-watcher"
-    compileOnly "org.fusesource.jansi:jansi"
-    compileOnly "jline:jline"
-    compileOnly "net.java.dev.jna:jna"
+    compileOnly 'io.methvin:directory-watcher'
+    compileOnly 'org.fusesource.jansi:jansi'
+    compileOnly 'jline:jline'
+    compileOnly 'net.java.dev.jna:jna'
 
-    api "org.yaml:snakeyaml"
+    api 'org.yaml:snakeyaml'
 
-    testImplementation "org.apache.groovy:groovy-xml"
-    testImplementation "org.apache.groovy:groovy-templates"
-    testImplementation "org.fusesource.jansi:jansi"
-    testImplementation "jline:jline"
+    testImplementation 'org.apache.groovy:groovy-xml'
+    testImplementation 'org.apache.groovy:groovy-templates'
+    testImplementation 'org.fusesource.jansi:jansi'
+    testImplementation 'jline:jline'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -57,14 +57,15 @@ dependencies {
 }
 
 processResources {
-    inputs.property "version", version
-    filter(ReplaceTokens, tokens:[version:version])
+    inputs.property 'version', version
+    filter(ReplaceTokens, tokens: [version: version])
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

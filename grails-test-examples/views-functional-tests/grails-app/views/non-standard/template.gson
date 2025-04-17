@@ -1,0 +1,12 @@
+import functional.tests.Book
+import functional.tests.CustomClass
+
+model {
+    Book book
+    CustomClass custom
+}
+
+json {
+    bookTitle book.title
+    custom custom
+}

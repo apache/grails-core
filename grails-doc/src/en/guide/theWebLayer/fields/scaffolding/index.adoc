@@ -1,0 +1,17 @@
+= Grails Scaffolding
+:author: James Kleeh
+:email: kleehj@ociweb.com
+:source-highlighter: coderay
+:numbered:
+
+== Introduction
+
+include::introduction.adoc[]
+
+include::definitions/index.adoc[]
+
+include::installation/index.adoc[]
+
+include::usage/index.adoc[]
+
+include::extending/index.adoc[]

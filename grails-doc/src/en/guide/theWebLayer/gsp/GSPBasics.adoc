@@ -1,0 +1,37 @@
+In the next view sections we'll go through the basics of GSP and what is available to you. First off let's cover some basic syntax that users of JSP and ASP should be familiar with.
+
+GSP supports the usage of `<% %>` scriptlet blocks to embed Groovy code (again this is discouraged):
+
+[,xml]
+----
+<html>
+   <body>
+     <% out << "Hello GSP!" %>
+   </body>
+</html>
+----
+
+You can also use the `<%= %>` syntax to output values:
+
+[,xml]
+----
+<html>
+   <body>
+     <%="Hello GSP!" %>
+   </body>
+</html>
+----
+
+GSP also supports JSP-style server-side comments (which are not rendered in the HTML response) as the following example demonstrates:
+
+[,xml]
+----
+<html>
+   <body>
+     <%-- This is my comment --%>
+     <%="Hello GSP!" %>
+   </body>
+</html>
+----
+
+WARNING: Embedding data received from user input has the risk of making your application vulnerable to an Cross Site Scripting (XSS) attack. Please read the documentation under link:security.html#xssPrevention[XSS prevention] for information on how to prevent XSS attacks.

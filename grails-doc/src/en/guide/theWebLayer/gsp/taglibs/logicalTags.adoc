@@ -1,0 +1,20 @@
+You can also create logical tags where the body of the tag is only output once a set of conditions have been met. An example of this may be a set of security tags:
+
+[source,groovy]
+----
+def isAdmin = { attrs, body ->
+    def user = attrs.user
+    if (user && checkUserPrivs(user)) {
+        out << body()
+    }
+}
+----
+
+The tag above checks if the user is an administrator and only outputs the body content if he/she has the correct set of access privileges:
+
+[source,xml]
+----
+<g:isAdmin user="${myUser}">
+    // some restricted content
+</g:isAdmin>
+----

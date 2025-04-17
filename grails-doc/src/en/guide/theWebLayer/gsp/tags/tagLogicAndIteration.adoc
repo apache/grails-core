@@ -1,0 +1,25 @@
+GSP also supports logical and iterative tags out of the box. For logic there are xref:../../../../ref/Tags%20-%20GSP/if.adoc[if], xref:../../../../ref/Tags%20-%20GSP/else.adoc[else] and xref:../../../../ref/Tags%20-%20GSP/elseif.adoc[elseif] tags for use with branching:
+
+[,xml]
+----
+<g:if test="${session.role == 'admin'}">
+   <%-- show administrative functions --%>
+</g:if>
+<g:else>
+   <%-- show basic functions --%>
+</g:else>
+----
+
+Use xref:../../../../ref/Tags%20-%20GSP/each.adoc[each] and xref:../../../../ref/Tags%20-%20GSP/while.adoc[while] tags for iteration:
+
+[,xml]
+----
+<g:each in="${[1,2,3]}" var="num">
+   <p>Number ${num}</p>
+</g:each>
+
+<g:set var="num" value="${1}" />
+<g:while test="${num < 5 }">
+    <p>Number ${num++}</p>
+</g:while>
+----

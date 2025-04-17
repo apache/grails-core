@@ -1,0 +1,2 @@
+## grails-plugin-gsp
+

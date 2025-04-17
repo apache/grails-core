@@ -1,0 +1,11 @@
+
+import functional.tests.Circular
+
+model {
+    Circular circular
+}
+
+json {
+    name circular.name
+    children tmpl.circ(circular.circulars)
+}

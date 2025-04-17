@@ -1,0 +1,23 @@
+All Markup views subclass the link:{api}/grails/plugin/markup/view/MarkupViewTemplate.html[MarkupViewTemplate] class by default.
+
+The `MarkupViewTemplate` superclass implements the link:{api}/grails/plugin/markup/view/api/MarkupView.html[MarkupView] trait which in turn extends the the link:{api}/grails/views/api/GrailsView.html[GrailsView] trait.
+
+Much of the API is shared between JSON and Markup views. However, one difference compared to JSON views is that you must use `this` as a prefix when refering to properties from the parent class. For example to generate links this will produce a compilation error:
+
+[source,groovy]
+cars {
+   cars.each {
+       car(make: it.make, href: g.link(controller:'car'))
+   }
+}
+
+However, the following works fine:
+
+[source,groovy]
+cars {
+   cars.each {
+       car(make: it.make, href: this.g.link(controller:'car'))
+   }
+}
+
+Notice the `this` prefix when refering to `this.g.link(..)`. 

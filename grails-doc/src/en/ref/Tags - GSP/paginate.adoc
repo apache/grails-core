@@ -1,0 +1,74 @@
+
+== paginate
+
+
+
+=== Purpose
+
+
+Creates next/previous buttons and a breadcrumb trail for pagination of results
+
+
+=== Examples
+
+
+Example domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    String author
+}
+----
+
+Example controller:
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        [books: Book.list(params), bookCount: Book.count()]
+    }
+}
+----
+
+Paginate code:
+
+[source,xml]
+----
+<g:paginate controller="book" action="list" total="${bookCount}" />
+----
+
+or
+
+[source,xml]
+----
+<g:paginate next="Forward" prev="Back"
+            maxsteps="0" controller="book"
+            action="list" total="${bookCount}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `total` (required) - The total number of results to paginate
+* `action` (optional) - the name of the action to use in the link; if not specified the default action will be linked
+* `controller` (optional) - the name of the controller to use in the link; if not specified the current controller will be linked
+* `id` (optional) - The id to use in the link
+* `params` (optional) - A Map of request parameters
+* `prev` (optional) - The text to display for the previous link (defaults to "Previous" as defined by `default.paginate.prev` property in the i18n `messages.properties` file)
+* `next` (optional) - The text to display for the next link (defaults to "Next" as defined by `default.paginate.next` property in the i18n `messages.properties` file)
+* `omitPrev` (optional) - If set to true, the previous link will never be shown
+* `omitNext` (optional) -  If set to true, the next link will never be shown
+* `omitFirst` (optional) -  If set to true, the first page link will only be shown when the first page is within the offset
+* `omitLast` (optional) -  If set to true, the last page link will only be shown when the last page is within the offset
+* `max` (optional) - The number of records to display per page (defaults to 10). Used ONLY if `params.max` is empty
+* `maxsteps` (optional) - The number of steps displayed for pagination (defaults to 10). Used ONLY if `params.maxsteps` is empty
+* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc[named URL mapping] to use to rewrite the link
+* `offset` (optional) - Used ONLY if `params.offset` is empty
+
+

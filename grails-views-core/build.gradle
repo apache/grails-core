@@ -1,0 +1,42 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.views'
+
+ext {
+    pomDescription = 'Grails Views Core'
+    pomDevelopers = [ 'graemerocher': 'Graeme Rocher', 'puneetbehl': 'Puneet Behl' ]
+    testForked = true
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api 'com.github.ben-manes.caffeine:caffeine' // Used in public API
+    api 'org.apache.grails.data:grails-datastore-core' // MappingContext is used in public API
+    api project(':grails-mimetypes') // MimeUtility is used in public API
+    api project(':grails-rest-transforms') // Used in public API
+    api project(':grails-web-url-mappings') // LinkGenerator is used in public API
+    api 'org.springframework:spring-context' // MessageSource is used in public API
+
+    implementation project(':grails-bootstrap')
+    implementation project(':grails-core')
+    implementation 'org.apache.grails.data:grails-datamapping-support'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'org.springframework:spring-beans'
+
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warnings about missing slf4j implementation during test task
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

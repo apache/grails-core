@@ -1,0 +1,14 @@
+Within the scope of a tag library there are a number of pre-defined variables including:
+
+* `actionName` - The currently executing action name
+* `controllerName` - The currently executing controller name
+* `flash` - The xref:../../../../ref/Controllers/flash.adoc[flash] object
+* `grailsApplication` - The {api}grails/core/GrailsApplication.html[GrailsApplication] instance
+* `out` - The response writer for writing to the output stream
+* `pageScope` - A reference to the xref:../../../../ref/Tag%20Libraries/pageScope.adoc[pageScope] object used for GSP rendering (i.e. the binding)
+* `params` - The xref:../../../../ref/Controllers/params.adoc[params] object for retrieving request parameters
+* `pluginContextPath` - The context path to the plugin that contains the tag library
+* `request` - The {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] instance
+* `response` - The {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] instance
+* `servletContext` - The {javaee}javax/servlet/ServletContext.html[javax.servlet.ServletContext] instance
+* `session` - The {javaee}javax/servlet/http/HttpSession.html[HttpSession] instance

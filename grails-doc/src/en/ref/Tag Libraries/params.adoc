@@ -1,0 +1,55 @@
+
+== params
+
+
+
+=== Purpose
+
+
+A mutable multi-dimensional map (hash) of request (CGI) parameters.
+
+
+=== Examples
+
+
+To obtain a request parameter called `id`:
+[source,groovy]
+----
+class BookController {
+    def show() {
+        def book = Book.get(params.id)
+    }
+}
+----
+
+To perform data binding (see xref:theWebLayer/dataBinding.adoc[data binding] in the user guide):
+
+[source,groovy]
+----
+def save() {
+    def book = new Book(params) // bind request parameters onto properties of book
+}
+----
+
+
+=== Description
+
+
+The standard Servlet API provides access to parameters with the `HttpServletRequest` object. Although Grails provides the same capability through the xref:../ref/Controllers/request.adoc[request] object, it goes a bit further by providing a mutable map of request parameters called `params`.
+
+The `params` object can be indexed into using the array index operator or de-reference operator, so given the URL `/hello?foo=bar` you can access `foo` with
+
+----
+println params.foo
+----
+
+The params object can also be used to bind request parameters onto the properties of a domain class using either the constructor or the xref:../ref/Domain%20Classes/properties.adoc[properties] property:
+
+[source,groovy]
+----
+def book = new Book(params)
+book = Book.get(1)
+book.properties = params
+----
+
+For further reading see xref:theWebLayer/dataBinding.adoc[data binding] in the user guide.

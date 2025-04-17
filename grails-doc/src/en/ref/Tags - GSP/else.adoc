@@ -1,0 +1,23 @@
+
+== else
+
+
+
+=== Purpose
+
+
+The logical else tag
+
+
+=== Examples
+
+
+[,xml]
+----
+<g:if test="${name == 'fred'}">
+     Hello Fred!
+</g:if>
+<g:else>
+     Hello ${name}! Do I know you?
+</g:else>
+----

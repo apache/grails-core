@@ -1,0 +1,34 @@
+
+== flash
+
+
+
+=== Purpose
+
+
+A temporary storage map that stores objects within the session for the next request and the next request only, automatically clearing out the objects held there after the next request completes.
+
+
+=== Examples
+
+
+[source,groovy]
+----
+class BookController {
+
+    def index() {
+        flash.message = "Welcome!"
+        redirect(action: 'home')
+    }
+
+    def home() {}
+}
+----
+
+
+=== Description
+
+
+The flash object is a Map (a hash) which you can use to store key value pairs. These values are transparently stored inside the session and then cleared at the end of the next request.
+
+This pattern lets you use HTTP redirects and retain values that can be retrieved from the flash object.

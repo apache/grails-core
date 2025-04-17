@@ -1,0 +1,50 @@
+
+== textField
+
+
+
+=== Purpose
+
+
+Creates an input of type 'text' (a text field). An implicit `id` attribute is given the same value as the name unless you explicitly specify one.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:textField name="myField" value="${myValue}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the text field
+* `value` (optional) - The initial text to display in the text field. By default the text field will be empty.
+
+
+=== Configuration
+
+
+Some attributes can be defined as Boolean values, but the html specification
+mandates the attribute must have the same value as its name. For example,
+`disabled`, `readonly` and `checked`. It may be desirable to have additional attributes
+(like `required`) behave the same way. This can be controlled with the following config value:
+
+[source,yml]
+----
+grails:
+    tags:
+        booleanToAttributes:
+            - disabled
+            - checked
+            - readonly
+            - required
+----
+
+Defaults are `disabled`, `checked`, `readonly`
+

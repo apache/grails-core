@@ -1,0 +1,34 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomDescription = 'JSON Views Testing Support'
+    pomDevelopers = [ 'graemerocher': 'Graeme Rocher', 'puneetbehl': 'Puneet Behl' ]
+    testForked = true
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-views-gson') // Used in public API
+    api 'org.springframework:spring-web' // Used in public API
+    api 'org.apache.grails.data:grails-datastore-core' // Used in public API
+    api 'org.spockframework:spock-core' // Used in public API
+
+    implementation project(':grails-core')
+    implementation project(':grails-testing-support-core')
+    implementation project(':grails-web-url-mappings')
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-json'
+    implementation 'org.apache.groovy:groovy-templates'
+    implementation 'org.springframework:spring-webmvc'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')

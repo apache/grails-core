@@ -1,21 +1,21 @@
 buildscript {
     repositories {
         // mavenLocal()
-        maven { url = "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
         classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
-        classpath "org.apache.grails:grails-gradle-plugins"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
+        classpath 'org.apache.grails:grails-gradle-plugins'
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
     }
 }
 
-version "0.1"
-group "hyphenated"
+version = '0.1'
+group = 'hyphenated'
 
-apply plugin: "asset-pipeline"
-apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: 'asset-pipeline'
+apply plugin: 'org.apache.grails.gradle.grails-web'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gsp
@@ -25,14 +25,14 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.apache.grails:grails-dependencies"
-    implementation "org.apache.grails.web:grails-web-boot"
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'org.apache.grails:grails-dependencies'
+    implementation 'org.apache.grails.web:grails-web-boot'
 
-    implementation "org.apache.grails:grails-data-hibernate5"
+    implementation 'org.apache.grails:grails-data-hibernate5'
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
         // exclude javax variant of hibernate-core
         exclude group: 'org.hibernate', module: 'hibernate-core'
@@ -40,20 +40,20 @@ dependencies {
     runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }
-    implementation "org.apache.grails:grails-cache"
+    implementation 'org.apache.grails:grails-cache'
 
-    runtimeOnly "org.apache.grails:grails-scaffolding"
-    runtimeOnly "org.apache.grails:grails-fields"
+    runtimeOnly 'org.apache.grails:grails-scaffolding'
+    runtimeOnly 'org.apache.grails:grails-fields'
 
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
-    runtimeOnly "org.apache.tomcat:tomcat-jdbc"
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
-    testImplementation "org.apache.grails:grails-testing-support-web"
-    testImplementation "org.apache.grails:grails-testing-support-datamapping"
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    console "org.apache.grails:grails-console"
+    console 'org.apache.grails:grails-console'
 
-    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
 apply {

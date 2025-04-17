@@ -1,0 +1,7 @@
+
+import functional.tests.Embedded
+import groovy.transform.Field
+
+@Field Embedded embedded
+
+json jsonapi.render(embedded)

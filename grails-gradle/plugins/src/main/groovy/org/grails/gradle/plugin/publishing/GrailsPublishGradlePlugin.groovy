@@ -225,23 +225,16 @@ Note: if project properties are used, the properties must be defined prior to ap
             final ExtensionContainer extensionContainer = project.extensions
 
             validateProjectPublishable(project as Project)
-            project.publishing {
-                if (useMavenPublish) {
-                    final def mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: System.getenv('MAVEN_PUBLISH_URL') ?: ''
 
-                    // Validate as part of the task since we only want to fail the build when the publish actions are in the taskGraph
-                    registerValidationTask(project, "requireMavenPublishUrl") {
-                        // the maven publish url can technically be a directory so do not force to String type
-                        if (!mavenPublishUrl) {
-                            throw new RuntimeException('Could not locate a project property of `mavenPublishUrl` or an environment variable of `MAVEN_PUBLISH_URL`. A URL is required for maven publishing.')
-                        }
-                    }
+            project.publishing {
+                final def mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: System.getenv('MAVEN_PUBLISH_URL')
+                if (useMavenPublish) {
                     System.setProperty('org.gradle.internal.publish.checksums.insecure', true as String)
 
                     repositories {
                         maven {
-                            final String mavenPublishUsername = project.findProperty('mavenPublishUsername') ?: System.getenv('MAVEN_PUBLISH_USERNAME') ?: ''
-                            final String mavenPublishPassword = project.findProperty('mavenPublishPassword') ?: System.getenv('MAVEN_PUBLISH_PASSWORD') ?: ''
+                            final String mavenPublishUsername = project.findProperty('mavenPublishUsername') ?: System.getenv('MAVEN_PUBLISH_USERNAME')
+                            final String mavenPublishPassword = project.findProperty('mavenPublishPassword') ?: System.getenv('MAVEN_PUBLISH_PASSWORD')
                             if (mavenPublishUsername && mavenPublishPassword) {
                                 credentials {
                                     username = mavenPublishUsername
@@ -442,7 +435,6 @@ Note: if project properties are used, the properties must be defined prior to ap
             TaskProvider<? extends Task> publishTask = project.tasks.named("publish")
 
             TaskProvider validateTask = project.tasks.register(taskName, c)
-
             publishTask.configure {
                 it.dependsOn validateTask
             }

@@ -1,0 +1,351 @@
+The plugin resolves the GSP template used for each property according to conventions. You can override the rendering based
+on the class and property name or the property type. The `f:field` tag looks for a template called `_wrapper.gsp`, the `f:widget`
+tag looks for a template called `_widget.gsp`, the `f:display` tag looks for a template called `_displayWrapper.gsp`.
+
+WARNING: Breaking changes in version 1.5
+
+In version 1.5 a new template was introduced `_displayWidget.gsp`. This is the corollary of `_widget.gsp` for fields that
+are read-only, i.e. it is responsible for rendering just the markup for the field itself. Furthermore, the default names
+of all the templates were changed in this version, in the interest of clarity and consistency. The changes to the template
+names are summarized below:
+
+.Template Name Changes
+|===
+|Old Template Name (before v.1.5)|New Template Name (v.1.5 onwards)
+
+|`_field.gsp`
+|`_wrapper.gsp`
+
+|`_display.gsp`
+|`_displayWrapper.gsp`
+
+|N/A
+|`_displayWidget.gsp`
+|===
+
+
+Users upgrading to 1.5 from a previous version should either rename their templates (recommended) or add the following
+to `grails-app/conf/application.yml` to change the default templates names to the old names
+
+[source,groovy]
+----
+grails:
+    plugin:
+        fields:
+            wrapper: field
+            displayWrapper: display
+            widget: input
+            displayWidget: displayWidget
+----
+
+
+=== Locating Field Templates by Convention
+
+
+The template for a field is chosen by a convention using the names of the controller, action, bean class, bean property, theme, etc. All the tags will look for templates in the following directories in decreasing order of preference:
+
+* `grails-app/views/*controllerNamespace*/*controllerName*/*actionName*/*propertyName*/_themes/*themeName*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*actionName*/_themes/*themeName*/*propertyType*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*actionName*/_themes/*themeName*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*propertyName*/_themes/*themeName*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/_themes/*themeName*/*propertyType*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/_themes/*themeName*/`
+* `grails-app/views/*controllerName*/*actionName*/*propertyName*/_themes/*themeName*/`
+* `grails-app/views/*controllerName*/*actionName*/_themes/*themeName*/*propertyType*/`
+* `grails-app/views/*controllerName*/*actionName*/_themes/*themeName*/`
+* `grails-app/views/*controllerName*/*propertyName*/_themes/*themeName*/`
+* `grails-app/views/*controllerName*/_themes/*themeName*/*propertyType*/`
+* `grails-app/views/*controllerName*/_themes/*themeName*/`
+* `grails-app/views/_fields/_themes/*themeName*/*class*/*propertyName*/`
+* `grails-app/views/_fields/_themes/*themeName*/*superclass*/*propertyName*/`
+* `grails-app/views/_fields/_themes/*themeName*/*associationType*/`
+* `grails-app/views/_fields/_themes/*themeName*/*propertyType*/`
+* `grails-app/views/_fields/_themes/*themeName*/*propertySuperclass*/`
+* `grails-app/views/_fields/_themes/*themeName*/default/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*actionName*/*propertyName*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*actionName*/*propertyType*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*actionName*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*propertyName*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/*propertyType*/`
+* `grails-app/views/*controllerNamespace*/*controllerName*/`
+* `grails-app/views/*controllerName*/*actionName*/*propertyName*/`
+* `grails-app/views/*controllerName*/*actionName*/*propertyType*/`
+* `grails-app/views/*controllerName*/*actionName*/`
+* `grails-app/views/*controllerName*/*propertyName*/`
+* `grails-app/views/*controllerName*/*propertyType*/`
+* `grails-app/views/*controllerName*/`
+* `grails-app/views/_fields/*class*/*propertyName*/`
+* `grails-app/views/_fields/*superclass*/*propertyName*/`
+* `grails-app/views/_fields/*associationType*/`
+* `grails-app/views/_fields/*propertyType*/`
+* `grails-app/views/_fields/*propertySuperclass*/`
+* `grails-app/views/_fields/default/`
+
+The variables referenced in these paths are:
+
+.Referenced Variables
+[cols="1,2"]
+|===
+|Name | Description
+
+|*controllerName*
+|The name of the current controller (if any).
+
+|*actionName*
+|The name of the current action (if any).
+
+|*themeName*
+|Theme name specified as value of theme attribute (Optional).
+
+|*class*
+|The bean class. For simple properties this is the class of the object passed to the `bean` attribute of the `f:field` or `f:widget` tag but when the `property` attribute was nested this is the class at the end of the chain. For example, if the property path was `employees[0].address.street` this will be the class of `address`.
+
+| *superclass*
+|Any superclass or interface of `class` excluding `Object`, `GroovyObject`, `Serializable`, `Comparable` and `Cloneable` and those from GORM.
+
+|*propertyName*
+| The property name at the end of the chain passed to the `property` attribute of the `f:field` or `f:widget` tag. For example, if the property path was `employees[0].address.street` then this will be `street`.
+
+|*propertyType*
+|The type of the property at the end of the chain passed to the `property` attribute of the `f:field` or `f:widget` tag. For example, for a `java.lang.String` property this would be `string`.
+
+|*propertySuperclass*
+|Any superclass or interface of `propertyType` excluding `Object`, `GroovyObject`, `Serializable`, `Comparable` and `Cloneable`.
+
+|*associationType*
+|One of `'oneToOne'`, `'oneToMany'`, `'manyToMany'` or `'manyToOne'`. Only relevant if the property is a domain class association.
+|===
+
+
+All class names are camel-cased simple forms. For example `java.lang.String` becomes `string`, and `com.project.HomeAddress` becomes `homeAddress`.
+
+Templates are resolved in this order so that you can override in the more specific circumstance and fall back to successively more general defaults. For example, you can define a field template for all `java.lang.String` properties but override a specific property of a particular class to use more specialized rendering.
+
+Templates in plugins are resolved as well. This means plugins such as `Joda Time` can provide default rendering for special property types. A template in your application will take precedence over a template in a plugin at the same 'level'. For example if a plugin provides a `grails-app/views/_fields/string/_widget.gsp` the same template in your application will override it but if the plugin provides `grails-app/views/_fields/person/name/_widget.gsp` it would be used in preference to the more general template in your application.
+
+For most properties the out-of-the-box defaults should provide a good starting point.
+
+
+=== Locating Templates Conventionally Example
+
+
+Imagine an object of class `Employee` that extends the class `Person` and has a `String name` property.
+
+You can override the template `f:field` uses with any of these:
+
+* `grails-app/views/*controllerName*/*actionName*/name/_themes/*themeName*/_wrapper.gsp`
+* `grails-app/views/*controllerName*/*actionName*/name/_wrapper.gsp`
+* `grails-app/views/*controllerName*/*actionName*/string/_wrapper.gsp`
+* `grails-app/views/*controllerName*/*actionName*/_wrapper.gsp`
+* `grails-app/views/*controllerName*/name/_wrapper.gsp`
+* `grails-app/views/*controllerName*/string/_wrapper.gsp`
+* `grails-app/views/*controllerName*/_wrapper.gsp`
+* `grails-app/views/_fields/employee/name/_wrapper.gsp`
+* `grails-app/views/_fields/person/name/_wrapper.gsp`
+* `grails-app/views/_fields/string/_wrapper.gsp`
+* `grails-app/views/_fields/default/_wrapper.gsp`
+
+override the template `f:widget` uses with any of these:
+
+* `grails-app/views/*controllerName*/*actionName*/name/_themes/*themeName*/_widget.gsp`
+* `grails-app/views/*controllerName*/*actionName*/name/_widget.gsp`
+* `grails-app/views/*controllerName*/*actionName*/string/_widget.gsp`
+* `grails-app/views/*controllerName*/*actionName*/_widget.gsp`
+* `grails-app/views/*controllerName*/name/_widget.gsp`
+* `grails-app/views/*controllerName*/string/_widget.gsp`
+* `grails-app/views/*controllerName*/_widget.gsp`
+* `grails-app/views/_fields/employee/name/_widget.gsp`
+* `grails-app/views/_fields/person/name/_widget.gsp`
+* `grails-app/views/_fields/string/_widget.gsp`
+* `grails-app/views/_fields/default/_widget.gsp`
+
+And override the template _f:display_ uses with any of these:
+
+* `grails-app/views/*controllerName*/*actionName*/name/_themes/*themeName*/_displayWrapper.gsp`
+* `grails-app/views/*controllerName*/*actionName*/name/_displayWrapper.gsp`
+* `grails-app/views/*controllerName*/*actionName*/string/_displayWrapper.gsp`
+* `grails-app/views/*controllerName*/*actionName*/_displayWrapper.gsp`
+* `grails-app/views/*controllerName*/name/_displayWrapper.gsp`
+* `grails-app/views/*controllerName*/string/_displayWrapper.gsp`
+* `grails-app/views/*controllerName*/_displayWrapper.gsp`
+* `grails-app/views/_fields/employee/name/_displayWrapper.gsp`
+* `grails-app/views/_fields/person/name/_displayWrapper.gsp`
+* `grails-app/views/_fields/string/_displayWrapper.gsp`
+* `grails-app/views/_fields/default/_displayWrapper.gsp`
+
+During template development it is usually recommended to disable template caching in order to allow the plugin to recognize new/renamed/moved templates without restarting the application. See the "Performance" section of the guide for the exact settings.
+
+
+=== See Template Seach Path
+
+The plugin logs which locations it is checking for templates as debug log. You can enable this by defining a logger in logback.groovy
+
+ logger('grails.plugin.formfields.FormFieldsTemplateService', DEBUG,['STDOUT'])
+
+The can disable the caching in application.yml using:
+
+----
+grails:
+    plugin:
+        fields:
+            disableLookupCache: true
+----
+
+
+=== Default Behaviour - Using Grails Widget Tags
+
+
+If no template override is found the plugin will use the standard grails input tags (e.g. `g:select`, `g:checkbox`, `g:field`) for rendering input controls.
+Using `f:field` you can pass extra arguments (e.g. `optionKey`, `optionValue`) through to these tags by prefixing them with `widget-`, e.g.
+
+[source,groovy]
+----
+<f:field bean="person" property="gender" widget-optionValue="name"/>
+----
+
+
+=== Template parameters
+
+
+The `f:field` and `f:widget` tags will pass the following parameters to your templates or to the body of `f:field` if you use one:
+
+.Template Parameters
+|===
+|Name | Type | Description
+
+|*bean*
+| Object
+| The `bean` attribute as passed to the `f:field` or `f:widget` tag.
+
+|*property*
+|String
+|The `property` attribute as passed to the `f:field` or `f:widget` tag. This would generally be useful for the `name` attribute of a form input.
+
+|*type*
+|Class
+|The property type.
+
+|*label*
+|String
+|The field label text. This is based on the `label` attribute passed to the `f:field` or `f:widget` tag. If no `label` attribute was used the label is resolved by convention - see below.
+
+|*value*
+|Object
+|the property value. This can also be overridden or defaulted if the `value` or `default` attribute was passed to `f:field` or `f:widget`.
+
+|*constraints*
+|ConstrainedProperty
+|The constraints for the property if the bean is a domain or command object.
+
+|*persistentProperty*
+|link:http://grails.github.io/scaffolding/latest/api/org/grails/scaffolding/model/property/DomainProperty.html[DomainProperty]
+|The persistent property object if the bean is a domain object.
+
+|*errors*
+|List<String>
+|The error messages for any field errors present on the property. If there are no errors this will be an empty _List_.
+
+|*required*
+|boolean
+|`true` if the field is required, i.e. has a `nullable: false` or `blank: false` constraint.
+
+|*invalid*
+|boolean
+|`true` if the property has any field errors.
+
+|*prefix*
+|String
+|A string (including the trailing period) that should be appended before the input name such as `name="${prefix}propertyName"`.  The label is also modified.
+
+|===
+
+In addition `f:field` passes the following parameters:
+
+.Parameter Names from f:field
+|===
+|Name | Type | Description
+|*widget*
+|String
+|The output of `f:widget` for the current bean and property if `f:field` was used without a tag body, otherwise the output of the tag body.
+|===
+
+NOTE: If the `bean` attribute was not supplied to `f:field` then `bean`, `type`, `value` and `persistentProperty` will all be `null`.
+
+
+=== Field labels
+
+
+If the `label` attribute is not supplied to the `f:field` tag then the label string passed to the field template is resolved by convention. The plugin uses the following order of preference for the label:
+
+* An i18n message using the key '_beanClass_._path_.label'. For example when using `<f:field bean="authorInstance" property="book.title"/>` the plugin will try the i18n key `author.book.title.label`. If the property path contains any index it is removed so `<f:field bean="authorInstance" property="books<<0>>.title"/>` would use the key `author.books.title.label`.
+* For classes using the same bean class as properties, it is possible to get a key without the class name prefixed. If the configuration value `grails.plugin.fields.i18n.addPathFromRoot` is set to `true` (default: `false`). _Example_: a class `Publisher` has two `Address` properties `authorAddress` and `printAddress`. With `addPathFromRoot=true` they will share the key `address.city.label`. The same goes if `Author` and `Publisher` had a `Book book`, the key would be `book.title.label`, and if they both had a `List<Book> books` the key would be `books.title.label`   
+* An i18n message using the key '_objectType_._propertyName_`.label`'. For example when using `<f:field bean="personInstance" property="address.city"/>` the plugin will try the i18n key `address.city.label`.
+* The natural property name. For example when using `<f:field bean="personInstance" property="dateOfBirth"/>` the plugin will use the label `"Date Of Birth"`.
+
+
+=== Locating Field Templates Directly
+
+
+Rather than relying on the convention described previously to locate the template(s) to be used for a particular field, it is
+instead possible to directly specify the directory containing the templates. This feature was introduced in version 1.5.
+
+* The `wrapper` attribute can be used with the _f:field_ or _f:display_ tags to specify the directory containing the `_wrapper.gsp` or `_displayWrapper.gsp` template to be used
+* The `widget` attribute can be used with the _f:field_ or _f:display_ tags to specify the directory containing the `_widget.gsp` or `_displayWidget.gsp` template to be used
+* If the wrapper and widget templates both have the same value, the `templates` attribute can be used instead as a shorthand. For example:
+
+[source,groovy]
+----
+<f:field property="startDate" templates="bootstrap3" />
+----
+
+is equivalent to:
+
+[source,groovy]
+----
+<f:field property="startDate" wrapper="bootstrap3" widget="bootstrap3" />
+----
+
+if theme is specified, theme will be searched first to find the templates
+For example
+
+[source,groovy]
+----
+<f:field property="startDate" templates="custom" theme="bs-horizontal"/>
+----
+
+Will search the templates first in _\_fields/_themes/bs-horizontal/custom_ and then _\_fields/custom_
+
+If a direct location is specified, and the templates cannot be found therein, the plugin will fall back to locating templates
+by convention.
+
+
+=== Locating Templates Directly Example
+
+
+[source,groovy]
+----
+// renders _fields/\_themes/bs-horizontal/custom/_wrapper.gsp:
+<f:field property="startDate" wrapper="custom" theme="bs-horizontal"/>
+
+// renders _fields/bootstrap3/_wrapper.gsp:
+<f:field property="startDate" wrapper="bootstrap3"/>
+
+// renders _fields/time/_widget.gsp:
+<f:field property="startDate" widget="time"/>
+
+// renders _fields/time/_wrapper.gsp and _fields/time/_widget.gsp:
+<f:field property="startDate" templates="time"/>
+
+// renders _fields/\_themes/bs-horizontal/custom/_displayWrapper.gsp:
+<f:display property="startDate" wrapper="custom" theme="bs-horizontal"/>
+
+
+// renders _fields/bootstrap3/_displayWrapper.gsp:
+<f:display property="startDate" wrapper="bootstrap3"/>
+
+// renders _fields/time/_displayWidget.gsp:
+<f:display property="startDate" widget="time"/>
+
+// renders _fields/time/_displayWrapper.gsp and _fields/time/_displayWidget.gsp:
+<f:display property="startDate" templates="time"/>
+----

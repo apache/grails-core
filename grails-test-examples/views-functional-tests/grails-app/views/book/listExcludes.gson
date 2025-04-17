@@ -1,0 +1,12 @@
+
+import functional.tests.Book
+
+model {
+    List books
+}
+
+json g.render(books, [excludes: 'title']) { Book book ->
+    title book.title
+    vendor config.getProperty("book.listExcludes.vendor")
+    fromParams params.int("testParam")
+}

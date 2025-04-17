@@ -1,0 +1,14 @@
+Markup views configuration can be altered with `grails-app/conf/application.yml`. Any of the properties within the link:{api}/grails/plugin/markup/view/MarkupViewConfiguration.html[MarkupViewConfiguration] class and Groovy's http://docs.groovy-lang.org/latest/html/api/groovy/text/markup/TemplateConfiguration.html[TemplateConfiguration] class can be set.
+
+For example:
+
+[source,yaml]
+grails:
+    views:
+        markup:
+            compileStatic: true
+            cacheTemplates: true
+            autoIndent: true
+            ...
+
+Alternatively you can register a new `MarkupViewConfiguration` bean using the bean name `markupViewConfiguration` in `grails-app/conf/spring/resources.groovy`.

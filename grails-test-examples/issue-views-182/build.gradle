@@ -1,20 +1,21 @@
 buildscript {
     repositories {
         // mavenLocal()
-        maven { url = "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
-        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
+        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
+        classpath 'org.apache.grails:grails-gradle-plugins'
     }
 }
 
-version "0.1"
-group "issueviews182"
+version = '0.1'
+group = 'issueviews182'
 
-apply plugin:"org.apache.grails.gradle.grails-web"
+apply plugin:'org.apache.grails.gradle.grails-web'
 
-// The views-json plugins is not needed for running the functional tests.
+// The grails-gson plugins is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gson-views
 // for production does not fail during build task.
 apply plugin: 'org.apache.grails.gradle.grails-gson'
@@ -22,32 +23,32 @@ apply plugin: 'org.apache.grails.gradle.grails-gson'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.apache.grails:grails-core"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.apache.grails:grails-url-mappings"
-    implementation "org.apache.grails:grails-rest-transforms"
-    implementation "org.apache.grails:grails-codecs"
-    implementation "org.apache.grails:grails-interceptors"
-    implementation "org.apache.grails:grails-services"
-    implementation "org.apache.grails:grails-datasource"
-    implementation "org.apache.grails:grails-databinding"
-    implementation "org.apache.grails.web:grails-web-boot"
-    implementation "org.apache.grails:grails-logging"
-    implementation "org.apache.grails:grails-cache"
-    implementation "org.apache.grails:grails-async"
-    implementation "org.apache.grails:grails-events"
-    implementation "org.apache.grails:grails-data-hibernate5"
-    implementation "org.apache.grails:grails-views-gson"
-    console "org.apache.grails:grails-console"
-    profile "org.grails.profiles:rest-api"
-    runtimeOnly "com.h2database:h2"
-    runtimeOnly "org.apache.tomcat:tomcat-jdbc"
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'org.apache.grails:grails-url-mappings'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-codecs'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-datasource'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-logging'
+    implementation 'org.apache.grails:grails-cache'
+    implementation 'org.apache.grails:grails-async'
+    implementation 'org.apache.grails:grails-events'
+    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-views-gson'
+    console 'org.apache.grails:grails-console'
+    profile 'org.grails.profiles:rest-api'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
-    testImplementation "org.apache.grails:grails-testing-support-web"
-    testImplementation "org.apache.grails:grails-testing-support-datamapping"
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"

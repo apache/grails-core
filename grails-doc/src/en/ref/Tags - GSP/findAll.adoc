@@ -1,0 +1,30 @@
+
+== findAll
+
+
+
+=== Purpose
+
+
+Uses the Groovy JDK `findAll` method to iterate over each element of the specified object that match the GPath expression within the attribute "expr"
+
+
+=== Examples
+
+
+[,xml]
+----
+Stephen King's Books:
+<g:findAll in="${books}" expr="it.author == 'Stephen King'">
+     <p>Title: ${it.title}</p>
+</g:findAll>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `in` - The object to iterative over
+* `expr` - A GPath expression

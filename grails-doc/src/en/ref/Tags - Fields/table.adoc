@@ -1,0 +1,111 @@
+
+==== f:table
+
+===== Purpose
+
+`<f:table/>` renders some or all properties of a collection of beans in a table using the _f:display_ widget for each property type. If there is no _\_display_ template in scope the tag will simply render the property values.
+
+===== Examples
+
+[source,groovy]
+----
+<f:table collection="personList"/>
+
+<f:table collection="personList" properties="firstName, lastName"/>
+
+<f:table collection="personList" properties="['firstName', 'lastName']"/>
+
+<f:table collection="catsAndDogsList" domainClass="org.zoo.Animal"/>
+
+<f:table collection="catsAndDogsList" domainClass="org.zoo.Animal" theme="bs-horizontal"/>
+
+// List first three properties in Person
+<f:table collection="personList" maxProperties="3"/>
+
+// Include id, lastUpdated, dateCreated
+<f:table collection="personList" except="[]]"/>
+
+----
+
+The template for `<f:table/>` should be in
+
+[source]
+----
+grails-app/views/templates/_fields/_table.gsp
+----
+
+but you can have multiple table templated, if you specify the template property.
+All templates should still be located in `view/templates/_fields/`, the example below uses 4 different templates for table.
+
+[source]
+----
+<f:table collection="myList" myProperty="Template: view/templates/_fields/_table.gsp" />
+<f:table collection="${demoList}" template="table3" myProperty="Template: view/templates/_fields/_table3.gsp" />
+<f:table collection="${demoList}" template="tables/table2" myProperty="Template: in view/templates/_fields/tables/_table2.gsp" />
+<f:table collection="${demoList}" template="tables/table" myProperty="Template: view/templates/_fields/tables/_table.gsp" />
+----
+
+When *theme* is specified, the _\_display_ template will be searched first in *theme*, but the theme property does *not* directly apply to table.
+
+===== Attributes
+
+[options="header",cols="2,1,1,5"]
+|===
+|*Name*|*Required?*|*Default*|*Description*
+|*collection*|yes||The collection of beans to be displayed
+|*domainClass*||`Class` of first element in `collection`|The FQN of the domain class of the elements in the collection.
+|*properties*||First 7 (or less)|Comma-separated `String` or `List` of properties to be shown (table columns).  Defaults to the first 7 (or less) properties of the domain class ordered by the domain class' `constraints`, unless `maxProperties` is set below
+|*displayStyle*|||Determines the display template used for the bean's properties. Defaults to _table_ meaning that _\_display-table_ templates will be used when available.
+|*except*||`['id', 'lastUpdated', 'dateCreated']`|A comma-separated `String` or `List` of properties that should be skipped. Use the empty list to include `id`, `lastUpdated` and `dateCreated`
+|*order*|||Comma-separated `String` or `List` of properties which represents the order in which the tag should display them.
+|*theme*|String||Theme to use if available.
+|*maxProperties*|Number|7|The maximum number of properties to display when rendering the table. If zero is specified all columns are shown, otherwise `properties[0..<maxProperties]` are shown. `maxProperties` can be negative.
+|*template*|String|'table'|Alternative template for table rendering. Templates should be in the 'grails-app/views/templates/_fields/' folder.
+|===
+
+ Any additional attributes are passed to the rendered template.
+
+===== Modifying the `_table.gsp` template.
+
+To make you own version of a `f:table` template, the file should be located in `grails-app/views/templates/_fields/_table.gsp`
+unless a different location is specified with the template property.
+You can find a starting point for a new file link:https://github.com/grails-fields-plugin/grails-fields/blob/master/grails-app/views/templates/_fields/_table.gsp[on GitHub]
+
+====== Model in the template
+
+The following model is passed to the  `_table.gsp` template:
+[options="header",cols="1,5"]
+|===
+|Name | Content
+|domainClass
+|The type of the persistent instance. Either type of the first row in the collection or the `domainClass` passed as argument to `f:table`
+
+|columnProperties
+|Contains a list of `Map` describing each table column. See table below for the map content
+
+|domainProperties
+|deprecated: see `columnProperties`
+
+|collection |Rows with data
+
+|displayStyle| The attribute `displayStyle` passed to the model unmodified
+
+|theme| The attribute `theme` passed to the model unmodified
+|===
+
+The column model:
+
+[options="header",cols="1,3"]
+|===
+|Name            | Content
+|`bean`          | Empty instance of a `domainClass` bean
+|`property`      | The property name
+|`name`          | Deprecated, see `property`
+|`type`          | The property type
+|`defaultLabel`  | Translated label (deprecated)
+|`label`         | Translated label
+|`constraints`   | If the property has constraints
+|`required`      | Is the property required
+|===
+
+(This is a simplified version of a `wrapper` model)

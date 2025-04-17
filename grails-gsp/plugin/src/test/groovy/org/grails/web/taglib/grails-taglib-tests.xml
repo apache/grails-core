@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+	<bean id="grailsApplication" class="org.grails.spring.beans.factory.GrailsApplicationFactoryBean">
+		<description>Grails application factory bean</description>
+		<property name="groovyFiles">
+            <list>
+                <value>file:./src/grails/grails-app/taglib/*.groovy</value>
+                <value>file:./src/grails/grails-app/utils/*.groovy</value>
+            </list>
+        </property>
+	</bean>
+</beans>

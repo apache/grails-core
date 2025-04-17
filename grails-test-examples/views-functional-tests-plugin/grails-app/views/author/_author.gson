@@ -1,0 +1,6 @@
+import functional.tests.plugin.Author
+import groovy.transform.Field
+
+@Field Author author = null
+
+json g.render(author)

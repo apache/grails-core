@@ -1,0 +1,29 @@
+
+== hiddenField
+
+
+
+=== Purpose
+
+
+Creates an input of type 'hidden' (a hidden field). All the usual HTML elements apply.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:hiddenField name="myField" value="myValue" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the text field
+* `value` (optional) - The value of the text field
+
+

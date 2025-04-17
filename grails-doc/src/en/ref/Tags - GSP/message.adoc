@@ -1,0 +1,83 @@
+
+== message
+
+
+
+=== Purpose
+
+
+Resolves a message from the given code or error. Normally used in conjunction with xref:eachError.adoc[eachError]
+
+
+=== Examples
+
+
+Loop through each error and output the message:
+
+[source,xml]
+----
+<g:eachError bean="${book}">
+    <li><g:message error="${it}" /></li>
+</g:eachError>
+----
+
+NOTE: This is typically used for built-in Grails messages, rather than user application messages. For user application messages, use the `code` or `message` parameters as illustrated below.
+
+Output a message for a specific known code:
+
+[source,xml]
+----
+<g:message code="my.message.code" />
+----
+
+Output a message for a compatible object.
+
+[source,xml]
+----
+<g:message message="${myObj}" />
+----
+
+NOTE: Objects passed to the message parameter must implement the {springapi}org/springframework/context/MessageSourceResolvable.html[MessageSourceResolvable] interface.
+
+
+=== Description
+
+
+Attributes
+
+* `error` (optional) - The error to resolve the message for. Used for built-in Grails messages.
+* `code` (optional) - The code to resolve the message for.  Used for custom application messages.
+* `message` (optional) - The object to resolve the message for. Objects must implement `MessageSourceResolvable`.
+* `default` (optional) - The default message to output if the error or code cannot be found in `messages.properties`.
+* `args` (optional) - A list of argument values to apply to the message when `code` is used.
+* `encodeAs` (optional) - The name of a codec to apply, i.e. HTML, JavaScript, URL etc
+* `locale` (optional) Override `Locale` to use instead of the one detected
+
+One of either the `error` attribute, the `code` attribute or the `message` attribute is required. Messages are resolved from the `grails-app/i18n/messages.properties` bundle. See also Internationalization.
+
+For a more complex example, to output your own message with parameters and a default message, you might use the following code from your controller:
+
+[source,groovy]
+----
+flash.message = "book.delete.message"
+flash.args = ["The Stand"]
+flash.default = "book deleted"
+----
+
+You would then specify the following in messages.properties:
+
+[source,groovy]
+----
+book.delete.message="Book {0} deleted."
+----
+
+and specify the following from your view:
+
+[source,xml]
+----
+<g:message code="${flash.message}" args="${flash.args}"
+           default="${flash.default}"/>
+----
+
+Which would result in the output "Book The Stand deleted."  If you had misnamed the message or not specified it in `messages.properties`, your default message of "book deleted" would be output.
+

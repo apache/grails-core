@@ -1,0 +1,9 @@
+Plugins can include field and/or input level templates to support special UI rendering or non-standard property types. Just include the templates in the plugin's `grails-app/views` directory as described in the <<customizingFieldRendering,Customizing Field Rendering>> section.
+
+WARNING: If you supply templates in a plugin you should consider declaring a `<%@page defaultCodec="html" %>` directive so that any HTML unsafe property values are escaped properly regardless of the default codec used by client apps.
+
+In order to be performant, the Fields plugin caches field template lookup results by default. This makes it possible to perform the time-consuming template path resolutions only once during the runtime of the application.
+
+When template caching is active, only the first page renderings are slow, subsequent ones are fast.
+
+Due to the flexibility needed during template development, this feature can be disabled so it would be possible to recognize newly added field templates without restarting the application. As a result, with bigger webpages, containing a lot of fields, rendering may be fairly slow in development (depending on the number of fields on the page).

@@ -1,0 +1,8 @@
+
+import functional.tests.Bulletin
+
+model {
+    Bulletin bulletin
+}
+
+json tmpl.'/bulletin/bulletin'(bulletin)

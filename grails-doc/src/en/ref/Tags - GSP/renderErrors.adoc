@@ -1,0 +1,39 @@
+
+== renderErrors
+
+
+
+=== Purpose
+
+
+Renders errors a specified format (at the moment only an HTML list is implemented)
+
+
+=== Examples
+
+
+Render a list for the "book" bean:
+
+[source,xml]
+----
+<g:renderErrors bean="${book}" as="list" />
+----
+
+Render a list for the title field of the "book" bean:
+
+[source,xml]
+----
+<g:renderErrors bean="${book}" as="list" field="title"/>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `as` (optional) - What to render it as current options are "list" and "xml". Defaults to "list" if not specified.
+* `bean` (optional) - The name of the bean to check for errors
+* `model` (optional) - The name of the model Map to check for errors
+* `field` (optional) - The field within the bean or model to check for errors for
+

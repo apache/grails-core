@@ -5,7 +5,7 @@ To use the Grails Promise abstraction you should add a dependency on the `async`
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-implementation "org.grails.plugins:async:{GrailsVersion}"
+implementation "org.apache.grails:grails-async:{version}"
 ----
 
 === Promise Basics

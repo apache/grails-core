@@ -1,0 +1,42 @@
+
+import org.springframework.validation.*
+import static org.springframework.http.HttpStatus.*
+
+model {
+    BeanPropertyBindingResult errors
+}
+response.contentType "application/vnd.error"
+response.status UNPROCESSABLE_ENTITY
+
+json {
+    BeanPropertyBindingResult errorsObject = (BeanPropertyBindingResult)this.errors
+    def object = errorsObject.target
+    def allErrors = errorsObject.allErrors
+    int errorCount = allErrors.size()
+    def resourcePath = g.link(resource:object, absolute:false)
+    def resourceLink = g.link(resource:object, absolute:true)
+    if(errorCount == 1) {
+        def error = allErrors.iterator().next()
+        message messageSource.getMessage(error, locale)
+        path resourcePath
+        _links {
+            self {
+                href resourceLink
+            }
+        }
+    }
+    else {
+        total errorCount
+        _embedded {
+            errors(allErrors) { ObjectError error ->
+                message messageSource.getMessage(error, locale)
+                path resourcePath
+                _links {
+                    self {
+                        href resourceLink
+                    }
+                }
+            }
+        }
+    }
+}

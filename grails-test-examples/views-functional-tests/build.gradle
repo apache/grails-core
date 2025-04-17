@@ -1,0 +1,54 @@
+plugins {
+    id 'application'
+    id 'groovy'
+    id 'org.apache.grails.gradle.grails-gsp'
+    id 'org.apache.grails.gradle.grails-web'
+}
+
+version = "0.0.1"
+group = 'functional.tests'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation project(':grails-test-examples-views-functional-tests-plugin')
+    implementation 'org.apache.grails:grails-views-gson'
+    implementation 'org.apache.grails:grails-views-markup'
+
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-logging'
+    implementation 'org.apache.grails.web:grails-web-boot'
+
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails:grails-i18n'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-url-mappings'
+    implementation 'org.apache.grails:grails-validation'
+
+    implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-data-hibernate5'
+
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    compileOnly 'org.slf4j:slf4j-api' // Provided by Tomcat
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+
+    testImplementation 'org.apache.grails:grails-testing-support-views-gson'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+
+    integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    integrationTestImplementation "io.micronaut:micronaut-jackson-databind:$micronautVersion"
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}

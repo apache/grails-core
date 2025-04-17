@@ -1,0 +1,295 @@
+http://stateless.co/hal_specification.html[HAL] is a standard format for representing JSON that has gained traction for its ability to represent links between resources and provide navigable APIs.
+
+The JSON views plugin for Grails provides HAL support out-of-the-box. All JSON views have access to the `hal` instance which implements link:groovydoc/grails/plugin/json/view/api/HalViewHelper.html[HalViewHelper].
+
+For example:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.links(book)
+    hal.embedded {
+        author( book.authors.first() ) { Author author ->
+            name author.name
+        }
+    }
+    title book.title
+}
+
+NOTE: The call to `hal.links()` has to be the first element within the `json{}` closure.
+
+This produces the HAL output:
+
+[source,javascript]
+{
+    "_links": {
+        "self": {
+            "href": "http://localhost:8080/book/show/1",
+            "hreflang": "en",
+            "type": "application/hal+json"
+        }
+    },
+    "_embedded": {
+        "author": {
+            "_links": {
+                "self": {
+                    "href": "http://localhost:8080/author/show/1",
+                    "hreflang": "en",
+                    "type": "application/hal+json"
+                }
+            },
+            "name": "Stephen King"
+        }
+    },
+    "title": "The Stand"
+}
+
+== Generating HAL Links
+
+The above example uses the `hal.links(..)` method to render links for a domain resource and the `hal.embedded(..)` method to define any embedded objects that form part of the HAL response.
+
+The `hal.links(..)` method will by default create a link to the resource, but you can define additional links by annotating the domain class with either `grails.rest.Linkable` or `grails.rest.Resource` and using the `link` method on the object:
+
+[source,groovy]
+book.link(rel:"publisher", href:"http://foo.com/books")
+
+The link will then be included in the HAL output. 
+
+If you wish to be specific about which links to include you can do so by passing a map of objects to link to:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.links(self:book, author: book.author)
+    ...
+}
+
+Alternatively, if you prefer to define the HAL links yourself then you can do so by passing a closure to the `hal.links` method:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.links {
+        self {
+            href '...'
+            hreflang 'en'
+            type "application/hal+json"
+        }
+    }
+    ...
+}
+
+
+== Rendering Domain Classes as HAL
+
+If you prefer to let the plugin handle the rendering of your object you can use the `hal.render(..)` method:
+
+[source,groovy]
+model {
+    Book book
+}
+json hal.render(book)
+    
+The `hal.render` method works the same as the `g.render` method, accepting the same arguments, the difference being it will output HAL links for the object via `hal.links` and also output associations fetched via a join query for `hal.embedded`.
+
+For example you can also customize the content of the generated HAL with a closure:
+
+[source,groovy]
+model {
+    Book book
+}
+json hal.render(book) {
+    pages 1000
+}
+
+== Embedded Association and HAL
+
+Generally, when using the `hal.render(..)` method, `_embedded` associations are only rendered for associations that have been initialized and eagerly fetched. This means that the following query will not render the `book.authors` association:
+
+[source,groovy]
+Book.get(params.id)
+
+However, this query will render the `book.authors` association:
+
+[source,groovy]
+Book.get(params.id, [fetch:[authors:'eager']])
+
+
+This is by design and to prevent unexpected performance degradation due to N+1 query loading. If you wish to force the `render` method to render `_embedded` associations for HAL you can do see using the `deep` argument:
+
+[source,groovy]
+json hal.render(book, [deep:true])
+
+You can prevent HAL `_embedded` associations from being rendering using the `embedded:false` parameter:
+
+[source,groovy]
+model {
+    Book book
+}
+json hal.render(book, [embedded:false])
+
+
+You can also render embedded associations without using the `hal.render(..)` method, by using the `hal.embedded(..)` method:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.embedded(book)
+    title book.title
+}
+
+NOTE: Like the `hal.links(..)` method, the `hal.embedded(..)` method should come first, before any other attributes, in your JSON output
+
+You can also control which associations should be embedded by using a map argument instead:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.embedded(authors: book.authors)
+    title book.title
+}
+
+And you can inline the contents of the book without any associations using the `hal.inline(..)` method:
+
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.embedded(authors: book.authors)
+    hal.inline(book)
+}
+
+To customize the contents of the inlined JSON output use a closure:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.embedded(authors: book.authors)
+    hal.inline(book) {
+        pages 300
+    }
+}
+
+NOTE: You cannot include additional content after the call to `hal.inline(..)` as this will produce invalid JSON
+
+
+You can combine `hal.embeddded(..)` and `hal.links(..)` to obtain exactly the links and the embedded content you want:
+
+[source,groovy]
+model {
+    Book book
+}
+json {
+    hal.links(self: book )
+    hal.embedded(authors: book.authors)
+    hal.inline(book) {
+        pages 300
+    }
+}
+
+== Specifying the HAL Content Type
+
+The default HAL response content type is `application/hal+json`, however as discussed in the section on <<gsonContentNegotiation.adoc#mimeTypes,Custom Mime Type>> you can define your own response content types to represent your resources.
+
+For example given the following configuration in `grails-app/conf/application.yml`:
+
+[source,groovy]
+grails:
+    mime:
+        types:
+            all:      "*/*"
+            book:     "application/vnd.books.org.book+json"
+
+You can set the HAL content type to an explicit content type or one of the named content types defined in `grails.mime.types` in `application.yml`:
+
+[source,groovy]
+model {
+    Book book
+}
+hal.type("book")
+json {
+    ...
+}
+
+== HAL Pagination
+
+The JSON views plugin for Grails provides navigable pagination support.
+Like the GSP `<g:paginate>` tag, the parameters include: `total`, `max`, `offset`, `sort` and `order`.
+
+For example:
+
+[source,groovy]
+model {
+    Iterable<Book> bookList
+    Integer bookCount
+    Integer max // optional, defaults to 10
+    Integer offset // optional, defaults to 0
+    String sort // optional
+    String order // optional
+}
+json {
+    hal.paginate(Book, bookCount, max, offset, sort, order)
+    ...
+}
+
+NOTE: Similar to `hal.links()` the `hal.paginate()` has to be the first element within the `json{}` closure.
+
+When accessing `http://localhost:8080/book?offset=10` this produces the navigable output like:
+
+[source,javascript]
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/book/index?offset=10&max=10",
+      "hreflang": "en_US",
+      "type": "application/hal+json"
+    },
+    "first": {
+      "href": "http://localhost:8080/book/index?offset=0&max=10",
+      "hreflang": "en_US"
+    },
+    "prev": {
+      "href": "http://localhost:8080/book/index?offset=0&max=10",
+      "hreflang": "en_US"
+    },
+    "next": {
+      "href": "http://localhost:8080/book/index?offset=20&max=10",
+      "hreflang": "en_US"
+    },
+    "last": {
+      "href": "http://localhost:8080/book/index?offset=40&max=10",
+      "hreflang": "en_US"
+    }
+  },
+  ...
+}
+
+NOTE: If there aren't enough results to paginate the navigation links will not appear, Likewise, the `prev` and `next` links are only present when there is a previous or next page.
+
+If you have other links that you want to include along with the pagination links then you can use the `hal.links(..)` method with pagination arguments:
+
+[source,groovy]
+model {
+    Author author
+    Iterable<Book> bookList
+    Integer bookCount
+}
+json {
+    // the model, type to paginate, and the total count
+    hal.links([author:author], Book, bookCount)
+    ...
+}

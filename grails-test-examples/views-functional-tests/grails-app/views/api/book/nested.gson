@@ -1,0 +1,1 @@
+json g.render(template: 'foo')

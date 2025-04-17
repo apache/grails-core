@@ -1,0 +1,29 @@
+
+== timeZoneSelect
+
+
+
+=== Purpose
+
+
+Helper tag to create HTML select tags for selecting from a list of time zones.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<!-- Create a timezone selector -->
+<g:timeZoneSelect name="myTimeZone" value="${tz}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the select
+* `value` (optional) - An instance of {javase}java.base/java/util/TimeZone.html[TimeZone]. Defaults to the time zone for the current {javase}java.base/java/util/Locale.html[Locale] if not specified
+* `locale` (optional) - The {javase}java.base/java/util/Locale.html[Locale] to use for formatting the time zone names. Defaults to the current request locale and then system default locale if not specified. A {javase}java.base/java/util/Locale.html[Locale] or parsable locale {javase}java.base/java/lang/String.html[String] value (for example: 'sv_SE').

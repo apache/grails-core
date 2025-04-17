@@ -1,0 +1,30 @@
+
+== collect
+
+
+
+=== Purpose
+
+
+Uses the Groovy JDK `collect` method to iterate over each element of the specified object transforming the result using the expression in the closure
+
+
+=== Examples
+
+
+[,xml]
+----
+Books titles:
+<g:collect in="${books}" expr="it.title">
+    <p>Title: ${it}</p>
+</g:collect>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `in` - The object to iterative over
+* `expr` - A GPath expression

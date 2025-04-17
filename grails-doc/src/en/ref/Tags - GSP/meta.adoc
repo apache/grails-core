@@ -1,0 +1,31 @@
+
+== meta
+
+
+
+=== Purpose
+
+
+Renders application metadata properties.
+
+
+=== Examples
+
+
+[,xml]
+----
+Version <g:meta name="info.app.version"/>
+Built with Grails <g:meta name="info.app.grailsVersion"/>
+----
+
+
+=== Description
+
+
+Meta properties are populated from the `application.yml` file as well as the `grails.build.info` file if it exists, such as in a production environment, and include the application's version and the Grails version it requires. It can be used to expose some invariant data about your application at runtime. See the Application Metadata section for more details.
+
+Attributes
+
+* `name` - The name of the metadata property to retrieve, for example "info.app.version"
+
+

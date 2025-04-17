@@ -18,22 +18,22 @@ ext {
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    api "org.apache.groovy:groovy:$groovyVersion"
-    api "org.springframework:spring-test"
-    api project(":grails-codecs"), {
+    api 'org.apache.groovy:groovy'
+    api 'org.springframework:spring-test'
+    api project(':grails-codecs'), {
         exclude module:'grails-mimetypes'
         exclude module: 'grails-converters'
         exclude module: 'grails-web'
     }
 
-    api project(":grails-databinding")
-    api "org.apache.grails.data:grails-datamapping-core"
-    api project(":grails-test-core")
-    api "org.springframework.boot:spring-boot-test"
-    api("org.spockframework:spock-spring") { transitive = false }
-    api "org.junit.jupiter:junit-jupiter-api"
-    api "org.junit.platform:junit-platform-runner"
-    runtimeOnly "org.junit.jupiter:junit-jupiter-engine"
+    api project(':grails-databinding')
+    api 'org.apache.grails.data:grails-datamapping-core'
+    api project(':grails-test-core')
+    api 'org.springframework.boot:spring-boot-test'
+    api('org.spockframework:spock-spring') { transitive = false }
+    api 'org.junit.jupiter:junit-jupiter-api'
+    api 'org.junit.platform:junit-platform-runner'
+    runtimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -54,9 +54,10 @@ dependencies {
 }
 
 apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

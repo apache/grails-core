@@ -1,0 +1,101 @@
+All JSON views subclass the link:{api}/grails/plugin/json/view/JsonViewTemplate.html[JsonViewTemplate] class by default.
+
+The `JsonViewTemplate` superclass implements the link:{api}/grails/plugin/json/view/api/JsonView.html[JsonView] trait which in turn extends the the link:groovydoc/grails/views/api/GrailsView.html[GrailsView] trait.
+
+Thanks to these traits several methods and properties are available to JSON views that can be used to accomplish different tasks.
+
+== Creating Links
+
+Links can be generated using the `g.link(..)` method:
+
+[source,groovy]
+json.person {
+    name "bob"
+    homepage g.link(controller:"person", id:"bob")
+}
+
+The `g.link` method is similar to the equivalent tag in GSP and allows you to easily create links to other controllers.
+
+== Altering the Response Headers
+
+To customize content types and headers use the `response` object defined by the link:{api}/grails/views/api/HttpView.html[HttpView] trait:
+
+[source,groovy]
+response.contentType "application/hal+json"
+response.header "Token", "foo"
+json.person {
+    name "bob"
+}
+
+The `HttpView` trait defines a variety of methods for inspecting the request and altering the response. 
+
+NOTE: The methods available are only a subset of the methods available via the `HttpServletRequest` and `HttpServletResponse` objects, this is by design as view logic should be limited and logic performed in the controller instead.
+
+== Accessing the Request
+
+Various aspects of the request can be accessed by the `request` object defined by the link:{api}/grails/views/api/HttpView.html[HttpView] trait:
+
+[source,groovy]
+json.person {
+ name "bob"
+ userAgent request.getHeader('User-Agent')
+}
+
+Parameters can be accessed via the `params` object which is an instance of link:{api}/grails/views/api/http/Parameters.html[Parameters]:
+
+[source,groovy]
+json.person {
+ name "bob"
+ first params.int('offset', 0)
+ sort params.get('sort', 'name')
+}
+
+== Default Static Imports
+
+The following classes' static properties are imported by default:
+
+* `org.springframework.http.HttpStatus`
+* `org.springframework.http.HttpMethod`
+* `grails.web.http.HttpHeaders`
+
+This means that you can use the `response` object to set the status using these constants, instead of hard coded numbers:
+
+[source,groovy]
+response.status NOT_FOUND
+
+Or generate links using the appropriate HTTP method:
+
+[source,groovy]
+g.link(resource:"books", method:POST)
+
+== I18n & Locale Integration
+
+You can lookup i18n messages use the `g.message` method:
+
+[source,groovy]
+json.error {
+    description g.message(code:'default.error.message')
+}
+
+You can also create locale specific views by appending the locale to view name. For example `person_de.gson` for German or `person.gson` for the default.
+
+NOTE: For more complex message lookups the `messageSource` property is an instance of the Spring https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/context/MessageSource.html[MessageSource] class.
+
+== Accessing Configuration
+
+The application configuration is injected automatically into your json views. To access it, simply reference `config`.
+
+[source,groovy]
+json {
+    foo config.getProperty("bar", String, null)
+}
+
+== Miscellaneous Properties
+
+Other properties are also available:
+
+|=======
+|`controllerName` |The name of the current controller
+|`actionName` |The name of the current controller action
+|`controllerNamespace` |The namespace of the current controller
+|=======

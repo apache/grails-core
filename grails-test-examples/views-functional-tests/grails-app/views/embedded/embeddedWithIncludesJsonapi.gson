@@ -1,0 +1,7 @@
+
+import functional.tests.Embedded
+
+model {
+    Embedded embedded
+}
+json jsonapi.render(embedded, [includes: ['name', 'customClass']])

@@ -1,21 +1,21 @@
 buildscript {
     repositories {
         // mavenLocal()
-        maven { url = "https://repo.grails.org/grails/core" }
+        maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
     dependencies {
         classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
-        classpath "org.apache.grails:grails-gradle-plugins:${project.projectVersion}"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
+        classpath 'org.apache.grails:grails-gradle-plugins'
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
     }
 }
 
-version "0.1"
-group "issue11102"
+version = '0.1'
+group = 'issue11102'
 
-apply plugin: "asset-pipeline"
-apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: 'asset-pipeline'
+apply plugin: 'org.apache.grails.gradle.grails-web'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gsp
@@ -25,32 +25,32 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.apache.grails:grails-core"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation "org.apache.grails.web:grails-web-boot"
-    implementation "org.apache.grails:grails-logging"
-    implementation "org.apache.grails:grails-rest-transforms"
-    implementation "org.apache.grails:grails-databinding"
-    implementation "org.apache.grails:grails-i18n"
-    implementation "org.apache.grails:grails-services"
-    implementation "org.apache.grails:grails-url-mappings"
-    implementation "org.apache.grails:grails-interceptors"
-    implementation "org.apache.grails:grails-cache"
-    implementation "org.apache.grails:grails-async"
-    implementation "org.apache.grails:grails-scaffolding"
-    implementation "org.apache.grails:grails-events"
-    implementation "org.apache.grails:grails-gsp"
-    console "org.apache.grails:grails-console"
-    profile "org.grails.profiles:web"
-    runtimeOnly "com.h2database:h2"
-    runtimeOnly "org.apache.tomcat:tomcat-jdbc"
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-logging'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails:grails-i18n'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-url-mappings'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-cache'
+    implementation 'org.apache.grails:grails-async'
+    implementation 'org.apache.grails:grails-scaffolding'
+    implementation 'org.apache.grails:grails-events'
+    implementation 'org.apache.grails:grails-gsp'
+    console 'org.apache.grails:grails-console'
+    profile 'org.grails.profiles:web'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
 
-    testImplementation "org.apache.grails:grails-testing-support-web"
-    testImplementation "org.apache.grails:grails-testing-support-datamapping"
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
@@ -58,7 +58,7 @@ dependencies {
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 }
 
-tasks.named('assetCompile') {
+tasks.named('assetCompile').configure {
     // No need to compile assets in functional tests
     enabled = false
 }

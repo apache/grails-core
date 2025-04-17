@@ -1,0 +1,111 @@
+
+== link
+
+
+
+=== Purpose
+
+
+Creates an html anchor tag with the `href` set based on the specified parameters.
+
+
+=== Examples
+
+
+Example controller for an application called "shop":
+
+[source,groovy]
+----
+class BookController {
+    def list() {
+        [books: Book.list(params)]
+    }
+
+    def show() {
+        [book : Book.get(params.id)]
+    }
+}
+----
+
+Example usages for above controller:
+
+[,xml]
+----
+<g:link action="show" id="1">Book 1</g:link>
+
+<g:link action="show" id="${currentBook.id}">${currentBook.name}</g:link>
+
+<g:link controller="book">Book Home</g:link>
+
+<g:link controller="book" action="list">Book List</g:link>
+
+<g:link controller="book" action="list" plugin="publishingUtils">Book List</g:link>
+
+<g:link url="[action:'list',controller:'book']">Book List</g:link>
+
+<g:link action="list" params="[sort: 'title', order: 'asc',
+                               author: currentBook.author]">
+     Book List
+</g:link>
+
+<g:link controller="book" absolute="true">Book Home</g:link>
+
+<g:link controller="book" namespace="publishing">Publishing Book Home</g:link>
+
+<g:link controller="book" base="http://admin.mygreatsite.com">Book Home</g:link>
+----
+
+Example Usage for a RESTful Resource:
+
+[,groovy]
+----
+static mappings = {
+    "/books"(resources: 'book')
+}
+----
+
+[,xml]
+----
+<g:link resource="book">Book Home</g:link>
+<g:link resource="book" id="${book.id}">Book Show</g:link>
+<g:link resource="book" action="create">New Book</g:link>
+----
+
+Example as a method call in GSP only:
+
+[,gsp]
+----
+<%= link(action:'list',controller:'book') { 'Book List' }%>
+----
+
+Results in:
+
+[source,xml]
+----
+<a href="/shop/book/list">Book List</a>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `action` (optional) - the name of the action to use in the link; if not specified the default action will be linked
+* `controller` (optional) - the name of the controller to use in the link; if not specified the current controller will be linked
+* `resource` (optional)   - the name of the resource url mapping to use in the link; if not specified controller should be used
+* `namespace` (optional) - the namespace of the controller to use in the link
+* `plugin` (optional) - the name of the plugin which provides the controller
+* `elementId` (optional) - this value will be used to populate the `id` attribute of the generated href
+* `id` (optional) - the id to use in the link
+* `fragment` (optional) - The link fragment (often called anchor tag) to use
+* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc[named URL mapping] to use to rewrite the link
+* `method` (optional) - The HTTP method specified in the corresponding URL mapping
+* `params` (optional) - a Map of request parameters
+* `uri` (optional) - a relative URI
+* `relativeUri` (optional) - Used to specify a uri relative to the current path.
+* `url` (optional) - a Map containing the action, controller, id etc.
+* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:<port> if there is no setting in the config and not running in production.
+* `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property, if both are specified.
+* `event` (optional) - The name of a Webflow event to trigger for the flow associated with the given `action`. Requires the Webflow plugin.
+

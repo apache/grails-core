@@ -1,0 +1,108 @@
+
+== select
+
+
+
+=== Purpose
+
+
+Generates HTML selects.
+
+
+=== Examples
+
+
+[,xml]
+----
+<!-- create a select from a range -->
+<g:select name="user.age" from="${18..65}" value="${age}"
+          noSelection="['':'-Choose your age-']" />
+
+<!-- use a no selection with a nullable Object property (use 'null' as key) -->
+<g:select id="type" name='type.id' value="${person?.type?.id}"
+    noSelection="${['null':'Select One...']}"
+    from='${PersonType.list()}'
+    optionKey="id" optionValue="name" />
+
+<!--
+create select from a list of companies
+note the 'optionKey' is set to the id of each company element
+-->
+<g:select name="user.company.id"
+          from="${Company.list()}"
+          value="${user?.company.id}"
+          optionKey="id" />
+
+<!-- create multiple select -->
+<g:select name="cars"
+          from="${Car.list()}"
+          value="${person?.cars*.id}"
+          optionKey="id"
+          multiple="true" />
+
+<!--
+create select with internationalized labels (this is
+useful for small static lists and the inList constraint).
+expected properties in messages.properties:
+book.category.M=Mystery
+book.category.T=Thriller
+book.category.F=Fantasy
+-->
+<g:select name="book.category" from="${['M', 'T', 'F']}"
+          valueMessagePrefix="book.category" />
+----
+
+Example as a method call in GSP only:
+
+[,gsp]
+----
+${select(from:aList, value:aValue)}
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the select element
+* `from` (required) - The list or range to select from
+* `value` (optional) - The current selected value that evaluates equals() to `true` for one of the elements in the `from` list.
+* `optionKey` (optional) - By default, the  `value` attribute of each `<option>` element will be the result of a `toString()` call on each element. Setting this allows the value to be a bean property of each element in the list.
+* `optionValue` (optional) - By default, the body of each `<option>` element will be the result of a `toString()` call on each element in the `from` attribute list. Setting this allows the value to be a bean property of each element in the list.
+* `keys` (optional) - A list of values to be used for the value attribute of each `option` element.
+* `noSelection` (optional) - A single-entry Map detailing the key and value to use for the "no selection made" choice in the select box. If there is no current selection this will be shown as it is first in the list, and if submitted with this selected, the key that you provide will be submitted. Typically, this will be blank - but you can also use 'null' in the case that you're passing the ID of an object
+* `valueMessagePrefix` (Optional) - By default, the value of the `option` element will be the result of a `toString()` call on each element in the `from` attribute list. Setting this allows the value to be resolved from the i18n messages. The `valueMessagePrefix` will be suffixed with a dot ('.') and then the value attribute of the option to resolve the message. If the message could not be resolved, the value is presented.
+* `multiple` (optional) - Set to `true` to generate a multi-select listbox rather than a dropdown list.
+* `dataAttrs` (optional) - a Map that adds `"data-\*` attributes to the `<option>` elements. Map's keys will be used as names of the `data-\*` attributes like so: `data-${key}="value V"` (i.e. with a "data-" prefix). The object belonging to a key determines the value V of the `data-\*` attribute. It can be a string referring to a property of beans in `from`, a Closure that accepts an item from `from` and returns the value, or a List that contains a value for each of the `<option>`s.
+* `locale` (optional) - The {javase}java.base/java/util/Locale.html[Locale] to use when resolving messages. If not specified, the current request locale is used.
+
+The `optionKey` and `optionValue` attribute of the `<g:select>` tag deserve special mention as these let you control what is displayed to the user within the resulting `<select>` tag and also the value which is submitted in a form submission. The default behaviour is to call `toString()` on each element in the `from` attribute, but for example if you had a list of `Book` domain classes this may not be useful behaviour.
+
+As an example the following `<g:select>` uses the `optionKey` attribute to resolve the `id` property of each `Book` as the value of the `value` attribute in each `<option>` tag. It also uses the `optionValue` attribute of `<g:select>` to display the `title` property of each `Book` to the user:
+
+[source,xml]
+----
+<g:select optionKey="id" optionValue="title"
+          name="book.title" from="${bookList}" />
+----
+
+If you require even more control over how each `<option>` element is presented to the user you can use a closure to apply a transformation within the `optionValue` attribute. As an example, the following code transforms each `Book` title to upper case:
+
+[source,xml]
+----
+<g:select optionKey="id" optionValue="${{it.title?.toUpperCase()}}"
+          name="book.title" from="${bookList}" />
+----
+
+If you specify an `optionKey` then be aware that you should use that property in the `value` attribute in order to pre-select an item in the drop-down list. For example, let's say we have a `favoriteBook` that we want to pre-select in a list of books:
+
+[source,xml]
+----
+<g:select optionKey="id" value="${favoriteBook.id}"
+          name="book" from="${bookList}" />
+----
+
+In this case, `value` should contain the ID of `favoriteBook` rather than the book object itself because `optionKey` is set to the `id` property.
+
+

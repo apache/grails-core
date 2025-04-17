@@ -1,0 +1,31 @@
+
+== localeSelect
+
+
+
+=== Purpose
+
+
+Generates an HTML select with ``Locale``s as values
+
+
+=== Examples
+
+
+[source,xml]
+----
+<!-- create a locale select -->
+<g:localeSelect name="myLocale" value="${locale}" />
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` - The name to be used for the select box
+* `value` (optional) - The selected {javase}java.base/java/util/Locale.html[Locale]; defaults to the current request locale if not specified
+* `locale` (optional) - The {javase}java.base/java/util/Locale.html[Locale] to use for formatting the locale names. Defaults to the current request locale and then the system default locale if not specified
+
+

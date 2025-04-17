@@ -1,0 +1,99 @@
+GSON views integrate with Grails' content negotiation infrastructure. For example if you create two views called `grails-app/views/book/show/show.gsp` (for HTML) and `grails-app/views/book/show/show.gson` (for JSON), you can then define the following action:
+
+[source,groovy]
+.`grails-app/controllers/myapp/BookController.groovy`
+def show() {
+    respond Book.get(params.id)
+}
+
+The result is that if you send a request to `/book/show` it will render `show.gsp` but if you send a request to `/book/show.json` it will render `show.gson`.
+
+In addition, if the client sends a request with the `Accept` header containing `application/json` the `show.gson` view will be rendered.
+
+== Content Negotiation and Domain Classes
+
+Content negotiation also works nicely with domain classes, for example if you want to define a template to render any instance of the `Book` domain class you can create a `gson` file that matches the class name. 
+
+For example given a class called `demo.Book` you can create `grails-app/views/book/_book.gson` and whenever `respond` is called with an instance of `Book` Grails will render `_book.gson`.
+
+[source,groovy]
+def show() {
+    respond Book.get(params.id) 
+}
+
+If you define an `index` action that responds with a list of books:
+
+[source,groovy]
+----
+def index() {
+    respond Book.list()
+}
+----
+
+Then you can create a corresponding `grails-app/views/book/index.gson` file that renders each book:
+
+.grails-app/views/book/index.gson
+[source,groovy]
+----
+@Field List<Book> bookList
+
+json tmpl.book(bookList)
+----
+
+NOTE: When responding with a list of objects Grails automatically appends the suffix "List" to the model name, so in this case the model name is `bookList`
+
+By calling the `tmpl.book(..)` method with the list of books the `grails-app/views/book/_book.gson` template will be rendered for each one and a JSON array returned.
+
+== Global Default Template
+
+You can also define a `/object/_object` template that is rendered by default if no other template is found during content negotiation. To do this create a file called `/grails-app/views/object/_object.gson` where the name of the model is `object`, for example:
+
+[source,groovy]
+model {
+    Object object
+}
+json g.render(object)
+
+== Content Negotiation and Versioned APIs
+
+A typical use case when building REST APIs is the requirement to support different versions of the API. GSON views can be versioned by including the version in the name of the view.
+
+Grails will then use the `ACCEPT-VERSION` header when resolving the view.
+
+For example given a view called `/book/show.gson` if you wish to deprecate your previous API and create a version 2.0 API, you can rename the previous view `/book/show_v1.0.gson` and create a new `/book/show.gson` representing the new version of the API.
+
+Then when the client sends a request with the `ACCEPT-VERSION` header containing `v1.0` the `/book/show_v1.0.gson` view will be rendered instead of `/book/show.gson`.
+
+== Content Negotiation and View Resolving Strategy
+
+Grails Framework takes into account a number of factors when attempting to resolve the view including the content type, version and locale.
+
+The paths searched are following:
+
+* view_name[_LOCALE][_ACCEPT_CONTENT_TYPE][_ACCEPT-VERSION].gson (Example: show_de_hal_v1.0.gson)
+* view_name[_LOCALE][_ACCEPT_CONTENT_TYPE].gson (Example: show_de_hal.gson)
+* view_name[_LOCALE][_ACCEPT-VERSION].gson (Example: show_de_v1.0.gson)
+* view_name[_LOCALE].gson (Example: show_de.gson)
+* view_name[_ACCEPT_CONTENT_TYPE][_ACCEPT-VERSION].gson (Example: show_hal_v1.0.gson)
+* view_name[_ACCEPT-VERSION][_ACCEPT_CONTENT_TYPE].gson (Example: show_v1.0_hal.gson)
+* view_name[_ACCEPT_CONTENT_TYPE].gson (Example: show_hal.gson)
+* view_name[_ACCEPT-VERSION].gson (Example: show_v1.0.gson)
+* view_name.gson (Example: show.gson)
+
+The content type (defined by either the `ACCEPT` header or file extension in the URI) is taken into account to allow different formats for the same view.
+
+[[mimeTypes]]
+== Content Negotiation and Custom Mime Types
+
+Some REST APIs use the notion of custom mime types to represent resources. Within Grails you can for example define custom mime types in `grails-app/conf/application.yml`:
+
+[source,groovy]
+grails:
+    mime:
+        types:
+            all:      "*/*"
+            book:     "application/vnd.books.org.book+json"
+            bookList: "application/vnd.books.org.booklist+json"
+
+Once these custom mime types have been defined you can then define a view such as `show.book.gson` for that particular mime type.
+

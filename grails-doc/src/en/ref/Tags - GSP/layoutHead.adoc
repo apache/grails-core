@@ -1,0 +1,52 @@
+== layoutHead
+
+
+
+=== Purpose
+
+
+Used in layouts to render the contents of the head tag of the decorated page. Equivalent to the SiteMesh `<decorator:head />` tag.
+
+
+=== Examples
+
+
+Example decorated page:
+
+[source,html]
+----
+<html>
+   <head>
+        <meta name="layout" content="myLayout" />
+        <script src="myscript.js"></script>
+   </head>
+   <body>Page to be decorated</body>
+</html>
+----
+
+Example decorator layout:
+
+[source,html]
+----
+<html>
+   <head>
+        <script src="global.js" /></script>
+        <g:layoutHead />
+   </head>
+   <body><g:layoutBody /></body>
+</html>
+----
+
+Results in:
+
+[source,html]
+----
+<html>
+   <head>
+        <script src="global.js"></script>
+        <script src="myscript.js"></script>
+   </head>
+   <body>Page to be decorated</body>
+</html>
+----
+

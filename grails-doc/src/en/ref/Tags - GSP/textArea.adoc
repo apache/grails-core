@@ -1,0 +1,54 @@
+
+== textArea
+
+
+
+=== Purpose
+
+
+Creates an HTML text area element. An implicit "id" attribute is given the same value as name unless you explicitly specify one. You can specify "rows" and "cols" attributes, but CSS values for width and height on `textarea` will override these values.
+
+NOTE: The standard stylesheet used by the scaffolding defines values for 'width' and 'height' on <textarea> elements, so if you want to customise the sizes yourself you will have to provide CSS overrides.
+
+
+=== Examples
+
+
+[source,xml]
+----
+<g:textArea name="myField" value="myValue" rows="5" cols="40"/>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `name` (required) - The name of the text area
+* `value` (optional) - The initial text to display in the text area. By default, the text area will be empty.
+* `escapeHtml` (optional) - Sets whether the given value will be encoded as HTML. Default value is `true`.
+
+
+=== Configuration
+
+
+Some attributes can be defined as Boolean values, but the html specification
+mandates the attribute must have the same value as its name. For example,
+`disabled`, `readonly` and `checked`. It may be desirable to have additional attributes
+(like `required`) behave the same way. This can be controlled with the following config value:
+
+[source,yml]
+----
+grails:
+    tags:
+        booleanToAttributes:
+            - disabled
+            - checked
+            - readonly
+            - required
+----
+
+Defaults are `disabled`, `checked`, `readonly`
+
+

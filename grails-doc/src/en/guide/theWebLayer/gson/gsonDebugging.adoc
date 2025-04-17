@@ -1,0 +1,26 @@
+Generally views should be kept simple and if you arrive to the point where you need to debug a view you probably have too much logic in the view that would be better off handled by the controller prior to supplying the model.
+
+Nevertheless here are a few view debugging tips to help identify problems in the view.
+
+== Introspecting the Model
+
+Every JSON view is a Groovy script and like any Groovy script the model is defined in a `binding` variable. Therefore you can easily find out the model at any time by either logging or printing the binding variables:
+
+[source,groovy]
+----
+model {
+    Book book
+}
+// use the log variable
+log.debug "Model is $binding.variables"
+// use system out
+System.out.println "Model is $binding.variables"
+json g.render(book)
+----
+
+NOTE: If you using the `log` variable then you will need to enabling logging for the `grails.views` package in `grails-app/conf/logback.groovy`
+
+
+== Connecting a Debugger
+
+Some IDEs like Intellij IDE allow you to set break points and step debug within the view itself. As mentioned previously you shouldn't arrive to this point and if you do you have too much logic in your view, but if you do need it the feature is there.

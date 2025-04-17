@@ -86,7 +86,7 @@ You can also define this parameter in the link:theWebLayer.html#urlmappings[URL 
 
 You could code your controller action to return XML based on this property, but you can also make use of the controller-specific `withFormat()` method:
 
-NOTE: This example requires the addition of the `org.grails.plugins:converters` plugin
+NOTE: This example requires the addition of the `org.apache.grails:grails-converters` plugin
 
 [source,groovy]
 ----

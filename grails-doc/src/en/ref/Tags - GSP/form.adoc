@@ -1,0 +1,72 @@
+
+== form
+
+
+
+=== Purpose
+
+
+Creates a form that submits to a controller, action, and/or id. Beyond what is described below, all the usual HTML attributes apply.
+
+
+=== Examples
+
+
+Example controller for an application called "shop":
+
+[source,groovy]
+----
+class Book {
+    def list() {
+        [books: Book.list(params)]
+    }
+
+    def show() {
+        [book: Book.get(params.id)]
+    }
+}
+----
+
+Example usages for above controller:
+
+[,xml]
+----
+<g:form name="myForm" action="myaction" id="1">...</g:form>
+results in:
+<form action="/shop/book/myaction/1" method="post"
+      name="myForm" id="myForm">
+...
+</form>
+
+<g:form name="myForm" url="[action:'list',controller:'book']">...</g:form>
+results in:
+<form action="/shop/book/list" method="post" name="myForm" id="myForm">
+...
+</form>
+
+<g:form action="show">...</g:form>
+results in:
+<form action="/shop/book/show" method="post" >...</form>
+----
+
+
+=== Description
+
+
+Attributes
+
+* `action` (optional) - The name of the action to use in the link; if not specified the default action will be linked
+* `controller` (optional) - The name of the controller to use in the link; if not specified the current controller will be linked
+* `id` (optional) - The id to use in the link
+* `fragment` (optional) - The link fragment (often called anchor tag) to use
+* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc[named URL mapping] to use to rewrite the link
+* `params` (optional) - A Map of request parameters
+* `url` (optional) - A map containing the action, controller, id etc.
+* `relativeUri` (optional) - Used to specify a uri relative to the current path.
+* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:<port> if there is no setting in the config and not running in production.
+* `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property, if both are specified.
+* `name` (optional) - A value to use for both the name and id attribute of the form tag
+* `useToken` (optional) - Set whether to send a token in the request to handle duplicate form submissions. See xref:../guide/theWebLayer/controllers/formtokens.adoc[Handling Duplicate Form Submissions]
+* `method` (optional) - The form method to use, either `POST` or `GET`; defaults to `POST`
+
+

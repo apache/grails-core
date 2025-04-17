@@ -1,0 +1,23 @@
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gson'
+}
+
+version = '0.0.1'
+group = 'functional.tests.plugin'
+
+// TODO: the fileSystemShortName in the BinaryGrailsPlugin must match the plugin name for views to be found on the classpath
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-views-gson'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    compileOnly 'org.slf4j:slf4j-nop' // Used for getting rid of warning about missing slf4j implementation during compileGsonViews task
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}
