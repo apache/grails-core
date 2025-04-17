@@ -11,7 +11,7 @@ group = 'functional.tests'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation project(':grails-test-examples-gson-plugin')
+    implementation project(':grails-test-examples-views-functional-tests-plugin')
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'org.apache.grails:grails-views-markup'
 
