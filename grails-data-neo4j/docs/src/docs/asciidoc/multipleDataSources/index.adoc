@@ -1,0 +1,14 @@
+GORM for Neo4j supports the notion of multiple data sources where multiple individual Bolt `Driver` instances can be configured and switched between.
+
+=== Configuring Multiple Bolt Drivers
+
+include::configuration.adoc[]
+
+=== Mapping Domain Classes to Bolt Drivers
+
+include::mappingDomainsToDataSources.adoc[]
+
+=== Switching between Bolt Drivers
+
+include::boltDriverSwitching.adoc[]
+

@@ -1,0 +1,21 @@
+import graphql.GraphQLError
+import graphql.language.SourceLocation
+
+model {
+    Object data
+    List<GraphQLError> errors
+}
+
+json {
+    data g.render(data)
+    if (errors) {
+        errors(errors) { GraphQLError error ->
+            message error.message
+            errorType error.errorType
+            locations(error.locations ?: []) { SourceLocation location ->
+                line location.line
+                column location.column
+            }
+        }
+    }
+}

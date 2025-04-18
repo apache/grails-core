@@ -1,0 +1,91 @@
+== Arguments
+
+Arguments are how users supply data to your custom operation or field. Arguments support simple types (String, Integer, etc) as well as custom types that you define.
+
+[source,groovy]
+----
+query('authorByName', Author) {
+    argument('name', String) //To take in a single string
+
+    argument('names', [String]) //To take in a list of strings
+
+    argument('fullName', 'AuthorNameArgument') { //A custom argument
+        accepts {
+            field('first', String)
+            field('last', String)
+        }
+    }
+}
+----
+
+The API inside of the last argument block is exactly the same as the API for defining link:#custom[custom properties] with custom types.
+
+=== Argument Metadata
+
+GraphQL has the ability to store metadata about arguments to operations.
+
+[source,groovy]
+----
+query('authorByName', Author) {
+    argument('name', String) {
+        defaultValue 'John' //Supply a sensible default
+
+        nullable true //Allow a null value (default false)
+
+        description 'The name of the author to search for'
+    }
+}
+----
+=== Using Argument Inputs
+Within your supplied DataFetcher, arguments can easily be retrieved from their corresponding DataFetchingEnvironment and used as necessary.
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static hasMany = [books: Book]
+
+    static graphql = GraphQLMapping.build {
+        query('authorByName', Author) {
+            argument('name', String)
+            dataFetcher(new DataFetcher<>() {
+                @Override
+                Object get(DataFetchingEnvironment environment) {
+                    Author.findByName(environment.getArgument('name'))
+                }
+            })
+        }
+        add('booksPublishedBetween', [Book]) {
+            input(false)
+            argument('from', Date)
+            argument('to', Date)
+            dataFetcher { Author author, ClosureDataFetchingEnvironment environment ->
+                Date from = environment.getArgument('from')
+                Date to = environment.getArgument('to')
+                Book.where {
+                    author == author
+                    published >= from
+                    published <= to
+                }.list()
+            }
+        }
+    }
+}
+----
+
+The above example would support the following type of query:
+
+[source,graphql]
+----
+query {
+  authorByName(name: "Herman Melville") {
+    booksPublishedBetween(from: "1850-01-01", to: "1852-12-31") {
+      title
+      pageCount
+    }
+  }
+}
+----
+

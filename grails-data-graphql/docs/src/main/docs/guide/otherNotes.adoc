@@ -1,0 +1,117 @@
+== Other Notes
+
+This section of the documentation is designed to inform you about special circumstances that may impact some use cases.
+
+=== Metadata
+
+You may come across a time when you would like to supply metadata for a property or type, but because that type is not part of an exposed persistent entity, it is not possible to do so via the mapping DSL. For those use cases, a link:{api}/org/grails/gorm/graphql/GraphQL.html[@GraphQL] annotation exists. The annotation can be applied to related entities or enums, for example.
+
+=== Nullability
+
+The nullable constraint on persistent properties is only respected during the create operation. For all other cases, null is always allowed. The reasoning for allowing nulls for output operations (get or list) is due to the possibility of the properties being null as a result of validation errors during a create or update. Nulls are allowed for update operations to allow users to send a partial object instead of the entire object.
+
+=== Inheritance
+
+Because GraphQL doesn't support the ability to have interfaces extend other interfaces, interface types will only be created for root entities that have children. All child entities, regardless of any intermediate parent classes, will set their interface type to their root entity interface.
+
+When querying the root entity, all children will be available to select properties via the `... on` directive.
+
+=== Map Properties
+
+Since `Map`s by definition are dynamic, they don't fit well into the pre defined world that is the GraphQL schema. It is impossible to render them as they are with dynamic keys because the schema must be statically defined. There are a couple ways to work around this depending on how you are using the properties.
+
+==== Truly Dynamic
+
+For `Map` properties where the keys are not known at all, it is entirely up to the user to determine how it should be handled. One example might be to return a list of objects instead. For example, consider the following domain class:
+
+[source,groovy]
+.grails-app/domain/demo/Author.groovy
+----
+class Author {
+
+include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
+
+}
+----
+
+It is impossible to know what keys will be used in this example, so we will need to provide the data in a predefined format. Instead of a `Map<String, Book>`, we could return the books as a `List<Map>` where each map has a `key` property and a `value` property.
+
+To accomplish this there are several steps necessary to take in order for everything to work property.
+
+===== Configure The Property
+
+The property must be modified to contain the definition proposed above. In order to change the data type of a property, it must first be excluded and then replaced with a custom property.
+
+[source,groovy]
+.grails-app/domain/demo/Author.groovy
+----
+class Author {
+
+include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
+
+    static graphql = GraphQLMapping.build {
+
+include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customBooks]
+
+    }
+}
+----
+
+<1> The persistent property is excluded from the schema
+<2> A custom property is created in its place
+<3> A custom type is defined for our property
+<4> The data is converted to the expected data type that GraphQL expects
+
+The domain class configuration is enough to be able to retrieve author instances with GraphQL. If users are to be creating or updating instances, there is more work to do.
+
+===== Data Binding
+
+A data binder must be configured to transform the data sent in the `key/value` object format to a format that can be bound to the domain. For those using this library standalone, it is up to you to determine how that is best done. Grails data binding supports binding to Map types, given the request data is in a specific format. To achieve that format, a data binder for the `Author` domain must be registered.
+
+[source,groovy]
+.src/main/groovy/demo/AuthorDataBinder.groovy
+----
+include::{sourcedir}/examples/grails-docs-app/src/main/groovy/demo/AuthorDataBinder.groovy[tags=wholeFile]
+----
+
+Then to register the data binder, see the section on link:#dataBinders.html[data binders].
+
+==== Pre Defined Keys
+
+For `Map` properties where the keys of the map are known, the process to handle them is much easier. In this example, there is a Map property on our `Author` domain class that can store a `lat` key and a `long` key to represent latitude and longitude.
+
+[source,groovy]
+.grails-app/domain/demo/Author.groovy
+----
+class Author {
+
+include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=locationDefinition]
+
+    static graphql = GraphQLMapping.build {
+
+include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customLocation]
+
+    }
+}
+----
+
+<1> The persistent property is excluded from the schema
+<2> A custom property is created in its place
+<3> A custom type is defined for our property
+
+==== All Together
+
+Once all of the above is in place, here is what a create mutation might look like:
+
+:url: http://localhost:8080/graphql
+[source, bash, subs="attributes"]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createCommand]
+----
+
+And here is the expected response:
+
+[source, json]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createResponse]
+----

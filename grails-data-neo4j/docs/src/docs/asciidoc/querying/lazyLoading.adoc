@@ -1,0 +1,148 @@
+When retrieving a GORM entity and its associations by default single-ended associations will only retrieve the association id, whilst associations to many objects will not retrieve the association at all until it is accessed. This is called lazy loading.
+
+For example given the following domain model:
+
+[source,groovy]
+----
+class League {
+    String name
+    static hasMany = [clubs:Club]
+}
+class Club {
+    String name
+    static belongsTo = [league:League]
+    static hasMany = [teams: Team ]
+}
+class Team  {
+    String name
+    static belongsTo = [club:Club]
+}
+----
+
+When you retrieve the `Club` by name:
+
+[source,groovy]
+----
+def club = Club.findByName("Manchester United")
+----
+
+You will get the following Cypher query:
+
+[source,cypher]
+----
+MATCH (n:Club) WHERE ( ID(n)={1} ) RETURN n as data
+----
+
+As you can see the `teams` association is not loaded in the query and nor is the `league` association. Note that if you were to make the `league` association nullable:
+
+[source,groovy]
+----
+class Club {
+ ...
+ static belongsTo = [league:League]
+ static constraints = {
+    league nullable:true
+ }
+}
+----
+
+This would alter the query executed to:
+
+[source,cypher]
+----
+MATCH (n:Club) WHERE ( ID(n) = {1} )
+OPTIONAL MATCH(n)-[:LEAGUE]->(leagueNode)
+RETURN n as data, collect(DISTINCT ID(leagueNode)) as leagueIds
+----
+
+Note that only the ID of the `league` association is retrieved.
+
+The reason the `id` of the associated entity is retrieved is to differentiate between whether an association exists or is `null`. You can restore the previous behaviour by making the `league` association `lazy`:
+
+[source,groovy]
+----
+class Club {
+ ...
+ static belongsTo = [league:League]
+ static constraints = {
+    league nullable:true
+ }
+ static mapping = {
+    league lazy:true
+ }
+}
+----
+
+However if you were to access the `league` association and it were `null` you would get an exception.
+
+With all of these approaches, if you then iterate over the teams you will get a second query to obtain the teams:
+
+[source,groovy]
+----
+for(team in club.teams) {
+    println team.name
+}
+----
+
+The query generated will be:
+
+[source,groovy]
+----
+MATCH (from:Club)-[:TEAMS]->(to:Team) WHERE ID(from) = {id} RETURN to as data
+----
+
+If you wish to avoid this secondary query to retrieve the data you can do so using an eager query:
+
+[source,groovy]
+----
+// using a dynamic finder
+def club = Club.findByName("Manchester United", [fetch:[teams:'join']])
+
+// using a where queries
+def query = Club.where { name == "Manchester United" }
+                .join('teams')
+def club = query.find()
+
+// using criteria
+def query = Club.createCriteria()
+def club = query.get {
+    eq 'name', "Manchester United"
+    join 'teams'
+}
+----
+
+
+This will instead generate the following query:
+
+[source,cypher]
+----
+MATCH (n:Club) WHERE ( n.name={1} )
+OPTIONAL MATCH(n)-[:TEAMS]->(teamsNode) WITH n, collect(DISTINCT teamsNode) as teamsNodes
+RETURN n as data, teamsNodes
+----
+
+As you can see the associated team nodes are loaded by the query. If you prefer this to happen for every query, then this can also be configured in the mapping:
+
+[source,groovy]
+----
+class Club {
+    ...
+
+    static mapping = {
+       teams fetch:"eager"
+    }
+}
+----
+
+You can also configure the collection ids to be eagerly loaded, but the instances themselves to be lazy loaded via proxies:
+
+[source,groovy]
+----
+class Club {
+    ...
+
+    static mapping = {
+       teams fetch:"eager", lazy:true
+    }
+}
+----

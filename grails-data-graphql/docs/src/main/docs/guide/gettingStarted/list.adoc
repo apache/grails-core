@@ -1,0 +1,14 @@
+In this example the query is demonstrating retrieving a list of speakers. Since the talks of the speaker are requested to be returned, the association will be eagerly fetched to make the process as efficient as possible.
+
+:url: http://localhost:8080/graphql
+[source, bash, subs="attributes"]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=listCurlCommand]
+----
+
+which returns:
+
+[source, json]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=listResponse]
+----

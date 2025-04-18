@@ -1,0 +1,36 @@
+===== Purpose
+
+Execute a cypher query.
+
+===== Example
+
+
+[source,groovy]
+----
+setup:
+def person = new Person(firstName: "Bob", lastName: "Builder")
+def petType = new PetType(name: "snake")
+def pet = new Pet(name: "Fred", type: petType, owner: person)
+person.addToPets(pet)
+person.save(flush: true)
+session.clear()
+
+when:
+def result = person.cypher("start n=node({this}) match n-[:pets]->m return m")
+
+then:
+result.iterator().size() == 1
+----
+
+===== Description
+
+
+`cypher` is invoked on any domain instance and returns a https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Result.html[org.neo4j.driver.Result]
+
+The parameters passed are:
+
+* cypher query string. The query string might use a implicit `this` parameter pointing to the instance's node
+* a optional map of cypher parameters
+
+
+

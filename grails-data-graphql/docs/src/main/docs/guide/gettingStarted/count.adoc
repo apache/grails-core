@@ -1,0 +1,14 @@
+In this example the query is demonstrating retrieving the total count of speakers.
+
+:url: http://localhost:8080/graphql
+[source, bash, subs="attributes"]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=countCurlCommand]
+----
+
+which returns:
+
+[source, json]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=countResponse]
+----

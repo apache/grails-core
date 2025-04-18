@@ -1,0 +1,48 @@
+plugins {
+    id "com.gradle.enterprise" version "3.15.1"
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+}
+
+gradleEnterprise {
+    server = 'https://ge.grails.org'
+    buildScan {
+        publishAlwaysIf(System.getenv('CI') == 'true')
+        publishIfAuthenticated()
+        uploadInBackground = System.getenv("CI") == null
+        capture {
+            taskInputFiles = true
+        }
+    }
+}
+
+buildCache {
+    local { enabled = System.getenv('CI') != 'true' }
+    remote(gradleEnterprise.buildCache) {
+        def isAuthenticated = System.getenv('GRADLE_ENTERPRISE_ACCESS_KEY')
+        push = System.getenv('CI') == 'true' && isAuthenticated
+        enabled = true
+    }}
+
+include 'core'
+include 'plugin'
+include 'docs'
+
+include 'examples-grails-test-app'
+project(":examples-grails-test-app").projectDir = new File(settingsDir, "examples/grails-test-app")
+
+include 'examples-grails-docs-app'
+project(":examples-grails-docs-app").projectDir = new File(settingsDir, "examples/grails-docs-app")
+
+include 'examples-grails-tenant-app'
+project(":examples-grails-tenant-app").projectDir = new File(settingsDir, "examples/grails-tenant-app")
+
+include 'examples-grails-multi-datastore-app'
+project(":examples-grails-multi-datastore-app").projectDir = new File(settingsDir, "examples/grails-multi-datastore-app")
+
+include 'examples-spring-boot-app'
+project(":examples-spring-boot-app").projectDir = new File(settingsDir, "examples/spring-boot-app")
+
+rootProject.name = 'gorm-graphql-root'
+
+findProject(':core').name = 'gorm-graphql'
+findProject(':plugin').name = 'grails-plugin-gorm-graphql-plugin'

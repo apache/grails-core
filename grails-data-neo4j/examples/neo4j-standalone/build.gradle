@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(":grails-datastore-gorm-neo4j")
+    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+}

@@ -1,0 +1,21 @@
+This implementation tries to be as compatible as possible with GORM for Hibernate. In general you can refer to the link:../../hibernate[GORM for Hibernate documentation] as the majority of features are implemented across both.
+
+The following key features are supported by GORM for Neo4j:
+
+* Simple persistence methods (save,delete etc)
+* Dynamic finders
+* Criteria queries
+* Named queries
+* Inheritance
+* Embedded types
+* Query by example
+* Many-to-many associations (these can be modelled with a mapping class)
+
+However, some features are not supported:
+
+* HQL queries (however Cypher Queries are)
+* Composite primary keys
+* Any direct interaction with the Hibernate API
+* Custom Hibernate user types
+
+There may be other limitations not mentioned here so in general it shouldn't be expected that an application based on GORM for Hibernate will "just work" without some tweaking involved. Having said that, the large majority of common GORM functionality is supported.

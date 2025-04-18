@@ -1,0 +1,40 @@
+To query with raw Cypher queries you can use the built in `find` and `findAll` methods:
+
+[source,groovy]
+----
+def club = Club.find("MATCH n where n.name = {1} RETURN n", 'FC Bayern Muenchen')
+def clubs = Club.findAll("MATCH n where n.name = {1} RETURN n", 'FC Bayern Muenchen')
+----
+
+Note that the first returned item should be the node itself. To execute cypher queries and work with the raw results use `executeCypher`:
+
+[source,groovy]
+----
+Result result = Club.executeCypher("MATCH n where n.name = {1} RETURN n", ['FC Bayern Muenchen'])
+----
+
+Or alternatively you can use `executeQuery` which will return a list of results:
+
+[source,groovy]
+----
+List<Node> nodes = Club.executeQuery("MATCH n where n.name = {1} RETURN n", ['FC Bayern Muenchen'])
+----
+
+When working with raw results, you can convert any `org.neo4j.driver.types.Node` into a domain instance using the `as` keyword:
+
+[source,groovy]
+----
+Node myNode = ...
+ Club club = myNode as Club
+----
+
+TIP: This also works for `Relationship` and `Path` types
+
+You can also convert any https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Result.html[org.neo4j.driver.Result] instance to a list of domain classes:
+
+[source,groovy]
+----
+Result result = ...
+List<Club> clubs = result.toList(Club)
+----
+

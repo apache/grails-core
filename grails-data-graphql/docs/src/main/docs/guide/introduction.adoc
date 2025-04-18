@@ -1,0 +1,27 @@
+image::logo.svg[GraphQL,100,100,float="left"]
+
+The GORM GraphQL library provides functionality to generate a GraphQL schema based on your GORM entities. If you aren't sure what GraphQL is, please take a look at their link:http://graphql.org/[homepage].
+
+The underlying implementation of the GraphQL specification used by this library is link:http://graphql-java.readthedocs.io/en/stable/[graphql-java].
+
+There are two different binaries available for use. The first is the core library which contains all of the logic for building the schema. The second is a Grails plugin which, on top of core, provides several features.
+
+== Core Library
+
+In addition to mapping domain classes to a GraphQL schema, the core library also provides default implementations of "data fetchers" to query, update, and delete data through executions of the schema.
+
+Because GraphQL is different in the way that the fields requested to be returned are included with the request, it allows the server to be smart about the query being executed. For example, when a property is requested, the server knows whether or not that property is an association. If it is an association, the query parameters can be set to eagerly fetch the association, resulting in a single query instead of many. The end result is that less queries will be executed against your database, greatly increasing the performance of your API.
+
+CAUTION: Requires Java 8. Effort has been made to support GORM 6.0.x, however this library is only tested against 6.1.x.
+
+== Grails Plugin
+
+- A controller to receive and respond to GraphQL requests through HTTP, based on their link:http://graphql.org/learn/serving-over-http/[guidelines].
+
+- Generates the schema at startup with spring bean configuration to make it easy to extend.
+
+- Includes a link:https://github.com/graphql/graphiql[GraphiQL] browser enabled by default in development. The browser is accessible at `/graphql/browser`.
+
+- Overrides the default data binder to use the data binding provided by Grails
+
+- Provides a link:{api}/org/grails/gorm/graphql/plugin/testing/GraphQLSpec.html[trait] to make integration testing of your GraphQL endpoints easier.

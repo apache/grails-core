@@ -1,0 +1,18 @@
+=== Create
+
+In this example the request is a mutation to create a speaker.
+
+:url: http://localhost:8080/graphql
+[source, bash, subs="attributes"]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=curlCommand]
+----
+
+The API answers with the properties we requested.
+
+[source, json]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=response]
+----
+
+NOTE: If there was a validation error during the create process, the `errors` property would be populated with the validation errors.

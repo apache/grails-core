@@ -1,0 +1,49 @@
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+		classpath("org.springframework.boot:spring-boot-gradle-plugin")
+	}
+}
+
+apply plugin: 'groovy'
+apply plugin: 'idea'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+dependencies {
+	implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation "org.springframework.boot:spring-boot-starter-web"
+	implementation project(':hibernate5-boot-plugin')
+	implementation "org.hibernate:hibernate-core:$hibernateCoreVersion"
+	implementation "org.hibernate:hibernate-ehcache:$hibernateCoreVersion", {
+		// exclude javax variant of hibernate-core
+		exclude group: 'org.hibernate', module: 'hibernate-core'
+	}
+	implementation "org.apache.grails:grails-core"
+	implementation project(":gorm-graphql")
+	//implementation 'org.codehaus.groovy:groovy-astbuilder:3.0.19'
+	implementation 'jakarta.transaction:jakarta.transaction-api'
+	implementation 'com.github.javaparser:javaparser-core'
+	implementation "com.graphql-java:graphql-java:$graphqlJavaVersion"
+	implementation 'junit:junit'
+	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+	runtimeOnly "org.apache.tomcat.embed:tomcat-embed-logging-log4j"
+	implementation 'jakarta.persistence:jakarta.persistence-api'
+
+	runtimeOnly "javax.el:javax.el-api"
+	runtimeOnly "org.glassfish:javax.el"
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.spockframework:spock-core'
+	testImplementation 'junit:junit'
+}
+
+tasks.withType(Test) {
+	useJUnitPlatform()
+}

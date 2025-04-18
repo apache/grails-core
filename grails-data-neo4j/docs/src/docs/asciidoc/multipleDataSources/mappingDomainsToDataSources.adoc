@@ -1,0 +1,64 @@
+If a domain class has no specified Neo4j driver connection configuration then the default is used.
+
+You can set the `connection` method in the `mapping` block to configure an alternate Neo4j Driver.
+
+For example, if you want to use the `ZipCode` domain to use a Neo4j Driver connection called `'lookup'`, configure it like this:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      connection 'lookup'
+   }
+}
+----
+
+A domain class can also use two or more configured Neo4j Driver connections by using the `connections` method with a list of names to configure more than one, for example:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      connections(['lookup', 'auditing'])
+   }
+}
+----
+
+If a domain class uses the default connection and one or more others, you can use the `ConnectionSource.DEFAULT` constant to indicate that:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.core.connections.*
+
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      connections(['lookup', ConnectionSource.DEFAULT])
+   }
+}
+----
+
+If a domain class uses all configured `DataSource` instances use the value `ALL`:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.core.connections.*
+
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      connection ConnectionSource.ALL
+   }
+}
+----
+

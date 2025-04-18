@@ -1,0 +1,76 @@
+===== Purpose
+
+
+For domain classes mapped by Neo4j you can put and get arbitrary attributes on a instances by using the dot operator or map semantics on the domain instance.
+
+===== Example
+
+
+A simple domain class:
+[source,groovy]
+----
+class Person implements Serializable {
+    String firstName
+    String lastName
+    Integer age = 0
+}
+----
+
+
+===== Using Map Semantics
+
+[source,groovy]
+----
+when:
+def person = new Person(lastName:'person1').save()
+person['notDeclaredProperty'] = 'someValue'   // n.b. the 'dot' notation is not valid for undeclared properties
+person['emptyArray'] = []
+person['someIntArray'] = [1,2,3]
+person['someStringArray'] = ['a', 'b', 'c']
+person['someDoubleArray'] = [0.9, 1.0, 1.1]
+session.flush()
+session.clear()
+person = Person.get(person.id)
+
+then:
+person['notDeclaredProperty'] == 'someValue'
+person['lastName'] == 'person1'  // declared properties are also available via map semantics
+person['someIntArray'] == [1,2,3]
+person['someStringArray'] == ['a', 'b', 'c']
+person['someDoubleArray'] == [0.9, 1.0, 1.1]
+----
+
+
+===== Using Dot Operator
+
+[source,groovy]
+----
+when:
+def person = new Person(lastName:'person1').save(flush:true)
+session.clear()
+person = Person.load(person.id)
+person.notDeclaredProperty = 'someValue'   // n.b. the 'dot' notation is not valid for undeclared properties
+person.emptyArray = []
+person.someIntArray = [1,2,3]
+person.someStringArray = ['a', 'b', 'c']
+person.someDoubleArray= [0.9, 1.0, 1.1]
+session.flush()
+session.clear()
+person = Person.get(person.id)
+
+then:
+person.notDeclaredProperty == 'someValue'
+person.lastName == 'person1'  // declared properties are also available via map semantics
+person.someIntArray == [1,2,3]
+person.someStringArray == ['a', 'b', 'c']
+person.emptyArray == []
+person.someDoubleArray == [0.9, 1.0, 1.1]
+----
+
+
+===== Description
+
+
+The non declared attribtes are stored a regular properties on the domain instance's node. The values of the schemaless attributes must be a valid type for Neo4j property (String, primitives and arrays of the former two).
+
+

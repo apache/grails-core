@@ -1,0 +1,1 @@
+The GraphQL specification allows for properties, types, operations, etc to have metadata associated with them. Metadata might include a description or deprecation. This library exposes APIs to allow the user to customize that metadata.

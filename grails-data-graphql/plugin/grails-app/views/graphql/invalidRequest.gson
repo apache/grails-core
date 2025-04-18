@@ -1,0 +1,9 @@
+model {
+    String error
+}
+
+response.status(422)
+
+json {
+    error error
+}

@@ -1,0 +1,34 @@
+To define which properties of your domain class should be indexed for querying you can do so in the mapping:
+
+[source,groovy]
+----
+class Club {
+    String name
+
+    ...
+    static mapping = {
+        name index:true
+    }
+}
+----
+
+On startup GORM will use Cypher to create indexes as follows:
+
+[source,groovy]
+----
+CREATE INDEX ON :Club(name)
+----
+
+To define a unique index use `unique` instead:
+
+[source,groovy]
+----
+class Club {
+    String name
+
+    ...
+    static mapping = {
+        name unique:true
+    }
+}
+----

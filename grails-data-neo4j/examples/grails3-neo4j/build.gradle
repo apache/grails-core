@@ -1,0 +1,66 @@
+group "examples"
+configurations.configureEach {
+    exclude group: 'org.apache.grails', module: 'grails-data-simple'
+}
+
+dependencies {
+    implementation "org.springframework.boot:spring-boot-starter-logging"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-tomcat"
+    implementation "javax.servlet:javax.servlet-api:$servletApiVersion"
+    implementation "org.apache.grails:grails-core"
+    implementation "org.apache.grails:grails-dependencies:$grailsVersion"
+    implementation "org.apache.grails.web:grails-web-boot:$grailsVersion"
+
+    implementation project(":grails-plugin")
+
+    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:$assetPipelineVersion"
+    runtimeOnly "org.apache.grails:grails-scaffolding:$scaffoldingVersion"
+    runtimeOnly "org.apache.grails:grails-fields:$fieldsVersion"
+
+    testImplementation ("org.apache.grails.testing:grails-testing-support-core:$testingSupportVersion") {
+        exclude group: "org.spockframework", module: "spock-core"
+    }
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation ("org.apache.grails:grails-testing-support-web:$testingSupportVersion") {
+        exclude group: "org.spockframework", module: "spock-core"
+    }
+
+    testImplementation("org.apache.grails:grails-geb") {
+        exclude group: 'org.gebish', module: 'geb-spock'
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+    testImplementation ("org.gebish:geb-spock:$gebVersion")
+
+    testRuntimeOnly "org.seleniumhq.selenium:selenium-chrome-driver:$seleniumVersion"
+    testRuntimeOnly "org.seleniumhq.selenium:selenium-firefox-driver:$seleniumVersion"
+    testRuntimeOnly "org.seleniumhq.selenium:selenium-safari-driver:$seleniumSafariDriverVersion"
+
+    testImplementation "org.seleniumhq.selenium:selenium-remote-driver:$seleniumVersion"
+    testImplementation "org.seleniumhq.selenium:selenium-api:$seleniumVersion"
+    testImplementation "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
+
+    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+
+    profile "org.apache.grails.profiles:web"
+}
+
+tasks.withType(Test) {
+    systemProperty "geb.env", System.getProperty('geb.env')
+    systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")
+    if (!System.getenv().containsKey('CI')) {
+        systemProperty 'webdriver.chrome.driver', System.getProperty('webdriver.chrome.driver')
+        systemProperty 'webdriver.gecko.driver', System.getProperty('webdriver.gecko.driver')
+    } else {
+        systemProperty 'webdriver.chrome.driver', "${System.getenv('CHROMEWEBDRIVER')}/chromedriver"
+        systemProperty 'webdriver.gecko.driver', "${System.getenv('GECKOWEBDRIVER')}/geckodriver"
+    }
+}
+
+webdriverBinaries {
+    if (!System.getenv().containsKey('CI')) {
+        chromedriver "$chromeDriverVersion"
+        geckodriver "$geckodriverVersion"
+    }
+}

@@ -1,0 +1,38 @@
+
+===== graphDatabaseService
+
+
+
+===== Purpose
+
+
+A Spring bean that provides access to the lower level Neo4j GraphDatabaseService instance.
+
+
+===== Examples
+
+
+[source,groovy]
+----
+def graphDatabaseService
+
+def foo = {
+    def graphDatabaseService
+    def myAction = {
+        def node = graphDatabaseService.createNode() // create
+        ... do something with node ...s
+    }
+}
+----
+
+
+===== Description
+
+
+See the https://api.neo4j.org/current/org/neo4j/graphdb/GraphDatabaseService.html[Neo4j Api doc] docs for how to use the graphDatabaseService bean.
+
+
+===== Configuration
+
+
+tbd

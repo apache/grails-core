@@ -1,0 +1,87 @@
+As mentioned previously, GORM for Neo4j supports the `DATABASE` and `DISCRIMINATOR` however there are some considerations to keep in mind.
+
+==== Database Per Tenant
+
+When using the `DATABASE` mode, only GORM methods calls are dispatched to the correct tenant. This means the following will use the tenant id:
+
+[source,groovy]
+----
+// switches to the correct client based on the tenant id
+Book.list()
+----
+
+However, going directly through the `Driver` will not work:
+
+[source,groovy]
+----
+@Autowired Driver boltDriver
+
+// uses the default connection and doesn't resolve the tenant it
+boltDriver.session().run("..")
+----
+
+If you are working directly with the `Driver` instance you need to make sure you obtain the correct instance. For example:
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.*
+
+@Autowired Neo4jDatastore neo4jDatastore
+...
+Driver boltDriver =
+        neo4jDatastore.getDatastoreForTenantId(Tenants.currentId())
+                      .getBoltDriver()
+----
+
+==== Partitioned Multi-Tenancy
+
+When using the `DISCRIMINATOR` approach, GORM for Neo4j will store a `tenantId` attribute in each Neo4j node and attempt to partition the data.
+
+Once again this works only when using GORM methods and even then there are cases where it will not work if you use native Neo4j interfaces.
+
+For example the following works fine:
+
+[source,groovy]
+----
+// correctly includes the `tenantId` in the query
+Book.list()
+----
+
+As does this:
+
+[source,groovy]
+----
+// works automatically if you include the tenantId in the query
+Book.find("MATCH (p:Book) WHERE p.title={title} AND p.publisher={tenantId} RETURN p", [name:"The Stand"]")
+----
+
+But this query with throw an exception due to a missing tenant id:
+
+[source,groovy]
+----
+Book.find("MATCH (p:Book) WHERE p.title={title} RETURN p", [name:"The Stand"])
+----
+
+Also if you obtain the driver directly the the tenant id will not be included in the query:
+
+[source,groovy]
+----
+@Autowired Driver boltDriver
+
+// uses the default connection and doesn't resolve the tenant it
+boltDriver.session()
+          .run("MATCH (p:Book) WHERE p.title={title} RETURN p", [name:"The Stand"]")
+----
+
+Since you are operating directly on the Driver cannot know when you perform a query that should be multi-tenant aware.
+
+In this case you will have to ensure to include the `tenantId` manually:
+
+[source,groovy]
+----
+boltDriver.session()
+          .run("MATCH (p:Book) WHERE p.title={title} AND p.publisher={tenantId} RETURN p",
+                [name:"The Stand", tenantId: Tenants.currentId() ])
+----
+
+And the same is true of write operations such as inserts that are done with the native API.

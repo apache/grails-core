@@ -1,0 +1,53 @@
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.springframework.boot:spring-boot-starter-logging"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation "org.apache.grails:grails-core"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-tomcat"
+    implementation "org.apache.grails:grails-url-mappings"
+    implementation "org.apache.grails:grails-rest-transforms"
+    implementation "org.apache.grails:grails-codecs"
+    implementation "org.apache.grails:grails-interceptors"
+    implementation "org.apache.grails:grails-services"
+    implementation "org.apache.grails:grails-datasource"
+    implementation "org.apache.grails:grails-databinding"
+    implementation "org.apache.grails.web:grails-web-boot"
+    implementation "org.apache.grails:grails-logging"
+    implementation "org.apache.grails:grails-cache"
+    implementation "org.apache.grails:grails-async"
+    implementation "org.apache.grails:grails-data-hibernate5"
+    implementation "org.hibernate:hibernate-core:$hibernateCoreVersion"
+    implementation "org.apache.grails:grails-data-mongodb"
+    implementation "org.apache.grails:grails-views-gson"
+    implementation 'io.micronaut.rxjava2:micronaut-rxjava2-http-client:1.2.0'
+    implementation "org.apache.grails:grails-data-mongodb-gson-templates"
+    implementation "com.graphql-java:graphql-java:$graphqlJavaVersion"
+    console "org.apache.grails:grails-console"
+    profile "org.apache.grails.profiles:rest-api"
+    compileOnly 'org.grails.plugins:embedded-mongodb:2.0.1'
+    implementation "org.apache.commons:commons-compress:1.10"
+    implementation "org.glassfish.web:el-impl:2.1.2-b03"
+    implementation "com.h2database:h2"
+    implementation "org.apache.tomcat:tomcat-jdbc"
+    compileOnly "org.apache.grails:grails-testing-support-datamapping"
+    compileOnly "org.apache.grails:grails-geb"
+    compileOnly "org.apache.grails:grails-testing-support-web"
+    testRuntimeOnly "org.seleniumhq.selenium:selenium-htmlunit-driver:2.47.1"
+    testRuntimeOnly "net.sourceforge.htmlunit:htmlunit:2.18"
+    testImplementation "org.grails:grails-test-mixins:3.3.0"
+    testImplementation project(':grails-testing-support-datamapping')
+    implementation project(":grails-plugin-gorm-graphql-plugin")
+}
+
+bootRun {
+    jvmArgs('-Dspring.output.ansi.enabled=always')
+    sourceResources sourceSets.main
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+}

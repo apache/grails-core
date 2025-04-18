@@ -1,0 +1,34 @@
+You will have noticed from the previous example that the relationship type is `CASTMEMBER`.
+
+By default GORM uses the class name for the relationship type. You can configure an alternative default using the `mapping` block if necessary:
+
+[source,groovy]
+----
+import grails.neo4j.*
+import static grails.neo4j.mapping.MappingBuilder.*
+
+static mapping = relationship {
+   type "ACTED_IN"
+   direction Direction.OUTGOING
+}
+----
+
+The above example also demonstrates configuring the `direction` of the relationship.
+
+You can also assign a per instance relationship type overriding the default:
+
+[source,groovy]
+----
+def castMember = new CastMember(
+    type: "DIRECTED"
+    from: new Person(name: "Lana Wachowski"),
+    to: new Movie(title: "The Matrix"))
+    .save(flush:true)
+----
+
+And then later use the type in queries:
+
+[source,groovy]
+----
+List<CastMember> directors = CastMember.findAllByType("DIRECTED")
+----

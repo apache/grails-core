@@ -1,0 +1,34 @@
+It is relatively trivial to write unit tests that use GORM for Neo4j. If you wish to use an embedded version of Neo4j simply add the `neo4j-harness` dependency to your `build.gradle` file:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+testRuntime "org.neo4j.test:neo4j-harness:{neo4jVersion}"
+----
+
+Then create a https://spockframework.org[Spock] specification and declare a `@Shared` field using the `Neo4jDatastore` constructor with the domain classes you wish to test:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/assignedid/OneToManyCreateSpec.groovy[tags=setup,indent=0]
+----
+
+NOTE: The `@AutoCleanup` annotation will ensure the datastore is shutdown correctly after the test completes
+
+If the test is in the same package as your domain classes then you can also setup package scanning instead of hard coding each domain class name:
+
+[source,groovy]
+----
+@Shared @AutoCleanup Neo4jDatastore datastore
+        = new Neo4jDatastore(getClass().getPackage())
+----
+
+Then annotate each test method with the `grails.gorm.transactions.Rollback` annotation:
+
+[source,groovy]
+----
+@Rollback
+void "test something"() {
+
+}
+----

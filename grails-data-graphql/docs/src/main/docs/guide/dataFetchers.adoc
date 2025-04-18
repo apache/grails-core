@@ -1,0 +1,144 @@
+This library provides a means for overriding the data fetchers used for the default provided operations. That is done through the use of a link:{api}/org/grails/gorm/graphql/fetcher/manager/GraphQLDataFetcherManager.html[GraphQLDataFetcherManager].
+
+== Get The Manager
+
+To register a fetcher, you need to get a reference to the link:{api}/org/grails/gorm/graphql/fetcher/manager/GraphQLDataFetcherManager.html[GraphQLDataFetcherManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
+
+=== Standalone
+
+When creating the schema, initialize it first. The default fetcher manager will then be set.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.initialize()
+GraphQLDataFetcherManager dataFetcherManager = schema.dataFetcherManager
+...
+schema.generate()
+----
+
+=== Plugin
+
+For Grails applications it is recommended to reference the bean created by the plugin. The easiest way to do so is to register a bean post processor. The plugin has a class available to extend to make that easier.
+
+[source,groovy]
+.resources.groovy
+----
+myGraphQLCustomizer(MyGraphQLCustomizer)
+----
+
+[source,groovy]
+.src/main/groovy/demo/MyGraphQLCustomizer.groovy
+----
+import org.grails.gorm.graphql.plugin.GraphQLPostProcessor
+
+class MyGraphQLCustomizer extends GraphQLPostProcessor {
+
+    @Override
+    void doWith(GraphQLDataFetcherManager dataFetcherManager) {
+        ...
+    }
+}
+----
+
+TIP: If you need to customize more than 1 manager, only a single bean needs to be registered. There are `doWith` methods for all of the managers you may need to register object instances with.
+
+== Register A Fetcher
+
+Once you have access to the manager, registration of your own data fetcher is easy. In this example a data fetcher is being registered to handle soft deleting an entity.
+
+TIP: Registering a fetcher for the `Object` type will allow it to be used for all domain classes.
+
+[source,groovy]
+----
+GraphQLDataFetcherManager dataFetcherManager
+
+fetcherManager.registerDeletingDataFetcher(Author, new DeleteEntityDataFetcher(Author.gormPersistentEntity) {
+    @Override
+    protected void deleteInstance(GormEntity instance) {
+        Author author = ((Author)instance)
+        author.active = false
+        author.save()
+    }
+})
+----
+
+TIP: A class exists to use for soft deletes: link:{api}/org/grails/gorm/graphql/fetcher/impl/SoftDeleteEntityDataFetcher.html[SoftDeleteEntityDataFetcher]
+
+There are 3 types of data fetchers that can be registered.
+
+=== Binding
+
+Binding data fetchers accept a data binder object to bind the argument(s) to the domain instance. When the binding data fetcher instances are retrieved from the manager, the data binder will be set automatically.
+
+=== Deleting
+
+Deleting data fetchers accept a delete response handler object that is responsible for determining how the fetcher should respond for delete requests. When the deleting data fetcher instances are retrieved from the manager, the delete response handler will be set automatically.
+
+=== Reading
+
+Reading data fetchers are designed to execute read only queries. They don't require any other dependencies to work.
+
+== Query Optimization
+
+All of the default data fetcher classes extend from link:{api}/org/grails/gorm/graphql/fetcher/DefaultGormDataFetcher.html[DefaultGormDataFetcher]. If you are creating your own custom data fetcher class, it is highly recommended to extend from it as well. The main reason for doing so is to take advantage of the built in query optimization. Based on what fields are requested in any given request, the default data fetchers will execute a query that will join any associations that have been requested. This feature ensures that each API call is as efficient as possible.
+
+For example, consider the following domain structure:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+}
+class Book {
+    static belongsTo = [author: Author]
+}
+----
+
+When executing a query against a given book, if the author object is not requested, or if only the ID of the author is requested, the association will not be joined.
+
+[source,groovy]
+----
+book(id: 5) {
+    author {
+        id
+    }
+}
+----
+
+Example generated SQL:
+
+`select * from book b where id = 5`
+
+When any property on the author other than the ID is requested, then the association will be joined.
+
+[source,groovy]
+----
+book(id: 5) {
+    author {
+        name
+    }
+}
+----
+
+Example generated SQL:
+
+`select * from book b inner join author a on b.author_id = a.id where b.id = 5`
+
+The logic for retrieving the list of properties to be joined is contained within the link:{api}/org/grails/gorm/graphql/entity/EntityFetchOptions.html[EntityFetchOptions] class. If you prefer not to extend from the default gorm data fetcher, it is possible to make use of this class in your own data fetcher.
+
+=== Custom Property Data Fetchers
+
+When adding a custom property to a domain class, it may be the case that a separate query is being executed on another domain class. Normally that query would not be able to benefit from the automatic join operations based on the requested fields in that domain class. When providing the closure to retrieve the relevant data, a second parameter is available. The second parameter to the closure will be an instance of link:{api}/org/grails/gorm/graphql/fetcher/impl/ClosureDataFetchingEnvironment.html[ClosureDataFetchingEnvironment].
+
+The environment is an extension of the GraphQL Java `DataFetchingEnvironment`. In addition to everything the standard environment has, the environment also has methods for retrieving the fetch options or the list of join properties to use in your query.
+
+In this example a property was added to the `Tag` domain to retrieve the list of `Post` objects that contain the given tag.
+
+[source,groovy,indent=0]
+----
+include::{sourcedir}/examples/grails-test-app/grails-app/domain/grails/test/app/Tag.groovy[tags=getPosts]
+----

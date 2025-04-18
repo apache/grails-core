@@ -1,0 +1,12 @@
+GORM for Neo4j supports the following multi-tenancy modes:
+
+* `DATABASE` - A separate database with a separate connection pool is used to store each tenants data.
+* `DISCRIMINATOR` - The same database is used with a discriminator used to partition and isolate data.
+
+=== Configuring Multi Tenancy
+
+include::configuration.adoc[]
+
+=== Multi Tenancy Modes
+
+include::multiTenancyModes.adoc[]

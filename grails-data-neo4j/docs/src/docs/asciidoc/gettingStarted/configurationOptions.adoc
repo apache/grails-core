@@ -1,0 +1,44 @@
+The following options can be configured in `grails-app/conf/application.yml`:
+
+* `grails.neo4j.url` - The Neo4j Bolt URL
+* `grails.neo4j.buildIndex` - Whether to build the Neo4j index on startup (defaults to true)
+* `grails.neo4j.type` - The Neo4j server type. If set to `embedded` loads an embedded server
+* `grails.neo4j.flush.mode` - The flush mode to use when working with Neo4j sessions. Default to `AUTO`.
+* `grails.neo4j.username` - The username to use to authenticate
+* `grails.neo4j.password` - The password to use to authenticate
+* `grails.neo4j.default.mapping` - The default database mapping. Must be a closure configured in `application.groovy`
+* `grails.neo4j.options` - Any options to be passed to the driver
+
+The `grails.neo4j.options` setting allows you to configure the properties of https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Config.html[org.neo4j.driver.Config], for example:
+
+
+[source,yaml]
+----
+grails:
+    neo4j:
+        options:
+            maxConnectionPoolSize: 100
+            connectionLivenessCheckTimeout: 200
+----
+
+For builder methods with 0 arguments, setting the configuration value to true will cause the method to be executed. For example the following configuration will result in the https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Config.ConfigBuilder.html#withEncryption--[ConfigBuilder#withEncryption] method to be called.
+
+[source,yaml]
+----
+grails:
+    neo4j:
+        options:
+            encryption: true
+----
+
+For builder methods with more than 1 argument, it is possible to configure values for the method using `arg#` syntax. For example the following configuration will result in the https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Config.ConfigBuilder.html#withConnectionTimeout-long-java.util.concurrent.TimeUnit-[ConfigBuilder#withConnectionTimeout] method to be called.
+
+[source,yaml]
+----
+grails:
+    neo4j:
+        options:
+            connectionTimeout:
+                arg0: 10
+                arg1: SECONDS
+----

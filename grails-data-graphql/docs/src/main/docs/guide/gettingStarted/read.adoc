@@ -1,0 +1,15 @@
+In this example the query is attempting to retrieve the details of a single speaker with an id of `1`.
+
+
+:url: http://localhost:8080/graphql
+[source, bash, subs="attributes"]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=readCurlCommand]
+----
+
+and the api responds with:
+
+[source, json]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=readResponse]
+----

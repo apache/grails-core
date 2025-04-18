@@ -1,0 +1,10 @@
+If you plan to use Neo4j as your primary datastore then you need to remove the Hibernate plugin by editing your `BuildConfig` or `build.gradle` (dependending on the version of Grails) and removing the Hibernate plugin definition
+
+With this done all domain classes in grails-app/domain will be persisted via Neo4j and not Hibernate. You can create a domain class by running the regular `create-domain-class` command:
+
+[source,groovy]
+----
+grails create-domain-class Person
+----
+
+The `Person` domain class will automatically be a persistent entity that can be stored in Neo4j.

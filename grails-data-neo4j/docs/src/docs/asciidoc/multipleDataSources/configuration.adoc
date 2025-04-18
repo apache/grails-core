@@ -1,0 +1,16 @@
+To configure multiple Bolt `Driver` connections you need to use the `grails.neo4j.connections` setting. For example in `application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    neo4j:
+        url: bolt://localhost:7687
+        connections:
+            moreBooks:
+                url: bolt://localhost:7688
+            evenMoreBooks:
+                url: bolt://localhost:7689
+----
+
+You can configure individual settings for each Bolt driver. If a setting is not specified by default the setting is inherited from the default Neo4j driver.

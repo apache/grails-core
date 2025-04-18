@@ -1,0 +1,84 @@
+To get started with GORM for Neo4j you need to install the plugin into a Grails application.
+
+For Grails 3.x and above you need to edit your `build.gradle` file and add the plugin as a dependency:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+	compile 'org.grails.plugins:neo4j:{pluginVersion}'
+}
+----
+
+If you are using a version of Grails 3 earlier than 3.3 then you may need to enforce the GORM version. If you are using Grails 3.2.7 or above this can be done by modifying the `gormVersion` setting in `gradle.properties`:
+
+[source,properties,subs="attributes"]
+----
+gormVersion={version}
+----
+
+Otherwise if you are using an earlier version of Grails you can force the GORM version by adding the following block directly above the `dependencies` block:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if( details.requested.group == 'org.grails' &&
+            details.requested.name.startsWith('grails-datastore')) {
+            details.useVersion("{version}")
+        }
+    }
+}
+dependencies {
+    ...
+}
+----
+
+
+NOTE: GORM for Neo4j requires Grails 2.5.x or above and Neo4j 3.0.x or above, if you wish to use Neo4j 2.3.x use the https://gorm.grails.org/5.0.x[5.x version] of GORM
+
+
+To configure the plugin for Grails 2.x edit the `grails-app/conf/BuildConfig.groovy` file and add the following plugin definitions:
+
+
+[source,groovy,subs="attributes"]
+----
+plugins {
+    compile ':neo4j:{pluginVersion}'
+    build ':tomcat:8.22'
+}
+----
+
+WARNING: Grails 2.5.x must be configured with Tomcat 8 when using Neo4j in `embedded` mode, since the Neo4j server depends newer versions of the Servlet API and will not work with Tomcat 7.
+
+By default the Grails plugin assumes you have a Neo4j instance running on port `7687`, however you can run Neo4j embedded by including the following configuration in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+grails:
+    neo4j:
+        type: embedded
+----
+
+And then adding the Neo4j test harness to your `provided` dependencies:
+
+[source,groovy]
+----
+provided 'org.neo4j.test:neo4j-harness:3.0.2'
+----
+
+WARNING: The Neo4j server uses Jetty, so when you add Neo4j as embedded Grails will also use Jetty (not Tomcat) as the container since it discovered on the classpath, therefore it is not recommended to use Neo4j embedded.
+
+To configure the Neo4j server URL you can use the `grails.neo4j.url` setting in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+grails:
+    neo4j:
+        url: bolt://localhost:7687
+----
+
+
+
+

@@ -1,0 +1,27 @@
+introduction: Introduction
+installation: Installation
+gettingStarted:
+    title: Getting Started
+    create: Create
+    read: Read
+    list: List
+    count: Count
+    update: Update
+    delete: Delete
+customizations:
+    title: Customizing The Schema
+    properties:
+        title: Properties
+        existing: GORM Properties
+        custom: Custom Properties
+    operations: Operations
+    arguments: Arguments
+    responseHandlers: Validation Error and Delete Responses
+    namingConvention: Naming Convention
+    configuration: Configuration
+types: Type Conversion And Creation
+dataFetchers: Data Fetchers
+dataBinders: Data Binding
+interceptors: Interceptors
+otherNotes: Other Notes
+APIDocs: API Docs

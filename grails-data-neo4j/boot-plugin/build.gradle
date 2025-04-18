@@ -1,0 +1,22 @@
+dependencies {
+    compileOnly "org.springframework.boot:spring-boot-cli:$springBootVersion", {
+        exclude group:'org.codehaus.groovy', module:'groovy'
+    }
+
+    api "org.springframework.boot:spring-boot-autoconfigure:$springBootVersion"
+
+    api "org.codehaus.groovy:groovy:$groovyVersion"
+    api project(":grails-datastore-gorm-neo4j")
+    api "org.springframework:spring-tx:$springVersion"
+
+    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+    testImplementation ("org.spockframework:spock-core:$spockVersion") {
+        exclude group: 'junit', module: 'junit-dep'
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+        transitive = false
+    }
+    testImplementation "org.springframework.boot:spring-boot-cli:$springBootVersion", {
+        exclude group:'org.codehaus.groovy', module:'groovy'
+    }
+}

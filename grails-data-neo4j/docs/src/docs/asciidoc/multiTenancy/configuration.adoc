@@ -1,0 +1,23 @@
+You can configure Multi-Tenancy the same way described in the link:../../hibernate/manual/index.html#multiTenancy[GORM for Hibernate documenation], simply specify a multi tenancy mode and resolver:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        multiTenancy:
+            mode: DATABASE
+            tenantResolverClass: org.grails.datastore.mapping.multitenancy.web.SubDomainTenantResolver
+----
+
+Note that if you are using Neo4j and Hibernate together the above configuration will configure both Neo4j *and* Hibernate to use a multi-tenancy mode of `DATABASE`.
+
+If you only want to enable multi-tenancy for Neo4j only you can use the following configuration instead:
+
+[source,yaml]
+----
+grails:
+    neo4j:
+        multiTenancy:
+            mode: DATABASE
+            tenantResolverClass: org.grails.datastore.mapping.multitenancy.web.SubDomainTenantResolver
+----

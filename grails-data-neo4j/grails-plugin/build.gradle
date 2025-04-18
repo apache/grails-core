@@ -1,0 +1,67 @@
+sourceCompatibility = "1.11"
+targetCompatibility = "1.11"
+
+dependencyManagement {
+    imports {
+        mavenBom "org.apache.grails:grails-bom:$pluginGrailsVersion"
+    }
+    applyMavenExclusions false
+}
+
+configurations.configureEach {
+    exclude group: 'org.apache.grails.data', module: 'grails-data-simple'
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'org.apache.grails.data'
+                && details.requested.name.startsWith('grails-datastore')
+                && !details.requested.name.contains('neo4j')) {
+
+            details.useVersion(datastoreVersion)
+        } else if (details.requested.group == 'org.apache.groovy' && details.requested.name.startsWith('groovy')) {
+            details.useVersion(groovyVersion)
+        } else if (details.requested.group == 'org.springframework') {
+            details.useVersion(springVersion)
+        }
+    }
+}
+
+dependencies {
+    compileOnly "org.apache.grails:grails-core"
+    compileOnly "org.apache.grails.bootstrap:grails-bootstrap"
+    compileOnly "org.spockframework:spock-core:$spockVersion", {
+        exclude group: "junit", module: "junit-dep"
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+    }
+
+    runtimeOnly "org.apache.grails.data:grails-datastore-web:$datastoreVersion"
+
+    api "org.apache.grails.data:grails-datamapping-support:$datastoreVersion", {
+        exclude group:'org.springframework', module:'spring-context'
+        exclude group:'org.springframework', module:'spring-core'
+        exclude group:'org.springframework', module:'spring-beans'
+        exclude group:'org.springframework', module:'spring-tx'
+        exclude group:'org.apache.grails.bootstrap', module:'grails-bootstrap'
+        exclude group:'org.codehaus.groovy', module:'groovy-all'
+        exclude group:'org.apache.grails', module:'grails-core'
+        exclude group:'javax.transaction', module:'jta'
+    }
+    api project(":grails-datastore-gorm-neo4j"), {
+        exclude group:'org.springframework', module:'spring-context'
+        exclude group:'org.springframework', module:'spring-core'
+        exclude group:'org.springframework', module:'spring-beans'
+        exclude group:'org.springframework', module:'spring-tx'
+        exclude group:'org.apache.grails.bootstrap', module:'grails-bootstrap'
+        exclude group:'org.codehaus.groovy', module:'groovy-all'
+        exclude group:'org.apache.grails', module:'grails-core'
+        exclude group:'javax.transaction', module:'jta'
+    }
+
+    testImplementation "org.apache.grails:grails-core"
+    testImplementation "org.apache.grails.bootstrap:grails-bootstrap"
+    testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
+
+}
+
+springBoot {
+    mainClass  = "grails.plugins.neo4j.Application"
+}

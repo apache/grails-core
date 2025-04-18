@@ -1,0 +1,57 @@
+plugins {
+    id "com.gradle.enterprise" version "3.16.2"
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+}
+
+gradleEnterprise {
+    server = 'https://ge.grails.org'
+    buildScan {
+        publishAlwaysIf(System.getenv('CI') == 'true')
+        publishIfAuthenticated()
+        uploadInBackground = System.getenv("CI") == null
+        capture {
+            taskInputFiles = true
+        }
+    }
+}
+
+buildCache {
+    local { enabled = System.getenv('CI') != 'true' }
+    remote(HttpBuildCache) {
+        push = System.getenv('CI') == 'true'
+        enabled = true
+        url = 'https://ge.grails.org/cache/'
+        credentials {
+            username = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER')
+            password = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')
+        }
+    }}
+
+// core
+include "grails-datastore-gorm-neo4j"
+
+// plugins
+include "boot-plugin"
+include 'grails-plugin'
+
+// documentation
+include 'docs'
+
+// examples
+include 'examples-grails3-neo4j'
+project(":examples-grails3-neo4j").projectDir = new File(settingsDir, "examples/grails3-neo4j")
+
+include 'examples-grails3-neo4j-hibernate'
+project(":examples-grails3-neo4j-hibernate").projectDir = new File(settingsDir, "examples/grails3-neo4j-hibernate")
+
+include 'examples-neo4j-standalone'
+project(":examples-neo4j-standalone").projectDir = new File(settingsDir, "examples/neo4j-standalone")
+
+include 'examples-neo4j-spring-boot'
+project(":examples-neo4j-spring-boot").projectDir = new File(settingsDir, "examples/neo4j-spring-boot")
+
+include 'examples-test-data-service'
+project(":examples-test-data-service").projectDir = new File(settingsDir, "examples/test-data-service")
+
+findProject(':boot-plugin').name = 'gorm-neo4j-spring-boot'
+

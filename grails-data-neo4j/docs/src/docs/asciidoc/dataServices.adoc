@@ -1,0 +1,35 @@
+Additional support for https://gorm.grails.org/6.1.x/hibernate/manual/index.html#dataServices[GORM Data Services] exists in GORM for Neo4j beyond what is already offered by GORM core.
+
+For example if you declare a data service interface:
+
+[source,groovy]
+----
+include::{exampledir}/grails-app/services/functional/tests/PersonService.groovy[tags=class,indent=0]
+}
+----
+
+You can use the `@Cypher` annotation to automatically implement methods that execute Cypher queries:
+
+
+[source,groovy]
+----
+include::{exampledir}/grails-app/services/functional/tests/PersonService.groovy[tags=findPathCypher,indent=0]
+----
+
+Notice how you can use the class names within the Cypher query and it will correctly translate the declaration into the appropriate node `MATCH` statement.
+
+Variable references within the `@Cypher` string declaration are also compile time checked.
+
+You can also automatically implement Cypher update operations:
+
+[source,groovy]
+----
+include::{exampledir}/grails-app/services/functional/tests/PersonService.groovy[tags=updatePerson,indent=0]
+----
+
+Finally, support for implementing methods that find paths is also possible. For example:
+
+[source,groovy]
+----
+include::{exampledir}/grails-app/services/functional/tests/PersonService.groovy[tags=findPath,indent=0]
+----

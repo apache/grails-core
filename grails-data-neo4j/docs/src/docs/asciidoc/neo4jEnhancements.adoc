@@ -1,0 +1,28 @@
+GORM for Neo4j contains some enhancements to the Neo4j Bolt Driver API.
+
+
+==== Getting Properties from Nodes
+
+
+The dot operator can be used to obtain properties from a node:
+
+[source,groovy]
+----
+Node node = ...
+def value = node.myProperty
+
+// or
+
+def value = node['myProperty']
+----
+
+==== Cast a Node to a Map
+
+Nodes can be cast to maps:
+
+
+[source,groovy]
+----
+Node node = ...
+Map myMap = node as Map
+----

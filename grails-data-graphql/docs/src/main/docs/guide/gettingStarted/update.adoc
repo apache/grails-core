@@ -1,0 +1,17 @@
+In this example we are updating properties of a speaker.
+
+:url: http://localhost:8080/graphql
+[source, bash, subs="attributes"]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=updateCurlCommand]
+----
+
+and the server acknowledges the update:
+
+[source, json]
+----
+include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=updateResponse]
+----
+
+
+NOTE: If there was a validation error during the update process, the `errors` property would be populated with the validation errors.

@@ -1,0 +1,173 @@
+== Adding Custom Properties
+
+It is possible to add custom properties to your domain class solely for the use in the GraphQL schema. You must supply either a custom data binder or a setter method for properties that will be used for input. For output, a data fetcher or getter method must be made available.
+
+In this example we are adding a property to the GraphQL schema that will allow users to retrieve the age of authors. In this case the property doesn't make sense to allow users to provide the property when creating or updating because they should be modifying the `birthDay` instead. For that reason, `input false` is specified to prevent that behavior.
+
+TIP: Supplying other domain classes as the return type is supported
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.entity.dsl.GraphQLMapping
+import java.time.Period
+
+class Author {
+
+    LocalDate birthDay
+
+    static graphql = GraphQLMapping.build {
+        add('age', Integer) {
+            dataFetcher { Author author ->
+                Period.between(author.birthDay, LocalDate.now()).years
+            }
+            input false
+        }
+    }
+}
+----
+
+NOTE: Instead of providing a data fetcher, it is possible to create a getter method to do the same thing.
+
+[source,groovy]
+----
+Integer getAge() {
+    Period.between(birthDay, LocalDate.now()).years
+}
+----
+
+=== Returning A Collection
+
+The above example creates a custom property that returns an Integer. The property were to return a collection, the following notation can be used:
+
+[source,groovy]
+----
+add('age', [Integer]) {
+    ...
+}
+----
+
+=== Nullable, Description, Deprecation
+
+Very similar to how existing domain properties can be configured, it is also possible to configure additional properties.
+
+[source,groovy]
+----
+add('age', Integer) {
+
+    nullable false //default is true
+
+    description 'How old the author is in years'
+
+    deprecationReason 'To be removed in the future'
+    //or
+    deprecated true
+}
+----
+
+=== Read or Write Only
+
+Custom properties can also be controlled in the same way to existing properties in regards to whether they are read or write only.
+
+To make a property read only:
+
+[source,groovy]
+----
+add('name', String) {
+    input false
+}
+----
+
+To make a property write only:
+
+[source,groovy]
+----
+add('name', String) {
+    output false
+}
+----
+
+=== Custom Type
+
+If a property needs to handle something more complex than a collection of a single class, this library supports creating custom types.
+
+For example if our age property needs to return years, months, and days:
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.entity.dsl.GraphQLMapping
+import java.time.temporal.ChronoUnit
+
+class Author {
+
+    LocalDate birthDay
+
+    Map getAge() {
+        LocalDate now = LocalDate.now()
+
+        [days: ChronoUnit.DAYS.between(birthDay, now),
+         months: ChronoUnit.MONTHS.between(birthDay, now),
+         years: ChronoUnit.YEARS.between(birthDay, now)]
+    }
+
+    static graphql = GraphQLMapping.build {
+        add('age', 'Age') {
+            input false
+            type {
+                field('days', Long)
+                field('months', Long)
+                field('years', Long)
+            }
+        }
+    }
+}
+----
+
+In the above example we have added a new property to the domain class called `age`. That property returns a custom data type that consists of 3 properties. The name that represents that type in the GraphQL schema is "Age". In our getter method we are returning a Map that contains those properties, however any POGO that contains those properties would work as well.
+
+Similar to properties, the fields themselves can have complex subtypes with the `field(String, String, Closure)` method signature.
+
+For instance if we were to add a property to our domain to represent a list of books:
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.entity.dsl.GraphQLMapping
+
+class Author {
+
+    //A getter method or dataFetcher is required to make this configuration valid
+    static graphql = GraphQLMapping.build {
+        add('books', 'Book') {
+            type {
+                field('title', String)
+                field('publisher', 'Publisher') {
+                    field('name', String)
+                    field('address', String)
+                }
+                collection true
+            }
+        }
+    }
+}
+----
+
+WARNING: When creating custom types, it is important that the name you choose does not already exist. For example if this application also had a Publisher domain class, the types will conflict because in GraphQL the type names must be unique.
+
+=== Order
+
+The order in which the fields appear in the schema can be customized.
+By default any identity properties and the version property appear first in order.
+
+To customize the order of a custom property:
+
+[source,groovy]
+----
+   static graphql = GraphQLMapping.build {
+       add('name', String) {
+            order 1
+       }
+   }
+----
+
+If no order is specified, added properties will be put at the end of the list of properties in the schema. Properties with the same or no order will be ordered by name.
+
+TIP: To customize properties to come before the identifier or version, set the value as negative. The default order for id properties is -20 and the default order for version properties is -10.

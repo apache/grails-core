@@ -1,0 +1,35 @@
+Since 6.1, GORM for Neo4j features support for Neo4j path queries. To use path queries you must implement the `grails.neo4j.Node` trait in your domain class. For example given the following class:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/domain/Person.groovy[tags=class,indent=0]
+----
+
+And the following setup data:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/PathSpec.groovy[tags=model,indent=0]
+----
+
+Which creates a friend graph it is possible to find out the shortest path from one friend to another with the `findShortestPath` method which returns a `grails.neo4j.Path` instance:
+
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/PathSpec.groovy[tags=shortestPath,indent=0]
+----
+
+You can also find the shortest path without first loading the entities using proxies:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/PathSpec.groovy[tags=shortestPathProxy,indent=0]
+----
+
+Finally it is also possible to use Cypher queries to find a path:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/PathSpec.groovy[tags=pathCypher,indent=0]
+----

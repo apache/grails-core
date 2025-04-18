@@ -1,0 +1,37 @@
+Generally all types of GORM queries work with relationships. There is some special handling for the `from` and `to` properties of a relationship to make it possible to query these and use projections.
+
+When you query any other property of a relationship the relationship's properties are queried. When using `from` and `to` however, the nodes that form both ends of the relationship are queried instead.
+
+Consider this query:
+
+[source,groovy]
+----
+List keanuCastings = CastMember.where {
+    from.name == "Keanu"
+}.list()
+----
+
+The above `where` query will produce the following cypher query:
+
+----
+MATCH (from:Person)-[r:ACTED_IN]->(to:Movie) WHERE ( ( from.name={1} ) ) RETURN r as rel, from as from, to
+----
+
+Notice that the `from` end of the relationship is queried. You can also apply projections to the `to` and `from` associations. For example:
+
+
+[source,groovy]
+----
+DetachedCriteria<CastMember> baseQuery = CastMember.where {
+    from.name == "Keanu"
+} <1>
+int totalKeanuMovies = baseQuery.projections {
+    countDistinct("to.title")
+}.get() <2>
+
+List<String> keanuMovieTitles = baseQuery.property('to.title').list() <3>
+----
+
+<1> Create a `DetachedCriteria` query
+<2> Use a projection to get the total count of movie titles
+<3> Use a project to get only the movie titles

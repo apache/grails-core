@@ -1,0 +1,32 @@
+In addition to being able to query for paths since 6.1, GORM for Neo4j features support for Neo4j relationship queries. To use path queries you must implement the `grails.neo4j.Node` trait in your domain class. For example given the following class:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/domain/Person.groovy[tags=class,indent=0]
+----
+
+You can find a relationship between two entities with the following query:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/RelationshipSpec.groovy[tags=findRelationship,indent=0]
+----
+
+The arguments can be retrieved instances or unloaded proxies to nodes.
+
+TIP: Querying for relationships in this way is not as flexible as using relationship entities. Consider <<relationships,mapping an entity to a relationship>>.
+
+
+You can also find all the relationships between two entities:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/RelationshipSpec.groovy[tags=findRelationships,indent=0]
+----
+
+Or find all the relationships between two entity types:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/RelationshipSpec.groovy[tags=findRelationshipsForTypes,indent=0]
+----

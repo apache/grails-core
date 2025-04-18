@@ -1,0 +1,33 @@
+===== Purpose
+
+Execute a cypher query.
+
+===== Example
+
+[source,groovy]
+----
+setup:
+new Person(lastName:'person1').save()
+new Person(lastName:'person2').save()
+session.flush()
+session.clear()
+
+when:
+def result = Person.cypherStatic("start n=node({this}) match n-[:INSTANCE]->m where m.lastName='person1' return m")
+
+then:
+result.iterator().size()==1
+----
+
+
+===== Description
+
+`cypherStatic` is invoked on any domain class and returns a https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Result.html[org.neo4j.driver.Result]
+
+The parameters passed are:
+
+* cypher query string. The query string might use a implicit `this` parameter pointing to the domain class's (aka subreference) node
+* a optional map of cypher parameters
+
+
+

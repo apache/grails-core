@@ -1,0 +1,7 @@
+If you have both the Hibernate and Neo4j plugins installed then by default all classes in the `grails-app/domain`  directory will be persisted by Hibernate and not Neo4j. If you want to persist a particular domain class with Neo4j then you must use the `mapWith` property in the domain class:
+
+[source,groovy]
+----
+static mapWith = "neo4j"
+----
+
