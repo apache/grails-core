@@ -37,7 +37,7 @@ subprojects {
         }
     }
 
-    if(name.startsWith('grails-doc') || name.startsWith('grails-data-doc') || name.endsWith('-docs')) {
+    if(name.startsWith('grails-doc') || name.startsWith('grails-data-doc') || name.endsWith('-docs') || name.endsWith("-test-report")) {
         rootProject.ext['docProjects'] << name
     }
 
