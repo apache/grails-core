@@ -107,7 +107,7 @@ jobs:
       - name: "🔨 Functional Tests"
         run: ./gradlew build -PonlyFunctionalTests --stacktrace
   publishGradle:
-    if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
+    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
     needs: [ skip_check, buildGradle ]
     permissions:
       contents: read # limit to read access
@@ -135,7 +135,7 @@ jobs:
         run: >
           ./gradlew publish -Dorg.gradle.internal.publish.checksums.insecure=true
   publish:
-    if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
+    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
     needs: [ skip_check, publishGradle, build, functional]
     permissions:
       contents: read # limit to read access
@@ -162,7 +162,7 @@ jobs:
         run: >
           ./gradlew publish
   docs:
-    if: github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
+    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
     needs: [skip_check, publish]
     runs-on: ubuntu-latest
     permissions:
