@@ -13,26 +13,8 @@ env:
   # to prevent throttling of the github api, include the github token in an environment variable since the build will check for it
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
-  skip_check:
-    runs-on: ubuntu-latest
-    outputs:
-      found_skip_publish: ${{ steps.check_prevent_property.outputs.value }}
-    permissions:
-      contents: read
-    steps:
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
-      - name: "🔍 Check if we should skip publish"
-        id: check_prevent_property
-        run: |
-          if grep -q '^preventSnapshotPublish=true' gradle.properties; then
-            echo "value=true" >> $GITHUB_OUTPUT
-          else
-            echo "value=false" >> $GITHUB_OUTPUT
-          fi
   buildGradle:
     name: 'Build Gradle Plugins'
-    needs: skip_check
     permissions:
       contents: read  #  to fetch code (actions/checkout)
     strategy:
@@ -58,7 +40,6 @@ jobs:
         run: ./gradlew build assemble --continue --stacktrace
   build:
     name: 'Build Grails-Core'
-    needs: skip_check
     permissions:
       contents: read  #  to fetch code (actions/checkout)
     strategy:
@@ -84,7 +65,6 @@ jobs:
         run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue --stacktrace -PskipFunctionalTests
   functional:
     name: "Functional Tests"
-    needs: skip_check
     permissions:
       contents: read  #  to fetch code (actions/checkout)
     strategy:
@@ -166,8 +146,8 @@ jobs:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew cleanTest build --continue -PonlyHibernate5Tests
   publishGradle:
-    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    needs: [ skip_check, buildGradle ]
+    if: github.repository_owner == 'apache' && github.event_name == 'push'
+    needs: [ buildGradle ]
     permissions:
       contents: read # limit to read access
     runs-on: ubuntu-latest
@@ -194,8 +174,8 @@ jobs:
         run: >
           ./gradlew publish -Dorg.gradle.internal.publish.checksums.insecure=true
   publish:
-    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    needs: [ skip_check, publishGradle, build, functional, hibernate5Functional, mongodbFunctional]
+    if: github.repository_owner == 'apache' && github.event_name == 'push'
+    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional]
     permissions:
       contents: read # limit to read access
     runs-on: ubuntu-latest
@@ -221,8 +201,8 @@ jobs:
         run: >
           ./gradlew publish
   docs:
-    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.skip_check.outputs.found_skip_publish != 'true'
-    needs: [skip_check, publish]
+    if: github.repository_owner == 'apache' && github.event_name == 'push'
+    needs: [publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
