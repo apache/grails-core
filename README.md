@@ -11,7 +11,7 @@ Consolidated Home for Grails Profiles
 
 ### Profiles version
 
-Verify **profiles.version** in grails-core/build.gradle matches version from https://github.com/apache/grails-profiles
+Verify **profiles.version** in grails-core/dependencies.gradle matches version from https://github.com/apache/grails-profiles
 
 ### Configure grails-shell CLI to use mavenLocal() profiles
 
