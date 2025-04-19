@@ -168,12 +168,14 @@ project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
-project(':grails-data-docs-guide-developer').projectDir = file('docs/guide-developer')
+project(':grails-data-docs-guide-developer').projectDir = file('grails-data-docs/guide-developer')
 // until this can be finished ported to grails 7, we are disabling
 // include 'grails-data-docs-guide-rx'
 // project(':grails-data-docs-guide-rx').projectDir = file('docs/guide-rx')
 include 'grails-data-docs-guide-whats-new'
-project(':grails-data-docs-guide-whats-new').projectDir = file('docs/guide-whats-new')
+project(':grails-data-docs-guide-whats-new').projectDir = file('grails-data-docs/guide-whats-new')
+include 'grails-data-docs-guide'
+project(':grails-data-docs-guide').projectDir = file('grails-data-docs/guide')
 
 // Data Mapping - Simple (for simple gorm usage, unit tests, and base implementation testing)
 include 'grails-data-simple'

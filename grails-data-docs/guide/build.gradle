@@ -50,7 +50,7 @@ tasks.register('data-mapping-groovydoc', Groovydoc).configure { Groovydoc task -
     task.processScripts = false
     task.destinationDir = project.layout.buildDirectory.dir('docs/api').get().asFile
 
-    task.dependsOn([':cleanDocs'] + docProjects.collect { "$it.name:classes" })
+    task.dependsOn(['cleanDocs'] + docProjects.collect { ":$it.name:classes" })
 
     task.outputs.dir(project.layout.buildDirectory.dir('docs/api').get().asFile)
     task.doLast {
@@ -86,7 +86,7 @@ tasks.register('copyHibernate5Docs', Copy).configure {Copy it ->
 
 tasks.register('grails-data-docs').configure { Task it ->
     it.group = 'documentation'
-    it.dependsOn(':data-mapping-groovydoc')
+    it.dependsOn('data-mapping-groovydoc')
     it.finalizedBy('copyRootWebsite','copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs')
 }
 
