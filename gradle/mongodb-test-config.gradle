@@ -45,9 +45,3 @@ tasks.withType(Test).configureEach {
     systemProperty('mongodb.gorm.suite', 'true')
 }
 
-if(project.hasProperty('serializeMongoTests')) {
-    // if the developer decides to run a local mongo instance, the tests must be serialized instead of launching containers as needed
-    tasks.withType(Test).configureEach { Task task ->
-        task.outputs.dir rootProject.layout.buildDirectory.dir('mongo-test-serialize')
-    }
-}

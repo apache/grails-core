@@ -44,6 +44,5 @@ sourceSets {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
 }

@@ -32,32 +32,41 @@ def debugArguments = [
         '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
 ]
-tasks.withType(Test).configureEach {
+tasks.withType(Test).configureEach { Test task ->
+    boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
+    boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
+
     onlyIf {
-        if(project.hasProperty('skipFunctionalTests')) {
+        if (project.hasProperty('skipFunctionalTests')) {
             return false
         }
 
-        if(project.hasProperty('onlyHibernate5Tests')) {
-            if(!project.name.startsWith('grails-test-examples-hibernate5')) {
+        if (project.hasProperty('onlyHibernate5Tests')) {
+            if (isHibernate5) {
                 return false
             }
         }
 
-        if(project.hasProperty('onlyMongodbTests')) {
-            if(!project.name.startsWith('grails-test-examples-mongodb')) {
+        if (project.hasProperty('onlyMongodbTests')) {
+            if (isMongo) {
                 return false
             }
         }
 
-        if(project.hasProperty('onlyCoreTests')) {
+        if (project.hasProperty('onlyCoreTests')) {
             return false
         }
 
         return true
     }
-    useJUnitPlatform()
-    testLogging {
+
+    if (isMongo && project.hasProperty('serializeMongoTests')) {
+        // if the developer decides to run a local mongo instance, the tests must be serialized instead of launching containers as needed
+        task.outputs.dir rootProject.layout.buildDirectory.dir('mongo-test-serialize')
+    }
+
+    task.useJUnitPlatform()
+    task.testLogging {
         events('passed', 'skipped', 'failed', 'standardOut', 'standardError')
         showExceptions = true
         exceptionFormat = 'full'
@@ -65,14 +74,14 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
     if (findProperty('testForked')) {
-        maxParallelForks = configuredTestParallel
-        forkEvery = (findProperty('testForkEvery') ?: 0) as long
+        task.maxParallelForks = configuredTestParallel
+        task.forkEvery = (findProperty('testForkEvery') ?: 0) as long
     }
     if (findProperty('testJvmArgs')) {
-        jvmArgs = findProperty('testJvmArgs')
+        task.jvmArgs = findProperty('testJvmArgs')
     }
     if (System.getProperty('debug.tests')) {
-        jvmArgs += debugArguments
+        task.jvmArgs += debugArguments
     }
 }
 
