@@ -174,8 +174,8 @@ project(':grails-data-docs-guide-developer').projectDir = file('grails-data-docs
 // project(':grails-data-docs-guide-rx').projectDir = file('docs/guide-rx')
 include 'grails-data-docs-guide-whats-new'
 project(':grails-data-docs-guide-whats-new').projectDir = file('grails-data-docs/guide-whats-new')
-include 'grails-data-docs-guide'
-project(':grails-data-docs-guide').projectDir = file('grails-data-docs/guide')
+include 'grails-data-docs-stage'
+project(':grails-data-docs-stage').projectDir = file('grails-data-docs/stage')
 
 // Data Mapping - Simple (for simple gorm usage, unit tests, and base implementation testing)
 include 'grails-data-simple'

@@ -222,23 +222,25 @@ tasks.register('publishPdf', PublishPdf).configure { PublishPdf pTask ->
     pTask.outputDirectory = project.layout.buildDirectory.dir('manual')
 }
 
-tasks.register('docs', Copy).configure {Copy it ->
-    it.dependsOn 'aggregateGroovydoc', 'publishGuide', 'createReleaseDropdown', 'publishPdf'
+tasks.register('docs', Sync).configure { Sync it ->
+    it.dependsOn 'aggregateGroovydoc', 'publishGuide', 'createReleaseDropdown', 'publishPdf', ':grails-data-docs-stage:grails-data-docs'
 
     def manualDocsDir = publishGuide.targetDir
     def apiDocsDir = rootProject.layout.buildDirectory.dir('docs')
     // This is the output directory of the groovydoc task in the grails project.
     def modifiedPagesDir = createReleaseDropdown.outputDir
     def mergedDocsDir = project.layout.buildDirectory.dir('docs')
+    def dataDocsDir = rootProject.layout.buildDirectory.dir('grails-data-docs')
 
     it.inputs.dir manualDocsDir
     it.inputs.dir apiDocsDir
     it.inputs.dir modifiedPagesDir
     it.inputs.dir project.layout.projectDirectory.dir('src')
+    it.inputs.dir dataDocsDir
 
     it.outputs.dir mergedDocsDir
 
-    it.from manualDocsDir, apiDocsDir, modifiedPagesDir
+    it.from manualDocsDir, apiDocsDir, modifiedPagesDir, dataDocsDir
     it.into mergedDocsDir
 
     it.duplicatesStrategy = DuplicatesStrategy.INCLUDE

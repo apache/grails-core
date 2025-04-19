@@ -10,7 +10,7 @@ dependencies {
     documentation 'org.apache.groovy:groovy-ant'
 }
 
-tasks.register('cleanDocs', Delete).configure {Delete it ->
+tasks.register('cleanDocs', Delete).configure { Delete it ->
     it.group = 'documentation'
     it.delete(rootProject.layout.buildDirectory.dir('grails-data-docs'))
 }
@@ -37,7 +37,7 @@ tasks.register('data-mapping-groovydoc', Groovydoc).configure { Groovydoc task -
     }
 
     for (Project docProject : docProjects) {
-        docProject.sourceSets.main.allSource.srcDirs.each { File srcDir -> if(srcDir.exists()) task.inputs.dir(srcDir) }
+        docProject.sourceSets.main.allSource.srcDirs.each { File srcDir -> if (srcDir.exists()) task.inputs.dir(srcDir) }
     }
 
     task.docTitle = "Grails Data Mapping API - ${projectVersion}"
@@ -48,21 +48,21 @@ tasks.register('data-mapping-groovydoc', Groovydoc).configure { Groovydoc task -
     task.includeAuthor = true
     task.includeMainForScripts = false
     task.processScripts = false
-    task.destinationDir = project.layout.buildDirectory.dir('docs/api').get().asFile
+    task.destinationDir = rootProject.layout.buildDirectory.dir('grails-data-docs/grails-data/api').get().asFile
 
-    task.dependsOn(['cleanDocs'] + docProjects.collect { ":$it.name:classes" })
+    task.dependsOn(docProjects.collect { ":$it.name:classes" })
 
-    task.outputs.dir(project.layout.buildDirectory.dir('docs/api').get().asFile)
+    task.outputs.dir(task.destinationDir)
     task.doLast {
-        delete(rootProject.layout.buildDirectory.dir('tmp'))
+        delete(project.layout.buildDirectory.dir('tmp'))
     }
 }
 
-tasks.register('copyMongodbDocs', Copy).configure { Copy it ->
+tasks.register('copyMongodbDocs', Sync).configure { Sync it ->
     it.dependsOn(':grails-data-mongodb-docs:docs')
 
-    def mongodbSourceDir =  project(':grails-data-mongodb-docs').layout.buildDirectory.dir('docs')
-    def targetDir = rootProject.layout.buildDirectory.dir('grails-data-docs/mongodb')
+    def mongodbSourceDir = project(':grails-data-mongodb-docs').layout.buildDirectory.dir('docs')
+    def targetDir = rootProject.layout.buildDirectory.dir('grails-data-docs/grails-data/mongodb')
 
     it.from(mongodbSourceDir)
     it.into(targetDir)
@@ -71,11 +71,11 @@ tasks.register('copyMongodbDocs', Copy).configure { Copy it ->
     it.outputs.dir(targetDir)
 }
 
-tasks.register('copyHibernate5Docs', Copy).configure {Copy it ->
+tasks.register('copyHibernate5Docs', Sync).configure { Sync it ->
     it.dependsOn(':grails-data-hibernate5-docs:docs')
 
-    def hibernate5SourceDir =  project('::grails-data-hibernate5-docs').layout.buildDirectory.dir('docs')
-    def targetDir = rootProject.layout.buildDirectory.dir('grails-data-docs/hibernate5')
+    def hibernate5SourceDir = project('::grails-data-hibernate5-docs').layout.buildDirectory.dir('docs')
+    def targetDir = rootProject.layout.buildDirectory.dir('grails-data-docs/grails-data/hibernate5')
 
     it.from(hibernate5SourceDir)
     it.into(targetDir)
@@ -86,26 +86,28 @@ tasks.register('copyHibernate5Docs', Copy).configure {Copy it ->
 
 tasks.register('grails-data-docs').configure { Task it ->
     it.group = 'documentation'
-    it.dependsOn('data-mapping-groovydoc')
-    it.finalizedBy('copyRootWebsite','copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs')
+    it.dependsOn('copyRootWebsite', 'data-mapping-groovydoc', 'copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs')
 }
 
-tasks.register('copyRootWebsite', Copy).configure { Copy it ->
+tasks.register('copyRootWebsite', Sync).configure { Sync it ->
+    it.dependsOn('cleanDocs')
     it.group = 'documentation'
     it.from rootProject.layout.projectDirectory.dir('grails-data-docs/data-mapping-website/src/main/resources')
-    it.into rootProject.layout.buildDirectory.dir('grails-data-docs')
+    it.into rootProject.layout.buildDirectory.dir('grails-data-docs/grails-data')
 }
 
-tasks.register('copyGuides', Copy).configure {Copy it ->
+tasks.register('copyGuides', Copy).configure { Copy it ->
     it.group = 'documentation'
 
     for (Project subproject : subprojects.findAll { it.name.startsWith('grails-data-docs-guide-') }) {
+        project.logger.lifecycle("Found Project Guide = ${subproject.name}")
         it.dependsOn(subproject.tasks.named('asciidoctor'))
         def guideDirectory = subproject.layout.buildDirectory.dir('docs')
         it.from(guideDirectory) { CopySpec fromSpec ->
             fromSpec.includeEmptyDirs = false
-            fromSpec.into ("${subproject.name.substring('grails-data-docs-guide-'.length())}/manual")
+            fromSpec.into("${subproject.name.substring('grails-data-docs-guide-'.length())}/manual")
         }
     }
-    it.into rootProject.layout.buildDirectory.dir('grails-data-docs')
+
+    it.into rootProject.layout.buildDirectory.dir('grails-data-docs/grails-data')
 }
