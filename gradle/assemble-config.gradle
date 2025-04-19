@@ -1,7 +1,7 @@
 tasks.register('installToHomeDist').configure { Task task ->
-    task.inputs.files(tasks.named('jar').map { jar -> jar.outputs.files })
-    task.inputs.files(tasks.named('sourcesJar').map { jar -> jar.outputs.files })
-    task.inputs.files(tasks.named('javadocJar').map { jar -> jar.outputs.files })
+    task.inputs.files(tasks.named('jar'))
+    task.inputs.files(tasks.named('sourcesJar'))
+    task.inputs.files(tasks.named('javadocJar'))
     task.outputs.dir(distInstallDir)
 
     doLast {
