@@ -4,26 +4,12 @@ ext {
     includeInApiDocs = true
 }
 
-tasks.named('groovydoc', Groovydoc).configure {Groovydoc doc ->
-    doc.classpath = configurations.documentation
-    doc.groovyClasspath = configurations.documentation
-    doc.access = GroovydocAccess.PROTECTED
-    doc.includeAuthor = true
-    doc.includeMainForScripts = false
-    doc.processScripts = false
-
-    List possibleSources = [project.sourceSets.main]
-    def testFixturesSource = project.sourceSets.findByName('testFixtures')
-    if(testFixturesSource) {
-        possibleSources.add(testFixturesSource)
-    }
-
-    def astSource = project.sourceSets.findByName('ast')
-    if(astSource) {
-        possibleSources.add(astSource)
-    }
-
-    doc.source(possibleSources.collect{ SourceSet it -> it.allSource.srcDirs }.flatten())
-    doc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
-    doc.classpath = files(possibleSources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten())
+tasks.named('groovydoc', Groovydoc).configure {
+    // TODO: Fix this for testFixtures
+    classpath = configurations.documentation
+    groovyClasspath = configurations.documentation
+    access = GroovydocAccess.PROTECTED
+    includeAuthor = true
+    includeMainForScripts = false
+    processScripts = false
 }
