@@ -4,20 +4,26 @@ ext {
     includeInApiDocs = true
 }
 
-tasks.named('groovydoc', Groovydoc).configure {
-    classpath = configurations.documentation
-    groovyClasspath = configurations.documentation
-    access = GroovydocAccess.PROTECTED
-    includeAuthor = true
-    includeMainForScripts = false
-    processScripts = false
+tasks.named('groovydoc', Groovydoc).configure {Groovydoc doc ->
+    doc.classpath = configurations.documentation
+    doc.groovyClasspath = configurations.documentation
+    doc.access = GroovydocAccess.PROTECTED
+    doc.includeAuthor = true
+    doc.includeMainForScripts = false
+    doc.processScripts = false
 
-    List possibleSources = [sourceSets.main.allSource]
-    if(sourceSets.findByName('testFixtures')) {
-        possibleSources.add(sourceSets.testFixtures.allSource)
+    List possibleSources = [project.sourceSets.main]
+    def testFixturesSource = project.sourceSets.findByName('testFixtures')
+    if(testFixturesSource) {
+        possibleSources.add(testFixturesSource)
     }
-    if(sourceSets.findByName('ast')) {
-        possibleSources.add(sourceSets.ast.allSource)
+
+    def astSource = project.sourceSets.findByName('ast')
+    if(astSource) {
+        possibleSources.add(astSource)
     }
-    source = files(possibleSources)
+
+    doc.source(possibleSources.collect{ SourceSet it -> it.allSource.srcDirs }.flatten())
+    doc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
+    doc.classpath = files(possibleSources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten())
 }
