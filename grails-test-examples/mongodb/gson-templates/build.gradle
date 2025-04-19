@@ -8,7 +8,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-core'
-    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'org.apache.grails:grails-views-markup'
     implementation 'org.apache.grails:grails-gsp'

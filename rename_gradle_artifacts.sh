@@ -35,7 +35,7 @@ while getopts "pdvsqrtcfgl:" flag; do
     "org[.]grails:grails-web-mvc|org.apache.grails.web:grails-web-mvc"
     "org[.]grails:grails-web-databinding|org.apache.grails.web:grails-web-databinding"
     "org[.]grails:grails-web-common|org.apache.grails.web:grails-web-common"
-    "org[.]grails:grails-web-boot|org.apache.grails.web:grails-web-boot"
+    "org[.]grails:grails-web-boot|org.apache.grails:grails-web-boot"
     "org[.]grails:grails-web|org.apache.grails.web:grails-web"
     "org[.]grails:grails-testing-support|org.apache.grails.testing:grails-testing-support-core"
     "org[.]grails:grails-test|org.apache.grails.testing:grails-test-core"

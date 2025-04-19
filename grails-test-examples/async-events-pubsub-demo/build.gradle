@@ -34,7 +34,7 @@ dependencies {
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
-    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-web-boot'
 
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'org.apache.grails:grails-data-hibernate5'

@@ -11,7 +11,7 @@ dependencies {
     implementation 'org.apache.grails:grails-data-mongodb'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
-    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-gsp'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'

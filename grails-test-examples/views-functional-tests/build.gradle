@@ -17,7 +17,7 @@ dependencies {
 
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-logging'
-    implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.apache.grails:grails-web-boot'
 
     implementation 'org.apache.grails:grails-databinding'
     implementation 'org.apache.grails:grails-i18n'
