@@ -1,5 +1,4 @@
 = GORM for Hibernate
-Graeme Rocher, Puneet Behl
 :revnumber: {version}
 :imagesdir: ./images
 :source-highlighter: coderay

@@ -1,5 +1,3 @@
-:author: Puneet Behl
-
 = Discover What's Exciting in GORM 8!
 
 == GORM 8 Unleashed: Embracing Java 11

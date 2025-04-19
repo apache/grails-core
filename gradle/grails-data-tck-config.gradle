@@ -23,7 +23,7 @@ dependencies {
 
 // TODO: gradle will happily put the jar file on the classpath, but junit won't find the tests.
 //  Dynamic test discovery also won't find them so extract the class files to force junit to work.
-TaskProvider<Sync> extractTck = tasks.register('extractTckJar', Sync).configure {Sync it ->
+TaskProvider<Sync> extractTck = tasks.register('extractTckJar', Sync).configure { Sync it ->
     it.inputs.files(configurations.tck)
 
     it.from { zipTree(configurations.tck.singleFile) }

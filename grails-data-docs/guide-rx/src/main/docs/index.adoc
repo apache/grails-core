@@ -1,4 +1,3 @@
-:author: Graeme Rocher
 :source-highlighter: coderay
 :numbered:
 :toc: left
