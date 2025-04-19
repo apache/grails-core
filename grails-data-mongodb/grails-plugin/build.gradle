@@ -109,6 +109,9 @@ tasks.named('groovydoc') {
     source += sourceSets.testFixtures.allSource
 }
 
-apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

@@ -114,7 +114,9 @@ dependencies {
 
 //compileTestGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 
-apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+}

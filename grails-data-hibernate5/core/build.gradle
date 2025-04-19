@@ -74,4 +74,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }

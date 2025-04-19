@@ -32,46 +32,41 @@ dependencies {
     implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.groovy:groovy'
 
-    // Used to surface versions for AsciiDoc
+    // Used to surface versions for groovydoc
     implementation project(':grails-dependencies')
     implementation project(':grails-testing-support-core')
     implementation project(':grails-data-hibernate5')
     implementation 'org.apache.grails:grails-gradle-plugins'
-}
-
-tasks.register('resolvedVersions') {
-    group = 'documentation'
-    description = 'Resolve Geb Version from the BOM'
-    ext.gebVersion = configurations.compileClasspath
-            .resolvedConfiguration
-            .resolvedArtifacts
-            .find {
-                it.moduleVersion.id.group == 'org.gebish' &&
-                        it.moduleVersion.id.name == 'geb-spock'
-            }.moduleVersion.id.version
-    logger.lifecycle('Resolved Geb version for Javadoc links: {}', gebVersion)
+    implementation 'org.testcontainers:testcontainers'
+    implementation 'org.springframework:spring-core'
+    implementation 'org.springframework.boot:spring-boot'
+    implementation 'org.gebish:geb-spock'
 }
 
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
 tasks.register('aggregateGroovydoc', Groovydoc).configure { Groovydoc gdoc ->
     gdoc.group = 'documentation'
-    def srcDirs = rootProject.subprojects
+    def sources = rootProject.subprojects
             .findAll { it.findProperty('includeInApiDocs') }
-            .collectMany {
-                List possibleSources = [it.sourceSets.main.allSource.srcDirs]
-                if(sourceSets.findByName('testFixtures')) {
-                    possibleSources.add(it.sourceSets.testFixtures.allSource.srcDirs)
+            .collectMany {Project it ->
+                List possibleSources = [it.sourceSets.main]
+
+                def testFixturesSource = it.sourceSets.findByName('testFixtures')
+                if(testFixturesSource) {
+                    possibleSources.add(testFixturesSource)
                 }
-                if(sourceSets.findByName('ast')) {
-                    possibleSources.add(it.sourceSets.ast.allSource.srcDirs)
+
+                def astSource = it.sourceSets.findByName('ast')
+                if(astSource) {
+                    possibleSources.add(astSource)
                 }
                 possibleSources
             }
             .flatten()
-    gdoc.source(srcDirs)
-    gdoc.exclude('META-INF/**')
-    gdoc.classpath = configurations.documentation
+    gdoc.source(sources.collect{ SourceSet it -> it.allSource.srcDirs }.flatten())
+    gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
+    gdoc.classpath = files(sources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten())
     gdoc.groovyClasspath = configurations.documentation
     gdoc.destinationDir = project.layout.buildDirectory.dir('docs/api').get().asFile
     gdoc.windowTitle = "Grails $projectVersion"
@@ -80,9 +75,19 @@ tasks.register('aggregateGroovydoc', Groovydoc).configure { Groovydoc gdoc ->
     gdoc.includeAuthor = true
     gdoc.includeMainForScripts = false
     gdoc.processScripts = false
-    gdoc.inputs.files(srcDirs)
+    gdoc.inputs.files(gdoc.source)
     gdoc.outputs.dir(destinationDir)
-    gdoc.link("https://www.gebish.org/manual/${resolvedVersions.gebVersion}/api/", 'geb')
+
+    def gebVersion = getVersion('org.gebish', 'geb-spock')
+    def testContainersVersion = getVersion('org.testcontainers', 'testcontainers')
+    def springVersion = getVersion('spring-core')
+    def springBootVersion = getVersion('spring-boot')
+
+    gdoc.link("https://www.gebish.org/manual/${gebVersion}/api/", 'geb.')
+    gdoc.link("https://javadoc.io/doc/org.testcontainers/testcontainers/${testContainersVersion}/", 'org.testcontainers.')
+    gdoc.link("https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/", 'org.springframework.core.')
+    gdoc.link("https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/", 'org.springframework.boot.')
+
     gdoc.doLast {
         delete(project.layout.buildDirectory.dir('tmp'))
     }
@@ -145,13 +150,17 @@ tasks.register('resolveGroovyVersion').configure { Task versionTask ->
     logger.lifecycle('Resolved Groovy version for Guide links: {}', ext.resolved)
 }
 
-String getVersion(String artifact) {
-    configurations.runtimeClasspath
+String getVersion(String group = null, String artifact) {
+    String version = configurations.runtimeClasspath
             .resolvedConfiguration
             .resolvedArtifacts
             .find {
                 it.moduleVersion.id.name == artifact
             }?.moduleVersion?.id?.version
+    if(!version) {
+        throw new GradleException("Could not find ${artifact} version.")
+    }
+    version
 }
 
 tasks.register('publishGuide', PublishGuide).configure { PublishGuide publish ->
@@ -173,10 +182,8 @@ tasks.register('publishGuide', PublishGuide).configure { PublishGuide publish ->
         propertiesFiles = [rootProject.layout.projectDirectory.file('gradle.properties').asFile]
         asciidoc = true
 
-        def springVersion = getVersion('spring-core')
-        def springBootVersion = getVersion('spring-boot')
-        def gspVersion = getVersion('grails-gsp')
-        def gormVersion = getVersion('grails-datamapping-core')
+        def springVersion = getVersion('org.springframework','spring-core')
+        def springBootVersion = getVersion('org.springframework.boot', 'spring-boot')
 
         properties = [
                 'api'                      : '../../api',
@@ -202,7 +209,7 @@ tasks.register('publishGuide', PublishGuide).configure { PublishGuide publish ->
                 'gradleVersion'            : gradle.gradleVersion,
                 'GrailsVersion'            : projectVersion,
                 'version'                  : projectVersion,
-                'gormVersion'              : gormVersion,
+                'gormVersion'              : projectVersion,
                 'cacheExampleSourceDir'    : rootProject.layout.projectDirectory.dir('grails-test-examples/cache').asFile,
                 'hibernate5Version'        : getVersion("hibernate-core-jakarta"),
                 'spockVersion'             : getVersion("spock-core"),

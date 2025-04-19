@@ -131,7 +131,10 @@ dependencies {
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
-apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/mongodb-forked-test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/mongodb-forked-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

@@ -43,5 +43,9 @@ dependencies {
 //compileGroovy.groovyOptions.fork = false
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 
-apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    // do NOT do test configuration here, this is a TCK module
+}

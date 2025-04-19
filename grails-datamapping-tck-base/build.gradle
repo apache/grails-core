@@ -26,5 +26,8 @@ dependencies {
     compileOnly 'org.spockframework:spock-core'
 }
 
-apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    // do NOT do test configuration here, this is a TCK module
+}
