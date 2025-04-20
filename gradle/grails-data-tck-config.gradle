@@ -23,18 +23,23 @@ dependencies {
 
 // TODO: gradle will happily put the jar file on the classpath, but junit won't find the tests.
 //  Dynamic test discovery also won't find them so extract the class files to force junit to work.
-TaskProvider<Sync> extractTck = tasks.register('extractTckJar').configure { Task it ->
-    it.inputs.files(configurations.tck)
-    it.outputs.updateWhen { false } // force the task to not cache
-    it.finalizedBy(tasks.withType(Test))
+TaskProvider<Sync> extractTck = tasks.register('extractTckJar', Sync)
+extractTck.configure { Sync it ->
+    inputs.files(configurations.tck)
 
+    it.from { zipTree(configurations.tck.singleFile) }
+    it.into(layout.buildDirectory.dir('extracted-tck-classes'))
+}
+
+// There is a known issue with IntelliJ that can cause it's inspection process to lock up.
+// this is a work around to help prevent the scenario that causes the lock up.
+def cleanupTask = tasks.register('cleanupTckClasses')
+cleanupTask.configure { Task it ->
+    Provider<Directory> extractDir = layout.buildDirectory.dir('extracted-tck-classes')
     it.doLast {
-        copy {
-            it.from { zipTree(configurations.tck.singleFile) }
-            it.into(layout.buildDirectory.dir('extracted-tck-classes'))
-
-        }
+        extractDir.get().asFile.deleteDir()
     }
+    it.outputs.upToDateWhen {false}
 }
 
 tasks.withType(Test).configureEach {
@@ -71,15 +76,5 @@ tasks.withType(Test).configureEach {
     }
 
     testClassesDirs = objects.fileCollection().from(extractTck, testClassesDirs)
-    finalizedBy('cleanupTckClasses')
-}
-
-// There is a known issue with IntelliJ that can cause it's inspection process to lock up.
-// this is a work around to help prevent the scenario that causes the lock up.
-tasks.register('cleanupTckClasses').configure { Task it ->
-    Provider<Directory> extractDir = layout.buildDirectory.dir('extracted-tck-classes')
-    it.doLast {
-        extractDir.get().asFile.deleteDir()
-    }
-    it.outputs.upToDateWhen {false}
+    finalizedBy(cleanupTask)
 }
