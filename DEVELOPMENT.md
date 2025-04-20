@@ -8,6 +8,7 @@
 * skipMongodbTests - does not run mongo related tests
 * skipCoreTests - does not run the "core" tests
 * serializeMongoTests - if true, only integration tests from one mongo project will run at a time
+* skipTests - no tests will run
 
 # Start a mongo docker container (containers will start by default)
 `docker run -d  --name mongo-on-docker  -p 27017:27017 mongo`

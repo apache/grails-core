@@ -71,6 +71,10 @@ tasks.withType(Test).configureEach { Test task ->
             return false
         }
 
+        if(project.hasProperty('skipTests')) {
+            return false
+        }
+
         return true
     }
 
