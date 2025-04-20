@@ -1,6 +1,7 @@
 package org.apache.grails.gradle.tasks.bom
 
 import io.spring.gradle.dependencymanagement.org.apache.maven.model.Model
+import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
@@ -13,7 +14,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
-import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 
 import java.util.regex.Pattern
 
@@ -253,7 +253,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         }
 
         if ((expandedVersion =~ dynamicPattern).find()) {
-            project.logger.warn("Reached max iterations for ${errorDescription} while resolving properties in: ${dynamicVersion}")
+            logger.warn("Reached max iterations for ${errorDescription} while resolving properties in: ${dynamicVersion}")
         }
 
         expandedVersion
