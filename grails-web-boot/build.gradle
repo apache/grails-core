@@ -5,7 +5,7 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.apache.grails.web'
+group = 'org.apache.grails'
 
 dependencies {
 
