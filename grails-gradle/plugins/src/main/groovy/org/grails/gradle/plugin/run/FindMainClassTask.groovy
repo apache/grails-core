@@ -34,6 +34,7 @@ import org.springframework.boot.gradle.tasks.run.BootRun
  * @since 3.0
  */
 @CompileStatic
+@CacheableTask
 class FindMainClassTask extends DefaultTask {
 
     @TaskAction
@@ -51,6 +52,7 @@ class FindMainClassTask extends DefaultTask {
     }
 
     @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getClassesDirs() {
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         if(mainSourceSet) {
