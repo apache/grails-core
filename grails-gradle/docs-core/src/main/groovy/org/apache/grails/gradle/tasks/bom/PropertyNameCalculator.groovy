@@ -41,13 +41,13 @@ class PropertyNameCalculator {
             return null
         }
 
-        if(found.versionProperty) {
+        if(found.versionPropertyReference) {
             return found
         }
 
         String propertyName = determinePossibleKey(found, coordinateMapping)
         if (propertyName) {
-            found.versionProperty = propertyName ? "\${${propertyName}}" : '' as String
+            found.versionPropertyReference = propertyName ? "\${${propertyName}}" : '' as String
             return found
         }
 

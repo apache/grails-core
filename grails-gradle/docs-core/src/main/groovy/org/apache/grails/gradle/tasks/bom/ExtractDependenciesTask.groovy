@@ -15,6 +15,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 
+import java.util.regex.Pattern
+
 /**
  * Grails Bom files define their dependencies in a series of maps, this task takes those maps and generates an
  * asciidoc file containing all of the resolve dependencies and their versions in the bom.
@@ -90,7 +92,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         List lines = []
         constraints.values().sort { ExtractedDependencyConstraint a, ExtractedDependencyConstraint b -> a.groupId <=> b.groupId ?: a.artifactId <=> b.artifactId }.withIndex().each {
             int position = it.v2 + 1
-            lines << "| ${position} | ${it.v1.groupId} | ${it.v1.artifactId} | ${it.v1.version} | ${it.v1.versionProperty ?: ''} | ${it.v1.source} "
+            lines << "| ${position} | ${it.v1.groupId} | ${it.v1.artifactId} | ${it.v1.version} | ${it.v1.versionPropertyReference ?: ''} | ${it.v1.source} "
         }
         lines
     }
@@ -209,7 +211,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
                         String propertyName = depItem.version.contains('$') ? depItem.version : null
                         ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(
                                 groupId: resolvedCoordinates.groupId, artifactId: resolvedCoordinates.artifactId,
-                                version: resolvedVersion, versionProperty: propertyName, source: bomCoordinates.artifactId
+                                version: resolvedVersion, versionPropertyReference: propertyName, source: bomCoordinates.artifactId
                         )
                         if (depItem.scope == 'import') {
                             constraints.put(resolvedCoordinates, constraint)
@@ -238,7 +240,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     }
 
     private String resolveMavenProperty(String errorDescription, String dynamicVersion, Map properties, int maxIterations = 10) {
-        def dynamicPattern = ~/\$\{([^}]+)\}/
+        Pattern dynamicPattern = ~/\$\{([^}]+)\}/
         String expandedVersion = dynamicVersion
 
         int iterations = 0
