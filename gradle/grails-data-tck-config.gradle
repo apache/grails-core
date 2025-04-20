@@ -29,6 +29,7 @@ TaskProvider<Sync> extractTck = tasks.register('extractTckJar', Sync).configure 
     it.from { zipTree(configurations.tck.singleFile) }
     it.into(layout.buildDirectory.dir('extracted-tck-classes'))
     it.finalizedBy(tasks.withType(Test))
+    it.outputs.updateWhen { false } // force the task to not cache
 }
 
 tasks.withType(Test).configureEach {
