@@ -45,6 +45,8 @@ dist/
 idea
 output/
 prodDb.mv.db
+testWatchedFile.properties
+_alternativeTable.gsp
 **/src/en/ref/Versions/Grails BOM.adoc
 stacktrace.log
 target
