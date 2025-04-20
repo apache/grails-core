@@ -37,7 +37,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Abstract Gradle task for compiling templates, using GroovyPageCompilerForkTask
+ * Abstract Gradle task for compiling templates, using GroovyPageForkedCompiler
  * This Task is a Forked Java Task that is configurable with fork options provided
  * by {@link ViewCompileOptions}
  *
@@ -45,6 +45,7 @@ import java.nio.file.Paths
  * @since 4.0
  */
 @CompileStatic
+@CacheableTask
 abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     @Input
@@ -56,6 +57,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     final ConfigurableFileCollection grailsConfigurationPaths
 
     @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
     final DirectoryProperty srcDir
 
     @Nested
@@ -163,7 +165,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     @Input
     protected String getCompilerName() {
-        "org.grails.web.pages.GroovyPageCompilerForkTask"
+        "org.grails.web.pages.GroovyPageForkedCompiler"
     }
 
     @Input

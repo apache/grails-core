@@ -2,6 +2,7 @@ package org.grails.gradle.plugin.views.json
 
 import groovy.transform.CompileStatic
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.process.ExecOperations
 import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
 
@@ -13,6 +14,7 @@ import javax.inject.Inject
  * @author Graeme Rocher
  */
 @CompileStatic
+@CacheableTask
 class GsonViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Inject

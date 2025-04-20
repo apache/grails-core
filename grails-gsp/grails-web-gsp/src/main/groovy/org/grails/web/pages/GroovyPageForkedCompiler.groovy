@@ -21,13 +21,13 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.grails.gsp.compiler.GroovyPageCompiler
 
 /**
- * A Forked Compiler Task for use (typically by Gradle)
+ * A Forked Compiler for use (typically by Gradle)
  *
  * @author David Estes
  */
 
 @CompileStatic
-class GroovyPageCompilerForkTask {
+class GroovyPageForkedCompiler {
 
     private static final String fileExtension = '.gsp'
 
@@ -43,7 +43,7 @@ class GroovyPageCompilerForkTask {
     String targetCompatibility
     String[] configs
 
-    GroovyPageCompilerForkTask(File sourceDir, File destDir, File tmpdir) {
+    GroovyPageForkedCompiler(File sourceDir, File destDir, File tmpdir) {
         this.tmpdir = tmpdir
         this.destDir = destDir
         this.sourceDir = sourceDir
@@ -106,7 +106,7 @@ class GroovyPageCompilerForkTask {
         if (args.length != 8) {
             System.err.println("Invalid arguments: [${args.join(',')}]")
             System.err.println("""
-Usage: java -cp CLASSPATH GroovyPageCompilerForkTask [srcDir] [destDir] [tmpDir] [targetCompatibility] [packageName] [serverPath] [configFile] [encoding]
+Usage: java -cp CLASSPATH GroovyPageForkedCompiler [srcDir] [destDir] [tmpDir] [targetCompatibility] [packageName] [serverPath] [configFile] [encoding]
 """)
             System.exit(1)
         }
@@ -120,7 +120,7 @@ Usage: java -cp CLASSPATH GroovyPageCompilerForkTask [srcDir] [destDir] [tmpDir]
         File configFile = new File(args[6])
         String encoding = args[7] ?: 'UTF-8'
 
-        GroovyPageCompilerForkTask compiler = new GroovyPageCompilerForkTask(srcDir, destinationDir, tmpDir)
+        GroovyPageForkedCompiler compiler = new GroovyPageForkedCompiler(srcDir, destinationDir, tmpDir)
         if (configFiles) {
             compiler.configs = configFiles
         }

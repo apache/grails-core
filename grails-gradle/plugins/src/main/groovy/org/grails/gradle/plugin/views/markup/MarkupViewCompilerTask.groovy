@@ -3,6 +3,7 @@ package org.grails.gradle.plugin.views.markup
 import groovy.transform.CompileStatic
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.process.ExecOperations
 import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
@@ -16,6 +17,7 @@ import javax.inject.Inject
  * @since 1.0
  */
 @CompileStatic
+@CacheableTask
 class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Input

@@ -21,6 +21,7 @@ import java.util.regex.Pattern
  * Grails Bom files define their dependencies in a series of maps, this task takes those maps and generates an
  * asciidoc file containing all of the resolve dependencies and their versions in the bom.
  */
+@CacheableTask
 abstract class ExtractDependenciesTask extends DefaultTask {
     @InputFiles
     @Classpath

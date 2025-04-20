@@ -23,6 +23,7 @@ import javax.inject.Inject
  * @since 1.0
  */
 @CompileStatic
+@CacheableTask
 abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
 
     @Input
@@ -34,6 +35,7 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
     final ConfigurableFileCollection grailsConfigurationPaths
 
     @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
     final DirectoryProperty srcDir
 
     @Nested
