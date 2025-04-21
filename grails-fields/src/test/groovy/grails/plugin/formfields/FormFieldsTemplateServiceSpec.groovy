@@ -625,7 +625,6 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 		render(template: template.path) == 'DEFAULT FIELD TEMPLATE'
 	}
 
-	@PendingFeature(reason = 'until domain class inheritance works in Groovy 4')
 	def "resolves template for superclass property"() {
 		given:
 		views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'
