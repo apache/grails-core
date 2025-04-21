@@ -28,6 +28,10 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.apache.grails.testing:grails-testing-support-mongodb'
 
+    // This project also has unit tests in it, so we must define the launcher per
+    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
+    add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 

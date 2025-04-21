@@ -20,6 +20,10 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     testImplementation 'org.spockframework:spock-core'
+
+    // This project also has unit tests in it, so we must define the launcher per
+    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
+    add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
 }
 
 apply {

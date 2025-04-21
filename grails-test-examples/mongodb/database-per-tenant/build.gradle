@@ -24,7 +24,7 @@ dependencies {
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation project(':grails-testing-support-mongodb')
+    testImplementation 'org.apache.grails.testing:grails-testing-support-mongodb'
 }
 
 apply {
