@@ -2,10 +2,8 @@ package org.grails.web.pages
 
 import grails.artefact.Artefact
 import grails.testing.web.taglib.TagLibUnitTest
-import spock.lang.Ignore
 import spock.lang.Specification
 
-@Ignore // ignored until new release of testing framework
 class TagLibNamespaceTests extends Specification implements TagLibUnitTest<TestTagLib> {
 
     void testInvokeNamespacedTag() {
