@@ -1,7 +1,7 @@
 ext {
     grailsVersion = projectVersion
     isCiBuild = System.getenv().get('CI') as Boolean
-    configuredTestParallel = System.getProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
+    configuredTestParallel = find('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     // Directories created during the build which are related
