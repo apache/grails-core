@@ -65,9 +65,3 @@ tasks.withType(Test).configureEach {
     }
 }
 
-tasks.register('singleTest', Test).configure { Test it ->
-    it.description = 'Task for running a single test with -DsingleTest.single=TestName singleTest'
-    if (System.getProperty('debug.tests')) {
-        it.jvmArgs += debugArguments
-    }
-}
