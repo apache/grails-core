@@ -1,12 +1,11 @@
 package org.grails.scaffolding.registry.input
 
+import grails.web.mapping.LinkGenerator
+import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.scaffolding.ClosureCapture
 import org.grails.scaffolding.ClosureCaptureSpecification
 import org.grails.scaffolding.model.property.DomainProperty
-import grails.web.mapping.LinkGenerator
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.ToMany
-import spock.lang.Ignore
+import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Subject
 
@@ -35,7 +34,7 @@ class BidirectionalToManyInputRendererSpec extends ClosureCaptureSpecification {
         renderer.supports(property)
     }
 
-    @Ignore
+    @PendingFeature
     void "test render"() {
         given:
         DomainProperty property
