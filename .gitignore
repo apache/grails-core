@@ -16,6 +16,7 @@
 .settings
 /*/*.iml
 /*/.settings/*
+!etc/bin
 /*/bin
 /*/build/*
 /*/out/*
