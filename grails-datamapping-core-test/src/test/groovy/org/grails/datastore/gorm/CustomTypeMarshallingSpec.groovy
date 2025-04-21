@@ -50,7 +50,7 @@ class CustomTypeMarshallingSpec extends GormDatastoreSpec {
             p2 == null
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-8436")
+    @Issue("https://github.com/apache/grails-core/issues/4546")
     @PendingFeature(reason = 'Was previously @Ignore')
     void "can re-save an existing instance without modifications"() {
         given:
@@ -67,7 +67,7 @@ class CustomTypeMarshallingSpec extends GormDatastoreSpec {
             p.version == old(p.version)
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-8436")
+    @Issue("https://github.com/apache/grails-core/issues/4546")
     void "can modify the value of a custom type property"() {
         given:
             def p = Person.findByName("Fred")
@@ -87,7 +87,7 @@ class CustomTypeMarshallingSpec extends GormDatastoreSpec {
             Person.countByBirthdayGreaterThan(new Birthday(now)) == 1
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-8436")
+    @Issue("https://github.com/apache/grails-core/issues/4546")
     void "can nullify the value of a custom type property"() {
         given:
             def p = Person.findByName("Fred")
