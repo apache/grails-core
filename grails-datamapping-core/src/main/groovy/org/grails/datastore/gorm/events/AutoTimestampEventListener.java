@@ -14,11 +14,6 @@
  */
 package org.grails.datastore.gorm.events;
 
-import java.lang.reflect.Field;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import grails.gorm.annotation.AutoTimestamp;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.gorm.timestamp.TimestampProvider;
@@ -26,17 +21,18 @@ import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.config.Settings;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.EntityAccess;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
-import org.grails.datastore.mapping.engine.event.EventType;
-import org.grails.datastore.mapping.engine.event.PreInsertEvent;
-import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
+import org.grails.datastore.mapping.engine.event.*;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEvent;
+
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * An event listener that adds support for GORM-style auto-timestamping
@@ -48,7 +44,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
 
     // if false, will not set timestamp on insert event if value is not null
     @Value("${" + Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE + ":true}")
-    boolean insertOverwrite = true;
+    public boolean insertOverwrite = true;
 
     public static final String DATE_CREATED_PROPERTY = "dateCreated";
     public static final String LAST_UPDATED_PROPERTY = "lastUpdated";

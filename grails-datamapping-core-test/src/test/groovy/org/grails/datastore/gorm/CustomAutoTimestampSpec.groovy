@@ -4,15 +4,15 @@ import grails.gorm.annotation.AutoTimestamp
 import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
-import spock.lang.Ignore
+import spock.lang.Isolated
+import spock.lang.Stepwise
 
 import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
+@Isolated
+@Stepwise
 class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
-    // TODO: This test fails randomly in a parallel run.  See https://github.com/apache/grails-data-mapping/issues/1877
-    // for the likely cause
-    @Ignore
     void "Test when the auto timestamp properties are customized, they are correctly set"() {
         when:"An entity is persisted"
             def r = new RecordCustom(name: "Test")
@@ -93,6 +93,9 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         then:"the custom lastUpdated property is updated and dateCreated is not"
         r.modified != null && previousModified < r.modified
         previousCreated.time == r.created.time
+
+        cleanup:
+        (RecordCustom.gormPersistentEntity.mappingContext.eventListeners.find { it.class == AutoTimestampEventListener} as AutoTimestampEventListener).insertOverwrite = true
     }
 
     @Override
