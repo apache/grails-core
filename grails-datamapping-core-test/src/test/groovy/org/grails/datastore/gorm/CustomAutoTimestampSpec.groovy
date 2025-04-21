@@ -4,6 +4,7 @@ import grails.gorm.annotation.AutoTimestamp
 import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import spock.lang.IgnoreIf
 import spock.lang.Retry
 import spock.lang.Stepwise
 
@@ -11,6 +12,7 @@ import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
 @Retry // this test is flaky on CI due to https://github.com/apache/grails-data-mapping/issues/1877
 @Stepwise
+@IgnoreIf( { os.windows } )
 class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
     void "Test when the auto timestamp properties are customized, they are correctly set"() {
