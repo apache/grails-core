@@ -4,12 +4,12 @@ import grails.gorm.annotation.AutoTimestamp
 import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
-import spock.lang.Isolated
+import spock.lang.Retry
 import spock.lang.Stepwise
 
 import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
-@Isolated
+@Retry // this test is flaky on CI due to https://github.com/apache/grails-data-mapping/issues/1877
 @Stepwise
 class CustomAutoTimestampSpec extends GormDatastoreSpec {
 
