@@ -12,6 +12,6 @@ class CoordinateHolder {
     String artifactId
 
     String getCoordinatesWithoutVersion() {
-        "${groupId}:${artifactId}" as String
+        "$groupId:$artifactId" as String
     }
 }
