@@ -48,12 +48,12 @@ dependencies {
     testImplementation 'org.objenesis:objenesis'
 }
 
-apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-}
-
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }
