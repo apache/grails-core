@@ -261,7 +261,6 @@ tasks.register('docs', Sync).configure { Sync it ->
     it.inputs.dir manualDocsDir
     it.inputs.dir apiDocsDir
     it.inputs.dir dataDocsDir
-    it.inputs.dir guidePdfDir
     it.inputs.dir project.layout.projectDirectory.dir('src')
 
     it.outputs.dir mergedDocsDir
