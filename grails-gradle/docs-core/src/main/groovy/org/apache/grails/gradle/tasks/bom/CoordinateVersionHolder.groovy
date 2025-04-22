@@ -20,6 +20,6 @@ class CoordinateVersionHolder extends CoordinateHolder {
             throw new GradleException("Constraint does not have a version: ${this}")
         }
 
-        "${groupId}:${artifactId}:${version}" as String
+        "$groupId:$artifactId:$version" as String
     }
 }
