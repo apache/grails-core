@@ -62,7 +62,13 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         id: build
-        run: ./gradlew build assemble groovydoc -PskipFunctionalTests --continue --stacktrace -PskipMongodbTests -PskipHibernate5Tests
+        run: >
+          ./gradlew build 
+          assemble 
+          groovydoc 
+          --continue 
+          --stacktrace 
+          -PskipFunctionalTests -PskipMongodbTests -PskipHibernate5Tests
   functional:
     name: "Functional Tests"
     permissions:
@@ -85,7 +91,11 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Functional Tests"
-        run: ./gradlew build -PonlyFunctionalTests --stacktrace -PskipMongodbTests -PskipHibernate5Tests
+        run: >
+          ./gradlew 
+          build 
+          --stacktrace 
+          -PonlyFunctionalTests -PskipMongodbTests -PskipHibernate5Tests
   mongodbFunctional:
     name: "Mongodb Functional Tests"
     runs-on: ubuntu-24.04
@@ -110,7 +120,12 @@ jobs:
         id: build
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew cleanTest build --continue -PonlyMongodbTests -PmongodbContainerVersion=${{ matrix.mongodb-version }}
+        run: >
+          ./gradlew 
+          cleanTest 
+          build 
+          --continue 
+          -PonlyMongodbTests -PmongodbContainerVersion=${{ matrix.mongodb-version }}
   hibernate5Functional:
     name: "Hibernate5 Functional Tests"
     runs-on: ubuntu-24.04
