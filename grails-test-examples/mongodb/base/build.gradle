@@ -3,6 +3,7 @@ group = 'examples'
 
 apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'com.bertramlabs.asset-pipeline'
 
 dependencies {
 
