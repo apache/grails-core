@@ -79,7 +79,7 @@ In this case when you add new elements to the books collection the order is reta
 
 [source,groovy]
 ----
-author.books<<0>> // get the first book
+author.books[0] // get the first book
 ----
 
 The way this works at the database level is Hibernate creates a `books_idx` column where it saves the index of the elements in the collection to retain this order at the database level.
