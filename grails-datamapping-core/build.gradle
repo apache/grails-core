@@ -78,7 +78,7 @@ dependencies {
 
     compileOnlyApi "jakarta.el:jakarta.el-api:$elApiVersion"
 
-    runtimeOnly "org.glassfish:jakarta.el:$jakartaElGlassfishImplVersion", {
+    runtimeOnly "jakarta.el:jakarta.el-api:$elApiVersion", {
         // Note: Default EL implementation included for convenience,
         //       can be replaced by downstream consumers
     }
