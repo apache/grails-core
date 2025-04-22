@@ -80,7 +80,7 @@ tasks.register('copyMongodbDocs', Sync).configure { Sync it ->
 tasks.register('copyHibernate5Docs', Sync).configure { Sync it ->
     it.dependsOn(':grails-data-hibernate5-docs:docs')
 
-    def hibernate5SourceDir = project('::grails-data-hibernate5-docs').layout.buildDirectory.dir('docs')
+    def hibernate5SourceDir = project(':grails-data-hibernate5-docs').layout.buildDirectory.dir('docs')
     def targetDir = project.layout.buildDirectory.dir('docs/grails-data/hibernate5')
 
     it.from(hibernate5SourceDir)
