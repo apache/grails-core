@@ -44,7 +44,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
     implementation project(':grails-gsp-spring-boot')
 
-    implementation 'org.hibernate.validator:hibernate-validator:8.0.0.Final' // validation
+    implementation 'org.hibernate.validator:hibernate-validator' // validation
 
     implementation project(':grails-web-jsp')
 

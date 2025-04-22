@@ -76,7 +76,7 @@ dependencies {
         // impl: ResourceBundleMessageInterpolator
     }
 
-    compileOnlyApi "jakarta.el:jakarta.el-api:$elApiVersion" // TODO: Was previous 4.0.0 instead of elApiVersion
+    compileOnlyApi "jakarta.el:jakarta.el-api:$elApiVersion"
 
     runtimeOnly "org.glassfish:jakarta.el:$jakartaElGlassfishImplVersion", {
         // Note: Default EL implementation included for convenience,

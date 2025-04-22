@@ -48,8 +48,8 @@ dependencies {
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'
 
-    testImplementation 'io.micronaut.serde:micronaut-serde-jackson:2.10.2'
-    testImplementation 'io.micronaut:micronaut-http-client:4.6.5'
+    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
     testImplementation 'org.apache.grails:grails-testing-support-web'
 }
 
