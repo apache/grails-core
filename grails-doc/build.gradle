@@ -1,6 +1,5 @@
 import grails.doc.AddReleaseDropDown
 import grails.doc.gradle.PublishGuide
-import grails.doc.gradle.PublishPdf
 
 plugins {
     id 'base'
@@ -246,15 +245,8 @@ tasks.register('generateBomDocumentation').configure { Task it ->
     }
 }
 
-tasks.register('generateGuidePdf', PublishPdf).configure { PublishPdf pTask ->
-    pTask.dependsOn 'publishGuide'
-    pTask.outputDirectory = project.layout.buildDirectory.dir('guide-pdf')
-    pTask.guideSingleFile = project.layout.buildDirectory.file('original-guide/guide/single.html')
-}
-
 tasks.register('generateGuide').configure { Task task ->
     task.dependsOn('createReleaseDropdown')
-    task.finalizedBy('generateGuidePdf')
 }
 
 tasks.register('docs', Sync).configure { Sync it ->
@@ -263,7 +255,6 @@ tasks.register('docs', Sync).configure { Sync it ->
     def manualDocsDir = project.layout.buildDirectory.dir('modified-guide')
     def apiDocsDir = project.layout.buildDirectory.dir('combined-api')
     def dataDocsDir = rootProject.layout.projectDirectory.dir('grails-data-docs/stage/build/docs')
-    def guidePdfDir = project.layout.buildDirectory.dir('guide-pdf')
 
     def mergedDocsDir = project.layout.buildDirectory.dir('docs')
 
