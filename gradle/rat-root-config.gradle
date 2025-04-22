@@ -27,5 +27,9 @@ tasks.named('rat') {
             '**/*.html', // html files are only in test
             '**/resources/*', // exclude test artifacts
             'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
+            'src/*', // exclude build artifacts
+            'LICENSE',
+            'NOTICE',
+            '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
     ]
 }
