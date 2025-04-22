@@ -54,7 +54,7 @@ tasks.register('data-mapping-groovydoc', Groovydoc).configure { Groovydoc task -
     task.includeAuthor = true
     task.includeMainForScripts = false
     task.processScripts = false
-    task.destinationDir = project.layout.buildDirectory.dir('docs/grails-data/api').get().asFile
+    task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
 
     task.dependsOn(docProjects.collect { ":$it.name:classes" })
 
@@ -68,7 +68,7 @@ tasks.register('copyMongodbDocs', Sync).configure { Sync it ->
     it.dependsOn(':grails-data-mongodb-docs:docs')
 
     def mongodbSourceDir = project(':grails-data-mongodb-docs').layout.buildDirectory.dir('docs')
-    def targetDir = project.layout.buildDirectory.dir('docs/grails-data/mongodb')
+    def targetDir = project.layout.buildDirectory.dir('mongodb-api/grails-data/mongodb')
 
     it.from(mongodbSourceDir)
     it.into(targetDir)
@@ -81,7 +81,7 @@ tasks.register('copyHibernate5Docs', Sync).configure { Sync it ->
     it.dependsOn(':grails-data-hibernate5-docs:docs')
 
     def hibernate5SourceDir = project(':grails-data-hibernate5-docs').layout.buildDirectory.dir('docs')
-    def targetDir = project.layout.buildDirectory.dir('docs/grails-data/hibernate5')
+    def targetDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data/hibernate5')
 
     it.from(hibernate5SourceDir)
     it.into(targetDir)
@@ -90,9 +90,20 @@ tasks.register('copyHibernate5Docs', Sync).configure { Sync it ->
     it.outputs.dir(targetDir)
 }
 
-tasks.register('docs').configure { Task it ->
+tasks.register('docs', Sync).configure { Sync it ->
     it.group = 'documentation'
     it.dependsOn('copyRootWebsite', 'data-mapping-groovydoc', 'copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs')
+
+    def websiteDir = rootProject.layout.projectDirectory.dir('grails-data-docs/data-mapping-website/src/main/resources')
+    def guidesDir = project.layout.buildDirectory.dir('guides/grails-data')
+    def mongoApiDir = project.layout.buildDirectory.dir('mongodb-api/grails-data')
+    def hibernate5ApiDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data')
+    def dataCoreApiDir = project.layout.buildDirectory.dir('data-api')
+
+    def combinedDir = project.layout.buildDirectory.dir('docs/grails-data')
+
+    it.from websiteDir, guidesDir, mongoApiDir, hibernate5ApiDir, dataCoreApiDir
+    it.into combinedDir
 }
 
 tasks.register('copyRootWebsite', Copy).configure { Copy it ->
@@ -118,7 +129,7 @@ tasks.register('copyGuides').configure { Task task ->
                 }
             }
 
-            into(project.layout.buildDirectory.dir('docs/grails-data'))
+            into(project.layout.buildDirectory.dir('guides/grails-data'))
         }
     }
 }
