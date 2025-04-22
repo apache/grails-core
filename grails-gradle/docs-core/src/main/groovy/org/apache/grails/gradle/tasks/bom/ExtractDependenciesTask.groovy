@@ -254,7 +254,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         }
 
         if ((expandedVersion =~ dynamicPattern).find()) {
-            logger.warn("Reached max iterations for ${errorDescription} while resolving properties in: ${dynamicVersion}")
+            logger.warn("Reached max iterations for {} while resolving properties in: {}", errorDescription, dynamicVersion)
         }
 
         expandedVersion
