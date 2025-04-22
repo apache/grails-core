@@ -6,23 +6,24 @@ class PdfPublisherSpec extends Specification {
 
     void "generate pdf from sample docs"() {
         given:
-        String sampleDocsFolderPath = 'src/test/resources/docs'
-        File sampleDocsFolder = new File(sampleDocsFolderPath)
+        File documentationFolder = new File('src/test/resources/docs')
+        File outputDir = new File(documentationFolder, 'guide')
+        File targetFile = new File(documentationFolder, 'guide/single.html')
         String pdfName = 'single.pdf'
-        String child = "guide/single.html"
+        File pdfFile = new File(documentationFolder, "guide/${pdfName}")
 
         expect:
-        sampleDocsFolder.exists()
-        !new File("${sampleDocsFolderPath}/guide/${pdfName}").exists()
+        documentationFolder.exists()
+        !pdfFile.exists()
 
         when:
-        PdfPublisher.publishPdfFromHtml(sampleDocsFolder, new File(sampleDocsFolder, child), pdfName)
+        PdfPublisher.publishPdfFromHtml(outputDir, targetFile, pdfName)
 
         then:
         noExceptionThrown()
-        new File("${sampleDocsFolderPath}/guide/${pdfName}").exists()
+        pdfFile.exists()
 
         cleanup:
-        new File("${sampleDocsFolderPath}/guide/${pdfName}").delete()
+        pdfFile.delete()
     }
 }
