@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 Scaffolding templates based on the _Fields_ plugin are quite powerful as they will pick up field and input rendering templates from your application and any plugins that provide them. This means that the useful life of scaffolding templates should be much longer as you do not need to replace the entire _create.gsp_ and/or _edit.gsp_ template just because you want to do something different with a certain property of one particular class.
 
 The plugin makes the _renderEditor.template_ file used by standard Grails scaffolding redundant. This template was very limited because it could not be extended by plugins or applications (only replaced) and was unable to support embedded properties of domain classes.

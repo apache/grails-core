@@ -117,7 +117,7 @@ class GrailsPublishExtension {
         String url
         String distribution = 'repo'
 
-        static final License APACHE2 = new License(name: 'The Apache Software License, Version 2.0', url: 'http://www.apache.org/licenses/LICENSE-2.0.txt')
+        static final License APACHE2 = new License(name: 'The Apache Software License, Version 2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0.txt')
         static final License EPL1 = new License(name: 'Eclipse Public License - v 1.0', url: 'https://www.eclipse.org/legal/epl-v10.html')
         static final License LGPL21 = new License(name: 'GNU Lesser General Public License, version 2.1', url: 'http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html')
         static final License LGPL = new License(name: 'GNU Lesser General Public License', url: 'http://www.gnu.org/licenses/lgpl-3.0.html')

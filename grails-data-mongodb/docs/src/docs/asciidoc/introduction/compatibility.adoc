@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 === Compatibility with GORM for Hibernate
 This implementation tries to be as compatible as possible with GORM for Hibernate. In general you can refer to the https://grails.org/doc/latest/guide/5.%20Object%20Relational%20Mapping%20(GORM).html[GORM documentation] and the "Domain Classes" section of the https://grails.org/doc/latest/[reference guide] (see the right nav) for usage information.
 
