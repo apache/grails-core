@@ -33,5 +33,8 @@ tasks.named('rat') {
             '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
             '**/*.db', // H2 database test files
             '**/*.gitkeep', // Empty Gitkeep file
+            'grails-scaffolding/src/main/templates/scaffolding/*.gsp', // template files that people are expected to use in the end application
+            'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
+            'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
     ]
 }
