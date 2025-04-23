@@ -21,7 +21,6 @@ import org.apache.grails.gradle.tasks.bom.ExtractDependenciesTask
 import org.apache.grails.gradle.tasks.bom.ExtractedDependencyConstraint
 import org.apache.grails.gradle.tasks.bom.PropertyNameCalculator
 
-// Copyright 2024 the original author or authors.
 buildscript {
     apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
 }
