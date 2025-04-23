@@ -56,4 +56,4 @@ jobs:
         run: |
           echo "## 📋 Apache RAT Report" >> $GITHUB_STEP_SUMMARY
           # inject raw HTML (it will render as HTML in the summary)
-          sed '/<h3>Archives:<\/h3>/,/<\/body>/d' build/reports/rat/index.html >> $GITHUB_STEP_SUMMARY
+          sed -n '/<body[^>]*>/,/<\/body>/ { /<h3>Archives:<\/h3>/,/<\/body>/d; /<body[^>]*>/d; /<\/body>/d; p; }' build/reports/rat/index.html >> $GITHUB_STEP_SUMMARY
