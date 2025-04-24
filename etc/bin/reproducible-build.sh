@@ -19,20 +19,20 @@
 #
 
 export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
-
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 cd "$SCRIPT_DIR/../.."
 
 git clean -xdf
 ./gradlew build --rerun-tasks -PskipTests
-FIRST_BUILD=$("$SCRIPT_DIR/generate-build-artifact-hashes.groovy")
+FIRST_BUILD=$(sha256sum build/libs/*)
 
 git clean -xdf
 ./gradlew build --rerun-tasks -PskipTests
-SECOND_BUILD=$("$SCRIPT_DIR/generate-build-artifact-hashes.groovy")
+SECOND_BUILD=$(sha256sum build/libs/*)
 
-cd -
-echo "$FIRST_BUILD" > first.txt
-echo "$SECOND_BUILD" > second.txt
+cd $SCRIPT_DIR
+echo $FIRST_BUILD > first.txt
+echo $SECOND_BUILD > second.txt
 
 diff -u first.txt second.txt
