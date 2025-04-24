@@ -25,22 +25,39 @@ extensions.configure(JavaPluginExtension) {
     it.withJavadocJar()
 }
 
+tasks.withType(Javadoc).configureEach { Javadoc it ->
+    it.options.noTimestamp true // prevent the file header with the date
+    it.options.bottom "Generated ${formattedBuildDate} (UTC)"
+}
+
+// JavaCompile is not configured because we put java files inside of the groovy source sets
+
 tasks.withType(GroovyCompile).configureEach {
-    groovyOptions.encoding = 'UTF-8'
+    groovyOptions.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
     // Preserve method parameter names in Groovy classes for IDE parameter hints.
     groovyOptions.parameters = true
-    options.encoding = 'UTF-8'
+    options.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
     options.fork = true
     options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx1G']
 }
 
+// Grails determines the grails version via the META-INF/MANIFEST.MF file
+// Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
 tasks.withType(Jar).configureEach {
     manifest.attributes(
-            'Built-By': System.properties['user.name'],
-            'Created-By': System.properties['java.vm.version'] + ' (' + System.properties['java.vm.vendor'] + ')',
             'Implementation-Title': 'Grails',
             'Implementation-Version': grailsVersion,
             'Implementation-Vendor': 'grails.org'
     )
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
+
+// Any jar, zip, or archive should be reproducible
+// No longer needed after https://github.com/gradle/gradle/issues/30871
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false // to prevent timestamp mismatches
+    reproducibleFileOrder = true // to keep the same ordering
+    dirMode = 0755 // To avoid platform specific defaults
+    fileMode = 0644 // to avoid platform specific defaults
+}
+
