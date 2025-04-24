@@ -34,6 +34,9 @@ dependencies {
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-gsp'
 
+    implementation 'org.webjars.npm:bootstrap'
+    implementation 'org.webjars.npm:jquery'
+
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
@@ -56,4 +59,5 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/webjar-asset-pipeline-config.gradle')
 }

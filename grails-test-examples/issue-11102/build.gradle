@@ -62,6 +62,10 @@ dependencies {
     implementation 'org.apache.grails:grails-scaffolding'
     implementation 'org.apache.grails:grails-events'
     implementation 'org.apache.grails:grails-gsp'
+
+    implementation 'org.webjars.npm:bootstrap'
+    implementation 'org.webjars.npm:jquery'
+
     console 'org.apache.grails:grails-console'
     profile 'org.grails.profiles:web'
     runtimeOnly 'com.h2database:h2'
@@ -91,4 +95,5 @@ bootRun {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/webjar-asset-pipeline-config.gradle')
 }

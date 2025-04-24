@@ -22,6 +22,7 @@ group = 'examples'
 
 apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'asset-pipeline'
 
 dependencies {
 
@@ -33,6 +34,8 @@ dependencies {
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-gsp'
     implementation 'org.apache.grails:grails-data-hibernate5'
+
+    implementation 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
@@ -63,4 +66,5 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/webjar-asset-pipeline-config.gradle')
 }
