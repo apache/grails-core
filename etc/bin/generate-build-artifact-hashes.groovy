@@ -44,6 +44,7 @@ List<Path> artifacts = []
 Files.walk(root)
         .filter {
             Files.isRegularFile(it) &&
+                    !it.toString().contains('buildSrc') &&  // build src jars aren't published
                     it.toString().endsWith('.jar') &&
                     it.toString().contains("${File.separator}build${File.separator}libs${File.separator}")
         }
