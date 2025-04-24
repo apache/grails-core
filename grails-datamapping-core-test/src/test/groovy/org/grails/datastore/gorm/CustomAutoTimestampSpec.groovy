@@ -42,7 +42,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
             Date previousCreated = r.created
             Date previousModified = r.modified
             r.name = "Test 2"
-            sleep(50) // give the save a chance to set a different time
+            sleep(1) // give the save a chance to set a different time
             r.save(flush:true)
             session.clear()
             r = RecordCustom.get(r.id)
@@ -59,7 +59,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         def now = new Date()
         r.created = new Date(now.time)
         r.modified = r.created
-        sleep(50) // give the save a chance to set a different time
+        sleep(1) // give the save a chance to set a different time
         r.save(flush:true, failOnError:true)
         session.clear()
         r = RecordCustom.get(r.id)
@@ -72,7 +72,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         Date previousCreated = r.created
         Date previousModified = r.modified
         r.name = "Test 2"
-        sleep(50) // give the save a chance to set a different time
+        sleep(1) // give the save a chance to set a different time
         r.save(flush:true)
         session.clear()
         r = RecordCustom.get(r.id)
@@ -93,7 +93,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         def now = new Date()
         r.created = new Date(now.time)
         r.modified = r.created
-        sleep(50) // give the save a chance to set a different time
+        sleep(1) // give the save a chance to set a different time
         r.save(flush:true, failOnError:true)
         session.clear()
         r = RecordCustom.get(r.id)
@@ -106,7 +106,7 @@ class CustomAutoTimestampSpec extends GormDatastoreSpec {
         Date previousCreated = r.created
         Date previousModified = r.modified
         r.name = "Test 2"
-        sleep(50) // give the save a chance to set a different time
+        sleep(1) // give the save a chance to set a different time
         r.save(flush:true)
         session.clear()
         r = RecordCustom.get(r.id)
