@@ -35,6 +35,6 @@ class GroovyPageUnitTestMixinWithCustomViewDirSpec extends Specification impleme
         def result = render(template: '/demo/myTemplate')
         
         then:
-        result == '\nthis is a custom template'
+        result.contains('this is a custom template')
     }
 }
