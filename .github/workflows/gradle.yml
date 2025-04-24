@@ -31,8 +31,6 @@ env:
 jobs:
   buildGradle:
     name: 'Build Gradle Plugins'
-    permissions:
-      contents: read  #  to fetch code (actions/checkout)
     strategy:
       fail-fast: false
       matrix:
@@ -57,8 +55,6 @@ jobs:
           --continue --stacktrace
   build:
     name: 'Build Grails-Core'
-    permissions:
-      contents: read  #  to fetch code (actions/checkout)
     strategy:
       fail-fast: false
       matrix:
@@ -86,8 +82,6 @@ jobs:
           -PskipHibernate5Tests
   functional:
     name: "Functional Tests"
-    permissions:
-      contents: read  #  to fetch code (actions/checkout)
     strategy:
       fail-fast: false
       matrix:
@@ -169,8 +163,6 @@ jobs:
   publishGradle:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ buildGradle ]
-    permissions:
-      contents: read # limit to read access
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
@@ -197,8 +189,6 @@ jobs:
   publish:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
-    permissions:
-      contents: read # limit to read access
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
@@ -223,8 +213,6 @@ jobs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publish ]
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write # TODO: Comment why this is needed
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
