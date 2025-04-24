@@ -32,10 +32,10 @@ jobs:
       release_version: ${{ steps.release_version.outputs.value }}
       target_branch: ${{ steps.extract_branch.outputs.value }}
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -116,13 +116,13 @@ jobs:
     permissions:
       contents: read # limit to read access
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -163,12 +163,12 @@ jobs:
     needs: publish
     runs-on: ubuntu-24.04
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
           ref: v${{ needs.publish.outputs.release_version }}
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
