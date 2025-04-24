@@ -1,7 +1,3 @@
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -22,13 +18,6 @@ import java.time.format.DateTimeFormatter
  */
 
 ext {
-    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
-            .map(Long::parseLong)
-            .map(Instant::ofEpochSecond)
-            .orElseGet(Instant::now)
-    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
-    buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
-
     grailsVersion = projectVersion
     isCiBuild = System.getenv().get('CI') as Boolean
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
@@ -85,6 +74,16 @@ subprojects {
         }
     }
 
+    // This is added to prevent a remote cache misses, because the project JAR include a manifest
+    // file with Built-By and Created-By properties which might be different for CI vs Local.
+    normalization {
+        runtimeClasspath {
+            metaInf {
+                ignoreAttribute('Built-By')
+                ignoreAttribute('Created-By')
+            }
+        }
+    }
     apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
 

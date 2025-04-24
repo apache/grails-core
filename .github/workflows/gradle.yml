@@ -39,8 +39,6 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -66,8 +64,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -98,8 +94,6 @@ jobs:
         java: [ '17', '21', '23' ]
     runs-on: ubuntu-latest
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -126,8 +120,6 @@ jobs:
         java: [ 17, 21 ]
         mongodb-version: [ '5.0', '6.0', '7.0', '8.0' ]
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -157,8 +149,6 @@ jobs:
       matrix:
         java: [ 17, 21 ]
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -182,8 +172,6 @@ jobs:
       contents: read # limit to read access
     runs-on: ubuntu-latest
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -212,8 +200,6 @@ jobs:
       contents: read # limit to read access
     runs-on: ubuntu-latest
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -241,8 +227,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
       - name: "🔀 Store current branch name"

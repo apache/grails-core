@@ -44,9 +44,3 @@ reporting {
 tasks.named('check') {
     dependsOn tasks.named('testAggregateTestReport', TestReport)
 }
-
-// the java plugin is applied to this project, but we do not build a jar file since
-// the dependencies are only used for resolving the tests
-tasks.withType(Jar).configureEach {
-    it.enabled = false
-}
