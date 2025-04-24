@@ -62,9 +62,15 @@ dependencies {
 
 apply {
     // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
 
-tasks.withType(Jar).configureEach {
+// these must be after the above applies because they opt out of the defaults created in those files
+tasks.named('javadocJar').configure {
+    it.enabled = false
+}
+
+tasks.named('sourcesJar').configure {
     it.enabled = false
 }
