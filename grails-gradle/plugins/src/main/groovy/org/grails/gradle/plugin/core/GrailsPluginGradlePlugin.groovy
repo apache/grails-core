@@ -184,13 +184,13 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         project.afterEvaluate {
             Task sourcesJarTask = taskContainer.findByName('sourcesJar')
             if (sourcesJarTask) {
-                project.rootProject.logger.lifecycle("Found sources jar task")
+                project.rootProject.logger.info('Found sources jar task')
                 sourcesJarTask.configure {
-                    project.rootProject.logger.lifecycle("Including ast in sources jar")
+                    project.rootProject.logger.info('Including ast in sources jar')
                     from sourceSets.ast.allSource
                 }
             } else {
-                project.rootProject.logger.lifecycle("No sources jar task found")
+                project.rootProject.logger.info('No sources jar task found')
             }
 
             Task javadocTask = taskContainer.findByName('javadoc')
@@ -199,7 +199,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     source += sourceSets.ast.allJava
                 }
             } else {
-                project.rootProject.logger.lifecycle("Warning - a javadocTask was not found, so the ast source will not be included in the javadoc task")
+                project.rootProject.logger.info('Warning - a javadocTask was not found, so the ast source will not be included in the javadoc task')
             }
 
             Task groovydocTask = taskContainer.findByName('groovydoc')
@@ -216,7 +216,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     source += sourceSets.ast.allJava
                 }
             } else {
-                project.rootProject.logger.lifecycle("Warning - a groovydocTask was not found, so the ast source will not be included in the groovydoc task")
+                project.rootProject.logger.info('Warning - a groovydocTask was not found, so the ast source will not be included in the groovydoc task')
             }
         }
     }
