@@ -22,6 +22,7 @@ import grails.artefact.Enhances
 import grails.compiler.traits.TraitInjector
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.*
 import org.codehaus.groovy.ast.expr.CastExpression

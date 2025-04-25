@@ -24,42 +24,15 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.apache.grails'
+group = 'org.apache.grails.common'
 
 dependencies {
-
     implementation platform(project(':grails-bom'))
 
-    compileOnly 'org.aspectj:aspectjrt'
-    compileOnly 'org.aspectj:aspectjweaver'
-    api 'jakarta.inject:jakarta.inject-api'
-    api 'jakarta.persistence:jakarta.persistence-api'
-    api 'jakarta.annotation:jakarta.annotation-api'
+    // WARNING: this file is not to depend on grails-core; it is meant to be a shared library that can be used
+    // independently of Grails.  Mainly to share data between Grails & GORM
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
-    api 'org.springframework.boot:spring-boot'
-    api 'org.springframework:spring-core'
-    api 'org.springframework:spring-tx'
-    api 'org.springframework:spring-beans'
-    api 'org.springframework:spring-context'
-    api 'org.springframework.boot:spring-boot-autoconfigure'
-
-    compileOnly 'org.springframework:spring-test'
-    compileOnly 'org.apache.groovy:groovy-templates'
-
-    api project(':grails-common')
-    api project(':grails-bootstrap')
-    api project(':grails-spring')
-
-    api project(':grails-datastore-core')
-
-    testImplementation 'org.springframework:spring-jdbc'
-
-    testImplementation 'org.hamcrest:hamcrest'
-
-    testRuntimeOnly 'com.h2database:h2'
-    testRuntimeOnly 'com.fasterxml.jackson.core:jackson-databind'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -74,19 +47,6 @@ dependencies {
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
-}
-
-TaskProvider<WriteProperties> writeProps = tasks.register('writeGrailsProperties', WriteProperties)
-writeProps.configure { WriteProperties it ->
-    it.destinationFile = project.layout.buildDirectory.file('grails.build.properties')
-    it.property('grails.version', project.version)
-}
-
-tasks.named('processResources', ProcessResources).configure { ProcessResources it ->
-    it.from writeProps
 }
 
 apply {

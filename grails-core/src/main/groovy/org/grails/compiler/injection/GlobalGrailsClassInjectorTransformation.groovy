@@ -32,6 +32,7 @@ import groovy.xml.slurpersupport.GPathResult
 import groovy.xml.XmlSlurper
 import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.*
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.control.CompilationUnit

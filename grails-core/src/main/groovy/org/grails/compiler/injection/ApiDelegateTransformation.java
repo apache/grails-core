@@ -18,6 +18,7 @@
  */
 package org.grails.compiler.injection;
 
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.ClassExpression;

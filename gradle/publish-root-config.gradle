@@ -35,6 +35,7 @@ def publishedProjects = [
         'grails-cache',
         'grails-codecs',
         'grails-codecs-core',
+        'grails-common',
         'grails-console',
         'grails-controllers',
         'grails-converters',

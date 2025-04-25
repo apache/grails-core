@@ -19,6 +19,7 @@
 package org.grails.compiler.injection
 
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ModuleNode

@@ -1,4 +1,4 @@
-package org.grails.compiler.injection
+package org.apache.grails.common.compiler
 
 import groovy.transform.CompileStatic
 

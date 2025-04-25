@@ -53,6 +53,7 @@ include (
         'grails-cache',
         'grails-codecs-core',
         'grails-codecs',
+        'grails-common',
         'grails-console',
         'grails-controllers',
         'grails-converters',
