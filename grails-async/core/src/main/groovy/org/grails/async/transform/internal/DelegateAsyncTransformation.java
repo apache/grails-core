@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
@@ -55,6 +56,7 @@ import org.codehaus.groovy.ast.tools.GenericsUtils;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import org.codehaus.groovy.transform.TransformWithPriority;
 import org.codehaus.groovy.transform.stc.StaticTypeCheckingSupport;
 
 /**
@@ -64,7 +66,7 @@ import org.codehaus.groovy.transform.stc.StaticTypeCheckingSupport;
  * @since 2.3
  */
 @GroovyASTTransformation
-public class DelegateAsyncTransformation implements ASTTransformation {
+public class DelegateAsyncTransformation implements ASTTransformation, TransformWithPriority {
     private static final ArgumentListExpression NO_ARGS = new ArgumentListExpression();
     private static final String VOID = "void";
     public static final ClassNode GROOVY_OBJECT_CLASS_NODE = new ClassNode(GroovyObjectSupport.class);
@@ -227,6 +229,11 @@ public class DelegateAsyncTransformation implements ASTTransformation {
             newParameterTypes[i] = newParameter;
         }
         return newParameterTypes;
+    }
+
+    @Override
+    public int priority() {
+        return GroovyTransformOrder.DELEGATE_ASYNC_ORDER;
     }
 
     private static class NoopDelegateAsyncTransactionalMethodTransformer implements DelegateAsyncTransactionalMethodTransformer {

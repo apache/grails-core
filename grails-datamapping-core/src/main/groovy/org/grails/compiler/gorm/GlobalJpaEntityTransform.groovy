@@ -21,6 +21,7 @@ package org.grails.compiler.gorm
 
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -33,6 +34,7 @@ import org.codehaus.groovy.transform.AbstractASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 
 import jakarta.persistence.Entity
+import org.codehaus.groovy.transform.TransformWithPriority
 
 /**
  * Makes all entities annotated with @Entity JPA into GORM entities
@@ -42,7 +44,7 @@ import jakarta.persistence.Entity
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
-class GlobalJpaEntityTransform extends AbstractASTTransformation implements ASTTransformation, CompilationUnitAware {
+class GlobalJpaEntityTransform extends AbstractASTTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     CompilationUnit compilationUnit
 
@@ -61,5 +63,10 @@ class GlobalJpaEntityTransform extends AbstractASTTransformation implements ASTT
             jpaEntityTransformation.compilationUnit = compilationUnit
             jpaEntityTransformation.visit(classNode, source)
         }
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.JPA_ORDER
     }
 }

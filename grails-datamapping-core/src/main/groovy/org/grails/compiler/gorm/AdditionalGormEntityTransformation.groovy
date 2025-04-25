@@ -23,6 +23,7 @@ import groovy.transform.CompilationUnitAware
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 
 /**
  * Additional transformations applied to GORM entities
@@ -30,7 +31,7 @@ import org.codehaus.groovy.transform.ASTTransformation
  * @author Graeme Rocher
  * @since 6.0
  */
-interface AdditionalGormEntityTransformation extends ASTTransformation, CompilationUnitAware {
+interface AdditionalGormEntityTransformation extends ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     /**
      * @return Whether the transformation is available

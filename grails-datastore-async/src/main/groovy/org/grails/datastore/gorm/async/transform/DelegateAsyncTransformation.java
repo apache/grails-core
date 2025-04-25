@@ -23,6 +23,7 @@ import grails.async.Promise;
 import grails.async.Promises;
 import groovy.lang.Closure;
 import groovy.lang.GroovyObjectSupport;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.*;
@@ -33,6 +34,7 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import org.codehaus.groovy.transform.TransformWithPriority;
 import org.codehaus.groovy.transform.stc.StaticTypeCheckingSupport;
 import org.grails.async.transform.internal.DelegateAsyncUtils;
 
@@ -44,7 +46,7 @@ import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecR
 import static org.codehaus.groovy.ast.tools.GenericsUtils.createGenericsSpec;
 
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-public class DelegateAsyncTransformation implements ASTTransformation {
+public class DelegateAsyncTransformation implements ASTTransformation, TransformWithPriority {
     private static final ArgumentListExpression NO_ARGS = new ArgumentListExpression();
     private static final String VOID = "void";
     public static final ClassNode GROOVY_OBJECT_CLASS_NODE = new ClassNode(GroovyObjectSupport.class);
@@ -207,4 +209,8 @@ public class DelegateAsyncTransformation implements ASTTransformation {
         return newParameterTypes;
     }
 
+    @Override
+    public int priority() {
+        return GroovyTransformOrder.GORM_ASYNC_ORDER;
+    }
 }

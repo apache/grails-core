@@ -30,6 +30,8 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
+    api project(':grails-common')
+
     api 'org.apache.groovy:groovy'
     api 'org.apache.groovy:groovy-xml'
 

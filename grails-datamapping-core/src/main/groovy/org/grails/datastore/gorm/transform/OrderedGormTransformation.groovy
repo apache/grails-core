@@ -20,6 +20,7 @@ package org.grails.datastore.gorm.transform
 
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -30,6 +31,7 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.AbstractASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 import org.grails.datastore.mapping.core.order.OrderedComparator
 import org.grails.datastore.mapping.reflect.ClassUtils
 
@@ -44,7 +46,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-class OrderedGormTransformation extends AbstractASTTransformation implements CompilationUnitAware {
+class OrderedGormTransformation extends AbstractASTTransformation implements CompilationUnitAware, TransformWithPriority {
 
     CompilationUnit compilationUnit
 
@@ -100,6 +102,11 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
         AnnotationNode gormTransform = findAnnotation(ann.classNode, GormASTTransformationClass)
         String transformName = gormTransform?.getMember("value")?.text
         transformName
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.GORM_TRANSFORMS_ORDER
     }
 
     private static class TransformationInvocation {

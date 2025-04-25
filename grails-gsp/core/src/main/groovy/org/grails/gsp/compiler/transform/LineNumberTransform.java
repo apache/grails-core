@@ -18,6 +18,7 @@
  */
 package org.grails.gsp.compiler.transform;
 
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
@@ -29,6 +30,7 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import org.codehaus.groovy.transform.TransformWithPriority;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
@@ -42,7 +44,7 @@ import java.util.List;
  * @author Andrew Eisenberg
  */
 @GroovyASTTransformation(phase=CompilePhase.SEMANTIC_ANALYSIS)
-public class LineNumberTransform implements ASTTransformation {
+public class LineNumberTransform implements ASTTransformation, TransformWithPriority {
 
     // LOG statements commented out because they were causing
     // compilation problems when used outside of grails
@@ -119,6 +121,11 @@ public class LineNumberTransform implements ASTTransformation {
             array[i] = numbers.get(i);
         }
         return array;
+    }
+
+    @Override
+    public int priority() {
+        return GroovyTransformOrder.GSP_LINE_ORDER;
     }
 
     class LineNumberVisitor extends ClassCodeVisitorSupport {

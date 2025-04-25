@@ -132,7 +132,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         // code that will mark the property as dirty. Note that if the property has no getter we have to add one, since only adding the setter results in a read-only property
         final propertyNodes = classNode.getProperties()
         def staticCompilationVisitor = new StaticCompilationVisitor(source, classNode)
-        Map<String, GetterAndSetter> gettersAndSetters = [:]
+        LinkedHashMap<String, GetterAndSetter> gettersAndSetters = [:]
         boolean isJavaValidateable = false
 
         for (MethodNode mn in classNode.methods) {

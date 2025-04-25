@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm.query.transform;
 
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
@@ -25,6 +26,7 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import org.codehaus.groovy.transform.TransformWithPriority;
 
 import java.util.List;
 
@@ -35,7 +37,7 @@ import java.util.List;
  * @since 1.0
  */
 @GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
-public class GlobalDetachedCriteriaASTTransformation implements ASTTransformation{
+public class GlobalDetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
     /**
      * The method is invoked when an AST Transformation is active. For local transformations, it is invoked once
      * each time the local annotation is encountered. For global transformations, it is invoked once for every source
@@ -54,5 +56,10 @@ public class GlobalDetachedCriteriaASTTransformation implements ASTTransformatio
         for (ClassNode aClass : classes) {
             transformer.visitClass(aClass);
         }
+    }
+
+    @Override
+    public int priority() {
+        return GroovyTransformOrder.WHERE_ORDER;
     }
 }

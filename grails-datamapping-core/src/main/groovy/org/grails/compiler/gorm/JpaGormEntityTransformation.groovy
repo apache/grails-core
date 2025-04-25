@@ -22,6 +22,7 @@ package org.grails.compiler.gorm
 import grails.gorm.annotation.Entity
 import grails.gorm.annotation.JpaEntity
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -67,5 +68,10 @@ class JpaGormEntityTransformation extends GormEntityTransformation {
             classNode.addAnnotation(JPA_ENTITY_ANNOTATION_NODE)
         }
         super.visit(classNode, sourceUnit)
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.JPA_GORM_ENTITY_ORDER
     }
 }

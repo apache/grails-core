@@ -22,6 +22,7 @@ package org.grails.compiler.gorm
 import grails.gorm.dirty.checking.DirtyCheck
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -31,6 +32,7 @@ import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 
 /**
  * Applies the DirtyCheck transformation
@@ -39,7 +41,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
  * @since 2.0
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-class DirtyCheckTransformation implements ASTTransformation, CompilationUnitAware {
+class DirtyCheckTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     private static final ClassNode MY_TYPE = new ClassNode(DirtyCheck.class);
     private static final String MY_TYPE_NAME = "@" + MY_TYPE.getNameWithoutPackage();
@@ -67,5 +69,10 @@ class DirtyCheckTransformation implements ASTTransformation, CompilationUnitAwar
         def dirtyCheckingTransformer = new DirtyCheckingTransformer()
         dirtyCheckingTransformer.compilationUnit = compilationUnit
         dirtyCheckingTransformer.performInjection(source, cNode)
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.DIRTY_CHECK_ORDER
     }
 }

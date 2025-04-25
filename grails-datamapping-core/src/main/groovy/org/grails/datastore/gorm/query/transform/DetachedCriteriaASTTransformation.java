@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm.query.transform;
 
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
@@ -25,12 +26,13 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import org.codehaus.groovy.transform.TransformWithPriority;
 
 /**
  * Transforms regular Groovy-style finders into detached criteria
  */
 @GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
-public class DetachedCriteriaASTTransformation implements ASTTransformation{
+public class DetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
 
     /**
      * The method is invoked when an AST Transformation is active. For local transformations, it is invoked once
@@ -48,5 +50,10 @@ public class DetachedCriteriaASTTransformation implements ASTTransformation{
         AnnotatedNode parent = (AnnotatedNode) nodes[1];
         ClassNode cNode = (ClassNode) parent;
         transformer.visitClass(cNode);
+    }
+
+    @Override
+    public int priority() {
+        return GroovyTransformOrder.FINDER_ORDER;
     }
 }

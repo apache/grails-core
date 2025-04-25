@@ -29,6 +29,7 @@ group = 'org.apache.grails.async'
 dependencies {
     implementation platform(project(':grails-bom'))
 
+    api project(':grails-common')
     implementation 'org.apache.groovy:groovy'
     implementation 'org.slf4j:slf4j-api'
     implementation 'jakarta.annotation:jakarta.annotation-api'

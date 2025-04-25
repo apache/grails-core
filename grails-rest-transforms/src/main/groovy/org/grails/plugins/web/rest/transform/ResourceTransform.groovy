@@ -20,7 +20,8 @@ package org.grails.plugins.web.rest.transform
 
 import grails.io.IOUtils
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
-import org.grails.compiler.injection.GrailsASTUtils
+import org.codehaus.groovy.transform.TransformWithPriority
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 
 import static java.lang.reflect.Modifier.*
@@ -88,7 +89,7 @@ import org.springframework.beans.factory.annotation.Qualifier
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-class ResourceTransform implements ASTTransformation, CompilationUnitAware {
+class ResourceTransform implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
     private static final ClassNode MY_TYPE = new ClassNode(Resource)
     public static final String ATTR_READY_ONLY = "readOnly"
     public static final String ATTR_SUPER_CLASS = "superClass"
@@ -263,5 +264,10 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware {
     
     void setCompilationUnit(CompilationUnit unit) {
         this.unit = unit
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.RESOURCE_ORDER
     }
 }

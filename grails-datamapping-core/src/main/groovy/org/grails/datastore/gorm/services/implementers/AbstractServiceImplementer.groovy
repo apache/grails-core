@@ -46,6 +46,7 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.*
+
 /**
  * Abstract implementation of the {@link ServiceImplementer} interface
  *

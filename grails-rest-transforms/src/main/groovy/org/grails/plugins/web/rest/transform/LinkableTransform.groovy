@@ -40,6 +40,8 @@ import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
+import org.apache.grails.common.compiler.GroovyTransformOrder
 
 import static java.lang.reflect.Modifier.*
 import static org.grails.compiler.injection.GrailsASTUtils.*
@@ -52,7 +54,7 @@ import static org.grails.compiler.injection.GrailsASTUtils.*
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-class LinkableTransform implements ASTTransformation{
+class LinkableTransform implements ASTTransformation, TransformWithPriority {
 
     private static final ClassNode MY_TYPE = new ClassNode(Linkable);
     public static final String LINK_METHOD = "link"
@@ -98,5 +100,10 @@ class LinkableTransform implements ASTTransformation{
         }
 
         addLinkingMethods(parent)
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.LINK_ORDER
     }
 }

@@ -42,6 +42,8 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
+    api project(':grails-common')
+
     api 'jakarta.persistence:jakarta.persistence-api', {
         // api: FlushModeType, AccessType, CascadeType, EnumType, FetchType, LockModeType, JoinType
         // impl: Entity, Transient

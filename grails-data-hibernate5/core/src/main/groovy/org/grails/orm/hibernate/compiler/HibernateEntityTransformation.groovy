@@ -22,6 +22,7 @@ package org.grails.orm.hibernate.compiler
 import grails.gorm.dirty.checking.DirtyCheckedProperty
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.*
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -33,6 +34,7 @@ import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 import org.codehaus.groovy.transform.sc.StaticCompilationVisitor
 import org.grails.compiler.gorm.GormEntityTransformation
 import org.grails.datastore.mapping.model.config.GormProperties
@@ -57,7 +59,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware {
+class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
     private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity.class);
     private static final Object APPLIED_MARKER = new Object();
 
@@ -313,5 +315,10 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         }
 
         classNode.putNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.HIBERNATE5_ORDER
     }
 }
