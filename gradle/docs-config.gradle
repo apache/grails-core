@@ -31,4 +31,5 @@ tasks.named('groovydoc', Groovydoc).configure {
     includeAuthor = true
     includeMainForScripts = false
     processScripts = false
+    noTimestamp = true
 }

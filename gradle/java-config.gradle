@@ -30,10 +30,6 @@ tasks.withType(Javadoc).configureEach { Javadoc it ->
     it.options.bottom "Generated ${formattedBuildDate} (UTC)"
 }
 
-tasks.withType(Groovydoc).configureEach { Groovydoc it ->
-    it.noTimestamp = true
-}
-
 // JavaCompile is not configured because we put java files inside of the groovy source sets
 
 tasks.withType(GroovyCompile).configureEach {
