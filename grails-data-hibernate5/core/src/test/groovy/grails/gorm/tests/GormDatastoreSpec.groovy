@@ -64,8 +64,8 @@ import spock.lang.Specification
 @Slf4j
 abstract class GormDatastoreSpec extends Specification {
 
-    static final CURRENT_TEST_NAME = "current.gorm.test"
-    static final SETUP_CLASS_NAME = 'org.grails.datastore.gorm.Setup'
+    private static final CURRENT_TEST_NAME = "current.gorm.test"
+    private static final SETUP_CLASS_NAME = 'org.grails.datastore.gorm.Setup'
     static final TEST_CLASSES = [
             Book, ChildEntity, City, ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
             ClassWithOverloadedBeforeValidate, CommonTypes, Country, EnumThing, Face, Highway,

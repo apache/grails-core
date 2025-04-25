@@ -72,7 +72,7 @@ import spock.lang.Shared
 @Slf4j
 abstract class GormDatastoreSpec extends AutoStartedMongoSpec {
 
-    static final CURRENT_TEST_NAME = "current.gorm.test"
+    private static final CURRENT_TEST_NAME = "current.gorm.test"
 
     List getDomainClasses() {
         [Book, ChildEntity, City, ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
