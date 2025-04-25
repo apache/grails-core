@@ -23,6 +23,8 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation platform(project(':grails-bom'))
+
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-autoconfigure"
     implementation "org.springframework.boot:spring-boot-starter-actuator"
@@ -35,6 +37,8 @@ dependencies {
     implementation project(':grails-plugin')
     implementation "org.apache.grails:grails-data-hibernate5:$hibernateDatastoreVersion"
     implementation "org.hibernate:hibernate-ehcache:$hibernateEhcacheVersion"
+
+    implementation 'org.webjars.npm:jquery'
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:$assetPipelineVersion"
     runtimeOnly "org.apache.grails:grails-scaffolding:$scaffoldingVersion"
@@ -79,4 +83,8 @@ webdriverBinaries {
         chromedriver "$chromeDriverVersion"
         geckodriver "$geckodriverVersion"
     }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
 }

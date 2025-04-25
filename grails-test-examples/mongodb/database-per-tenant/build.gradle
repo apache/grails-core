@@ -22,7 +22,7 @@ group = 'examples.mongo.tenant'
 
 apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
-apply plugin: 'com.bertramlabs.asset-pipeline'
+apply plugin: 'asset-pipeline'
 
 dependencies {
 
@@ -33,6 +33,8 @@ dependencies {
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-gsp'
+
+    implementation 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
@@ -50,4 +52,5 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
 }
