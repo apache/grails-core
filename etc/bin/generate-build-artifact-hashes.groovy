@@ -60,6 +60,7 @@ Files.walk(scanRoot)
             .filter {
                 Files.isRegularFile(it) &&
                         !it.toString().contains("buildSrc") &&
+                        !it.toString().contains("etc") &&
                         it.toString().endsWith('.jar') &&
                         it.toString().contains("${File.separator}build${File.separator}libs${File.separator}")
             }
