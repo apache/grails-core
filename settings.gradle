@@ -302,6 +302,7 @@ include (
         'grails-test-examples-app1',
         'grails-test-examples-app2',
         'grails-test-examples-app3',
+        'grails-test-examples-external-configuration',
         'grails-test-examples-datasources',
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
@@ -328,6 +329,7 @@ project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('gra
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
+project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
