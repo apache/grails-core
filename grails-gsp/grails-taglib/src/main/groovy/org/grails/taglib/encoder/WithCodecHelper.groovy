@@ -125,7 +125,7 @@ class WithCodecHelper {
             }
             String allFallback = null
             String nameFallback = null
-            (Map<String,String>)((Map)codecInfo).each { k, v ->
+            ((Map) codecInfo).each { k, v ->
                 String codecWriterName = k.toString().toLowerCase() - 'codec'
                 if (codecWriterName == OutputEncodingSettings.INHERIT_SETTING_NAME || codecWriterName == OutputEncodingSettings.REPLACE_ONLY_SETTING_NAME) {
                     codecInfoMap.put(codecWriterName, convertToBoolean(v))
@@ -188,7 +188,7 @@ class WithCodecHelper {
         if (currentSettings) {
             Map<String, Object> canonicalCodecInfo = makeSettingsCanonical(currentSettings)
             if (parentSettings != null) {
-                codecInfoMap = new HashMap<String, Object>()
+                codecInfoMap = new LinkedHashMap<String, Object>()
                 codecInfoMap.putAll(parentSettings)
                 codecInfoMap.putAll(canonicalCodecInfo)
             } else {

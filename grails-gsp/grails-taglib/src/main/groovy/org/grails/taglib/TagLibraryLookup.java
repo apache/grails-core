@@ -42,10 +42,10 @@ import java.util.*;
 public class TagLibraryLookup implements ApplicationContextAware, GrailsApplicationAware, InitializingBean {
     protected ApplicationContext applicationContext;
     protected GrailsApplication grailsApplication;
-    protected Map<String, Map<String, Object>> tagNamespaces = new HashMap<>();
-    protected Map<String, NamespacedTagDispatcher> namespaceDispatchers = new HashMap<>();
-    protected Map<String, Set<String>> tagsThatReturnObjectForNamespace = new HashMap<String, Set<String>>();
-    protected Map<String, Map<String,Map<String, Object>>> encodeAsForTagNamespaces = new HashMap<String, Map<String,Map<String, Object>>>();
+    protected Map<String, Map<String, Object>> tagNamespaces = new LinkedHashMap<>();
+    protected Map<String, NamespacedTagDispatcher> namespaceDispatchers = new LinkedHashMap<>();
+    protected Map<String, Set<String>> tagsThatReturnObjectForNamespace = new LinkedHashMap<String, Set<String>>();
+    protected Map<String, Map<String, Map<String, Object>>> encodeAsForTagNamespaces = new LinkedHashMap<String, Map<String, Map<String, Object>>>();
 
     public void afterPropertiesSet() throws Exception {
         if (grailsApplication == null || applicationContext == null) {
