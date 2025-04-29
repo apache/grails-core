@@ -1,0 +1,140 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    pomPublishTestSources = true
+    pomTitle = 'Grails GORM'
+    pomDescription = 'GORM - Grails Data Access Framework'
+    pomDevelopers = [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith',
+            'jameskleeh': 'James Kleeh',
+            'puneetbehl': 'Puneet Behl',
+            'jamesfredley': 'James Fredley'
+    ]
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-datastore-core'), {
+        // api: AbstractDatastore, AbstractKeyValueEntityPersister, AbstractSession, AssociationIndexer,
+        //      ConfigurationException, ConnectionSourceSettings, ConnectionSources, ConnectionSourcesProvider,
+        //      Datastore, EntityAccess, IdentityGenerationException, InMemoryConnectionSources, KeyValueMappingContext,
+        //      MappingContext, MultipleConnectionSourceCapableDatastore, MultiTenancySettings,
+        //      OptimisticLockingException, Persister, Property, PropertyValueIndexer, SchemaMultiTenantCapableDatastore,
+        //      Session, TenantResolver, Transaction, TransactionCapableDatastore
+        // impl: DatastoreTransactionManager, DatastoreUtils, EntityPersister, PersistentEntity, Settings
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // JoinType
+            //exclude group: 'org.javassist', module: 'javassist' // activate JavassistProxyFactory
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datamapping-core'), {
+        // api: ConfigurableApplicationEventPublisher, GormEnhancer, GormInstanceApi, GormStaticApi, GormValidationApi
+        // impl: MultiTenantEventListener, ClasspathEntityScanner
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PostConstruct
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            exclude group: 'org.springframework', module: 'spring-tx'
+         }
+    }
+    api 'org.springframework:spring-context', {
+        // api: ApplicationEventPublisher, ConfigurableApplicationContext
+    }
+    api 'org.springframework:spring-core', {
+        // api: PropertyResolver
+    }
+    api 'org.springframework:spring-tx', {
+        // api: PlatformTransactionManager
+    }
+
+    // RemovalListener (caffeine)
+    implementation "com.github.ben-manes.caffeine:caffeine"
+
+    compileOnly 'org.apache.groovy:groovy', {
+        // comp: CompileStatic
+    }
+
+    testImplementation 'org.apache.groovy:groovy-json', {
+        // impl: DefaultJsonGenerator, JsonGenerator
+    }
+    testImplementation 'org.junit.platform:junit-platform-suite', {
+        // api: SelectClasses, Suite
+    }
+    testImplementation project(':grails-core'), {
+        // impl: Entity. ValidationException
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+    testImplementation 'org.spockframework:spock-core'
+
+    // Commented out since we aren't building / publishing
+    //testImplementation project(":grails-datamapping-rx")
+
+    // Use the simple datastore to ensure the base implementation works correctly
+    api project(':grails-data-simple')
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
+
+    runtimeOnly 'org.apache.groovy:groovy-dateutil', {
+        // Groovy Date Utils Extensions are used in the tests
+    }
+ }
+
+//compileTestGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+}

@@ -1,0 +1,126 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Standalone
+
+The schema has several properties that can be modified.
+
+=== List Arguments
+
+A map where the key is a string (one of link:{api}/org/grails/gorm/graphql/fetcher/impl/EntityDataFetcher.html#ARGUMENTS[EntityDataFetcher.ARGUMENTS]) and the value is the class the argument should be coerced into.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.listArguments = (Map<String, Class>)..
+----
+
+=== Date Type
+
+If a date type is not already registered with the type manager, a default one will be provided. The default type can be customized with the date formats that should be attempted to convert user input, and whether or not the parsing should be lenient.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.dateFormats = (List<String>)...
+schema.dateFormatLenient = (boolean)...
+----
+
+NOTE: The date formats will also be used for the Java 8 date types.
+
+== Plugin
+
+The following options are available to configure for Grails applications using the plugin.
+
+|===
+|code|Type|Default Value|Description
+|`grails.gorm.graphql.enabled`
+|Boolean
+|True
+|Whether the plugin is enabled
+|`grails.gorm.graphql.dateFormats`
+|List<String>
+| - yyyy-MM-dd HH:mm:ss.S,
+  - yyyy-MM-dd'T'HH:mm:ss'Z'
+  - yyyy-MM-dd HH:mm:ss.S z
+  - yyyy-MM-dd'T'HH:mm:ss.SSSX
+|If the setting is not provided, the `grails.databinding.dateFormats` will be used.
+|`grails.gorm.graphql.dateFormatLenient`
+|Boolean
+|False
+|If the setting is not provided, the `grails.databinding.dateParsingLenient` will be used.
+|`grails.gorm.graphql.listArguments`
+|Map<String, Class>
+|The default arguments in link:{api}/org/grails/gorm/graphql/fetcher/impl/EntityDataFetcher.html#ARGUMENTS[EntityDataFetcher.ARGUMENTS]
+|
+|`grails.gorm.graphql.browser`
+| Boolean
+| True (only in development)
+|Whether the `GraphqlController.browser` action which by default responds on the `graphql/browser` endpoint is enabled
+|===
+
+=== Fetching Context
+
+Data fetchers in GraphQL have a "context". The context is really just an Object field that can contain anything you like with the purpose of exposing it to the data fetching environment. For example, the default context created by the plugin is a Map that contains the request locale. The locale is used to render validation error messages.
+
+TIP: If you prefer to set the context to a custom class, implement link:{api}/org/grails/gorm/graphql/fetcher/context/LocaleAwareContext.html[LocaleAwareContext] and the default validation errors response handler will retrieve the locale from the object.
+
+It is common to need to manipulate the context to include data that some or all of your data fetchers might need. If a fetcher needs to be aware of the current user and you are using the spring security plugin, you may want to add the `springSecurityService` to the context.
+
+To customize the context, register a bean named "graphQLContextBuilder" of type link:{api}/org/grails/gorm/graphql/plugin/GraphQLContextBuilder.html[GraphQLContextBuilder]. If the default errors handler is being used, extend from link:{api}/org/grails/gorm/graphql/plugin/DefaultGraphQLContextBuilder.html[DefaultGraphQLContextBuilder] and add to the result of the super method call.
+
+[source,groovy]
+.src/main/groovy/demo/MyGraphQLContextBuilder.groovy
+----
+import org.grails.gorm.graphql.plugin.DefaultGraphQLContextBuilder
+import org.springframework.beans.factory.annotation.Autowired
+import grails.plugin.springsecurity.SpringSecurityService
+
+class MyGraphQLContextBuilder extends DefaultGraphQLContextBuilder {
+
+    @Autowired
+    SpringSecurityService springSecurityService
+
+    @Override
+    Map buildContext(GrailsWebRequest request) {
+        Map context = super.buildContext(request)
+        context.springSecurityService = springSecurityService
+        context
+    }
+}
+----
+
+[source,groovy]
+.resources.groovy
+----
+graphQLContextBuilder(MyGraphQLContextBuilder)
+----
+
+Then in a data fetcher:
+
+[source,groovy]
+----
+T get(DataFetchingEnvironment environment) {
+    ((Map) environment.context).springSecurityService
+}
+----

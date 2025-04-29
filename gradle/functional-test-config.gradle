@@ -1,5 +1,24 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 rootProject.subprojects
-        .findAll { !(it.name in testProjects) && it.name != 'grails-doc' }
+        .findAll { !(it.name in testProjects) && !(it.name in docProjects) }
         .each { project.evaluationDependsOn(it.path) }
 
 configurations.configureEach {
@@ -7,12 +26,27 @@ configurations.configureEach {
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
         // included will be substituted with the local projects in this repository instead of pulling upstream.
         for (def possibleProject : rootProject.subprojects) {
-            if (!(possibleProject.name in testProjects) && possibleProject.name != 'grails-doc') {
+            if (!(possibleProject.name in testProjects) && !(possibleProject.name in docProjects)) {
                 def artifactId = possibleProject.findProperty('pomArtifactId') ?: possibleProject.name
                 def substitutedArtifact = "$possibleProject.group:$artifactId"
+                //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
+                // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
                 if (possibleProject.name == 'grails-bom') {
                     substitute module(substitutedArtifact) using platform(project(':grails-bom'))
-                } else {
+                }
+                else if(possibleProject.name == 'grails-geb') {
+                    def selector = it.variant(module(substitutedArtifact)) { VariantSelectionDetails details ->
+                        details.capabilities { ModuleDependencyCapabilitiesHandler handler ->
+                            handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
+                        }
+                    }
+
+                    def replacement = it.variant(project(":$possibleProject.name")) { v ->
+                        v.capabilities { it.requireCapability("${substitutedArtifact}-test-fixtures") }
+                    }
+                    substitute selector using replacement
+                }
+                else {
                     substitute module(substitutedArtifact) using project(":$possibleProject.name")
                 }
             }
@@ -27,14 +61,49 @@ if ('assetCompile' in tasks.names) {
     }
 }
 
-def debugArguments = [
+List<String> debugArguments = [
         '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
 ]
-tasks.withType(Test).configureEach {
-    onlyIf { !project.hasProperty('skipFunctionalTests') }
-    useJUnitPlatform()
-    testLogging {
+tasks.withType(Test).configureEach { Test task ->
+    boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
+    boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
+
+    onlyIf {
+        if (project.hasProperty('skipFunctionalTests')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyHibernate5Tests')) {
+            if (isHibernate5) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('onlyMongodbTests')) {
+            if (isMongo) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('onlyCoreTests')) {
+            return false
+        }
+
+        if(project.hasProperty('skipTests')) {
+            return false
+        }
+
+        return true
+    }
+
+    if (isMongo && project.hasProperty('serializeMongoTests')) {
+        // if the developer decides to run a local mongo instance, the tests must be serialized instead of launching containers as needed
+        task.outputs.dir rootProject.layout.buildDirectory.dir('mongo-test-serialize')
+    }
+
+    task.useJUnitPlatform()
+    task.testLogging {
         events('passed', 'skipped', 'failed', 'standardOut', 'standardError')
         showExceptions = true
         exceptionFormat = 'full'
@@ -42,19 +111,14 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
     if (findProperty('testForked')) {
-        if (isCiBuild) {
-            maxParallelForks = findProperty('testMaxParallelFork') ?: 2
-            forkEvery = findProperty('testForkEvery') ?: 0
-        } else {
-            maxParallelForks = findProperty('testMaxParallelFork') ?: 4
-            forkEvery = findProperty('testForkEvery') ?: 0
-        }
+        task.maxParallelForks = configuredTestParallel
+        task.forkEvery = (findProperty('testForkEvery') ?: 0)
     }
     if (findProperty('testJvmArgs')) {
-        jvmArgs = findProperty('testJvmArgs')
+        task.jvmArgs = property('testJvmArgs') as List<String>
     }
     if (System.getProperty('debug.tests')) {
-        jvmArgs += debugArguments
+        task.jvmArgs += debugArguments
     }
 }
 

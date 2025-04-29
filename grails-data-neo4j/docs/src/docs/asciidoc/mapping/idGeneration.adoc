@@ -1,0 +1,113 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+GORM by default uses a native Neo4j node identifiers for each `id` property of a domain class.
+These have a couple of disadvantages that should encourage you to use an alternative id generation strategy:
+
+1. Neo4j node ids are more like internal identifiers used by Neo4j to identify nodes (equivalent to the `rowid` in a SQL database), but can be potentially re-used if data is deleted and recreated. This makes them not appropriate for use as a public facing key.
+2. In order to obtain a Node id GORM must perform an insert (similar to the way GORM for Hibernate has to perform a SQL INSERT if the id generation strategy is an auto-increment column), which means it cannot efficiently batch up Cypher `CREATE` statements.
+
+This last disadvantage can be worked around by using the `saveAll` method to save multiple domain classes at once:
+
+[source,groovy]
+----
+Club.saveAll([
+    new Club(name:"Manchester United"),
+    new Club(name:"Arsenal")
+])
+----
+
+However, it is generally better to consider a different id generation strategy.
+
+==== Assigned Identifiers
+
+The recommended approach is to use `assigned` identifiers that relate to your domain. For example:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/assignedid/domain/Owner.groovy[tags=class,indent=0]
+include::{testsdir}/grails/gorm/tests/assignedid/domain/Pet.groovy[tags=class,indent=0]
+----
+
+With assigned identifiers GORM can do a much better job of optimizing write operations. For example the following logic:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/assignedid/OneToManyCreateSpec.groovy[tags=save,indent=0]
+----
+
+GORM will generate the following Cypher:
+
+[source,cypher]
+----
+UNWIND {ownerBatch} as row
+CREATE (owner:Owner)
+SET owner += row.props
+FOREACH (pets IN row.pets |
+    CREATE (pet:Pet)
+    SET pet += pets.props
+    MERGE (owner)-[:PETS]->(pet)
+)
+----
+
+Notice how `UNWIND` and `FOREACH` are used to create both the entity and its associations in one go, significantly improving write performance for large data sets.
+
+==== Snowflake Identifiers
+
+Another option is a custom identity generator based on the Snowflake algorithm and stores the generated identifier in a property of each Neo4j node called `__id__`:
+
+[source,groovy]
+----
+import static grails.neo4j.mapping.MappingBuilder.*
+class Club {
+    String name
+    ...
+    static mapping = node {
+        id {
+            generator "snowflake"
+        }
+    }
+
+}
+----
+
+==== Globally Changing Identity Strategy
+
+If you wish to globally change id generation then you can do so in `grails-app/conf/application.groovy` (`Config.groovy` in Grails 2.x):
+
+
+[source,groovy]
+----
+grails.neo4j.default.mapping = {
+    id generator:'assigned'
+}
+----
+
+==== Custom Identifiers
+
+In addition, if you wish to use a custom identity generation strategy you can do so by specifying a class name that implements the `IdGenerator` interface:
+
+[source,groovy]
+----
+grails.neo4j.default.mapping = {
+    id generator:'com.foo.MyIdGenerator'
+}
+----
+
+

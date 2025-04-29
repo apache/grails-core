@@ -1,26 +1,29 @@
 /*
- * Copyright 2024 original authors
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.gradle.plugin.views.gsp
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.gradle.api.Action
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -37,7 +40,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Abstract Gradle task for compiling templates, using GroovyPageCompilerForkTask
+ * Abstract Gradle task for compiling templates, using GroovyPageForkedCompiler
  * This Task is a Forked Java Task that is configurable with fork options provided
  * by {@link ViewCompileOptions}
  *
@@ -45,13 +48,19 @@ import java.nio.file.Paths
  * @since 4.0
  */
 @CompileStatic
+@CacheableTask
 abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     @Input
     @Optional
     final Property<String> packageName
 
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    final ConfigurableFileCollection grailsConfigurationPaths
+
     @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
     final DirectoryProperty srcDir
 
     @Nested
@@ -73,6 +82,11 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         srcDir = objectFactory.directoryProperty()
         compileOptions = objectFactory.newInstance(ViewCompileOptions.class)
         serverpath = objectFactory.property(String)
+        grailsConfigurationPaths = objectFactory.fileCollection()
+        grailsConfigurationPaths.from(
+                project.layout.projectDirectory.file('grails-app/conf/application.yml'),
+                project.layout.projectDirectory.file('grails-app/conf/application.groovy')
+        )
     }
 
 
@@ -123,12 +137,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                         javaExecSpec.setMaxHeapSize(compileOptions.forkOptions.memoryMaximumSize)
                         javaExecSpec.setMinHeapSize(compileOptions.forkOptions.memoryInitialSize)
 
-                        //This is the OLD Style and seems kinda silly to be hard coded this way. but restores functionality
-                        //for now
-                        String configFiles = [
-                                project.file("grails-app/conf/application.yml").canonicalPath,
-                                project.file("grails-app/conf/application.groovy").canonicalPath
-                        ].join(',')
+                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(",")
 
                         Path path = Paths.get(tmpDirPath)
                         File tmp = Files.exists(path) ? path.toFile() : Files.createDirectories(path).toFile()
@@ -159,11 +168,11 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     @Input
     protected String getCompilerName() {
-        "org.grails.web.pages.GroovyPageCompilerForkTask"
+        'org.grails.web.pages.GroovyPageForkedCompiler'
     }
 
     @Input
     String getFileExtension() {
-        "gsp"
+        'gsp'
     }
 }

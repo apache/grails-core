@@ -1,0 +1,112 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A one-to-many relationship is when one class, example `Author`, has many instances of another class, example `Book`. With GORM you define such a relationship with the `hasMany` setting:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+
+    String name
+}
+----
+
+[source,groovy]
+----
+class Book {
+    String title
+}
+----
+
+In this case we have a unidirectional one-to-many. GORM will, by default, map this kind of relationship with a join table.
+
+NOTE: The <<ormdsl,ORM DSL>> allows mapping unidirectional relationships using a foreign key association instead
+
+GORM will automatically inject a property of type `java.util.Set` into the domain class based on the `hasMany` setting. This can be used to iterate over the collection:
+
+[source,groovy]
+----
+def a = Author.get(1)
+
+for (book in a.books) {
+    println book.title
+}
+----
+
+NOTE: The default fetch strategy used by GORM is "lazy", which means that the collection will be lazily initialized on first access. This can lead to the N+1 if you are not careful.
+
+If you need "eager" fetching you can use the <<ormdsl,ORM DSL>> or specify eager fetching as part of a <<querying,query>>
+
+The default cascading behaviour is to cascade saves and updates, but not deletes unless a `belongsTo` is also specified:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+
+    String name
+}
+----
+
+[source,groovy]
+----
+class Book {
+    static belongsTo = [author: Author]
+    String title
+}
+----
+
+If you have two properties of the same type on the many side of a one-to-many you have to use `mappedBy` to specify which the collection is mapped:
+
+[source,groovy]
+----
+class Airport {
+    static hasMany = [flights: Flight]
+    static mappedBy = [flights: "departureAirport"]
+}
+----
+
+[source,groovy]
+----
+class Flight {
+    Airport departureAirport
+    Airport destinationAirport
+}
+----
+
+This is also true if you have multiple collections that map to different properties on the many side:
+
+[source,groovy]
+----
+class Airport {
+    static hasMany = [outboundFlights: Flight, inboundFlights: Flight]
+    static mappedBy = [outboundFlights: "departureAirport",
+                       inboundFlights: "destinationAirport"]
+}
+----
+
+[source,groovy]
+----
+class Flight {
+    Airport departureAirport
+    Airport destinationAirport
+}
+----
+

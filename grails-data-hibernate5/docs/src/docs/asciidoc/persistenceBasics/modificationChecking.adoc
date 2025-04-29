@@ -1,0 +1,125 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Once you have loaded and possibly modified a persistent domain class instance, it isn't straightforward to retrieve the original values. If you try to reload the instance using link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)] Hibernate will return the current modified instance from its Session cache.
+
+Reloading using another query would trigger a flush which could cause problems if your data isn't ready to be flushed yet. So GORM provides some methods to retrieve the original values that Hibernate caches when it loads the instance (which it uses for dirty checking).
+
+
+==== isDirty
+
+
+You can use the link:../api/org/grails/datastore/gorm/GormEntity.html#isDirty(java.lang.String)[isDirty()] method to check if any field has been modified:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+assert !airport.isDirty()
+
+airport.properties = params
+if (airport.isDirty()) {
+   // do something based on changed state
+}
+----
+
+NOTE: `isDirty()` does not currently check collection associations, but it does check all other persistent properties and associations.
+
+You can also check if individual fields have been modified:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+assert !airport.isDirty()
+
+airport.properties = params
+if (airport.isDirty('name')) {
+   // do something based on changed name
+}
+----
+
+==== isDirty and Proxies
+
+Dirty checking uses the `equals()` method to determine if a property has changed. In the case of associations, it is important to recognize that if the association is a proxy, comparing properties on the domain that are not related to the identifier will initialize the proxy, causing another database query.
+
+If the association does not define `equals()` method, then the default Groovy behavior of verifying the instances are the same will be used. Because proxies are not the same instance as an instance loaded from the database, which can cause confusing behavior. It is recommended to implement the `equals()` method if you need to check the dirtiness of an association. For example:
+
+[source, groovy]
+----
+class Author {
+    Long id
+    String name
+
+     /**
+     * This ensures that if either or both of the instances
+     * have a null id (new instances), they are not equal.
+     */
+    @Override
+    boolean equals(o) {
+        if (!(o instanceof Author)) return false
+        if (this.is(o)) return true
+        Author that = (Author) o
+        if (id !=null && that.id !=null) return id == that.id
+        return false
+    }
+}
+
+class Book {
+    Long id
+    String title
+    Author author
+}
+----
+
+==== getDirtyPropertyNames
+
+
+You can use the link:../api/org/grails/datastore/gorm/GormEntity.html#getDirtyPropertyNames()[getDirtyPropertyNames()] method to retrieve the names of modified fields; this may be empty but will not be null:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+assert !airport.isDirty()
+
+airport.properties = params
+def modifiedFieldNames = airport.getDirtyPropertyNames()
+for (fieldName in modifiedFieldNames) {
+   // do something based on changed value
+}
+----
+
+==== getPersistentValue
+
+You can use the link:../api/org/grails/datastore/gorm/GormEntity.html#getPersistentValue(java.lang.String)[getPersistentValue(fieldName)] method to retrieve the value of a modified field:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+assert !airport.isDirty()
+
+airport.properties = params
+def modifiedFieldNames = airport.getDirtyPropertyNames()
+for (fieldName in modifiedFieldNames) {
+    def currentValue = airport."$fieldName"
+    def originalValue = airport.getPersistentValue(fieldName)
+    if (currentValue != originalValue) {
+        // do something based on changed value
+    }
+}
+----
+

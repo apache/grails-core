@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 The plugin provides GSP tags which are useful for caching the result of evaluating sections of markup.  These tags allow for the result of evaluating sections of markup to be cached so subsequent renderings of the same markup do not have to result in the markup being evaluated again.  These tags support automatic cache eviction with the use of a time to live (ttl) attribute.
 
 See the documentation for the link:{tags}/block.html[block] and link:{tags}/render.html[render] tags for more details.

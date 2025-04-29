@@ -1,4 +1,3 @@
-package grails.plugin.json.builder;
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -8,7 +7,7 @@ package grails.plugin.json.builder;
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
@@ -17,6 +16,8 @@ package grails.plugin.json.builder;
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
+package grails.plugin.json.builder;
 
 import groovy.json.JsonException;
 import groovy.json.JsonLexer;

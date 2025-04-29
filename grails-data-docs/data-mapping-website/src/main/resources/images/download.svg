@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="94px" height="94px" viewBox="0 0 94 94" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>download</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="download" transform="translate(1.000000, 1.000000)">
+            <circle id="Oval" stroke="#FEB672" stroke-width="2.8347" cx="45.88" cy="45.792" r="45.374"></circle>
+            <path d="M38.8229167,16 L51.6458333,16 L51.6458333,35.234375 L64.46875,35.234375 L45.234375,54.46875 L26,35.234375 L38.8229167,35.234375 L38.8229167,16 Z M16,55.9583333 L16,72.9375 L75.4270833,72.9375 L75.4270833,55.9583333 L16,55.9583333 Z M28.734375,68.6927083 L20.2447917,68.6927083 L20.2447917,64.4479167 L28.734375,64.4479167 L28.734375,68.6927083 Z" id="polygon11" fill="#FEB672" fill-rule="nonzero"></path>
+        </g>
+    </g>
+</svg>

@@ -1,0 +1,212 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+==== The EntityPersister Interface
+
+
+The `EntityPersister` interface is used to implement the basic Create, Read, Update and Delete (CRUD) operations. There are individual methods to implement such as `persistEntity`, `updateEntity`, `deleteEntity` and so on.
+
+In many cases there is a representation of an entity in its "native" form as supplied by the datastore driver. For example in Cassandra this could be a `ColumnFamily`, or in MongoDB a `DBCollection`. 
+
+To support implementing such cases, there is an abstract `NativeEntryEntityPersister<T, K>` super class that provides the basis for an implementation that maps a native entry, such as a MongoDB `DBObject` or a Neo4j `Node`, to a persisted entity and back again.
+
+The two generic types of this superclass indicate the native entry type (example `DBObject` in MongoDB) and the native key type (example `ObjectId` in MongoDB). The MongoDB implementation looks like this:
+
+[,java]
+----
+public class MongoEntityPersister extends NativeEntryEntityPersister<DBObject, Object>
+----
+
+Note that `Object` is used for the key since MongoDB also supports Long and String-based identifiers.
+
+They key methods that need implementing are defined below:
+
+* `getEntityFamily()` - Defines the name of the entity group or family. This could be a database table, a Cassandra Column Family or a MongoDB collection
+* `T createNewEntry(String family)` - Creates a native entry ready to be inserted
+* `Object getEntryValue(T nativeEntry, String property)` - Retrieves a value of entry and returns its Java object form. For example a "date" property stored as a String in the datastore would need to be returned as a java.util.Date at this point
+* `setEntryValue(T nativeEntry, String key, Object value)` - Sets a value of the native entry, converting any Java objects to the required native format
+* `deleteEntry(String family, K key, Object entry)` - Deletes an entry for the given family, native key and entry
+* `T retrieveEntry(PersistentEntity persistentEntity, String family, Serializable key)` - Retrieves a native entry for the given entity, family and key
+* `K storeEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, K storeId, T nativeEntry)` - Stores a native entry for the given id 
+* `updateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, K key, T entry)` - Updates an entry 
+* `K generateIdentifier(PersistentEntity persistentEntity, T entry)` - Generate an identifier for the given native entry
+* `PropertyValueIndexer getPropertyIndexer(PersistentProperty property)` - If the datastore requires manual indexing, you'll need to implement a `PropertyIndexer`, otherwise return null
+* `AssociationIndexer getAssociationIndexer(T nativeEntry, Association association)` - If the datastore requires manual indexing, you'll need to implement a `AssociationIndexer`, otherwise return null
+
+
+
+
+
+==== Create
+
+
+The `createNewEntry` method is used to create a native record that will be inserted into the datastore. In MongoDB this is a `DBObject` whilst in the implementation for `ConcurrentHashMap` it is another `Map`:
+
+[,java]
+----
+@Override
+protected DBObject createNewEntry(String family) {
+    return new BasicDBObject();
+}
+----
+
+
+==== Read
+
+
+The `retrieveEntry` method is used to retrieve a native record for a given key:
+
+[,java]
+----
+protected DBObject retrieveEntry(final PersistentEntity persistentEntity,
+        String family, final Serializable key) {
+    return mongoTemplate.execute(new DbCallback<DBObject>() {
+        public DBObject doInDB(DB con) throws MongoException, DataAccessException {
+            DBCollection dbCollection = con.getCollection(getCollectionName(persistentEntity));
+            return dbCollection.findOne(key);
+        }
+    });
+}
+----
+
+Here you can see the `MongoDB` implementation that uses a Spring Data `MongoTemplate` to find a `DBObject` for the given key. There is a separate `storeEntry` method that is used to actually store the native object. In `MongoDB` this looks like:
+
+[,java]
+----
+@Override
+protected Object storeEntry(final PersistentEntity persistentEntity, final EntityAccess entityAccess,
+                            final Object storeId, final DBObject nativeEntry) {
+    return mongoTemplate.execute(new DbCallback<Object>() {
+        public Object doInDB(DB con) throws MongoException, DataAccessException {
+            nativeEntry.put(MONGO_ID_FIELD, storeId);
+            return storeId;
+        }
+    });
+}
+----
+
+Notice it doesn't actually do anything native insert into a MongoDB collection. This is because the Datastore API supports the notion of batch insert operations and flushing. In the case of `MongoDB` the `MongoSession` implementation overrides the `flushPendingInserts` method of `AbstractSession` and performs a batch insert of multiple MongoDB documents (ie ``DBObject``s) at once:
+
+[,java]
+----
+collection.insert(dbObjects.toArray(DBObject::new), writeConcernToUse);
+----
+
+Other datastores that  do not support batch inserts would instead do the insert in the `storeEntry` method itself. For example the implementation for `ConcurrentHashMap` looks like __(with Groovy)__:
+
+[source,groovy]
+----
+protected storeEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, storeId, Map nativeEntry) {
+    if (!persistentEntity.root) {
+        nativeEntry.discriminator = persistentEntity.discriminator
+    }
+    datastore.put(storeId, nativeEntry)
+    return storeId
+}
+----
+
+
+==== Update
+
+
+The `updateEntry` method is used to update an entry:
+
+[,java]
+----
+public void updateEntry(final PersistentEntity persistentEntity, final EntityAccess ea,
+        final Object key, final DBObject entry) {
+    mongoTemplate.execute(new DbCallback<Object>() {
+        public Object doInDB(DB con) throws MongoException, DataAccessException {
+            String collectionName = getCollectionName(persistentEntity, entry);
+            DBCollection dbCollection = con.getCollection(collectionName);
+            if (isVersioned(ea)) {
+                // TODO this should be done with a CAS approach if possible
+                DBObject previous = dbCollection.findOne(key);
+                checkVersion(ea, previous, persistentEntity, key);
+            }
+
+            MongoSession mongoSession = (MongoSession) session;
+            dbCollection.update(dbo, entry, false, false, mongoSession.getWriteConcern());
+            return null;
+        }
+    });
+}
+----
+
+As you can see again the underlying database specific `update` method is used, in this case the ``DBCollection``'s `update` method.
+
+
+==== Delete
+
+
+The `deleteEntry` method is used to delete an entry. For example in the `ConcurrentHashMap` implementation it is simply removed from the map:
+
+[source,groovy]
+----
+protected void deleteEntry(String family, key, entry) {
+    datastore.remove(key)
+}
+----
+
+Whilst in `MongoDB` the `DBCollection` object's `remove` method is called:
+
+[,java]
+----
+@Override
+protected void deleteEntry(String family, final Object key, final Object entry) {
+    mongoTemplate.execute(new DbCallback<Object>() {
+        public Object doInDB(DB con) throws MongoException, DataAccessException {
+            DBCollection dbCollection = getCollection(con);
+
+            MongoSession mongoSession = (MongoSession) session;
+            dbCollection.remove(key, mongoSession.getWriteConcern());
+            return null;
+        }
+
+        protected DBCollection getCollection(DB con) {
+            return con.getCollection(getCollectionName(getPersistentEntity()));
+        }
+    });
+}
+----
+
+Note that if the underlying datastore supports batch delete operations you may want override and implement the `deleteEntries` method which allows for deleting multiple entries in a single operation. The implementation for MongoDB looks like:
+
+[,java]
+----
+protected void deleteEntries(String family, final List<Object> keys) {
+    mongoTemplate.execute(new DbCallback<Object>() {
+        public Object doInDB(DB con) throws MongoException, DataAccessException {
+            String collectionName = getCollectionName(getPersistentEntity());
+            DBCollection dbCollection = con.getCollection(collectionName);
+
+            MongoSession mongoSession = (MongoSession) getSession();
+            MongoQuery query = mongoSession.createQuery(getPersistentEntity().getJavaClass());
+            query.in(getPersistentEntity().getIdentity().getName(), keys);
+
+            dbCollection.remove(query.getMongoQuery());
+
+            return null;
+        }
+    });
+}
+----
+
+You'll notice that this implementation uses a `MongoQuery` instance. Also, it's important to note that when implementing an `EntityPersister`, you enable basic CRUD operations, but not querying. The latter is a subject we'll explore in the following sections. However, before delving into that, we need to cover secondary indices, as they are required for querying.

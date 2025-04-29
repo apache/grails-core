@@ -1,87 +1,150 @@
-/* Copyright 2004-2005 the original author or authors.
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package grails.doc.gradle
 
 import grails.doc.DocPublisher
 import grails.doc.macros.HiddenMacro
 import org.gradle.api.DefaultTask
+import org.gradle.api.Project
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+
+import javax.inject.Inject
 
 /**
  * Gradle task for generating a gdoc-based HTML user guide.
  */
+@CacheableTask
 class PublishGuide extends DefaultTask {
 
-    @Optional @Input String language = ""
-    @Optional @Input String sourceRepo
-    @Optional @Input Properties properties = new Properties()
-    @Optional @Input Boolean asciidoc = false
-    @Optional @Input List propertiesFiles = []
+    @Optional
+    @Input
+    final Property<String> language
 
-    @InputDirectory File sourceDir = new File(project.projectDir, "src")
-    @Optional @InputDirectory File workDir = project.layout.buildDirectory.get().asFile
-    @Optional @InputDirectory File resourcesDir = new File(project.projectDir, "resources")
+    @Optional
+    @Input
+    final Property<String> sourceRepo
 
-    @Optional @Input Collection macros = []
+    @Optional
+    @Input
+    final MapProperty<String, Object> properties
 
-    @OutputDirectory File targetDir = project.layout.buildDirectory.dir("docs").get().asFile
+    @Optional
+    @Input
+    final Property<Boolean> asciidoc
+
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    final ConfigurableFileCollection propertiesFiles
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    final DirectoryProperty sourceDir
+
+    @Optional
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    final DirectoryProperty workDir
+
+    @Optional
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    final DirectoryProperty resourcesDir
+
+    @Optional
+    @Input
+    final ListProperty<Object> macros
+
+    @OutputDirectory
+    final DirectoryProperty targetDir
+
+    @Inject
+    PublishGuide(ObjectFactory objects, Project project) {
+        language = objects.property(String).convention(null as String)
+        sourceRepo = objects.property(String)
+        properties = objects.mapProperty(String, Object).convention([:])
+        asciidoc = objects.property(Boolean).convention(true)
+        propertiesFiles = objects.fileCollection()
+        sourceDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir("src"))
+        workDir = objects.directoryProperty().convention(project.layout.buildDirectory)
+        resourcesDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir("resources"))
+        macros = objects.listProperty(Object).convention([])
+        targetDir = objects.directoryProperty().convention(project.layout.buildDirectory.dir("docs"))
+        group = 'documentation'
+    }
 
     @TaskAction
     def publishGuide() {
-        def props = new Properties()
-        def docProperties = new File("${resourcesDir}/doc.properties")
+        Properties combinedProperties = new Properties()
+
+        File resources = resourcesDir.get().asFile
+        File docProperties = new File(resources, 'doc.properties')
         if(docProperties.exists()) {
             docProperties.withInputStream { input ->
-                props.load(input)
+                combinedProperties.load(input)
             }
         }
 
         // Add properties from any optional properties files too.
-        for (f in propertiesFiles) {
-            (f as File).withInputStream {input ->
-                props.load(input)
+        for (File f : propertiesFiles) {
+            f.withInputStream { input ->
+                combinedProperties.load(input)
             }
         }
+        combinedProperties.putAll(properties.get())
 
-        props.putAll(properties)
+        File apiDir = targetDir.get().asFile
+        apiDir.deleteDir()
+        apiDir.mkdirs()
 
-        def publisher = new DocPublisher(sourceDir, targetDir)
+        def publisher = new DocPublisher(sourceDir.get().asFile, apiDir)
         publisher.ant = project.ant
         publisher.asciidoc = asciidoc
-        publisher.workDir = workDir
-        publisher.apiDir = targetDir
-        publisher.language = language ?: ''
-        publisher.sourceRepo = sourceRepo
-        publisher.images = project.file("${resourcesDir}/img")
-        publisher.css = project.file("${resourcesDir}/css")
-        publisher.fonts = project.file("${resourcesDir}/fonts")
-        publisher.js = project.file("${resourcesDir}/js")
-        publisher.style = project.file("${resourcesDir}/style")
-        publisher.version = props."grails.version"
+        publisher.workDir = workDir.get().asFile
+        publisher.apiDir = apiDir
+        publisher.language = language.getOrElse('')
+        publisher.sourceRepo = sourceRepo.getOrElse('')
+        publisher.images = new File(resources, 'img')
+        publisher.css = new File(resources, 'css')
+        publisher.fonts = new File(resources, 'fonts')
+        publisher.js = new File(resources, 'js')
+        publisher.style = new File(resources, 'style')
+        publisher.version = combinedProperties['grails.version']
 
         // Override doc.properties properties with their language-specific counterparts (if
         // those are defined). You just need to add entries like es.title or pt_PT.subtitle.
-        if (language) {
-            def pos = language.size() + 1
-            def languageProps = props.findAll { k, v -> k.startsWith("${language}.") }
-            languageProps.each { k, v -> props[k[pos..-1]] = v }
+        if (language.isPresent()) {
+            String lang = language.get()
+            def pos = lang.size() + 1
+            def languageProps = combinedProperties.findAll { k, v -> k.startsWith("${lang}.") }
+            languageProps.each { k, v -> combinedProperties[k[pos..-1]] = v }
         }
 
         // Aliases and other doc.properties entries are passed in as engine properties. This
         // is how the doc title, subtitle, etc. are set.
-        publisher.engineProperties = props
+        publisher.engineProperties = combinedProperties
 
         // Add custom macros.
 

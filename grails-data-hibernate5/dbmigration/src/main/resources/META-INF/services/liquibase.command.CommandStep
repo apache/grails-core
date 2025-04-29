@@ -1,0 +1,2 @@
+org.grails.plugins.databasemigration.liquibase.GroovyDiffToChangeLogCommandStep
+org.grails.plugins.databasemigration.liquibase.GroovyGenerateChangeLogCommandStep

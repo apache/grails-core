@@ -1,17 +1,20 @@
 /*
- * Copyright 2004-2005 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.compiler.injection;
 
@@ -21,6 +24,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -57,7 +61,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
 
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
         if (GrailsASTUtils.isDomainClass(classNode, source) && shouldInjectClass(classNode)) {
-            if(!classNode.getAnnotations(new ClassNode(Artefact.class)).isEmpty()) return;
+            if (!classNode.getAnnotations(new ClassNode(Artefact.class)).isEmpty()) return;
             performInjectionOnAnnotatedEntity(classNode);
         }
     }
@@ -127,14 +131,14 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
         List<PropertyNode> properties = new ArrayList<>();
         if (e instanceof MapExpression) {
             MapExpression me = (MapExpression) e;
+
             for (MapEntryExpression mme : me.getMapEntryExpressions()) {
                 String key = mme.getKeyExpression().getText();
                 final Expression expression = mme.getValueExpression();
                 ClassNode type;
                 if (expression instanceof ClassExpression) {
                     type = expression.getType();
-                }
-                else {
+                } else {
                     type = ClassHelper.make(expression.getText());
                 }
 
@@ -157,6 +161,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
         List<PropertyNode> properties = new ArrayList<>();
         if (e instanceof MapExpression) {
             MapExpression me = (MapExpression) e;
+
             for (MapEntryExpression mee : me.getMapEntryExpressions()) {
                 String key = mee.getKeyExpression().getText();
                 addAssociationForKey(key, properties, classNode, findPropertyType(mee.getValueExpression()));
@@ -168,6 +173,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
     /**
      * Finds the type of the generated property.  The type will be a {@link Set} that is parameterized
      * by the type of the expression passed in.
+     *
      * @param expression the expression used to parameterize the {@link Set}.  Only used if a {@link ClassExpression}.  Otherwise ignored.
      * @return A {@link ClassNode} of type {@link Set} that is possibly parameterized by the expression that is passed in.
      */
@@ -242,6 +248,6 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
     }
 
     public String[] getArtefactTypes() {
-        return new String[] {DomainClassArtefactHandler.TYPE};
+        return new String[]{DomainClassArtefactHandler.TYPE};
     }
 }

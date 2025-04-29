@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="95px" height="95px" viewBox="0 0 95 95" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 47.1 (45422) - http://www.bohemiancoding.com/sketch -->
+    <title>restapis</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="restapis" transform="translate(2.000000, 1.000000)">
+            <circle id="Oval" stroke="#FFFFFF" stroke-width="2.8347" cx="45.848" cy="46.128" r="45.374"></circle>
+            <circle id="Oval" stroke="#FFFFFF" stroke-width="2.8347" cx="45.374" cy="46.374" r="45.374"></circle>
+            <g id="Group" transform="translate(17.000000, 9.000000)" font-size="50" font-family="Courier-Bold, Courier" fill="#FFFFFF" font-weight="bold">
+                <g id="Group-2">
+                    <text id="{">
+                        <tspan x="0.497558594" y="48">{</tspan>
+                    </text>
+                    <text id="{-copy" transform="translate(41.500000, 44.000000) rotate(180.000000) translate(-41.500000, -44.000000) ">
+                        <tspan x="26.4975586" y="62">{</tspan>
+                    </text>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 == id
 
 
@@ -29,7 +48,7 @@ Usage: `id(map)`
 
 Arguments:
 
-* `generator` (optional) - The name of the generator to use. Can be `increment`, `identity`, `sequence`, `seqhilo`, `uuid`, `uuid2`, `assigned`, `select`, `foreign`, `sequence-identity`, `enhanced-sequence` or `enhanced-table`. See {hibernateReference}#identifiers-generators[Hibernate reference documentation] for more information.
+* `generator` (optional) - The name of the generator to use. Can be `increment`, `identity`, `sequence`, `seqhilo`, `uuid`, `uuid2`, `assigned`, `select`, `foreign`, `sequence-identity`, `enhanced-sequence` or `enhanced-table`. See {hibernate5Reference}#identifiers-generators[Hibernate reference documentation] for more information.
 
 WARNING: `hilo` generator was removed in Hibernate 5. See https://github.com/hibernate/hibernate-orm/blob/5.0/migration-guide.adoc[Hibernate 5 Migration Guide].
 
@@ -74,4 +93,4 @@ static mapping = {
 }
 ----
 
-See the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#identity[Custom Database Identity] in the user guide for more information.
+See the section on  link:{hibernate5Guide}/manual/index.html#identity[Custom Database Identity] in the user guide for more information.

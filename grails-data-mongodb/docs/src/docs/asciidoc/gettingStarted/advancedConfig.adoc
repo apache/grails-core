@@ -1,0 +1,124 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Advanced Configuration
+==== Mongo Database Connection Configuration
+
+
+As mentioned the GORM for MongoDB plugin will configure all the defaults for you, but if you wish to customize those defaults you can do so in the `grails-app/conf/application.groovy` file:
+
+[source,groovy]
+----
+grails {
+    mongodb {
+        host = "localhost"
+        port = 27017
+        username = "blah"
+        password = "blah"
+        databaseName = "foo"
+    }
+}
+----
+
+The `databaseName` setting configures the default database name. If not specified the `databaseName` will default to the name of your application.
+
+You can also customize the MongoDB connection settings using an `options` block:
+
+[source,groovy]
+----
+grails {
+    mongodb {
+        options {
+            autoConnectRetry = true
+            connectTimeout = 300
+        }
+    }
+}
+----
+
+Available options and their descriptions are defined in the https://api.mongodb.org/java/current/com/mongodb/MongoClientOptions.html[MongoClientOptions] javadoc.
+
+==== MongoDB Connection Strings
+
+
+Since 2.0, you can also use MongoDB https://docs.mongodb.org/manual/reference/connection-string/[connection strings] to configure the connection:
+
+[source,groovy]
+----
+grails {
+    mongodb {
+        url = "mongodb://localhost/mydb"
+    }
+}
+----
+
+Using MongoDB connection strings is currently the most flexible and recommended way to configure MongoDB connections.
+
+
+
+==== Configuration Options Guide
+
+
+Below is a complete example showing all configuration options:
+
+[source,groovy]
+----
+grails {
+    mongodb {
+        databaseName = "myDb" // the default database name
+        host = "localhost" // the host to connect to
+        port = 27017 // the port to connect to
+        username = ".." // the username to connect with
+        password = ".." // the password to connect with
+        stateless = false // whether to use stateless sessions by default
+
+        // Alternatively, using  'url'
+        // url = "mongodb://localhost/mydb"
+
+        options {
+            connectionsPerHost = 10 // The maximum number of connections allowed per host
+            threadsAllowedToBlockForConnectionMultiplier = 5
+            maxWaitTime = 120000 // Max wait time of a blocking thread for a connection.
+            connectTimeout = 0 // The connect timeout in milliseconds. 0 == infinite
+            socketTimeout = 0 // The socket timeout. 0 == infinite
+            socketKeepAlive = false // Whether or not to have socket keep alive turned on
+            writeConcern = new com.mongodb.WriteConcern(0, 0, false) // Specifies the number of servers to wait for on the write operation, and exception raising behavior
+            sslEnabled = false // Specifies if the driver should use an SSL connection to Mongo
+            socketFactory = ... // Specifies the SocketFactory to use for creating connections
+        }
+    }
+}
+----
+
+
+
+==== Global Mapping Configuration
+
+
+Using the `grails.mongodb.default.mapping` setting in `grails-app/conf/application.groovy` you can configure global mapping options across your domain classes. This is useful if, for example, you want to disable optimistic locking globally or you wish to use `DBRefs` in your association mappings. For example, the following configuration will disable optimistic locking globally and use `DBRefs` for all properties:
+
+[source,groovy]
+----
+grails.mongodb.default.mapping = {
+    version false
+    '*'(reference:true)
+}
+----
+
+The `*` method is used to indicate that the setting applies to all properties.

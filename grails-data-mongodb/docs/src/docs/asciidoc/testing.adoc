@@ -1,0 +1,53 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Unit Testing
+To write unit tests with MongoDB and Spock you can simply extend from `grails.test.mongodb.MongoSpec`.
+
+`MongoSpec` is an abstract class that will initialise GORM in the setup phase of the specification being executed. It
+uses by default a `MongoClient` instance that connects to a MongoDB instance as defined in your configuration
+(by default, `localhost` and port `27017`, see <<gettingStarted>> for more details):
+
+It is preferable to use testcontainers to automatically run MongoDB in a containerized environment and not have to run a MongoDB instance locally. The following examples use testcontainers:
+
+[source,groovy]
+----
+include::{sourcedir}/examples/base/src/test/groovy/functional/tests/EmbeddedMongoClient.groovy[]
+----
+
+[source,groovy]
+----
+include::{sourcedir}/examples/base/src/test/groovy/functional/tests/LocalMongoUnitSpec.groovy[tags=structure]
+----
+
+You can also use your own low-level `MongoClient` instance, as shown in the following example:
+
+[source,groovy]
+----
+include::{sourcedir}/examples/base/src/test/groovy/functional/tests/BookUnitSpec.groovy[]
+----
+
+Note that the default implementation is to scan your classpath searching for domain classes, from the package defined
+in the configuration property `grails.codegen.defaultPackage`, and all the way down its subpackages. If your application
+is large, classpath scanning may be slow, so it's better to override the method `getDomainClasses()`:
+
+[source,groovy]
+----
+include::{sourcedir}/examples/hibernate5/src/test/groovy/functional/tests/BookFongoSpec.groovy[tags=getDomainClasses,indent=0]
+----

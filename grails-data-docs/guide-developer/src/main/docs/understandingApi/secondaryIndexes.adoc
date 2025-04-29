@@ -1,0 +1,84 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Many datastores do not support secondary indexing or require you to build your own. In cases like this, you will need to implement a `PropertyIndexer`.
+
+NOTE: If the underlying datastore supports secondary indexes then it is ok to just return a `null` `PropertyIndexer` and let the datastore handle the indexing.
+
+For example the `ConcurrentHashMap` implementation creates secondary indices by populating another `Map` containing the indices:
+
+[source,groovy]
+----
+void index(value, primaryKey) {
+
+    def index = getIndexName(value)
+    def indexed = indices[index]
+    if (indexed == null) {
+        indexed = []
+        indices[index] = indexed
+    }
+    if (!indexed.contains(primaryKey)) {
+        indexed << primaryKey
+    }
+}
+----
+
+The implementation for Redis is very similar and stores the primary key in a Redis set:
+
+[,java]
+----
+public void index(final Object value, final Long primaryKey) {
+      if (value == null) {
+          return;
+      }
+      final String primaryIndex = createRedisKey(value);
+      redisTemplate.sadd(primaryIndex, primaryKey);
+}
+----
+
+An index name is typically built from the entity name, property name and property value. The primary key of the entity is stored in this index for later querying. In fact there is a `query` method that needs to be implemented on `PropertyIndexer`. The `ConcurrentHashMap` implementation looks like this:
+
+[source,groovy]
+----
+List query(value, int offset, int max) {
+    def index = getIndexName(value)
+
+    def indexed = indices[index]
+    if (!indexed) {
+        return Collections.emptyList()
+    }
+    return indexed[offset..max]
+}
+----
+
+Depending on the characteristics of the underlying database you may want to do the indexing asynchronously or you may want to index into a search library such as Lucene. For datastores that are eventually consistent for example it makes sense to do all indexing asynchronously. 
+
+Finally, when an object is deleted it will need to removed from the indices. This can be done with the `deindex` method:
+
+[source,groovy]
+----
+void deindex(value, primaryKey) {
+    def index = getIndexName(value)
+    def indexed = indices[index]
+    if (indexed) {
+        indexed.remove(primaryKey)
+    }
+}
+----
+

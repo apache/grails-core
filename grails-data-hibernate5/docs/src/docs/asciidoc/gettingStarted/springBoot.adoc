@@ -1,0 +1,111 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+To use GORM for Hibernate in Spring Boot, add the necessary dependency to your Boot application:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+implementation 'org.grails:gorm-hibernate5-spring-boot:{version}'
+----
+
+Then ensure you have configured a https://docs.spring.io/spring-boot/reference/data/sql.html#data.sql.datasource[datasource and Hibernate as per the Spring Boot guide]. For example in the case of MySQL:
+
+[source,yaml]
+.application.yml
+----
+hibernate.hbm2ddl.auto: update
+spring.datasource.url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+----
+
+TIP: If you prefer to use the Grails way of configuring the `DataSource` (with `dataSource.url` etc.), these will
+work as well.
+
+[source,groovy]
+.Application.groovy
+----
+import groovy.transform.CompileStatic
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+@CompileStatic
+@SpringBootApplication(exclude = HibernateJpaAutoConfiguration)
+class Application {
+    static void main(String[] args) {
+        SpringApplication.run(Application, args)
+    }
+}
+----
+
+NOTE: You need to exclude the `HibernateJpaAutoconfiguration` as we are using GORM. Using `SpringBootApplication` without a `basePackages` attribute results in Boot scanning for classes in the same package or any package nested within the `Application` class package.
+If your GORM entities are in a different package, specify the package name as the value of the `basePackages` attribute on the `@SpringBootApplication` annotation.
+
+Finally create your GORM entities and ensure they are annotated with `grails.persistence.Entity`:
+
+[source,groovy]
+.Person.groovy
+----
+import grails.persistence.Entity
+
+@Entity
+class Person {
+    String firstName
+    String lastName
+}
+----
+
+Note that Spring Boot does not include any kind of OpenSessionInView interceptor so if you try and invoke GORM methods in a Spring `@Controller` you may encounter a session not found error. To eliminate this problem make sure your `@Controller` methods are annotated with `@Transactional`. For example:
+
+[source,groovy]
+.PersonController.groovy
+----
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+class PersonController {
+
+    @RequestMapping("/people")
+    @Transactional(readOnly = true)
+    public List<String> people() {
+        Person.list().collect { Person p ->
+            "$p.firstName $p.lastName".toString()
+        }
+    }
+}
+
+----
+
+In addition, if you wish to return a GORM instance from a Spring `@Controller`, it should be noted that Spring uses Jackson for JSON marshalling, and Jackson will attempt to marshal the entire object to JSON, which can present an issue since GORM adds additional persistence related properties to your domain instance. To resolve this issue you should use `@JsonIgnoreProperties` on your GORM entity class to ignore any properties added by GORM:
+
+[source,groovy]
+.Person.groovy
+----
+import grails.persistence.Entity
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+
+@Entity
+@JsonIgnoreProperties(['dirtyPropertyNames', 'errors', 'dirty', 'attached', 'version'])
+class Person {
+    String firstName
+    String lastName
+}
+----

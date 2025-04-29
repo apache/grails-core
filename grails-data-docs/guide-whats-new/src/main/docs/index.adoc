@@ -1,0 +1,60 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+= Discover What's Exciting in GORM 8!
+
+== GORM 8 Unleashed: Embracing Java 11
+
+GORM 8 now supports Java 11, offering its latest features, improved performance, and better security. Learn more about Java 11 in the official Oracle documentation: https://docs.oracle.com/en/java/javase/11/docs/api/index.html[Java 11 API Docs].
+
+== Powering Build Confidence: Gradle 7.6.2 Support
+
+GORM 8 fully integrates with Gradle 7.6.2, providing faster builds and seamless compatibility with the latest Gradle features. Explore Gradle's capabilities in the user guide: https://docs.gradle.org/current/userguide/userguide.html[Gradle User Guide].
+
+== Hibernate 5.6.15.Final: Mapping Mastery Amplified
+
+Discover the potential of GORM 8 with Hibernate 5.6.15.Final - the latest Java ORM framework release. Enjoy enhanced data mapping with new features and bug fixes. Learn more: https://hibernate.org/orm/documentation/5.6/[Hibernate 5.6 Documentation].
+
+== Seamlessly Compatible: MongoDB Java 4.5.0
+
+Connect effortlessly to MongoDB using the gorm-mongodb plugin with full compatibility for MongoDB Java driver version 4.5.0. Benefit from improved support and access to the latest MongoDB features. Find out more: https://mongodb.github.io/mongo-java-driver/4.5/[MongoDB Java Driver 4.5.0 Documentation].
+
+== Embrace the Graph: Neo4J Driver 4.4.10 Integration
+
+Optimize your graph database interactions with the gorm-neo4j plugin, now integrated with Neo4J Driver 4.4.10. Embrace the latest advancements in Neo4J. Learn how: https://neo4j.com/docs/api/java-driver/4.4/[Neo4J Java Driver 4.4 Documentation].
+
+== Empowering Spring Compatibility: Spring Boot 2.7.12
+
+Enjoy a seamless blend of Spring Boot features and GORM's powerful ORM capabilities with GORM 8's full compatibility with Spring Boot 2.7.12. Discover the world of Spring Boot: https://docs.spring.io/spring-boot/docs/2.7.12/reference/htmlsingle/[Spring Boot 2.7.12 Reference Guide].
+
+== Embrace Spring Awesomeness: Spring 5.3.27 Integration
+
+GORM 8 integrates with Spring 5.3.27, offering cutting-edge features like dependency injection, AOP, and transaction management. Dive into the Spring Framework: https://docs.spring.io/spring-framework/docs/5.3.27/reference/html/[Spring Framework 5.3.27 Reference Guide].
+
+== Strengthened Foundation: Updated Dependencies
+
+GORM 8 has updated dependencies for enhanced stability and security. Refer to the GORM 8 release notes for details.
+
+== Enhanced Reliability: Bug Fixes
+
+GORM 8 addresses known issues from previous versions, providing a more reliable user experience. Check out the GORM 8 release notes for specifics.
+
+GORM 8 offers a powerful ORM solution for Java-based applications. Leverage the latest Java, Gradle, Hibernate, MongoDB, Neo4J, and Spring versions to build robust data-centric applications. GORM 8 provides a unified API for simplified data access and management, supporting traditional SQL databases, NoSQL data stores like MongoDB, and graph databases like Neo4J.
+
+For comprehensive changes and in-depth information about GORM 8, explore the official GitHub repository and release notes. Get started with GORM 8 and explore its full capabilities in the https://gorm.grails.org/latest/documentation.html[GORM 8 Documentation].

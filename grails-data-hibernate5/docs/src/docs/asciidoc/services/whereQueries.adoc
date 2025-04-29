@@ -1,0 +1,33 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+If you have a more complex query then you may want to consider using the `@Where` annotation:
+
+
+[source,groovy]
+----
+    @Where({ title ==~ pattern && releaseDate > fromDate })
+    Book searchBooks(String pattern, Date fromDate)
+----
+
+With the `@Where` annotation the method name can be anything you want and query is expressed within a closure passed with the `@Where` annotation.
+
+The query will be type checked against the parameters and compilation will fail if you misspell a parameter or property name.
+
+The syntax is the same as what is passed to GORM's static `where` method, see the section on <<whereQueries,Where Queries>> for more information.

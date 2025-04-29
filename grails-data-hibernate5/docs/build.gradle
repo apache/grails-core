@@ -1,0 +1,141 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+plugins {
+    id 'groovy'
+    id 'org.asciidoctor.jvm.convert'
+}
+
+version = projectVersion
+
+ext {
+    isReleaseVersion = !projectVersion.endsWith('-SNAPSHOT')
+    coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
+}
+
+configurations {
+    documentation {
+        attributes {
+            attribute(Bundling.BUNDLING_ATTRIBUTE, (Bundling) (objects.named(Bundling, 'external')))
+        }
+    }
+}
+
+dependencies {
+    documentation platform(project(':grails-bom'))
+    documentation 'com.github.javaparser:javaparser-core'
+    documentation "info.picocli:picocli:$picocliVersion"
+    documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'org.fusesource.jansi:jansi'
+    documentation project(':grails-bootstrap')
+    documentation project(':grails-core')
+    documentation project(':grails-spring')
+    documentation "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
+    coreProjects.each {
+        documentation "org.apache.grails.data:$it"
+    }
+    rootProject.subprojects
+            .findAll { it.findProperty('gormApiDocs') }
+            .each { documentation project(":$it.name") }
+}
+
+tasks.named('asciidoctor', AsciidoctorTask) {
+    inputs.dir layout.projectDirectory.dir('src/docs')
+    outputs.dir layout.buildDirectory.dir('asciidoc/manual')
+    baseDirFollowsSourceDir()
+    resources {
+        from("$project.projectDir/src/docs/asciidoc/images")
+        into './images'
+    }
+
+    attributes(
+            'experimental': 'true',
+            'compat-mode': 'true',
+            'toc': 'left',
+            'icons': 'font',
+            'reproducible': '',
+            'version': projectVersion,
+            'pluginVersion': projectVersion,
+            'groupId': project.group,
+            'artifactId': project.name,
+            'sourcedir': "$project.rootDir",
+            'migrationPluginExamplesDir': rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.dir('src/integration-test/resources').asFile.absolutePath,
+            'migrationPluginGroupId': rootProject.findProject(':grails-data-hibernate5-dbmigration').group,
+            'migrationPluginArtifactId': rootProject.findProject(':grails-data-hibernate5-dbmigration').name,
+            'liquibaseHibernate5Version': liquibaseHibernate5Version
+    )
+    jvm {
+        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    }
+}
+
+tasks.withType(Groovydoc).configureEach {
+    it.dependsOn(rootProject.subprojects
+            .findAll { it.findProperty('gormApiDocs') }
+            .collect { ":${it.name}:groovydoc" })
+
+    it.docTitle = "GORM for Hibernate 5 - $project.version"
+
+    def sourceFiles = coreProjects.collect {
+        rootProject.layout.projectDirectory.files("$it/src/main/groovy")
+    }.sum()
+
+    rootProject.subprojects
+            .findAll { it.findProperty('gormApiDocs') }
+            .each { sourceFiles += it.files('src/main/groovy') }
+
+    it.source = sourceFiles
+    it.destinationDir = layout.buildDirectory.dir('combined-api/api').get().asFile
+    it.access = GroovydocAccess.PROTECTED
+    it.processScripts = false
+    it.includeMainForScripts = false
+    it.includeAuthor = false
+    it.classpath = configurations.documentation
+    it.groovyClasspath += configurations.documentation
+}
+
+tasks.register('docs', Sync).configure { Sync docTask ->
+    docTask.group = 'documentation'
+    docTask.dependsOn('asciidoctor', 'groovydoc')
+
+    def apiDir = layout.buildDirectory.dir('combined-api')
+    def resourceDir = layout.projectDirectory.dir('src/docs/resources')
+    def guideDir = layout.buildDirectory.dir('asciidoc')
+
+    docTask.from apiDir, resourceDir, guideDir
+    docTask.into layout.buildDirectory.dir('docs')
+
+    docTask.finalizedBy('assembleDocsDist')
+}
+
+tasks.register('assembleDocsDist', Zip).configure { Zip it ->
+    it.group = 'documentation'
+    it.dependsOn('docs')
+    it.from(layout.buildDirectory.dir('docs'))
+    it.archiveFileName = "${project.name}-${project.version}.zip"
+    it.destinationDirectory = project.layout.buildDirectory.dir('distributions')
+}
+
+// the groovy plugin is applied to this project, but we do not build a jar file since
+// the dependencies are only used for resolving versions from the bom
+tasks.withType(Jar).configureEach {
+    it.enabled = false
+}

@@ -1,0 +1,123 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+This library provides 2 types of interceptors, data fetcher and schema. Data fetcher interceptors are designed with the ability to prevent execution of a data fetcher. A common application of a data fetcher interceptor might be to implement security for the different operations available to be executed through GraphQL.
+
+Schema interceptors allow users to hook directly into the schema creation process to modify the schema directly before it is created. This option is for users who are comfortable with the link:https://github.com/graphql-java/graphql-java[graphql-java] library and would like to manipulate the schema as they see fit.
+
+NOTE: Any interceptor can implement link:{gormapi}/org/grails/datastore/mapping/core/Ordered.html[Ordered] to control the order it is invoked.
+
+== Get The Manager
+
+To register a data fetcher interceptor, you need to get a reference to the link:{api}/org/grails/gorm/graphql/interceptor/manager/GraphQLInterceptorManager.html[GraphQLInterceptorManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
+
+=== Standalone
+
+When creating the schema, initialize it first. The default interceptor manager will then be set.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.initialize()
+GraphQLInterceptorManager interceptorManager = schema.interceptorManager
+...
+schema.generate()
+----
+
+=== Plugin
+
+For Grails applications it is recommended to reference the bean created by the plugin. The easiest way to do so is to register a bean post processor. The plugin has a class available to extend to make that easier.
+
+[source,groovy]
+.resources.groovy
+----
+myGraphQLCustomizer(MyGraphQLCustomizer)
+----
+
+[source,groovy]
+.src/main/groovy/demo/MyGraphQLCustomizer.groovy
+----
+import org.grails.gorm.graphql.plugin.GraphQLPostProcessor
+
+class MyGraphQLCustomizer extends GraphQLPostProcessor {
+
+    @Override
+    void doWith(GraphQLInterceptorManager interceptorManager) {
+        ...
+    }
+}
+----
+
+TIP: If you need to customize more than 1 manager, only a single bean needs to be registered. There are `doWith` methods for all of the managers you may need to register object instances with.
+
+== Data Fetcher Interceptors
+
+All data fetcher interceptors must implement the link:{api}/org/grails/gorm/graphql/interceptor/GraphQLFetcherInterceptor.html[GraphQLFetcherInterceptor] interface. A link:{api}/org/grails/gorm/graphql/interceptor/impl/BaseGraphQLFetcherInterceptor[base class] is also available to extend from that allows all fetchers to proceed.
+
+For all interceptor methods, if the return value is `false`, further interceptors will not be executed and the resulting data will be `null`.
+
+=== Registering
+
+Once you have access to the manager, registration of your own interceptor is easy. In this example a data fetcher interceptor is being executed for the Author domain class. The interceptor will get invoked for all operations executed for that domain.
+
+[source,groovy]
+----
+GraphQLInterceptorManager interceptorManager
+
+interceptorManager.registerInterceptor(Author, new AuthorFetcherInterceptor())
+----
+
+TIP: Registering an interceptor for the `Object` type will cause it to be executed for all domain classes.
+
+=== Provided
+
+There are two methods that will be invoked for provided data fetchers. Which one gets invoked depends on whether the operation is a query or a mutation. For query operations (GET, LIST), the `onQuery` method will be executed. For mutation operations (CREATE, UPDATE, DELETE), the `onMutation` method will be executed.
+
+The data fetching environment and the data fetcher type are available to help make decisions about whether or not to interrupt the execution.
+
+=== Custom
+
+There are two methods that will be invoked for custom data fetchers. For operations registered with the `query` method in the mapping, the `onCustomQuery` method will be invoked. For operations registered with the `mutation` method in the mapping, the `onCustomMutation` method will be invoked.
+
+For custom operations, the name of the operation is available to be able to distinguish one custom operation from another.
+
+== Schema Interceptors
+
+In addition to data fetcher interceptors, it is also possible to register an interceptor for the GraphQL schema before it is built. These interceptors have the ability to intercept each persistent entity after its types are created, but before building, as well as one final interception before the schema as a whole is built.
+
+=== Registration
+
+Once you have access to the manager, registration of your own interceptor is easy. In this example a schema interceptor is being registered. The interceptor will get invoked for all entities as they are being created as well as once before the schema is finalized.
+
+[source,groovy]
+----
+GraphQLInterceptorManager interceptorManager
+
+interceptorManager.registerInterceptor(new MySchemaInterceptor())
+----
+
+=== Entity
+
+As each entity is being processed, a list of query fields and a list of mutation fields are being built. Before those fields are passed to the root query or mutation object, any schema interceptors are invoked with the intention that they may mutate the lists of fields. The persistent entity is also available to the interceptor.
+
+=== Final Schema
+
+After all of the entities have been processed, schema interceptors are invoked with the query type and mutation type. Once again, this provides the opportunity to make changes before the types are built and passed to the root schema object.

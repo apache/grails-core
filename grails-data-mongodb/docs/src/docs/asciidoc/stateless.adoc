@@ -1,0 +1,136 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Stateless Mode
+GORM for MongoDB supports both stateless and stateful modes for mapping domain classes to MongoDB. In general stateful mapping is superior for write heavy applications and stateless mode better for read heavy applications (particularily when large amounts of data is involved).
+
+
+=== Stateful mode
+
+Domain classes are by default stateful, which means when they are read from a MongoDB document their state is stored in the user session (which is typically bound to the request in Grails). This has several advantages for write heavy applications:
+
+* GORM can automatically detect whether a call to save() is an update or an insert and act appropriately
+* GORM stores the state of the read MongoDB document and therefore updates to schemaless properties don't require an extra query
+* GORM can store the current version and therefore implement optimistic locking
+* Repeated reads of the same entity can be retrieved from the cache, thus optimizing reads as well
+
+For an example of when a stateful domain class is better consider the following:
+
+[source,groovy]
+----
+def b = Book.get(1)
+b['pages'] = 400
+b['publisher'] = 'Manning'
+b['rating'] = 5
+b.save(flush:true)
+----
+
+With a stateful entity the updates to the three properties can be batched up and executed in the save() call, when there is no state then 3 updates needs to be executed for each schemaless property (ouch!).
+
+
+
+=== Stateless Domain classes
+
+
+However, stateful domain classes can cause problems for read-heavy applications. Take for example the following code:
+
+[source,groovy]
+----
+def books = Book.list() // read 100,000 books
+for(b in books) {
+    println b.title
+}
+----
+
+The above example will read 100,000 books and print the title of each. In stateful mode this will almost certainly run out of memory as each MongoDB document is stored in user memory as is each book. Rewriting the code as follows will solve the problem:
+
+[source,groovy]
+----
+Book.withStatelessSession {
+    def books = Book.list() // read 100,000 books
+    for(b in books) {
+        println b.title
+    }    
+}
+----
+
+Alternatively you can map the domain class as stateless, in which case its state will never be stored in the session:
+
+[source,groovy]
+----
+class Book {
+    ...
+    static mapping = {
+        stateless true
+    }
+}
+----
+
+
+=== Disadvantages of Stateless Mode
+
+
+There are several disadvantages to using stateless domain classes as the default. One disadvantage is that if you are using assigned identifiers GORM cannot detect whether you want to do an insert or an update so you have to be explicit about which one you want:
+
+[source,groovy]
+----
+Book b = new Book()
+b.id = "The Book"
+b.insert()
+----
+
+In the above case we use the explicit 'insert' method to tell Grails this is an insert not an udpate. Another disadvantage is that reading of schemaless/dynamic properties is more costly. For example:
+
+
+[source,groovy]
+----
+def books = Book.list() // read 100,000 books
+for(b in books) {
+    println b['pages']
+    println b['rating']
+}
+----
+
+Here GORM has to execute an additional read method for each schemaless property! This is better written as:
+
+[source,groovy]
+----
+def books = Book.list() // read 100,000 books
+for(b in books) {
+    def dbo = b.dbo
+    println dbo['pages']
+    println dbo['rating']
+}
+----
+
+Thus only requiring one query. Or alternatively you can use the native API:
+
+[source,groovy]
+----
+def books = Book.collection.find() // read 100,000 books
+for(dbo in books) {
+    Book b = dbo as Book    
+    println dbo['pages']
+    println dbo['rating']
+}
+----
+
+Which would be more efficient.
+
+

@@ -1,0 +1,88 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Data binders are responsible for taking the domain argument to a create or update operation and binding the data to an instance of the entity being created or updated.
+
+== Get The Manager
+
+To register a data binders, you need to get a reference to the link:{api}/org/grails/gorm/graphql/binding/GraphQLDataBinderManager.html[GraphQLDataBinderManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
+
+=== Standalone
+
+When creating the schema, initialize it first. The default binder manager will then be set.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.initialize()
+GraphQLDataBinderManager dataBinderManager = schema.dataBinderManager
+...
+schema.generate()
+----
+
+=== Plugin
+
+For Grails applications it is recommended to reference the bean created by the plugin. The easiest way to do so is to register a bean post processor. The plugin has a class available to extend to make that easier.
+
+[source,groovy]
+.resources.groovy
+----
+myGraphQLCustomizer(MyGraphQLCustomizer)
+----
+
+[source,groovy]
+.src/main/groovy/demo/MyGraphQLCustomizer.groovy
+----
+import org.grails.gorm.graphql.plugin.GraphQLPostProcessor
+
+class MyGraphQLCustomizer extends GraphQLPostProcessor {
+
+    @Override
+    void doWith(GraphQLDataBinderManager dataBinderManager) {
+        ...
+    }
+}
+----
+
+TIP: If you need to customize more than 1 manager, only a single bean needs to be registered. There are `doWith` methods for all of the managers you may need to register object instances with.
+
+== Register A Data Binder
+
+Once you have access to the manager, registration of your own data binder is easy. In this example a data binder is being registered for the Author domain class.
+
+[source,groovy]
+----
+GraphQLDataBinderManager dataBinderManager
+
+dataBinderManager.registerDataBinder(Author, new GraphQLDataBinder() {
+
+    @Override
+    void bind(Object object, Map data) {
+        Author author = (Author) object
+        author.name = data.name
+    }
+})
+----
+
+TIP: Registering a data binder for the `Object` type will cause it to be executed when a data binder could not otherwise be found.
+
+NOTE: For Grails applications, a default data binder is supplied that uses the standard Grails data binding features. That will allow you to customize the binding via `@BindUsing` or any other mechanism available via that feature.
+

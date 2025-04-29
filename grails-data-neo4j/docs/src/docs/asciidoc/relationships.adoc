@@ -1,0 +1,76 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+In addition to being able to map a domain class to a Neo4j `Node`, since 6.1 you are able to map a domain class to a Neo4j `Relationship`.
+
+For example consider the following domain model:
+
+[source,groovy]
+----
+import grails.neo4j.*
+
+class Movie {
+    String title
+    static hasMany = [cast:CastMember]
+}
+
+class CastMember implements Relationship<Person, Movie> {
+    List<String> roles = []
+}
+
+class Person {
+    String name
+    static hasMany = [appearances:CastMember]
+}
+----
+
+The `CastMember` class implements the link:../api/grails/neo4j/Relationship.html[Relationship] trait which takes two generic arguments: The class that represents the start of the relationship and the class that represents the end.
+
+You can then use regular GORM methods to query the `CastMember` relationship. In addition because Neo4j relationships are dynamic you can assign additional properties to them at runtime. For example:
+
+[source,groovy]
+----
+def castMember = new CastMember(
+    from: new Person(name: "Keanu"),
+    to: new Movie(title: "The Matrix"),
+    roles: ["Neo"])
+
+castMember['realName'] = "Thomas Anderson"
+castMember.save(flush:true)
+----
+
+In the above example the `roles` property is saved as a property of the relationship, as is the dynamic `realName` property.
+
+You can then query relationships using these properties:
+
+[source,groovy]
+----
+CastMember cm = CastMember.findByRoles(['Neo'])
+Person person = cm.from
+println person.name
+----
+
+The above example will produce a Cypher query that queries the relationship rather than the nodes:
+
+----
+MATCH (n:Person)-[from:CASTMEMBER]->(to:Movie) WHERE ( r.roles={1} ) RETURN r as rel, from as from, to as to
+ ] for params [[1:[Neo]]
+----
+
+

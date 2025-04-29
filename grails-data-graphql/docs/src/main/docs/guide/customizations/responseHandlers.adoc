@@ -1,0 +1,78 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The way the provided operations respond after deleting a GORM entity instance and how validation errors are returned is customizable.
+
+== Delete Response
+
+Delete responses are handled by a link:{api}/org/grails/gorm/graphql/response/delete/GraphQLDeleteResponseHandler.html[GraphQLDeleteResponseHandler]. The default implementation responds with an object that has a single property, `success`. You can register your own handler to override the default.
+
+For reference, see the link:https://github.com/grails/gorm-graphql/blob/master/core/src/main/groovy/org/grails/gorm/graphql/response/delete/DefaultGraphQLDeleteResponseHandler.groovy[default handler].
+
+=== Standalone
+
+After creating the schema, but before calling generate:
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.deleteResponseHandler = new MyDeleteResponseHandler()
+----
+
+=== Grails
+
+To override the delete response handler in a Grails application, register a bean with the name "graphQLDeleteResponseHandler".
+
+[source,groovy]
+.resources.groovy
+----
+graphQLDeleteResponseHandler(MyDeleteResponseHandler)
+----
+
+== Validation Error Response
+
+Validation error responses are handled by a link:{api}/org/grails/gorm/graphql/response/errors/GraphQLErrorsResponseHandler.html[GraphQLErrorsResponseHandler].
+
+For reference, see the link:https://github.com/grails/gorm-graphql/blob/master/core/src/main/groovy/org/grails/gorm/graphql/response/errors/DefaultGraphQLErrorsResponseHandler.groovy[default handler].
+
+If you plan to extend the default handler, a message source is required.
+
+=== Standalone
+
+The errors response handler is a property of the type manager. If you are supplying a custom type manager to the schema, set the property on it directly. If you are relying on the default type manager, do the following after creating the schema, but before calling generate:
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.errorsResponseHandler = new MyErrorsResponseHandler()
+----
+
+=== Grails
+
+To override the errors response handler in a Grails application, register a bean with the name "graphQLErrorsResponseHandler".
+
+[source,groovy]
+.resources.groovy
+----
+graphQLErrorsResponseHandler(MyErrorsResponseHandler, ref("messageSource"))
+----

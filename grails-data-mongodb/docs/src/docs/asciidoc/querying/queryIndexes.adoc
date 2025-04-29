@@ -1,0 +1,97 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Querying Indexing
+==== Basics
+
+
+MongoDB doesn't require that you specify indices to query, but like a relational database without specifying indices your queries will be significantly slower.
+
+With that in mind it is important to specify the properties you plan to query using the mapping block:
+
+[source,groovy]
+----
+class Person {
+    String name
+    static mapping = {
+        name index:true
+    }
+}
+----
+
+With the above mapping a MongoDB index will be automatically created for you. You can customize the index options using the `indexAttributes` configuration parameter:
+
+[source,groovy]
+----
+class Person {
+    String name
+    static mapping = {
+        name index:true, indexAttributes: [unique:true, dropDups:true]
+    }
+}
+----
+
+You can use MongoDB https://docs.mongodb.org/manual/reference/operator/meta/hint/[Query Hints] by passing the `hint` argument to any dynamic finder:
+
+[source,groovy]
+----
+def people = Person.findByName("Bob", [hint:[name:1]])
+----
+
+Or in a criteria query using the query "arguments" method
+
+[source,groovy]
+----
+Person.withCriteria {
+	eq 'firstName', 'Bob'
+    arguments hint:[1][firstName] }
+----
+
+
+==== Compound Indices
+
+
+MongoDB supports the notion of https://docs.mongodb.org/manual/core/index-compound/[compound keys]. GORM for MongoDB enables this feature at the mapping level using the `compoundIndex` mapping:
+
+[source,groovy]
+----
+class Person {
+    ...
+    static mapping = {
+        compoundIndex name:1, age:-1
+    }
+}
+----
+
+As per the MongoDB docs 1 is for ascending and -1 is for descending.
+
+
+==== Indexing using the 'index' method
+
+
+In addition to the convenience features described above you can use the `index` method to define any index you want. For example:
+
+[source,groovy]
+----
+static mapping = {
+    index( [1],[person.address.postCode] [unique:true] )
+}
+----
+
+In the above example I define an index on an embedded attribtue of the document. In fact what arguments you pass to the `index` method get passed to the underlying MongoDB https://api.mongodb.org/java/2.12/com/mongodb/DBCollection.html#createIndex(com.mongodb.DBObject,%20com.mongodb.DBObject)[createIndex] method.

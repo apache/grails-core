@@ -44,8 +44,13 @@ classes
 dist/
 idea
 output/
-**/src/en/ref/Dependency Versions/Grails BOM.adoc
+prodDb.mv.db
+testWatchedFile.properties
+_alternativeTable.gsp
+**/src/en/ref/Versions/Grails BOM.adoc
 stacktrace.log
 target
 tmp/
 !grails-fields/src/main/groovy/org/grails/scaffolding/registry/output
+!etc/bin
+etc/bin/results

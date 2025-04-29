@@ -1,0 +1,150 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+plugins {
+    id 'groovy'
+    id 'org.asciidoctor.jvm.convert'
+}
+
+version = projectVersion
+
+ext {
+    isReleaseVersion = !version.endsWith('SNAPSHOT')
+    coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
+}
+
+configurations {
+    documentation {
+        attributes {
+            attribute(Bundling.BUNDLING_ATTRIBUTE, (Bundling) (objects.named(Bundling, 'external')))
+        }
+    }
+}
+
+tasks.register('resolveMongodbVersion').configure { Task docTask ->
+    docTask.group = 'documentation'
+    docTask.description = 'Resolve MongoDB Version from the BOM'
+    ext.resolved = configurations.compileClasspath
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .find {
+                it.moduleVersion.id.group == 'org.mongodb' &&
+                        it.moduleVersion.id.name.contains('mongodb-driver-sync')
+            }.moduleVersion.id.version
+    logger.lifecycle('Resolved MongoDB Driver version for Guide links: {}', resolved)
+}
+
+
+dependencies {
+    documentation platform(project(':grails-bom'))
+    documentation 'org.fusesource.jansi:jansi'
+    documentation 'org.apache.groovy:groovy'
+    documentation 'org.apache.groovy:groovy-templates'
+    documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'com.github.javaparser:javaparser-core'
+    coreProjects.each {
+        documentation "org.apache.grails.data:$it"
+    }
+    rootProject.subprojects
+            .findAll { it.findProperty('gormApiDocs') }
+            .each { documentation project(":$it.name") }
+
+    // These are added to be able to resolve the mongo version from grails-bom
+    // in the resolveMongodbVersion task
+    implementation platform(project(':grails-bom'))
+    implementation 'org.mongodb:mongodb-driver-sync'
+}
+
+tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
+    dependsOn('resolveMongodbVersion')
+
+    inputs.dir project.layout.projectDirectory.dir('src/docs')
+    outputs.dir layout.buildDirectory.dir('asciidoc/manual')
+
+    it.jvm {
+        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
+    }
+    it.baseDirFollowsSourceFile()
+    it.sourceDir layout.projectDirectory.dir('src/docs')
+    it.outputDir = layout.buildDirectory.dir('docs')
+    it.attributes = [
+            'experimental'      : 'true',
+            'compat-mode'       : 'true',
+            'toc'               : 'left',
+            'icons'             : 'font',
+            'reproducible'      : '',
+            'version'           : projectVersion,
+            'pluginVersion'     : projectVersion,
+            'mongoDriverVersion': resolveMongodbVersion.resolved,
+            'sourcedir'         : "$project.rootDir"
+    ]
+}
+
+tasks.withType(Groovydoc).configureEach { Groovydoc groovydoc ->
+    groovydoc.dependsOn(rootProject.subprojects
+            .findAll { it.findProperty('gormApiDocs') }
+            .collect { ":${it.name}:groovydoc" })
+    groovydoc.docTitle = "GORM for MongoDB - $project.version"
+
+    def sourceFiles = coreProjects.collect {
+        layout.projectDirectory.files("$it/src/main/groovy")
+    }.sum()
+
+    rootProject.subprojects
+            .findAll { it.findProperty('gormApiDocs') }
+            .each { sourceFiles += it.files('src/main/groovy') }
+
+    groovydoc.source = sourceFiles
+    groovydoc.destinationDir = layout.buildDirectory.dir('combined-api/api').get().asFile
+    groovydoc.access = GroovydocAccess.PROTECTED
+    groovydoc.processScripts = false
+    groovydoc.includeMainForScripts = false
+    groovydoc.includeAuthor = true
+    groovydoc.classpath = configurations.documentation
+    groovydoc.groovyClasspath += configurations.documentation
+}
+
+tasks.register('docs', Sync).configure { Sync docTask ->
+    docTask.group = 'documentation'
+    docTask.dependsOn('asciidoctor', 'groovydoc')
+
+    def apiDir = layout.buildDirectory.dir('combined-api')
+    def resourceDir = layout.projectDirectory.dir('src/docs/resources')
+    def guideDir = layout.buildDirectory.dir('asciidoc')
+
+    docTask.from apiDir, resourceDir, guideDir
+    docTask.into layout.buildDirectory.dir('docs')
+
+    docTask.finalizedBy('assembleDocsDist')
+}
+
+tasks.register('assembleDocsDist', Zip).configure { Zip it ->
+    it.dependsOn('docs')
+    it.from(layout.buildDirectory.dir('docs'))
+    it.archiveFileName = "${project.name}-${project.version}.zip"
+    it.destinationDirectory = project.layout.buildDirectory.dir('distributions')
+}
+
+// the groovy plugin is applied to this project, but we do not build a jar file since
+// the dependencies are only used for resolving versions from the bom
+tasks.withType(Jar).configureEach {
+    it.enabled = false
+}

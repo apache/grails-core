@@ -1,0 +1,173 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[stepByStep]]
+== Step-by-Step Guide to Creating an Implementation
+
+To get started with a new GORM implementation, the following steps are required:
+
+
+=== Initial Directory Creation
+
+
+----
+git clone https://github.com/grails/grails-data-mapping.git
+cd grails-data-mapping
+mkdir grails-datastore-gorm-xyz
+----
+
+
+=== Setup Gradle Build
+
+
+Create build.gradle:
+
+----
+vi grails-datastore-gorm-xyz/build.gradle
+----
+
+With contents:
+
+[source,groovy]
+----
+dependencies {
+    implementation project(':grails-datastore-gorm'),
+            project(':grails-datastore-web'),
+            project(':grails-datamapping-support')
+            
+    testImplementation project(':grails-datamapping-tck-tests')
+    testRuntime "javax.servlet:javax.servlet-api:$servletApiVersion"
+
+}
+----
+
+Add new project to settings.gradle in root project:
+
+----
+vi settings.gradle
+----
+
+Changes shown below:
+
+[source,groovy]
+----
+// GORM Implementations
+'grails-datastore-gorm-neo4j',
+'grails-datastore-gorm-xyz',
+...
+----
+
+
+=== Create Project Source Directories
+
+
+----
+mkdir grails-datastore-gorm-xyz/src/main/groovy
+mkdir grails-datastore-gorm-xyz/src/test/groovy
+----
+
+
+=== Generate IDE Project Files and Import into IDE (Optional)
+
+
+----
+./gradlew grails-datastore-gorm-xyz:idea
+----
+
+Or
+
+----
+./gradlew grails-datastore-gorm-xyz:eclipse
+----
+
+
+=== Implement Required Interfaces
+
+
+In `src/main/groovy` create implementations:
+
+* `org.grails.datastore.xyz.XyzDatastore` extends and implements `org.grails.datastore.mapping.core.AbstractDatastore` 
+* `org.grails.datastore.xyz.XyzSession` extends and implements `org.grails.datastore.mapping.core.AbstractSession` 
+* `org.grails.datastore.xyz.engine.XyzEntityPersister` extends and implements `org.grails.datastore.mapping.engine.NativeEntryEntityPersister` 
+* `org.grails.datastore.xyz.query.XyzQuery` extends and implements `org.grails.datastore.mapping.query.Query`
+
+
+=== Create Test Suite
+
+
+In `src/test/groovy` create `org.grails.datastore.gorm.Setup` class to configure TCK:
+
+[source,groovy]
+----
+class Setup {
+
+    static xyz
+    static destroy() {
+        xyz.disconnect()
+    }
+    static Session setup(classes) {
+        def ctx = new GenericApplicationContext()
+        ctx.refresh()
+        xyz = new XyzDatastore(ctx)
+        for (cls in classes) {
+            xyz.mappingContext.addPersistentEntity(cls)
+        }
+
+
+        def enhancer = new GormEnhancer(xyz, new DatastoreTransactionManager(datastore: xyz))
+        enhancer.enhance()
+
+        xyz.mappingContext.addMappingContextListener({ e -> enhancer.enhance e } as MappingContext.Listener)
+        xyz.applicationContext.addApplicationListener new DomainEventListener(xyz)
+        xyz.applicationContext.addApplicationListener new AutoTimestampEventListener(xyz)
+
+        xyz.connect()
+    }
+}
+----
+
+Then in `src/test/groovy` create test suite class to allow running tests in IDE (without this you won't be able to run TCK tests from the IDE). Example test suite:
+
+[source,groovy]
+----
+package org.grails.datastore.gorm
+
+import org.junit.runners.Suite.SuiteClasses
+import org.junit.runners.Suite
+import org.junit.runner.RunWith
+import grails.gorm.tests.*
+
+/**
+ * @author graemerocher
+ */
+@RunWith(Suite)
+@SuiteClasses([
+  FindByMethodSpec,
+  ListOrderBySpec
+])
+class XyzTestSuite {
+}
+----
+
+
+=== Implement the TCK!
+
+
+Keep iterating until you have implemented all the tests in the TCK.
+

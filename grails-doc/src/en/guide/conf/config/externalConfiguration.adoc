@@ -1,0 +1,135 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+While Grails will check for configuration in `application.(properties|yml)` by default, it's useful to load configuration from other locations.
+
+There are many use cases for external, optional configuration, but two important ones are:
+
+1. Production Environments - sensitive information may need to be separated from the code.
+2. Development Environments - development environment specific configuration that will vary.
+
+As of Grails 7.0, external configuration is supported via the property `grails.config.locations`.
+Any configuration that is not found, will be skipped and not error.
+
+=== YML Example
+
+[source]
+----
+grails:
+    config:
+        locations:
+            - classpath:myconfig.groovy
+            - classpath:myconfig.yml
+            - classpath:myconfig.properties
+            - file:///etc/app/myconfig.groovy
+            - file:///etc/app/myconfig.yml
+            - file:///etc/app/myconfig.properties
+            - ~/.grails/myconfig.groovy
+            - ~/.grails/myconfig.yml
+            - ~/.grails/myconfig.properties
+            - file:${catalina.base}/myconfig.groovy
+            - file:${catalina.base}/myconfig.yml
+            - file:${catalina.base}/myconfig.properties
+----
+
+=== Groovy Example
+
+[source]
+----
+grails.config.locations = [
+        "classpath:myconfig.groovy",
+        "classpath:myconfig.yml",
+        "classpath:myconfig.properties",
+        "file:///etc/app/myconfig.groovy",
+        "file:///etc/app/myconfig.yml",
+        "file:///etc/app/myconfig.properties",
+        "~/.grails/myconfig.groovy",
+        "~/.grails/myconfig.yml",
+        "~/.grails/myconfig.properties",
+        'file:${catalina.base}/myconfig.groovy',
+        'file:${catalina.base}/myconfig.yml',
+        'file:${catalina.base}/myconfig.properties',
+
+----
+
+=== Prefix Explanations
+
+Each configuration location can be prefixed to indicate where to look for the configuration:
+* `classpath:` - indicates to search the classpath for the file.
+Wildcards are not supported.
+* `file:` - indicates to search for a file based on the path.  `~/` maps to the user home directory.
+
+If not specified, the prefix is assumed to be a file based location.
+
+=== Advanced Usage: Wildcard Support
+
+It is possible to use * as wildcards in the filename part of the configuration when using a file specific configuration:
+
+[source]
+----
+grails:
+    config:
+        locations:
+            - file:/etc/app/myconfig*.groovy
+            - ~/.grails/myconfig*.groovy
+----
+
+[source]
+----
+grails.config.locations = [
+        "file:/etc/app/myconfig*.groovy",
+        "~/.grails/myconfig*.groovy",
+]
+----
+
+NOTE: Wildcards are in the order they are found in the `locations` list, but the order of the expanded `locations` for each wildcard is not guaranteed, and it is dependent on the OS used.
+
+=== Advanced Usage: Adding configuration to the Classpath
+
+If you wish to make your Grails application pull external configuration from classpath when running locally, but you do not wish to get it packed into the assembled artifact (i.e. place the external configuration file in e.g. /external-config instead of /conf), then you can include the external configuration file to the classpath by adding the following line to build.gradle:
+
+[source]
+----
+tasks.named('bootRun').configure {
+    it.doFirst {
+        classpath += files("external-config")
+    }
+}
+
+tasks.withType(Test).configureEach {
+    doFirst {
+        classpath += files("external-config")
+    }
+}
+----
+
+Alternatively, you can add it to your `dependencies` block:
+
+[source]
+----
+    runtimeOnly files('external-config') // provided to ensure that external config is not included in the war file
+----
+
+=== Advanced Usage: Debugging
+
+In the event that you need to debug external configuration, you can enable logging for `grails.config.external` to `DEBUG` in your logback.xml.
+
+=== Further Configuration Customization
+
+As Grails is a SpringBoot configuration options are available as well, for documentation please consult: {springBootReference}/html/features.html#features.external-config.files

@@ -1,0 +1,201 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Persistent Property Options
+
+It is possible to control several aspects of how existing persistent properties on GORM entities are represented in the generated schema.
+
+There are several ways to modify the fields available. Consider a property `foo`:
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.entity.dsl.GraphQLMapping
+import org.grails.gorm.graphql.entity.dsl.GraphQLPropertyMapping
+
+static graphql = GraphQLMapping.build {
+
+    foo description: "Foo"
+    //or
+    foo {
+        description "Foo"
+    }
+    //or (code completion)
+    foo GraphQLPropertyMapping.build {
+        description "Foo"
+    }
+    //or
+    property('foo', description: "Foo")
+    //or (code completion)
+    property('foo') {
+        description "Foo"
+    }
+    //or (code completion)
+    property('foo', GraphQLPropertyMapping.build {
+        description "Foo"
+    })
+}
+
+----
+
+=== Exclusion
+
+To exclude a property from being included from the schema entirely:
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.entity.dsl.GraphQLMapping
+
+class Author {
+
+    String name
+
+    static graphql = GraphQLMapping.build {
+        exclude('name')
+    }
+}
+----
+
+To make a property read only:
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('name', input: false)
+}
+----
+
+To make a property write only:
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('name', output: false)
+}
+----
+
+=== Nullable
+
+By default, a property will be nullable based on the constraints provided in the domain class. You can override that specifically for GraphQL, however.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('name', nullable: false) //or true
+}
+----
+
+=== Fetching
+
+To customize the way a property is retrieved, you can supply a data fetcher with a closure. The domain instance is passed as an argument to the closure.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('name') {
+        dataFetcher { Author author ->
+            author.name ?: "Default Name"
+        }
+    }
+}
+----
+
+WARNING: The data type returned must be the same as the property type.
+
+=== Description
+
+A description of a property can be specified in the mapping to be registered in the schema.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('name', description: 'The name of the author')
+}
+----
+
+=== Deprecation
+
+A property can be marked as deprecated in the schema to inform users the property may be removed in the future.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('name', deprecationReason: 'To be removed August 1st, 2018')
+    //or
+    property('name', deprecated: true) //"Deprecated" will be the reason
+}
+----
+
+=== Name
+
+It is possible to change the name of existing properties as they appear in the schema.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    property('authority', name: 'name')
+}
+----
+
+CAUTION: When changing the name of a property, you must also account for the change when it comes to data binding in create or update operations. The following is an example data binder implementation for changing the property name from `authority` to `name`.
+
+[source,groovy]
+----
+include::{sourcedir}/examples/grails-test-app/src/main/groovy/grails/test/app/RoleDataBinder.groovy[tags=wholeFile]
+----
+
+The data binding implementation is removing the `name` property and assigning it back to `authority` so it can be correctly bound to the domain object.
+
+=== Order 
+
+The order in which the fields appear in the schema can be customized. 
+By default any identity properties and the version property appear first in order.
+
+To customize the order of an existing property:
+
+[source,groovy]
+----
+   static graphql = GraphQLMapping.build {
+       property('name', order: 1)
+   }
+----
+
+If the order is supplied via the constraints block, then that value will be used.
+
+[source,groovy]
+----
+   static constraints = {
+        name order: 1
+   }
+----
+
+NOTE: If the order is specified in both the constraints and the property mapping, the property mapping wins. If the order of two or more properties is the same, they are then sorted by name.
+
+If no order is specified, the default order provided by GORM is used. To enable name based sorting by default, configure the default constraints to set the order property to 0 for all domains.
+
+Example:
+
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.gorm.default.constraints = {
+   '*'(order: 0)
+}
+----
+
+TIP: To customize properties to come before the identifier or version, set the value as negative. The default order for id properties is -20 and the default order for version properties is -10.

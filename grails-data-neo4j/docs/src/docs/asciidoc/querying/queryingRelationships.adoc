@@ -1,0 +1,51 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+In addition to being able to query for paths since 6.1, GORM for Neo4j features support for Neo4j relationship queries. To use path queries you must implement the `grails.neo4j.Node` trait in your domain class. For example given the following class:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/domain/Person.groovy[tags=class,indent=0]
+----
+
+You can find a relationship between two entities with the following query:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/RelationshipSpec.groovy[tags=findRelationship,indent=0]
+----
+
+The arguments can be retrieved instances or unloaded proxies to nodes.
+
+TIP: Querying for relationships in this way is not as flexible as using relationship entities. Consider <<relationships,mapping an entity to a relationship>>.
+
+
+You can also find all the relationships between two entities:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/RelationshipSpec.groovy[tags=findRelationships,indent=0]
+----
+
+Or find all the relationships between two entity types:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/path/RelationshipSpec.groovy[tags=findRelationshipsForTypes,indent=0]
+----

@@ -1,0 +1,59 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Once you have implemented the lower-level APIs you can trivially provide a GORM API to a set of Grails domain classes. For example consider the following simple domain class:
+
+[source,groovy]
+----
+import grails.persistence.*
+
+@Entity
+class Book {
+    String title
+}
+----
+
+
+The following setup code can be written to enable GORM for MongoDB:
+
+[source,groovy]
+----
+// create context
+def context = new MongoMappingContext(databaseName)
+context.addPersistentEntity(Book)
+
+// create datastore
+def mongoDatastore = new MongoDatastore(context)
+mongoDatastore.afterPropertiesSet()
+
+// enhance
+def enhancer = new MongoGormEnhancer(mongoDatastore, new DatastoreTransactionManager(datastore: mongoDatastore))
+enhancer.enhance()
+
+// use GORM!
+def books = Book.list()
+----
+
+The key element for enabling the use of all GORM methods (`list()`, dynamic finders, etc.) is the utilization of the `MongoGormEnhancer`. This class is a subclass of `org.grails.datastore.gorm.GormEnhancer` and offers extensions to GORM specifically tailored for MongoDB. However, a subclass is not mandatory, and if you don't need any datastore-specific extensions, you can equally use the standard `GormEnhancer`:
+
+[source,groovy]
+----
+def enhancer = new GormEnhancer(mongoDatastore, new DatastoreTransactionManager(datastore: mongoDatastore))
+enhancer.enhance()
+----

@@ -1,0 +1,62 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The default strategy for defining labels is to use the class name, however the strategy to define labels for a given node is completely configurable. For example you can use static mapping to define you labels:
+
+[source,groovy]
+----
+class Person {
+    static mapping = {
+        labels "Person", "People"
+    }
+}
+----
+
+You can also define labels dynamically. For example:
+
+[source,groovy]
+----
+class Person {
+    static mapping = {
+        labels { GraphPersistentEntity pe -> "`${pe.javaClass.name}`" }
+    }
+}
+----
+
+WARNING: Dynamic labels have a negative impact on write performance as GORM is unable to batch operations with dynamic labels so should be used sparingly.
+
+Or mix static and dynamic labels:
+
+[source,groovy]
+----
+static mapping = {
+    labels "People", { GraphPersistentEntity pe -> "`${pe.javaClass.name}`" }
+}
+----
+
+At the cost of read/write performance you can define dynamic labels based on an instance:
+
+[source,groovy]
+----
+static mapping = {
+    labels { GraphPersistentEntity pe, instance ->  // 2 arguments: instance dependent label
+        "`${instance.profession}`"
+    }
+}
+----

@@ -1,0 +1,72 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+==== Dependency Upgrades
+
+GORM 7.1 supports Apache Groovy 3, Java 14, Neo4J Driver 4.3 and Spring 5.3.x.
+
+Each of these underlying components may have changes that require altering your application. These changes are beyond the scope of this documentation.
+
+==== Default Autowire By Type inside GORM Data Services
+
+A Grails Service (or a bean) inside GORM DataService will default to autowire by-type, For example:
+
+_./grails-app/services/example/BookService.groovy_
+```
+package example
+
+import grails.gorm.services.Service
+
+@Service(Book)
+abstract class BookService {
+
+    TestService testRepo
+
+    abstract Book save(String title, String author)
+
+    void doSomething() {
+        assert testRepo != null
+    }
+}
+```
+
+Please note that with autowire by-type as the default, when multiple beans for same type are found the application with throw Exception. Use the Spring `@Qualifier annotation for https://docs.spring.io/spring-framework/docs/5.3.10/reference/html/core.html#beans-autowired-annotation-qualifiers[Fine-tuning Annotation Based Autowiring with Qualifiers].
+
+==== Configuration Changes
+
+The version 4 of the Neo4j driver contains changes in the configuration builder which require configuration changes to conform to them. For example `grails.neo4j.options.maxSessions` is now `grails.neo4j.options.maxConnectionPoolSize`. Some configuration defaults have also changed, so be sure to check the documentation of the driver for more information.
+
+==== Bolt Java Driver and API Changes
+
+The API has changed to accommodate the new Neo4j Bolt driver.
+
+Therefore you need to replace the usages of the following interfaces with their bolt equivalents:
+
+[format="csv", options="header"]
+|===
+
+Class, Replacement
+org.neo4j.driver.v1.Driver, org.neo4j.driver.Driver
+org.neo4j.driver.v1.Transaction, org.neo4j.driver.Transaction
+org.neo4j.driver.v1.types.Node, org.neo4j.driver.types.Node
+org.neo4j.driver.v1.types.Relationship, org.neo4j.driver.types.Relationship
+org.neo4j.driver.v1.StatementResult, org.neo4j.driver.Result
+|===
+
+There may be other classes that you need to replace references too. The `org.neo4j.driver.v1` package has shed its `v1` package, however there are also other changes.[.line-through]##

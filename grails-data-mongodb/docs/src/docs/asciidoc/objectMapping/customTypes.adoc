@@ -1,0 +1,208 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Custom User Types
+GORM for MongoDB will persist all common known Java types like String, Integer, URL etc., however if you want to persist one of your own classes that is not a domain class you can implement a custom user type.
+
+==== Custom Codecs
+
+GORM for MongoDB is built ontop of MongoDB's BSON encoding framework. This means it is possible to implement custom https://mongodb.github.io/mongo-java-driver/3.2/bson/codecs[Codecs] for encoding and decoding values to and from BSON.
+
+For example consider the following simple Groovy class:
+
+[source,groovy]
+----
+class Birthday {
+    Date date
+}
+----
+
+By default the encoding engine does not know how to represent this type as a BSON value. To make the encoding engine understand this type you have to implement a custom codec:
+
+
+[source,groovy]
+----
+import org.bson.*
+import org.bson.codecs.*
+
+class BirthdayCodec implements Codec<Birthday> {
+    Birthday decode(BsonReader reader, DecoderContext decoderContext) {
+        return new Birthday(date: new Date(reader.readDateTime())) <1>
+    }
+    void encode(BsonWriter writer, Birthday value, EncoderContext encoderContext) {
+        writer.writeDateTime(value.date.time) <2>
+    }
+    Class<Birthday> getEncoderClass() { Birthday } <3>
+}
+----
+
+<1> Decodes the `Birthday` type from the `BsonReader`
+<2> Encodes the `Birthday` type to the `BsonWriter`
+<3> Returns the type that is to be encoded. In this case `Birthday`.
+
+With that done you then need to register the custom `Codec`. There are two ways to achieve this.
+
+You can register a list of codecs in the `grails.mongodb.codecs` setting in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        codecs:
+            - my.company.BirthdayCodec
+----
+
+Or you can create a `META-INF/services/org.bson.codecs.Codec` file containing the fully qualified class name of the `Codec`. If there are multiple codec classes you would like to register, put each one on a separate line.
+
+==== Custom Types with GORM
+
+Another option is to define a GORM custom type. For example consider the following class:
+
+[source,groovy]
+----
+class Birthday implements Comparable{
+    Date date
+
+    Birthday(Date date) {
+        this.date = date
+    }
+
+    @Override
+    int compareTo(Object t) {
+        date.compareTo(t.date)
+    }
+}
+----
+
+NOTE: Custom types should go in src/groovy not grails-app/domain
+
+If you attempt to reference this class from a domain class it will not automatically be persisted for you. However you can create a custom type implementation and register it with Spring. For example:
+
+[source,groovy]
+----
+import groovy.transform.InheritConstructors
+import org.bson.Document
+import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.mongo.query.MongoQuery
+import org.grails.datastore.mapping.query.Query
+
+@InheritConstructors
+class BirthdayType extends AbstractMappingAwareCustomTypeMarshaller<Birthday, Document, Document> {
+   @Override
+   protected Object writeInternal(PersistentProperty property, String key, Birthday value, Document nativeTarget) {
+       final converted = value.date.time
+       nativeTarget.put(key, converted)
+       return converted
+   }
+
+   @Override
+   protected void queryInternal(PersistentProperty property, String key, PropertyCriterion criterion, Document nativeQuery) {
+       if (criterion instanceof Between) {
+           def dbo = new BasicDBObject()
+           dbo.put(MongoQuery.MONGO_GTE_OPERATOR, criterion.getFrom().date.time)
+           dbo.put(MongoQuery.MONGO_LTE_OPERATOR, criterion.getTo().date.time)
+           nativeQuery.put(key, dbo)
+       }
+       else {
+           nativeQuery.put(key, criterion.value.date.time)
+       }
+   }
+
+   @Override
+   protected Birthday readInternal(PersistentProperty property, String key, Document nativeSource) {
+       final num = nativeSource.get(key)
+       if (num instanceof Long) {
+           return new Birthday(new Date(num))
+       }
+       return null
+   }
+})
+----
+
+The above `BirthdayType` class is a custom user type implementation for MongoDB for the `Birthday` class. It provides implementations for three methods: `readInternal`, `writeInternal` and the optional `queryInternal`. If you do not implement `queryInternal` your custom type can be persisted but not queried.
+
+The `writeInternal` method gets passed the property, the key to store it under, the value and the native DBObject where the custom type is to be stored:
+
+[source,groovy]
+----
+@Override
+protected Object writeInternal(PersistentProperty property, String key, Birthday value, DBObject nativeTarget) {
+    final converted = value.date.time
+    nativeTarget.put(key, converted)
+    return converted
+}
+----
+
+You can then read the values of the custom type and register them with the `DBObject`. The `readInternal` method gets passed the `PersistentProperty`, the key the user type info is stored under (although you may want to use multiple keys) and the `DBObject`:
+
+[source,groovy]
+----
+@Override
+protected Birthday readInternal(PersistentProperty property, String key, Document nativeSource) {
+    final num = nativeSource.get(key)
+    if(num instanceof Long) {
+        return new Birthday(new Date(num))
+    }
+    return null
+}
+----
+
+You can then construct the custom type by reading values from the `DBObject`. Finally the `queryInternal` method allows you to handle how a custom type is queried:
+
+[source,groovy]
+----
+@Override
+protected void queryInternal(PersistentProperty property, String key, Query.PropertyCriterion criterion, Document nativeQuery) {
+    if(criterion instanceof Between) {
+        def dbo = new BasicDBObject()
+        dbo.put(MongoQuery.MONGO_GTE_OPERATOR, criterion.getFrom().date.time);
+        dbo.put(MongoQuery.MONGO_LTE_OPERATOR, criterion.getTo().date.time);
+        nativeQuery.put(key, dbo)
+    }
+    else if(criterion instanceof Equals){
+        nativeQuery.put(key, criterion.value.date.time)
+    }
+    else {
+	    throw new RuntimeException("unsupported query type for property $property")
+    }
+}
+----
+
+The method gets passed a `criterion` which is the type of query and depending on the type of query you may handle the query differently. For example the above implementation supports `between` and `equals` style queries. So the following 2 queries will work:
+
+[source,groovy]
+----
+Person.findByBirthday(new Birthday(new Date()-7)) // find someone who was born 7 days ago
+Person.findByBirthdayBetween(new Birthday(new Date()-7), new Birthday(new Date())) // find someone who was born in the last 7 days
+----
+
+However "like" or other query types will not work.
+
+To register a custom type in a grails application simply register it as Spring bean. For example, to register the above `BirthdayType` add the following to grails-app/conf/spring/resources.groovy:
+
+[source,groovy]
+----
+import com.example.*
+
+// Place your Spring DSL code here
+beans = {
+  birthdayType(BirthdayType, Birthday)
+}
+----

@@ -1,17 +1,20 @@
 /*
- * Copyright 2015-2025 original authors
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.gradle.plugin.core
 
@@ -354,32 +357,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileStatic
     protected void configureGroovy(Project project) {
-        final String groovyVersion = project.properties['groovyVersion']
+        final String groovyVersion = project.properties['groovy.version']
         if (groovyVersion) {
-            if (groovyVersion.startsWith("4.")) {
-                project.configurations.configureEach { Configuration configuration ->
-                    configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                        String dependencyName = details.requested.name
-                        String group = details.requested.group
-                        if (group == 'org.codehaus.groovy') {
-                            if (dependencyName == 'groovy-all') {
-                                details.useTarget "org.apache.groovy:groovy:$groovyVersion"
-                            } else {
-                                details.useTarget "org.apache.groovy:$dependencyName:$groovyVersion"
-                            }
-                            details.because("Groovy version substituted for Groovy $groovyVersion")
-                        } else if (group == 'org.apache.groovy' && dependencyName.startsWith('groovy')) {
-                            details.useVersion(groovyVersion)
-                        }
-                    }
-                }
-            } else if (groovyVersion.startsWith("3.")) {
-                project.configurations.configureEach { Configuration configuration ->
-                    configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                        if ((details.requested.group == 'org.codehaus.groovy' || details.requested.group == 'org.apache.groovy') && details.requested.name != 'groovy-bom') {
-                            details.useTarget(group: 'org.codehaus.groovy', name: details.requested.name, version: "$GroovySystem.version")
-                            details.because "Use Groovy version $GroovySystem.version provided by Gradle"
-                        }
+            project.logger.lifecycle("Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version ${groovyVersion}.")
+            project.configurations.configureEach { Configuration configuration ->
+                configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                    String group = details.requested.group
+                    if (group == 'org.apache.groovy') {
+                        details.useVersion(groovyVersion)
                     }
                 }
             }

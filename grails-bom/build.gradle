@@ -1,6 +1,26 @@
-import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 
-// Copyright 2024 the original author or authors.
+import org.apache.grails.gradle.tasks.bom.ExtractDependenciesTask
+import org.apache.grails.gradle.tasks.bom.ExtractedDependencyConstraint
+import org.apache.grails.gradle.tasks.bom.PropertyNameCalculator
+
 buildscript {
     apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
 }
@@ -29,7 +49,7 @@ dependencies {
         exclude group: 'com.fasterxml.jackson'
     }
 
-    for (def entry  : bomPlatformDependencies.entrySet()) {
+    for (def entry : bomPlatformDependencies.entrySet()) {
         api platform(entry.value)
     }
 
@@ -42,7 +62,7 @@ dependencies {
         }
 
         for (Project subproject : rootProject.subprojects) {
-            if (subproject.path == project.path || subproject.name in testProjects || subproject.name == 'grails-doc') {
+            if (subproject.path == project.path || subproject.name in testProjects || subproject.name in docProjects) {
                 continue // ignore self & test projects
             }
 
@@ -57,175 +77,25 @@ dependencies {
     }
 }
 
-
 configurations.register('bomDependencies').configure {
     it.canBeResolved = true
     it.transitive = true
     it.extendsFrom(configurations.named('api').get())
 }
 
-String resolveMavenProperty(String errorDescription, String dynamicVersion, Map properties, int maxIterations = 10) {
-    def dynamicPattern = ~/\$\{([^}]+)\}/
-    String expandedVersion = dynamicVersion
+tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
+    it.configuration = configurations.named('bomDependencies')
+    it.configurationName = 'bomDependencies'
+    it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')
+    it.platformDefinitions = combinedPlatforms
+    it.definitions = combinedDependencies
+    it.versions = combinedVersions
 
-    int iterations = 0
-    while ((expandedVersion =~ dynamicPattern).find() && iterations < maxIterations) {
-        expandedVersion = expandedVersion.replaceAll(dynamicPattern) { String fullMatch, String propName ->
-            String replacement = properties[propName] as String
-            return replacement ? replacement : fullMatch
-        }
-        iterations++
-    }
-
-    if ((expandedVersion =~ dynamicPattern).find()) {
-        logger.warn("Reached max iterations for ${errorDescription} while resolving properties in: ${dynamicVersion}")
-    }
-
-    expandedVersion
+    it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
 }
 
-//TODO: This really should be a gradle task that we export so others can use.
-tasks.register('extractConstraints') {
-    it.inputs.files(configurations.named('bomDependencies'))
-    it.outputs.file(project.layout.buildDirectory.file('grails-bom-constraints.adoc'))
-
-    dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
-    doLast {
-        def conf = configurations.detachedConfiguration()
-        conf.transitive = true
-
-        Map<String, Tuple4<String, String, String, String>> bomConstraints = [:]
-        Configuration apiConfiguration = configurations.named('bomDependencies').get()
-
-        // Explicit constraints
-        apiConfiguration.getAllDependencyConstraints().all { constraint ->
-            bomConstraints.put("${module.group}:${module.name}" as String,
-                    new Tuple4<String, String, String, String>(
-                            constraint.module.group as String,
-                            constraint.module.name as String,
-                            constraint.version as String,
-                            'grails-bom'
-                    )
-            )
-        }
-
-        // Build an exclusion list so parsing the pom we can exclude any dependencies as they are matched
-        Map<String, List<Tuple2<String, String>>> allExclusions = [:].withDefault { [] }
-        apiConfiguration.allDependencies.each { dep ->
-            if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
-                String coordinates = "${dep.group}:${dep.name}" as String
-
-                dep.excludeRules.each { exclusion ->
-                    Tuple2<String, String> exclude = new Tuple2<>(exclusion.group, exclusion.module)
-                    allExclusions.get(coordinates).add(exclude)
-                }
-            }
-        }
-
-        // Find inherited libraries via platform() usage
-        apiConfiguration.incoming.resolutionResult.allDependencies.each { ResolvedDependencyResult dep ->
-            // Any non-constraint via api dependency should *always* be a platform dependency, so expand each of those
-            String bomGroup = dep.requested.group
-            String bomName = dep.requested.module
-            String bomVersion = dep.requested.version
-
-            String bomCoordinates = "${bomGroup}:${bomName}" as String
-            List<Tuple2<String, String>> excluded = allExclusions.get(bomCoordinates)
-
-            // fetch the BOM as a pom file so it can be expanded
-            populatePlatformDependencies(bomGroup, bomName, bomVersion, bomConstraints, excluded)
-        }
-
-        List lines = []
-        bomConstraints.values().sort { a, b -> a.v1 <=> b.v1 ?: a.v2 <=> b.v2 }.each {
-            lines << "| ${it.v1} | ${it.v2} | ${it.v3} | ${it.v4} "
-        }
-
-        project.layout.buildDirectory.file('grails-bom-constraints.adoc').get().asFile.withWriter { writer ->
-            writer.writeLine '[cols="1,1,1,1", options="header"]'
-            writer.writeLine '|==='
-            writer.writeLine '| Group | Artifact | Version | Source'
-            lines.each { line ->
-                writer.writeLine(line)
-            }
-            writer.writeLine '|==='
-        }
-    }
-}
-
-private Properties populatePlatformDependencies(String bomGroup, String bomName, String bomVersion,
-                                          Map<String, Tuple4<String, String, String, String>> bomConstraints,
-                                          List<Tuple2<String, String>> excluded, boolean error = true, int level = 0) {
-    def bomDependency = dependencies.create("${bomGroup}:${bomName}:${bomVersion}@pom")
-    def bomConf = configurations.detachedConfiguration(bomDependency)
-    File bomPomFile = bomConf.singleFile
-
-    def reader = new MavenXpp3Reader()
-    def model = reader.read(new FileReader(bomPomFile))
-
-    Properties versionProperties = new Properties()
-    if(model.parent) {
-        // Need to populate the parent bom if it's present first
-        populatePlatformDependencies(model.parent.groupId, model.parent.artifactId, model.parent.version, bomConstraints, excluded, false, level + 1)?.entrySet()?.each {
-            versionProperties.put(it.key, it.value)
-        }
-    }
-    model.properties.entrySet().each {
-        versionProperties.put(it.key, it.value)
-    }
-    versionProperties.put('project.groupId', bomGroup)
-    versionProperties.put('project.version', bomVersion)
-
-    if (model.dependencyManagement && model.dependencyManagement.dependencies) {
-        model.dependencyManagement.dependencies.each { depItem ->
-            String baseCoordinates = "${depItem.groupId}:${depItem.artifactId}" as String
-            String artifactId = resolveMavenProperty(baseCoordinates, depItem.artifactId, versionProperties)
-            String groupId = resolveMavenProperty(baseCoordinates, depItem.groupId, versionProperties)
-
-            String resolvedCoordinates = "${groupId}:${artifactId}" as String
-            if (!bomConstraints.containsKey(resolvedCoordinates)) {
-                boolean isExcluded = excluded.any {
-                    if (it.v1 && it.v2) {
-                        return resolvedCoordinates == "${it.v1}:${it.v2}" as String
-                    }
-
-                    if (it.v1 && !it.v2) {
-                        return depItem.groupId == it.v1
-                    }
-
-                    if (!it.v1 && it.v2) {
-                        return depItem.artifactId == it.v2
-                    }
-
-                    false
-                }
-                if (!isExcluded) {
-
-                    String version = resolveMavenProperty(resolvedCoordinates, depItem.version, versionProperties)
-
-                    if(depItem.scope == 'import') {
-                        bomConstraints.put(resolvedCoordinates, new Tuple4<String, String, String, String>(groupId, artifactId, version, bomName))
-                        populatePlatformDependencies(groupId, artifactId, version, bomConstraints, excluded, error, level + 1)
-                    }
-                    else {
-                        bomConstraints.put(resolvedCoordinates, new Tuple4<>(groupId, artifactId, version, bomName))
-                    }
-                }
-            }
-        }
-    } else {
-        if(error) {
-            // only the boms we directly include need to error since we expect a dependency management;
-            // parent boms are sometimes use to share properties so we need to not error on these cases
-            throw new GradleException("BOM ${bomGroup}:${bomName}:${bomVersion} has no dependencyManagement section.")
-        }
-    }
-
-    return versionProperties
-}
-
-tasks.register('validateNoSnapshotDependencies') {
-    doLast {
+tasks.register('validateNoSnapshotDependencies').configure { Task it ->
+    it.doLast {
         configurations.each { config ->
             config.allDependencies.each { dep ->
                 if (dep.version && dep.version.contains('-SNAPSHOT')) {
@@ -243,50 +113,6 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
     tasks.named('generatePomFileForMavenPublication').configure {
         dependsOn(tasks.named('validateNoSnapshotDependencies'))
     }
-}
-
-Closure determinePossibleKey = { Map.Entry<String, String> found, Map versions ->
-    //TODO: this isn't the correct way to do this, but with project mergers it may not matter
-    String possibleKey = found.key.toString()
-            .replace('grails-datamapping', 'grails-data')
-            .replace('grails-datastore', 'grails-data')
-            .replace('grails-testing-support-datamapping', 'grails-data')
-    while (possibleKey != null) {
-        String propertyName = "${possibleKey}.version" as String
-        if (versions.containsKey(propertyName)) {
-            return propertyName
-        }
-
-        int lastIndex = possibleKey.lastIndexOf('-')
-        possibleKey = lastIndex > 0 ? possibleKey.substring(0, lastIndex) : null
-    }
-}
-
-Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
-    Map<String, String> toSearch = isBom ? bomPlatformDependencies : bomDependencies
-    Map<String, String> toSearchGradle = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
-
-    Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
-    if (!found) {
-        found = toSearchGradle.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
-        if (!found) {
-            return null
-        }
-    }
-
-    Map<String, String> versions = bomDependencyVersions
-
-    //TODO: this isn't the correct way to do this, but with project mergers it may not matter
-    String propertyName = determinePossibleKey(found, versions)
-    if (!propertyName) {
-        propertyName = determinePossibleKey(found, gradleBomDependencyVersions)
-    }
-
-    if (propertyName) {
-        return propertyName
-    }
-
-    throw new GradleException("Could not determine artifact property key for $groupId:$artifactId:$version")
 }
 
 ext {
@@ -310,15 +136,16 @@ ext {
                     inlineVersion = null
                 }
 
+                PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
                 if (inlineVersion) {
-                    String propertyName = determinePropertyName(groupId, artifactId, inlineVersion, isBom)
-                    if (propertyName) {
-                        // Replace the version in the pom with a property reference
-                        String propertyReference = "\${${propertyName}}"
-                        dep.version[0].value = propertyReference
+                    ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
+                    if (extractedConstraint?.versionPropertyReference) {
+                        // use the property reference instead of the hard coded version so that it can be
+                        // overriden by the spring boot dependency management plugin
+                        dep.version[0].value = extractedConstraint.versionPropertyReference
 
                         // Add an entry in the <properties> node with the actual version number
-                        pomProperties.put(propertyName, inlineVersion)
+                        pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
                     }
                 } else if (!inlineVersion) {
                     throw new GradleException("Dependency $groupId:$artifactId does not have a version.")

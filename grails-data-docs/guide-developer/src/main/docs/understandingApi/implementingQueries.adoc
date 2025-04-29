@@ -1,0 +1,123 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+==== Introduction
+
+
+The `org.grails.datastore.mapping.query.Query` abstract class defines the query model, and it is the job of the GORM implementor to translate this query model into an underlying database query. This is different depending on the implementation and may involve:
+
+* Generating a String-based query such as SQL or JPA-QL 
+* Creating a query object such as MongoDB's use of a `Document` to define queries
+* Generating for use with manually created Secondary indices as is the case with Redis
+
+The `Query` object defines the following:
+
+* One or many `Criterion` that define the criteria to query by. 
+* Zero or more `Projection` instances that define what the data you want back will look like.
+* Pagination parameters such as `max` and `offset`
+* Sorting parameters
+
+There are many types of `Criterion` for each specific type of query, examples include `Equals`, `Between`, `Like` etc. Depending on the capabilities of the underlying datastore you may implement only a few of these. 
+
+There are also many types of `Projection` such as `SumProjection`, `MaxProjection` and `CountProjection`. Again you may implement only a few of these.
+
+NOTE: If, for instance, the underlying datastore does not support the calculation of a `sum` or `max` for a specific property, you can utilize the `ManualProjections` class to carry out these operations in memory on the client.
+
+Writing a `Query` implementation is probably the most complex part of implementing a GORM provider, but starts by subclassing the `Query` class and implementing the `executeQuery` method:
+
+[,java]
+----
+public class MongoQuery extends Query implements QueryArgumentsAware {
+     ...
+        
+}
+----
+
+
+==== Using the Query Model
+
+
+To implement querying you need to understand the Query model. As discussed, a `Query` contains a list of `Criterion`. However, the root `Criterion` could be a conjunction (an AND query) or a disjunction (an OR query). The `Query` may also contain a combination of regular criterion (=, !=, LIKE etc.) and junctions (AND, OR or NOT). Implementing a `Query` therefore requires writing a recursive method. The implementation for `ConcurrentHashMap` looks like:
+
+[source,groovy]
+----
+Collection executeSubQueryInternal(criteria, criteriaList) {
+    SimpleMapResultList resultList = new SimpleMapResultList(this)
+    for (Query.Criterion criterion in criteriaList) {
+        if (criterion instanceof Query.Junction) {
+            resultList.results << executeSubQueryInternal(criterion, criterion.criteria)
+        }
+        else {
+            PersistentProperty property = getValidProperty(criterion)
+            def handler = handlers[criterion.getClass()]
+
+            def results = handler?.call(criterion, property) ?: []
+            resultList.results << results
+        }
+    }
+}
+----
+
+Note that if a `Junction` is encountered (representing AND, OR, or NOT), the method recursively handles the junctions. Otherwise, it obtains and executes a handler for the `Criterion` class. The `handlers` map is a map of `Criterion` class to query handlers. The implementation for `Equals` appears as follows:
+
+[source,groovy]
+----
+def handlers = [
+    ...
+    (Query.Equals): { Query.Equals equals, PersistentProperty property ->
+        def indexer = entityPersister.getPropertyIndexer(property)
+        final value = subqueryIfNecessary(equals)
+        return indexer.query(value)
+    }
+    ...
+]
+----
+
+This approach simply employs the property indexer to query for all identifiers. However, it's worth noting that this is a scenario involving a datastore, such as `ConcurrentHashMap`, that lacks support for secondary indices. Instead of manually querying secondary indices in this manner, an alternative might be to construct a String-based or native query. For instance, in MongoDB, this process appears as follows:
+
+[,java]
+----
+queryHandlers.put(Equals.class, new QueryHandler<Equals>() {
+    public void handle(PersistentEntity entity, Equals criterion, Document query) {
+        String propertyName = getPropertyName(entity, criterion);
+        Object value = criterion.getValue();
+        PersistentProperty property = entity.getPropertyByName(criterion.getProperty());
+        MongoEntityPersister.setDBObjectValue(query, propertyName, value, entity.getMappingContext());
+    }
+});
+----
+
+Observe that in this case, the query takes the form of a `DBObject`. In the context of Gemfire, the implementation differs as follows:
+
+[,java]
+----
+queryHandlers.put(Equals.class, new QueryHandler() {
+    public int handle(PersistentEntity entity, Criterion criterion, StringBuilder q, List params, int index) {
+        Equals eq = (Equals) criterion;
+        final String name = eq.getProperty();
+        validateProperty(entity, name, Equals.class);
+
+        q.append(calculateName(entity, name));
+        return appendOrEmbedValue(q, params, index, eq.getValue(), EQUALS);
+    }
+});
+----
+
+In this case a `StringBuilder` is used to construct a OQL query from the `Query` model.

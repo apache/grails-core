@@ -1,19 +1,21 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
-
 package org.grails.plugins.web.rest.render.hal
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -681,8 +683,8 @@ class HalJsonRendererSpec extends Specification {
         }''')
     }
 
-    @Issue('GRAILS-10372')
-    @Ignore
+    @Issue('https://github.com/apache/grails-core/issues/5671')
+    @Ignore // fails in github vs locally due to time zone issues
     void "Test that the HAL renderer allows for different date converters"() {
         given:"A HAL renderer"
         HalJsonRenderer renderer = getEventRenderer()
@@ -719,7 +721,7 @@ class HalJsonRendererSpec extends Specification {
               "type": "application/hal+json"
             }
           },
-          "date": "2013-11-08T13:12:30-08:00",
+          "date": "2013-11-08T18:12:30+0000",
           "name": "Lollapalooza",
           "state": "OPEN"
         }''')

@@ -1,0 +1,43 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+===== Purpose
+
+Executes a MongoDB https://docs.mongodb.org/manual/reference/operator/query/nearSphere/[$nearSphere] query
+
+===== Examples
+
+[source,groovy]
+----
+import grails.mongodb.geo.*
+...
+Restaurant.findByLocationNearSphere( Point.valueOf( 40, 40 ) )
+// native query
+Restaurant.findAllByLocationNearSphere( [$geometry: [type:'Point', coordinates: [1,7]], $maxDistance:30000] )
+// criteria query
+Restaurant.withCriteria {
+    nearSphere 'location', Point.valueOf(1,7), 300000
+}
+----
+
+===== Description
+
+Specifies a point for which a geospatial query returns the closest documents first. The query sorts the documents from nearest to farthest. MongoDB calculates distances for $nearSphere using spherical geometry.
+
+See the documentation for the https://docs.mongodb.org/manual/reference/operator/query/nearSphere/[$nearSphere] query operator.

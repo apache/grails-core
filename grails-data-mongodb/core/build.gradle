@@ -1,0 +1,158 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for MongoDB'
+    pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
+    pomDevelopers =  [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith'
+    ]
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-data-mongodb-bson'), {
+        // api: BsonQuery, EmbeddedQueryEncoder
+        // impl: CodecCustomTypeMarshaller
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-data-mongodb-bson
+            exclude group: 'org.mongodb', module: 'bson'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
+        }
+    }
+    api project(':grails-datastore-core'), {
+        // api: AbstractSession, Criteria, DocumentMappingContext, EntityPersister, Junction, MappingContext,
+        //      PendingOperation, PersistentEntity, PersistentProperty, Query, QueryArgumentsAware, Session
+        // impl: AssociationQuery, CustomTypeMarshaller, EmbeddedPersistentEntity, EntityAccess, ManualProjections,
+        //       PropertyProjection, SessionImplementor
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PreDestroy
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+    api project(':grails-datamapping-core'), {
+        // api: CriteriaBuilder, AbstractResultList
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            //exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api' // PreDestroy
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            //exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation' // ConstraintRegistry
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datamapping-support'), {
+        // api: AbstractDatastorePersistenceContextInterceptor
+        // impl: DatastorePersistenceContextInterceptor
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datamapping-support
+            exclude group: 'org.apache.grails', module: 'grails-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+        }
+    }
+    api 'org.mongodb:bson', {
+        // api: Document
+        // impl: BsonDocument, BsonDocumentReader, BsonDocumentWriter, CodeRegistry
+    }
+    api 'org.mongodb:mongodb-driver-core', {
+        // api: WriteConcern
+        // impl: ReadConcern
+    }
+    api 'org.mongodb:mongodb-driver-sync', {
+        // api: FindIterable, MongoClient, MongoCollection, MongoCursor
+        // impl: AggregateIterable, MongoIterable
+    }
+    api 'org.springframework:spring-context', {
+        // api: ApplicationEventPublisher
+    }
+
+    implementation project(':grails-core'), {
+        // impl: GrailsMessageSourceUtils
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // FetchType
+            //exclude group: 'org.apache.grails.data', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+    implementation 'org.springframework:spring-tx', {
+        // impl: InvalidDataAccessResourceUsageException, TransactionSynchronizationManager
+    }
+
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'com.github.ben-manes.caffeine:caffeine', {
+        // comp: RemovalCause, this should perhaps be api in data-mapping as it is needed for compilation downstream
+    }
+
+    testImplementation 'jakarta.validation:jakarta.validation-api'
+    testImplementation 'junit:junit' // JUnit 4
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-testing-support-mongodb')
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/mongodb-forked-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

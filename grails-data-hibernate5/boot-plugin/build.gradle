@@ -1,0 +1,65 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'Grails GORM'
+    pomDescription = 'GORM - Grails Data Access Framework'
+    pomDevelopers =  [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith',
+            'puneetbehl': 'Puneet Behl',
+    ]
+}
+
+dependencies {
+    // TODO: Clarify and clean up dependencies
+    implementation platform(project(':grails-bom'))
+
+    compileOnly project(':grails-shell-cli'), {
+        exclude group:'org.apache.groovy', module:'groovy'
+    }
+    api "org.apache.groovy:groovy"
+    api "org.springframework.boot:spring-boot-autoconfigure"
+    api project(":grails-data-hibernate5-core")
+
+    testImplementation project(':grails-shell-cli'), {
+        exclude group:'org.apache.groovy', module:'groovy'
+    }
+    testImplementation "org.spockframework:spock-core"
+
+    testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
+    testRuntimeOnly "com.h2database:h2"
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

@@ -1,3 +1,22 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 plugins {
     id 'groovy'
     id 'java-library'
@@ -12,19 +31,19 @@ dependencies {
     testImplementation platform(project(':grails-bom'))
     testImplementation project(':grails-codecs')
 
-    testImplementation project(':grails-test-suite-base'),
-                project(':grails-domain-class'),
-                project(':grails-datasource'),
-                project(':grails-i18n'),
-                project(':grails-url-mappings'),
-                project(':grails-databinding'),
-                project(':grails-services'),
-                project(':grails-controllers'),
-                project(':grails-bootstrap'),
-                project(':grails-spring')
+    testImplementation project(':grails-test-suite-base')
+    testImplementation project(':grails-domain-class')
+    testImplementation project(':grails-datasource')
+    testImplementation project(':grails-i18n')
+    testImplementation project(':grails-url-mappings')
+    testImplementation project(':grails-databinding')
+    testImplementation project(':grails-services')
+    testImplementation project(':grails-controllers')
+    testImplementation project(':grails-bootstrap')
+    testImplementation project(':grails-spring')
 
-    testImplementation 'org.apache.grails.data:grails-datamapping-validation'
-    testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
+    testImplementation project(':grails-datamapping-validation')
+    testImplementation project(':grails-data-hibernate5-core')
 
     api 'org.apache.tomcat:tomcat-jdbc'
     api 'org.apache.groovy:groovy'
@@ -35,8 +54,8 @@ dependencies {
     testRuntimeOnly 'org.springframework:spring-aspects'
     testRuntimeOnly 'org.aspectj:aspectjrt', 'org.aspectj:aspectjweaver'
 
-    testImplementation project(':grails-async-plugin')
-    testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
+    testImplementation project(':grails-async')
+    testImplementation project(':grails-testing-support-datamapping'), {
         exclude module:'grails-testing-support-core'
     }
     testImplementation project(':grails-testing-support-core')
@@ -69,7 +88,7 @@ dependencies {
 }
 
 test {
-    maxParallelForks = 2
+    maxParallelForks = configuredTestParallel
     forkEvery = isCiBuild ? 25 : 100
     if(!isCiBuild) {
         maxHeapSize = '2048m'
@@ -90,6 +109,11 @@ task testIsolatedPersistentOne(type: Test) {
 }
 
 test.dependsOn testGrailsDomainBinder, testIsolatedPersistentOne
+
+tasks.withType(Groovydoc).configureEach {
+    // tests do not have groovydoc
+    enabled = false
+}
 
 apply {
     // java-configuration must be applied first since tasks are now lazy registered

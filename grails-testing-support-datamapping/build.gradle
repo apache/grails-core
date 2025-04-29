@@ -1,0 +1,142 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Web Testing Support'
+    pomDescription = 'Support for writing concise expressive tests for Grails Web Artifacts'
+    pomDevelopers = ['jeffscottbrown': 'Jeff Brown', 'jameskleeh': 'James Kleeh']
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-datastore-core'), {
+        // api: AbstractDatastore, PersistentEntity, Session
+        // impl: DatastoreUtils, Initializable, MappingContext, Settings, Service
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-core
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            exclude group: 'org.javassist', module: 'javassist'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datamapping-validation'), {
+        // api: CascadingValidator, ConstraintsEvaluator, PersistentEntityValidator
+        // impl: ConstraintRegistry, DefaultConstraintEvaluator, DefaultConstraintRegistry, PersistentEntityValidator
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datamapping-validation
+            exclude group: 'commons-validator', module: 'commons-validator'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.springframework', module: 'spring-context'
+        }
+    }
+    api project(':grails-testing-support-core'), {
+        // api: GrailsUnitTest
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-testing-support
+            exclude group: 'org.springframework', module: 'spring-test'
+            exclude group: 'org.apache.grails', module: 'grails-codecs'
+            exclude group: 'org.apache.grails', module: 'grails-databinding'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
+            exclude group: 'org.apache.grails', module: 'grails-test-core'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-test'
+            exclude group: 'org.spockframework', module: 'spock-spring'
+            exclude group: 'org.spockframework', module: 'spock-core'
+            exclude group: 'org.apache.groovy', module: 'groovy-test-junit5'
+            exclude group: 'org.junit.jupiter', module: 'junit-jupiter-api'
+            exclude group: 'org.junit.platform', module: 'junit-platform-runner'
+        }
+    }
+    api 'org.springframework:spring-context', {
+        // api: MessageSource
+        // impl: ConfigurableApplicationContext, ConfigurableConversionService, Validator
+    }
+    api 'org.springframework:spring-tx', {
+        // api: PlatformTransactionManager
+    }
+    api 'org.spockframework:spock-core', {
+        // api: IGlobalExtension, IMethodInterceptor, IMethodInvocation
+        // impl: Converter
+    }
+
+    implementation project(':grails-datamapping-core'), {
+        // impl: GormEnhancer, UniqueConstraint
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    api project(':grails-datamapping-core-test'), {
+        // impl: SimpleMapDatastore
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datamapping-core-test
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+        }
+    }
+    implementation project(':grails-core'), {
+        // impl: ConstraintEvalUtils, DomainClassArtefactHandler, GrailsClass
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+            exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+            //exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap' // Resource
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails', module: 'grails-spring'
+            exclude group: 'org.springframework', module: 'spring-beans'
+            exclude group: 'org.springframework', module: 'spring-context'
+            exclude group: 'org.springframework', module: 'spring-core'
+            exclude group: 'org.springframework', module: 'spring-tx'
+            exclude group: 'org.springframework.boot', module: 'spring-boot'
+            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        }
+    }
+
+    compileOnly 'org.apache.groovy:groovy', {
+        // comp: CompileStatic, CompileDynamic, TypeCheckingMode
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

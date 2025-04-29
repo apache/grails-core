@@ -1,0 +1,59 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Where Queries
+Where queries are the preferred way to build more complex queries. They are type safe, expressive and lazily executed:
+
+[source,groovy]
+----
+def query = Book.where {
+    title == 'The Stand'
+}
+----
+
+Note that no query is actually executed directly, instead the `where(Closure)` method returns an instance of link:../api/grails/gorm/rx/DetachedCriteria.html[DetachedCriteria].
+
+Like an `rx.Observable`, the `DetachedCriteria` class can be subscribed to:
+
+
+[source,groovy]
+----
+Book.where {
+    title == 'The Stand'
+}
+.subscribe { Book book ->
+    println "Title = ${book.title}"
+}
+----
+
+Alternatively you can execute one of the query methods to invoke the query and return an `rx.Observable`:
+
+
+[source,groovy]
+----
+Book.where { title == 'The Stand' }
+    .list()
+    .subscribe { List<Book> books ->
+        for (Book book in books) {
+            println "Title = ${book.title}"
+        }
+    }
+----
+
+For more information on the syntax of where queries see the https://gorm.grails.org/latest/hibernate5/manual/index.html#whereQueries[relevant section in the GORM documentation].

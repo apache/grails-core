@@ -1,0 +1,240 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A many-to-one relationship is the simplest kind, and is defined with a property of the type of another domain class. Consider this example:
+
+
+===== Example A
+
+[source,groovy]
+----
+class Face {
+    Nose nose
+}
+----
+
+[source,groovy]
+----
+class Nose {
+}
+----
+
+In this case we have a unidirectional many-to-one relationship from `Face` to `Nose`. To make this relationship bidirectional define the other side as follows (and see the section on controlling the ends of the association just below):
+
+
+===== Example B
+
+
+[source,groovy]
+----
+class Face {
+    Nose nose
+}
+----
+
+[source,groovy]
+----
+class Nose {
+    static belongsTo = [face:Face]
+}
+----
+
+In this case we use the `belongsTo` setting to say that `Nose` "belongs to" `Face`. The result of this is that we can create a `Face`, attach a `Nose` instance to it and when we save or delete the `Face` instance, GORM will save or delete the `Nose`. In other words, saves and deletes will cascade from `Face` to the associated `Nose`:
+
+[source,groovy]
+----
+new Face(nose:new Nose()).save()
+----
+
+The example above will save both face and nose. Note that the inverse _is not_ true and will result in an error due to a transient `Face`:
+
+[source,groovy]
+----
+new Nose(face:new Face()).save() // will cause an error
+----
+
+Now if we delete the `Face` instance, the `Nose` will go too:
+
+[source,groovy]
+----
+def f = Face.get(1)
+f.delete() // both Face and Nose deleted
+----
+
+To make the relationship a true one-to-one, use the `hasOne` property on the owning side, e.g. `Face`:
+
+
+===== Example C
+
+
+[source,groovy]
+----
+class Face {
+    static hasOne = [nose:Nose]
+}
+----
+
+[source,groovy]
+----
+class Nose {
+    Face face
+}
+----
+
+Note that using this property puts the foreign key on the inverse table to the example A, so in this case the foreign key column is stored in the `nose` table inside a column called `face_id`.
+
+NOTE: `hasOne` only works with bidirectional relationships.
+
+Finally, it's a good idea to add a unique constraint on one side of the one-to-one relationship:
+
+[source,groovy]
+----
+class Face {
+    static hasOne = [nose:Nose]
+
+    static constraints = {
+        nose unique: true
+    }
+}
+----
+
+[source,groovy]
+----
+class Nose {
+    Face face
+}
+----
+
+
+===== Controlling the ends of the association
+
+
+Occasionally you may find yourself with domain classes that have multiple properties of the same type. They may even be self-referential, i.e. the association property has the same type as the domain class it's in. Such situations can cause problems because GORM may guess incorrectly the type of the association. Consider this simple class:
+
+[source,groovy]
+----
+class Person {
+    String name
+    Person parent
+
+    static belongsTo = [ supervisor: Person ]
+
+    static constraints = { supervisor nullable: true }
+}
+----
+
+As far as GORM is concerned, the `parent` and `supervisor` properties are two directions of the same association. So when you set the `parent` property on a `Person` instance, GORM will automatically set the `supervisor` property on the other `Person` instance. This may be what you want, but if you look at the class, what we in fact have are two unidirectional relationships.
+
+To guide GORM to the correct mapping, you can tell it that a particular association is unidirectional through the `mappedBy` property:
+
+[source,groovy]
+----
+class Person {
+    String name
+    Person parent
+
+    static belongsTo = [ supervisor: Person ]
+
+    static mappedBy = [ supervisor: "none", parent: "none" ]
+
+    static constraints = { supervisor nullable: true }
+}
+----
+
+You can also replace "none" with any property name of the target class. And of course this works for normal domain classes too, not just self-referential ones. Nor is the `mappedBy` property limited to many-to-one and one-to-one associations: it also works for one-to-many and many-to-many associations as you'll see in the next section.
+
+WARNING: If you have a property called "none" on your domain class, this approach won't work currently! The "none" property will be treated as the reverse direction of the association (or the "back reference"). Fortunately, "none" is not a common domain class property name.
+
+===== Replacing a many-to-one collection
+
+Given these GORM entities:
+
+[source,groovy]
+----
+class Book {
+    String name
+    static hasMany = [reviews: Review]
+}
+class Review {
+    String author
+    String quote
+    static belongsTo = [book: Book]
+}
+----
+
+Imagine you have a book with two reviews:
+
+[source,groovy]
+----
+new Book(name: 'Daemon')
+                .addToReviews(new Review(quote: 'Daemon does for surfing the Web what Jaws did for swimming in the ocean.', author: 'Chicago Sun-Times'))
+                .addToReviews(new Review(quote: 'Daemon is wet-yourself scary, tech-savvy, mind-blowing!', author: 'Paste Magazine'))
+                .save()
+----
+
+You could create a method to replace the `reviews` collection as illustrated next:
+
+[source,groovy]
+----
+Book replaceReviews(Serializable idParam, List<Review> newReviews) {
+    Book book = Book.where { id == idParam }.join('reviews').get()
+    clearReviews(book)
+    newReviews.each { book.addToReviews(it) }
+    book.save()
+}
+
+void clearReviews(Book book) {
+    List<Serializable> ids = []
+    book.reviews.collect().each {
+        book.removeFromReviews(it)
+        ids << it.id
+    }
+    Review.executeUpdate("delete Review r where r.id in :ids", [ids: ids])
+}
+----
+
+Alternatively you could leverage https://docs.grails.org/latest/ref/Database%20Mapping/cascade.html[cascade] behaviour.
+
+[source,groovy]
+----
+class Book {
+    String name
+    static hasMany = [reviews: Review]
+    static mappping = {
+        reviews cascade: 'all-delete-orphan'
+    }
+}
+class Review {
+    String author
+    String quote
+    static belongsTo = [book: Book]
+}
+----
+
+The cascade behaviour takes cares of deleting every orphan `Review`. Thus, invoking `.clear()` suffices to remove the book's previous reviews.
+
+[source,groovy]
+----
+Book replaceReviews(Serializable idParam, List<Review> newReviews) {
+    Book book = Book.where { id == idParam }.join('reviews').get()
+    book.reviews.clear()
+    newReviews.each { book.addToReviews(it) }
+    book.save()
+}
+----

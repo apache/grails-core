@@ -1,0 +1,122 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Performing CRUD Operations
+
+Create, Read, Update and Delete (or CRUD) are the most common use cases when working with databases. The following examples will work you through how to perform each.
+
+==== Create - Saving domain instances
+
+To create and save a new instance to the database you should use the `save()` method:
+
+
+[source,groovy]
+----
+new Book(title:"The Stand")
+        .save()
+        .toBlocking()
+        .first()
+----
+
+The `save()` method returns an https://reactivex.io/RxJava/javadoc/rx/Observable.html[rx.Observable].
+
+Notice that in this example we are calling `toBlocking()`, this is purely for demonstration and testing purposes to ensure the operation completes immediately.
+
+In a real world application you would typically subscribe to the observable in order to receive a result:
+
+
+[source,groovy]
+----
+new Book(title:"The Stand")
+    .save()
+    .subscribe { Book book ->
+        println "Title = ${book.title}"
+    }
+----
+
+NOTE: If you don't call `subscribe(..)` or convert the `Observable` into a blocking operation, then no query will be executed! At least one call to `subscribe(..)` is required.
+
+==== Read - Retrieving domain instances
+
+To retrieve an instance you can use the static `get(..)` method:
+
+[source,groovy]
+----
+Book.get(id)
+    .subscribe { Book book ->
+        println "Title = ${book.title}"
+    }
+----
+
+==== Update - Updating instances
+
+To update an instance after retrieving it you can use the https://reactivex.io/RxJava/javadoc/rx/Observable.html#switchMap-rx.functions.Func1-[Observable.switchMap] method:
+
+[source,groovy]
+----
+Book.get(id)
+    .switchMap() { Book book ->
+        book.title = "The Shining"
+        book.save()
+    }.subscribe { Book updated ->
+        println "Book updated!"
+    }
+----
+
+The `switchMap` transforms an `Observable` and converts the result into another `Observable`. However, this is not the most efficient way to perform updates as you can use https://gorm.grails.org/latest/hibernate5/manual/index.html#whereQueries[where queries] to update an instance without retrieving it:
+
+
+[source,groovy]
+----
+Book.where { id == id }
+    .updateAll(title: "The Shining")
+    .subscribe { Number updateCount ->
+        println "${updateCount} books were updated!"
+    }
+----
+
+==== Delete - Deleting instances
+
+To delete an instance after retreiving it you can use the https://reactivex.io/RxJava/javadoc/rx/Observable.html#switchMap-rx.functions.Func1-[Observable.switchMap] method:
+
+[source,groovy]
+----
+Book.get(id)
+    .switchMap() { Book book ->
+        book.delete()
+    }
+    .subscribe { Boolean wasDeleted ->
+        if(wasDeleted) {
+            println "Book deleted!"
+        }
+    }
+----
+
+But, once again it is more efficient with where queries:
+
+[source,groovy]
+----
+Book.where { id == id }
+    .deleteAll()
+    .subscribe { Number deleteCount ->
+        println "${deleteCount} books were deleted!"
+    }
+----
+
+

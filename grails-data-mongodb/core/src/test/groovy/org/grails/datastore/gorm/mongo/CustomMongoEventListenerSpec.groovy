@@ -1,0 +1,135 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.datastore.gorm.mongo
+
+import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
+import org.springframework.context.ApplicationEvent
+
+import static org.grails.datastore.mapping.engine.event.EventType.PostDelete
+import static org.grails.datastore.mapping.engine.event.EventType.PostInsert
+import static org.grails.datastore.mapping.engine.event.EventType.PostLoad
+import static org.grails.datastore.mapping.engine.event.EventType.PostUpdate
+import static org.grails.datastore.mapping.engine.event.EventType.PreDelete
+import static org.grails.datastore.mapping.engine.event.EventType.PreInsert
+import static org.grails.datastore.mapping.engine.event.EventType.PreLoad
+import static org.grails.datastore.mapping.engine.event.EventType.PreUpdate
+
+class CustomMongoEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Listener])
+    }
+
+    void "Test corrects are triggered for persistence life cycle"() {
+        given: "A registered event listener"
+        def listener = new MyPersistenceListener(manager.session.datastore)
+        manager.session.datastore.applicationEventPublisher.addApplicationListener(listener)
+
+        when: "An entity is saved"
+        def p = new Listener(name: "Cabbage")
+        p.save(flush: true)
+
+        then:
+        listener.preInsertCount == 1
+        listener.postInsertCount == 1
+        listener.preUpdateCount == 0
+        listener.postUpdateCount == 0
+        listener.preDeleteCount == 0
+        listener.postDeleteCount == 0
+        listener.preLoadCount == 0
+        listener.postLoadCount == 0
+    }
+}
+
+@Entity
+class Listener {
+    Long id
+    Long version
+    String name
+
+    def beforeInsert() {
+        println "ENTITY PRE INSERT"
+    }
+
+    def afterInsert() {
+        println "ENTITY POST INSERT"
+    }
+}
+
+class MyPersistenceListener extends AbstractPersistenceEventListener {
+    int preInsertCount
+    int postInsertCount
+    int preUpdateCount
+    int postUpdateCount
+    int preDeleteCount
+    int postDeleteCount
+    int preLoadCount
+    int postLoadCount
+
+    public MyPersistenceListener(final Datastore datastore) {
+        super(datastore)
+    }
+
+    @Override
+    protected void onPersistenceEvent(final AbstractPersistenceEvent event) {
+        switch (event.eventType) {
+            case PreInsert:
+                println "LISTENER PRE INSERT ${event.entityObject}"
+                preInsertCount++
+                break
+            case PostInsert:
+                println "LISTENER POST INSERT ${event.entityObject}"
+                postInsertCount++
+                break
+            case PreUpdate:
+                println "LISTENER PRE UPDATE ${event.entityObject}"
+                preUpdateCount++
+                break;
+            case PostUpdate:
+                println "LISTENER POST UPDATE ${event.entityObject}"
+                postUpdateCount++
+                break;
+            case PreDelete:
+                println "LISTENER PRE DELETE ${event.entityObject}"
+                preDeleteCount++
+                break;
+            case PostDelete:
+                println "LISTENER POST DELETE ${event.entityObject}"
+                postDeleteCount++
+                break;
+            case PreLoad:
+                println "LISTENER PRE LOAD ${event.entityObject}"
+                preLoadCount++
+                break;
+            case PostLoad:
+                println "LISTENER POST LOAD ${event.entityObject}"
+                postLoadCount++
+                break;
+        }
+    }
+
+    @Override
+    public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
+        return true
+    }
+}

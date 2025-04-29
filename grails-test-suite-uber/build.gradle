@@ -1,3 +1,22 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 plugins {
     id 'groovy'
     id 'project-report'
@@ -9,7 +28,7 @@ group = 'org.apache.grails.testing'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    testImplementation project(':grails-async-plugin')
+    testImplementation project(':grails-async')
     testImplementation project(':grails-codecs')
     testImplementation project(':grails-controllers')
     testImplementation project(':grails-databinding')
@@ -26,9 +45,9 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.apache.grails.data:grails-data-hibernate5-core'
+    testImplementation project(':grails-data-hibernate5-core')
     testImplementation project(':grails-gsp')
-    testImplementation 'org.apache.grails:grails-testing-support-datamapping', {
+    testImplementation project(':grails-testing-support-datamapping'), {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-rest-transforms'
@@ -38,7 +57,7 @@ dependencies {
         exclude module: 'grails-testing-support-core'
         exclude module: 'grails-rest-transforms'
     }
-    testImplementation 'org.apache.grails.data:grails-datamapping-validation'
+    testImplementation project(':grails-datamapping-validation')
     testImplementation 'org.objenesis:objenesis'
 
     testCompileOnly 'jakarta.servlet:jakarta.servlet-api'
@@ -61,32 +80,43 @@ dependencies {
 }
 
 def isolatedTestPatterns = [
-    isolatedTestsOne: [
-        'org.grails.core.DefaultGrailsControllerClassSpec',
-        'org.grails.web.util.WebUtilsTests'
-    ],
-    isolatedTestsTwo: [
-        'grails.test.mixin.UrlMappingsTestMixinTests',
-        'grails.test.mixin.SetupTeardownInvokeTests',
-        'grails.test.mixin.TestMixinSetupTeardownInvokeTests'
-    ],
-    isolatedRestRendererTests: [
-        '*.rest.render.*Spec'
-    ],
-    isolatedPersonTests: [
-        'org.grails.validation.TestingValidationSpec',
-        'org.grails.validation.CascadingErrorCountSpec'
-    ],
-    isolatedRestfulControllerTests: [
-        'grails.test.mixin.RestfulControllerSpec',
-        'grails.test.mixin.ResourceAnnotationRestfulControllerSpec'
-    ]
+        isolatedTestsOne              : [
+                'org.grails.core.DefaultGrailsControllerClassSpec',
+                'org.grails.web.util.WebUtilsTests'
+        ],
+        isolatedTestsTwo              : [
+                'grails.test.mixin.UrlMappingsTestMixinTests',
+                'grails.test.mixin.SetupTeardownInvokeTests',
+                'grails.test.mixin.TestMixinSetupTeardownInvokeTests'
+        ],
+        isolatedRestRendererTests     : [
+                '*.rest.render.*Spec'
+        ],
+        isolatedPersonTests           : [
+                'org.grails.validation.TestingValidationSpec',
+                'org.grails.validation.CascadingErrorCountSpec'
+        ],
+        isolatedRestfulControllerTests: [
+                'grails.test.mixin.RestfulControllerSpec',
+                'grails.test.mixin.ResourceAnnotationRestfulControllerSpec'
+        ]
 ]
 
 isolatedTestPatterns.keySet().each { taskName ->
-    tasks.register(taskName, Test) {
-        group = 'verification'
-        filter.includePatterns = isolatedTestPatterns[taskName]
+    tasks.register(taskName, Test).configure { Test tTask ->
+        tTask.onlyIf {
+            ![
+                    'onlyFunctionalTests',
+                    'onlyHibernate5Tests',
+                    'onlyMongodbTests',
+                    'skipCoreTests',
+                    'skipTests'
+            ].find {
+                project.hasProperty(it)
+            }
+        }
+        tTask.group = 'verification'
+        tTask.filter.includePatterns = isolatedTestPatterns[taskName]
     }
 }
 
@@ -96,15 +126,39 @@ tasks.named('isolatedTestsTwo', Test).configure {
 }
 
 tasks.withType(Test).configureEach {
-    onlyIf { !project.hasProperty('onlyFunctionalTests') }
+    onlyIf {
+        ![
+                'onlyHibernate5Tests',
+                'onlyMongodbTests',
+                'skipCoreTests'
+        ].find {
+            project.hasProperty(it)
+        }
+    }
+
+    onlyIf {
+        !project.hasProperty('onlyFunctionalTests')
+    }
     useJUnitPlatform()
-    maxParallelForks = isCiBuild ? 2 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1
+    maxParallelForks = configuredTestParallel
     forkEvery = isCiBuild ? 25 : 100
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
 
 tasks.named('test', Test).configure {
+    onlyIf {
+        ![
+                'onlyFunctionalTests',
+                'onlyHibernate5Tests',
+                'onlyMongodbTests',
+                'skipCoreTests',
+                'skipTests'
+        ].find {
+            project.hasProperty(it)
+        }
+    }
+
     filter.excludePatterns = isolatedTestPatterns.values().flatten()
     dependsOn(provider {
         tasks.findAll({
@@ -116,4 +170,9 @@ tasks.named('test', Test).configure {
 apply {
     // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}
+
+tasks.withType(Groovydoc).configureEach {
+    // tests do not have groovydoc
+    enabled = false
 }

@@ -1,0 +1,195 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+===== Lazy Collections
+
+
+As discussed in the section on <<fetching,Eager and Lazy fetching>>, GORM collections are lazily loaded by default but you can change this behaviour with the ORM DSL. There are several options available to you, but the most common ones are:
+
+* lazy: false
+* fetch: 'join'
+
+and they're used like this:
+
+[source,java]
+----
+class Person {
+
+    String firstName
+    Pet pet
+
+    static hasMany = [addresses: Address]
+
+    static mapping = {
+        addresses lazy: false
+        pet fetch: 'join'
+    }
+}
+----
+
+[source,java]
+----
+class Address {
+    String street
+    String postCode
+}
+----
+
+[source,java]
+----
+class Pet {
+    String name
+}
+----
+
+The first option, `lazy: false` , ensures that when a `Person` instance is loaded, its `addresses` collection is loaded at the same time with a second SELECT. The second option is basically the same, except the collection is loaded with a JOIN rather than another SELECT. Typically you want to reduce the number of queries, so `fetch: 'join'` is the more appropriate option. On the other hand, it could feasibly be the more expensive approach if your domain model and data result in more and larger results than would otherwise be necessary.
+
+For more advanced users, the other settings available are:
+
+* `batchSize: N`
+* `lazy: false, batchSize: N`
+
+where N is an integer. These let you fetch results in batches, with one query per batch. As a simple example, consider this mapping for `Person`:
+
+[source,groovy]
+----
+class Person {
+
+    String firstName
+    Pet pet
+
+    static mapping = {
+        pet batchSize: 5
+    }
+}
+----
+If a query returns multiple `Person` instances, then when we access the first `pet` property, Hibernate will fetch that `Pet` plus the four next ones. You can get the same behaviour with eager loading by combining `batchSize` with the `lazy: false` option.
+
+You can find out more about these options in the https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#fetching[Hibernate user guide]. Note that ORM DSL does not currently support the "subselect" fetching strategy.
+
+
+===== Lazy Single-Ended Associations
+
+
+In GORM, one-to-one and many-to-one associations are by default lazy. Non-lazy single ended associations can be problematic when you load many entities because each non-lazy association will result in an extra SELECT statement. If the associated entities also have non-lazy associations, the number of queries grows significantly!
+
+Use the same technique as for lazy collections to make a one-to-one or many-to-one association non-lazy/eager:
+
+[source,java]
+----
+class Person {
+    String firstName
+}
+----
+
+[source,java]
+----
+class Address {
+
+    String street
+    String postCode
+
+    static belongsTo = [person: Person]
+
+    static mapping = {
+        person lazy: false
+    }
+}
+----
+
+Here we configure GORM to load the associated `Person` instance (through the `person` property) whenever an `Address` is loaded.
+
+
+===== Lazy Associations and Proxies
+
+
+Hibernate uses runtime-generated proxies to facilitate single-ended lazy associations; Hibernate dynamically subclasses the entity class to create the proxy.
+
+Consider the previous example but with a lazily-loaded `person` association: Hibernate will set the `person` property to a proxy that is a subclass of `Person`. When you call any of the getters (except for the `id` property) or setters on that proxy, Hibernate will load the entity from the database.
+
+Unfortunately this technique can produce surprising results. Consider the following example classes:
+
+[source,java]
+----
+class Pet {
+    String name
+}
+----
+
+[source,java]
+----
+class Dog extends Pet {
+}
+----
+
+[source,java]
+----
+class Person {
+    String name
+    Pet pet
+}
+----
+
+Proxies can have confusing behavior when combined with inheritance. Because the proxy is only a subclass of the parent class, any attempt to cast or access data on the subclass will fail. Assuming we have a single `Person` instance with a `Dog` as the `pet`.
+
+The code below will not fail because directly querying the `Pet` table does not require the resulting objects to be proxies because they are not lazy.
+
+[source,groovy]
+----
+def pet = Pet.get(1)
+assert pet instanceof Dog
+----
+
+The following code will fail because the association is lazy and the `pet` instance is a proxy.
+
+[source,groovy]
+----
+def person = Person.get(1)
+assert person.pet instanceof Dog
+----
+
+If the only goal is to check if the proxy is an instance of a class, there is one helper method available to do so that works with proxies. Take special care in using it though because it does cause a call to the database to retrieve the association data.
+
+[source,groovy]
+----
+def person = Person.get(1)
+assert person.pet.instanceOf(Dog)
+----
+
+There are a couple of ways to approach this issue. The first rule of thumb is that if it is known ahead of time that the association data is required, join the data in the query of the `Person`. For example, the following assertion is true.
+
+[source,groovy]
+----
+def person = Person.where { id == 1 }.join("pet").get()
+assert person.pet instanceof Dog
+----
+
+In the above example the `pet` association is no longer lazy because it is being retrieved along with the `Person` and thus no proxies are necessary. There are cases when it makes sense for a proxy to be returned, mostly in the case where its impossible to know if the data will be used or not. For those cases in order to access properties of the subclasses, the proxy must be unwrapped. To unwrap a proxy inject an instance of link:../api/org/grails/datastore/mapping/proxy/ProxyHandler.html[ProxyHandler] and pass the proxy to the `unwrap` method.
+
+[source,groovy]
+----
+def person = Person.get(1)
+assert proxyHandler.unwrap(person.pet) instanceof Dog
+----
+
+For cases where dependency injection is impractical or not available, a helper method link:../api/org/grails/orm/hibernate/cfg/GrailsHibernateUtil.html#unwrapIfProxy(java.lang.Object)[GrailsHibernateUtil.unwrapIfProxy(Object)] can be used instead.
+
+Unwrapping a proxy is different than initializing it. Initializing a proxy simply populates the underlying instance with data from the database, however unwrapping a returns the inner target.
+

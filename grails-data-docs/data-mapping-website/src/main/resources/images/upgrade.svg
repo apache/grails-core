@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="95px" height="95px" viewBox="0 0 95 95" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 47.1 (45422) - http://www.bohemiancoding.com/sketch -->
+    <title>upgrade</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="upgrade" transform="translate(2.000000, 2.000000)">
+            <circle id="Oval" stroke="#FEB672" stroke-width="2.8347" cx="45.374" cy="45.374" r="45.374"></circle>
+            <g id="arrow" transform="translate(23.000000, 10.000000)" fill-rule="nonzero" fill="#FEB672">
+                <polygon id="Shape" points="12 65 34 65 34 71 12 71"></polygon>
+                <polygon id="Shape" points="12 56 34 56 34 62 12 62"></polygon>
+                <polygon id="Shape" points="45 22 22.5 0 0 22 11.2408163 22 11.2408163 44 33.7408163 44 33.7408163 22"></polygon>
+                <polygon id="Shape" points="12 47 34 47 34 53 12 53"></polygon>
+            </g>
+        </g>
+    </g>
+</svg>

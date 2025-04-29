@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 
 == fetchMode
 
@@ -36,4 +55,4 @@ By default associations in Grails are fetched lazily (each record is read from t
 
 In the case of eager fetching and a one-to-many association, the instance as well as the association will be initialized when they are loaded (eagerly). However, caution should be observed when using eager fetching, since being too eager can result in your entire database being loaded into memory!
 
-For more information see the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/#fetchingDSL[Eager and Lazy Fetching] in the user guide.
+For more information see the section on  link:{hibernate5Guide}/manual/#fetchingDSL[Eager and Lazy Fetching] in the user guide.

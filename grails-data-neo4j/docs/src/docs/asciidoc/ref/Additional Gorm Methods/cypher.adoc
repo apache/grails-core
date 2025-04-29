@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+===== Purpose
+
+Execute a cypher query.
+
+===== Example
+
+
+[source,groovy]
+----
+setup:
+def person = new Person(firstName: "Bob", lastName: "Builder")
+def petType = new PetType(name: "snake")
+def pet = new Pet(name: "Fred", type: petType, owner: person)
+person.addToPets(pet)
+person.save(flush: true)
+session.clear()
+
+when:
+def result = person.cypher("start n=node({this}) match n-[:pets]->m return m")
+
+then:
+result.iterator().size() == 1
+----
+
+===== Description
+
+
+`cypher` is invoked on any domain instance and returns a https://neo4j.com/docs/api/java-driver/4.0/org/neo4j/driver/Result.html[org.neo4j.driver.Result]
+
+The parameters passed are:
+
+* cypher query string. The query string might use a implicit `this` parameter pointing to the instance's node
+* a optional map of cypher parameters
+
+
+

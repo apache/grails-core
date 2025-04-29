@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="95px" height="95px" viewBox="0 0 95 95" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>mongo</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <path d="M4.57556581,0.0402838387 L3.1163234,0.634912628 C3.1163234,0.634912628 3.30242418,9.72651754 0.638859936,10.3631209 C-1.11753002,12.8683452 0.909219886,117.376518 7.28992908,10.7211729 C7.28992908,10.7211729 5.10600902,9.37128351 4.69260327,7.07889989 C4.27934364,4.78495741 4.57556581,0.0402838387 4.57556581,0.0402838387 L4.57556581,0.0402838387 Z" id="path-1"></path>
+        <linearGradient x1="-70.4431054%" y1="56.0454455%" x2="160.735797%" y2="44.1472733%" id="linearGradient-3">
+            <stop stop-color="#929669" offset="0%"></stop>
+            <stop stop-color="#929669" offset="23.0769%"></stop>
+            <stop stop-color="#FDFCF1" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="-70.4431054%" y1="50.0921592%" x2="160.735797%" y2="49.9107787%" id="linearGradient-4">
+            <stop stop-color="#929669" offset="0%"></stop>
+            <stop stop-color="#929669" offset="23.0769%"></stop>
+            <stop stop-color="#FDFCF1" offset="100%"></stop>
+        </linearGradient>
+        <path d="M2.24519062,0.0062952866 C2.24519062,0.0062952866 14.925126,10.2867381 11.9545272,31.6371127 C9.09370873,47.1485789 2.33933686,52.247881 1.61353898,54.1946234 C0.814489187,55.5723919 0.00969224116,58.0143635 0.00969224116,58.0143635 L0.549048415,14.7948828 C0.549048415,14.7948828 -0.566582118,1.59816343 2.24519062,0.0062952866 L2.24519062,0.0062952866 Z" id="path-5"></path>
+        <linearGradient x1="-16.6073557%" y1="99.2992429%" x2="78.1504823%" y2="2.53574843%" id="linearGradient-7">
+            <stop stop-color="#45AA3A" offset="0%"></stop>
+            <stop stop-color="#3D9439" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="-16.6073557%" y1="52.2347045%" x2="78.1504823%" y2="47.8484745%" id="linearGradient-8">
+            <stop stop-color="#45AA3A" offset="0%"></stop>
+            <stop stop-color="#3D9439" offset="100%"></stop>
+        </linearGradient>
+        <path d="M11.2869314,0.0313565227 C11.2869314,0.0313565227 -0.60728953,10.019758 0.0770523918,27.6432629 C0.761581243,45.2673074 9.16238237,53.9326196 10.7985691,55.5046426 C11.8563871,56.8926034 11.900124,57.427403 11.9819479,58.7967777 C12.7233313,56.8362456 12.6000596,29.5133827 12.6786203,26.3198138 C12.9834145,13.8880618 12.1192953,2.3780595 11.2869314,0.0313565227 L11.2869314,0.0313565227 Z" id="path-9"></path>
+        <linearGradient x1="-9.62444561%" y1="43.9043949%" x2="152.344354%" y2="53.6889702%" id="linearGradient-11">
+            <stop stop-color="#41A83B" offset="0%"></stop>
+            <stop stop-color="#5EBC44" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="-9.62444561%" y1="49.7177164%" x2="152.344354%" y2="50.1708338%" id="linearGradient-12">
+            <stop stop-color="#41A83B" offset="0%"></stop>
+            <stop stop-color="#5EBC44" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="mongo" transform="translate(2.000000, 2.000000)">
+            <circle id="Oval" stroke="#FEB672" stroke-width="2.8347" cx="45.374" cy="45.374" r="45.374"></circle>
+            <g id="MongoDB-Logo" transform="translate(33.000000, 11.000000)">
+                <g id="g10" transform="translate(13.500000, 34.500000) scale(-1, 1) rotate(-180.000000) translate(-13.500000, -34.500000) translate(0.000000, 0.000000)">
+                    <g id="g12" transform="translate(0.048705, 0.000000)">
+                        <g id="g14" transform="translate(8.912966, 0.239821)">
+                            <g id="g16-Clipped">
+                                <g>
+                                    <mask id="mask-2" fill="white">
+                                        <use xlink:href="#path-1"></use>
+                                    </mask>
+                                    <g id="path-1"></g>
+                                    <g id="g16" mask="url(#mask-2)" fill-rule="nonzero" fill="url(#linearGradient-4)">
+                                        <path d="M4.57556581,0.0402838387 L3.1163234,0.634912628 C3.1163234,0.634912628 3.30242418,9.72651754 0.638859936,10.3631209 C-1.11753002,12.8683452 0.909219886,117.376518 7.28992908,10.7211729 C7.28992908,10.7211729 5.10600902,9.37128351 4.69260327,7.07889989 C4.27934364,4.78495741 4.57556581,0.0402838387 4.57556581,0.0402838387" id="path30"></path>
+                                    </g>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="g32" transform="translate(12.030068, 9.053221)">
+                            <g id="g34-Clipped">
+                                <g>
+                                    <mask id="mask-6" fill="white">
+                                        <use xlink:href="#path-5"></use>
+                                    </mask>
+                                    <g id="path-4"></g>
+                                    <g id="g34" mask="url(#mask-6)" fill-rule="nonzero" fill="url(#linearGradient-8)">
+                                        <path d="M2.24519062,0.0062952866 C2.24519062,0.0062952866 14.925126,10.2867381 11.9545272,31.6371127 C9.09370873,47.1485789 2.33933686,52.247881 1.61353898,54.1946234 C0.814489187,55.5723919 0.00969224116,58.0143635 0.00969224116,58.0143635 L0.549048415,14.7948828 C0.549048415,14.7948828 -0.566582118,1.59816343 2.24519062,0.0062952866" id="path46"></path>
+                                    </g>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="g48" transform="translate(0.000000, 8.453671)">
+                            <g id="g50-Clipped">
+                                <g>
+                                    <mask id="mask-10" fill="white">
+                                        <use xlink:href="#path-9"></use>
+                                    </mask>
+                                    <g id="path-7"></g>
+                                    <g id="g50" mask="url(#mask-10)" fill-rule="nonzero" fill="url(#linearGradient-12)">
+                                        <path d="M11.2869314,0.0313565227 C11.2869314,0.0313565227 -0.60728953,10.019758 0.0770523918,27.6432629 C0.761581243,45.2673074 9.16238237,53.9326196 10.7985691,55.5046426 C11.8563871,56.8926034 11.900124,57.427403 11.9819479,58.7967777 C12.7233313,56.8362456 12.6000596,29.5133827 12.6786203,26.3198138 C12.9834145,13.8880618 12.1192953,2.3780595 11.2869314,0.0313565227" id="path62"></path>
+                                    </g>
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

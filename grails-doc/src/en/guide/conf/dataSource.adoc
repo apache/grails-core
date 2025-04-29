@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 Since Grails is built on Java technology setting up a data source requires some knowledge of JDBC (the technology that stands for Java Database Connectivity).
 
 If you use a database other than H2 you need a JDBC driver. For example for MySQL you would need https://www.mysql.com/downloads/connector/j/[Connector/J].
@@ -164,4 +183,4 @@ Hibernate can automatically create the database tables required for your domain 
 * *validate* - Makes no changes to your database. Compares the configuration with the existing database schema and reports warnings.
 * any other value - does nothing
 
-Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://flywaydb.org/[Flyway] or http://www.liquibase.org/[Liquibase]. The https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#databaseMigration[Database Migration] plugin uses Liquibase.
+Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://flywaydb.org/[Flyway] or http://www.liquibase.org/[Liquibase]. The  link:{hibernate5Guide}/manual/index.html#databaseMigration[Database Migration] plugin uses Liquibase.

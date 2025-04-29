@@ -1,0 +1,140 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+apply plugin: 'groovy'
+
+configurations.register('documentation')
+
+dependencies {
+    documentation platform(project(':grails-bom'))
+    documentation 'org.apache.groovy:groovy-groovydoc'
+    documentation 'org.apache.groovy:groovy-ant'
+}
+
+// grails-data-mapping api
+tasks.register('aggregateDataMappingGroovydoc', Groovydoc).configure { Groovydoc task ->
+    task.group = 'documentation'
+    task.description = 'Copies Groovy API Documentation for all supporting projects'
+    Set<Project> docProjects = rootProject.subprojects.findAll {
+        it.name in [
+                'grails-datastore-async',
+                'grails-datastore-core',
+                'grails-datamapping-core',
+                'grails-datamapping-async',
+                'grails-datamapping-support',
+                'grails-datamapping-validation',
+                'grails-datastore-web',
+
+                // These are test api docs that aren't typically included in the runtime classpath of applications.
+                // for now include them in the groovy doc unless we want to call out that documentation separately later.
+                'grails-datamapping-core-test',
+                'grails-testing-support-datamapping'
+        ]
+    }
+
+    for (Project docProject : docProjects) {
+        docProject.sourceSets.main.allSource.srcDirs.each { File srcDir -> if (srcDir.exists()) task.inputs.dir(srcDir) }
+    }
+
+    task.docTitle = "Grails Data Mapping API - ${projectVersion}"
+    task.source = docProjects.collect { it.sourceSets.main.allSource }.flatten()
+    task.classpath = files(configurations.documentation + docProjects.configurations.compileClasspath)
+
+    task.access = GroovydocAccess.PROTECTED
+    task.includeAuthor = true
+    task.includeMainForScripts = false
+    task.processScripts = false
+    task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
+
+    task.dependsOn(docProjects.collect { ":$it.name:classes" })
+
+    task.outputs.dir(task.destinationDir)
+    task.doLast {
+        delete(project.layout.buildDirectory.dir('tmp'))
+    }
+}
+
+tasks.register('copyMongodbDocs', Sync).configure { Sync it ->
+    it.dependsOn(':grails-data-mongodb-docs:docs')
+
+    def mongodbSourceDir = project(':grails-data-mongodb-docs').layout.buildDirectory.dir('docs')
+    def targetDir = project.layout.buildDirectory.dir('mongodb-api/grails-data/mongodb')
+
+    it.from(mongodbSourceDir)
+    it.into(targetDir)
+
+    it.inputs.dir(mongodbSourceDir)
+    it.outputs.dir(targetDir)
+}
+
+tasks.register('copyHibernate5Docs', Sync).configure { Sync it ->
+    it.dependsOn(':grails-data-hibernate5-docs:docs')
+
+    def hibernate5SourceDir = project(':grails-data-hibernate5-docs').layout.buildDirectory.dir('docs')
+    def targetDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data/hibernate5')
+
+    it.from(hibernate5SourceDir)
+    it.into(targetDir)
+
+    it.inputs.dir(hibernate5SourceDir)
+    it.outputs.dir(targetDir)
+}
+
+tasks.register('docs', Sync).configure { Sync it ->
+    it.group = 'documentation'
+    it.dependsOn('aggregateDataMappingGroovydoc', 'copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs')
+
+    def websiteDir = rootProject.layout.projectDirectory.dir('grails-data-docs/data-mapping-website/src/main/resources')
+    def guidesDir = project.layout.buildDirectory.dir('guides/grails-data')
+    def mongoApiDir = project.layout.buildDirectory.dir('mongodb-api/grails-data')
+    def hibernate5ApiDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data')
+    def dataCoreApiDir = project.layout.buildDirectory.dir('data-api')
+
+    def combinedDir = project.layout.buildDirectory.dir('docs/grails-data')
+
+    it.from websiteDir, guidesDir, mongoApiDir, hibernate5ApiDir, dataCoreApiDir
+    it.into combinedDir
+}
+
+tasks.register('copyGuides').configure { Task task ->
+    task.group = 'documentation'
+
+    Set<Project> dataHeaderGuides = rootProject.subprojects.findAll { it.name.startsWith('grails-data-docs-guide-') }
+    task.dependsOn(dataHeaderGuides.tasks*.named('asciidoctor'))
+    doLast {
+        copy {
+            for (Project subproject : dataHeaderGuides) {
+                String guideName = subproject.name.substring('grails-data-docs-guide-'.length())
+                def guideDirectory = subproject.layout.buildDirectory.dir('docs').get().asFile.absolutePath
+
+                from(guideDirectory) {
+                    into("${guideName}-manual")
+                }
+            }
+
+            into(project.layout.buildDirectory.dir('guides/grails-data'))
+        }
+    }
+}
+
+// the groovy plugin is applied to this project, but we do not build a jar file since
+// the dependencies are only used for resolving versions from the bom
+tasks.withType(Jar).configureEach {
+    it.enabled = false
+}

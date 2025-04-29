@@ -1,3 +1,22 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 package org.grails.gradle.test
 
 import org.gradle.testkit.runner.GradleRunner
@@ -683,7 +702,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("DefaultPackage/TestJava.html", javadocJar)
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
         findJarFileEntry("org/grails/example/MyProject.html", javadocJar)
 
         File sourcesJar = artifacts.find{ it.name.endsWith("sources.jar") }
@@ -734,7 +754,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("DefaultPackage/TestJava.html", javadocJar)
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
         findJarFileEntry("org/grails/example/MyProject.html", javadocJar)
 
         File sourcesJar = artifacts.find{ it.name.endsWith("sources.jar") }
@@ -798,7 +819,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("TestJava.html", javadocJar) // TODO: Unfortunately, groovydoc seems to always put this under DefaultPackage, while javadoc does not
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
 
         File sourcesJar = artifacts.find{ it.name.endsWith("sources.jar") }
         sourcesJar
@@ -840,7 +862,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("DefaultPackage/TestJava.html", javadocJar)
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
 
         File sourcesJar = artifacts.find{ it.name.endsWith("sources.jar") }
         sourcesJar
@@ -886,7 +909,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("DefaultPackage/TestJava.html", javadocJar)
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
         findJarFileEntry("org/grails/example/SubProject1.html", javadocJar)
         !findJarFileEntry("org/grails/example/SubProject2.html", javadocJar)
 
@@ -937,7 +961,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("DefaultPackage/TestJava.html", javadocJar)
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
         findJarFileEntry("org/grails/example/SubProject1.html", javadocJar)
         !findJarFileEntry("org/grails/example/SubProject2.html", javadocJar)
 
@@ -985,7 +1010,8 @@ class GrailsPublishPluginSpec extends GradleSpecification {
 
         File javadocJar = artifacts.find{ it.name.endsWith("javadoc.jar") }
         javadocJar
-        findJarFileEntry("TestJava.html", javadocJar)
+        findJarFileEntry("DefaultPackage/TestJava.html", javadocJar)
+        findJarFileEntry("another/TestOtherJava.html", javadocJar)
         findJarFileEntry("org/grails/example/MyProject.html", javadocJar)
 
         File sourcesJar = artifacts.find{ it.name.endsWith("sources.jar") }

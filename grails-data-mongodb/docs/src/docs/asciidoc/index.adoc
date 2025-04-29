@@ -1,0 +1,219 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+= GORM for MongoDB
+:revnumber: {version}
+:imagesdir: ./images
+:source-highlighter: coderay
+
+[[introduction]]
+== Introduction
+
+include::introduction.adoc[]
+
+[[compatibility]]
+include::introduction/compatibility.adoc[]
+
+[[releaseNotes]]
+include::introduction/releaseNotes.adoc[]
+
+[[upgradeNotes]]
+include::introduction/upgradeNotes.adoc[]
+
+[[gettingStarted]]
+include::gettingStarted/basicSetup.adoc[]
+
+[[mongoOnly]]
+include::gettingStarted/mongoOnly.adoc[]
+
+[[withHibernate]]
+include::gettingStarted/withHibernate.adoc[]
+
+[[advancedConfig]]
+include::gettingStarted/advancedConfig.adoc[]
+
+[[springBoot]]
+include::gettingStarted/springBoot.adoc[]
+
+[[outsideGrails]]
+include::gettingStarted/outsideGrails.adoc[]
+
+[[objectMapping]]
+include::objectMapping.adoc[]
+
+[[idGeneration]]
+include::objectMapping/idGeneration.adoc[]
+
+[[dirtyChecking]]
+include::objectMapping/dirtyChecking.adoc[]
+
+[[queryIndexes]]
+include::querying/queryIndexes.adoc[]
+
+[[writeConcern]]
+include::objectMapping/writeConcern.adoc[]
+
+[[dynamicAttributes]]
+include::objectMapping/dynamicAttributes.adoc[]
+
+[[customTypes]]
+include::objectMapping/customTypes.adoc[]
+
+[[querying]]
+== Querying
+
+[[queryingBasics]]
+include::querying/queryingBasics.adoc[]
+
+[[geoSpatial]]
+include::querying/geoSpatial.adoc[]
+
+[[twodsphere]]
+include::querying/geoSpatial/2dsphere.adoc[]
+
+[[twodindex]]
+include::querying/geoSpatial/2dindex.adoc[]
+
+[[geoJson]]
+include::querying/geoSpatial/geoJson.adoc[]
+
+[[textSearch]]
+include::querying/textSearch.adoc[]
+
+[[multipleDataSources]]
+include::multipleDataSources/index.adoc[]
+
+[[databaseSwitching]]
+include::databaseSwitching.adoc[]
+
+[[multiTenancy]]
+include::multiTenancy/index.adoc[]
+
+[[stateless]]
+include::stateless.adoc[]
+
+[[lowLevelApi]]
+include::lowLevelApi.adoc[]
+
+[[transactions]]
+include::transactions.adoc[]
+
+[[testing]]
+include::testing.adoc[]
+include::integrationTesting.adoc[]
+
+[[reference]]
+== Reference
+
+[[ref-beans]]
+=== Beans
+
+[[ref-beans-mongo]]
+==== mongo
+
+include::ref/Beans/mongo.adoc[]
+
+[[ref-domain-classes]]
+=== Domain Classes
+
+[[ref-domain-classes-collection]]
+==== collection
+
+include::ref/Domain Classes/collection.adoc[]
+
+[[ref-domain-classes-collectionName]]
+==== collectionName
+
+include::ref/Domain Classes/collectionName.adoc[]
+
+[[ref-domain-classes-countHits]]
+==== countHits
+
+include::ref/Domain Classes/countHits.adoc[]
+
+[[ref-domain-classes-DB]]
+==== DB
+
+include::ref/Domain Classes/DB.adoc[]
+
+[[ref-domain-classes-dbo]]
+==== dbo
+
+include::ref/Domain Classes/dbo.adoc[]
+
+[[ref-domain-classes-findByGeoIntersects]]
+==== findByGeoIntersects
+
+include::ref/Domain Classes/findByGeoIntersects.adoc[]
+
+[[ref-domain-classes-findByGeoWithin]]
+==== findByGeoWithin
+
+include::ref/Domain Classes/findByGeoWithin.adoc[]
+
+[[ref-domain-classes-findByNear]]
+==== findByNear
+
+include::ref/Domain Classes/findByNear.adoc[]
+
+[[ref-domain-classes-findByNearSphere]]
+==== findByNearSphere
+
+include::ref/Domain Classes/findByNearSphere.adoc[]
+
+[[ref-domain-classes-findByWithinBox]]
+==== findByWithinBox
+
+include::ref/Domain Classes/findByWithinBox.adoc[]
+
+[[ref-domain-classes-findByWithinCircle]]
+==== findByWithinCircle
+
+include::ref/Domain Classes/findByWithinCircle.adoc[]
+
+[[ref-domain-classes-search]]
+==== search
+
+include::ref/Domain Classes/search.adoc[]
+
+[[ref-domain-classes-searchTop]]
+==== searchTop
+
+include::ref/Domain Classes/searchTop.adoc[]
+
+[[ref-domain-classes-useCollection]]
+==== useCollection
+
+include::ref/Domain Classes/useCollection.adoc[]
+
+[[ref-domain-classes-useDatabase]]
+==== useDatabase
+
+include::ref/Domain Classes/useDatabase.adoc[]
+
+[[ref-domain-classes-withCollection]]
+==== withCollection
+
+include::ref/Domain Classes/withCollection.adoc[]
+
+[[ref-domain-classes-withDatabase]]
+==== withDatabase
+
+include::ref/Domain Classes/withDatabase.adoc[]
+

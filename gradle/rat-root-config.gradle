@@ -1,0 +1,44 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+apply plugin: 'org.nosphere.apache.rat'
+
+tasks.named('rat') {
+    excludes = [
+            '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            '**/build/**', // Gradle generated build directories
+            '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
+            '**/*.html', // html files are only in test
+            '**/resources/*', // exclude test artifacts
+            'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
+            'src/*', // exclude build artifacts
+            'LICENSE',
+            'NOTICE',
+            '**/.sdkmanrc', // tool selection files aren't code
+            '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
+            '**/*.db', // H2 database test files
+            '**/*.gitkeep', // Empty Gitkeep file
+            'grails-scaffolding/src/main/templates/scaffolding/*.gsp', // template files that people are expected to use in the end application
+            'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
+            'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
+            'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
+            'grails-test-suite-uber/test/test-projects/plugin-build-settings/plugins/hibernate-1.2-SNAPSHOT/**/*', // exclude example test data for test cases
+            'bin/**', // scripts generated during build for grails-shell-cli
+    ]
+}

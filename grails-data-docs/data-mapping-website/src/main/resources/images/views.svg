@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Ebene_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="93.58px" height="93.58px" viewBox="0 0 93.58 93.58" enable-background="new 0 0 93.58 93.58" xml:space="preserve">
+<g>
+	<circle fill="none" stroke="#FEB672" stroke-width="2.8347" stroke-miterlimit="10" cx="46.79" cy="46.79" r="45.374"/>
+</g>
+<g>
+	
+		<linearGradient id="path7508_2_" gradientUnits="userSpaceOnUse" x1="-452.624" y1="-621.2036" x2="-420.8847" y2="-652.9473" gradientTransform="matrix(0.9988 0 0 -0.9987 482.6216 -589.0444)">
+		<stop  offset="0" style="stop-color:#FEB672"/>
+		<stop  offset="0.0209" style="stop-color:#FEB978"/>
+		<stop  offset="0.1734" style="stop-color:#FECEA1"/>
+		<stop  offset="0.3297" style="stop-color:#FFE0C3"/>
+		<stop  offset="0.4885" style="stop-color:#FFEEDD"/>
+		<stop  offset="0.6506" style="stop-color:#FFF7F0"/>
+		<stop  offset="0.8183" style="stop-color:#FFFDFB"/>
+		<stop  offset="1" style="stop-color:#FFFFFF"/>
+	</linearGradient>
+	<path id="path7508_1_" fill="url(#path7508_2_)" d="M46.753,57.787c9.955,13.572,19.699-3.788,19.684-14.228
+		c-0.016-12.343-12.527-19.241-19.691-19.241c-11.502,0-22.455,9.505-22.455,22.511c0,14.454,12.557,22.461,22.455,22.461
+		c-2.24-0.322-9.707-1.922-9.807-19.115c-0.066-11.629,3.795-16.275,9.789-14.231c0.137,0.05,6.613,2.606,6.613,10.956
+		C53.341,55.212,46.753,57.787,46.753,57.787z"/>
+	
+		<linearGradient id="path7510_2_" gradientUnits="userSpaceOnUse" x1="-419.4487" y1="-651.5103" x2="-451.1868" y2="-619.7677" gradientTransform="matrix(0.9988 0 0 -0.9987 482.6216 -589.0444)">
+		<stop  offset="0" style="stop-color:#FEB672"/>
+		<stop  offset="0.1577" style="stop-color:#FECB9B"/>
+		<stop  offset="0.325" style="stop-color:#FFDEBF"/>
+		<stop  offset="0.4938" style="stop-color:#FFECDB"/>
+		<stop  offset="0.6626" style="stop-color:#FFF7EF"/>
+		<stop  offset="0.8312" style="stop-color:#FFFDFB"/>
+		<stop  offset="1" style="stop-color:#FFFFFF"/>
+	</linearGradient>
+	<path id="path7510_1_" fill="url(#path7510_2_)" d="M46.741,35.935c-6.578-2.268-14.637,3.154-14.637,14.015
+		c0,17.731,13.139,19.341,14.732,19.341c11.5,0,22.453-9.505,22.453-22.51c0-14.455-12.555-22.462-22.453-22.462
+		c2.742-0.38,14.775,2.967,14.775,19.417c0,10.727-8.986,16.566-14.83,14.072c-0.135-0.051-6.613-2.606-6.613-10.955
+		C40.169,38.538,46.741,35.935,46.741,35.935z"/>
+</g>
+</svg>

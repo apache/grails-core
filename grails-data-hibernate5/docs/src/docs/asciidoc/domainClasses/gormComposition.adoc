@@ -1,0 +1,40 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+As well as <<gormAssociation,associations>>, GORM supports the notion of composition. In this case instead of mapping classes onto separate tables a class can be "embedded" within the current table. For example:
+
+[source,groovy]
+----
+class Person {
+    Address homeAddress
+    Address workAddress
+    static embedded = ['homeAddress', 'workAddress']
+}
+
+class Address {
+    String number
+    String code
+}
+----
+
+The resulting mapping would looking like this:
+
+image::5.2.2-composition.jpg[]
+
+NOTE: If you define the `Address` class in a separate Groovy file in the `grails-app/domain` directory you will also get an `address` table. If you don't want this to happen use Groovy's ability to define multiple classes per file and include the `Address` class below the `Person` class in the `grails-app/domain/Person.groovy` file. Another option is to define the `Address` class in `src/main/groovy/Address.groovy` and annotate it with `grails.gorm.annotation.Entity`

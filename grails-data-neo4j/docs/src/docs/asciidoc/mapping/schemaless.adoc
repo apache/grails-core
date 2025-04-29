@@ -1,0 +1,69 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Neo4j is a schemaless database. This means that, unlike SQL where you can only have a fixed number of rows and columns, nodes can have unlimited properties.
+
+Most existing object mapping tools in statically typed languages don't allow you to harness this power, but GORM for Neo4j allows you to define both statically defined properties (ie the properties of the domain class) and domain properties.
+
+For example, take the following domain class:
+
+[source,groovy]
+----
+class Plant {
+    String name
+ }
+----
+
+You can set both the statically defined `name` property, but also any arbitrary number of dynamic properties using the subscript operator in Groovy:
+
+[source,groovy]
+----
+def p = new Plant(name:"Carrot")
+  p['goesInPatch'] = true
+  p.save(flush:true)
+----
+
+Any simple properties can be included, however if you wish to have dynamic associations you can as well by modifying the mapping:
+
+[source,groovy]
+----
+class Plant {
+    String name
+    static mapping = {
+        dynamicAssociations true
+    }
+ }
+----
+
+
+With this in place you can define dynamic associations:
+
+[source,groovy]
+----
+def p = new Plant(name:"Carrot")
+  p['related'] = [ new Plant(name:"Potato").save() ]
+  p.save(flush:true)
+----
+
+WARNING: Dynamic associations have a runtime performance cost as when you access any dynamic property GORM has to issue a separate query to retrieve that association if the value is null, use with care.
+
+
+
+
+

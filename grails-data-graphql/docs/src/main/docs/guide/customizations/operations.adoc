@@ -1,0 +1,276 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Provided Operations
+
+The 3 query (get, list, count) and 3 mutation (create, update, delete) operations provided by default for all entities mapped with GraphQL are called the provided operations.
+
+It is possible to customize the provided operations as well as disable their creation.
+
+=== Disabling All Operations
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    operations.all.enabled false
+}
+----
+
+=== Disabling A Provided Operation
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    operations.delete.enabled false
+    //or
+    //operations.get
+    //operations.list
+    //operations.count
+    //operations.create
+    //operations.update
+    //operations.delete
+}
+----
+
+=== Disabling All Mutation(Write) Operation
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    operations.mutation.enabled false
+}
+----
+
+=== Disabling All Query(Read) Operation
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    operations.query.enabled false
+}
+----
+
+
+=== Metadata
+
+The mapping closure also allows the description and deprecation status of the provided operations to be manipulated.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    operations.get
+        .description("Retrieve a single instance")
+        .deprecationReason("Use newBook instead")
+
+    operations.delete.deprecated(true)
+}
+----
+
+=== Pagination
+
+By default, list operations return a list of instances. For most pagination solutions, that is not enough data. In addition to the list of results, the total count is required to be able to calculate pagination controls. Pagination is supported in this library through configuration of the list operation.
+
+[source,groovy]
+----
+static graphql = GraphQLMapping.build {
+    operations.list.paginate(true)
+}
+----
+
+By configuring the list operation to paginate, instead of a list of results being returned, an object will be returned that has a "results" value, which is the list, and a "totalCount" value which is the total count not considering the pagination parameters.
+
+==== Customization
+
+It is possible to customize how the pagination response is created through the creation of a link:{api}/org/grails/gorm/graphql/response/pagination/GraphQLPaginationResponseHandler.html[GraphQLPaginationResponseHandler].
+
+How you can supply your own pagination response handler depends on whether the library is being used standalone or part of a Grails application.
+
+For standalone applications, simply set the handler on the schema.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.paginationResponseHandler = new MyPaginationResponseHandler()
+...
+schema.generate()
+----
+
+For Grails applications, override the `graphQLPaginationResponseHandler` bean.
+
+[source,groovy]
+.grails-app/config/spring/resources.groovy
+----
+beans = {
+    graphQLPaginationResponseHandler(MyPaginationResponseHandler)
+}
+----
+
+NOTE: Data fetchers must respond according to the object type definition created by the pagination response handler. When supplying your own data fetcher, implement link:{api}/org/grails/gorm/graphql/fetcher/PaginatingGormDataFetcher.html[PaginatingGormDataFetcher] and the response handler will be populated for you. The response handler is responsible for creating the response in order to assure it is compatible.
+
+== Custom Operations
+
+In addition to the provided operations, it is possible to add custom operations through the mapping block in an entity.
+
+Custom operations can be defined with the `query` method and the `mutation` method, depending on what category the operation being added falls into. In both cases the API is exactly the same.
+
+=== Definition
+
+Custom operations must be defined in the mapping block of GORM entities. In the example below we have an `Author` class that has a `name`. We want to create a custom operation to retrieve an author by it's name.
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static graphql = GraphQLMapping.build {
+
+        //authorByName is the name exposed by the API
+        //Author is the return type
+        query('authorByName', Author) { //or [Author] to return a list of authors
+            ...
+        }
+    }
+}
+----
+
+In the case where a pagination result should be returned from the custom operation, a simple method `pagedResult` is available to mark the type.
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static graphql = GraphQLMapping.build {
+
+        //authorsByName is the name exposed by the API
+        //The return type will have a results key and a totalCount key
+        query('authorsByName', pagedResult(Author)) {
+            ...
+        }
+    }
+}
+----
+
+For operations with a custom return type, it possible to define a custom type using the `returns` block. The API inside of the returns block is exactly the same as the API for defining link:#custom[custom properties] with custom types.
+
+[source,groovy]
+----
+mutation('deleteAuthors', 'AuthorsDeletedResponse') {
+    returns {
+        field('deletedCount', Long)
+        field('success', Boolean)
+    }
+}
+----
+
+The data fetcher provided must have the defined fields.
+
+=== Metadata
+
+Description and deprecation information can also be supplied for custom operations.
+
+[source,groovy]
+----
+query('authorByName', Author) { //or [Author] to return a list of authors
+    description 'Retrieves an author where the name equals the supplied name`
+
+    deprecated true
+    //or
+    deprecationReason 'Use authorWhereName instead`
+}
+----
+
+=== Data Fetcher
+
+When creating a custom operation, it is necessary to supply a "data fetcher". The data fetcher is responsible for returning data to GraphQL to be used in generating the response. The data fetcher must be an instance of `graphql.schema.DataFetcher`.
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static hasMany = [books: Book]
+
+    static graphql = GraphQLMapping.build {
+        argument('name', String)
+        query('authorByName', Author) {
+            dataFetcher(new DataFetcher<>() {
+                @Override
+                Object get(DataFetchingEnvironment environment) {
+                    Author.findByName(environment.getArgument('name'))
+                }
+            })
+        }
+    }
+}
+----
+
+The above example will function properly, however it is missing out on one of the best features of this library, query optimization. If books were requested to be returned, a separate query would need to be executed to retrieve the books. To make this better, the recommendation is to always extend from one of the provided data fetchers.
+
+|===
+|Type|Class
+|GET
+|link:{api}/org/grails/gorm/graphql/fetcher/impl/SingleEntityDataFetcher.html[SingleEntityDataFetcher]
+|LIST
+|link:{api}/org/grails/gorm/graphql/fetcher/impl/EntityDataFetcher.html[EntityDataFetcher]
+|LIST (Paginated Response)
+|link:{api}/org/grails/gorm/graphql/fetcher/impl/PaginatedEntityDataFetcher.html[PaginatedEntityDataFetcher]
+|CREATE
+|link:{api}/org/grails/gorm/graphql/fetcher/impl/CreateEntityDataFetcher.html[CreateEntityDataFetcher]
+|UPDATE
+|link:{api}/org/grails/gorm/graphql/fetcher/impl/UpdateEntityDataFetcher.html[UpdateEntityDataFetcher]
+|DELETE
+|link:{api}/org/grails/gorm/graphql/fetcher/impl/DeleteEntityDataFetcher.html[EntityDataFetcher]
+|===
+
+If the data fetcher you wish to create does not fit well in any of the above use cases, you can extend directly from link:{api}/org/grails/gorm/graphql/fetcher/DefaultGormDataFetcher.html[DefaultGormDataFetcher], which has all of the query optimization logic.
+
+All of the classes above have a constructor which takes in a link:{gormapi}org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity]. The easiest way to get a persistent entity from a domain class is to execute the static `gormPersistentEntity` method.
+
+Using the above information, we can change the `authorByName` to extend from the link:{api}/org/grails/gorm/graphql/fetcher/impl/SingleEntityDataFetcher.html[SingleEntityDataFetcher] class because we are returning a single `Author`.
+
+
+[source,groovy]
+----
+class Author {
+
+    String name
+
+    static hasMany = [books: Book]
+
+    static graphql = GraphQLMapping.lazy {
+        query('authorByName', Author) {
+            argument('name', String)
+            dataFetcher(new SingleEntityDataFetcher<>(Author.gormPersistentEntity) {
+                @Override
+                protected DetachedCriteria buildCriteria(DataFetchingEnvironment environment) {
+                    Author.where { name == environment.getArgument('name') }
+                }
+            })
+        }
+    }
+}
+----
+
+CAUTION: Note the use of `GraphQLMapping.lazy` in this example. Because we are accessing the persistent entity, the GORM mapping context must be created before this code is evaluated. The `lazy` method will execute the provided code when the mapping is requested (during schema creation), instead of at class initialization time. By that time it is expected that GORM is available.

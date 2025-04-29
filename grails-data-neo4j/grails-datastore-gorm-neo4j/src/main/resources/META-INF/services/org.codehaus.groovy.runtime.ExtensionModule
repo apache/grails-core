@@ -1,0 +1,3 @@
+moduleName=grails-neo4j-module
+moduleVersion=1.0
+extensionClasses=org.grails.datastore.gorm.neo4j.extensions.Neo4jExtensions

@@ -1,17 +1,20 @@
 /*
- * Copyright 2004-2005 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.compiler.injection;
 
@@ -1088,7 +1091,7 @@ public class GrailsASTUtils {
      */
     public static Map<String, ClassNode> getAssocationMap(ClassNode classNode, String associationType) {
         PropertyNode property = classNode.getProperty(associationType);
-        Map<String, ClassNode> associationMap = new HashMap<String, ClassNode>();
+        Map<String, ClassNode> associationMap = new LinkedHashMap<String, ClassNode>();
         if (property != null && property.isStatic()) {
             Expression e = property.getInitialExpression();
             if (e instanceof MapExpression) {
@@ -1106,7 +1109,7 @@ public class GrailsASTUtils {
     }
 
     public static Map<String,ClassNode> getAllAssociationMap(ClassNode classNode) {
-        Map<String, ClassNode> associationMap = new HashMap<String, ClassNode>();
+        Map<String, ClassNode> associationMap = new LinkedHashMap<String, ClassNode>();
         associationMap.putAll( getAssocationMap(classNode, GormProperties.HAS_MANY));
         associationMap.putAll( getAssocationMap(classNode, GormProperties.HAS_ONE));
         associationMap.putAll( getAssocationMap(classNode, GormProperties.BELONGS_TO));
@@ -1428,7 +1431,7 @@ public class GrailsASTUtils {
     }
     
     public static void removeCompileStaticAnnotations(final AnnotatedNode annotatedNode) {
-        filterAnnotations(annotatedNode, null, new HashSet<String>(Arrays.asList(new String[]{CompileStatic.class.getName(), TypeChecked.class.getName()})));
+        filterAnnotations(annotatedNode, null, new LinkedHashSet<String>(Arrays.asList(new String[]{CompileStatic.class.getName(), TypeChecked.class.getName()})));
     }
     
     public static void markApplied(ASTNode astNode, Class<?> transformationClass) {

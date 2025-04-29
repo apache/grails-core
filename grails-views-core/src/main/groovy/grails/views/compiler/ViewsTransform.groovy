@@ -1,23 +1,34 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 package grails.views.compiler
 
 import grails.compiler.traits.TraitInjector
-import grails.views.ResolvableGroovyTemplateEngine
 import grails.views.Views
-import groovy.text.markup.MarkupTemplateEngine
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.apache.commons.validator.Var
 import org.codehaus.groovy.ast.ASTNode
-import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.CodeVisitorSupport
-import org.codehaus.groovy.ast.DynamicVariable
 import org.codehaus.groovy.ast.FieldNode
-import org.codehaus.groovy.ast.MethodNode
-import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
@@ -27,14 +38,12 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.codehaus.groovy.ast.expr.PropertyExpression
-import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.Statement
-import org.codehaus.groovy.ast.tools.GeneralUtils
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import org.codehaus.groovy.transform.TransformWithPriority
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
@@ -53,7 +62,7 @@ import java.lang.reflect.Modifier
  */
 @GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
 @CompileStatic
-class ViewsTransform implements ASTTransformation, CompilationUnitAware {
+class ViewsTransform implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
     public static final String APPLIED = "grails.views.transform.APPLIED"
 
     final String extension
@@ -142,6 +151,11 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware {
         GrailsFactoriesLoader.loadFactories(TraitInjector).findAll() { TraitInjector ti ->
             ti.artefactTypes.contains(Views.TYPE)
         }
+    }
+
+    @Override
+    int priority() {
+        GroovyTransformOrder.VIEWS_ORDER
     }
 
     class ModelTypesVisitor extends ClassCodeVisitorSupport {

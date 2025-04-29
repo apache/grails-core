@@ -1,0 +1,73 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures'
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Geb Plugin'
+    pomDescription = 'Provides Integration with Geb for Functional Testing'
+    pomDevelopers = [
+            graemerocher: 'Graeme Rocher',
+            puneetbehl: 'Puneet Behl',
+            sbglasius: 'Søren Berg Glasius',
+            matrei: 'Mattias Reichel',
+            jdaugherty: 'James Daugherty'
+    ]
+}
+
+dependencies {
+    // Because this is a grails plugin and the gradle grails-plugin is applied, these won't be used due to the mavenBom apply
+    // For most core projects, we don't apply the plugin and only add what we need so we need the platform
+    // for consistency, add the platform here and later move away from the grails-plugin gradle plugin apply
+    implementation platform(project(':grails-bom'))
+    testFixturesApi(platform(project(':grails-bom')))
+    testFixturesImplementation platform(project(':grails-bom'))
+
+    compileOnly project(':grails-core') // Provided, as this is a Grails plugin
+
+    testFixturesCompileOnly 'jakarta.servlet:jakarta.servlet-api'
+    testFixturesCompileOnly 'org.slf4j:slf4j-simple' // Remove compilation warning about missing slf4j impl
+
+    testFixturesApi 'org.gebish:geb-spock'
+    testFixturesApi project(':grails-testing-support-core')
+    testFixturesApi project(':grails-datamapping-core')
+    testFixturesApi "org.testcontainers:selenium"
+    testFixturesApi "org.seleniumhq.selenium:selenium-chrome-driver"
+    testFixturesApi "org.seleniumhq.selenium:selenium-remote-driver"
+
+    testFixturesImplementation "org.seleniumhq.selenium:selenium-support"
+
+    // Added to be able to resolve the geb version from the BOM in the resolveVersions task
+    compileOnly 'org.gebish:geb-spock'
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

@@ -1,0 +1,93 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for MongoDB'
+    pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
+    pomDevelopers =  [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith'
+    ]
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api 'org.mongodb:bson', {
+        // api: Document, ObjectId
+        // impl: Bson
+    }
+    api 'org.mongodb:mongodb-driver-core', {
+        // api: DBObject, DeleteResult, ReadPreference, @Nullable(runtime), UpdateResult, WriteConcern
+        // impl: BasicDBObject
+    }
+
+    implementation project(':grails-data-mongodb-core'), {
+        // impl: AbstractMongoObectEntityPersister, AbstractMongoSession, MongoConstants, MongoEntityPersister,
+        //       MongoQuery
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datastore-gorm-mongodb
+            //exclude group: 'org.apache.grails.data', module: 'grails-datastore-core' // NativeEntryEntityPersister
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-data-mongodb-bson'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-support'
+            //exclude group: 'org.mongodb', module: 'bson' // Document
+            exclude group: 'org.mongodb', module: 'mongodb-driver-core'
+            //exclude group: 'org.mongodb', module: 'mongodb-driver-sync' // FindIterable
+            exclude group: 'org.springframework', module: 'spring-context'
+        }
+    }
+    implementation project(':grails-datamapping-core'), {
+        // impl: GormEnhancer
+        if (excludeUnusedTransDeps) {
+            // API dependencies in grails-datamapping-core
+            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
+            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // Entity
+            exclude group: 'org.apache.grails', module: 'grails-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
+            exclude group: 'org.apache.grails.data', module: 'grails-datamapping-validation'
+            //exclude group: 'org.springframework', module: 'spring-context' // ApplicationEventPublisher
+            exclude group: 'org.springframework', module: 'spring-jdbc'
+            //exclude group: 'org.springframework', module: 'spring-tx' // PlatformTransactionManager
+        }
+    }
+
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.slf4j:slf4j-api', {
+        // "optional" compile dependency in mongodb-driver-core
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

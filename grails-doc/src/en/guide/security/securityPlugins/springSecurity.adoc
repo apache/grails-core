@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 The Spring Security plugins are built on the https://spring.io/projects/spring-security[Spring Security] project which provides a flexible, extensible framework for building all sorts of authentication and authorization schemes. The plugins are modular so you can install just the functionality that you need for your application. The Spring Security plugins are the official security plugins for Grails and are actively maintained and supported.
 
 There is a https://github.com/apache/grails-spring-security[Spring Security Core] plugin which supports form-based authentication, encrypted/salted passwords, HTTP Basic authentication, etc. and secondary dependent plugins provide alternate functionality such as https://github.com/apache/grails-spring-security[ACL support], https://github.com/apache/grails-spring-security[single sign-on with Jasig CAS], https://github.com/apache/grails-spring-security[LDAP authentication], https://github.com/grails-plugins/grails-spring-security-kerberos[Kerberos authentication], and a plugin providing https://github.com/apache/grails-spring-security[user interface extensions] and security workflows.

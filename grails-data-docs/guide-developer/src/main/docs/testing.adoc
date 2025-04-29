@@ -1,0 +1,78 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The `grails-datamapping-tck-tests` project provides several hundred tests to guarantee that a particular GORM implementation is compliant. To use the TCK you need to define a dependency on the TCK in the subprojects `build.gradle` file:
+
+[source,groovy]
+----
+testCompile project(':grails-datamapping-tck-tests')
+----
+
+Then create a `Setup.groovy` file that sets up your custom datastore in your implementation.
+
+For example the `ConcurrentHashMap` implementation has one defined in `grails-datastore-gorm-test/src/test/groovy/org/grails/datastore/gorm/Setup.groovy`:
+
+[source,groovy]
+----
+class Setup {
+
+    static destroy() {
+        // noop
+    }
+    static Session setup(classes) {
+
+        def ctx = new GenericApplicationContext()
+        ctx.refresh()
+        def simple = new SimpleMapDatastore(ctx)
+
+        ...
+        for (cls in classes) {
+            simple.mappingContext.addPersistentEntity(cls)
+        }
+
+        ...
+        def enhancer = new GormEnhancer(simple, new DatastoreTransactionManager(datastore: simple))
+        enhancer.enhance()
+
+        simple.mappingContext.addMappingContextListener({ e -> enhancer.enhance e } as MappingContext.Listener)
+
+        simple.applicationContext.addApplicationListener new DomainEventListener(simple)
+        simple.applicationContext.addApplicationListener new AutoTimestampEventListener(simple)
+
+        return simple.connect()
+    }
+}
+----
+
+Some setup code has been omitted for clarity, but essentially, the `Setup.groovy` class should initialize the `Datastore` and return a `Session` from the static setup method, which is passed a list of classes to configure.
+
+With this setup, all the TCK tests will be run against the subproject. If a specific test cannot be implemented due to the underlying datastore lacking support for a particular feature, you can create a test with the same name as the failing test, and that will then override the corresponding test in the TCK.
+
+For example: SimpleDB doesn't support pagination. Add a `grails.gorm.tests.PagedResultSpec` class that overrides the one from the TCK. Each test is a Spock specification and Spock has an `Ignore` annotation that can be used to ignore a particular test:
+
+[source,groovy]
+----
+/**
+ * Ignored for SimpleDB because SimpleDB doesn't support pagination
+ */
+@Ignore
+class PagedResultSpec extends GormDatastoreSpec{
+   ...
+}
+----

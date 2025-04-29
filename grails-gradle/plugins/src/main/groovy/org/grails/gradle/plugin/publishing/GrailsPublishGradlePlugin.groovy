@@ -1,17 +1,20 @@
 /*
- * Copyright 2015-2025 original authors
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.gradle.plugin.publishing
 
@@ -22,12 +25,9 @@ import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.plugins.ExtensionContainer
-import org.gradle.api.plugins.ExtraPropertiesExtension
-import org.gradle.api.plugins.JavaPlatformExtension
-import org.gradle.api.plugins.JavaPluginExtension
-import org.gradle.api.plugins.PluginManager
+import org.gradle.api.plugins.*
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.api.tasks.SourceSet
@@ -35,6 +35,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.javadoc.Groovydoc
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
@@ -144,10 +145,9 @@ Note: if project properties are used, the properties must be defined prior to ap
             isRelease = !isSnapshot
 
             if (project.version == Project.DEFAULT_VERSION) {
-                if(isRelease) {
+                if (isRelease) {
                     project.rootProject.logger.warn("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
-                }
-                else {
+                } else {
                     project.rootProject.logger.info("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
                 }
             }
@@ -249,8 +249,8 @@ Note: if project properties are used, the properties must be defined prior to ap
                 final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
                 publications {
                     maven(MavenPublication) {
-                        artifactId gpe.artifactId ?: project.name
-                        groupId gpe.groupId ?: project.group
+                        delegate.artifactId = gpe.artifactId ?: project.name
+                        delegate.groupId = gpe.groupId ?: project.group
 
                         doAddArtefact(project, delegate)
                         def extraArtefact = getDefaultExtraArtifact(project)
@@ -351,7 +351,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
                             }
 
-                            if(gpe.pomCustomization) {
+                            if (gpe.pomCustomization) {
                                 gpe.pomCustomization.delegate = delegate
                                 gpe.pomCustomization.resolveStrategy = Closure.DELEGATE_FIRST
                                 gpe.pomCustomization.call()
@@ -501,29 +501,57 @@ Note: if project properties are used, the properties must be defined prior to ap
             it.withSourcesJar()
         }
 
-        final TaskContainer taskContainer = project.tasks
-        taskContainer.named('javadocJar', Jar).configure { Jar task ->
-            project.rootProject.logger.info("Configuring javadocJar task for project {} to include groovydoc", project.name)
-            Task groovyDocTask = taskContainer.findByName('groovydoc')
+        final TaskContainer tasks = project.tasks
+        tasks.named('javadoc').configure {
+            Task groovyDocTask = tasks.findByName('groovydoc')
             if (groovyDocTask) {
-                task.dependsOn groovyDocTask
-
-                task.duplicatesStrategy = DuplicatesStrategy.INCLUDE
-                task.from groovyDocTask.outputs
+                project.rootProject.logger.info("Configuring javadocJar task for project {} to include groovydoc", project.name)
+                it.enabled = false
             }
         }
 
-        taskContainer.named('sourcesJar', Jar).configure { Jar task ->
-            SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
-            task.duplicatesStrategy = DuplicatesStrategy.INCLUDE
-            // don't only include main, but any source set
-            task.from sourceSets.collect { it.allSource }
+        tasks.named('javadocJar', Jar).configure { Jar jar ->
+            jar.reproducibleFileOrder = true
+            jar.preserveFileTimestamps = false
+            jar.dirMode = 0755 // To avoid platform specific defaults
+            jar.fileMode = 0644 // to avoid platform specific defaults
+
+            Groovydoc groovyDocTask = tasks.findByName('groovydoc')
+            if (groovyDocTask) {
+                jar.dependsOn(groovyDocTask)
+
+                // Ensure the java source set is included in the groovydoc source set
+                SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
+                groovyDocTask.source(project.files(sourceSets.main.java.srcDirs))
+
+                ConfigurableFileCollection groovyDocFiles = project.files(groovyDocTask.destinationDir)
+                jar.from(groovyDocFiles)
+                jar.inputs.files(groovyDocFiles)
+            }
         }
 
-        project.tasks.register('testSourcesJar', Jar) {
-            it.dependsOn('testClasses')
-            it.from project.sourceSets.test.output
-            it.archiveClassifier.set('tests')
+        tasks.named('sourcesJar', Jar).configure { Jar jar ->
+            SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
+            jar.reproducibleFileOrder = true
+            jar.preserveFileTimestamps = false
+            jar.dirMode = 0755 // To avoid platform specific defaults
+            jar.fileMode = 0644 // to avoid platform specific defaults
+            jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+            // don't only include main, but any source set
+            jar.from sourceSets.collect { it.allSource }
+            jar.inputs.files(sourceSets.collect { it.allSource })
+        }
+
+        project.tasks.register('testSourcesJar', Jar).configure { Jar jar ->
+            jar.dependsOn('testClasses')
+            jar.reproducibleFileOrder = true
+            jar.preserveFileTimestamps = false
+            jar.dirMode = 0755 // To avoid platform specific defaults
+            jar.fileMode = 0644 // to avoid platform specific defaults
+            jar.from project.sourceSets.test.output
+            jar.inputs.files(project.sourceSets.test.output)
+            jar.archiveClassifier.set('tests')
         }
 
         SourceSetContainer sourceSets = SourceSets.findSourceSets(project)

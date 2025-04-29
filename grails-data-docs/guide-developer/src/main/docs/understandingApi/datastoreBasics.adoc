@@ -1,0 +1,119 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+==== The MappingContext
+
+
+The `org.grails.datastore.mapping.model.MappingContext` interface is used to obtain metadata about the classes that are configured for persistence. There are `org.grails.datastore.mapping.model.PersistentEntity` and `org.grails.datastore.mapping.model.PersistentProperty` interfaces that represent a class and its properties respectively. These can be obtained and introspected via the `MappingContext`.
+
+There are various concrete implementations of the `MappingContext` interface such as:
+
+* `DocumentMappingContext` - Used for document stores, subclassed by `MongoMappingContext`
+* `JpaMappingContext` - Used for JPA
+* `KeyValueMappingContext` - Used by key/value stores
+
+Creating a new `MappingContext` may be useful because it allows users to configure how a class is mapped to the underlying datastore using GORM's `mapping` block as well as allowing registration of custom type converters and so on. The implementation for Neo4j looks like this:
+
+[source,groovy]
+----
+class Neo4jMappingContext extends AbstractMappingContext {
+
+    MappingFactory<Collection, Attribute> mappingFactory
+    MappingConfigurationStrategy syntaxStrategy
+
+    Neo4jMappingContext() {
+        mappingFactory = new GraphGormMappingFactory()
+        syntaxStrategy = new GormMappingConfigurationStrategy(mappingFactory)
+        //addTypeConverter(new StringToNumberConverterFactory().getConverter(BigDecimal))
+        addTypeConverter(new StringToShortConverter())
+        addTypeConverter(new StringToBigIntegerConverter())
+         ...
+    }
+
+    @Override
+    protected PersistentEntity createPersistentEntity(Class javaClass) {
+        GraphPersistentEntity persistentEntity = new GraphPersistentEntity(javaClass, this)
+        mappingFactory.createMappedForm(persistentEntity) // populates mappingFactory.entityToPropertyMap as a side effect
+        persistentEntity
+    }
+
+    MappingConfigurationStrategy getMappingSyntaxStrategy() {
+        syntaxStrategy
+    }
+
+    MappingFactory getMappingFactory() {
+        mappingFactory
+    }
+}
+----
+
+
+Notice how Neo4j provides a custom `GraphGormMappingFactory` and `GraphPersistentEntity` to allow the domain class configuration to be changed for a given Neo4j `Node`.
+
+
+==== The Datastore Interface
+
+
+The `org.grails.datastore.mapping.core.Datastore` interface is the equivalent of a SQL `DataSource` where by it provides the necessary capability to create a connection. In most cases one can simply subclass the `AbstractDatastore` super class and implement the `createSession` method. The following implementation is from the `SimpleMapDatastore` which implements GORM ontop of a `ConcurrentHashMap`:
+
+[,java]
+----
+@Override
+protected Session createSession(PropertyResolver connDetails) {
+    return new SimpleMapSession(this, getMappingContext(), getApplicationEventPublisher());
+}
+----
+
+The implementation depends a lot on the underlying datastore. For example for MongoDB the following implementation is used:
+
+[,java]
+----
+@Override
+protected Session createSession(PropertyResolver connDetails) {
+    return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), false);
+}
+----
+
+Notice that the `Datastore` also has a reference to the `MappingContext` discussed in the previous section.
+
+
+
+==== The Session Interface
+
+
+The `org.grails.datastore.mapping.core.Session` interface represents an active connection. It can be either stateful or stateless, depending on the implementation. For example of embedded databases where there is no network connection, a stateful session is not particularly useful, but a datastore that creates network connections you may want to cache returned instances to reduce load.
+
+The `AbstractSession` class provides some support for creating stateful sessions, if you prefer a stateless implementation then simply implement `Session` or subclass `AbstractAttributeStoringSession`.
+
+In general, if you subclass `AbstractSession`, the minimum you need to do is implement the `createPersister` method:
+
+[,java]
+----
+protected Persister createPersister(Class cls, MappingContext mappingContext) {
+    PersistentEntity entity = mappingContext.getPersistentEntity(cls.getName());
+    if (entity == null) {
+        return null;
+    }
+    return new SimpleMapEntityPersister(mappingContext, entity, this,
+        (SimpleMapDatastore) getDatastore(), publisher);
+}
+----
+
+The example above is from the `SimpleMapSession` implementation, which creates a `SimpleMapEntityPersister` instance and returns it. Returning null indicates that the class cannot be persisted and an exception will be thrown.

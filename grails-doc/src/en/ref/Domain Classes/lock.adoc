@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 
 == lock
 
@@ -22,8 +41,8 @@ book.lock()
 === Description
 
 
-The `lock` method obtains a pessimistic lock on an instance, locking the row in the database with `select ... for update`. The `lock` method is equivalent to using Hibernate's https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/LockMode.html#UPGRADE[LockMode.UPGRADE] in combination with the https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html#lock(java/lang/Object, org/hibernate/LockMode).html[lock] method.
+The `lock` method obtains a pessimistic lock on an instance, locking the row in the database with `select ... for update`. The `lock` method is equivalent to using Hibernate's https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/LockMode.html#UPGRADE[LockMode.UPGRADE] in combination with the https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#lock(java/lang/Object, org/hibernate/LockMode).html[lock] method.
 
 The lock is automatically released when the transaction commits. In Grails this is typically after an action has finished executing.
 
-Refer to the section on https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#locking[Optimistic and Pessimistic locking] in the user guide for info.
+Refer to the section on  link:{hibernate5Guide}/manual/index.html#locking[Optimistic and Pessimistic locking] in the user guide for info.

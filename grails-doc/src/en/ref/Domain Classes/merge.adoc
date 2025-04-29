@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 
 == merge
 
@@ -39,7 +58,7 @@ ____
 Copy the state of the given object onto the persistent object with the same identifier. If there is no persistent instance currently associated with the session, it will be loaded. If the given instance is unsaved, save a copy of and return it as a newly persistent instance.
 ____
 
-The `merge` method is equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernateVersion}/org/hibernate/Session.html#merge(java/lang/Object).html[merge] method.
+The `merge` method is equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#merge(java/lang/Object).html[merge] method.
 
 Parameters:
 

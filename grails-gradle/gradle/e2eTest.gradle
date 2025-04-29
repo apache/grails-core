@@ -1,20 +1,50 @@
-def e2eTest = sourceSets.create('e2eTest')
-def e2eTestTask = tasks.register('e2eTest', Test) {
-    group = 'verification'
-    testClassesDirs = sourceSets.e2eTest.output.classesDirs
-    classpath = sourceSets.e2eTest.runtimeClasspath
-    useJUnitPlatform()
-    systemProperty('localMavenPath', rootProject.layout.buildDirectory.dir('local-maven').get().asFile.absolutePath)
-    systemProperty('grailsGradlePluginVersion', project.version)
-    systemProperty('groovyVersion', e2eGroovyVersion)
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 
-    testLogging {
+def e2eTest = sourceSets.create('e2eTest')
+def e2eTestTask = tasks.register('e2eTest', Test)
+e2eTestTask.configure { Test it ->
+    it.onlyIf {
+        ![
+                'onlyFunctionalTests',
+                'onlyHibernate5Tests',
+                'onlyMongodbTests',
+                'skipTests'
+        ].find {
+            project.hasProperty(it)
+        }
+    }
+    it.group = 'verification'
+    it.testClassesDirs = sourceSets.e2eTest.output.classesDirs
+    it.classpath = sourceSets.e2eTest.runtimeClasspath
+    it.useJUnitPlatform()
+    it.systemProperty('localMavenPath', rootProject.layout.buildDirectory.dir('local-maven').get().asFile.absolutePath)
+    it.systemProperty('grailsGradlePluginVersion', project.version)
+    it.systemProperty('groovyVersion', e2eGroovyVersion)
+
+    it.testLogging {
         exceptionFormat = 'full'
         events 'passed', 'skipped', 'failed', 'standardOut', 'standardError'
     }
-    beforeTest { descriptor -> logger.quiet ' -- $descriptor' }
+    it.beforeTest { descriptor -> logger.quiet ' -- $descriptor' }
 
-    dependsOn 'publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-bom:publishAllPublicationsToTestCaseMavenRepoRepository'
+    it.dependsOn 'publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-bom:publishAllPublicationsToTestCaseMavenRepoRepository'
 }
 
 tasks.named('check').configure {

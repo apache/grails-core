@@ -1,0 +1,91 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+There are a few ways to implement projections. One way is to is to use the convention `T find[Domain Class][Property]`. For example say the `Book` class has a `releaseDate` property of type `Date`:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+   Date findBookReleaseDate(String title)
+}
+----
+
+This also works for multiple results:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+   List<Date> findBookReleaseDate(String publisher)
+}
+----
+
+And you can use the `Map` argument to provide ordering and pagination if necessary:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+   List<Date> findBookReleaseDate(String publisher, Map args)
+}
+----
+
+===== JPA-QL Projections
+
+You can also use a JPA-QL query to perform a projection:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+   @Query("select $b.releaseDate from ${Book b} where $b.publisher = $publisher order by $b.releaseDate")
+   List<Date> findBookReleaseDates(String publisher)
+}
+----
+
+===== Interface Projections
+
+Sometimes you want to expose a more limited set of a data to the calling class. In this case it is possible to use interface projections.
+
+For example:
+
+
+[source,groovy]
+----
+class Author {
+    String name
+    Date dateOfBirth <1>
+}
+interface AuthorInfo {
+    String getName() <2>
+}
+@Service(Author)
+interface AuthorService {
+   AuthorInfo find(String name) <3>
+}
+----
+
+<1> The domain class `Author` has a property called `dateOfBirth` that we do not want to make available to the client
+<2> You can define an interface that only exposes the properties you want to expose
+<3> Return the interface from the service.
+
+NOTE: If a property exists on the interface but not on the domain class you will receive a compilation error.
+

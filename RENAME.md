@@ -1,3 +1,19 @@
+<!--
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Grails Repackaging
 
 As part of the move to the Apache Software Foundation, the grails artifacts must adhere to the apache namespace.
@@ -128,6 +144,7 @@ Below is a reference of all migrated artifacts - both their old and new name.
 | org.grails.plugins                | views-json                                      | org.apache.grails                               | grails-views-gson                                             |                        |                        | grails-views           |
 | org.grails                        | views-json-testing-support                      | org.apache.grails                               | grails-testing-support-views-gson                             |                        |                        | grails-views           |
 | org.grails                        | views-markup                                    | org.apache.grails                               | grails-views-markup                                           |                        |                        | grails-views           |
+| org.grails.plugins                | views-gradle                                    | org.apache.grails                               | grails-gradle-plugins                                         |                        |                        | grails-views           |
 | org.grails                        | grails-web                                      | org.apache.grails.web                           | grails-web-core                                               |                        |                        | grails-core            |
 | org.grails                        | grails-web-boot                                 | org.apache.grails.web                           | grails-web-boot                                               |                        |                        | grails-core            |
 | org.grails                        | grails-web-common                               | org.apache.grails.web                           | grails-web-common                                             |                        |                        | grails-core            |

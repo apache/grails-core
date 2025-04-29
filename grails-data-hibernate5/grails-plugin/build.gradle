@@ -1,0 +1,91 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'Grails GORM'
+    pomDescription = 'GORM - Grails Data Access Framework'
+    pomDevelopers =  [
+            'graemerocher': 'Graeme Rocher',
+            'jeffscottbrown': 'Jeff Brown',
+            'burtbeckwith': 'Burt Beckwith',
+            'puneetbehl': 'Puneet Behl',
+    ]
+}
+
+dependencies {
+    // TODO: Clarify and clean up dependencies
+    implementation platform(project(':grails-bom'))
+
+    api "org.springframework.boot:spring-boot"
+    api "org.springframework:spring-orm"
+    api "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
+    api project(":grails-datastore-web")
+    api project(":grails-datamapping-support")
+    api project(":grails-data-hibernate5-core"), {
+        exclude group:'org.springframework', module:'spring-context'
+        exclude group:'org.springframework', module:'spring-core'
+        exclude group:'org.springframework', module:'spring-beans'
+        exclude group:'org.springframework', module:'spring-tx'
+        exclude group:'org.apache.grails', module:'grails-bootstrap'
+        exclude group:'org.codehaus.groovy', module:'groovy-all'
+        exclude group:'org.apache.grails', module:'grails-core'
+        exclude group:'javax.transaction', module:'jta'
+    }
+
+    compileOnly project(':grails-bootstrap')
+    compileOnly project(':grails-core')
+
+    compileOnly 'org.spockframework:spock-core', {
+        exclude group: 'junit', module: 'junit-dep'
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+    }
+
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'com.h2database:h2'
+    testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
+    testRuntimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
+        // exclude javax variant of hibernate-core 5.6
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    testRuntimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+    testRuntimeOnly 'org.springframework:spring-aop'
+    testRuntimeOnly 'org.springframework:spring-expression'
+    testRuntimeOnly 'org.yaml:snakeyaml'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="94px" height="94px" viewBox="0 0 94 94" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>hibernate</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="hibernate" transform="translate(1.000000, 1.000000)">
+            <circle id="Oval" stroke="#FEB672" stroke-width="2.8347" cx="45.88" cy="45.792" r="45.374"></circle>
+            <g id="hibernate_icon_whitebkg" transform="translate(22.000000, 21.000000)" fill-rule="nonzero">
+                <polygon id="Shape" fill="#59666C" points="19.2384505 16.8004602 9.70651445 33.6255492 9.70651445 33.6255492 0.181933033 16.8006572 9.71019177 0"></polygon>
+                <polygon id="Shape" fill="#BCAE79" points="28.7725157 0.000591093734 9.71561106 0.000591093734 19.2442569 16.8012483 38.3058066 16.8006572"></polygon>
+                <polygon id="Shape" fill="#59666C" points="28.76729 33.6338245 38.298839 16.8085384 38.298839 16.8085384 47.823614 33.6338245 38.2951617 50.4342848"></polygon>
+                <polygon id="Shape" fill="#BCAE79" points="19.2334184 50.4336936 38.2901295 50.4336936 28.7616772 33.6326424 9.6999339 33.6338245"></polygon>
+            </g>
+        </g>
+    </g>
+</svg>

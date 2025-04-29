@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="94px" height="94px" viewBox="0 0 94 94" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 49 (51002) - http://www.bohemiancoding.com/sketch -->
+    <title>vue</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="vue" transform="translate(1.000000, 1.000000)">
+            <circle id="Oval" stroke="#FEB672" stroke-width="2.8347" cx="45.79" cy="45.789" r="45.374"></circle>
+            <g id="vuejs" transform="translate(22.000000, 25.000000)" fill-rule="nonzero">
+                <g id="g10" transform="translate(23.500000, 20.500000) scale(-1, 1) rotate(-180.000000) translate(-23.500000, -20.500000) ">
+                    <g id="g12" transform="translate(0.014594, 0.001999)" fill="#FEB672">
+                        <polygon id="path14" points="28.2093247 39.744897 22.9243893 30.6189108 17.6394539 39.744897 0.0398660704 39.744897 22.9243893 0.228475051 45.8089125 39.744897"></polygon>
+                    </g>
+                    <g id="g16" transform="translate(9.106856, 15.806987)" fill="#D0853D">
+                        <polygon id="path18" points="19.117063 23.9399087 13.8321276 14.8139225 8.54719225 23.9399087 0.101413688 23.9399087 13.8321276 0.230102035 27.5628416 23.9399087"></polygon>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

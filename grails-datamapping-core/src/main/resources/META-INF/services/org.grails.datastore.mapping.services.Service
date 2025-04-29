@@ -1,0 +1,2 @@
+org.grails.datastore.gorm.services.DefaultTransactionService
+org.grails.datastore.gorm.services.DefaultTenantService

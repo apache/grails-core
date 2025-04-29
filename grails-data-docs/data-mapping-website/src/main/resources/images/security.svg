@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="95px" height="95px" viewBox="0 0 95 95" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>security</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="security" transform="translate(2.000000, 2.000000)">
+            <circle id="Oval" stroke="#FEB672" stroke-width="2.8347" cx="45.374" cy="45.374" r="45.374"></circle>
+            <path d="M27,42.9076923 L27,72.1282051 L64,72.1282051 L64,42.9076923 M29.6428571,42.9076923 L29.6428571,34.9384615 C29.6428571,26.1723077 36.7785714,19 45.5,19 C54.2214286,19 61.3571429,26.1723077 61.3571429,34.9384615 L61.3571429,42.9076923 L56.0714286,42.9076923 L56.0714286,34.9384615 C56.0714286,29.094359 51.3142857,24.3128205 45.5,24.3128205 C39.6857143,24.3128205 34.9285714,29.094359 34.9285714,34.9384615 L34.9285714,42.9076923" id="Shape" fill="#FEB672" fill-rule="nonzero"></path>
+        </g>
+    </g>
+</svg>

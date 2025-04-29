@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="203px" height="258px" viewBox="0 0 203 258" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>bintray</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M92,36.9350288 L72.7114178,56.2236111 L59.2763889,42.7885822 L100.288582,1.77638892 L100.5,1.98780669 L101.711418,0.776388924 L142.723611,41.7885822 L129.288582,55.2236111 L110,35.9350288 L110,165.064971 L169.564971,105.5 L143.5,105.5 L143.5,86.5 L201.5,86.5 L201.5,87 L202,87 L202,145 L183,145 L183,118.935029 L101.376894,200.558135 L87.9418651,187.123106 L88.0649712,187 L19,117.935029 L19,145 L0,145 L0,87 L0.5,87 L0.5,86.5 L58.5,86.5 L58.5,105.5 L33.4350288,105.5 L92,164.064971 L92,36.9350288 Z M181.681241,105.5 L183,106.818759 L183,105.5 L181.681241,105.5 Z M0,239 L203,239 L203,258 L0,258 L0,239 Z" id="bintray" fill="#000000"></path>
+    </g>
+</svg>

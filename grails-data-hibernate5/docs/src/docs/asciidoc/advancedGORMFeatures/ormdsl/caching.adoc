@@ -1,0 +1,155 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+===== Setting up caching
+
+
+https://www.hibernate.org/[Hibernate] features a second-level cache with a customizable cache provider. This needs to be configured in the `grails-app/conf/application.yml` file as follows:
+
+[source,groovy]
+----
+hibernate:
+  cache:
+    use_second_level_cache: true
+    provider_class: net.sf.ehcache.hibernate.EhCacheProvider
+    region:
+       factory_class: org.hibernate.cache.ehcache.EhCacheRegionFactory
+----
+
+You can customize any of these settings, for example to use a distributed caching mechanism.
+
+NOTE: For further reading on caching and in particular Hibernate's second-level cache, refer to the https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#caching[Hibernate documentation] on the subject.
+
+
+===== Caching instances
+
+
+Call the `cache` method in your mapping block to enable caching with the default settings:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        table 'people'
+        cache true
+    }
+}
+----
+
+This will configure a 'read-write' cache that includes both lazy and non-lazy properties. You can customize this further:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        table 'people'
+        cache usage: 'read-only', include: 'non-lazy'
+    }
+}
+----
+
+
+===== Caching associations
+
+
+As well as the ability to use Hibernate's second level cache to cache instances you can also cache collections (associations) of objects. For example:
+
+[source,java]
+----
+class Person {
+
+    String firstName
+
+    static hasMany = [addresses: Address]
+
+    static mapping = {
+        table 'people'
+        version false
+        addresses column: 'Address', cache: true
+    }
+}
+----
+
+[source,java]
+----
+class Address {
+    String number
+    String postCode
+}
+----
+
+This will enable a 'read-write' caching mechanism on the `addresses` collection. You can also use:
+
+[source,java]
+----
+cache: 'read-write' // or 'read-only' or 'transactional'
+----
+
+to further configure the cache usage.
+
+
+===== Caching Queries
+
+In order for the results of queries to be cached, you must enable caching in your mapping: 
+
+[source,groovy]
+----
+hibernate:
+  cache:     
+    use_query_cache: true   
+----
+
+To enable query caching for all queries created by dynamic finders, GORM etc. you can specify:
+ 
+[source,groovy]
+----
+hibernate:
+  cache:     
+    queries: true    # This implicitly sets  `use_query_cache=true`
+----
+
+You can cache queries such as dynamic finders and criteria. To do so using a dynamic finder you can pass the `cache` argument:
+
+[source,java]
+----
+def person = Person.findByFirstName("Fred", [cache: true])
+----
+
+You can also cache criteria queries:
+
+[source,java]
+----
+def people = Person.withCriteria {
+    like('firstName', 'Fr%')
+    cache true
+}
+----
+
+
+===== Cache usages
+
+
+Below is a description of the different cache settings and their usages:
+
+* `read-only` - If your application needs to read but never modify instances of a persistent class, a read-only cache may be used.
+* `read-write` - If the application needs to update data, a read-write cache might be appropriate.
+* `nonstrict-read-write` - If the application only occasionally needs to update data (i.e. if it is very unlikely that two transactions would try to update the same item simultaneously) and strict transaction isolation is not required, a `nonstrict-read-write` cache might be appropriate.
+* `transactional` - The `transactional` cache strategy provides support for fully transactional cache providers such as JBoss TreeCache. Such a cache may only be used in a JTA environment and you must specify `hibernate.transaction.manager_lookup_class` in the `grails-app/conf/application.groovy` file's `hibernate` config.

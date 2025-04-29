@@ -1,0 +1,51 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Notes
+==== Dependency Upgrades
+
+GORM 7.1 supports Apache Groovy 3, Java 14, MongoDB Driver 4.3 and Spring 5.3.x.
+
+Each of these underlying components may have changes that require altering your application. These changes are beyond the scope of this documentation.
+
+==== Default Autowire By Type inside GORM Data Services
+
+A Grails Service (or a bean) inside GORM DataService will default to autowire by-type, For example:
+
+_./grails-app/services/example/BookService.groovy_
+```
+package example
+
+import grails.gorm.services.Service
+
+@Service(Book)
+abstract class BookService {
+
+    TestService testRepo
+
+    abstract Book save(String title, String author)
+
+    void doSomething() {
+        assert testRepo != null
+    }
+}
+```
+
+Please note that with autowire by-type as the default, when multiple beans for same type are found the application with throw Exception. Use the Spring `@Qualifier annotation for https://docs.spring.io/spring-framework/docs/5.3.10/reference/html/core.html#beans-autowired-annotation-qualifiers[Fine-tuning Annotation Based Autowiring with Qualifiers].
+

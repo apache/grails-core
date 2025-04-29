@@ -1,0 +1,3 @@
+moduleName=grails-mongodb-module
+moduleVersion=1.0
+extensionClasses=org.grails.datastore.gorm.mongo.extensions.MongoExtensions

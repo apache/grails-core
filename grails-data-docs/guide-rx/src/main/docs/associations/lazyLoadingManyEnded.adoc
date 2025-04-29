@@ -1,0 +1,37 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Many Ended Associations
+
+In the previous section we discussed the implications of association proxies for single-ended associations. However, the same applies with many-ended associations.
+
+In the case of collection types, these implement the link:../api/grails/gorm/rx/collection/RxPersistentCollection.html[RxPersistentCollection] and again can be subscribed to:
+
+
+[source,groovy]
+----
+Author author = Author.findByName("Steven King")
+author.books.subscribe { Collection<Book> books ->
+    for (Book book in books) {
+        println "Book: ${book.title}"
+    }
+}
+----
+
+Like single-ended associations you can also use a join query to eagerly fetch the association and avoid having to subscribe to it in order to achieve a non-blocking outcome.

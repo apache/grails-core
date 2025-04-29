@@ -1,3 +1,22 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
 ### Bump up Grails Version
 
 You will need to upgrade your Grails version defined in `gradle.properties`.
@@ -24,7 +43,7 @@ grailsVersion=4.0.4
 
 ### Bump up GORM Version
 
-If you were using https://gorm.grails.org[GORM], you will need to update the version defined in `gradle.properties`.
+If you were using link:{gormWebsite}[GORM], you will need to update the version defined in `gradle.properties`.
 
 Grails 3 app's `gradle.properties`
 
@@ -65,7 +84,7 @@ Grails 4.0 is built on Spring 5 and Spring Boot 2.1. See the https://github.com/
 
 Grails 4.x supports a minimum version of Hibernate 5.4 and GORM 7.x. Several changes have been made to GORM to support the newer version of Hibernate and simplify GORM itself.
 
-The details of these changes are covered in the https://gorm.grails.org/{gormVersion}/hibernate/manual/index.html#upgradeNotes[GORM upgrade documentation].
+The details of these changes are covered in the  link:{hibernate5Guide}/manual/index.html#upgradeNotes[GORM upgrade documentation].
 
 ### Spring Boot 2.1 Actuator
 

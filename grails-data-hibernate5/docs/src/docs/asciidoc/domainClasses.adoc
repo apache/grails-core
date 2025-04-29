@@ -1,0 +1,53 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+When building applications you have to consider the problem domain you are trying to solve. For example if you were building an https://www.amazon.com/[Amazon]-style bookstore you would be thinking about books, authors, customers and publishers to name a few.
+
+These are modeled in GORM as Groovy classes, so a `Book` class may have a title, a release date, an ISBN number and so on. The next few sections show how to model the domain in GORM.
+
+
+Consider the following domain class:
+
+[source,groovy]
+.grails-app/domain/org/bookstore/Book.groovy
+----
+package org.bookstore
+
+class Book {
+}
+----
+
+This class will map automatically to a table in the database called `book` (the same name as the class).
+
+NOTE: This behaviour is customizable through the <<ormdsl,ORM Domain Specific Language>>
+
+Now that you have a domain class you can define its properties as Java types. For example:
+
+[source,groovy]
+----
+package org.bookstore
+
+class Book {
+    String title
+    Date releaseDate
+    String ISBN
+}
+----
+
+Each property is mapped to a column in the database, where the convention for column names is all lower case separated by underscores. For example `releaseDate` maps onto a column `release_date`. The SQL types are auto-detected from the Java types, but can be customized with <<constraints,Constraints>> or the <<ormdsl,ORM DSL>>.

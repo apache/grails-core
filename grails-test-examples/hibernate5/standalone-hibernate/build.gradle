@@ -1,0 +1,48 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+}
+
+version = '0.0.1'
+group = 'examples'
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.grails.data:grails-data-hibernate5-core'
+    implementation 'org.springframework:spring-tx'
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
+
+    // This project also has unit tests in it, so we must define the launcher per
+    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+}

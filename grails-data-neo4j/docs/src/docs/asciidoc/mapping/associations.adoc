@@ -1,0 +1,62 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+GORM for Neo4j will create Neo4j relationships between nodes for you based on the relationship ownership rules defined in your GORM mapping. For example the following mapping:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/cypher/domain/Owner.groovy[tags=class,indent=0]
+include::{testsdir}/grails/gorm/tests/cypher/domain/Pet.groovy[tags=class,indent=0]
+----
+
+When you save the relationship:
+
+[source,groovy]
+----
+include::{testsdir}/grails/gorm/tests/cypher/OneToManyCreateSpec.groovy[tags=save,indent=0]
+----
+
+The `save()` method will generate a Cypher relationship creation query as follows:
+
+[source,cypher]
+----
+MATCH (from:Owner),(to:Pet) WHERE ID(from) = {start} AND ID(to) IN {end} MERGE (from)-[r:PETS]->(to)
+----
+
+As you can see from the query the relationship is defined as `(from)-[r:PETS]->(to)`, with the direction of the association defined by who "owns" the association. Since `Pet` defines a `belongTo` association to `Owner`, this means that `Owner` owns the association and the relationship is from `Owner` to `Pet`.
+
+You can customize the Neo4j relationship type and direction using the `mapping` block if necessary:
+
+[source,groovy]
+----
+import static grails.neo4j.Direction.*
+
+class Owner {
+    String name
+    static hasMany = [pets:Pet]
+
+    static mapping = {
+         pets type:"PETZ", direction:BOTH
+    }
+}
+----
+
+In this case a bidirectional relationship will be created  in the graph such as `(from)<-[r:PETZ]->(to)`.
+
+TIP: For more information on defining relationships with GORM, see the https://grails.github.io/grails-doc/latest/guide/GORM.html#gormAssociation[corresponding guide in the GORM documentation].

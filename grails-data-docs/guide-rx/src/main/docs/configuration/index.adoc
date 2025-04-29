@@ -1,0 +1,75 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Configuration
+
+If you are using Grails, configuration can be provided via the `grails-app/conf/application.yml` file.
+
+An example configuration can be seen below:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        host: mycompany
+        port: 1234
+        username: foo
+        password: bar
+        options:
+            clusterSettings:
+                maxWaitQueueSize: 10
+----
+
+
+You can specify any setting of the https://mongodb.github.io/mongo-java-driver/3.12/javadoc/com/mongodb/async/client/MongoClientSettings.html[MongoClientSettings] within the `options` block. The example above is configuring the https://mongodb.github.io/mongo-java-driver/3.12/javadoc/com/mongodb/connection/ClusterSettings.html#getMaxWaitQueueSize()[maxWaitQueueSize] property.
+
+
+An alternative to specifying the host and port is to use a MongoDB https://mongodb.github.io/mongo-java-driver/3.12/javadoc/com/mongodb/ConnectionString.html[ConnectionString]:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        connectionString:  mongodb://user:pass@mycompany:27017
+----
+
+If you are not using Grails you can either provide a `MongoClient` instance directly in the constructor or you can supply an instance of https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/core/env/PropertyResolver.html[PropertyResolver] with the necessary configuration.
+
+For example:
+
+[source,groovy]
+----
+import org.springframework.core.env.*
+
+def env = new StandardEnvironment()
+env.getPropertySources().addLast(new PropertiesPropertySource("myConfig", myConfig))
+
+new RxMongoDatastoreClient(env, "myDatabase", MyClass)
+----
+
+If you are using Spring Boot then the `Environment` instance can be obtained from the `ApplicationContext`:
+
+[source,groovy]
+----
+new RxMongoDatastoreClient(
+    applicationContext.getEnvironment(),
+    "myDatabase",
+    MyClass
+)
+----

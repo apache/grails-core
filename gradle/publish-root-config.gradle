@@ -1,3 +1,22 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 // Workaround needed for nexus publishing bug
 // version and group must be specified in the root project
 // https://github.com/gradle-nexus/publish-plugin/issues/310
@@ -7,7 +26,7 @@ group = 'this.will.be.overridden'
 def publishedProjects = [
         'grails-async-core',
         'grails-async-gpars',
-        'grails-async-plugin',
+        'grails-async',
         'grails-async-rxjava',
         'grails-async-rxjava2',
         'grails-async-rxjava3',
@@ -16,6 +35,7 @@ def publishedProjects = [
         'grails-cache',
         'grails-codecs',
         'grails-codecs-core',
+        'grails-common',
         'grails-console',
         'grails-controllers',
         'grails-converters',
@@ -29,13 +49,14 @@ def publishedProjects = [
         'grails-events-compat',
         'grails-events-core',
         'grails-events-gpars',
-        'grails-events-plugin',
+        'grails-events',
         'grails-events-rxjava',
         'grails-events-rxjava2',
         'grails-events-rxjava3',
         'grails-events-spring',
         'grails-events-transforms',
         'grails-fields',
+        'grails-geb',
         'grails-gsp',
         'grails-gsp-core',
         'grails-i18n',
@@ -51,6 +72,7 @@ def publishedProjects = [
         'grails-taglib',
         'grails-test-core',
         'grails-testing-support-core',
+        'grails-testing-support-mongodb',
         'grails-testing-support-views-gson',
         'grails-testing-support-web',
         'grails-url-mappings',
@@ -68,6 +90,32 @@ def publishedProjects = [
         'grails-web-mvc',
         'grails-web-taglib',
         'grails-web-url-mappings',
+        // datastore
+        'grails-datastore-async',
+        'grails-datastore-core',
+        'grails-datamapping-core',
+        'grails-datamapping-core-test',
+        'grails-datamapping-async',
+        //'grails-datamapping-rx',
+        'grails-datamapping-support',
+        'grails-datamapping-tck',
+        'grails-datamapping-validation',
+        'grails-datastore-web',
+        'grails-testing-support-datamapping',
+        // simple
+        'grails-data-simple',
+        // hibernate5
+        'grails-data-hibernate5-spring-boot',
+        'grails-data-hibernate5-dbmigration',
+        'grails-data-hibernate5-core',
+        'grails-data-hibernate5',
+        // mongodb
+        'grails-data-mongodb-spring-boot',
+        'grails-data-mongodb-core',
+        'grails-data-mongodb-bson',
+        'grails-data-mongodb-ext',
+        'grails-data-mongodb',
+        'grails-data-mongodb-gson-templates'
 ]
 
 subprojects {

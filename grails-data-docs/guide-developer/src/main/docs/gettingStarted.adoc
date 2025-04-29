@@ -1,0 +1,66 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+=== Checking out and Building 
+
+
+The project is https://github.com/grails/grails-data-mapping[hosted on GitHub].
+
+You are free to fork the project from there or clone it anonymously using git:
+
+----
+git clone https://github.com/grails/grails-data-mapping.git
+cd grails-data-mapping
+----
+
+The project has a https://gradle.org[Gradle] build.
+
+To build the project you can run the `assemble` task:
+
+----
+./gradlew assemble
+----
+
+To install the jar files for the various subprojects into your local Maven repository you can run:
+
+----
+./gradlew publishToMavenLocal
+----
+
+=== Project Structure
+
+The project is essentially a multi-project Gradle build. There is a core API and then subprojects that implement that API. The core API subprojects include:
+
+* `grails-datastore-core` - The core API, this provides core interfaces for implementing a GORM provider
+* `grails-datastore-gorm` - The runtime meta-programming and AST transformation infrastructure behind GORM. This also provides end users with APIs like `grails.gorm.CriteriaBuilder` and `grails.gorm.DetachedCriteria`
+* `grails-datamapping-support` - Support classes for easing the writing of a GORM plugin for Grails
+* `grails-datamapping-tck-tests` - The TCK that includes hundreds of Spock specifications that a GORM implementation will need to pass
+* `grails-datastore-web` - Classes required to integrate GORM into a web tier
+
+In addition to this, there are separate projects of GORM implementations for various datastores:
+
+* https://github.com/grails/gorm-hibernate4[GORM for Hibernate 4]
+* https://github.com/grails/gorm-hibernate5[GORM for Hibernate 5]
+* https://github.com/grails/gorm-mongodb[GORM for MongoDB]
+* https://github.com/grails/gorm-neo4j[GORM for Neo4j]
+* https://github.com/grails/gorm-redis[GORM for Redis]
+* https://github.com/grails/gorm-cassandra[GORM for Cassandra]
+
+

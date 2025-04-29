@@ -1,0 +1,84 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+It is the responsibility of the type manager to convert Java classes to GraphQL types used in the creation of the schema. All of the basic GORM types have corresponding converters registered in the default type manager. It may be necessary to register GraphQL types for classes used in your domain model.
+
+NOTE: The type manager is designed to store GraphQL types for non GORM entities (simple types). If you encounter a link:{api}/org/grails/gorm/graphql/types/TypeNotFoundException.html[TypeNotFoundException], it is likely you will need to register a type for the missing class.
+
+== Get The Manager
+
+To register type converters, you need to get a reference to the link:{api}/org/grails/gorm/graphql/types/GraphQLTypeManager.html[GraphQLTypeManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
+
+=== Standalone
+
+When creating the schema, initialize it first. The default type manager will then be set.
+
+[source,groovy]
+----
+import org.grails.gorm.graphql.Schema
+
+Schema schema = ...
+schema.initialize()
+GraphQLTypeManager typeManager = schema.typeManager
+...
+schema.generate()
+----
+
+=== Plugin
+
+For Grails applications it is recommended to reference the bean created by the plugin. The easiest way to do so is to register a bean post processor. The plugin has a class available to extend to make that easier.
+
+[source,groovy]
+.resources.groovy
+----
+myGraphQLCustomizer(MyGraphQLCustomizer)
+----
+
+[source,groovy]
+.src/main/groovy/demo/MyGraphQLCustomizer.groovy
+----
+import org.grails.gorm.graphql.plugin.GraphQLPostProcessor
+
+class MyGraphQLCustomizer extends GraphQLPostProcessor {
+
+    @Override
+    void doWith(GraphQLTypeManager typeManager) {
+        ...
+    }
+}
+----
+
+TIP: If you need to customize more than 1 manager, only a single bean needs to be registered. There are `doWith` methods for all of the managers you may need to register object instances with.
+
+== Register A Converter
+
+Once you have access to the manager, registration of your own type is easy. In this example a type is being registered to handle a Mongo `ObjectId`. The type will be used to do conversion of arguments in GraphQL.
+
+NOTE: This process only handles how an ObjectId will be created from either Java arguments, or arguments passed inline in the GraphQL query or mutation. For Grails applications, the process of rendering the ObjectID as json is handled by link:http://views.grails.org[JSON views]. To supply behavior for how an ObjectId is rendered, see the documentation for json views. For standalone projects, you are responsible for any conversions that may need to happen.
+
+[source,groovy]
+----
+import graphql.schema.GraphQLScalarType
+import org.bson.types.ObjectId
+import graphql.schema.Coercing
+
+GraphQLTypeManager typeManager
+
+include::{sourcedir}/core/src/test/groovy/org/grails/gorm/graphql/MongoSchemaSpec.groovy[tags=registerObjectId]
+----

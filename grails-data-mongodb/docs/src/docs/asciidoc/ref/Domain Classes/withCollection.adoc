@@ -1,0 +1,35 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+===== Purpose
+
+Allows switching which collection to use to persist for the domain class for the scope of the given closure
+
+===== Examples
+
+[source,groovy]
+----
+Book.withCollection("non-fiction") {
+    // code here
+}
+----
+
+===== Description
+
+The `useCollection` method allows switching, at runtime, the collection used persist and retrieve domain classes. The `collectionName` property will return the current collection being used. Note that the method switches the collection used for the scope of given closure (ie. it is not permanent). If you wish to permanently change the collection used then you need to configure the mapping of the domain class.

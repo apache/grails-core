@@ -1,3 +1,22 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 // see https://github.com/dependabot/dependabot-core/issues/1618
 // This file allows dependabot to update the gradle dependencies
 
@@ -26,7 +45,7 @@ ext {
             'profiles.version'                   : '10.0.2',
             'gradle-spock.version'               : '2.3-groovy-3.0',
             'gradle-nexus-publish-plugin.version': '2.0.0',
-            'spring-boot.version'                : '3.4.2',
+            'spring-boot.version'                : '3.4.5',
             'springloaded.version'               : '1.2.8.RELEASE',
     ]
 
@@ -66,10 +85,8 @@ ext {
             'bootstrap.version'            : '5.3.3',
             'commons-codec.version'        : '1.17.1',
             'geb-spock.version'            : '7.0',
-            'grails-data.version'          : '9.0.0-SNAPSHOT',
-            'grails-geb.version'           : '5.0.0-SNAPSHOT',
             'grails-profiles.version'      : '10.0.2',
-            'groovy.version'               : '4.0.25',
+            'groovy.version'               : '4.0.26',
             'h2.version'                   : '2.3.232',
             'jackson.version'              : '2.18.2',
             'jquery.version'               : '3.7.1',
@@ -78,68 +95,53 @@ ext {
             'rxjava.version'               : '1.3.8',
             'rxjava2.version'              : '2.2.21',
             'rxjava3.version'              : '3.1.10',
+            'selenium.version'             : '4.25.0',
             'spock.version'                : '2.3-groovy-4.0',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomPlatformDependencies = [
-            'spock-bom'  : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
-            'jackson-bom': "com.fasterxml.jackson:jackson-bom:${bomDependencyVersions['jackson.version']}",
-            'groovy-bom' : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}"
+            'spock-bom'   : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
+            'jackson-bom' : "com.fasterxml.jackson:jackson-bom:${bomDependencyVersions['jackson.version']}",
+            'groovy-bom'  : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
+            'selenium-bom': "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomDependencies = [
-            'asset-pipeline-grails'             : "com.bertramlabs.plugins:asset-pipeline-grails:${bomDependencyVersions['asset-pipeline-grails.version']}",
-            'bootstrap'                         : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
-            'bootstrap-icons'                   : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
-            'commons-codec'                     : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
-            'geb-spock'                         : "org.gebish:geb-spock:${bomDependencyVersions['geb-spock.version']}",
-            'grails-data-hibernate5'            : "org.apache.grails:grails-data-hibernate5:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-hibernate5-core'       : "org.apache.grails.data:grails-data-hibernate5-core:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-hibernate5-dbmigration': "org.apache.grails:grails-data-hibernate5-dbmigration:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-hibernate5-spring-boot': "org.apache.grails:grails-data-hibernate5-spring-boot:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-mongodb'               : "org.apache.grails:grails-data-mongodb:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-mongodb-bson'          : "org.apache.grails.data:grails-data-mongodb-bson-core:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-mongodb-core'          : "org.apache.grails.data:grails-data-mongodb-core:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-mongodb-ext'           : "org.apache.grails.data:grails-data-mongodb-ext-core:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-mongodb-gson-templates': "org.apache.grails:grails-data-mongodb-gson-templates:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-mongodb-spring-boot'   : "org.apache.grails:grails-data-mongodb-spring-boot:${bomDependencyVersions['grails-data.version']}",
-            'grails-data-simple'                : "org.apache.grails.data:grails-data-simple:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-async'          : "org.apache.grails.data:grails-datamapping-async:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-core'           : "org.apache.grails.data:grails-datamapping-core:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-core-test'      : "org.apache.grails.data:grails-datamapping-core-test:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-rx'             : "org.apache.grails.data:grails-datamapping-rx:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-support'        : "org.apache.grails.data:grails-datamapping-support:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-tck-tests'      : "org.apache.grails.data:grails-datamapping-tck-tests:${bomDependencyVersions['grails-data.version']}",
-            'grails-datamapping-validation'     : "org.apache.grails.data:grails-datamapping-validation:${bomDependencyVersions['grails-data.version']}",
-            'grails-datastore-async'            : "org.apache.grails.data:grails-datastore-async:${bomDependencyVersions['grails-data.version']}",
-            'grails-datastore-core'             : "org.apache.grails.data:grails-datastore-core:${bomDependencyVersions['grails-data.version']}",
-            'grails-datastore-web'              : "org.apache.grails.data:grails-datastore-web:${bomDependencyVersions['grails-data.version']}",
-            'grails-geb'                        : "org.apache.grails:grails-geb:${bomDependencyVersions['grails-geb.version']}",
-            'grails-profiles-angular'           : "org.apache.grails.profiles:angular:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-base'              : "org.apache.grails.profiles:base:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-plugin'            : "org.apache.grails.profiles:plugin:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-profile'           : "org.apache.grails.profiles:profile:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-react'             : "org.apache.grails.profiles:react:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-rest-api'          : "org.apache.grails.profiles:rest-api:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-rest-api-plugin'   : "org.apache.grails.profiles:rest-api-plugin:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-vue'               : "org.apache.grails.profiles:vue:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-web'               : "org.apache.grails.profiles:web:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-profiles-web-plugin'        : "org.apache.grails.profiles:web-plugin:${bomDependencyVersions['grails-profiles.version']}",
-            'grails-testing-support-datamapping': "org.apache.grails:grails-testing-support-datamapping:${bomDependencyVersions['grails-data.version']}",
-            'h2'                                : "com.h2database:h2:${bomDependencyVersions['h2.version']}",
-            'jquery'                            : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
-            'liquibase-hibernate5'              : "org.liquibase:liquibase:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate5-cdi'          : "org.liquibase:liquibase-cdi:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate5-core'         : "org.liquibase:liquibase-core:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate5-ext'          : "org.liquibase.ext:liquibase5-hibernate:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'mongodb-bson'                      : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-core'               : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-sync'               : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-record-codec'              : "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
-            'rxjava'                            : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
-            'rxjava2'                           : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
-            'rxjava3'                           : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
+            'asset-pipeline-grails'          : "com.bertramlabs.plugins:asset-pipeline-grails:${bomDependencyVersions['asset-pipeline-grails.version']}",
+            'bootstrap'                      : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
+            'bootstrap-icons'                : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
+            'commons-codec'                  : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
+            'geb-spock'                      : "org.gebish:geb-spock:${bomDependencyVersions['geb-spock.version']}",
+            'grails-profiles-angular'        : "org.apache.grails.profiles:angular:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-base'           : "org.apache.grails.profiles:base:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-plugin'         : "org.apache.grails.profiles:plugin:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-profile'        : "org.apache.grails.profiles:profile:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-react'          : "org.apache.grails.profiles:react:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-rest-api'       : "org.apache.grails.profiles:rest-api:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-rest-api-plugin': "org.apache.grails.profiles:rest-api-plugin:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-vue'            : "org.apache.grails.profiles:vue:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-web'            : "org.apache.grails.profiles:web:${bomDependencyVersions['grails-profiles.version']}",
+            'grails-profiles-web-plugin'     : "org.apache.grails.profiles:web-plugin:${bomDependencyVersions['grails-profiles.version']}",
+            'h2'                             : "com.h2database:h2:${bomDependencyVersions['h2.version']}",
+            'jquery'                         : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
+            'liquibase-hibernate5'           : "org.liquibase:liquibase:${bomDependencyVersions['liquibase-hibernate5.version']}",
+            'liquibase-hibernate5-cdi'       : "org.liquibase:liquibase-cdi:${bomDependencyVersions['liquibase-hibernate5.version']}",
+            'liquibase-hibernate5-core'      : "org.liquibase:liquibase-core:${bomDependencyVersions['liquibase-hibernate5.version']}",
+            'liquibase-hibernate5-ext'       : "org.liquibase.ext:liquibase5-hibernate:${bomDependencyVersions['liquibase-hibernate5.version']}",
+            'mongodb-bson'                   : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
+            'mongodb-driver-core'            : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
+            'mongodb-driver-sync'            : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
+            'mongodb-record-codec'           : "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
+            'rxjava'                         : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
+            'rxjava2'                        : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
+            'rxjava3'                        : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
     ]
+
+    // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
+    // this requires copying the platforms selectively to the grails-bom. Create a combined version for convenience.
+    combinedPlatforms = ['spring-boot-bom': gradleBomPlatformDependencies['spring-boot-bom']] + bomPlatformDependencies
+    combinedDependencies = gradleBomDependencies + bomDependencies
+    combinedVersions = gradleBomDependencyVersions + bomDependencyVersions
 }

@@ -1,0 +1,67 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Single Ended Associations
+
+Consider for example a domain model such as:
+
+[source,groovy]
+----
+package example
+...
+class Book implements RxMongoEntity<Book> {
+    ObjectId id
+    String title
+    Author author
+}
+----
+
+Each `Book` has an `Author` instance. The `Author` instance may have its own set of associations. In order to avoid potentially loading your entire object graph into memory RxGORM will load each `Book` instance with the `author` property loaded as a lazy proxy.
+
+This is traditionally how most blocking object mapping implementations have worked. However, an issue arises in a reactive scenario when you access the proxy:
+
+[source,groovy]
+----
+for (Book book in books) {
+    println "Author: ${book.author.name}"
+}
+----
+
+In the above example RxGORM has no choice but to block in order to load the association lazy and access the `name`! Typically, you do not want your reactive application to block at any point, so in order to get around this, each proxy loaded by GORM implements the link:../api/grails/gorm/rx/proxy/ObservableProxy.html[ObservableProxy] interface. That means the above code can be written in a non-blocking manner:
+
+[source,groovy]
+----
+for (Book book in books) {
+    book.author.subscribe { Author author ->
+        println "Author: ${author.name}"
+    }
+}
+----
+
+Another alternative if you know you plan to access the `author` association, is to use an eager GORM query. In this case GORM will fetch and initialize the association in a non-blocking manner:
+
+[source,groovy]
+----
+// using a dynamic finder
+Book.findByTitle("The Stand", [fetch: [author: "eager"]])
+
+// using a where query
+Book.where { title == "The Stand" }
+    .join("author")
+----

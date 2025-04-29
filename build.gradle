@@ -1,6 +1,38 @@
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 ext {
+    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .map(Long::parseLong)
+            .map(Instant::ofEpochSecond)
+            .orElseGet(Instant::now)
+    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
+
     grailsVersion = projectVersion
     isCiBuild = System.getenv().get('CI') as Boolean
+    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
+    excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     // Directories created during the build which are related
     // to turning the workspace root into a GRAILS_HOME
@@ -15,6 +47,7 @@ ext {
             'grails-test-examples'
     ]
     testProjects = [ /* Will be populated by subprojects loop below */]
+    docProjects = [ /* Will be populated by subprojects loop below */]
 }
 
 allprojects {
@@ -22,7 +55,7 @@ allprojects {
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
-        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
     }
 }
@@ -35,40 +68,33 @@ subprojects {
         }
     }
 
+    if (name.startsWith('grails-doc') || name.startsWith('grails-data-doc') || name.endsWith('-docs') || name.endsWith('-test-report')) {
+        rootProject.ext['docProjects'] << name
+    }
+
     configurations.configureEach {
         resolutionStrategy {
             def cacheHours = isCiBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
-            eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.apache.groovy') {
-                    details.useVersion(groovyVersion)
-                }
-            }
         }
     }
 
-    // This is added to prevent a remote cache misses, because the project JAR include a manifest
-    // file with Built-By and Created-By properties which might be different for CI vs Local.
-    normalization {
-        runtimeClasspath {
-            metaInf {
-                ignoreAttribute('Built-By')
-                ignoreAttribute('Created-By')
-            }
-        }
-    }
     apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
 
-tasks.register('clean', Delete) {
+tasks.register('clean', Delete).configure {
     group = 'build'
-    delete(layout.buildDirectory, homeBinDir, homeConfDir, homeDistDir, homeLibDir)
+
+    doFirst {
+        delete(layout.buildDirectory, homeBinDir, homeConfDir, homeDistDir, homeLibDir)
+    }
 }
 
 apply {
     from layout.projectDirectory.file('gradle/assemble-root-config.gradle')
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
+    from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }
 
 // For debugging the gradle task graph: Uncomment to show task dependencies when a task is run

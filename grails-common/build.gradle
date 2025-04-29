@@ -1,0 +1,59 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.apache.grails.common'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    // WARNING: this file is not to depend on grails-core; it is meant to be a shared library that can be used
+    // independently of Grails.  Mainly to share data between Grails & GORM
+
+    api 'org.apache.groovy:groovy'
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // Logging
+    api 'org.slf4j:slf4j-api'
+    api 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

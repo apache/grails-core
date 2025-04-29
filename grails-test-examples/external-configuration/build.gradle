@@ -1,0 +1,83 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+buildscript {
+    repositories {
+        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+    }
+    dependencies {
+        classpath platform("org.apache.grails:grails-gradle-bom:$projectVersion")
+        classpath "org.apache.grails:grails-gradle-plugins"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle"
+    }
+}
+
+apply plugin: 'groovy'
+apply plugin: 'org.apache.grails.gradle.grails-web'
+
+repositories {
+    maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+    mavenCentral()
+}
+
+version = '0.1'
+group = 'test.app'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-logging'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails:grails-i18n'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-url-mappings'
+    implementation 'org.apache.grails:grails-web-boot'
+    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-scaffolding'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+    runtimeOnly 'org.fusesource.jansi:jansi'
+
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.spockframework:spock-core'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+}
+
+tasks.withType(Test).configureEach {
+    systemProperty 'TEST_HOME', 'home-value'
+    systemProperty 'user.home', System.getProperty('user.home')
+    systemProperty 'grails.env', 'TEST'
+}

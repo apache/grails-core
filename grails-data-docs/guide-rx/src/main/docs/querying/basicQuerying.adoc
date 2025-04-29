@@ -1,0 +1,72 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Basic Querying
+To query for a single instance by identifier you can use the `get(id)` method:
+
+[source,groovy]
+----
+Book.get(id)
+    .subscribe { Book book ->
+        println "Title = ${book.title}"
+    }
+----
+
+
+To query for a `List` of objects you can use the `list()` method:
+
+[source,groovy]
+----
+Book.list()
+    .subscribe { List<Book> books ->
+        for(Book book in books) {
+            println "Title = ${book.title}"
+        }
+    }
+----
+
+However, for large data sets, it is better to use the `findAll()` method which will return each result in a reactive manner rather than load the entire list into memory:
+
+[source,groovy]
+----
+Book.findAll()
+    .subscribe { Book book ->
+        println "Title = ${book.title}"
+    }
+----
+
+To return the first result you can use the `first()` method:
+
+[source,groovy]
+----
+Book.first()
+    .subscribe { Book book ->
+        println "Title = ${book.title}"
+    }
+----
+
+And conversely to return the last result you can use the `last()` method:
+
+[source,groovy]
+----
+Book.last()
+    .subscribe { Book book ->
+        println "Title = ${book.title}"
+    }
+----
