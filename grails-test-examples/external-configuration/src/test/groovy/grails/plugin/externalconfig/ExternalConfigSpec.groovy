@@ -25,8 +25,8 @@ import org.grails.config.NavigableMap
 import org.grails.config.NavigableMapPropertySource
 import org.grails.testing.GrailsUnitTest
 import org.springframework.core.env.ConfigurableEnvironment
-import spock.lang.IgnoreIf
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -274,7 +274,7 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
     }
 
     @Issue('https://github.com/sbglasius/external-config/issues/24')
-    @IgnoreIf(value={ os.windows }, reason = 'Wildcard not working on windows OS')
+    @PendingFeatureIf(value={ os.windows }, reason = 'Wildcard is not working on windows OS')
     def "when getting config with wildcard files from user home"() {
         given: "Three files in home, where two matches the pattern"
         def home = new File(System.getProperty('user.home'))
