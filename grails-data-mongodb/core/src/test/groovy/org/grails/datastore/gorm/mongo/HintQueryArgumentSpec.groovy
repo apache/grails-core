@@ -22,10 +22,15 @@ import com.mongodb.MongoException
 import com.mongodb.MongoQueryException
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class HintQueryArgumentSpec extends GormDatastoreSpec {
+class HintQueryArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses += [Person]
+    }
 
     void "Test that hints work on criteria queries"() {
         when: "A criteria query is created with a hint"
@@ -41,7 +46,8 @@ class HintQueryArgumentSpec extends GormDatastoreSpec {
         when: "A dynamic finder uses a hint"
         def results = Person.findAllByFirstName("Bob", [hint: "firstName"])
         // just to trigger the query
-        for (e in results) { }
+        for (e in results) {
+        }
 
         then: "The hint is used"
         MongoException exception = thrown()
@@ -64,7 +70,8 @@ class HintQueryArgumentSpec extends GormDatastoreSpec {
 
         def results = detachedCriteria.list(hint: ["firstName": "blah"])
         // just to trigger the query
-        for (e in results) { }
+        for (e in results) {
+        }
         then: "The hint is used"
         MongoException exception = thrown()
         exception instanceof MongoQueryException

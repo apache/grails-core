@@ -18,33 +18,33 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedWithIdSpecifiedSpec extends GormDatastoreSpec {
+class EmbeddedWithIdSpecifiedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    void "Test that id is saved of embedded entity if specified"() {
-         when:"A domain model with an embedded id specified"
-            def sc = new SystemCustomer(name: "Bob", singleKpi:new MultiLevelKpi(id: "bar", name: "bar1", type: 'goods'))
-            sc.kpis << new MultiLevelKpi(id: "foo", name: "foo1", type: "stuff")
-            sc.save flush:true
-            session.clear()
-            sc = SystemCustomer.get(sc.id)
-
-         then:"The id is saved too"
-            sc != null
-            sc.kpis.size() == 1
-            sc.kpis[0].id == "foo"
-            sc.kpis[0].name == "foo1"
-            sc.kpis[0].type == "stuff"
-            sc.singleKpi != null
-            sc.singleKpi.id == 'bar'
-            sc.singleKpi.name == 'bar1'
+    void setupSpec() {
+        manager.domainClasses += [SystemCustomer, PreorderTreeNode, MultiLevelKpi]
     }
 
-    @Override
-    List getDomainClasses() {
-        [SystemCustomer, PreorderTreeNode, MultiLevelKpi]
+    void "Test that id is saved of embedded entity if specified"() {
+        when: "A domain model with an embedded id specified"
+        def sc = new SystemCustomer(name: "Bob", singleKpi: new MultiLevelKpi(id: "bar", name: "bar1", type: 'goods'))
+        sc.kpis << new MultiLevelKpi(id: "foo", name: "foo1", type: "stuff")
+        sc.save flush: true
+        manager.session.clear()
+        sc = SystemCustomer.get(sc.id)
+
+        then: "The id is saved too"
+        sc != null
+        sc.kpis.size() == 1
+        sc.kpis[0].id == "foo"
+        sc.kpis[0].name == "foo1"
+        sc.kpis[0].type == "stuff"
+        sc.singleKpi != null
+        sc.singleKpi.id == 'bar'
+        sc.singleKpi.name == 'bar1'
     }
 }
 
@@ -59,11 +59,12 @@ class PreorderTreeNode {
 class SystemCustomer {
     String id
     List kpis = []
-    static hasMany = [kpis:MultiLevelKpi]
+    static hasMany = [kpis: MultiLevelKpi]
     static embedded = ['kpis', 'singleKpi']
 
     String name
     MultiLevelKpi singleKpi
+
     String toString() { name }
 }
 

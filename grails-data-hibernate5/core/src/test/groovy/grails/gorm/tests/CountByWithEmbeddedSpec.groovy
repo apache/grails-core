@@ -20,27 +20,29 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 20/04/16.
  */
-class CountByWithEmbeddedSpec extends GormSpec {
+class CountByWithEmbeddedSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([CountByPerson])
+    }
 
     @Issue('https://github.com/grails/grails-core/issues/9846')
     void "Test countBy query with embedded entity"() {
         given:
-        new CountByPerson(name: "Fred", bornInCountry: new CountByCountry(name: "England")).save(flush:true)
-        new CountByPerson(bornInCountry: new CountByCountry(name: "Scotland")).save(flush:true)
+        new CountByPerson(name: "Fred", bornInCountry: new CountByCountry(name: "England")).save(flush: true)
+        new CountByPerson(bornInCountry: new CountByCountry(name: "Scotland")).save(flush: true)
+
         expect:
         CountByPerson.countByNameIsNotNull() == 1
     }
-    @Override
-    List getDomainClasses() {
-        [CountByPerson]
-    }
 }
+
 @Entity
 class CountByPerson {
     String name

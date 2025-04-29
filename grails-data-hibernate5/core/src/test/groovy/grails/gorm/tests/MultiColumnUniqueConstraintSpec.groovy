@@ -19,11 +19,16 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 
 @Issue('https://github.com/grails/grails-data-mapping/issues/617')
-class MultiColumnUniqueConstraintSpec extends GormDatastoreSpec {
+class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([DomainOne, Task1, TaskLink])
+    }
 
     void "test generated unique constraints"() {
         expect:
@@ -59,11 +64,6 @@ class MultiColumnUniqueConstraintSpec extends GormDatastoreSpec {
 
         then: 'DataIntegrityViolationException is thrown'
         thrown DataIntegrityViolationException
-    }
-
-    @Override
-    List getDomainClasses() {
-        [DomainOne, Task1, TaskLink]
     }
 }
 

@@ -19,14 +19,19 @@
 package grails.gorm.tests.inheritance
 
 import grails.gorm.annotation.Entity
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 29/05/2017.
  */
 @Issue('https://github.com/grails/grails-data-mapping/issues/937')
-class TablePerConcreteClassAndDateCreatedSpec extends GormSpec {
+class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Vehicle, Spaceship])
+    }
+
     void "should set the dateCreated automatically"() {
         given:
         Spaceship ship = new Spaceship(name: "Heart of Gold")
@@ -49,11 +54,6 @@ class TablePerConcreteClassAndDateCreatedSpec extends GormSpec {
         // DataIntegrityViolationException is thrown:
         // NULL not allowed for column "DATE_CREATED"
         ship.dateCreated != null
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Vehicle, Spaceship]
     }
 }
 

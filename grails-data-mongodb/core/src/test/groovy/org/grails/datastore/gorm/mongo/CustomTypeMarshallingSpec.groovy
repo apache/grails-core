@@ -18,48 +18,46 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
-
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class CustomTypeMarshallingSpec extends GormDatastoreSpec {
+class CustomTypeMarshallingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Person])
+    }
 
     void "Test basic crud with custom types"() {
         given: "A custom type registered for the Birthday class"
-            final now = new Date()
-            def p = new Person(name:"Fred", birthday: new Birthday(now))
-            p.save(flush:true)
-            session.clear()
+        final now = new Date()
+        def p = new Person(name: "Fred", birthday: new Birthday(now))
+        p.save(flush: true)
+        manager.session.clear()
 
         when: "We query the person"
-            p = Person.findByName("Fred")
+        p = Person.findByName("Fred")
 
         then: "The birthday is returned"
-            p != null
-            p.name == "Fred"
-            p.birthday != null
+        p != null
+        p.name == "Fred"
+        p.birthday != null
 
         when: "We query with a custom type"
-           p = Person.findByBirthday(new Birthday(now))
+        p = Person.findByBirthday(new Birthday(now))
 
         then:
-            p != null
+        p != null
 
         when: "A range query is executed"
 
-            p = Person.findByBirthdayBetween(new Birthday(now-1), new Birthday(now+1))
-            def p2 = Person.findByBirthdayBetween(new Birthday(now+1), new Birthday(now+2))
+        p = Person.findByBirthdayBetween(new Birthday(now - 1), new Birthday(now + 1))
+        def p2 = Person.findByBirthdayBetween(new Birthday(now + 1), new Birthday(now + 2))
 
         then:
-            p != null
-            p2 == null
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Person]
+        p != null
+        p2 == null
     }
 }
 

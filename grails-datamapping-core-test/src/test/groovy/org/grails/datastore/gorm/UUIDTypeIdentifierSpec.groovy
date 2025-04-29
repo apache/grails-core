@@ -18,43 +18,42 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class UUIDTypeIdentifierSpec extends GormDatastoreSpec {
+class UUIDTypeIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([SimpleUUIDModel])
+    }
 
-  void "Test that an id with type of java.util.UUID is correctly generated"() {
-    when:"A domain with a UUID is saved"
-      def dm = new SimpleUUIDModel(name: "My Doc").save()
+    void "Test that an id with type of java.util.UUID is correctly generated"() {
+        when: "A domain with a UUID is saved"
+        def dm = new SimpleUUIDModel(name: "My Doc").save()
 
-    then:"The UUID is correctly generated"
-      dm != null
-      dm.id != null
-      SimpleUUIDModel.count() == 1
+        then: "The UUID is correctly generated"
+        dm != null
+        dm.id != null
+        SimpleUUIDModel.count() == 1
 
-    when:"Another entity is saved"
-      new SimpleUUIDModel(name: "Another").save()
-    then:"There are 2"
-      SimpleUUIDModel.count() == 2
-  }
-
-  @Override
-  List getDomainClasses() {
-    [SimpleUUIDModel]
-  }
+        when: "Another entity is saved"
+        new SimpleUUIDModel(name: "Another").save()
+        then: "There are 2"
+        SimpleUUIDModel.count() == 2
+    }
 }
 
 @Entity
-class SimpleUUIDModel  {
+class SimpleUUIDModel {
 
-  UUID id
-  String name
+    UUID id
+    String name
 
-  static mapping = {
-    id generator:'uuid'
-  }
+    static mapping = {
+        id generator: 'uuid'
+    }
 
-  static constraints = {
-    name blank: false
-  }
+    static constraints = {
+        name blank: false
+    }
 }

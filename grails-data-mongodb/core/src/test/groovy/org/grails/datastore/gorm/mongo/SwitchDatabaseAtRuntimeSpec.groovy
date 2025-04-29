@@ -18,57 +18,55 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import com.mongodb.client.MongoClient
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class SwitchDatabaseAtRuntimeSpec extends GormDatastoreSpec {
+class SwitchDatabaseAtRuntimeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    @Override
-    List getDomainClasses() {
-        [Person]
+    void setupSpec() {
+        manager.domainClasses.addAll([Person])
     }
 
     void setup() {
-        ((MongoClient) session.nativeInterface).getDatabase('thesimpsons').drop()
+        manager.session.nativeInterface.getDatabase('thesimpsons').drop()
     }
 
-
     void "Test switch database at runtime"() {
-        given:"Some test data"
-            createPeople()
-            def initialDb = Person.DB.name
+        given: "Some test data"
+        createPeople()
+        def initialDb = Person.DB.name
 
-        when:"A count is issued"
-            int total = Person.count()
+        when: "A count is issued"
+        int total = Person.count()
 
-        then:"The result is correct"
-            total == 6
+        then: "The result is correct"
+        total == 6
 
-        when:"We switch to another database"
-            def previous = Person.useDatabase("thesimpsons")
+        when: "We switch to another database"
+        def previous = Person.useDatabase("thesimpsons")
 
-        then:"The count is now 0"
-            Person.count() == 0
-            Person.DB.name == 'thesimpsons'
+        then: "The count is now 0"
+        Person.count() == 0
+        Person.DB.name == 'thesimpsons'
 
-        when:"We save a new person"
-            new Person(firstName: "Maggie", lastName: "Simpson").save(flush:true)
+        when: "We save a new person"
+        new Person(firstName: "Maggie", lastName: "Simpson").save(flush: true)
 
-        then:"The count is now 1"
-            Person.count() == 1
-            Person.DB.name == 'thesimpsons'
+        then: "The count is now 1"
+        Person.count() == 1
+        Person.DB.name == 'thesimpsons'
 
 
-        when:"we switch back all is good"
-            Person.useDatabase(previous)
+        when: "we switch back all is good"
+        Person.useDatabase(previous)
 
-        then:"the people count is 6 again"
-            Person.count() == 6
-            Person.DB.name == initialDb
+        then: "the people count is 6 again"
+        Person.count() == 6
+        Person.DB.name == initialDb
     }
 
 

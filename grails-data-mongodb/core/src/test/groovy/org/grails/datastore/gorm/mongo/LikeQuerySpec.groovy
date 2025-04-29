@@ -19,9 +19,14 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.tests.Pet
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class LikeQuerySpec extends GormDatastoreSpec {
+class LikeQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses += [Pet]
+    }
 
     void "Test for like query"() {
         given:
@@ -32,7 +37,7 @@ class LikeQuerySpec extends GormDatastoreSpec {
         new Pet(name: "*").save(flush:true, failOnError:true)
         new Pet(name: "**").save(flush:true, failOnError:true)
         new Pet(name: "***").save(flush:true, failOnError:true)
-        session.clear()
+        manager.session.clear()
 
         when:
         def results = Pet.findAllByNameLike(search)

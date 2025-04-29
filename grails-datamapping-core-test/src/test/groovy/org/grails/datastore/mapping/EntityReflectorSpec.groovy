@@ -18,13 +18,17 @@
  */
 package org.grails.datastore.mapping
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by Jim on 8/19/2016.
  */
-class EntityReflectorSpec extends GormDatastoreSpec {
+class EntityReflectorSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Library, LibraryBook])
+    }
 
     void "test getAssociationId with a null association"() {
         when:
@@ -34,11 +38,6 @@ class EntityReflectorSpec extends GormDatastoreSpec {
         then:
         noExceptionThrown()
         id == null
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Library, LibraryBook]
     }
 }
 

@@ -18,64 +18,63 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class IsNullSpec extends GormDatastoreSpec {
+class IsNullSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    @Issue('GPMONGODB-164')
-    void "Test isNull works in a criteria query"() {
-        given:"Some test data"
-            new Elephant(name: "Dumbo").save(validate:false)
-            new Elephant(name: "Big Daddy", trunk:new Trunk(length: 10).save()).save(flush:true,validate:false)
-            session.clear()
-
-        when:"A entity is queried with isNull"
-            def results = Elephant.withCriteria {
-                isNull 'trunk'
-            }
-
-        then:"The correct results are returned"
-            results.size() == 1
-            results[0].name == "Dumbo"
-
-        when:"A entity is queried with isNotNull"
-            results = Elephant.withCriteria {
-                isNotNull 'trunk'
-            }
-
-        then:"The correct results are returned"
-            results.size() == 1
-            results[0].name == "Big Daddy"
+    void setupSpec() {
+        manager.domainClasses.addAll([Elephant, Trunk])
     }
 
     @Issue('GPMONGODB-164')
-    void "Test isNull works in a dynamic finder"() {
-        given:"Some test data"
-        new Elephant(name: "Dumbo").save(validate:false)
-        new Elephant(name: "Big Daddy", trunk:new Trunk(length: 10).save()).save(flush:true,validate:false)
-        session.clear()
+    void "Test isNull works in a criteria query"() {
+        given: "Some test data"
+        new Elephant(name: "Dumbo").save(validate: false)
+        new Elephant(name: "Big Daddy", trunk: new Trunk(length: 10).save()).save(flush: true, validate: false)
+        manager.session.clear()
 
-        when:"A entity is queried with isNull"
-        def results = Elephant.findAllByTrunkIsNull()
+        when: "A entity is queried with isNull"
+        def results = Elephant.withCriteria {
+            isNull 'trunk'
+        }
 
-        then:"The correct results are returned"
+        then: "The correct results are returned"
         results.size() == 1
         results[0].name == "Dumbo"
 
-        when:"A entity is queried with isNotNull"
-        results = Elephant.findAllByTrunkIsNotNull()
+        when: "A entity is queried with isNotNull"
+        results = Elephant.withCriteria {
+            isNotNull 'trunk'
+        }
 
-        then:"The correct results are returned"
+        then: "The correct results are returned"
         results.size() == 1
         results[0].name == "Big Daddy"
     }
 
-    @Override
-    List getDomainClasses() {
-        [Elephant, Trunk]
+    @Issue('GPMONGODB-164')
+    void "Test isNull works in a dynamic finder"() {
+        given: "Some test data"
+        new Elephant(name: "Dumbo").save(validate: false)
+        new Elephant(name: "Big Daddy", trunk: new Trunk(length: 10).save()).save(flush: true, validate: false)
+        manager.session.clear()
+
+        when: "A entity is queried with isNull"
+        def results = Elephant.findAllByTrunkIsNull()
+
+        then: "The correct results are returned"
+        results.size() == 1
+        results[0].name == "Dumbo"
+
+        when: "A entity is queried with isNotNull"
+        results = Elephant.findAllByTrunkIsNotNull()
+
+        then: "The correct results are returned"
+        results.size() == 1
+        results[0].name == "Big Daddy"
     }
 }
 
@@ -85,7 +84,7 @@ class Elephant {
     String name
     Trunk trunk
     static mapping = {
-        trunk nullable:true
+        trunk nullable: true
     }
 }
 

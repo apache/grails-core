@@ -19,28 +19,28 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 import java.sql.ResultSet
 
 /**
  * Created by graemerocher on 24/02/16.
  */
-class EnumMappingSpec extends GormSpec {
+class EnumMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Recipe])
+    }
 
     void "Test enum mapping"() {
-        when:"An enum property is persisted"
-        new Recipe(title: "Chicken Tikka Masala").save(flush:true)
-        def resultSet = sessionFactory.currentSession.connection().prepareStatement("select * from recipe").executeQuery()
+        when: "An enum property is persisted"
+        new Recipe(title: "Chicken Tikka Masala").save(flush: true)
+        ResultSet resultSet = manager.sessionFactory.currentSession.connection().prepareStatement("select * from recipe").executeQuery()
         resultSet.next()
 
-        then:"The enum is mapped as a varchar"
+        then: "The enum is mapped as a varchar"
         resultSet.getString('type') == 'GOOD'
 
-    }
-    @Override
-    List getDomainClasses() {
-        [Recipe]
     }
 }
 
@@ -49,6 +49,7 @@ class Recipe {
     String title
     RecipeType type = RecipeType.GOOD
 }
-enum RecipeType{
+
+enum RecipeType {
     GOOD, BAD, BORING
 }

@@ -20,7 +20,6 @@
 package org.grails.datastore.gorm.neo4j
 
 import grails.gorm.tests.Club
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.League
 import grails.gorm.tests.Person
 import grails.gorm.tests.Pet

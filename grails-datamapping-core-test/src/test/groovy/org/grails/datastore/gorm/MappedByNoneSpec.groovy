@@ -18,8 +18,9 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.types.Association
 import spock.lang.Issue
 
@@ -27,20 +28,17 @@ import spock.lang.Issue
  * @author graemerocher
  */
 @Issue('https://github.com/grails/grails-core/issues/669')
-class MappedByNoneSpec extends GormDatastoreSpec {
+class MappedByNoneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Player, SoftballTeamPreference])
+    }
 
     void "Test that mapped by with a value of 'none' disables the mapping"() {
         given: "A unidirectional associated mapped with 'none'"
-            Association association = session.mappingContext.getPersistentEntity(SoftballTeamPreference.name).getPropertyByName("players")
+        Association association = manager.session.mappingContext.getPersistentEntity(SoftballTeamPreference.name).getPropertyByName("players")
 
-        expect:"The association to be unidirectional"
-            !association.isBidirectional()
-
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Player, SoftballTeamPreference]
+        expect: "The association to be unidirectional"
+        !association.isBidirectional()
     }
 }
 

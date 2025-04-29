@@ -19,17 +19,17 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 24/08/2016.
  */
-class IndexWithInheritanceSpec extends GormDatastoreSpec {
+class IndexWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    @Override
-    List getDomainClasses() {
-        [Lion, Mammal]
+    void setupSpec() {
+        manager.domainClasses.addAll([Lion, Mammal])
     }
 
     void "Test collection indexes"() {
@@ -42,12 +42,14 @@ class IndexWithInheritanceSpec extends GormDatastoreSpec {
         Mammal.DB.drop()
     }
 }
+
 @Entity
 class Mammal implements MongoEntity<Mammal> {
     static mapping = {
-        index( [ "_class": 1] )
+        index(["_class": 1])
     }
 }
+
 @Entity
 class Lion extends Mammal implements MongoEntity<Lion> {
 }

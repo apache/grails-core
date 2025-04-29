@@ -18,19 +18,22 @@
  */
 package grails.gorm.hibernate.mapping
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-import org.grails.orm.hibernate.GormSpec
-import org.grails.orm.hibernate.cfg.HibernateMappingBuilder
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.boot.Metadata
 import org.hibernate.engine.OptimisticLockStyle
 import org.hibernate.mapping.PersistentClass
 
-class HibernateOptimisticLockingStyleMappingSpec extends GormDatastoreSpec {
+class HibernateOptimisticLockingStyleMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([HibernateOptLockingStyleVersioned, HibernateOptLockingStyleNotVersioned])
+    }
 
     void testEvaluateHibernateOptimisticLockStyleIsDefined() {
         setup:
-        Metadata hibernateMetadata = setupClass.hibernateDatastore.getMetadata()
+        Metadata hibernateMetadata = manager.hibernateDatastore.getMetadata()
 
         when: 'Find out Hibernate PersistentClass representations for our domains'
         PersistentClass forVersioned = hibernateMetadata.getEntityBinding(HibernateOptLockingStyleVersioned.name)
@@ -40,12 +43,6 @@ class HibernateOptimisticLockingStyleMappingSpec extends GormDatastoreSpec {
         forVersioned.optimisticLockStyle == OptimisticLockStyle.VERSION
         forNotVersioned.optimisticLockStyle == OptimisticLockStyle.NONE
     }
-
-    @Override
-    List getDomainClasses() {
-        [HibernateOptLockingStyleVersioned, HibernateOptLockingStyleNotVersioned]
-    }
-
 }
 
 

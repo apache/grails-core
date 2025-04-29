@@ -20,11 +20,12 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class AutoTimestampSpec extends GormDatastoreSpec {
-    @Override
-    List getDomainClasses() {
-        [DateCreatedTestA, DateCreatedTestB]
+class AutoTimestampSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([DateCreatedTestA, DateCreatedTestB])
     }
 
     void "autoTimestamp should prevent custom changes to dateCreated and lastUpdated if turned on"() {

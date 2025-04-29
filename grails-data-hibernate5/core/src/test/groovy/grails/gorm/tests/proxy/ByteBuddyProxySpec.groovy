@@ -16,31 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm.tests.proxy
 
+import grails.gorm.tests.Club
+import grails.gorm.tests.Team
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
-
-import grails.gorm.tests.Club
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.Team
-import spock.lang.PendingFeature
 import spock.lang.PendingFeatureIf
+import spock.lang.Shared
 
 /**
- * Contains misc proxy tests using Hibenrate defaults, which is ByteBuddy.
+ * Contains misc proxy tests using Hibernate defaults, which is ByteBuddy.
  * These should all be passing for Gorm to be operating correctly with Groovy.
  */
-class ByteBuddyProxySpec extends GormDatastoreSpec {
-    static HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
+class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Team, Club])
+    }
+
+    @Shared
+    HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     //to show test that fail that should succeed set this to true. or uncomment the
     // testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxy" to see pass
     boolean runPending = ClassUtils.isPresent("yakworks.hibernate.proxy.ByteBuddyGroovyInterceptor")
-
-    @Override
-    List getDomainClasses() { [Team, Club] }
 
     Team createATeam(){
         Club c = new Club(name: "DOOM Club").save(failOnError:true)
@@ -51,7 +52,7 @@ class ByteBuddyProxySpec extends GormDatastoreSpec {
     void "getId and id property checks dont initialize proxy if in a CompileStatic method"() {
         when:
         Team team = createATeam()
-        session.clear()
+        manager.session.clear()
         team = Team.load(team.id)
 
         then:"The asserts on getId and id should not initialize proxy when statically compiled"
@@ -66,7 +67,7 @@ class ByteBuddyProxySpec extends GormDatastoreSpec {
     void "getId and id dont initialize proxy"() {
         when:"load proxy"
         Team team = createATeam()
-        session.clear()
+        manager.session.clear()
         team = Team.load(team.id)
 
         then:"The asserts on getId and id should not initialize proxy"
@@ -86,7 +87,7 @@ class ByteBuddyProxySpec extends GormDatastoreSpec {
     void "truthy check on instance should not initialize proxy"() {
         when:"load proxy"
         Team team = createATeam()
-        session.clear()
+        manager.session.clear()
         team = Team.load(team.id)
 
         then:"The asserts on the intance should not init proxy"
@@ -102,7 +103,7 @@ class ByteBuddyProxySpec extends GormDatastoreSpec {
     void "id checks on association should not initialize its proxy"() {
         when:"load instance"
         Team team = createATeam()
-        session.clear()
+        manager.session.clear()
         team = Team.load(team.id)
 
         then:"The asserts on the intance should not init proxy"
@@ -125,7 +126,7 @@ class ByteBuddyProxySpec extends GormDatastoreSpec {
     void "isDirty should not intialize the association proxy"() {
         when:"load instance"
         Team team = createATeam()
-        session.clear()
+        manager.session.clear()
         team = Team.load(team.id)
 
         then:"The asserts on the intance should not init proxy"

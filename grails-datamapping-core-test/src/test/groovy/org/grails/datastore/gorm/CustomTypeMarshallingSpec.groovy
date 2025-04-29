@@ -18,122 +18,121 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 import spock.lang.PendingFeature
 import spock.lang.Shared
-import grails.gorm.tck.Person
 
-class CustomTypeMarshallingSpec extends GormDatastoreSpec {
+class CustomTypeMarshallingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    @Shared Date now = new Date()
+    @Shared
+    Date now = new Date()
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Person])
+    }
 
     def setup() {
-        def p = new Person(name:"Fred", birthday: new Birthday(now))
-        p.save(flush:true)
-        session.clear()
+        def p = new Person(name: "Fred", birthday: new Birthday(now))
+        p.save(flush: true)
+        manager.session.clear()
     }
 
     def cleanup() {
         Person.list()*.delete(flush: true)
-        session.clear()
+        manager.session.clear()
     }
 
     void "can retrieve custom values from the datastore"() {
         when: "We query the person"
-            def p = Person.findByName("Fred")
+        def p = Person.findByName("Fred")
 
         then: "The birthday is returned"
-            p != null
-            p.name == "Fred"
-            p.birthday != null
+        p != null
+        p.name == "Fred"
+        p.birthday != null
     }
 
     void "can query based on custom types"() {
         when: "We query with a custom type"
-           def p = Person.findByBirthday(new Birthday(now))
+        def p = Person.findByBirthday(new Birthday(now))
 
         then:
-            p != null
+        p != null
     }
 
     void "can perform a range query based on custom types"() {
         when: "A range query is executed"
-            def p = Person.findByBirthdayBetween(new Birthday(now-1), new Birthday(now+1))
-            def p2 = Person.findByBirthdayBetween(new Birthday(now+1), new Birthday(now+2))
+        def p = Person.findByBirthdayBetween(new Birthday(now - 1), new Birthday(now + 1))
+        def p2 = Person.findByBirthdayBetween(new Birthday(now + 1), new Birthday(now + 2))
 
         then:
-            p != null
-            p2 == null
+        p != null
+        p2 == null
     }
 
     @Issue("https://github.com/apache/grails-core/issues/4546")
     @PendingFeature(reason = 'Was previously @Ignore')
     void "can re-save an existing instance without modifications"() {
         given:
-            def p = Person.findByName("Fred")
+        def p = Person.findByName("Fred")
 
         when: "we can re-save an existing instance without modifications"
-            p.birthday = new Birthday(now)
-            boolean saveResult = p.save(flush: true)
+        p.birthday = new Birthday(now)
+        boolean saveResult = p.save(flush: true)
 
         then: 'the save is successful'
-            saveResult
+        saveResult
 
         and: "the version is not incremented"
-            p.version == old(p.version)
+        p.version == old(p.version)
     }
 
     @Issue("https://github.com/apache/grails-core/issues/4546")
     void "can modify the value of a custom type property"() {
         given:
-            def p = Person.findByName("Fred")
+        def p = Person.findByName("Fred")
 
         when: "we modify the value of a custom property"
-            p.birthday = new Birthday(now + 1)
-            boolean saveResult = p.save(flush: true)
+        p.birthday = new Birthday(now + 1)
+        boolean saveResult = p.save(flush: true)
 
         then: 'the save is successful'
-            saveResult
+        saveResult
 
         and: "the version is incremented"
-            p.version == old(p.version) + 1
+        p.version == old(p.version) + 1
 
         and: "we can query based on the modified value"
-            session.clear()
-            Person.countByBirthdayGreaterThan(new Birthday(now)) == 1
+        manager.session.clear()
+        Person.countByBirthdayGreaterThan(new Birthday(now)) == 1
     }
 
     @Issue("https://github.com/apache/grails-core/issues/4546")
     void "can nullify the value of a custom type property"() {
         given:
-            def p = Person.findByName("Fred")
+        def p = Person.findByName("Fred")
 
         when: "we modify the value of a custom property"
-            p.birthday = null
-            boolean saveResult = p.save(flush: true)
+        p.birthday = null
+        boolean saveResult = p.save(flush: true)
 
         then: 'the save is successful'
-            saveResult
+        saveResult
 
         and: "the version is incremented"
-            p.version == old(p.version) + 1
+        p.version == old(p.version) + 1
 
         and: "we can query based on the modified value"
-            session.clear()
-            Person.countByBirthdayIsNull() == 1
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Person]
+        manager.session.clear()
+        Person.countByBirthdayIsNull() == 1
     }
 }
 
 @Entity
 class Person {
-
 
 
     Long id

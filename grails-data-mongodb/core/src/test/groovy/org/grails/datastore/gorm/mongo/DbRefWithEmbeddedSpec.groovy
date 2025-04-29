@@ -19,8 +19,9 @@
 package org.grails.datastore.gorm.mongo
 
 import com.mongodb.DBRef
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.Issue
@@ -28,36 +29,34 @@ import spock.lang.Issue
 /**
  * @author Graeme Rocher
  */
-class DbRefWithEmbeddedSpec extends GormDatastoreSpec {
+class DbRefWithEmbeddedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([One, Two])
+    }
 
     @Issue('GPMONGODB-260')
     void "Test that an embedded links to the correct collection when using dbrefs"() {
-        when:""
-            def one = new One(name: 'My Foo')
-            one.save(flush: true)
+        when: ""
+        def one = new One(name: 'My Foo')
+        one.save(flush: true)
 
-            def two = new Two()
-            two.link2one = new Link2One(link: one)
-            two.save(flush: true)
-            session.clear()
-            final link2one = Two.collection.find().first().link2one?.link
-        then:""
-            link2one instanceof DBRef
-            Two.DB.getCollection(link2one.collectionName).find(new Document('_id', link2one.id)).first().name == "My Foo"
+        def two = new Two()
+        two.link2one = new Link2One(link: one)
+        two.save(flush: true)
+        manager.session.clear()
+        final link2one = Two.collection.find().first().link2one?.link
+        then: ""
+        link2one instanceof DBRef
+        Two.DB.getCollection(link2one.collectionName).find(new Document('_id', link2one.id)).first().name == "My Foo"
 
-        when:"The entity is loaded again"
-            two = Two.first()
+        when: "The entity is loaded again"
+        two = Two.first()
 
-        then:"It is correct"
-            two.link2one.link.name == 'My Foo'
-
-    }
-
-    @Override
-    List getDomainClasses() {
-        [One,Two]
+        then: "It is correct"
+        two.link2one.link.name == 'My Foo'
     }
 }
+
 @Entity
 class One {
     ObjectId id
@@ -66,6 +65,7 @@ class One {
         version false
     }
 }
+
 @Entity
 class Two {
     ObjectId id
@@ -75,6 +75,7 @@ class Two {
         version false
     }
 }
+
 class Link2One {
     One link
     static mapping = {

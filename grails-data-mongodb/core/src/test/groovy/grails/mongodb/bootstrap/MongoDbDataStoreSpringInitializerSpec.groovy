@@ -22,7 +22,7 @@ import com.mongodb.client.MongoClient
 import grails.mongodb.MongoEntity
 import grails.mongodb.geo.Point
 import grails.persistence.Entity
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.Document
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.mongo.BirthdayCodec

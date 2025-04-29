@@ -20,20 +20,25 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.model.MappingContext
 
 /**
  * Created by graemerocher on 23/08/2017.
  */
-class ArrayMaxSizeSpec extends GormDatastoreSpec {
+class ArrayMaxSizeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([ArrayEntity])
+    }
 
     void "test size validation"() {
 
         given:
-        MappingContext context = session.datastore.mappingContext
-        context.setValidatorRegistry(new DefaultValidatorRegistry(context, session.datastore.getConnectionSources().getDefaultConnectionSource().settings))
+        MappingContext context = manager.session.datastore.mappingContext
+        context.setValidatorRegistry(new DefaultValidatorRegistry(context, manager.session.datastore.getConnectionSources().getDefaultConnectionSource().settings))
         ArrayEntity invalid = new ArrayEntity(field: "foo", bytes: new byte[0], stringArray: new String[0])
 
         when:
@@ -44,10 +49,6 @@ class ArrayMaxSizeSpec extends GormDatastoreSpec {
         invalid.errors.getFieldError('bytes')
         invalid.errors.getFieldError('stringArray')
 
-    }
-    @Override
-    List getDomainClasses() {
-        [ArrayEntity]
     }
 }
 

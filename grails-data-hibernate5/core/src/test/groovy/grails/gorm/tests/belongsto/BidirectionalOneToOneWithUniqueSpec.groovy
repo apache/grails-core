@@ -19,32 +19,31 @@
 
 package grails.gorm.tests.belongsto
 
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 22/08/2017.
  */
-class BidirectionalOneToOneWithUniqueSpec extends GormSpec{
-
+class BidirectionalOneToOneWithUniqueSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([HibernateFace, HibernateNose])
+    }
 
     void "test bidirectional one-to-one with unique"() {
 
         given:
-        def nose = new Nose()
-        def face = new Face(nose: nose)
+        def nose = new HibernateNose()
+        def face = new HibernateFace(nose: nose)
         nose.face = face
         face.save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
-        Face f = Face.first()
+        HibernateFace f = HibernateFace.first()
 
         then:
         f.nose
         f.nose.face
-    }
-    @Override
-    List getDomainClasses() {
-        [Face, Nose]
     }
 }

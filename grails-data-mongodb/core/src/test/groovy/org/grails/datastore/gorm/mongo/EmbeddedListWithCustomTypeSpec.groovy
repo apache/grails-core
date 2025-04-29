@@ -18,36 +18,36 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
-import org.bson.types.ObjectId
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.bson.types.ObjectId
 import spock.lang.Issue
 
-class EmbeddedListWithCustomTypeSpec extends GormDatastoreSpec{
+class EmbeddedListWithCustomTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Person, Family])
+    }
 
     @Issue('GPMONGODB-217')
     void "Test that custom types in an embedded list persist correctly"() {
-        given:"An entity with a custom type property"
-            final birthdate = new Date()
-            def joan = new Person (name: 'joan', birthday: new Birthday(birthdate))
+        given: "An entity with a custom type property"
+        final birthdate = new Date()
+        def joan = new Person(name: 'joan', birthday: new Birthday(birthdate))
 
-        when:"The person is persisted inside an embedded collection"
-            def black = new Family(name: 'black', members: [joan])
-            black.save(flush:true)
-            session.clear()
-            black = Family.findByName('black')
+        when: "The person is persisted inside an embedded collection"
+        def black = new Family(name: 'black', members: [joan])
+        black.save(flush: true)
+        manager.session.clear()
+        black = Family.findByName('black')
 
-        then:"Custom type is persisted correctly"
-            black != null
-            black.members.size() == 1
-            black.members[0].name == 'joan'
-            black.members[0].birthday != null
-            black.members[0].birthday.date == birthdate
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Person,Family]
+        then: "Custom type is persisted correctly"
+        black != null
+        black.members.size() == 1
+        black.members[0].name == 'joan'
+        black.members[0].birthday != null
+        black.members[0].birthday.date == birthdate
     }
 }
 

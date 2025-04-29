@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tck.TestEntity
-import grails.gorm.tck.ChildEntity
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Daniel Wiell
  */
-class OrderBySpec extends GormDatastoreSpec {
+class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     def setup() {
         def age = 40
         ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
@@ -43,7 +44,7 @@ class OrderBySpec extends GormDatastoreSpec {
 
     def 'Test order by property name with dynamic finder using max'() {
         when:
-        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age", order: 'desc', max:  1])
+        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age", order: 'desc', max: 1])
 
         then:
         45 == results[0].age
@@ -51,7 +52,7 @@ class OrderBySpec extends GormDatastoreSpec {
 
     def 'Test order by with list() method using max'() {
         when:
-        def results = TestEntity.list(sort: "age", order:  'desc', max: 1)
+        def results = TestEntity.list(sort: "age", order: 'desc', max: 1)
 
         then:
         45 == results[0].age

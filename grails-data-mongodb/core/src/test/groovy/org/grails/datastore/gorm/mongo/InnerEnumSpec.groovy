@@ -18,26 +18,26 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 05/01/16.
  */
-class InnerEnumSpec extends GormDatastoreSpec {
+class InnerEnumSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([InnerPerson])
+    }
 
     void "Test that inner enums are persisted"() {
         given:
-        new InnerPerson(name: "Fred", state: InnerPerson.PersonState.GOOD).save(flush:true)
-        session.clear()
+        new InnerPerson(name: "Fred", state: InnerPerson.PersonState.GOOD).save(flush: true)
+        manager.session.clear()
 
         expect:
-            InnerPerson.first().state == InnerPerson.PersonState.GOOD
-    }
-
-    @Override
-    List getDomainClasses() {
-        [InnerPerson]
+        InnerPerson.first().state == InnerPerson.PersonState.GOOD
     }
 }
 

@@ -18,15 +18,20 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
+
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * @author graemerocher
  */
 @Issue('https://github.com/grails/grails-core/issues/2674')
-class FindByDomainInListSpec extends GormDatastoreSpec{
+class FindByDomainInListSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([BookAuthor, AuthorBook])
+    }
 
     void "Test fetch books by author"() {
         given:
@@ -35,7 +40,7 @@ class FindByDomainInListSpec extends GormDatastoreSpec{
         author.books << new AuthorBook(title: "Twilight", author: author)
         author.books << new AuthorBook(title: "Harry Potter", author: author)
         author.save(flush: true, failOnError: true)
-        session.clear()
+        manager.session.clear()
         when:
         def books = AuthorBook.withCriteria {
             inList 'author', BookAuthor.list()
@@ -45,11 +50,6 @@ class FindByDomainInListSpec extends GormDatastoreSpec{
         AuthorBook.count() == 2
         books
         books.size() == 2
-    }
-
-    @Override
-    List getDomainClasses() {
-        [BookAuthor, AuthorBook]
     }
 }
 

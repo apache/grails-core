@@ -18,97 +18,97 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedPropertyQuerySpec extends GormDatastoreSpec {
-
-    static {
-        GormDatastoreSpec.TEST_CLASSES << Book2 << Author2
+class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses += [Book2, Author2]
     }
 
     void "Test eq query of embedded properties"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            book.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        book.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            book = Book2.createCriteria().get { eq 'publishPeriod.startDate', new Date(2012, 1, 1) }
+        book = Book2.createCriteria().get { eq 'publishPeriod.startDate', new Date(2012, 1, 1) }
         then:
-            book != null
+        book != null
     }
 
     void "Test gt query of embedded properties"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            book.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        book.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            book = Book2.createCriteria().get { gt 'publishPeriod.startDate', new Date(2011, 1, 1) }
+        book = Book2.createCriteria().get { gt 'publishPeriod.startDate', new Date(2011, 1, 1) }
         then:
-            book != null
+        book != null
     }
 
     void "Test ge query of embedded properties"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            book.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        book.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            book = Book2.createCriteria().get { ge 'publishPeriod.startDate', new Date(2012, 1, 1) }
+        book = Book2.createCriteria().get { ge 'publishPeriod.startDate', new Date(2012, 1, 1) }
         then:
-            book != null
+        book != null
     }
 
     void "Test lt query of embedded properties"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            book.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        book.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            book = Book2.createCriteria().get { lt 'publishPeriod.startDate', new Date(2014, 1, 1) }
+        book = Book2.createCriteria().get { lt 'publishPeriod.startDate', new Date(2014, 1, 1) }
         then:
-            book != null
+        book != null
     }
 
     void "Test le query of embedded properties"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            book.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        book.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            book = Book2.createCriteria().get { le 'publishPeriod.endDate', new Date(2013, 1, 1) }
+        book = Book2.createCriteria().get { le 'publishPeriod.endDate', new Date(2013, 1, 1) }
         then:
-            book != null
+        book != null
     }
 
     void "Test isNotNull query of embedded properties"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            book.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        book.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            book = Book2.createCriteria().get {
-                isNotNull 'publishPeriod.endDate'
-            }
+        book = Book2.createCriteria().get {
+            isNotNull 'publishPeriod.endDate'
+        }
         then:
-            book != null
+        book != null
     }
 
     void "Test associated query of embedded property"() {
         given:
-            def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
-            def author = new Author2(name: 'George', books: [book])
-            author.save(flush: true, failOnError: true)
-            session.clear()
+        def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
+        def author = new Author2(name: 'George', books: [book])
+        author.save(flush: true, failOnError: true)
+        manager.session.clear()
         when:
-            author = Author2.createCriteria().get {
-                books {
-                    eq 'publishPeriod.startDate', new Date(2012, 1, 1)
-                }
+        author = Author2.createCriteria().get {
+            books {
+                eq 'publishPeriod.startDate', new Date(2012, 1, 1)
             }
+        }
         then:
-            author != null
+        author != null
     }
 
 }

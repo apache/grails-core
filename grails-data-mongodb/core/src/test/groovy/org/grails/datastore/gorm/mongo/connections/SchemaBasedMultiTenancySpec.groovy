@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm.mongo.connections
 
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.gorm.mongo.City
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.mongo.MongoDatastore

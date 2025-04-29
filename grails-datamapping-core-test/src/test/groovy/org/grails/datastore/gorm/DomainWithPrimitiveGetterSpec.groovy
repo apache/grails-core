@@ -18,12 +18,15 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class DomainWithPrimitiveGetterSpec extends GormDatastoreSpec{
+class DomainWithPrimitiveGetterSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([DomainWithPrimitiveGetterAuthor, DomainWithPrimitiveGetterBook])
+    }
 
     @Issue('GRAILS-8788')
     void "Test that a domain that contains a primitive getter maps correctly"() {
@@ -35,11 +38,6 @@ class DomainWithPrimitiveGetterSpec extends GormDatastoreSpec{
         then:"The save executes correctly"
             DomainWithPrimitiveGetterBook.count() == 1
             DomainWithPrimitiveGetterAuthor.count() == 1
-    }
-
-    @Override
-    List getDomainClasses() {
-        [DomainWithPrimitiveGetterAuthor, DomainWithPrimitiveGetterBook]
     }
 }
 

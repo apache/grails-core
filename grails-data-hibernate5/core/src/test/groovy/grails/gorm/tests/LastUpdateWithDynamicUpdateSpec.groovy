@@ -19,14 +19,15 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 27/06/16.
  */
-class LastUpdateWithDynamicUpdateSpec extends GormDatastoreSpec {
-    @Override
-    List getDomainClasses() {
-        [LastUpdateTestA, LastUpdateTestB, LastUpdateTestC]
+class LastUpdateWithDynamicUpdateSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([LastUpdateTestA, LastUpdateTestB, LastUpdateTestC])
     }
 
     void "lastUpdated should work for dynamic update and no versioning on TestA"() {

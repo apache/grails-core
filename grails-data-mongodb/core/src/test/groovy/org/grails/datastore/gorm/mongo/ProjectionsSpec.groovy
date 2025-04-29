@@ -19,15 +19,20 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.DetachedCriteria
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 15/04/14.
  */
-class ProjectionsSpec extends GormDatastoreSpec {
+class ProjectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Dog])
+    }
 
     void "Test distinct projection with detached criteria"() {
         given: "Some test data"
@@ -92,11 +97,6 @@ class ProjectionsSpec extends GormDatastoreSpec {
         then: "The result is correct"
         results.size() == 2
         [["Joe", 2], ["Fred", 6]].containsAll(results)
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Dog]
     }
 }
 

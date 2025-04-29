@@ -18,23 +18,23 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.Person
+import org.apache.grails.data.testing.tck.domains.Person
 import grails.gorm.transactions.Transactional
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 05/01/2017.
  */
-class TransactionalTransformOnServiceSpec extends GormDatastoreSpec {
+class TransactionalTransformOnServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Person])
+    }
 
     void "test transaction manager lookup with @Transactional and unassigned transaction manager"() {
         expect:
         new TestService().testMe()
         new ChildService().doSomething("value") == "parent value"
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Person]
     }
 
 

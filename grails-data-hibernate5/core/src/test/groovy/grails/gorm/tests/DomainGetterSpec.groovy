@@ -19,23 +19,23 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 16/09/2016.
  */
-class DomainGetterSpec extends GormSpec {
+class DomainGetterSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([DomainOne, DomainWithGetter])
+    }
 
     void "test a domain with a getter"() {
         when:
-        new DomainOne(controller: 'project', action: 'update').save(flush:true, validate:false)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true, validate: false)
 
         then:
         new DomainWithGetter().relatedDomainOne
-    }
-    @Override
-    List getDomainClasses() {
-        [DomainOne, DomainWithGetter]
     }
 }
 

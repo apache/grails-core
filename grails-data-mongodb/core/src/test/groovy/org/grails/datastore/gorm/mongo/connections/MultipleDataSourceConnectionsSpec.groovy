@@ -21,7 +21,7 @@ package org.grails.datastore.gorm.mongo.connections
 import grails.gorm.annotation.Entity
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSource

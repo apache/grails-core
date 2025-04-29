@@ -19,28 +19,28 @@
 package org.grails.datastore.gorm.mongo
 
 import com.mongodb.WriteConcern
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 25/03/14.
  */
-class IndexAttributesAndCompoundKeySpec extends GormDatastoreSpec{
+class IndexAttributesAndCompoundKeySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([ServerStream])
+    }
 
     @Issue('GPMONGODB-359')
     void "Test that a compound index works"() {
-        expect:"No exceptions on startup"
-            ServerStream.count() == 0
+        expect: "No exceptions on startup"
+        ServerStream.count() == 0
 
-            ServerStream.collection.listIndexes()[1].key == [server:1, stream:1]
-            ServerStream.collection.listIndexes()[1].unique
+        ServerStream.collection.listIndexes()[1].key == [server: 1, stream: 1]
+        ServerStream.collection.listIndexes()[1].unique
 
-    }
-    @Override
-    List getDomainClasses() {
-        [ServerStream]
     }
 }
 
@@ -51,11 +51,11 @@ class ServerStream {
     Long version
     String server
     String stream
-    Boolean fBackfill=false
+    Boolean fBackfill = false
 
     static mapping = {
         version false
-        compoundIndex server :1, stream:1, indexAttributes:[unique:true, dropDups:true]
+        compoundIndex server: 1, stream: 1, indexAttributes: [unique: true, dropDups: true]
         writeConcern WriteConcern.ACKNOWLEDGED
     }
 }

@@ -22,9 +22,7 @@ import grails.gorm.tests.services.Attribute
 import grails.gorm.tests.services.Product
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
-import org.grails.orm.hibernate.GormSpec
 import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.interceptor.TransactionAspectSupport
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -35,8 +33,9 @@ import spock.lang.Specification
  */
 class TransactionalWithinReadOnlySpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(Product, Attribute)
-
+    @Shared
+    @AutoCleanup
+    HibernateDatastore datastore = new HibernateDatastore(Product, Attribute)
 
     void "test transaction status"() {
         given:
@@ -46,7 +45,6 @@ class TransactionalWithinReadOnlySpec extends Specification {
         txService.readProduct()
         !txService.writeProduct()
     }
-
 }
 
 @ReadOnly

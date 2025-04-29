@@ -18,13 +18,18 @@
  */
 package grails.gorm.tests
 
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.QueryException
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 03/11/16.
  */
-class WhereQueryWithAssociationSortSpec extends GormDatastoreSpec {
+class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Club, Team])
+    }
 
     @Issue('https://github.com/grails/grails-core/issues/9860')
     void "Test sort with where query that queries association"() {
@@ -54,10 +59,5 @@ class WhereQueryWithAssociationSortSpec extends GormDatastoreSpec {
         then:"an exception is thrown because no alias is specified"
         results.size() == 2
         results.first().name == "Arsenal First Team"
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Club, Team]
     }
 }

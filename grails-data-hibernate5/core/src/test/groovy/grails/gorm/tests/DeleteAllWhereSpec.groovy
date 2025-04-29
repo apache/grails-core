@@ -18,20 +18,24 @@
  */
 package grails.gorm.tests
 
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
-class DeleteAllWhereSpec extends GormSpec{
+class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Club])
+    }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/969')
     void "test delete all type conversion"() {
         given:
         new Club(name: "Manchester United").save()
-        new Club(name: "Arsenal").save(flush:true)
+        new Club(name: "Arsenal").save(flush: true)
 
         when:
         int count = Club.count
@@ -48,11 +52,5 @@ class DeleteAllWhereSpec extends GormSpec{
         then:
         Club.count == 1
         Club.findByName("Manchester United")
-    }
-
-
-    @Override
-    List getDomainClasses() {
-        [Club]
     }
 }

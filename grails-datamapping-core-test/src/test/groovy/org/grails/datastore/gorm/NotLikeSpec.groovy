@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tck.TestEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 22/08/2017.
  */
-class NotLikeSpec extends GormDatastoreSpec {
+class NotLikeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void "test not like"() {
         when:

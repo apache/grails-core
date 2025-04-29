@@ -16,19 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author graemerocher
  */
-class BidirectionalOneToManyWithInheritanceSpec extends GormDatastoreSpec {
+class BidirectionalOneToManyWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([ConfigurationItem, Documentation, ChangeRequest])
+    }
 
     void "Test a bidirectional one-to-many association with inheritance"() {
-
         given:
         def doc = new Documentation()
 
@@ -36,17 +38,12 @@ class BidirectionalOneToManyWithInheritanceSpec extends GormDatastoreSpec {
                 .addToConfigurationItems(new Documentation())
 
         when:
-        doc.save(flush:true)
-        session.clear()
+        doc.save(flush: true)
+        manager.session.clear()
         doc = Documentation.get(1)
 
         then:
         doc.configurationItems.size() == 2
-    }
-
-    @Override
-    List getDomainClasses() {
-        [ConfigurationItem, Documentation, ChangeRequest]
     }
 }
 

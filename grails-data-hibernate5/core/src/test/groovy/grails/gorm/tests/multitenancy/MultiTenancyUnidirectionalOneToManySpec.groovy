@@ -22,12 +22,9 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
-import org.grails.orm.hibernate.GormSpec
 import grails.gorm.MultiTenant
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.connections.SingleTenantAuthor
 import org.hibernate.dialect.H2Dialect
-import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -38,20 +35,20 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/954')
     void "test multi-tenancy with unidirectional one-to-many"() {
-        given:"A configuration for schema based multi-tenancy"
+        given: "A configuration for schema based multi-tenancy"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
         Map config = [
-                "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-                "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver.name,
-                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-                'dataSource.dialect': H2Dialect.name,
-                'dataSource.formatSql': 'true',
-                'hibernate.flush.mode': 'COMMIT',
-                'hibernate.cache.queries': 'true',
-                'hibernate.hbm2ddl.auto': 'create',
+                "grails.gorm.multiTenancy.mode"               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver.name,
+                'dataSource.url'                              : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.dialect'                          : H2Dialect.name,
+                'dataSource.formatSql'                        : 'true',
+                'hibernate.flush.mode'                        : 'COMMIT',
+                'hibernate.cache.queries'                     : 'true',
+                'hibernate.hbm2ddl.auto'                      : 'create',
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage() )
+        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
 
         when:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "ford")
@@ -59,7 +56,7 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
             new Vehicle(model: "A5", year: 2017, manufacturer: "Audi")
                     .addToEngines(cylinders: 6, manufacturer: "VW")
                     .addToWheels(spokes: 5)
-                    .save(flush:true)
+                    .save(flush: true)
         }
 
         then:
@@ -94,7 +91,7 @@ class Engine implements MultiTenant<Engine> {
     }
 
     static mapping = {
-        tenantId name:'manufacturer'
+        tenantId name: 'manufacturer'
     }
 }
 
@@ -109,7 +106,7 @@ class Wheel implements MultiTenant<Wheel> {
     }
 
     static mapping = {
-        tenantId name:'manufacturer'
+        tenantId name: 'manufacturer'
     }
 }
 
@@ -121,12 +118,12 @@ class Vehicle implements MultiTenant<Vehicle> {
 
     static hasMany = [engines: Engine, wheels: Wheel]
     static constraints = {
-        model blank:false
-        year min:1980
+        model blank: false
+        year min: 1980
     }
 
     static mapping = {
-        tenantId name:'manufacturer'
+        tenantId name: 'manufacturer'
         year column: 'vehicleYear'
     }
 }

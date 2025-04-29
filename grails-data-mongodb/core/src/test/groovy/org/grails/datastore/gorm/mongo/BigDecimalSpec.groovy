@@ -16,39 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
-import org.bson.Document
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.Decimal128
-import spock.lang.Ignore
-import spock.lang.IgnoreIf
 
 /**
  * Created by graemerocher on 14/12/16.
  */
-class BigDecimalSpec extends GormDatastoreSpec {
+class BigDecimalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([BossMan])
+    }
 
     void "test save and retrieve big decimal value"() {
-        when:"A big decimal is saved"
+        when: "A big decimal is saved"
         def val = new BigDecimal("1.0")
-        new BossMan(salary: val).save(flush:true)
-        session.clear()
+        new BossMan(salary: val).save(flush: true)
+        manager.session.clear()
         BossMan bm = BossMan.first()
-        then:""
+
+        then: ""
         bm.salary == val
         BossMan.collection.find().first().salary instanceof Decimal128
-
-    }
-
-    @Override
-    List getDomainClasses() {
-        [BossMan]
     }
 }
+
 @Entity
 class BossMan implements MongoEntity<BossMan> {
     BigDecimal salary

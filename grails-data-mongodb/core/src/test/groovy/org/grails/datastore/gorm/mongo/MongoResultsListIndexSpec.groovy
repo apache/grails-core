@@ -18,38 +18,42 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class MongoResultsListIndexSpec extends GormDatastoreSpec{
+class MongoResultsListIndexSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    void "Test that indexing into results works with MongoDB"() {
-        given:"Some people"
-            createPeople()
-
-        when:"We index into the results"
-            def people = Person.list()
-            def bart = people[2]
-            def homer = people[0]
-            def barney = people[4]
-
-        then:"The results are correct"
-            bart.firstName == "Bart"
-            homer.firstName == "Homer"
-            barney.firstName == "Barney"
-            people[10] == null
-            people.size() == 6
-
-        when:"An index out of range is used"
-            people.get(10)
-
-        then:"An exception is thrown"
-            thrown IndexOutOfBoundsException
+    void setupSpec() {
+        manager.domainClasses += [Person]
     }
 
+    void "Test that indexing into results works with MongoDB"() {
+        given: "Some people"
+        createPeople()
+
+        when: "We index into the results"
+        def people = Person.list()
+        def bart = people[2]
+        def homer = people[0]
+        def barney = people[4]
+
+        then: "The results are correct"
+        bart.firstName == "Bart"
+        homer.firstName == "Homer"
+        barney.firstName == "Barney"
+        people[10] == null
+        people.size() == 6
+
+        when: "An index out of range is used"
+        people.get(10)
+
+        then: "An exception is thrown"
+        thrown IndexOutOfBoundsException
+    }
 
     protected void createPeople() {
         new Person(firstName: "Homer", lastName: "Simpson").save()

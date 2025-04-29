@@ -18,28 +18,29 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-class TransientPropertySpec extends GormDatastoreSpec {
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-    void "Test that transient properties are not saved to mongodb"() {
-        when:"A doman with a transient property is saved"
-            def c = new Cow(name: "Daisy", other:"foo").save(flush:true)
-            def service = c.rodeoService
-            session.clear()
-            c = Cow.findByName("Daisy")
+class TransientPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-        then:"The transient instance is not persisted"
-            c != null
-            c.name == "Daisy"
-            c.other == null
-            c.rodeoService  != null
-            c.rodeoService !=  service
+    void setupSpec() {
+        manager.domainClasses.addAll([Cow])
     }
 
-    @Override
-    List getDomainClasses() {
-        [Cow]
+    void "Test that transient properties are not saved to mongodb"() {
+        when: "A doman with a transient property is saved"
+        def c = new Cow(name: "Daisy", other: "foo").save(flush: true)
+        def service = c.rodeoService
+        manager.session.clear()
+        c = Cow.findByName("Daisy")
+
+        then: "The transient instance is not persisted"
+        c != null
+        c.name == "Daisy"
+        c.other == null
+        c.rodeoService != null
+        c.rodeoService != service
     }
 }
 

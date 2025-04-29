@@ -18,30 +18,29 @@
  */
 package org.grails.datastore.gorm.mongo
 
-
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 
 import jakarta.validation.constraints.Digits
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 30/12/2016.
  */
-class JakartaValidationSpec extends GormDatastoreSpec {
+class JakartaValidationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    void "test jakarta.validator validation"() {
-        when:"An invalid entity is created"
-        JakartaProduct p = new JakartaProduct(name:"MacBook", price: "bad")
-        p.save()
-
-        then:"The are errors"
-        p.hasErrors()
-        p.errors.getFieldError('price')
+    void setupSpec() {
+        manager.domainClasses.addAll([JakartaProduct])
     }
 
-    @Override
-    List getDomainClasses() {
-        [JakartaProduct]
+    void "test jakarta.validator validation"() {
+        when: "An invalid entity is created"
+        JakartaProduct p = new JakartaProduct(name: "MacBook", price: "bad")
+        p.save()
+
+        then: "The are errors"
+        p.hasErrors()
+        p.errors.getFieldError('price')
     }
 }
 

@@ -16,18 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.PendingFeature
 
 /**
  * TODO: Support composite ids
  */
-class CompositeIdentifierSpec extends GormDatastoreSpec {
+class CompositeIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([User, Role, UserRole])
+    }
 
     @PendingFeature(reason = 'Composite ids not supported')
     void "Test that a composite identifier is treated as assigned"() {
@@ -36,18 +38,13 @@ class CompositeIdentifierSpec extends GormDatastoreSpec {
             def r = new Role(name: "Admin").save()
             def ur = new UserRole(user: u, role: r)
             ur.save flush: true
-            session.clear()
+        manager.session.clear()
 
         when:"The entity is queried"
             ur = UserRole.get(new UserRole(user: u, role: r))
 
         then:"it is found"
             ur != null
-    }
-
-    @Override
-    List getDomainClasses() {
-        [User, Role, UserRole]
     }
 }
 

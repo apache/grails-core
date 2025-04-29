@@ -19,22 +19,24 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.dirty.checking.DirtyCheck
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 
-class MarkDirtyFalseSpec extends GormDatastoreSpec {
+class MarkDirtyFalseSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    Map getConfiguration() {
-        [(MongoSettings.SETTING_MARK_DIRTY): false]
+    void setupSpec() {
+        manager.domainClasses.addAll([Bar, BarWithTimestamp])
+        manager.configuration.putAll([(MongoSettings.SETTING_MARK_DIRTY): false])
     }
 
     void "test behavior with mark dirty false"() {
         when:
         def b = new Bar(foo:"stuff", strings:['a', 'b'])
         b.save(flush:true)
-        session.clear()
+        manager.session.clear()
         b = Bar.get(b.id)
         b.save(flush: true)
 
@@ -44,17 +46,12 @@ class MarkDirtyFalseSpec extends GormDatastoreSpec {
         when:
         def bTs = new BarWithTimestamp(foo:"stuff")
         bTs.save(flush:true)
-        session.clear()
+        manager.session.clear()
         bTs = BarWithTimestamp.get(bTs.id)
         bTs.save(flush: true)
 
         then:
         bTs.version == 0
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Bar, BarWithTimestamp]
     }
 }
 

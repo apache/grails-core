@@ -18,47 +18,48 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
-import grails.persistence.Entity
-
 import com.mongodb.WriteConcern
+import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
-import static grails.mongodb.mapping.MappingBuilder.*
+
+import static grails.mongodb.mapping.MappingBuilder.document
+
 /**
  * Tests usage of WriteConcern
  */
-class WriteConcernSpec extends GormDatastoreSpec {
+class WriteConcernSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    @Override
-    List getDomainClasses() {
-        [SafeWrite, UnacknowledgedWrite]
+    void setupSpec() {
+        manager.domainClasses.addAll([SafeWrite, UnacknowledgedWrite])
     }
 
     void "Test that the correct WriteConcern is used to save entities"() {
-        when:"An object is saved"
-            def sw = new SafeWrite(name:"Bob")
-            sw.save(flush:true)
+        when: "An object is saved"
+        def sw = new SafeWrite(name: "Bob")
+        sw.save(flush: true)
 
-        then:"The correct write concern is used"
-            sw != null
+        then: "The correct write concern is used"
+        sw != null
     }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/600')
     void "Test unacknowledged write concern"() {
-        when:"An object is saved"
-        def sw = new UnacknowledgedWrite(name:"Bob")
-        sw.save(flush:true)
+        when: "An object is saved"
+        def sw = new UnacknowledgedWrite(name: "Bob")
+        sw.save(flush: true)
 
-        then:"The correct write concern is used"
+        then: "The correct write concern is used"
         sw != null
 
-        when:"The object is updated"
-        session.clear()
+        when: "The object is updated"
+        manager.session.clear()
         sw.name = "Fred"
-        sw.save(flush:true)
-        session.clear()
+        sw.save(flush: true)
+        manager.session.clear()
 
-        then:"The update worked"
+        then: "The update worked"
         UnacknowledgedWrite.findByName "Fred"
 
     }

@@ -19,7 +19,7 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.persistence.Entity
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import spock.lang.AutoCleanup

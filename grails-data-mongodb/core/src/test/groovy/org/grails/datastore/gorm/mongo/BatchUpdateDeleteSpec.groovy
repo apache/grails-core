@@ -20,51 +20,54 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Plant
 import grails.mongodb.MongoEntity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
-import spock.lang.IgnoreIf
 
 /**
  * Created by graemerocher on 20/03/14.
  */
 @ApplyDetachedCriteriaTransform
-class BatchUpdateDeleteSpec extends GormDatastoreSpec {
+class BatchUpdateDeleteSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([BatchUser, BatchAddress, Plant])
+    }
 
     void "Test that batch delete works"() {
-        when:"Some test data"
-            createTestData()
+        when: "Some test data"
+        createTestData()
 
-        then:"The correct amount of data exists"
-            Plant.count() == 6
+        then: "The correct amount of data exists"
+        Plant.count() == 6
 
-        when:"a batch delete is executed"
-            Plant.where {
-                name == ~/Ca+/
-            }.deleteAll()
-            session.flush()
+        when: "a batch delete is executed"
+        Plant.where {
+            name == ~/Ca+/
+        }.deleteAll()
+        manager.session.flush()
 
-        then:"The right amount of data is deleted"
-            Plant.count() == 4
+        then: "The right amount of data is deleted"
+        Plant.count() == 4
     }
 
     void "Test that batch update works"() {
-        when:"Some test data"
-            createTestData()
+        when: "Some test data"
+        createTestData()
 
-        then:"The correct amount of data exists"
-            Plant.count() == 6
+        then: "The correct amount of data exists"
+        Plant.count() == 6
 
-        when:"a batch delete is executed"
-            Plant.where {
-                name == ~/Ca+/
-            }.updateAll(goesInPatch:true)
-            session.flush()
+        when: "a batch delete is executed"
+        Plant.where {
+            name == ~/Ca+/
+        }.updateAll(goesInPatch: true)
+        manager.session.flush()
 
-        then:"The right amount of data is deleted"
-            Plant.countByGoesInPatch(true) == 2
+        then: "The right amount of data is deleted"
+        Plant.countByGoesInPatch(true) == 2
     }
 
     void "Test that batch update works with domain properties"() {
@@ -74,7 +77,7 @@ class BatchUpdateDeleteSpec extends GormDatastoreSpec {
         new BatchUser(address: addressA).save()
         new BatchUser(address: addressA).save()
         new BatchUser(address: addressB).save(flush: true, failOnError: true)
-        session.flush()
+        manager.session.flush()
 
         when:
         int aCount = BatchUser.where { address == addressA }.count()
@@ -86,7 +89,7 @@ class BatchUpdateDeleteSpec extends GormDatastoreSpec {
 
         when:
         BatchUser.where { address == addressA }.updateAll(address: addressB)
-        session.flush()
+        manager.session.flush()
 
         boolean addressBUserCount = BatchUser.where { address == addressB }.count() == 3
         boolean addressAUserCount = BatchUser.where { address == addressA }.count() == 0
@@ -95,14 +98,6 @@ class BatchUpdateDeleteSpec extends GormDatastoreSpec {
         BatchUser.count() == 3
         addressAUserCount
         addressBUserCount
-
-
-
-    }
-
-    @Override
-    List getDomainClasses() {
-        [BatchUser,BatchAddress,Plant]
     }
 
     void createTestData() {
@@ -111,7 +106,7 @@ class BatchUpdateDeleteSpec extends GormDatastoreSpec {
         new Plant(name: "Lettuce").save()
         new Plant(name: "Pumpkin").save()
         new Plant(name: "Bamboo").save()
-        new Plant(name: "Palm Tree").save(flush:true)
+        new Plant(name: "Palm Tree").save(flush: true)
     }
 }
 

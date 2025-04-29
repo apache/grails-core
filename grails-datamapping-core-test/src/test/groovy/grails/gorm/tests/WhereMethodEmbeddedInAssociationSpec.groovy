@@ -18,23 +18,22 @@
  */
 package grails.gorm.tests
 
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
+import spock.lang.Shared
 
 @ApplyDetachedCriteriaTransform
-class WhereMethodEmbeddedInAssociationSpec extends GormDatastoreSpec {
-
+class WhereMethodEmbeddedInAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    @Shared
     def gcl
 
-
-    @Override
-    List getDomainClasses() {
-        def list = super.getDomainClasses()
-
+    void setupSpec() {
         gcl = new GroovyClassLoader()
 
         gcl.parseClass('''
-import grails.gorm.tck.*
+import org.apache.grails.data.testing.tck.domains.*
 import grails.gorm.annotation.*
 import grails.persistence.*
 import grails.gorm.DetachedCriteria
@@ -70,12 +69,9 @@ class Partner {
         def Contact = this.gcl.loadClass("Contact")
         def Address = this.gcl.loadClass("Address")
 
-        list << Partner
-        list << Contact
-        list << Address
-
-        return list
-
+        manager.domainClasses << Partner
+        manager.domainClasses << Contact
+        manager.domainClasses << Address
     }
 
     def setup() {

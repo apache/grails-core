@@ -22,7 +22,7 @@ import com.mongodb.client.model.Filters
 import grails.gorm.MultiTenant
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings

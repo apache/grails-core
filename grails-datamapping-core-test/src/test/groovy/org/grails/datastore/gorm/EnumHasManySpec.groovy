@@ -18,34 +18,31 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
-import spock.lang.Specification
 
 /**
  * @author Graeme Rocher
  */
-class EnumHasManySpec extends GormDatastoreSpec{
-
-
-    @Override
-    List getDomainClasses() {
-        [Animal]
+class EnumHasManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Animal])
     }
 
     @Issue('GRAILS-9882')
     void "Test that a collection of enums can be persisted"() {
-        when:"A domain class with a collection of enum instance is saved"
-            Animal zebra = new Animal(name: 'zebra')
-            zebra.addToTraits(Trait.FOUR_LEGS)
-            zebra.addToTraits(Trait.TAIL)
-            zebra.addToTraits(Trait.STRIPES)
-            zebra.save(flush:true)
-            session.clear()
+        when: "A domain class with a collection of enum instance is saved"
+        Animal zebra = new Animal(name: 'zebra')
+        zebra.addToTraits(Trait.FOUR_LEGS)
+        zebra.addToTraits(Trait.TAIL)
+        zebra.addToTraits(Trait.STRIPES)
+        zebra.save(flush: true)
+        manager.session.clear()
 
-        then:"The results are correct"
-             Animal.findByName('zebra').traits.size() == 3
+        then: "The results are correct"
+        Animal.findByName('zebra').traits.size() == 3
     }
 
     void "Test removeFrom collection of enums"() {
@@ -78,7 +75,6 @@ class Animal {
 }
 
 enum Trait {
-
     TAIL,
     FOUR_LEGS,
     SPOTS,

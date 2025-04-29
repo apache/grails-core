@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class StatelessSpec extends GormDatastoreSpec {
+class StatelessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    @Override
-    List getDomainClasses() {
-        [Volcano]
+    void setupSpec() {
+        manager.domainClasses.addAll([Volcano])
     }
 
     void "stateless and self-assigned ids can be used together"() {
@@ -32,7 +32,7 @@ class StatelessSpec extends GormDatastoreSpec {
         Volcano v = new Volcano(country: "Spain")
         v.id = "Teide"
         v.insert flush: true
-        session.clear()
+        manager.session.clear()
 
         when:
         v = Volcano.get("Teide")
@@ -42,11 +42,11 @@ class StatelessSpec extends GormDatastoreSpec {
         v.country == "Spain"
 
         when:
-        session.clear()
+        manager.session.clear()
         v = Volcano.get("Teide")
         v.country = 'España'
         v.save flush: true
-        session.clear()
+        manager.session.clear()
         v = Volcano.get("Teide")
 
         then:

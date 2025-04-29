@@ -19,11 +19,16 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Ignore
 import spock.lang.Shared
 
-class WhereQueryInCriteriaSpec extends GormDatastoreSpec {
+class WhereQueryInCriteriaSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([InCritOwner, InCritDog])
+    }
 
     @Shared
     Long owner2Id
@@ -32,7 +37,7 @@ class WhereQueryInCriteriaSpec extends GormDatastoreSpec {
         new InCritOwner(name: "Foo 1").addToDogs(name: "Chapter 1").addToDogs(name: "Chapter 2").save(flush: true, failOnError: true)
         def owner2 = new InCritOwner(name: "Foo 2").addToDogs(name: "Chapter 3").addToDogs(name: "Chapter 4").save(flush: true, failOnError: true)
         owner2Id = owner2.id
-        session.clear()
+        manager.session.clear()
     }
 
     void "test where query in with list on right side"() {
@@ -88,11 +93,6 @@ class WhereQueryInCriteriaSpec extends GormDatastoreSpec {
         expect:
         owners.size() == 1
         owners[0].name == 'Foo 2'
-    }
-
-    @Override
-    List getDomainClasses() {
-        [InCritOwner, InCritDog]
     }
 }
 

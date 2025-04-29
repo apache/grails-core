@@ -18,8 +18,9 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.Requires
@@ -30,55 +31,53 @@ import spock.lang.Requires
 @Requires({
     System.getenv().get('CI') as Boolean
 })
-class ReadManyObjectsSpec extends GormDatastoreSpec {
+class ReadManyObjectsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([ProfileDoc])
+    }
+
     void "Test that reading thousands of objects doesn't run out of memory"() {
-        given:"A lot of test data"
-            createData()
+        given: "A lot of test data"
+        createData()
 
-        when:"The data is read"
-            long took = 30000
-            final now = System.currentTimeMillis()
-            for(p in ProfileDoc.list()) {
-                println p.n1
-            }
-            final then = System.currentTimeMillis()
-            took = then-now
-            println "Took ${then-now}ms"
+        when: "The data is read"
+        long took = 30000
+        final now = System.currentTimeMillis()
+        for (p in ProfileDoc.list()) {
+            println p.n1
+        }
+        final then = System.currentTimeMillis()
+        took = then - now
+        println "Took ${then - now}ms"
 
-        then:"Check that it doesn't take too long"
-            took < 30000
-
+        then: "Check that it doesn't take too long"
+        took < 30000
     }
 
     void "Test that reading thousands of objects doesn't run out of memory native query"() {
-        given:"A lot of test data"
+        given: "A lot of test data"
         createData()
 
-        when:"The data is read"
-            final now = System.currentTimeMillis()
-            final cursor = ProfileDoc.collection.find()
-            for(p in cursor) {
-                println p.n1
-            }
-            final then = System.currentTimeMillis()
-            long took = then-now
-            println "Took ${then-now}ms"
+        when: "The data is read"
+        final now = System.currentTimeMillis()
+        final cursor = ProfileDoc.collection.find()
+        for (p in cursor) {
+            println p.n1
+        }
+        final then = System.currentTimeMillis()
+        long took = then - now
+        println "Took ${then - now}ms"
 
-        then:"If it gets to this point we "
-            took < 30000
+        then: "If it gets to this point we "
+        took < 30000
 
     }
 
     void createData() {
         ProfileDoc.collection.drop()
         100000.times {
-            ProfileDoc.collection.insertOne(new Document(n1:"Plane $it".toString(),n2:it,n3:it.toLong(), date: new Date()))
+            ProfileDoc.collection.insertOne(new Document(n1: "Plane $it".toString(), n2: it, n3: it.toLong(), date: new Date()))
         }
-    }
-
-    @Override
-    List getDomainClasses() {
-        [ProfileDoc]
     }
 }
 

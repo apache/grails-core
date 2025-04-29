@@ -18,42 +18,46 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.Plant
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
 import org.springframework.context.ApplicationEvent
-import static org.grails.datastore.mapping.engine.event.EventType.*
 
-/**
- */
-class CustomMongoEventListenerSpec extends GormDatastoreSpec{
+import static org.grails.datastore.mapping.engine.event.EventType.PostDelete
+import static org.grails.datastore.mapping.engine.event.EventType.PostInsert
+import static org.grails.datastore.mapping.engine.event.EventType.PostLoad
+import static org.grails.datastore.mapping.engine.event.EventType.PostUpdate
+import static org.grails.datastore.mapping.engine.event.EventType.PreDelete
+import static org.grails.datastore.mapping.engine.event.EventType.PreInsert
+import static org.grails.datastore.mapping.engine.event.EventType.PreLoad
+import static org.grails.datastore.mapping.engine.event.EventType.PreUpdate
 
-    void "Test corrects are triggered for persistence life cycle"() {
-        given:"A registered event listener"
-            def listener = new MyPersistenceListener(session.datastore)
-            session.datastore.applicationEventPublisher.addApplicationListener(listener)
-
-        when:"An entity is saved"
-            def p = new Listener(name:"Cabbage")
-            p.save(flush:true)
-
-        then:
-            listener.preInsertCount == 1
-            listener.postInsertCount == 1
-            listener.preUpdateCount == 0
-            listener.postUpdateCount == 0
-            listener.preDeleteCount == 0
-            listener.postDeleteCount == 0
-            listener.preLoadCount == 0
-            listener.postLoadCount == 0
+class CustomMongoEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Listener])
     }
 
-    @Override
-    List getDomainClasses() {
-        [Listener]
+    void "Test corrects are triggered for persistence life cycle"() {
+        given: "A registered event listener"
+        def listener = new MyPersistenceListener(manager.session.datastore)
+        manager.session.datastore.applicationEventPublisher.addApplicationListener(listener)
+
+        when: "An entity is saved"
+        def p = new Listener(name: "Cabbage")
+        p.save(flush: true)
+
+        then:
+        listener.preInsertCount == 1
+        listener.postInsertCount == 1
+        listener.preUpdateCount == 0
+        listener.postUpdateCount == 0
+        listener.preDeleteCount == 0
+        listener.postDeleteCount == 0
+        listener.preLoadCount == 0
+        listener.postLoadCount == 0
     }
 }
 
@@ -85,9 +89,10 @@ class MyPersistenceListener extends AbstractPersistenceEventListener {
     public MyPersistenceListener(final Datastore datastore) {
         super(datastore)
     }
+
     @Override
     protected void onPersistenceEvent(final AbstractPersistenceEvent event) {
-        switch(event.eventType) {
+        switch (event.eventType) {
             case PreInsert:
                 println "LISTENER PRE INSERT ${event.entityObject}"
                 preInsertCount++

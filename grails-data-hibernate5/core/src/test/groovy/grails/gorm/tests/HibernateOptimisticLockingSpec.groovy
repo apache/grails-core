@@ -18,22 +18,24 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.OptLockNotVersioned
-import grails.gorm.tck.OptLockVersioned
+import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
+import org.apache.grails.data.testing.tck.domains.OptLockVersioned
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException
 
 /**
  * @author Burt Beckwith
  */
-class HibernateOptimisticLockingSpec extends GormDatastoreSpec {
+class HibernateOptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void "Test optimistic locking"() {
 
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
-        session.clear()
-        setupClass.transactionManager.commit setupClass.transactionStatus
-        setupClass.transactionStatus = null
+        manager.session.clear()
+        manager.transactionManager.commit manager.transactionStatus
+        manager.transactionStatus = null
 
         when:
         OptLockVersioned.withTransaction {
@@ -55,7 +57,7 @@ class HibernateOptimisticLockingSpec extends GormDatastoreSpec {
             o.name += ' in main session'
             o.save(flush: true)
 
-            session.clear()
+            manager.session.clear()
             o = OptLockVersioned.get(o.id)
         }
         then:
@@ -65,9 +67,9 @@ class HibernateOptimisticLockingSpec extends GormDatastoreSpec {
     void "Test optimistic locking disabled with 'version false'"() {
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
-        session.clear()
-        setupClass.transactionManager.commit setupClass.transactionStatus
-        setupClass.transactionStatus = null
+        manager.session.clear()
+        manager.transactionManager.commit manager.transactionStatus
+        manager.transactionStatus = null
 
         when:
         def ex
@@ -93,7 +95,7 @@ class HibernateOptimisticLockingSpec extends GormDatastoreSpec {
                 e.printStackTrace()
             }
 
-            session.clear()
+            manager.session.clear()
             o = OptLockNotVersioned.get(o.id)
 
         }

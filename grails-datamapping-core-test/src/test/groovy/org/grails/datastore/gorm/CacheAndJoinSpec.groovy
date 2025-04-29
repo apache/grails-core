@@ -16,36 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class CacheAndJoinSpec extends GormDatastoreSpec{
+class CacheAndJoinSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Author, Book])
+    }
 
     @Issue('GRAILS-8758')
     void "Test that the cache and join methods can be used in a test"() {
-        given:"Some test data"
-            new Author(name: "Bob").save flush:true
-            session.clear()
-        when:"The cache and join methods are used in criteria"
-            def a = Author.createCriteria().get {
-                eq 'name', "Bob"
-                join 'books'
-                maxResults 1
-                cache true
-            }
+        given: "Some test data"
+        new Author(name: "Bob").save flush: true
+        manager.session.clear()
+        when: "The cache and join methods are used in criteria"
+        def a = Author.createCriteria().get {
+            eq 'name', "Bob"
+            join 'books'
+            maxResults 1
+            cache true
+        }
 
-        then:"Results are returned"
-            a != null
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Author, Book]
+        then: "Results are returned"
+        a != null
     }
 }
 

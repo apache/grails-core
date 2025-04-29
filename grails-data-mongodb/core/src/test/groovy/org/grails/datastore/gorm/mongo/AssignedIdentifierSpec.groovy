@@ -16,24 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.mongo
 
 import com.mongodb.MongoBulkWriteException
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Tests for usage of assigned identifiers
  */
-class AssignedIdentifierSpec extends GormDatastoreSpec {
+class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([River, Lake, Volcano])
+    }
 
     void "Test that entities can be saved, retrieved and updated with assigned ids"() {
         when: "An entity is saved with an assigned id"
         def r = new River(name: "Amazon", country: "Brazil")
         r.save flush: true
-        session.clear()
+        manager.session.clear()
         r = River.get("Amazon")
 
         then: "The entity can be retrieved"
@@ -44,7 +47,7 @@ class AssignedIdentifierSpec extends GormDatastoreSpec {
         when: "The entity is updated"
         r.country = "Argentina"
         r.save flush: true
-        session.clear()
+        manager.session.clear()
         r = River.get("Amazon")
 
         then: "The update is applied"
@@ -65,7 +68,7 @@ class AssignedIdentifierSpec extends GormDatastoreSpec {
         when: "An entity is saved with an assigned id"
         def r = new River(name: "Amazon", country: "Brazil")
         r.save flush: true
-        session.clear()
+        manager.session.clear()
         r = River.get("Amazon")
 
         then: "The entity can be retrieved"
@@ -74,7 +77,7 @@ class AssignedIdentifierSpec extends GormDatastoreSpec {
         r.country == "Brazil"
 
         when: "A second object with the same id is saved"
-        session.clear()
+        manager.session.clear()
         r = new River(name: "Amazon", country: "Brazil")
         r.save flush: true
 
@@ -98,7 +101,7 @@ class AssignedIdentifierSpec extends GormDatastoreSpec {
         when: "An entity is saved with an assigned id"
         def l = new Lake(id: "Lake Ontario", country: "Canada")
         l.save flush: true
-        session.clear()
+        manager.session.clear()
         l = Lake.get("Lake Ontario")
 
         then: "The object is correctly retrieved by assigned id"
@@ -113,7 +116,7 @@ class AssignedIdentifierSpec extends GormDatastoreSpec {
         def l = new Lake(country: "Canada")
         l.id = "Lake Ontario"
         l.save flush: true
-        session.clear()
+        manager.session.clear()
         l = Lake.get("Lake Ontario")
 
         then: "The object is correctly retrieved by assigned id"
@@ -127,17 +130,12 @@ class AssignedIdentifierSpec extends GormDatastoreSpec {
         Volcano v = new Volcano(country: "Spain")
         v.id = "Teide"
         v.insert(flush: true)
-        session.clear()
+        manager.session.clear()
         v = Volcano.get("Teide")
 
         then: "The object is correctly retrieved by assigned id"
         v.id == "Teide"
         v.country == "Spain"
-    }
-
-    @Override
-    List getDomainClasses() {
-        [River, Lake, Volcano]
     }
 }
 

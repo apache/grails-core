@@ -21,13 +21,13 @@ package grails.gorm.tests
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 @SuppressWarnings("GrMethodMayBeStatic")
-class DetachCriteriaSubquerySpec extends GormDatastoreSpec {
-
-    @Override
-    List getDomainClasses() {
-        return [User, Group, GroupAssignment, Organisation]
+class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([User, Group, GroupAssignment, Organisation])
     }
 
     void "test detached associated criteria in subquery"() {

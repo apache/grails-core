@@ -18,26 +18,25 @@
  */
 package grails.mongodb.cascade
 
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class MongoCascadeSpec extends GormDatastoreSpec {
-
-    @Override
-    List getDomainClasses() {
-        [Product, ProductLine]
+class MongoCascadeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Product, ProductLine])
     }
 
     void "test association is not cascaded on update or insert"() {
         given:
         ProductLine x = new ProductLine(name: "x")
         x.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         Product product = new Product(name: "my product", productLine: ProductLine.load(x.id))
         product.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:
         product = Product.get(product.id)
@@ -48,8 +47,8 @@ class MongoCascadeSpec extends GormDatastoreSpec {
         when: //no cascading on update
         product.productLine.name = "xy"
         product.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         x = ProductLine.get(x.id)
 
         then:
@@ -59,8 +58,8 @@ class MongoCascadeSpec extends GormDatastoreSpec {
         x.name = "xy"
         product = new Product(name: "other product", productLine: x)
         product.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         then:
         ProductLine.get(x.id).name == "x"

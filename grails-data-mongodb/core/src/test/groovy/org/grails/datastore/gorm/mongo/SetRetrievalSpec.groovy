@@ -19,9 +19,10 @@
 package org.grails.datastore.gorm.mongo
 
 import com.mongodb.client.MongoDatabase
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.Issue
@@ -29,7 +30,11 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 01/04/16.
  */
-class SetRetrievalSpec extends GormDatastoreSpec {
+class SetRetrievalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Team, Player])
+    }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/675')
     void "Test retrieve an existing set"() {
@@ -47,17 +52,13 @@ class SetRetrievalSpec extends GormDatastoreSpec {
     void "Test persist and retrieve sets"() {
         when:"An object with sets is persisted"
         new Team(name: "Real Madrid", nicknames: ['Los Blancos'] as Set, sports: [Sport.FOOTBALL, Sport.BASKETBALL] as Set ).save(flush:true)
-        session.clear()
+        manager.session.clear()
         List<Team> teams = Team.list()
 
         then:"It is retrievable"
         teams[0].name == "Real Madrid"
         teams[0].sports == [Sport.FOOTBALL, Sport.BASKETBALL] as Set
 
-    }
-    @Override
-    List getDomainClasses() {
-        [Team, Player]
     }
 }
 

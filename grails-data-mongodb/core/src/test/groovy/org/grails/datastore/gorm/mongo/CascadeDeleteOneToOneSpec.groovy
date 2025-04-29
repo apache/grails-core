@@ -16,91 +16,87 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
 /**
  * @author Graeme Rocher
  */
-class CascadeDeleteOneToOneSpec extends GormDatastoreSpec {
+class CascadeDeleteOneToOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([SystemUser, UserSettings, Company, Executive, Employee])
+    }
 
     void "Test owner deletes child in one-to-one cascade"() {
+        when: "A owner with a one-to-one relation is persisted"
+        def u = new SystemUser(name: "user2")
+        u.settings = new UserSettings(user: u)
+        u.save(flush: true)
+        manager.session.clear()
+        def found1 = SystemUser.findByName("user2")
+        def found1a = UserSettings.findByUser(found1)
 
-       when:"A owner with a one-to-one relation is persisted"
-           def u = new SystemUser(name:"user2")
-           u.settings = new UserSettings(user:u)
-           u.save(flush:true)
-           session.clear()
-           def found1 = SystemUser.findByName("user2")
-           def found1a = UserSettings.findByUser(found1)
+        then: "The user is found"
+        found1 != null
+        found1a != null
 
-        then:"The user is found"
-            found1 != null
-            found1a != null
+        when: "An owner is deleted"
+        found1.delete(flush: true)
+        def found2 = SystemUser.findByName("user2")
+        def found1b = UserSettings.findByUser(found1)
 
-        when:"An owner is deleted"
-           found1.delete(flush:true)
-           def found2 = SystemUser.findByName("user2")
-           def found1b = UserSettings.findByUser(found1)
-
-        then:"The child association is deleted too"
-            assert found2 == null
-            assert found1b == null
+        then: "The child association is deleted too"
+        assert found2 == null
+        assert found1b == null
     }
 
     void "Test delete doesnt cascade if no belongsTo"() {
-        when:"A one-to-one with no belongsTo is persisted"
-            def c = new Company(name:"Apple", ceo:new Executive(name:"Tim Cook").save(), designer:new Employee(name:"Bob"))
-            c.save flush:true
-            session.clear()
-            c = Company.get(c.id)
+        when: "A one-to-one with no belongsTo is persisted"
+        def c = new Company(name: "Apple", ceo: new Executive(name: "Tim Cook").save(), designer: new Employee(name: "Bob"))
+        c.save flush: true
+        manager.session.clear()
+        c = Company.get(c.id)
 
-        then:"The relationship can be retrieved"
-            c != null
-            c.ceo != null
-            c.designer != null
+        then: "The relationship can be retrieved"
+        c != null
+        c.ceo != null
+        c.designer != null
 
-        when:"The the entity is deleted"
-            c.delete flush:true
-            session.clear()
+        when: "The the entity is deleted"
+        c.delete flush: true
+        manager.session.clear()
 
-        then:"The associated entity is not deleted"
-            Company.count() == 0
-            Employee.count() == 0
-            Executive.count() == 1
-    }
-
-    @Override
-    List getDomainClasses() {
-        [SystemUser, UserSettings, Company, Executive,Employee]
+        then: "The associated entity is not deleted"
+        Company.count() == 0
+        Employee.count() == 0
+        Executive.count() == 1
     }
 }
 
 @Entity
 class SystemUser {
-   ObjectId id
+    ObjectId id
 
-   String name
-   UserSettings settings
+    String name
+    UserSettings settings
 }
 
 @Entity
 class UserSettings {
-   ObjectId id
+    ObjectId id
 
-   boolean someSetting = true
+    boolean someSetting = true
 
-   SystemUser user
-   static belongsTo = [user:SystemUser]
+    SystemUser user
+    static belongsTo = [user: SystemUser]
 
-   static mapping = {
-      collection "user_settings"
-   }
+    static mapping = {
+        collection "user_settings"
+    }
 }
 
 @Entity

@@ -18,11 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class NegationEnumSpec extends GormDatastoreSpec {
+class NegationEnumSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([HasEnum])
+    }
 
     void "Test negate with enum query"() {
         given: "two domains"
@@ -40,11 +44,6 @@ class NegationEnumSpec extends GormDatastoreSpec {
         results.size() == 1
         results[0].bookType == BookType.GOOD
 
-    }
-
-    @Override
-    List getDomainClasses() {
-        [HasEnum]
     }
 }
 

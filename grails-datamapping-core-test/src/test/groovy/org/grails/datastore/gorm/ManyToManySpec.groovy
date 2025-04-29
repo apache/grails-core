@@ -18,32 +18,31 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class ManyToManySpec extends GormDatastoreSpec {
-
-    void "Test save and load many-to-many association"() {
-        given:"A many-to-many association"
-            Account account = new Account().save()
-            assert account
-
-            account.addToInvoices(new Invoice())
-            account.save(flush:true)
-            session.clear()
-
-        when:"The association is loaded"
-            account = Account.get(account.id)
-
-        then:"The results are correct"
-            account != null
-            account.invoices.size() == 1
-            account.invoices.iterator().next().accounts.size() == 1
+class ManyToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Account, Invoice])
     }
 
-    @Override
-    List getDomainClasses() {
-        [Account, Invoice]
+    void "Test save and load many-to-many association"() {
+        given: "A many-to-many association"
+        Account account = new Account().save()
+        assert account
+
+        account.addToInvoices(new Invoice())
+        account.save(flush: true)
+        manager.session.clear()
+
+        when: "The association is loaded"
+        account = Account.get(account.id)
+
+        then: "The results are correct"
+        account != null
+        account.invoices.size() == 1
+        account.invoices.iterator().next().accounts.size() == 1
     }
 }
 

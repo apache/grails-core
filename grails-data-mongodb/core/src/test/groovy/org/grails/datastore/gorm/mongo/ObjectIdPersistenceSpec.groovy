@@ -18,27 +18,26 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class ObjectIdPersistenceSpec extends GormDatastoreSpec {
+class ObjectIdPersistenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    def "Test that we can persist an object that has a BSON ObjectId"() {
-
-        when:
-            def t = new MongoObjectIdEntity(name:"Bob").save(flush:true)
-            session.clear()
-            t = MongoObjectIdEntity.get(t.id)
-
-        then:
-            t != null
-            t.id != null
+    void setupSpec() {
+        manager.domainClasses.addAll([MongoObjectIdEntity])
     }
 
-    @Override
-    List getDomainClasses() {
-        [MongoObjectIdEntity]
+    def "Test that we can persist an object that has a BSON ObjectId"() {
+        when:
+        def t = new MongoObjectIdEntity(name: "Bob").save(flush: true)
+        manager.session.clear()
+        t = MongoObjectIdEntity.get(t.id)
+
+        then:
+        t != null
+        t.id != null
     }
 }
 

@@ -19,32 +19,32 @@
 package org.grails.datastore.gorm.mongo
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
 import grails.mongodb.geo.Point
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
-import org.grails.datastore.mapping.model.types.Custom
 
-import static grails.mongodb.mapping.MappingBuilder.*
+import static grails.mongodb.mapping.MappingBuilder.document
+
 /**
  * Created by graemerocher on 02/02/2017.
  */
-class DocumentMappingSpec extends GormDatastoreSpec {
+class DocumentMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([CustomMapping])
+    }
 
     void "test custom document mapping"() {
-        when:"A document is saved with a custom mapping"
-        new CustomMapping(name: "test", loc: Point.valueOf(10, 15) ).save(flush:true)
+        when: "A document is saved with a custom mapping"
+        new CustomMapping(name: "test", loc: Point.valueOf(10, 15)).save(flush: true)
         Document doc = CustomMapping.collection.find().first()
+
         then:
         CustomMapping.collection.namespace.collectionName == 'mycoll'
         CustomMapping.collection.namespace.databaseName == 'myDb'
         doc.get("my_name") == "test"
         doc.get("loc").inspect() == '[\'type\':\'Point\', \'coordinates\':[10.0, 15.0]]'
-
-    }
-    @Override
-    List getDomainClasses() {
-        [CustomMapping]
     }
 }
 

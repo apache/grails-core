@@ -26,7 +26,6 @@ version = projectVersion
 group = 'org.apache.grails.data'
 
 ext {
-    includeBaseTckClass = true
     pomPublishTestSources = true
     pomTitle = 'Grails GORM'
     pomDescription = 'GORM - Grails Data Access Framework'

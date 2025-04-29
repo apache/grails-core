@@ -21,7 +21,7 @@ package org.grails.datastore.gorm.mongo
 import grails.gorm.time.InstantConverter
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.BsonDateTime
 import org.bson.BsonDocumentWrapper
 import org.bson.BsonReader

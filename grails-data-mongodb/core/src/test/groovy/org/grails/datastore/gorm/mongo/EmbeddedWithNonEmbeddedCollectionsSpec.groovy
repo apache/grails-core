@@ -18,43 +18,37 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
-import com.mongodb.DBRef
-import com.mongodb.DBObject
-import org.bson.types.ObjectId
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-/**
- *
- */
-class EmbeddedWithNonEmbeddedCollectionsSpec extends GormDatastoreSpec{
-    @Override
-    List getDomainClasses() {
-        [Ship, Crew, Sailor, Captain]
+class EmbeddedWithNonEmbeddedCollectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Ship, Crew, Sailor, Captain])
     }
 
     void "Test that embedded collections can have non-embedded collections"() {
-        given:"A domain model with embedded associations that have non-embedded collections"
+        given: "A domain model with embedded associations that have non-embedded collections"
         final captain = new Captain(name: "Bob")
-        final firstMate = new Sailor(name:"Jim", captain:captain)
-        def ship = new Ship(name:"The Float")
+        final firstMate = new Sailor(name: "Jim", captain: captain)
+        def ship = new Ship(name: "The Float")
         ship.crew.firstMate = firstMate
-        ship.crew.sailors << new Sailor(name:"Fred", captain:captain)
-        ship.crew.sailors << new Sailor(name:"Joe", captain:captain)
-        ship.crew.reserves << new Sailor(name:"Tristan", captain:captain)
-        ship.crew.reserves << new Sailor(name:"Roger", captain:captain)
-        captain.shipmates << new Sailor(name:"Jeff", captain: captain)
-        captain.save flush: true,validate:false
-        ship.save flush:true,validate:false
-        session.clear()
+        ship.crew.sailors << new Sailor(name: "Fred", captain: captain)
+        ship.crew.sailors << new Sailor(name: "Joe", captain: captain)
+        ship.crew.reserves << new Sailor(name: "Tristan", captain: captain)
+        ship.crew.reserves << new Sailor(name: "Roger", captain: captain)
+        captain.shipmates << new Sailor(name: "Jeff", captain: captain)
+        captain.save flush: true, validate: false
+        ship.save flush: true, validate: false
+        manager.session.clear()
 
-        when:"The underlying Mongo document is queried"
+        when: "The underlying Mongo document is queried"
         def shipDbo = Ship.collection.find().first()
         Sailor fred = Sailor.findByName("Fred")
         Sailor joe = Sailor.findByName("Joe")
 
-        then:"It is correctly defined"
+        then: "It is correctly defined"
         shipDbo.name == "The Float"
         shipDbo.crew != null
         shipDbo.crew.firstMate == firstMate.id
@@ -65,11 +59,11 @@ class EmbeddedWithNonEmbeddedCollectionsSpec extends GormDatastoreSpec{
         shipDbo.crew.reserves[0].$id == Sailor.findByName('Tristan').id
         shipDbo.crew.reserves[0].$ref == 'sailor'
 
-        when:"The domain model is queried"
-        session.clear()
-        ship =  Ship.get(ship.id)
+        when: "The domain model is queried"
+        manager.session.clear()
+        ship = Ship.get(ship.id)
 
-        then:"The right results are returned"
+        then: "The right results are returned"
         ship != null
         ship.name == "The Float"
         ship.crew != null
@@ -95,7 +89,7 @@ class Ship implements MongoEntity<Ship> {
 }
 
 @Entity
-class Crew implements MongoEntity<Ship>{
+class Crew implements MongoEntity<Ship> {
     String id
     String name
     Sailor firstMate
@@ -103,8 +97,8 @@ class Crew implements MongoEntity<Ship>{
     List<Sailor> reserves = []
 
     static hasMany = [
-            sailors:Sailor,
-            reserves:Sailor
+            sailors : Sailor,
+            reserves: Sailor
     ]
 
     static mapping = {

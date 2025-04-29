@@ -18,74 +18,74 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EnumCollectionSpec extends GormDatastoreSpec {
+class EnumCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    @Override
-    List getDomainClasses() {
-        return [Teacher, Teacher2, Teacher3, DerivedTeacher]
+    void setupSpec() {
+        manager.domainClasses.addAll([Teacher, Teacher2, Teacher3, DerivedTeacher])
     }
 
     void "Test persistence of enum"() {
         given:
-            def i = new Teacher(name:"Melvin", subject: Subject.MATH)
+        def i = new Teacher(name: "Melvin", subject: Subject.MATH)
 
         when:
-            i.save(flush:true)
+        i.save(flush: true)
 
-        then:"Saving it doesn't break it"
-            i.subject == Subject.MATH
+        then: "Saving it doesn't break it"
+        i.subject == Subject.MATH
 
         when:
-            session.clear()
-            i = Teacher.findByName("Melvin")
+        manager.session.clear()
+        i = Teacher.findByName("Melvin")
 
         then:
-            i != null
-            i.name == 'Melvin'
-            i.subject == Subject.MATH
+        i != null
+        i.name == 'Melvin'
+        i.subject == Subject.MATH
     }
 
     void "Test persistence of enum collections"() {
         given:
-            def i = new Teacher2(name:"Melvin", subject: Subject.MATH)
-            i.otherSubjects = [Subject.HISTORY, Subject.HOME_EC]
+        def i = new Teacher2(name: "Melvin", subject: Subject.MATH)
+        i.otherSubjects = [Subject.HISTORY, Subject.HOME_EC]
 
-        when:"The entity is saved and flushed"
-            i.save(flush:true)
+        when: "The entity is saved and flushed"
+        i.save(flush: true)
 
-        then:"The collection hasn't been broken by saving it"
-            i.otherSubjects == [Subject.HISTORY, Subject.HOME_EC]
+        then: "The collection hasn't been broken by saving it"
+        i.otherSubjects == [Subject.HISTORY, Subject.HOME_EC]
 
-        when:"The entity is queried for afresh"
-            session.clear()
-            i = Teacher2.findByName("Melvin")
+        when: "The entity is queried for afresh"
+        manager.session.clear()
+        i = Teacher2.findByName("Melvin")
 
         then:
-            i != null
-            i.name == 'Melvin'
-            i.subject == Subject.MATH
-            i.otherSubjects != null
-            i.otherSubjects.size() == 2
-            i.otherSubjects[0] == Subject.HISTORY
-            i.otherSubjects[1] == Subject.HOME_EC
+        i != null
+        i.name == 'Melvin'
+        i.subject == Subject.MATH
+        i.otherSubjects != null
+        i.otherSubjects.size() == 2
+        i.otherSubjects[0] == Subject.HISTORY
+        i.otherSubjects[1] == Subject.HOME_EC
     }
 
     void "Test persistence of parent enum collections"() {
         given:
-        def i = new DerivedTeacher(name:"Melvin", subject: Subject.MATH, extra: 'hello')
+        def i = new DerivedTeacher(name: "Melvin", subject: Subject.MATH, extra: 'hello')
         i.otherSubjects = [Subject.HISTORY, Subject.HOME_EC]
 
-        when:"The entity is saved and flushed"
-        i.save(flush:true)
+        when: "The entity is saved and flushed"
+        i.save(flush: true)
 
-        then:"The collection hasn't been broken by saving it"
+        then: "The collection hasn't been broken by saving it"
         i.otherSubjects == [Subject.HISTORY, Subject.HOME_EC]
 
-        when:"The entity is queried for afresh"
-        session.clear()
+        when: "The entity is queried for afresh"
+        manager.session.clear()
         i = DerivedTeacher.findByName("Melvin")
 
         then:
@@ -102,19 +102,19 @@ class EnumCollectionSpec extends GormDatastoreSpec {
 
     void "Test persistence of enum  set collections"() {
         given:
-        def i = new Teacher3(name:"Melvin")
-        i.subjects= [Subject.HISTORY, Subject.HOME_EC]
+        def i = new Teacher3(name: "Melvin")
+        i.subjects = [Subject.HISTORY, Subject.HOME_EC]
 
-        when:"The entity is saved and flushed"
-        i.save(flush:true)
+        when: "The entity is saved and flushed"
+        i.save(flush: true)
 
-        then:"The collection hasn't been broken by saving it"
+        then: "The collection hasn't been broken by saving it"
         i.subjects.contains Subject.HISTORY
         i.subjects.contains Subject.HOME_EC
         i.subjects.size() == 2
 
-        when:"The entity is queried for afresh"
-        session.clear()
+        when: "The entity is queried for afresh"
+        manager.session.clear()
         i = Teacher3.findByName("Melvin")
 
         then:
@@ -134,7 +134,7 @@ class Teacher {
     Subject subject
 
     static mapping = {
-        name index:true
+        name index: true
     }
 }
 
@@ -146,7 +146,7 @@ class Teacher2 {
     List<Subject> otherSubjects
 
     static mapping = {
-        name index:true
+        name index: true
     }
 }
 
@@ -157,7 +157,7 @@ class Teacher3 {
     Set<Subject> subjects
 
     static mapping = {
-        name index:true
+        name index: true
     }
 }
 
@@ -167,7 +167,7 @@ class DerivedTeacher extends Teacher2 {
     String extra
 
     static mapping = {
-        name index:true
+        name index: true
     }
 }
 

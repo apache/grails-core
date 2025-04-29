@@ -20,6 +20,8 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.validation.PersistentEntityValidator
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -30,17 +32,20 @@ import spock.lang.Issue
  * @author Graeme Rocher
  * @since 1.0
  */
-class CircularCascadeSpec extends GormDatastoreSpec {
+class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate])
+    }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/967')
     void "test circular cascade does not stackoverflow with persistent entity validator"() {
         given:
         SchoolPerson splinter = new SchoolPerson(name: 'Master Splinter')
-        PersistentEntity entity = session.datastore.getMappingContext().getPersistentEntity(SchoolPerson.name)
+        PersistentEntity entity = manager.session.datastore.getMappingContext().getPersistentEntity(SchoolPerson.name)
         def messageSource = Mock(MessageSource)
-        messageSource.getMessage(_,_, _, _) >> 'test'
-        def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(messageSource), session.datastore.mappingContext, null)
-        session.datastore.getMappingContext().addEntityValidator(entity, new PersistentEntityValidator(entity, messageSource, evaluator))
+        messageSource.getMessage(_, _, _, _) >> 'test'
+        def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(messageSource), manager.session.datastore.mappingContext, null)
+        manager.session.datastore.getMappingContext().addEntityValidator(entity, new PersistentEntityValidator(entity, messageSource, evaluator))
         SchoolPerson leo = new SchoolPerson(name: 'Leonardo')
         SchoolPerson donnie = new SchoolPerson(name: 'Donatello')
         SchoolPerson mikey = new SchoolPerson(name: 'Michelangelo')
@@ -62,11 +67,11 @@ class CircularCascadeSpec extends GormDatastoreSpec {
 
     void addValidator(Class... classes) {
         classes.each { Class clazz ->
-            PersistentEntity entity = session.datastore.getMappingContext().getPersistentEntity(clazz.name)
+            PersistentEntity entity = manager.session.datastore.getMappingContext().getPersistentEntity(clazz.name)
             def messageSource = Mock(MessageSource)
-            messageSource.getMessage(_,_, _, _) >> 'test'
-            def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(messageSource), session.datastore.mappingContext, null)
-            session.datastore.getMappingContext().addEntityValidator(entity, new PersistentEntityValidator(entity, messageSource, evaluator))
+            messageSource.getMessage(_, _, _, _) >> 'test'
+            def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(messageSource), manager.session.datastore.mappingContext, null)
+            manager.session.datastore.getMappingContext().addEntityValidator(entity, new PersistentEntityValidator(entity, messageSource, evaluator))
         }
     }
 
@@ -84,11 +89,6 @@ class CircularCascadeSpec extends GormDatastoreSpec {
         !activity.validate()
         activity.errors.hasFieldErrors('sports[0].teams[0].name')
         activity.errors.hasFieldErrors('sports[0].arenas[0].name')
-    }
-
-    @Override
-    List getDomainClasses() {
-        [SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate]
     }
 }
 

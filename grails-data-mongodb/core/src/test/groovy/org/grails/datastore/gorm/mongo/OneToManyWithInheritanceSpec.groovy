@@ -18,34 +18,34 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class OneToManyWithInheritanceSpec extends GormDatastoreSpec {
+class OneToManyWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
-    void "Test that a one-to-many with inheritances behaves correctly"() {
-        given:"A one-to-many association inherited from a parent"
-            Animal animal = new Animal().save()
-            Donkey donkey = new Donkey(name: "Eeyore").save()
-            new Carrot(leaves: 1, animal: animal).save()
-            new Carrot(leaves: 2, animal: animal).save()
-            new Carrot(leaves: 3, animal: donkey).save()
-            new Carrot(leaves: 4, animal: donkey).save(flush:true)
-            session.clear()
-
-        when:"The association is loaded"
-            animal = Animal.get(animal.id)
-            donkey = Donkey.get(donkey.id)
-
-        then:"The association is correctly loaded"
-            animal.carrots.size() == 2
-            donkey.carrots.size() == 2
+    void setupSpec() {
+        manager.domainClasses.addAll([Animal, Donkey, Carrot])
     }
 
-    @Override
-    List getDomainClasses() {
-       [Animal,Donkey, Carrot]
+    void "Test that a one-to-many with inheritances behaves correctly"() {
+        given: "A one-to-many association inherited from a parent"
+        Animal animal = new Animal().save()
+        Donkey donkey = new Donkey(name: "Eeyore").save()
+        new Carrot(leaves: 1, animal: animal).save()
+        new Carrot(leaves: 2, animal: animal).save()
+        new Carrot(leaves: 3, animal: donkey).save()
+        new Carrot(leaves: 4, animal: donkey).save(flush: true)
+        manager.session.clear()
+
+        when: "The association is loaded"
+        animal = Animal.get(animal.id)
+        donkey = Donkey.get(donkey.id)
+
+        then: "The association is correctly loaded"
+        animal.carrots.size() == 2
+        donkey.carrots.size() == 2
     }
 }
 
@@ -58,7 +58,7 @@ class Donkey extends Animal implements MongoEntity<Donkey> {
 class Animal implements MongoEntity<Animal> {
     String id
     Set carrots = []
-    static hasMany = [carrots:Carrot]
+    static hasMany = [carrots: Carrot]
 }
 
 @Entity
@@ -66,5 +66,5 @@ class Carrot implements MongoEntity<Carrot> {
     Long id
     Integer leaves
     Animal animal
-    static belongsTo = [animal:Animal]
+    static belongsTo = [animal: Animal]
 }

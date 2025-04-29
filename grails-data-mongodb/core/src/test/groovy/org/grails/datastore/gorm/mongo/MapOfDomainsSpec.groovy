@@ -18,38 +18,36 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.Plant
 import grails.persistence.Entity
 import groovy.transform.EqualsAndHashCode
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
 /**
  * Created by graemerocher on 22/04/14.
  */
-class MapOfDomainsSpec extends GormDatastoreSpec{
+class MapOfDomainsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Smartphones])
+    }
 
     void "Test that a map of embedded objects can be persisted"() {
-        when:"A domain class with a map of embedded objects is persisted"
-            def phones = new Smartphones()
+        when: "A domain class with a map of embedded objects is persisted"
+        def phones = new Smartphones()
 
-            def data = [apple: new Smartphone(name: "iPhone"), samsung: new Smartphone(name: "Galaxy")]
-            phones.phonesByManufacturer = data
-            phones.save(flush:true)
-            session.clear()
-            phones = Smartphones.get(phones.id)
+        def data = [apple: new Smartphone(name: "iPhone"), samsung: new Smartphone(name: "Galaxy")]
+        phones.phonesByManufacturer = data
+        phones.save(flush: true)
+        manager.session.clear()
+        phones = Smartphones.get(phones.id)
 
-        then:"The results are correct"
-            phones.phonesByManufacturer == data
+        then: "The results are correct"
+        phones.phonesByManufacturer == data
 
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Smartphones]
     }
 }
-
 
 @Entity
 class Smartphones {
@@ -58,6 +56,7 @@ class Smartphones {
 
     static embedded = ['phonesByManufacturer']
 }
+
 @EqualsAndHashCode
 class Smartphone {
     String name

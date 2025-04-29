@@ -18,9 +18,14 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.TestEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class ReadOperationSpec extends GormDatastoreSpec {
+class ReadOperationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([TestEntity])
+    }
 
     void "test read operation for non existent"() {
         expect:
@@ -37,10 +42,5 @@ class ReadOperationSpec extends GormDatastoreSpec {
         TestEntity.read(te.id) != null
         TestEntity.exists(te.id)
         !TestEntity.exists(10)
-    }
-
-    @Override
-    List getDomainClasses() {
-        [TestEntity]
     }
 }

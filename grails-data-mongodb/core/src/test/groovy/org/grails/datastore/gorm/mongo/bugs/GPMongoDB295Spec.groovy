@@ -18,32 +18,34 @@
  */
 package org.grails.datastore.gorm.mongo.bugs
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
-import spock.lang.Specification
 
 /**
  * @author Graeme Rocher
  */
-class GPMongoDB295Spec extends GormDatastoreSpec {
-
+class GPMongoDB295Spec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([InheritUser, ObjParent, UserGroup, User, UserObject])
+    }
 
     @Issue('GPMONGODB-295')
     void "Test that 'com.mongodb.DBRef cannot be cast to java.io.Serializable' exception is not thrown"() {
-        given:"Some test data"
-            UserGroup group = new UserGroup(name: 'group', company: 'JFrog').save(flush: true, failOnError: true)
-            User user = new User(lastName: 'lastName', name: 'user', group: group).save(flush: true, failOnError: true)
-            UserObject obj = new UserObject(objName: 'obj').save(flush: true, failOnError: true)
-            group.addToUsers(user)
-            user.addToObjects(obj)
-            user.save(flush: true, failOnError: true)
-            group.save(failOnError: true, flush: true)
+        given: "Some test data"
+        UserGroup group = new UserGroup(name: 'group', company: 'JFrog').save(flush: true, failOnError: true)
+        User user = new User(lastName: 'lastName', name: 'user', group: group).save(flush: true, failOnError: true)
+        UserObject obj = new UserObject(objName: 'obj').save(flush: true, failOnError: true)
+        group.addToUsers(user)
+        user.addToObjects(obj)
+        user.save(flush: true, failOnError: true)
+        group.save(failOnError: true, flush: true)
 
-        expect:"The exception is not thrown"
-            !user.hasErrors()
-            !group.hasErrors()
-            getAllSavedDataWithANewSession()
+        expect: "The exception is not thrown"
+        !user.hasErrors()
+        !group.hasErrors()
+        getAllSavedDataWithANewSession()
     }
 
     private getAllSavedDataWithANewSession() {
@@ -57,11 +59,6 @@ class GPMongoDB295Spec extends GormDatastoreSpec {
             return user
         }
     }
-
-    @Override
-    List getDomainClasses() {
-        [InheritUser, ObjParent, UserGroup, User, UserObject]
-    }
 }
 
 @Entity
@@ -73,12 +70,12 @@ class InheritUser {
     }
 
 }
+
 @Entity
 class ObjParent {
     String id
     String dateCreated
     String lastUpdated
-
 }
 
 @Entity
@@ -94,6 +91,7 @@ class UserGroup extends InheritUser {
     String id
     String company
 }
+
 @Entity
 class User extends InheritUser {
     Set objects

@@ -18,14 +18,18 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * @author graemerocher
  */
-class InOperatorWithAssociationsSpec extends GormDatastoreSpec {
+class InOperatorWithAssociationsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([InAuthor, InBook])
+    }
 
     @Issue('https://github.com/grails/grails-core/issues/9279')
     void "Test query association using in operator in where query"() {
@@ -33,28 +37,24 @@ class InOperatorWithAssociationsSpec extends GormDatastoreSpec {
         InAuthor adams = new InAuthor(name: "Douglas Adams").save(failOnError: 'true')
         InAuthor meyerhoff = new InAuthor(name: "Joachim Meyerhoff").save(failOnError: 'true')
         new InBook(name: 'Per Anhalter durch die Galaxis', author: adams).save(failOnError: 'true')
-        new InBook(name: 'Wann wird es endlich wieder so, wie es nie war', author: meyerhoff).save(failOnError: 'true', flush:true)
+        new InBook(name: 'Wann wird es endlich wieder so, wie es nie war', author: meyerhoff).save(failOnError: 'true', flush: true)
         def authors = [adams, meyerhoff]
-        session.clear()
+        manager.session.clear()
 
         when: "Getting books by list of authors."
         List<InBook> books = InBook.where { author in authors }.list()
 
         then: "The service will find them"
         books.size() == 2
-
-    }
-
-    @Override
-    List getDomainClasses() {
-        [InAuthor, InBook]
     }
 }
+
 @Entity
 class InAuthor {
     Long id
     String name
 }
+
 @Entity
 class InBook {
     Long id

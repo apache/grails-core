@@ -18,48 +18,47 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 21/04/16.
  */
-class EventsWithAbstractInheritanceSpec extends GormDatastoreSpec{
+class EventsWithAbstractInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([ConcreteEventDomain])
+    }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/701')
     def 'Test that events work with abstract inheritance'() {
-        when:"An entity is saved"
-        ConcreteEventDomain ced = new ConcreteEventDomain(name: "Bob").save(flush:true)
+        when: "An entity is saved"
+        ConcreteEventDomain ced = new ConcreteEventDomain(name: "Bob").save(flush: true)
 
-        then:"An event listener inherited from the base class is fired"
+        then: "An event listener inherited from the base class is fired"
         ced.eventCount('beforeInsert') == 1
 
-        when:"An an instance is updated"
+        when: "An an instance is updated"
         ced.name = "Fred"
-        ced.save(flush:true)
+        ced.save(flush: true)
 
-        then:"The beforeUpdate event listener is fired"
+        then: "The beforeUpdate event listener is fired"
         ced.eventCount('beforeInsert') == 1
         ced.eventCount('beforeUpdate') == 1
 
-        when:"An an instance is updated again"
+        when: "An an instance is updated again"
         ced.name = "Joe"
-        ced.save(flush:true)
+        ced.save(flush: true)
 
-        then:"The beforeUpdate event listener is fired"
+        then: "The beforeUpdate event listener is fired"
         ced.eventCount('beforeInsert') == 1
         ced.eventCount('beforeUpdate') == 2
-    }
-
-    @Override
-    List getDomainClasses() {
-        [ConcreteEventDomain]
     }
 }
 
 @Entity
-class ConcreteEventDomain extends AbstractEventDomain{
+class ConcreteEventDomain extends AbstractEventDomain {
     String name
 }
 

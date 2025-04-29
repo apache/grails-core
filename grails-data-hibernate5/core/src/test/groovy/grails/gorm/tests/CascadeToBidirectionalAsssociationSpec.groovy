@@ -19,14 +19,18 @@
 
 package grails.gorm.tests
 
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 01/02/16.
  */
 @Issue('https://github.com/grails/grails-core/issues/9290')
-class CascadeToBidirectionalAsssociationSpec extends GormSpec {
+class CascadeToBidirectionalAsssociationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Club, Team, Player, Contract])
+    }
 
     /**
      * This test currently fails because the association between Contract and Player is left unassigned
@@ -62,9 +66,5 @@ class CascadeToBidirectionalAsssociationSpec extends GormSpec {
         then:"The object is saved"
         padres.id
 
-    }
-    @Override
-    List getDomainClasses() {
-        [Club, Team, Player, Contract]
     }
 }

@@ -18,15 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Ignore
 
 /**
  * Created by graemerocher on 22/04/16.
  */
-class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
+class EmbeddedSetAssignedIdSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Itemized, LineItem, SubItem, JobItem])
+    }
 
     void "Test saved nested embedded association graph"() {
         when:"an object graph is created with nested items"
@@ -35,7 +39,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
                                         .addToSubItems(name: "s1"))
                 .save(flush:true)
 
-        session.clear()
+        manager.session.clear()
         Itemized i = Itemized.first()
 
         then:"The object graph is correct"
@@ -51,14 +55,14 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
     void "Test update nested embedded association graph"() {
         when:"an object graph is created with nested items"
         new Itemized(name: "i1").save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         Itemized i = Itemized.first()
         i.addToLineItems(new JobItem(teamSize: 10)
          .addToSubItems(name: "s1"))
          .save(flush:true)
 
-        session.clear()
+        manager.session.clear()
         i = Itemized.first()
 
         then:"The object graph is correct"
@@ -74,14 +78,14 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
     void "Test update nested embedded association graph with assigned id"() {
         when:"an object graph is created with nested items"
         new Itemized(name: "i1").save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         Itemized i = Itemized.first()
         i.addToLineItems(new JobItem(id: new ObjectId(), teamSize: 10)
                 .addToSubItems(name: "s1"))
                 .save(flush:true)
 
-        session.clear()
+        manager.session.clear()
         i = Itemized.first()
 
         then:"The object graph is correct"
@@ -98,7 +102,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
     void "Test update nested embedded association graph with assigned id using direct collection modification"() {
         when:"an object graph is created with nested items"
         new Itemized(name: "i1").save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         Itemized i = Itemized.first()
         i.lineItems.add(new JobItem(id: new ObjectId(), teamSize: 10)
@@ -107,7 +111,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
 
         i.save(flush:true)
 
-        session.clear()
+        manager.session.clear()
         i = Itemized.first()
 
         then:"The object graph is correct"
@@ -124,7 +128,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
     void "Test update nested embedded association graph with assigned id by assigning a new collection"() {
         when:"an object graph is created with nested items"
         new Itemized(name: "i1").save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         Itemized i = Itemized.first()
         i.lineItems = [ new JobItem(id: new ObjectId(), teamSize: 10)
@@ -133,7 +137,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
 
         i.save(flush:true)
 
-        session.clear()
+        manager.session.clear()
         i = Itemized.first()
 
         then:"The object graph is correct"
@@ -151,7 +155,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
     void "Test update nested embedded association graph using a custom method defined on the domain instance"() {
         when:"an object graph is created with nested items"
         new Itemized(name: "i1").save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         Itemized i = Itemized.first()
         i.addLineItem( new JobItem(id: new ObjectId(), teamSize: 10)
@@ -160,7 +164,7 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
 
         i.save(flush:true)
 
-        session.clear()
+        manager.session.clear()
         i = Itemized.first()
 
         then:"The object graph is correct"
@@ -172,10 +176,6 @@ class EmbeddedSetAssignedIdSpec extends GormDatastoreSpec {
         i.lineItems.first().teamSize == 10
         i.lineItems.first().subItems.size() == 1
         i.lineItems.first().subItems.first().name == 's1'
-    }
-    @Override
-    List getDomainClasses() {
-        [Itemized, LineItem, SubItem, JobItem]
     }
 }
 

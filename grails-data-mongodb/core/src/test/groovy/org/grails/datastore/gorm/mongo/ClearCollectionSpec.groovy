@@ -19,41 +19,37 @@
 
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
-import org.bson.types.ObjectId
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.bson.types.ObjectId
 
-/**
- */
-class ClearCollectionSpec extends GormDatastoreSpec{
-
-    void "Test clear embedded mongo collection"() {
-        given:"An entity with an embedded collection"
-            Building  b = new Building(buildingName: "WTC", rooms: [new Room(roomNo: 1),new Room(roomNo: 1)]).save(flush:true, validate:false)
-            session.clear()
-
-        when:"The entity is queried"
-            b = Building.get(b.id)
-
-        then:"The entity was persisted correctly"
-            b.buildingName == "WTC"
-            b.rooms.size() == 2
-            b.rooms[0].roomNo == "1"
-
-        when:"The association is cleared"
-            b.rooms.clear()
-            b.save(flush: true)
-            session.clear()
-            b = Building.get(b.id)
-
-        then:"It is empty"
-            b.rooms.size() == 0
-
+class ClearCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Building, Room, RoomCompany])
     }
 
-    @Override
-    List getDomainClasses() {
-        [Building, Room, RoomCompany]
+    void "Test clear embedded mongo collection"() {
+        given: "An entity with an embedded collection"
+        Building b = new Building(buildingName: "WTC", rooms: [new Room(roomNo: 1), new Room(roomNo: 1)]).save(flush: true, validate: false)
+        manager.session.clear()
+
+        when: "The entity is queried"
+        b = Building.get(b.id)
+
+        then: "The entity was persisted correctly"
+        b.buildingName == "WTC"
+        b.rooms.size() == 2
+        b.rooms[0].roomNo == "1"
+
+        when: "The association is cleared"
+        b.rooms.clear()
+        b.save(flush: true)
+        manager.session.clear()
+        b = Building.get(b.id)
+
+        then: "It is empty"
+        b.rooms.size() == 0
     }
 }
 
@@ -69,7 +65,7 @@ class Building {
         version false
     }
     static constraints = {
-        rooms(blank:true,nullable:true)
+        rooms(blank: true, nullable: true)
     }
     static embedded = ['rooms']
 }

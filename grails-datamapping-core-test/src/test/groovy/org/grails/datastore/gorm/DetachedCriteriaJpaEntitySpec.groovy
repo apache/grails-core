@@ -18,12 +18,9 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
-
-import jakarta.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
-
 import spock.lang.Issue
 
 /**
@@ -31,39 +28,37 @@ import spock.lang.Issue
  */
 @ApplyDetachedCriteriaTransform
 @Issue('GRAILS-9750')
-class DetachedCriteriaJpaEntitySpec extends GormDatastoreSpec {
-    
-    @Override
-    List getDomainClasses() {
-        return [Todo]
+class DetachedCriteriaJpaEntitySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Todo])
     }
-    
-    def "test a where query on a jpa entity"()  {
+
+    def "test a where query on a jpa entity"() {
         given: "a todo"
-            new Todo(title: "todo").save(flush: true)
-            session.clear()
+        new Todo(title: "todo").save(flush: true)
+        manager.session.clear()
 
         when: "query without restrictions"
-            def results = Todo.findAll {}
+        def results = Todo.findAll {}
 
         then: "one todo"
-            results.size() == 1
+        results.size() == 1
 
         when: "query with matching restrictions"
-            results = Todo.findAll {
-                title == "todo"
-            }
+        results = Todo.findAll {
+            title == "todo"
+        }
 
         then: "one todo"
-            results.size() == 1
+        results.size() == 1
 
         when: "query with not matching restrictions"
-            results = Todo.findAll {
-                title == "no match"
-            }
+        results = Todo.findAll {
+            title == "no match"
+        }
 
         then: "no todo"
-            results.size() == 0
+        results.size() == 0
     }
 
 }

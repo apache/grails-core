@@ -18,7 +18,7 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.PetType
+import org.apache.grails.data.testing.tck.domains.PetType
 import grails.persistence.Entity
 
 /**

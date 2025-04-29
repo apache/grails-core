@@ -18,31 +18,30 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedNonEntityAssociationSpec extends GormDatastoreSpec {
+class EmbeddedNonEntityAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Being])
+    }
 
     void "Test persistence of embedded entities"() {
         given:
-            def i = new Being(name:"Bob", address: new ResidentialAddress(postCode:"30483"))
+        def i = new Being(name: "Bob", address: new ResidentialAddress(postCode: "30483"))
 
-            i.save(flush:true)
-            session.clear()
+        i.save(flush: true)
+        manager.session.clear()
 
         when:
-            i = Being.findByName("Bob")
+        i = Being.findByName("Bob")
 
         then:
-            i != null
-            i.name == 'Bob'
-            i.address != null
-            i.address.postCode == '30483'
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Being]
+        i != null
+        i.name == 'Bob'
+        i.address != null
+        i.address.postCode == '30483'
     }
 }
 
@@ -54,7 +53,7 @@ class Being {
     static embedded = ['address']
 
     static mapping = {
-        name index:true
+        name index: true
     }
 }
 

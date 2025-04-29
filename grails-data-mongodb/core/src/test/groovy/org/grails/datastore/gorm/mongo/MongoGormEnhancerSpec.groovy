@@ -19,37 +19,36 @@
 package org.grails.datastore.gorm.mongo
 
 import com.mongodb.client.MongoCollection
-import grails.gorm.tests.GormDatastoreSpec
 
 import grails.mongodb.MongoEntity
-import spock.lang.*
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class MongoGormEnhancerSpec extends GormDatastoreSpec{
+class MongoGormEnhancerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([MyMongoEntity])
+    }
 
     def "Test is MongoEntity"() {
         expect:
         MongoEntity.isAssignableFrom(MyMongoEntity)
     }
-    def "Test getCollectionName static method" () {
 
+    def "Test getCollectionName static method"() {
         when:
-            def collectionName = MyMongoEntity.collectionName
+        def collectionName = MyMongoEntity.collectionName
 
         then:
-            collectionName == "mycollection"
+        collectionName == "mycollection"
 
     }
 
-    def "Test getCollection static method" () {
+    def "Test getCollection static method"() {
         when:
-            MongoCollection collection = MyMongoEntity.collection
+        MongoCollection collection = MyMongoEntity.collection
 
         then:
-            collection.namespace.collectionName == 'mycollection'
-    }
-
-    @Override
-    List getDomainClasses() {
-        [MyMongoEntity]
+        collection.namespace.collectionName == 'mycollection'
     }
 }

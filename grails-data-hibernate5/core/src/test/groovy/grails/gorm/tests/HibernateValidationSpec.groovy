@@ -18,22 +18,22 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.ChildEntity
-import grails.gorm.tck.ClassWithListArgBeforeValidate
-import grails.gorm.tck.ClassWithNoArgBeforeValidate
-import grails.gorm.tck.ClassWithOverloadedBeforeValidate
-import grails.gorm.tck.TestEntity
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
+import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
+import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Tests validation semantics.
  */
-class HibernateValidationSpec extends GormDatastoreSpec {
-
-    @Override
-    List getDomainClasses() {
-        return [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                ClassWithOverloadedBeforeValidate]
+class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses += [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+                                 ClassWithOverloadedBeforeValidate]
     }
 
     void "Test that validate works without a bound Session"() {
@@ -41,21 +41,21 @@ class HibernateValidationSpec extends GormDatastoreSpec {
         def t
 
         when:
-        session.disconnect()
+        manager.session.disconnect()
         def resource
-        if (TransactionSynchronizationManager.hasResource(session.datastore.sessionFactory)) {
-            resource = TransactionSynchronizationManager.unbindResource(session.datastore.sessionFactory)
+        if (TransactionSynchronizationManager.hasResource(manager.session.datastore.sessionFactory)) {
+            resource = TransactionSynchronizationManager.unbindResource(manager.session.datastore.sessionFactory)
         }
 
         t = new TestEntity(name:"")
 
         then:
-        TransactionSynchronizationManager.getResource(session.datastore.sessionFactory) == null
+        TransactionSynchronizationManager.getResource(manager.session.datastore.sessionFactory) == null
         t.save() == null
         t.hasErrors() == true
 
         when:
-        TransactionSynchronizationManager.bindResource(session.datastore.sessionFactory, resource)
+        TransactionSynchronizationManager.bindResource(manager.session.datastore.sessionFactory, resource)
 
         then:
         1 == t.errors.allErrors.size()

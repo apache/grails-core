@@ -142,10 +142,7 @@ include (
         'grails-datamapping-async',
         'grails-datamapping-validation',
         'grails-datamapping-support',
-        // the tck is split into domains -> base -> tck so that the base class can be swapped out or reused
-        'grails-datamapping-tck-tests',
-        'grails-datamapping-tck-base',
-        'grails-datamapping-tck-domains',
+        'grails-datamapping-tck',
         'grails-datamapping-core-test',
 
         // RX projects

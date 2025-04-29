@@ -16,60 +16,58 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
-
 /**
  * @author Graeme Rocher
  */
-class CircularOneToManySpec extends GormDatastoreSpec {
+class CircularOneToManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Profile])
+    }
 
     @Issue('GPMONGODB-254')
     void "Test store and retrieve circular one-to-many association"() {
-        given:"A circular one-to-many"
-            new Profile(name: "Fred")
-                 .addToFriends(name: "Bob")
-                 .addToFriends(name: "Frank")
-                 .save(flush:true)
+        given: "A circular one-to-many"
+        new Profile(name: "Fred")
+                .addToFriends(name: "Bob")
+                .addToFriends(name: "Frank")
+                .save(flush: true)
 
-            session.clear()
+        manager.session.clear()
 
-        when:"The entity is loaded"
-            def fred = Profile.get(1L)
+        when: "The entity is loaded"
+        def fred = Profile.get(1L)
 
-        then:"The association is valid"
-            fred.name == "Fred"
-            fred.friends.size() == 2
-            fred.friends.any { it.name == "Bob" }
-            fred.friends.any { it.name == "Frank" }
+        then: "The association is valid"
+        fred.name == "Fred"
+        fred.friends.size() == 2
+        fred.friends.any { it.name == "Bob" }
+        fred.friends.any { it.name == "Frank" }
 
     }
 
     @Issue('https://github.com/grails/gorm-mongodb/issues/7')
     void "Test that deleting a child doesn't not delete the parent in a circular association"() {
-        given:"A circular one-to-many"
+        given: "A circular one-to-many"
         new Profile(name: "Fred")
                 .addToFriends(name: "Bob")
                 .addToFriends(name: "Frank")
-                .save(flush:true)
+                .save(flush: true)
 
-        session.clear()
+        manager.session.clear()
 
-        when:"A child is deleted"
+        when: "A child is deleted"
         Profile.findByName("Bob").delete(flush: true)
-        session.clear()
+        manager.session.clear()
 
-        then:"The parent wasn't deleted"
+        then: "The parent wasn't deleted"
         Profile.count() == 2
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Profile]
     }
 }
 
@@ -79,5 +77,5 @@ class Profile {
     String name
     List<Profile> friends
 
-    static hasMany = [friends:Profile]
+    static hasMany = [friends: Profile]
 }

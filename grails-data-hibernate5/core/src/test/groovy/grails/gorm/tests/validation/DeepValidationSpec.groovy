@@ -19,19 +19,18 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.transactions.Rollback
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 
 /**
  * Created by francoiskha on 19/04/18.
  */
-class DeepValidationSpec extends GormDatastoreSpec {
-
-    @Override
-    List getDomainClasses() {
-        return [AnotherCity, Market, Address]
+class DeepValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([AnotherCity, Market, Address])
     }
 
     @Rollback

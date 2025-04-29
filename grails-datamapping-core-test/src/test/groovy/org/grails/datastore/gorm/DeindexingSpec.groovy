@@ -18,13 +18,17 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Daniel Wiell
  */
-class DeindexingSpec extends GormDatastoreSpec {
+class DeindexingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([AuthorWithPseudonym])
+    }
 
     def 'Null is de-indexed'() {
         def author = new AuthorWithPseudonym(name: 'Samuel Clemens').save(failOnError: true)
@@ -33,11 +37,6 @@ class DeindexingSpec extends GormDatastoreSpec {
 
         expect:
         !AuthorWithPseudonym.findByPseudonymIsNull()
-    }
-
-    @Override
-    List getDomainClasses() {
-        [AuthorWithPseudonym]
     }
 }
 

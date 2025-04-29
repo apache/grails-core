@@ -21,7 +21,7 @@ package org.grails.datastore.gorm.mongo.connections
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.mongodb.MongoEntity
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.gorm.mongo.City
 import org.grails.datastore.mapping.core.Session

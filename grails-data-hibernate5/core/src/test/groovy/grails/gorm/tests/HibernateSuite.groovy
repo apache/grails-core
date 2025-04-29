@@ -18,8 +18,7 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.FirstAndLastMethodSpec
-import grails.gorm.tck.NotInListSpec
+import org.apache.grails.data.testing.tck.tests.FirstAndLastMethodSpec
 import org.junit.platform.suite.api.SelectClasses
 import org.junit.platform.suite.api.Suite
 

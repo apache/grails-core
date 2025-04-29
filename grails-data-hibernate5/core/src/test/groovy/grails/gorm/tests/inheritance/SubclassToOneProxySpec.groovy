@@ -19,25 +19,24 @@
 package grails.gorm.tests.inheritance
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class SubclassToOneProxySpec extends GormDatastoreSpec {
+class SubclassToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([SuperclassProxy, SubclassProxy, HasOneProxy])
+    }
 
     void "the hasOne is a proxy and unwraps"() {
         given:
         SubclassProxy dog = new SubclassProxy().save()
         new HasOneProxy(superclassProxy: dog).save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         HasOneProxy owner = HasOneProxy.first()
 
         expect:
-        session.mappingContext.proxyFactory.isProxy(owner.@superclassProxy)
-    }
-
-    @Override
-    List getDomainClasses() {
-        [SuperclassProxy, SubclassProxy, HasOneProxy]
+        manager.session.mappingContext.proxyFactory.isProxy(owner.@superclassProxy)
     }
 }
 

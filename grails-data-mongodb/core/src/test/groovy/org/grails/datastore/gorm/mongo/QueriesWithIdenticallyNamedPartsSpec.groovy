@@ -18,8 +18,9 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
@@ -27,10 +28,9 @@ import spock.lang.Issue
  * Test cases for GPMONGODB-296 (and GPMONGODB-302).
  */
 @Issue('GPMONGODB-296')
-class QueriesWithIdenticallyNamedPartsSpec extends GormDatastoreSpec {
-    @Override
-    List getDomainClasses() {
-        return [Foo]
+class QueriesWithIdenticallyNamedPartsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Foo])
     }
 
     void "Ors and ands work together"() {
@@ -41,7 +41,7 @@ class QueriesWithIdenticallyNamedPartsSpec extends GormDatastoreSpec {
                 new Foo(2, 1, 2, 1).save(),
                 new Foo(2, 2, 2, 2).save(),
         ]
-        session.flush()
+        manager.session.flush()
 
         when: "ors combined in implicit conjuction"
         def results = Foo.createCriteria().list {
@@ -88,7 +88,7 @@ class QueriesWithIdenticallyNamedPartsSpec extends GormDatastoreSpec {
                 new Foo(3, 2, 4, 3).save(),
                 new Foo(4, 2, 4, 3).save(),
         ]
-        session.flush()
+        manager.session.flush()
         def results
 
         when: "Multiple inList queries are combined"

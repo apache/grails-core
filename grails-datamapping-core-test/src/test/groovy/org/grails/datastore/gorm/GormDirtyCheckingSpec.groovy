@@ -19,18 +19,16 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class GormDirtyCheckingSpec extends GormDatastoreSpec {
-
-    @Override
-    List getDomainClasses() {
-        [Student, BooleanTest]
+class GormDirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Student, BooleanTest])
     }
 
     void "test a new instance is dirty by default"() {
-
         when:
         Student student = new Student(name: "JD")
 

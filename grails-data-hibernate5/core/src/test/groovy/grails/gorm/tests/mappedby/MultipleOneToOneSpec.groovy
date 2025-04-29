@@ -19,31 +19,28 @@
 package grails.gorm.tests.mappedby
 
 import grails.gorm.annotation.Entity
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 29/05/2017.
  */
-class MultipleOneToOneSpec extends GormSpec {
-
+class MultipleOneToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Org, OrgMember])
+    }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/950')
     void "test mappedBy with multiple many-to-one and a single one-to-one"() {
         given:
-        Org branch = new Org(id:1, name: "branch a").save()
-        new OrgMember(org:branch).save(flush:true)
-        def query = OrgMember.where({branch == null})
+        Org branch = new Org(id: 1, name: "branch a").save()
+        new OrgMember(org: branch).save(flush: true)
+        def query = OrgMember.where({ branch == null })
 
         expect:
         query.updateAll(branch: branch) == 1
         OrgMember.findByBranch(branch)
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Org, OrgMember]
     }
 }
 
@@ -69,13 +66,13 @@ class Org {
 
 @Entity
 class OrgMember {
-    static belongsTo = [org:Org]
+    static belongsTo = [org: Org]
 
     Org branch
     Org division
     Org region
 
-    static mappedBy = [branch:"none", division:"none", region:"none"]
+    static mappedBy = [branch: "none", division: "none", region: "none"]
 
     static constraints = {
         org nullable: false

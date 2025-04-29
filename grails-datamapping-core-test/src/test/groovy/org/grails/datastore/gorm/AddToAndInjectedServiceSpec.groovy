@@ -16,15 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class AddToAndInjectedServiceSpec extends GormDatastoreSpec {
+class AddToAndInjectedServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Pirate, Ship])
+    }
 
     @Issue('GRAILS-9119')
     void "Test add to method with injected service present"() {
@@ -36,11 +39,6 @@ class AddToAndInjectedServiceSpec extends GormDatastoreSpec {
 
         then:"It adds an associated entity correctly"
             assert 1 == ship.pirates.size()
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Pirate, Ship]
     }
 }
 

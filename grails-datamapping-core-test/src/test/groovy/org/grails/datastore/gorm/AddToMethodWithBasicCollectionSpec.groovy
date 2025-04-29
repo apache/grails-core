@@ -16,15 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class AddToMethodWithBasicCollectionSpec extends GormDatastoreSpec{
+class AddToMethodWithBasicCollectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([BasicBook])
+    }
 
     @Issue('GRAILS-8779')
     void "Test that the addTo* method works with basic collections"() {
@@ -34,7 +37,7 @@ class AddToMethodWithBasicCollectionSpec extends GormDatastoreSpec{
                 .addToAuthors("Jeff")
                 .save(flush:true)
 
-            session.clear()
+         manager.session.clear()
 
             book = BasicBook.get(book.id)
         then:"The model is saved correctly"
@@ -42,11 +45,6 @@ class AddToMethodWithBasicCollectionSpec extends GormDatastoreSpec{
             book.authors.size() == 2
             book.authors.contains "Graeme"
             book.authors.contains "Jeff"
-    }
-
-    @Override
-    List getDomainClasses() {
-        [BasicBook]
     }
 }
 

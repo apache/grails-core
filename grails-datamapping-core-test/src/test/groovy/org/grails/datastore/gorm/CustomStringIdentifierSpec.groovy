@@ -18,55 +18,55 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class CustomStringIdentifierSpec extends GormDatastoreSpec {
+class CustomStringIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    @Override
-    List getDomainClasses() {
-        [Product, Description]
+    void setupSpec() {
+        manager.domainClasses.addAll([Product, Description])
     }
 
     void "test basic crud operations with string id"() {
         when: "A product is saved with an assigned id"
-            createProducts()
-            def p = Product.get("MacBook")
+        createProducts()
+        def p = Product.get("MacBook")
 
-        then:"The product is not null"
-            p != null
+        then: "The product is not null"
+        p != null
 
-        when:"A product is retrieved by id"
-            session.clear()
-            p = Product.get("MacBook")
+        when: "A product is retrieved by id"
+        manager.session.clear()
+        p = Product.get("MacBook")
 
-        then:"The product is not null"
-            p != null
+        then: "The product is not null"
+        p != null
     }
 
     void "Test dynamic finders with string id"() {
         when: "A product with a string id is query via a dynamic finder"
-            createProducts()
-            def p = Product.findByName("MacBook")
+        createProducts()
+        def p = Product.findByName("MacBook")
 
-        then:"The product is not null"
-            p != null
+        then: "The product is not null"
+        p != null
 
     }
 
     void "Test integer based id"() {
-       when:"An object has an id that is an integer"
-            def d = new Description(name:"Blah").save(flush:true)
+        when: "An object has an id that is an integer"
+        def d = new Description(name: "Blah").save(flush: true)
 
-        then:"The object is successfully saved"
-            d != null
+        then: "The object is successfully saved"
+        d != null
 
-        when:"The object is queried"
-            session.clear()
-            d = Description.get(1)
+        when: "The object is queried"
+        manager.session.clear()
+        d = Description.get(1)
 
-        then:"The object is returned"
-            d != null
+        then: "The object is returned"
+        d != null
 
     }
 
@@ -90,6 +90,6 @@ class Product {
     Date dateCreated
 
     static mapping = {
-        id generator:'assigned', name:"name"
+        id generator: 'assigned', name: "name"
     }
 }

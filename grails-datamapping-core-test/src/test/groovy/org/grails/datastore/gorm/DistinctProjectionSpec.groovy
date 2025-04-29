@@ -18,25 +18,26 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tck.Person
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class DistinctProjectionSpec extends GormDatastoreSpec {
+class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    def "Test that using the distinct projection returns distinct results"()  {
-        given:"Some people with the same last names"
-            new Person(firstName: "Homer", lastName: "Simpson").save()
-            new Person(firstName: "Bart", lastName: "Simpson").save()
-            new Person(firstName: "Barney", lastName: "Rubble").save(flush:true)
+    def "Test that using the distinct projection returns distinct results"() {
+        given: "Some people with the same last names"
+        new Person(firstName: "Homer", lastName: "Simpson").save()
+        new Person(firstName: "Bart", lastName: "Simpson").save()
+        new Person(firstName: "Barney", lastName: "Rubble").save(flush: true)
 
-        when:"We query with criteria for distinct surnames"
-            def results = Person.withCriteria {
-                projections {
-                    distinct "lastName"
-                }
-            }.sort()
+        when: "We query with criteria for distinct surnames"
+        def results = Person.withCriteria {
+            projections {
+                distinct "lastName"
+            }
+        }.sort()
 
-        then:"The correct results are returned"
-            results == ['Rubble', 'Simpson']
+        then: "The correct results are returned"
+        results == ['Rubble', 'Simpson']
     }
 }

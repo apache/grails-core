@@ -19,7 +19,6 @@
 
 package org.grails.datastore.gorm.neo4j
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Person
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionStatus

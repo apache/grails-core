@@ -20,7 +20,7 @@
 package functional.tests
 
 import grails.test.mongodb.MongoSpec
-import org.apache.grails.testing.AbstractMongoGrailsExtension
+import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.testcontainers.containers.MongoDBContainer
 import org.testcontainers.utility.DockerImageName
 import spock.lang.AutoCleanup

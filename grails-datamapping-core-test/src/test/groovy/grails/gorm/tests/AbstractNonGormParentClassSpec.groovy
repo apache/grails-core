@@ -16,25 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm.tests
 
 import grails.persistence.Entity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 25/02/16.
  */
-class AbstractNonGormParentClassSpec extends GormDatastoreSpec {
+class AbstractNonGormParentClassSpec extends GrailsDataTckSpec {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([ConcreteFoo])
+    }
 
     void "Test a concrete domain class that extends a common base class"() {
         expect:
-        session.mappingContext.getPersistentEntity(ConcreteFoo.name)
-        !session.mappingContext.getPersistentEntity(Common.name)
+        manager.session.mappingContext.getPersistentEntity(ConcreteFoo.name)
+        !manager.session.mappingContext.getPersistentEntity(Common.name)
 
-    }
-    @Override
-    List getDomainClasses() {
-        [ConcreteFoo]
     }
 }
 

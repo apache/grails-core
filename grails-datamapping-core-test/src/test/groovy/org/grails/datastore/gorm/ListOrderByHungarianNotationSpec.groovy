@@ -18,13 +18,17 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tck.ClassWithHungarianNotation
-import grails.gorm.tests.GormDatastoreSpec
+import org.apache.grails.data.testing.tck.domains.ClassWithHungarianNotation
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by sdelamo on 12/10/2017.
  */
-class ListOrderByHungarianNotationSpec extends GormDatastoreSpec {
+class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([ClassWithHungarianNotation])
+    }
 
     void "test dynamic finder of properties with hungarian notation"() {
         when:
@@ -33,9 +37,5 @@ class ListOrderByHungarianNotationSpec extends GormDatastoreSpec {
 
         then:
         ClassWithHungarianNotation.listOrderByISize(order: 'desc')*.iSize == [3, 2]
-    }
-
-    List getDomainClasses() {
-        [ClassWithHungarianNotation]
     }
 }

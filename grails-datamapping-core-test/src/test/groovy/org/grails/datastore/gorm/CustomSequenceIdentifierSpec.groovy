@@ -18,24 +18,23 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class CustomSequenceIdentifierSpec extends GormDatastoreSpec {
-
-    void "Test sequence identifiers"() {
-        when:"when a book with a sequence id is saved"
-            new Book(title:"Blah").save(flush:true)
-            session.clear()
-            def b = Book.findByTitle("Blah")
-        then:"It can be retrieved"
-            b != null
-            b.id != null
+class CustomSequenceIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Book])
     }
 
-    @Override
-    List getDomainClasses() {
-        [Book]
+    void "Test sequence identifiers"() {
+        when: "when a book with a sequence id is saved"
+        new Book(title: "Blah").save(flush: true)
+        manager.session.clear()
+        def b = Book.findByTitle("Blah")
+        then: "It can be retrieved"
+        b != null
+        b.id != null
     }
 }
 
@@ -46,6 +45,6 @@ class Book {
     String title
 
     static mapping = {
-        id generator:'sequence', params:[sequence:'book_seq']
+        id generator: 'sequence', params: [sequence: 'book_seq']
     }
 }

@@ -18,26 +18,27 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.tck.TestEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 16/02/2017.
  */
-class DeepValidateWithSaveSpec extends GormDatastoreSpec {
+class DeepValidateWithSaveSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void "test deep validate parameter"() {
         given:
         def validateable = Mock(GormValidateable)
         validateable.hasErrors() >> true
-        def args = [deepValidate:true]
+        def args = [deepValidate: true]
 
         when:
         GormInstanceApi instanceApi = GormEnhancer.findInstanceApi(TestEntity)
-        instanceApi.save(validateable, [deepValidate:true])
+        instanceApi.save(validateable, [deepValidate: true])
 
         then:
         1 * validateable.validate(args)

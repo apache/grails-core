@@ -18,19 +18,23 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class ReadOnlyCriteriaResultsSpec extends GormDatastoreSpec {
+class ReadOnlyCriteriaResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([FamilyMember])
+    }
 
     @Issue('GRAILS-11670')
     void 'Test that readOnly does not cause a problem in a criteria query'() {
         given:
-        new FamilyMember(name:"Jeff").save(flush:true)
-        new FamilyMember(name:"Betsy").save(flush:true)
-        new FamilyMember(name:"Jake").save(flush:true)
-        new FamilyMember(name:"Zack").save(flush:true)
+        new FamilyMember(name: "Jeff").save(flush: true)
+        new FamilyMember(name: "Betsy").save(flush: true)
+        new FamilyMember(name: "Jake").save(flush: true)
+        new FamilyMember(name: "Zack").save(flush: true)
 
         when:
         def results = FamilyMember.withCriteria {
@@ -40,11 +44,6 @@ class ReadOnlyCriteriaResultsSpec extends GormDatastoreSpec {
 
         then:
         results.size() == 2
-    }
-
-    @Override
-    List getDomainClasses() {
-        [FamilyMember]
     }
 }
 

@@ -19,8 +19,8 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tck.GroupWithin
-import grails.gorm.tck.UniqueGroup
+import org.apache.grails.data.testing.tck.domains.GroupWithin
+import org.apache.grails.data.testing.tck.domains.UniqueGroup
 import org.grails.datastore.gorm.GormEntity
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager

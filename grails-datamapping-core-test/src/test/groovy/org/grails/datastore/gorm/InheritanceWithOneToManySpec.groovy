@@ -18,30 +18,29 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
-
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class InheritanceWithOneToManySpec extends GormDatastoreSpec{
+class InheritanceWithOneToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Group, Member, SubMember])
+    }
 
     @Issue('GRAILS-9010')
     void "Test that a one-to-many cascades to an association featuring inheritance"() {
-        when:"A domain model with an association featuring inheritance is saved"
-        def group = new Group(name:"my group")
-        def subMember = new SubMember(name:"my name",extraName:"extra name",externalId:'blah')
+        when: "A domain model with an association featuring inheritance is saved"
+        def group = new Group(name: "my group")
+        def subMember = new SubMember(name: "my name", extraName: "extra name", externalId: 'blah')
         group.addToMembers subMember
-        group.save(failOnError:true, flush:true)
-        session.clear()
+        group.save(failOnError: true, flush: true)
+        manager.session.clear()
 
-        then:"The association is correctly saved"
+        then: "The association is correctly saved"
         Group.count() == 1
         SubMember.count() == 1
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Group, Member, SubMember]
     }
 }
 
@@ -49,12 +48,12 @@ class InheritanceWithOneToManySpec extends GormDatastoreSpec{
 class Group {
     Long id
     String name
-    static hasMany = [members:Member]
+    static hasMany = [members: Member]
     Collection members
 }
 
 @Entity
-class Member   {
+class Member {
     Long id
     String name
     String externalId

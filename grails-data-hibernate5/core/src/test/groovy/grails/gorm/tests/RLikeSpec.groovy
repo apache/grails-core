@@ -19,9 +19,13 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class RLikeSpec extends GormSpec {
+class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([RlikeFoo])
+    }
 
     void "test rlike works with H2"() {
         given:
@@ -30,16 +34,11 @@ class RLikeSpec extends GormSpec {
         new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
 
         when:
-        session.clear()
+        manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
         then:
         allFoos.size() == 2
-    }
-
-    @Override
-    List getDomainClasses() {
-        [RlikeFoo]
     }
 }
 

@@ -18,19 +18,19 @@
  */
 package grails.gorm.tests.inheritance
 
-import org.grails.orm.hibernate.GormSpec
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 @Issue('https://github.com/grails/gorm-hibernate5/issues/151')
-class TablePerConcreteClassImportedSpec extends GormSpec {
-    void "test that subclasses are added to the imports on the metamodel"() {
-        expect:
-        sessionFactory.getMetamodel().getImportedClassName('Vehicle')
-        sessionFactory.getMetamodel().getImportedClassName('Spaceship')
+class TablePerConcreteClassImportedSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+    void setupSpec() {
+        manager.domainClasses.addAll([Vehicle, Spaceship])
     }
 
-    @Override
-    List getDomainClasses() {
-        [Vehicle, Spaceship]
+    void "test that subclasses are added to the imports on the metamodel"() {
+        expect:
+        manager.sessionFactory.getMetamodel().getImportedClassName('Vehicle')
+        manager.sessionFactory.getMetamodel().getImportedClassName('Spaceship')
     }
 }

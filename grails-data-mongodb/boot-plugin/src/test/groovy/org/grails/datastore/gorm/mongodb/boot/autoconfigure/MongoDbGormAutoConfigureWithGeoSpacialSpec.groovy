@@ -20,8 +20,8 @@ package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
 import grails.gorm.annotation.Entity
 import grails.mongodb.geo.Point
-import org.apache.grails.testing.AbstractMongoGrailsExtension
-import org.apache.grails.testing.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.types.ObjectId
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration

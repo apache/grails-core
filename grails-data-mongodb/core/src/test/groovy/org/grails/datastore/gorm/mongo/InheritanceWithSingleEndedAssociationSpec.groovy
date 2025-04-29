@@ -18,8 +18,9 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.GormDatastoreSpec
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.mapping.proxy.EntityProxy
 import spock.lang.Issue
@@ -27,11 +28,15 @@ import spock.lang.Issue
 /**
  * @author Graeme Rocher
  */
-class InheritanceWithSingleEndedAssociationSpec extends GormDatastoreSpec {
+class InheritanceWithSingleEndedAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+
+    void setupSpec() {
+        manager.domainClasses.addAll([Node, NodeA, NodeB, NodeC])
+    }
 
     @Issue('GPMONGODB-304')
     void "Test that inheritance works correctly with single ended associations"() {
-        given:"An association that uses a parent class type"
+        given: "An association that uses a parent class type"
 
         def a = new NodeA(a: 'A')
         def c = new NodeC(c: 'C')
@@ -40,35 +45,28 @@ class InheritanceWithSingleEndedAssociationSpec extends GormDatastoreSpec {
         a.save(validate: false)
         c.save(validate: false)
         b2.save(validate: false)
-        b.save(flush:true, validate: false)
-        session.clear()
+        b.save(flush: true, validate: false)
+        manager.session.clear()
 
-        when:"The association is queried with the get method"
+        when: "The association is queried with the get method"
         def nodeB = NodeB.get(b.id)
         def nodeB2 = NodeB.get(b2.id)
 
-        then:"The correct type is returned for the association"
+        then: "The correct type is returned for the association"
         nodeB.childNode instanceof EntityProxy
         nodeB.childNode.target instanceof NodeA
         nodeB2.childNode instanceof EntityProxy
         nodeB2.childNode.target instanceof NodeC
 
-        when:"The association is queried with a finder"
+        when: "The association is queried with a finder"
         nodeB = NodeB.findById(b.id)
         nodeB2 = NodeB.findById(b2.id)
-        then:"The correct type is returned for the association"
+        then: "The correct type is returned for the association"
         nodeB.childNode.target instanceof NodeA
         nodeB2.childNode.target instanceof NodeC
 
 //        nodeB = NodeB.findByB('B')
 //        assertTrue(nodeB.childNode instanceof NodeA) // doesn't work, childNode is a Node
-
-
-    }
-
-    @Override
-    List getDomainClasses() {
-        [Node, NodeA, NodeB, NodeC]
     }
 }
 
