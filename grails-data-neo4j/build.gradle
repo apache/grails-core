@@ -71,7 +71,6 @@ if (isReleaseVersion) {
 
 subprojects { subproject ->
 
-    ext['groovyVersion'] = System.getenv('CI_GROOVY_VERSION') ?: project.groovyVersion
     ext['gorm.version'] = datastoreVersion
     ext['gorm.hibernate5.version'] = hibernateDatastoreVersion
     ext['h2.version'] = h2Version
@@ -82,24 +81,12 @@ subprojects { subproject ->
     repositories {
         mavenLocal()
         maven { url "https://repo.grails.org/grails/core" }
-        if(groovyVersion && groovyVersion.endsWith('-SNAPSHOT')) {
-            maven {
-                name 'JFrog Groovy snapshot repo'
-                url 'https://groovy.jfrog.io/artifactory/libs-snapshot-local/'
-            }
-        }
     }
 
     configurations.all {
         resolutionStrategy {
             cacheDynamicVersionsFor 0, 'hours'
             cacheChangingModulesFor 0, 'hours'
-        }
-    }
-
-    configurations.all {
-        resolutionStrategy.dependencySubstitution {
-            substitute module("org.codehaus.groovy:groovy-all") with module("org.codehaus.groovy:groovy:$groovyVersion")
         }
     }
 
@@ -124,23 +111,24 @@ subprojects { subproject ->
             apply plugin: 'org.apache.grails.gradle.grails-gson'
         }
 
-        configurations.all {
-            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.codehaus.groovy' && details.requested.name.startsWith('groovy')) {
-                    details.useVersion(groovyVersion)
-                } else if (details.requested.group == 'org.springframework') {
-                    details.useVersion(springVersion)
-                } else if (details.requested.group == 'org.springframework.boot') {
-                    details.useVersion(springBootVersion)
-                } else if (details.requested.name in ['grails-testing-support', 'grails-web-testing-support', 'grails-testing-support-datamapping']) {
-                    details.useVersion(testingSupportVersion)
-                }
-            }
-        }
+        //TODO: Use bom instead
+//        configurations.all {
+//            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+//                if (details.requested.group == 'org.codehaus.groovy' && details.requested.name.startsWith('groovy')) {
+//                    details.useVersion(groovyVersion)
+//                } else if (details.requested.group == 'org.springframework') {
+//                    details.useVersion(springVersion)
+//                } else if (details.requested.group == 'org.springframework.boot') {
+//                    details.useVersion(springBootVersion)
+//                } else if (details.requested.name in ['grails-testing-support', 'grails-web-testing-support', 'grails-testing-support-datamapping']) {
+//                    details.useVersion(testingSupportVersion)
+//                }
+//            }
+//        }
 
         dependencies {
             testImplementation "org.hibernate:hibernate-validator:$hibernateValidatorVersion"
-            testImplementation "org.codehaus.groovy:groovy-test-junit5:$groovyVersion"
+            testImplementation "org.codehaus.groovy:groovy-test-junit5"
             testImplementation "org.spockframework:spock-core:$spockVersion", { transitive = false }
             testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
             testImplementation "org.junit.platform:junit-platform-runner:$junitPlatformVersion"
@@ -258,8 +246,8 @@ subprojects { subproject ->
 
 
     dependencies {
-        api "org.codehaus.groovy:groovy:$groovyVersion"
-        testImplementation "org.codehaus.groovy:groovy-test-junit5:$groovyVersion"
+        api "org.codehaus.groovy:groovy"
+        testImplementation "org.codehaus.groovy:groovy-test-junit5"
         testImplementation "org.spockframework:spock-core:$spockVersion", { transitive = false }
         testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
         testImplementation "org.junit.platform:junit-platform-runner:$junitPlatformVersion"

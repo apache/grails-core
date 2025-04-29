@@ -93,7 +93,7 @@ subprojects {
 
     dependencies {
         implementation "com.graphql-java:graphql-java:$graphqlJavaVersion"
-        testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+        testImplementation "org.codehaus.groovy:groovy-test"
         testImplementation "io.projectreactor:reactor-test:3.6.1"
         testImplementation("org.spockframework:spock-core:$spockVersion")
         implementation 'org.apache.grails.data:grails-datamapping-core:7.3.4'

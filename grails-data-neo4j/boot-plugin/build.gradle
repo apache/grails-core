@@ -24,7 +24,7 @@ dependencies {
 
     api "org.springframework.boot:spring-boot-autoconfigure:$springBootVersion"
 
-    api "org.codehaus.groovy:groovy:$groovyVersion"
+    api "org.codehaus.groovy:groovy"
     api project(":grails-datastore-gorm-neo4j")
     api "org.springframework:spring-tx:$springVersion"
 

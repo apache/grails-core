@@ -24,7 +24,7 @@ repositories {
 apply plugin: 'codenarc'
 
 dependencies {
-    documentation "org.codehaus.groovy:groovy-cli-picocli:$groovyVersion"
+    documentation "org.codehaus.groovy:groovy-cli-picocli"
 
     api "org.apache.grails.data:grails-datamapping-core:${gormVersion}"
     api "com.graphql-java:graphql-java:$graphqlJavaVersion"

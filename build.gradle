@@ -77,11 +77,6 @@ subprojects {
             def cacheHours = isCiBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
-            eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.apache.groovy') {
-                    details.useVersion(groovyVersion)
-                }
-            }
         }
     }
 

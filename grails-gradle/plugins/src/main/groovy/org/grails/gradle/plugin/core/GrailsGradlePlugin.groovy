@@ -357,32 +357,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileStatic
     protected void configureGroovy(Project project) {
-        final String groovyVersion = project.properties['groovyVersion']
+        final String groovyVersion = project.properties['groovy.version']
         if (groovyVersion) {
-            if (groovyVersion.startsWith("4.")) {
-                project.configurations.configureEach { Configuration configuration ->
-                    configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                        String dependencyName = details.requested.name
-                        String group = details.requested.group
-                        if (group == 'org.codehaus.groovy') {
-                            if (dependencyName == 'groovy-all') {
-                                details.useTarget "org.apache.groovy:groovy:$groovyVersion"
-                            } else {
-                                details.useTarget "org.apache.groovy:$dependencyName:$groovyVersion"
-                            }
-                            details.because("Groovy version substituted for Groovy $groovyVersion")
-                        } else if (group == 'org.apache.groovy' && dependencyName.startsWith('groovy')) {
-                            details.useVersion(groovyVersion)
-                        }
-                    }
-                }
-            } else if (groovyVersion.startsWith("3.")) {
-                project.configurations.configureEach { Configuration configuration ->
-                    configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                        if ((details.requested.group == 'org.codehaus.groovy' || details.requested.group == 'org.apache.groovy') && details.requested.name != 'groovy-bom') {
-                            details.useTarget(group: 'org.codehaus.groovy', name: details.requested.name, version: "$GroovySystem.version")
-                            details.because "Use Groovy version $GroovySystem.version provided by Gradle"
-                        }
+            project.logger.lifecycle("Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version ${groovyVersion}.")
+            project.configurations.configureEach { Configuration configuration ->
+                configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                    String group = details.requested.group
+                    if (group == 'org.apache.groovy') {
+                        details.useVersion(groovyVersion)
                     }
                 }
             }
