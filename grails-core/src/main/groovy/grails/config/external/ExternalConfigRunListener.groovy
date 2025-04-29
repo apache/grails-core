@@ -49,10 +49,8 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
     private String userHome = System.getProperty('user.home')
     private String separator = System.getProperty('file.separator')
 
-    final SpringApplication application
-
     ExternalConfigRunListener(SpringApplication application, String[] args) {
-        this.application = application
+        // args are required, but not used
     }
 
     @Override
