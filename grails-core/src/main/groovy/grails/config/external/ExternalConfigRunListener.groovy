@@ -46,8 +46,8 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
     private ResourceLoader defaultResourceLoader = new DefaultResourceLoader()
     private YamlPropertySourceLoader yamlPropertySourceLoader = new YamlPropertySourceLoader()
     private PropertiesPropertySourceLoader propertiesPropertySourceLoader = new PropertiesPropertySourceLoader()
-    private String userHome = System.properties.getProperty('user.home')
-    private String separator = System.properties.getProperty('file.separator')
+    private String userHome = System.getProperty('user.home')
+    private String separator = System.getProperty('file.separator')
 
     final SpringApplication application
 
