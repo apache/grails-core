@@ -22,7 +22,7 @@ apply plugin: 'groovy'
 configurations.register('documentation')
 
 dependencies {
-    documentation platform("org.apache.grails:grails-bom:$projectVersion")
+    documentation platform(project(':grails-bom'))
     documentation 'org.apache.groovy:groovy-groovydoc'
     documentation 'org.apache.groovy:groovy-ant'
 }

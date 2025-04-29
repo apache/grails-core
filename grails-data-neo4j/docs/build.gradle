@@ -44,19 +44,11 @@ configurations {
     }
 }
 
-configurations.all {
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        if (details.requested.group == 'org.codehaus.groovy' && details.requested.name.startsWith('groovy')) {
-            details.useVersion(groovyVersion)
-        }
-    }
-}
-
 dependencies {
     documentation "org.fusesource.jansi:jansi:$jansiVersion"
-    documentation "org.codehaus.groovy:groovy:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-templates:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-dateutil:$groovyVersion"
+    documentation "org.codehaus.groovy:groovy"
+    documentation "org.codehaus.groovy:groovy-templates"
+    documentation "org.codehaus.groovy:groovy-dateutil"
     documentation "com.github.javaparser:javaparser-core:$javaParserCoreVersion"
     for (p in coreProjects) {
         documentation "org.apache.grails:grails-datastore-$p:$datastoreVersion"

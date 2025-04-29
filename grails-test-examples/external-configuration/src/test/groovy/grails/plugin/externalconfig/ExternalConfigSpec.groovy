@@ -26,6 +26,7 @@ import org.grails.config.NavigableMapPropertySource
 import org.grails.testing.GrailsUnitTest
 import org.springframework.core.env.ConfigurableEnvironment
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -244,7 +245,6 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
         getConfigProperty('yml.config') == 'expected-value-test'
     }
 
-    @Issue('https://github.com/sbglasius/external-config/issues/24')
     def "when getting config with wildcard files from tmp"() {
         given: "Three files in tmp, where two matches the pattern"
         def tmp = new File(System.getProperty('java.io.tmpdir'))
@@ -272,7 +272,7 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
         [file1, file2, file3]*.delete()
     }
 
-    @Issue('https://github.com/sbglasius/external-config/issues/24')
+    @PendingFeatureIf(value={ os.windows }, reason = 'Wildcard is not working on windows OS')
     def "when getting config with wildcard files from user home"() {
         given: "Three files in home, where two matches the pattern"
         def home = new File(System.getProperty('user.home'))

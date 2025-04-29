@@ -27,21 +27,22 @@ dependencyManagement {
     applyMavenExclusions false
 }
 
-configurations.configureEach {
-    exclude group: 'org.apache.grails.data', module: 'grails-data-simple'
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        if (details.requested.group == 'org.apache.grails.data'
-                && details.requested.name.startsWith('grails-datastore')
-                && !details.requested.name.contains('neo4j')) {
-
-            details.useVersion(datastoreVersion)
-        } else if (details.requested.group == 'org.apache.groovy' && details.requested.name.startsWith('groovy')) {
-            details.useVersion(groovyVersion)
-        } else if (details.requested.group == 'org.springframework') {
-            details.useVersion(springVersion)
-        }
-    }
-}
+// TODO: Use bom
+//configurations.configureEach {
+//    exclude group: 'org.apache.grails.data', module: 'grails-data-simple'
+//    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+//        if (details.requested.group == 'org.apache.grails.data'
+//                && details.requested.name.startsWith('grails-datastore')
+//                && !details.requested.name.contains('neo4j')) {
+//
+//            details.useVersion(datastoreVersion)
+//        } else if (details.requested.group == 'org.apache.groovy' && details.requested.name.startsWith('groovy')) {
+//            details.useVersion(groovyVersion)
+//        } else if (details.requested.group == 'org.springframework') {
+//            details.useVersion(springVersion)
+//        }
+//    }
+//}
 
 dependencies {
     compileOnly "org.apache.grails:grails-core"

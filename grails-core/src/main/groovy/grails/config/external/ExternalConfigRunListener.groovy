@@ -47,7 +47,6 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
     private YamlPropertySourceLoader yamlPropertySourceLoader = new YamlPropertySourceLoader()
     private PropertiesPropertySourceLoader propertiesPropertySourceLoader = new PropertiesPropertySourceLoader()
     private String userHome = System.getProperty('user.home')
-    private String separator = System.getProperty('file.separator')
 
     ExternalConfigRunListener(SpringApplication application, String[] args) {
         // args are required, but not used
@@ -110,7 +109,7 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
     // Expands wildcards if any
     private List<Object> handleWildcardLocation(String location) {
         if (location.startsWith('file:')) {
-            String locationFileName = location.tokenize(separator)[-1]
+            String locationFileName = location.tokenize('/')[-1]
             if (locationFileName.contains('*')) {
                 String parentLocation = location - locationFileName
                 try {

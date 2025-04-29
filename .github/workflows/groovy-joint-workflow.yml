@@ -149,8 +149,10 @@ jobs:
           key: cache-local-maven-${{ github.sha }}
       - name: "🪶 Add mavenLocal repository to build"
         run: sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' build.gradle
+      - name: 'Swap Groovy Version'
+        run: |
+          sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
         run: >
           ./gradlew build
-          -PgroovyVersion=${{needs.build_groovy.outputs.groovyVersion}}
           -x groovydoc
