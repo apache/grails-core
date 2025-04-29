@@ -45,7 +45,7 @@ ext {
             'profiles.version'                   : '10.0.2',
             'gradle-spock.version'               : '2.3-groovy-3.0',
             'gradle-nexus-publish-plugin.version': '2.0.0',
-            'spring-boot.version'                : '3.4.2',
+            'spring-boot.version'                : '3.4.5',
             'springloaded.version'               : '1.2.8.RELEASE',
     ]
 
@@ -86,7 +86,7 @@ ext {
             'commons-codec.version'        : '1.17.1',
             'geb-spock.version'            : '7.0',
             'grails-profiles.version'      : '10.0.2',
-            'groovy.version'               : '4.0.25',
+            'groovy.version'               : '4.0.26',
             'h2.version'                   : '2.3.232',
             'jackson.version'              : '2.18.2',
             'jquery.version'               : '3.7.1',
