@@ -274,7 +274,7 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
     }
 
     @Issue('https://github.com/sbglasius/external-config/issues/24')
-    @IgnoreIf({ os.windows })  // Wildcard not working on windows OS
+    @IgnoreIf(value={ os.windows }, reason = 'Wildcard not working on windows OS')
     def "when getting config with wildcard files from user home"() {
         given: "Three files in home, where two matches the pattern"
         def home = new File(System.getProperty('user.home'))
