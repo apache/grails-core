@@ -58,6 +58,8 @@ A list of Maven repositories to include in the generated build. Example:
 [source,yaml]
 ----
 repositories:
+    - "https://repo1.maven.org/maven2"
+    - "https://repository.apache.org/content/groups/snapshots"
     - "https://repo.grails.org/grails/core"
 ----
 
@@ -71,6 +73,8 @@ A list of Maven repositories to include in the buildscript section of the genera
 ----
 build:
     repositories:
+        - "https://repo1.maven.org/maven2"
+        - "https://repository.apache.org/content/groups/snapshots"
         - "https://repo.grails.org/grails/core"
 ----
 

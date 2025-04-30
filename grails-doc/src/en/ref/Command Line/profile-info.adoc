@@ -34,8 +34,8 @@ Displays detailed info about a profile
 [source,groovy]
 ----
 grails profile-info rest-api
-grails profile-info org.grails.profiles:rest-api
-grails profile-info org.grails.profiles:rest-api:3.1.0
+grails profile-info org.apache.grails.profiles:rest-api
+grails profile-info org.apache.grails.profiles:rest-api:3.1.0
 ----
 
 

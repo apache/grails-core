@@ -88,7 +88,8 @@ build.gradle
 ----
 repositories {
     mavenCentral()
-    maven { url = "https://repo.grails.org/grails/core/" }
+    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/core' }
 }
 dependencies {
     classpath "org.apache.grails:grails-hibernate5:{projectVersion}"

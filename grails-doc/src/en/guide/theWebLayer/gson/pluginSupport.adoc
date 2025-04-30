@@ -35,7 +35,9 @@ Below is an example Gradle build that adds a `compileViews` task for templates l
 ----
 buildscript {
     repositories {
-        maven { url "https://repo.grails.org/grails/core" }
+        mavenCentral()
+        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+        maven { url = 'https://repo.grails.org/grails/core' }
     }
     dependencies {
         classpath "org.grails.plugins:views-gradle:{version}"
@@ -47,7 +49,9 @@ import grails.views.gradle.json.*
 apply plugin:"java"
 
 repositories {
-    maven { url "https://repo.grails.org/grails/core" }
+    mavenCentral()
+    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/core' }
 }
 
 dependencies {

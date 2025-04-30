@@ -22,7 +22,7 @@ One profile can extend one or many different parent profiles. To define profile 
 [source,groovy]
 ----
 dependencies {
-    runtime "org.grails.profiles:base:$baseProfileVersion"
+    runtime "org.apache.grails.profiles:base:$baseProfileVersion"
 }
 ----
 
@@ -39,8 +39,8 @@ To define the order of inheritance ensure that your dependencies are declared in
 [source,groovy]
 ----
 dependencies {
-    runtime "org.grails.profiles:plugin:$baseProfileVersion"
-    runtime "org.grails.profiles:web:$baseProfileVersion"
+    runtime "org.apache.grails.profiles:plugin:$baseProfileVersion"
+    runtime "org.apache.grails.profiles:web:$baseProfileVersion"
 }
 ----
 
