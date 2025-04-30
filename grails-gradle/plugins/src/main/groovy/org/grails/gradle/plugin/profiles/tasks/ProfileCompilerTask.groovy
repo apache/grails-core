@@ -39,7 +39,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
@@ -127,7 +126,7 @@ class ProfileCompilerTask extends AbstractCompile {
 
         if (!profileData.containsKey('extends')) {
             List<String> dependencies = []
-            project.configurations.named(GrailsProfileGradlePlugin.RUNTIME_CONFIGURATION).get().allDependencies.all() { Dependency d ->
+            project.configurations.named(GrailsProfileGradlePlugin.RUNTIME_ONLY_CONFIGURATION).get().allDependencies.all() { Dependency d ->
                 dependencies.add("${d.group}:${d.name}:${d.version}".toString())
             }
             profileData.put('extends', dependencies.join(','))
@@ -196,7 +195,7 @@ class ProfileCompilerTask extends AbstractCompile {
             CompilerConfiguration configuration = new CompilerConfiguration()
             configuration.setScriptBaseClass('org.grails.cli.profile.commands.script.GroovyScriptCommand')
             configuration.setTargetDirectory(destination.asFile)
-            configuration.setClasspath(getClasspath().getAsPath())
+            configuration.setClasspath(classpath.asPath)
 
             def importCustomizer = new ImportCustomizer()
             importCustomizer.addStarImports('org.grails.cli.interactive.completers')
@@ -210,7 +209,6 @@ class ProfileCompilerTask extends AbstractCompile {
                 configuration.compilationCustomizers.clear()
                 configuration.compilationCustomizers.addAll(importCustomizer, new ASTTransformationCustomizer(new GroovyScriptCommandTransform()))
                 compilationUnit.addSource(source)
-                //TODO
                 compilationUnit.compile()
             }
         }

@@ -24,13 +24,21 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.attributes.AttributeCompatibilityRule
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.CompatibilityCheckDetails
+import org.gradle.api.attributes.Usage
+import org.gradle.api.component.AdhocComponentWithVariants
+import org.gradle.api.component.ConfigurationVariantDetails
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.SyncSpec
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.grails.gradle.plugin.profiles.tasks.ProfileCompilerTask
 
+import javax.inject.Inject
 import java.nio.file.Files
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
@@ -44,16 +52,58 @@ import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
 @CompileStatic
 class GrailsProfileGradlePlugin implements Plugin<Project> {
 
-    static final String CONFIGURATION_NAME = 'grails'
+    static final String USAGE_PROFILE_NAME = 'profile-runtime'
+    static final String RUNTIME_API_CONFIGURATION = 'profileRuntimeApi'
+    static final String RUNTIME_ONLY_CONFIGURATION = 'profileRuntimeOnly'
 
-    public static final String RUNTIME_CONFIGURATION = "profileRuntimeOnly"
+    private final ObjectFactory objectFactory
+
+    @Inject
+    GrailsProfileGradlePlugin(ObjectFactory objectFactory) {
+        this.objectFactory = objectFactory
+    }
 
     @Override
     void apply(Project project) {
-        project.getPluginManager().apply(BasePlugin.class)
-        project.configurations.create(CONFIGURATION_NAME)
+        project.getPluginManager().apply(BasePlugin)
 
-        NamedDomainObjectProvider<Configuration> profileConfiguration = project.configurations.register(RUNTIME_CONFIGURATION)
+        Usage profileUsage = objectFactory.named(Usage, USAGE_PROFILE_NAME)
+
+        project.dependencies.attributesSchema {
+            it.attribute(Usage.USAGE_ATTRIBUTE) {
+                it.compatibilityRules.add(JavaRuntimeCompatibility)
+            }
+        }
+
+        NamedDomainObjectProvider<Configuration> runtimeApiConfiguration = project.configurations.register(RUNTIME_API_CONFIGURATION)
+        runtimeApiConfiguration.configure { Configuration it ->
+            it.description = "Dependencies exported transitively to other profile projects"
+            it.canBeConsumed = false
+            it.canBeResolved = false
+            it.attributes {
+                it.attribute(Usage.USAGE_ATTRIBUTE, profileUsage)
+                it.attribute(Category.CATEGORY_ATTRIBUTE, objectFactory.named(Category, Category.LIBRARY))
+            }
+        }
+
+        NamedDomainObjectProvider<Configuration> runtimeOnlyConfiguration = project.configurations.register(RUNTIME_ONLY_CONFIGURATION)
+        runtimeOnlyConfiguration.configure { Configuration it ->
+            it.description = "Dependencies required to compile a profile project"
+            it.canBeConsumed = true
+            it.canBeResolved = true
+            it.extendsFrom(runtimeApiConfiguration.get())
+            it.attributes {
+                it.attribute(Usage.USAGE_ATTRIBUTE, profileUsage)
+                it.attribute(Category.CATEGORY_ATTRIBUTE, objectFactory.named(Category, Category.LIBRARY))
+            }
+        }
+
+        project.components.withType(AdhocComponentWithVariants).configureEach { AdhocComponentWithVariants comp ->
+            comp.addVariantsFromConfiguration(runtimeOnlyConfiguration.get()) { ConfigurationVariantDetails details ->
+                // do not publish the configuration, only it's files for use in the compiler
+                details.mapToOptional()
+            }
+        }
 
         TaskProvider<Task> processProfileResourcesTask = project.tasks.register("processProfileResources")
         processProfileResourcesTask.configure { Task task ->
@@ -78,7 +128,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
                         s.into('skeleton')
                     }
 
-                    sync.into(project.layout.buildDirectory.dir('resources/profile'))
+                    sync.into(project.layout.buildDirectory.dir('resources/profile/META-INF/grails-profile'))
                 }
             }
         }
@@ -89,7 +139,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             it.config.set project.layout.projectDirectory.file('profile.yml')
             it.source project.layout.projectDirectory.dir('commands')
             it.templatesDirectory.set project.layout.projectDirectory.dir('templates')
-            it.classpath = profileConfiguration.get()
+            it.classpath = runtimeOnlyConfiguration.get()
         }
 
         TaskProvider<Jar> profileJarTask = project.tasks.register("profileJar", Jar)
@@ -136,6 +186,19 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
 
         project.tasks.named("assemble").configure { Task it ->
             it.dependsOn(profileJarTask)
+        }
+    }
+}
+
+/**
+ * I'm not sure why a separate configuration was originally created for the profiles, but maybe they are combined
+ * into a single gradle project.  For compatibility purposes, treat java-runtime as a usable substitute
+ */
+class JavaRuntimeCompatibility implements AttributeCompatibilityRule<Usage> {
+    @Override
+    void execute(CompatibilityCheckDetails<Usage> d) {
+        if (d.consumerValue.name == GrailsProfileGradlePlugin.USAGE_PROFILE_NAME && d.producerValue.name == Usage.JAVA_RUNTIME) {
+            d.compatible()
         }
     }
 }

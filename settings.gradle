@@ -303,6 +303,9 @@ project(':grails-test-examples-mongodb-gson-templates').projectDir = new File(se
 include 'grails-profiles-base'
 project(':grails-profiles-base').projectDir = file('grails-profiles/base')
 
+include 'grails-profiles-profile'
+project(':grails-profiles-profile').projectDir = file('grails-profiles/profile')
+
 // Functional Tests
 include (
         'grails-test-examples-async-events-pubsub-demo',

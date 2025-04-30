@@ -1,6 +1,23 @@
-grailsPublish {
-	title = "Grails Profile Profile"
-	desc = "A profile to create profiles"
-	developers = [graemerocher:'Graeme Rocher']
-}    
+plugins {
+	id 'groovy'
+	id 'org.apache.grails.gradle.grails-profile'
+}
 
+group = 'org.apache.grails.profiles'
+version = projectVersion
+
+ext {
+	pomArtifactId = 'profile'
+	pomTitle = 'Grails Profile Profile'
+	pomDescription = 'A profile to make creating profiles easier'
+	developers = [graemerocher: 'Graeme Rocher']
+}
+
+dependencies {
+	profileRuntimeOnly platform(project(':grails-bom'))
+	profileRuntimeOnly project(':grails-profiles-base')
+}
+
+apply {
+	from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+}

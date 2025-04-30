@@ -81,14 +81,14 @@ class GrailsProfilePublishGradlePlugin extends GrailsPublishGradlePlugin {
                     void execute(XmlProvider xml) {
                         Node dependenciesNode = xml.asNode().appendNode('dependencies')
 
-                        DependencySet dependencySet = project.configurations[GrailsProfileGradlePlugin.RUNTIME_CONFIGURATION].allDependencies
+                        DependencySet dependencySet = project.configurations[GrailsProfileGradlePlugin.RUNTIME_ONLY_CONFIGURATION].allDependencies
 
                         for (Dependency dependency : dependencySet) {
                             Node dependencyNode = dependenciesNode.appendNode('dependency')
                             dependencyNode.appendNode('groupId', dependency.group)
                             dependencyNode.appendNode('artifactId', dependency.name)
                             dependencyNode.appendNode('version', dependency.version)
-                            dependencyNode.appendNode('scope', GrailsProfileGradlePlugin.RUNTIME_CONFIGURATION)
+                            dependencyNode.appendNode('scope', GrailsProfileGradlePlugin.RUNTIME_ONLY_CONFIGURATION)
                         }
                     }
                 })

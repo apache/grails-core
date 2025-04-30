@@ -121,6 +121,7 @@ def publishedProjects = [
         'grails-wrapper',
         // profiles
         'grails-profiles-base',
+        'grails-profiles-profile',
 ]
 
 subprojects {

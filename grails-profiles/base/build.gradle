@@ -7,6 +7,7 @@ group = 'org.apache.grails.profiles'
 version = projectVersion
 
 ext {
+    pomArtifactId = 'base'
     pomTitle = 'Grails Base Profile'
     pomDescription = 'A profile for other profiles to extend from'
     developers = [graemerocher: 'Graeme Rocher']
@@ -14,11 +15,10 @@ ext {
 
 dependencies {
     profileRuntimeOnly platform(project(':grails-bom'))
-    profileRuntimeOnly project(':grails-shell-cli')
-    profileRuntimeOnly 'org.apache.groovy:groovy-jmx' // stop script 
+    profileRuntimeApi project(':grails-shell-cli')
+    profileRuntimeApi 'org.apache.groovy:groovy-jmx' // stop script uses GroovyMBean
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/profile-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

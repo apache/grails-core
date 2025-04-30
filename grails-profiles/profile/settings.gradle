@@ -1,8 +1,0 @@
-import org.apache.tools.ant.DirectoryScanner
-
-rootProject.name="profile"
-
-// Include .gitignore and other config files
-for(String file in DirectoryScanner.defaultExcludes) {
-    DirectoryScanner.removeDefaultExclude(file)
-}

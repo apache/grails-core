@@ -1,5 +1,0 @@
-if (project.name != "grails-profiles-base") {
-    tasks.named('compileProfile').configure { Task it ->
-        it.dependsOn(rootProject.project(':grails-profile-base').tasks.named('profileJar'))
-    }
-}
