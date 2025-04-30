@@ -40,8 +40,8 @@ import org.grails.cli.compiler.grape.DependencyResolutionFailedException
 class MavenProfileRepository extends AbstractJarProfileRepository {
 
     public static final GrailsRepositoryConfiguration DEFAULT_REPO = new GrailsRepositoryConfiguration("mavenCentral", new URI("https://repo1.maven.org/maven2"), true)
-    public static final GrailsRepositoryConfiguration GRAILS_CENTRAL = new GrailsRepositoryConfiguration("apacheSnapshot", new URI("https://repository.apache.org/content/groups/snapshots"), true)
-    public static final GrailsRepositoryConfiguration APACHE_SNAPSHOT = new GrailsRepositoryConfiguration("grailsCentral", new URI("https://repo.grails.org/grails/core"), true)
+    public static final GrailsRepositoryConfiguration APACHE_SNAPSHOT = new GrailsRepositoryConfiguration("apacheSnapshot", new URI("https://repository.apache.org/content/groups/snapshots"), true)
+    public static final GrailsRepositoryConfiguration GRAILS_CENTRAL = new GrailsRepositoryConfiguration("grailsCentral", new URI("https://repo.grails.org/grails/core"), true)
 
     List<GrailsRepositoryConfiguration> repositoryConfigurations
     AetherGrapeEngine grapeEngine
