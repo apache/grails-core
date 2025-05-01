@@ -39,8 +39,8 @@ To define the order of inheritance ensure that your dependencies are declared in
 [source,groovy]
 ----
 dependencies {
-    profileRuntimeOnly "org.grails.profiles:plugin:$baseProfileVersion"
-    profileRuntimeOnly "org.grails.profiles:web:$baseProfileVersion"
+    profileRuntimeApi "org.apache.grails.profiles:plugin:$baseProfileVersion"
+    profileRuntimeApi "org.apache.grails.profiles:web:$baseProfileVersion"
 }
 ----
 
