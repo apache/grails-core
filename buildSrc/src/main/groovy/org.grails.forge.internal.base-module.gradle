@@ -13,7 +13,7 @@ repositories {
 }
 
 version = project.projectVersion
-group "org.apache.grails.forge"
+group = "org.apache.grails.forge"
 
 ext.isSnapshot = version.toString().endsWith("-SNAPSHOT")
 

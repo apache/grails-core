@@ -4,7 +4,7 @@ plugins {
 }
 
 version = project.projectVersion
-group "org.apache.grails.forge"
+group = "org.apache.grails.forge"
 
 repositories {
     mavenCentral()
