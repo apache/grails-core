@@ -16,7 +16,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "🔨 Run Build"
         id: build
         run: ./gradlew build
@@ -46,7 +46,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "✅ Run Tests"
         run: >
           ./gradlew
@@ -98,7 +98,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "✅ Run Tests"
         run: ./gradlew grails-forge-analytics-postgres:test
       - name: "🔨 Build Docker image"

@@ -25,7 +25,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "🔨 Run Build"
         id: build
         run: ./gradlew build
@@ -60,7 +60,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -98,7 +98,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -136,7 +136,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -174,7 +174,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build (Powershell)"

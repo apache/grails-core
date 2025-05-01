@@ -25,7 +25,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: '⚙️ Run pre-release'
         id: release_version
         uses: grails/grails-github-actions/pre-release@asf
@@ -136,7 +136,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -180,7 +180,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -224,7 +224,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build (Powershell)"
@@ -272,7 +272,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_ENTERPRISE_ACCESS_KEY }}
       - name: "🚀 Grails SDK Minor Release"
         if: contains(needs.build.outputs.release_version, 'M')
         run: ./gradlew sdkMinorRelease
