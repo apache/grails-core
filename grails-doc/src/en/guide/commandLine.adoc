@@ -151,9 +151,11 @@ Once the Grails CLI has been successfully installed, you can activate it using t
 grails create-app myapp
 ----
 
-A Grails framework CLI project is recognizable by the presence of the "grails-cli.yml" file, which is automatically generated at the project's root if it was created using the CLI. This file contains information about the project's profile, default package, and other variables.
+A Grails framework CLI project is recognizable by the presence of the "grails-forge-cli.yml" file, which is automatically generated at the project's root if it was created using the CLI. This file contains information about the project's profile, default package, and other variables.
 
-Here is an example of a "grails-cli.yml" configuration for a default Grails web application:
+The file was previously "grails-cli.yml", and that filename is backwards compatible for Grails Forge CLI.
+
+Here is an example of a "grails-forge-cli.yml" configuration for a default Grails web application:
 
 [source,yaml]
 ----
@@ -191,7 +193,7 @@ features:
   - yaml
 ----
 
-This "grails-cli.yml" configuration sets the default values for various aspects of the Grails web application, including the application type, default package, test framework, source language, build tool, GORM implementation, servlet implementation, and a list of enabled features.
+This "grails-forge-cli.yml" configuration sets the default values for various aspects of the Grails web application, including the application type, default package, test framework, source language, build tool, GORM implementation, servlet implementation, and a list of enabled features.
 
 === Grails Default Package Configuration
 

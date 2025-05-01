@@ -485,7 +485,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
                 repositories {
                     maven { url "\${System.getenv('LOCAL_MAVEN_PATH')}\" }
                     maven { url = 'https://repo.grails.org/grails/core' }
-                    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+                    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
                 }
                 dependencies {
                     classpath "org.apache.grails:grails-gradle-plugins:\$grailsGradlePluginVersion"
@@ -500,7 +500,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         
             repositories {
                 maven { url = 'https://repo.grails.org/grails/core' }
-                maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+                maven { url = 'https://repository.apache.org/content/groups/snapshots' }
             }
 
             dependencies {
@@ -554,7 +554,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
                 repositories {
                     maven { url "\${System.getenv('LOCAL_MAVEN_PATH')}\" }
                     maven { url = 'https://repo.grails.org/grails/core' }
-                    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+                    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
                 }
                 dependencies {
                     classpath "org.apache.grails:grails-gradle-plugins:\$grailsGradlePluginVersion"
@@ -591,7 +591,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
                 repositories {
                     maven { url "\${System.getenv('LOCAL_MAVEN_PATH')}\" }
                     maven { url = 'https://repo.grails.org/grails/core' }                    
-                    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+                    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
                 }
                 dependencies {
                     classpath "org.apache.grails:grails-gradle-plugins:\$grailsGradlePluginVersion"

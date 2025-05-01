@@ -272,7 +272,6 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
         [file1, file2, file3]*.delete()
     }
 
-    @PendingFeatureIf(value={ os.windows }, reason = 'Wildcard is not working on windows OS')
     def "when getting config with wildcard files from user home"() {
         given: "Three files in home, where two matches the pattern"
         def home = new File(System.getProperty('user.home'))
