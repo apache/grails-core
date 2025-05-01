@@ -3,8 +3,8 @@ plugins {
     id "org.grails.forge.internal.aggregator"
 }
 
-version project.projectVersion
-group "org.grails.forge"
+version = project.projectVersion
+group = "org.apache.grails.forge"
 
 def ossUser = System.getenv("SONATYPE_USERNAME") ?: rootProject.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
 def ossPass = System.getenv("SONATYPE_PASSWORD") ?: rootProject.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''

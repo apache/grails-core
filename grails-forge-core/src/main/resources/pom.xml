@@ -18,9 +18,9 @@
             <version>7.0.0-M2</version>
         </dependency>
         <dependency>
-            <groupId>org.grails.plugins</groupId>
-            <artifactId>quartz</artifactId>
-            <version>4.0.0-M2</version>
+            <groupId>org.apache.grails</groupId>
+            <artifactId>grails-quartz</artifactId>
+            <version>4.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <!-- Last released Feb 24, 2021 -->
@@ -55,13 +55,13 @@
             <version>1.2.1</version>
         </dependency>
         <dependency>
-            <!-- use version from https://github.com/grails/grails-core/blob/7.0.x/gradle.properties-->
+            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties-->
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-http-client</artifactId>
             <version>4.6.5</version>
         </dependency>
         <dependency>
-            <!-- use version from https://github.com/grails/grails-core/blob/7.0.x/gradle.properties-->
+            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties-->
             <groupId>io.micronaut.serde</groupId>
             <artifactId>micronaut-serde-jackson</artifactId>
             <version>2.11.0</version>

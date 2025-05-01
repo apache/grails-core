@@ -51,7 +51,7 @@ public class GrailsConsole implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails")
+                .groupId("org.apache.grails")
                 .artifactId("grails-console")
                 .console());
     }

@@ -50,8 +50,8 @@ public class GormTestingSupport implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails")
-                .artifactId("grails-gorm-testing-support")
+                .groupId("org.apache.grails")
+                .artifactId("grails-testing-support-datamapping")
                 .testImplementation());
     }
 }

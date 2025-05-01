@@ -16,7 +16,7 @@ class LogbackGroovyConfigSpec extends ApplicationContextSpec implements CommandO
         then:
         output.containsKey("build.gradle")
         def build = output.get("build.gradle")
-        build.contains("implementation \"org.grails:grails-logging\"")
+        build.contains("implementation \"org.apache.grails:grails-logging\"")
         build.contains("implementation \"io.github.virtualdogbert:logback-groovy-config:1.12.4\"")
 
         where:

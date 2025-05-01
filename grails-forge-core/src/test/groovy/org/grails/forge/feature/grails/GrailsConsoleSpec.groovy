@@ -12,6 +12,6 @@ class GrailsConsoleSpec extends BeanContextSpec {
                 .render()
 
         then:
-        template.contains("console \"org.grails:grails-console\"")
+        template.contains("console \"org.apache.grails:grails-console\"")
     }
 }

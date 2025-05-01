@@ -72,28 +72,23 @@ public class ViewJson extends GrailsViews implements DefaultFeature {
         config.put("grails.mime.types.text", "text/plain");
         config.put("grails.mime.types.all", "*/*");
 
-        generatorContext.addBuildscriptDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("views-gradle")
-                .buildSrc());
-
         generatorContext.addBuildPlugin(GradlePlugin.builder()
-                .id("org.grails.plugins.views-json")
+                .id("org.apache.grails.gradle.grails-gson")
                 .useApplyPlugin(true)
                 .build());
 
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("views-json")
+                .groupId("org.apache.grails")
+                .artifactId("grails-views-gson")
                 .implementation());
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("views-json-templates")
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-mongodb-gson-templates")
                 .implementation());
 
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails")
-                .artifactId("views-json-testing-support")
+                .groupId("org.apache.grails")
+                .artifactId("grails-testing-support-views-gson")
                 .testImplementation());
 
         generatorContext.addTemplate("application_index_gson", new RockerTemplate(getViewFolderPath() + "application/index.gson", index.template()));

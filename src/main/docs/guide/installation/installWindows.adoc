@@ -1,4 +1,4 @@
-* Download the latest binary from https://github.com/grails/grails-forge/releases/[Grails Forge Release]
+* Download the latest binary from https://github.com/apache/grails-forge/releases/[Grails Forge Release]
 * Extract the binary to appropriate location (For example: `C:\grails`)
 * Create an environment variable `GRAILS_HOME` which points to the installation directory i.e. `C:\grails`
 * Update the `PATH` environment variable, append `%GRAILS_HOME%\bin`.

@@ -29,7 +29,7 @@ class HibernateGormSpec extends ApplicationContextSpec implements CommandOutputF
                 .render()
 
         then:
-        template.contains('implementation "org.grails.plugins:hibernate5"')
+        template.contains('implementation "org.apache.grails:grails-data-hibernate5"')
         template.contains('runtimeOnly "com.zaxxer:HikariCP"')
         template.contains('runtimeOnly "com.h2database:h2"')
     }
@@ -41,7 +41,7 @@ class HibernateGormSpec extends ApplicationContextSpec implements CommandOutputF
                 .renderBuildSrc()
 
         then:
-        template.contains('implementation "org.grails.plugins:hibernate5"')
+        template.contains('implementation "org.apache.grails:grails-data-hibernate5"')
     }
 
     void "test buildSrc is present for buildscript dependencies"() {
@@ -51,7 +51,7 @@ class HibernateGormSpec extends ApplicationContextSpec implements CommandOutputF
 
         expect:
         buildGradle != null
-        buildGradle.contains("classpath \"org.grails.plugins:hibernate5\"")
+        buildGradle.contains("classpath \"org.apache.grails:grails-data-hibernate5\"")
 
     }
 

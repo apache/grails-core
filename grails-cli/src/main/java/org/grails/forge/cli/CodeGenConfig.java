@@ -103,7 +103,13 @@ public class CodeGenConfig {
 
     public static CodeGenConfig load(BeanContext beanContext, File directory, ConsoleOutput consoleOutput) {
 
-        File grailsCli = new File(directory, "grails-cli.yml");
+        File grailsCli = new File(directory, "grails-forge-cli.yml");
+
+        if (!grailsCli.exists()) {
+            // backwards compatibility for grails-cli.yml
+            grailsCli = new File(directory, "grails-cli.yml");
+        }
+
         if (grailsCli.exists()) {
             try (InputStream inputStream = Files.newInputStream(grailsCli.toPath())) {
                 Yaml yaml = new Yaml();
@@ -154,7 +160,7 @@ public class CodeGenConfig {
                             .map(Feature::getName)
                             .collect(Collectors.toList()));
 
-                    consoleOutput.warning("This project is using Grails CLI v2 but is still using the v1 grails-cli.yml format");
+                    consoleOutput.warning("This project is using Grails CLI v2 but is still using the v1 grails-forge-cli.yml format");
                     consoleOutput.warning("To replace the configuration with the new format, run `grails update-cli-config`");
                 }
 

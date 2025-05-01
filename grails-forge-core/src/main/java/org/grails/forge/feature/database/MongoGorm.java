@@ -66,8 +66,8 @@ public class MongoGorm extends GormOneOfFeature {
         Map<String, Object> config = generatorContext.getConfiguration();
         config.put("grails.mongodb.url", "mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/foo");
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("mongodb")
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-mongodb")
                 .implementation());
     }
 

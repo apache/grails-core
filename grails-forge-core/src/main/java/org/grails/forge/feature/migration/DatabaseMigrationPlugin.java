@@ -52,13 +52,13 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
     public void apply(GeneratorContext generatorContext) {
         final String srcDirPath = getSrcDirPath();
         generatorContext.addBuildscriptDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("database-migration")
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-hibernate5-dbmigration")
                 .buildSrc()
                 .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))));
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("database-migration")
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-hibernate5-dbmigration")
                 .implementation());
     }
 

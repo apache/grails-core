@@ -15,11 +15,11 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
         final String buildGradle = output["build.gradle"]
 
         expect:
-        buildGradle.contains("implementation \"org.grails:grails-plugin-rest\"")
-        buildGradle.contains("implementation \"org.grails:grails-plugin-databinding\"")
-        buildGradle.contains("implementation \"org.grails:grails-plugin-i18n\"")
-        buildGradle.contains("implementation \"org.grails:grails-plugin-services\"")
-        buildGradle.contains("implementation \"org.grails:grails-plugin-interceptors\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-rest-transforms\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-databinding\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-i18n\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-services\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-interceptors\"")
     }
 
     void "test i18n message properties files are present"() {

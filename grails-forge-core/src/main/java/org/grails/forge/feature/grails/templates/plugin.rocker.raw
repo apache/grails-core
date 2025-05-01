@@ -45,10 +45,10 @@ class @project.getClassName()GrailsPlugin extends Plugin {
    //    def developers = [ [ name: "Joe Bloggs", email: "joe@@bloggs.net" ]]
 
        // Location of the plugin's issue tracker.
-   //    def issueManagement = [ system: "GitHub", url: "https://github.com/grails/@project.getClassName()/issues" ]
+   //    def issueManagement = [ system: "GitHub", url: "https://github.com/apache/@project.getClassName()/issues" ]
 
        // Online location of the plugin's browseable source code.
-   //    def scm = [ url: "https://github.com/grails/@project.getClassName()" ]
+   //    def scm = [ url: "https://github.com/apache/@project.getClassName()" ]
 
        Closure doWithSpring() { {->
                // TODO Implement runtime spring config (optional)

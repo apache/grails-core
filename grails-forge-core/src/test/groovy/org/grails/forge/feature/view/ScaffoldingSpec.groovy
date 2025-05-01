@@ -22,7 +22,7 @@ class ScaffoldingSpec extends ApplicationContextSpec implements CommandOutputFix
                 .render()
 
         then:
-        template.contains('implementation "org.grails.plugins:scaffolding"')
+        template.contains('implementation "org.apache.grails:grails-scaffolding"')
         template.contains('runtimeOnly "org.fusesource.jansi:jansi"')
     }
 

@@ -41,7 +41,7 @@ class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
                 .render()
 
         then:
-        template.contains("implementation \"org.grails.plugins:mongodb\"")
+        template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
     }
 
     void "test gorm mongodb with embedded-mongodb feature"() {
@@ -51,7 +51,7 @@ class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
                 .render()
 
         then:
-        template.contains("implementation \"org.grails.plugins:mongodb\"")
+        template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
         template.contains("testRuntimeOnly \"org.grails.plugins:embedded-mongodb:2.0.1\"")
     }
 

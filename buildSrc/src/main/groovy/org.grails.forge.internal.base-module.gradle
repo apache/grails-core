@@ -12,8 +12,8 @@ repositories {
     maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
 }
 
-version project.projectVersion
-group "org.grails.forge"
+version = project.projectVersion
+group = "org.apache.grails.forge"
 
 ext.isSnapshot = version.toString().endsWith("-SNAPSHOT")
 

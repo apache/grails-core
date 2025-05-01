@@ -49,8 +49,8 @@ public class GrailsCache implements Feature {
         config.put("grails.cache.cleanAtStartup", false);
         config.put("grails.cache.cacheManager", "grails.plugin.cache.GrailsConcurrentMapCacheManager");
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("cache")
+                .groupId("org.apache.grails")
+                .artifactId("grails-cache")
                 .implementation());
     }
 
@@ -66,7 +66,7 @@ public class GrailsCache implements Feature {
 
     @Override
     public String getDocumentation() {
-        return "https://grails-plugins.github.io/grails-cache/latest/guide/index.html";
+        return "https://docs.grails.org/";
     }
 
 }

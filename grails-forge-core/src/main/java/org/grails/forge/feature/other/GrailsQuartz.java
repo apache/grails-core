@@ -46,8 +46,8 @@ public class GrailsQuartz implements Feature {
     public void apply(GeneratorContext generatorContext) {
         generatorContext.getConfiguration().put("quartz.autoStartup", true);
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .lookupArtifactId("quartz")
+                .groupId("org.apache.grails")
+                .lookupArtifactId("grails-quartz")
                 .implementation());
     }
 
@@ -63,7 +63,7 @@ public class GrailsQuartz implements Feature {
 
     @Override
     public String getDocumentation() {
-        return "https://grails-plugins.github.io/grails-quartz/latest/guide/index.html";
+        return "https://apache.github.io/grails-quartz/latest/";
     }
 
 }

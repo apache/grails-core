@@ -20,7 +20,7 @@ class GradleDependencyComparatorSpec extends Specification {
                  dep(Dependency.builder().groupId("io.micronaut").artifactId("micronaut-http-client").implementation(), ctx),
                  dep(Dependency.builder().groupId("io.micronaut.openapi").artifactId("micronaut-openapi").annotationProcessor(), ctx),
                  dep(Dependency.builder().groupId("io.micronaut.sql").artifactId("micronaut-jdbc-hikari").implementation(), ctx),
-                 dep(Dependency.builder().groupId("org.grails").artifactId("grails-console").console(), ctx),
+                 dep(Dependency.builder().groupId("org.apache.grails").artifactId("grails-console").console(), ctx),
                  dep(Dependency.builder().groupId("org.testcontainers").artifactId("testcontainers").testImplementation(), ctx),
                  dep(Dependency.builder().groupId("mysql").artifactId("mysql-connector-java").runtimeOnly(), ctx),
                  dep(Dependency.builder().groupId("org.testcontainers").artifactId("junit-jupiter").testImplementation(), ctx),
@@ -38,7 +38,7 @@ class GradleDependencyComparatorSpec extends Specification {
         "${str(dependencies[4])}" == 'implementation "io.swagger.core.v3:swagger-annotations"'
         "${str(dependencies[5])}" == 'implementation "jakarta.annotation:jakarta.annotation-api"'
         "${str(dependencies[6])}" == 'compileOnly "io.micronaut.openapi:micronaut-openapi"'
-        "${str(dependencies[7])}" == 'console "org.grails:grails-console"'
+        "${str(dependencies[7])}" == 'console "org.apache.grails:grails-console"'
         "${str(dependencies[8])}" == 'runtimeOnly "ch.qos.logback:logback-classic"'
         "${str(dependencies[9])}" == 'runtimeOnly "mysql:mysql-connector-java"'
         "${str(dependencies[10])}" == 'testImplementation "org.testcontainers:junit-jupiter"'
