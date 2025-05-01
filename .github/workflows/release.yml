@@ -4,7 +4,7 @@ on:
     types: [published]
 jobs:
   build:
-    name: "Release artifacts to Bintray, Maven Central & SDKMAN, and publish documentation"
+    name: "Release artifacts to GitHub release and SDKMAN plus publish source & documentation"
     runs-on: ubuntu-latest
     permissions:
       contents: write  #  to create release
