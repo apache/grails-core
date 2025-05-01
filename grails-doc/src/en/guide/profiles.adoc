@@ -52,7 +52,7 @@ NOTE: Commands such as `profile-info` or `list-profiles` are not available when 
 ==== Profile Repositories
 
 
-By default, Grails will resolve profiles from  https://repo.maven.org/maven2/org/apache/grails/profiles/[Maven central repository]. However, you can override what repositories will be searched by specifying repositories in the `USER_HOME/.grails/settings.groovy` file.
+By default, Grails will resolve profiles from  https://repo1.maven.org/maven2/org/apache/grails/profiles/[Maven central repository]. However, you can override what repositories will be searched by specifying repositories in the `USER_HOME/.grails/settings.groovy` file.
 
 If you want profiles to be resolved with a custom repository in addition to the Maven central repository, you must specify Maven central in the file as well:
 

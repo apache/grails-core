@@ -3,11 +3,11 @@ skeleton:
     executable: ["**/gradlew*", "**/grailsw*"]
     binaryExtensions: ['png','gif','jpg','jpeg','ico','icns','pdf','zip','jar','class']
 repositories:
-    - "https://repo.maven.org/maven2"
+    - "https://repo1.maven.org/maven2"
     - "https://repo.grails.org/grails/core"
 build:
     repositories:
-        - "https://repo.maven.org/maven2"
+        - "https://repo1.maven.org/maven2"
         - "https://repo.grails.org/grails/core"
     plugins:
         - eclipse
