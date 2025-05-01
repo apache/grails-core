@@ -50,7 +50,7 @@ class MarkupViewGrailsPlugin extends Plugin {
     def license = "APACHE"
 
     // Details of company behind the plugin (if there is one)
-    def organization = [ name: "OCI", url: "https://www.ociweb.com/" ]
+    def organization = [name: 'Grails', url: 'https://grails.org']
 
     // Any additional developers beyond the author specified above.
     def developers = [ [ name: "Graeme Rocher", email: "graeme.rocher@gmail.com" ]]
