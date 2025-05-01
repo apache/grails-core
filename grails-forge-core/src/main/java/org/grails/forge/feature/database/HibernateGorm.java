@@ -80,12 +80,12 @@ public class HibernateGorm extends GormFeature implements DatabaseDriverConfigur
         config.put("hibernate.cache.use_query_cache", false);
 
         generatorContext.addBuildscriptDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("hibernate5")
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-hibernate5")
                 .buildSrc());
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.plugins")
-                .artifactId("hibernate5")
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-hibernate5")
                 .implementation());
         generatorContext.addDependency(Dependency.builder()
                 .groupId("com.zaxxer")

@@ -15,7 +15,7 @@ class GebWithTestcontainersSpec extends ApplicationContextSpec implements Comman
         def buildGradle = output['build.gradle']
 
         expect:
-        buildGradle.contains('integrationTestImplementation testFixtures("org.grails.plugins:geb")')
+        buildGradle.contains('integrationTestImplementation testFixtures("org.apache.grails:grails-geb")')
     }
 
     @Unroll

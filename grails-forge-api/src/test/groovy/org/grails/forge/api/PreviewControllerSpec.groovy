@@ -28,7 +28,7 @@ class PreviewControllerSpec extends Specification {
         def map = client.previewApp(ApplicationType.DEFAULT_OPTION, "test", [GrailsQuartz.FEATURE_NAME], null, null, null)
 
         then:
-        map.contents['build.gradle'].contains('org.grails.plugins:quartz')
+        map.contents['build.gradle'].contains('org.apache.grails:grails-quartz')
     }
 
     void "test preview - bad feature"() {

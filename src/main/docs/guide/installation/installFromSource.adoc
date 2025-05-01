@@ -2,7 +2,7 @@ Clone the repository as follows:
 
 [source,bash]
 ----
-$ git clone https://github.com/grails/grails-forge.git
+$ git clone https://github.com/apache/grails-forge.git
 ----
 
 

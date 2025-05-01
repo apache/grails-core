@@ -27,10 +27,9 @@ class ViewMarkupSpec extends ApplicationContextSpec implements CommandOutputFixt
                 .render()
 
         then:
-        template.contains("apply plugin: \"org.grails.grails-web\"")
-        template.contains("apply plugin: \"org.grails.plugins.views-markup\"")
-        template.contains("implementation \"org.grails.plugins:views-markup\"")
-        !template.contains("apply plugin: \"org.grails.plugins.views-json\"")
+        template.contains("apply plugin: \"org.apache.grails.gradle.grails-web\"")
+        template.contains("implementation \"org.apache.grails:grails-views-markup\"")
+        !template.contains("apply plugin: \"org.apache.grails.gradle.grails-gson\"")
     }
 
     void "test default gml views are present"() {
@@ -52,12 +51,11 @@ class ViewMarkupSpec extends ApplicationContextSpec implements CommandOutputFixt
         final String build = output['build.gradle']
 
         then:
-        build.contains("apply plugin: \"org.grails.grails-web\"")
-        build.contains("apply plugin: \"org.grails.plugins.views-markup\"")
-        build.contains("implementation \"org.grails.plugins:views-markup\"")
-        !build.contains("apply plugin: \"org.grails.plugins.views-json\"")
-        !build.contains("implementation \"org.grails.plugins:views-json\"")
-        !build.contains("implementation \"org.grails:views-json-testing-support\"")
+        build.contains("apply plugin: \"org.apache.grails.gradle.grails-web\"")
+        build.contains("implementation \"org.apache.grails:grails-views-markup\"")
+        !build.contains("apply plugin: \"org.apache.grails.gradle.grails-gson\"")
+        !build.contains("implementation \"org.apache.grails:grails-views-gson\"")
+        !build.contains("implementation \"org.apache.grails:grails-testing-support-views-gson\"")
 
         where:
         applicationType << [ApplicationType.REST_API]

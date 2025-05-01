@@ -25,7 +25,7 @@ class GrailsGradlePluginSpec extends BeanContextSpec implements CommandOutputFix
                 .renderBuildSrc()
 
         then:
-        template.contains('implementation "org.grails:grails-gradle-plugin"')
+        template.contains('implementation "org.apache.grails:grails-gradle-plugins"')
     }
 
     void "test buildSrc is present for buildscript dependencies"() {
@@ -35,7 +35,7 @@ class GrailsGradlePluginSpec extends BeanContextSpec implements CommandOutputFix
 
         expect:
         buildGradle != null
-        buildGradle.contains("classpath \"org.grails:grails-gradle-plugin\"")
+        buildGradle.contains("classpath \"org.apache.grails:grails-gradle-plugins\"")
 
     }
 
@@ -46,7 +46,7 @@ class GrailsGradlePluginSpec extends BeanContextSpec implements CommandOutputFix
                 .render()
 
         then:
-        template.contains("apply plugin: \"org.grails.grails-plugin\"")
+        template.contains("apply plugin: \"org.apache.grails.gradle.grails-plugin\"")
     }
 
 }

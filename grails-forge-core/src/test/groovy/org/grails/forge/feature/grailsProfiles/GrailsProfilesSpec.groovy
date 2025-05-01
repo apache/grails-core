@@ -18,7 +18,7 @@ class GrailsProfilesSpec extends ApplicationContextSpec implements CommandOutput
         then:
         output.containsKey("build.gradle")
         def build = output.get("build.gradle")
-        build.contains("profile \"org.grails.profiles:${applicationType.name.replace("_", "-")}\"")
+        build.contains("profile \"org.apache.grails.profiles:${applicationType.name.replace("_", "-")}\"")
 
         where:
         applicationType << ApplicationType.values().toList()

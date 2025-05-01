@@ -16,7 +16,7 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
         def buildGradle = output['build.gradle']
 
         expect:
-        buildGradle.contains('integrationTestImplementation testFixtures("org.grails.plugins:geb")')
+        buildGradle.contains('integrationTestImplementation testFixtures("org.apache.grails:grails-geb")')
         buildGradle.contains('testImplementation "org.seleniumhq.selenium:selenium-api"')
         buildGradle.contains('testImplementation "org.seleniumhq.selenium:selenium-support"')
         buildGradle.contains('testImplementation "org.seleniumhq.selenium:selenium-remote-driver"')

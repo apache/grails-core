@@ -62,18 +62,18 @@ class GrailsGradlePlugin implements DefaultFeature {
     public void apply(GeneratorContext generatorContext) {
         final ApplicationType applicationType = generatorContext.getApplicationType();
         generatorContext.addBuildscriptDependency(Dependency.builder()
-                .groupId("org.grails")
-                .artifactId("grails-gradle-plugin")
+                .groupId("org.apache.grails")
+                .artifactId("grails-gradle-plugins")
                 .buildSrc());
 
         if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-plugin").useApplyPlugin(true).build());
+            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.apache.grails.gradle.grails-plugin").useApplyPlugin(true).build());
         }
         if (generatorContext.getFeature(GrailsWeb.class).isPresent()) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-web").useApplyPlugin(true).build());
+            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.apache.grails.gradle.grails-web").useApplyPlugin(true).build());
         }
         if (generatorContext.getFeature(GrailsGsp.class).isPresent()) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.grails.grails-gsp").useApplyPlugin(true).build());
+            generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.apache.grails.gradle.grails-gsp").useApplyPlugin(true).build());
         }
     }
 }

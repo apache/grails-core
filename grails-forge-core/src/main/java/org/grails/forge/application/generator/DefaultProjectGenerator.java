@@ -83,7 +83,7 @@ public class DefaultProjectGenerator implements ProjectGenerator {
         features.sort(Comparator.comparing(Function.identity()));
 
         generatorContext.addTemplate("grailsCli",
-                new RockerTemplate("grails-cli.yml",
+                new RockerTemplate("grails-forge-cli.yml",
                         cli.template(Language.DEFAULT_OPTION,
                                 generatorContext.getTestFramework(),
                                 BuildTool.DEFAULT_OPTION,

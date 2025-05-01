@@ -50,8 +50,8 @@ public class ViewsJsonTestingSupport implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails")
-                .artifactId("views-json-testing-support")
+                .groupId("org.apache.grails")
+                .artifactId("grails-testing-support-views-gson")
                 .testImplementation());
     }
 }

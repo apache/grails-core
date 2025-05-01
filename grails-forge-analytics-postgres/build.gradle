@@ -3,8 +3,8 @@ plugins {
     id "io.micronaut.application" version "$micronautApplicationPluginVersion"
 }
 
-version project.projectVersion
-group "org.grails.forge"
+version = project.projectVersion
+group = "org.apache.grails.forge"
 
 repositories {
     mavenCentral()

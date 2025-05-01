@@ -62,7 +62,7 @@ public class LogbackGroovy implements LoggingFeature {
         generatorContext.addTemplate("loggingConfig", new RockerTemplate("grails-app/conf/logback-config.groovy", logbackGroovy.template(projectName, packageName, jansi)));
 
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails")
+                .groupId("org.apache.grails")
                 .artifactId("grails-logging")
                 .implementation());
 

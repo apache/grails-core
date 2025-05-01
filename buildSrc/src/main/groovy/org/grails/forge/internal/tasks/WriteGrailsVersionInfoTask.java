@@ -65,7 +65,7 @@ public abstract class WriteGrailsVersionInfoTask extends DefaultTask {
 
     private Map<String, String> generateProperties() {
         ArtifactResolutionResult result = getProject().getDependencies().createArtifactResolutionQuery()
-                .forModule("org.grails", "grails-bom", getVersion().get())
+                .forModule("org.apache.grails", "grails-bom", getVersion().get())
                 .withArtifacts(MavenModule.class, MavenPomArtifact.class)
                 .execute();
         Map<String, String> props = new TreeMap<>();

@@ -4,7 +4,7 @@ on:
     types: [published]
 jobs:
   build:
-    name: "Release artifacts to Bintray, Maven Central & SDKMAN, and publish documentation"
+    name: "Release artifacts to GitHub release and SDKMAN plus publish source & documentation"
     runs-on: ubuntu-latest
     permissions:
       contents: write  #  to create release
@@ -25,7 +25,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: '⚙️ Run pre-release'
         id: release_version
         uses: grails/grails-github-actions/pre-release@asf
@@ -34,23 +34,9 @@ jobs:
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
       - name: "🔨 Build All"
         run: ./gradlew grails-cli:assemble
-      - name: "🔐 Generate secring file"
-        env:
-          SECRING_FILE: ${{ secrets.SECRING_FILE }}
-        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
-      - name: "📤 Publish to Sonatype OSSRH"
-        env:
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_NEXUS_URL: ${{ secrets.SONATYPE_NEXUS_URL }}
-          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+      - name: "📦 Generate Docs"
         run: >
           ./gradlew
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
-          publishToSonatype
-          closeSonatypeStagingRepository
           docs
       - name: "📤 Upload CLI Zip"
         id: upload-release-asset
@@ -136,7 +122,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -180,7 +166,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build"
@@ -224,7 +210,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "📸 Build the Native Image"
         run: ./gradlew grails-cli:nativeCompile --no-daemon
       - name: "✅ Verify Build (Powershell)"
@@ -272,7 +258,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🚀 Grails SDK Minor Release"
         if: contains(needs.build.outputs.release_version, 'M')
         run: ./gradlew sdkMinorRelease

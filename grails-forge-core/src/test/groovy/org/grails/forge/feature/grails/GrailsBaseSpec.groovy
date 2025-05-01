@@ -16,9 +16,9 @@ class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
         def buildGradle = output['build.gradle']
 
         then:
-        buildGradle.contains("implementation \"org.grails:grails-core\"")
-        buildGradle.contains("implementation \"org.grails:grails-web-boot\"")
-        buildGradle.contains("implementation \"org.grails:grails-logging\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-core\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-web-boot\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-logging\"")
     }
 
     void "test src/main directories are present"() {

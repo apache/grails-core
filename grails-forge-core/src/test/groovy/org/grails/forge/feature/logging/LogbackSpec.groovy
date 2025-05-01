@@ -16,7 +16,7 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
         then:
         output.containsKey("build.gradle")
         def build = output.get("build.gradle")
-        build.contains("implementation \"org.grails:grails-logging\"")
+        build.contains("implementation \"org.apache.grails:grails-logging\"")
 
         where:
         applicationType << ApplicationType.values().toList()

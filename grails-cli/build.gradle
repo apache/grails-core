@@ -91,9 +91,9 @@ sdkman {
     version = project.version
     hashtag = "#grailsfw"
     platforms = [
-            "MAC_ARM64":"https://github.com/grails/grails-forge/releases/download/v${project.version}/grails-darwin-aarch64-v${project.version}.zip",
-            "MAC_OSX":"https://github.com/grails/grails-forge/releases/download/v${project.version}/grails-darwin-amd64-v${project.version}.zip",
-            "WINDOWS_64":"https://github.com/grails/grails-forge/releases/download/v${project.version}/grails-win-amd64-v${project.version}.zip",
-            "LINUX_64":"https://github.com/grails/grails-forge/releases/download/v${project.version}/grails-linux-amd64-v${project.version}.zip"
+            "MAC_ARM64":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-darwin-aarch64-v${project.version}.zip",
+            "MAC_OSX":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-darwin-amd64-v${project.version}.zip",
+            "WINDOWS_64":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-win-amd64-v${project.version}.zip",
+            "LINUX_64":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-linux-amd64-v${project.version}.zip"
     ]
 }

@@ -65,7 +65,7 @@ public class GrailsProfiles implements DefaultFeature {
         config.put("grails.profile", profile);
 
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails.profiles")
+                .groupId("org.apache.grails.profiles")
                 .artifactId(profile)
                 .scope(Scope.PROFILE));
     }

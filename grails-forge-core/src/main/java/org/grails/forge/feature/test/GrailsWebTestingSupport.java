@@ -50,8 +50,8 @@ public class GrailsWebTestingSupport implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.grails")
-                .artifactId("grails-web-testing-support")
+                .groupId("org.apache.grails")
+                .artifactId("grails-testing-support-web")
                 .testImplementation());
     }
 }
