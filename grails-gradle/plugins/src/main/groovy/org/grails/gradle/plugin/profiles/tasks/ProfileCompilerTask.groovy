@@ -134,7 +134,7 @@ class ProfileCompilerTask extends AbstractCompile {
         } else {
             profileData = new LinkedHashMap<String, Object>()
         }
-        profileData.put(PROFILE_NAME, project.name)
+        profileData.put(PROFILE_NAME, project.findProperty('pomArtifactId') ?: project.name)
 
         if (!profileData.containsKey('extends')) {
             List<String> dependencies = []
