@@ -1,7 +1,8 @@
 buildscript {
     repositories {
-@buildRepositories@
         mavenCentral()
+@buildRepositories@
+
     }
     dependencies {
         classpath platform("org.apache.grails:grails-bom:$grailsVersion")

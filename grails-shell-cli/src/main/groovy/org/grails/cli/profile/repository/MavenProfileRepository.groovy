@@ -40,8 +40,8 @@ import org.grails.cli.profile.Profile
 @CompileStatic
 class MavenProfileRepository extends AbstractJarProfileRepository {
 
-    public static final GrailsRepositoryConfiguration DEFAULT_REPO = new GrailsRepositoryConfiguration("mavenCentral", new URI("https://repo1.maven.org/maven2"), true)
-    public static final GrailsRepositoryConfiguration APACHE_SNAPSHOT = new GrailsRepositoryConfiguration("apacheSnapshot", new URI("https://repository.apache.org/content/groups/snapshots"), true)
+    public static final GrailsRepositoryConfiguration DEFAULT_REPO = new GrailsRepositoryConfiguration("apacheRepository", new URI("https://repository.apache.org/content/groups/public"), true)
+    public static final GrailsRepositoryConfiguration MAVEN_CENTRAL = new GrailsRepositoryConfiguration("mavenCentral", new URI("https://repo1.maven.org/maven2"), false)
 
     List<GrailsRepositoryConfiguration> repositoryConfigurations
     MavenResolverGrapeEngine grapeEngine
@@ -60,8 +60,9 @@ class MavenProfileRepository extends AbstractJarProfileRepository {
     }
 
     MavenProfileRepository() {
-        // Only add snapshot repository when grailsVersion is not set or it ends in SNAPSHOT
-        this((!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) ? [DEFAULT_REPO, APACHE_SNAPSHOT] : [DEFAULT_REPO])
+        // Use apache repository with SNAPSHOTS when grailsVersion is not set or it ends in SNAPSHOT
+        // otherwise use only mavenCentral
+        this((!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) ? [DEFAULT_REPO] : [MAVEN_CENTRAL])
     }
 
     @Override
