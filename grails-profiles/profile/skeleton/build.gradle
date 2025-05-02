@@ -2,7 +2,7 @@ buildscript {
     repositories {
         gradlePluginPortal()
         mavenCentral()
-        maven { url = 'https://repo1.maven.org/maven2' }
+        maven { url = 'https://repository.apache.org/content/groups/public' }
         maven { url = 'https://repo.grails.org/grails/core' }
         // mavenLocal()  // for local testing, do not commit uncommented
     }
@@ -19,7 +19,7 @@ version = '1.0.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo1.maven.org/maven2' }
+    maven { url = 'https://repository.apache.org/content/groups/public' }
     maven { url = 'https://repo.grails.org/grails/core' }
     // mavenLocal()  // for local testing, do not commit uncommented
 }  
