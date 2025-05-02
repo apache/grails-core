@@ -32,7 +32,6 @@ ext {
 dependencies {
     profileRuntimeApi platform(project(':grails-bom'))
     profileRuntimeApi 'org.apache.groovy:groovy-jmx' // stop script uses GroovyMBean
-    profileRuntimeApi project(':grails-shell-cli')
 }
 
 apply {
