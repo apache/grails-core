@@ -58,15 +58,3 @@ tasks.named('jar', Jar).configure { Jar it ->
         attributes 'Main-Class': 'grails.init.RunCommand'
     }
 }
-
-tasks.named('groovydoc') { Task it ->
-    it.enabled = false
-}
-
-tasks.named('javadocJar') { Task it ->
-    it.enabled = false
-}
-
-tasks.named('sourcesJar') { Task it ->
-    it.enabled = false
-}

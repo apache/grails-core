@@ -31,7 +31,7 @@ dependencies {
     implementation "org.apache.grails:grails-codecs"
     implementation "org.apache.grails:grails-services"
     implementation "org.apache.grails:grails-datasource"
-    implementation "org.apache.grails.web:grails-web-boot"
+    implementation "org.apache.grails:grails-web-boot"
     implementation "org.apache.grails:grails-logging"
     implementation "org.apache.grails:grails-cache"
     implementation "org.apache.grails:grails-events"
