@@ -35,10 +35,6 @@ dependencies {
     profileRuntimeApi project(':grails-shell-cli')
 }
 
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-}
-
 TaskProvider<Copy> copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy)
 copyWrapper.configure { Copy copy ->
     Project wrapperProject = rootProject.project(':grails-wrapper')
@@ -53,4 +49,8 @@ tasks.named('processProfileResources').configure {
 
 tasks.named('compileProfile').configure {
     it.dependsOn(copyWrapper)
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

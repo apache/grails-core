@@ -33,6 +33,22 @@ dependencies {
 	profileRuntimeOnly project(':grails-profiles-base')
 }
 
+TaskProvider<Copy> copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy)
+copyWrapper.configure { Copy copy ->
+	Project wrapperProject = rootProject.project(':grails-wrapper')
+	copy.from(wrapperProject.layout.projectDirectory.dir('shell'))
+	copy.from(wrapperProject.tasks.named('jar').get().outputs)
+	copy.into(project.layout.projectDirectory.dir('skeleton'))
+}
+
+tasks.named('processProfileResources').configure {
+	it.dependsOn(copyWrapper)
+}
+
+tasks.named('compileProfile').configure {
+	it.dependsOn(copyWrapper)
+}
+
 apply {
 	from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
