@@ -30,8 +30,7 @@ ext {
 }
 
 dependencies {
-    profileRuntimeOnly platform(project(':grails-bom'))
-    profileRuntimeApi project(":grails-profiles-base")
+    profileRuntimeOnly project(":grails-profiles-base")
 }
 
 apply {

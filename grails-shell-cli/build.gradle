@@ -99,6 +99,8 @@ dependencies {
     api 'org.springframework.boot:spring-boot-cli'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation "org.apache.maven:maven-resolver-provider:$apacheMavenVersion"
+    // TODO: replace ServiceLocator with RepositorySystemSupplier
+    // implementation "org.apache.maven:maven-resolver-supplier:$apacheMavenVersion"
     compileOnly "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
 
     implementation("org.apache.maven:maven-settings-builder:$apacheMavenVersion") {

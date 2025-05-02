@@ -34,22 +34,22 @@ import org.eclipse.aether.spi.locator.ServiceLocator
 import org.eclipse.aether.transport.file.FileTransporterFactory
 import org.eclipse.aether.transport.http.HttpTransporterFactory
 import org.eclipse.aether.util.repository.AuthenticationBuilder
-import org.grails.cli.compiler.grape.AetherGrapeEngine
 import org.grails.cli.compiler.grape.DefaultRepositorySystemSessionAutoConfiguration
 import org.grails.cli.compiler.grape.DependencyResolutionContext
+import org.grails.cli.compiler.grape.MavenResolverGrapeEngine
 import org.grails.cli.compiler.grape.RepositorySystemSessionAutoConfiguration
 
 /**
- *  Creates aether engine to resolve profiles. Mostly copied from {@link AetherGrapeEngine}.
+ *  Creates maven resolver engine to resolve profiles. Mostly copied from {@link MavenResolverGrapeEngine}.
  *  Created to support repositories with authentication.
  *
  * @author James Kleeh
  * @since 3.2
  */
 @CompileStatic
-class GrailsAetherGrapeEngineFactory {
+class GrailsMavenResolverGrapeEngineFactory {
 
-    static AetherGrapeEngine create(GroovyClassLoader classLoader,
+    static MavenResolverGrapeEngine create(GroovyClassLoader classLoader,
                                            List<GrailsRepositoryConfiguration> repositoryConfigurations,
                                            DependencyResolutionContext dependencyResolutionContext) {
 
@@ -69,7 +69,7 @@ class GrailsAetherGrapeEngineFactory {
         new DefaultRepositorySystemSessionAutoConfiguration()
                 .apply(repositorySystemSession, repositorySystem)
 
-        return new AetherGrapeEngine(classLoader, repositorySystem,
+        return new MavenResolverGrapeEngine(classLoader, repositorySystem,
                 repositorySystemSession, createRepositories(repositoryConfigurations),
                 dependencyResolutionContext, false)
     }
