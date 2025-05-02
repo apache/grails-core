@@ -24,6 +24,8 @@ import org.grails.cli.compiler.grape.RepositoryConfiguration
 /**
  * Created by jameskleeh on 10/31/16.
  */
+// TODO: This was created as an intermediate to prevent shipping all of the cli dependencies; but anywhere that this works
+// grails will already have a gradle project so we should just invoke via gradle instead
 class RunCommand {
 
     static final String DEFAULT_GRAILS_SHELL_VERSION = '7.0.0-SNAPSHOT'

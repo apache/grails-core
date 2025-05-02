@@ -39,7 +39,6 @@ public class Start {
 
     private static final String PROJECT_NAME = "grails-wrapper-impl";
     private static final String WRAPPER_PATH = "/org/apache/grails/" + PROJECT_NAME;
-    // TODO: Update to support multiple repositories for release and snapshot
     private static final String GRAILS_RELEASE_MAVEN_REPO_BASE_URL = "https://repository.apache.org/content/groups/public";
     private static final File WRAPPER_DIR = new File(System.getProperty("user.home") + "/.grails/wrapper");
     private static final File NO_VERSION_JAR = new File(WRAPPER_DIR, PROJECT_NAME + ".jar");
@@ -54,6 +53,26 @@ public class Start {
             return baseUrl;
         }
         return GRAILS_RELEASE_MAVEN_REPO_BASE_URL;
+    }
+
+    private static String getSnapshotVersion(String baseVersion) {
+        System.out.println("A Grails snapshot version has been detected.  Downloading latest snapshot.");
+        try {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAXParser saxParser = factory.newSAXParser();
+            FindSnapshotHandler findVersionHandler = new FindSnapshotHandler();
+            final String mavenMetadataFileUrl = getMavenBaseUrl() + WRAPPER_PATH + "/" + baseVersion + "/maven-metadata.xml";
+            HttpURLConnection conn = createHttpURLConnection(mavenMetadataFileUrl);
+            saxParser.parse(conn.getInputStream(), findVersionHandler);
+            return findVersionHandler.getVersion();
+        } catch (Exception e) {
+            if (!NO_VERSION_JAR.exists()) {
+                System.out.println("You must be connected to the internet the first time you use the Grails wrapper");
+                e.printStackTrace();
+                System.exit(1);
+            }
+            return null;
+        }
     }
 
     private static String getVersion() {
@@ -78,22 +97,23 @@ public class Start {
     private static HttpURLConnection createHttpURLConnection(String mavenMetadataFileUrl) throws IOException {
         final URL url = new URL(mavenMetadataFileUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestProperty("User-Agent", "Apache-Maven/3.9.6");
         conn.setInstanceFollowRedirects(true);
         return conn;
     }
 
 
-    private static boolean updateJar(String version) {
-
+    private static boolean updateJar(String baseVersion, String detailedVersion) {
         boolean success = false;
 
-        final String jarFileName = PROJECT_NAME + "-" + version;
+        final String localJarFilename = PROJECT_NAME + "-" + baseVersion;
+        final String remoteJarFilename = detailedVersion != null ? PROJECT_NAME + "-" + detailedVersion : PROJECT_NAME + "-" + baseVersion;
         final String jarFileExtension = ".jar";
 
         if (WRAPPER_DIR.exists() || WRAPPER_DIR.mkdirs()) {
             try {
-                File downloadedJar = File.createTempFile(jarFileName, jarFileExtension);
-                final String wrapperUrl = getMavenBaseUrl() + WRAPPER_PATH + "/" + version + "/" + jarFileName + jarFileExtension;
+                File downloadedJar = File.createTempFile(localJarFilename, jarFileExtension);
+                String wrapperUrl = getMavenBaseUrl() + WRAPPER_PATH + "/" + baseVersion + "/" + remoteJarFilename + jarFileExtension;
                 HttpURLConnection conn = createHttpURLConnection(wrapperUrl);
                 success = downloadWrapperJar(downloadedJar, conn.getInputStream());
             } catch (Exception e) {
@@ -120,10 +140,14 @@ public class Start {
 
         try {
             if (!NO_VERSION_JAR.exists() || (args.length > 0 && args[0].trim().equals("update-wrapper"))) {
-                System.out.println("Updating Grails wrapper jar to version: " + getVersion() + " located in: " + NO_VERSION_JAR.getAbsolutePath());
-                updateJar(getVersion());
+                String baseVersion = getVersion();
+                String detailedVersion = null;
+                if (baseVersion != null && baseVersion.endsWith("SNAPSHOT")) {
+                    detailedVersion = getSnapshotVersion(baseVersion);
+                }
+                updateJar(baseVersion, detailedVersion);
                 // remove "update-wrapper" command argument
-                if(args.length > 0) {
+                if (args.length > 0) {
                     args[0] = null;
                 }
             }
