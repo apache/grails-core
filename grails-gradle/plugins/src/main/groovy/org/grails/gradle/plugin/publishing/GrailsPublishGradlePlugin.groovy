@@ -25,10 +25,13 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.plugins.*
+import org.gradle.api.plugins.ExtensionContainer
+import org.gradle.api.plugins.ExtraPropertiesExtension
+import org.gradle.api.plugins.JavaPlatformExtension
+import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.plugins.PluginManager
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
@@ -38,6 +41,8 @@ import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.grails.gradle.plugin.util.SourceSets
+
+import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
 
 /**
  * A plugin to ease publishing Grails related artifacts - including source, groovydoc (as javadoc jars), and plugins
@@ -462,11 +467,12 @@ Note: if project properties are used, the properties must be defined prior to ap
             return null
         }
 
-        if (!project.sourceSets.main.hasProperty('groovy')) {
+        SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
+        if (!sourceSets.main.hasProperty('groovy')) {
             return null
         }
 
-        String pluginXml = "${project.sourceSets.main.groovy.getClassesDirectory().get().getAsFile()}/META-INF/grails-plugin.xml".toString()
+        String pluginXml = "${sourceSets.main.groovy.getClassesDirectory().get().getAsFile()}/META-INF/grails-plugin.xml".toString()
         new File(pluginXml).exists() ? [
                 source    : pluginXml,
                 classifier: getDefaultClassifier(),
@@ -543,18 +549,19 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         project.tasks.register('testSourcesJar', Jar).configure { Jar jar ->
             jar.onlyIf {
-                project.provider {
-                    project.extensions.findByType(GrailsPublishExtension).publishTestSources
-                }
+                project.extensions.findByType(GrailsPublishExtension).publishTestSources &&
+                        !jar.source.files.isEmpty()
             }
             jar.dependsOn('testClasses')
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
             jar.dirMode = 0755 // To avoid platform specific defaults
             jar.fileMode = 0644 // to avoid platform specific defaults
-            jar.from project.sourceSets.test.output
-            jar.inputs.files(project.sourceSets.test.output)
+            SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
+            jar.from sourceSets.test.output
+            jar.inputs.files(sourceSets.test.output)
             jar.archiveClassifier.set('tests')
+            jar.group = BUILD_GROUP
         }
 
         // TODO: Revisit this as an optional feature instead of forced, see @PendingFeature test case

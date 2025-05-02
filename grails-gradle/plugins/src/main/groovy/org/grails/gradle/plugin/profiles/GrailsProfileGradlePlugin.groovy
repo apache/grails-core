@@ -23,11 +23,13 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.AttributeCompatibilityRule
+import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.CompatibilityCheckDetails
+import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
 import org.gradle.api.component.AdhocComponentWithVariants
-import org.gradle.api.component.ConfigurationVariantDetails
+import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.SyncSpec
@@ -52,19 +54,22 @@ import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
 class GrailsProfileGradlePlugin implements Plugin<Project> {
 
     static final String USAGE_PROFILE_NAME = 'profile-runtime'
+    static final String COMPONENT_NAME = 'profile'
     static final String RUNTIME_API_CONFIGURATION = 'profileRuntimeApi'
     static final String RUNTIME_ONLY_CONFIGURATION = 'profileRuntimeOnly'
 
+    private final SoftwareComponentFactory softwareComponentFactory
     private final ObjectFactory objectFactory
 
     @Inject
-    GrailsProfileGradlePlugin(ObjectFactory objectFactory) {
+    GrailsProfileGradlePlugin(ObjectFactory objectFactory, SoftwareComponentFactory softwareComponentFactory) {
         this.objectFactory = objectFactory
+        this.softwareComponentFactory = softwareComponentFactory
     }
 
     @Override
     void apply(Project project) {
-        project.getPluginManager().apply(BasePlugin)
+        project.pluginManager.apply(BasePlugin)
 
         Usage profileUsage = objectFactory.named(Usage, USAGE_PROFILE_NAME)
 
@@ -74,39 +79,45 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             }
         }
 
+        AdhocComponentWithVariants profileComponent = softwareComponentFactory.adhoc(COMPONENT_NAME)
+        project.components.add(profileComponent)
+
         NamedDomainObjectProvider<Configuration> runtimeApiConfiguration = project.configurations.register(RUNTIME_API_CONFIGURATION)
         runtimeApiConfiguration.configure { Configuration it ->
-            it.description = "Dependencies exported transitively to other profile projects"
+            it.description = 'Dependencies exported transitively to other profile projects'
             it.canBeConsumed = false
             it.canBeResolved = false
             it.attributes {
                 it.attribute(Usage.USAGE_ATTRIBUTE, profileUsage)
+                it.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objectFactory.named(LibraryElements, LibraryElements.CLASSES))
                 it.attribute(Category.CATEGORY_ATTRIBUTE, objectFactory.named(Category, Category.LIBRARY))
+                it.attribute(Bundling.BUNDLING_ATTRIBUTE, objectFactory.named(Bundling, Bundling.EXTERNAL))
+            }
+            profileComponent.addVariantsFromConfiguration(it) {
+                it.mapToMavenScope('compile')
             }
         }
 
         NamedDomainObjectProvider<Configuration> runtimeOnlyConfiguration = project.configurations.register(RUNTIME_ONLY_CONFIGURATION)
         runtimeOnlyConfiguration.configure { Configuration it ->
-            it.description = "Dependencies required to compile a profile project"
+            it.description = 'Dependencies required to compile a profile project'
             it.canBeConsumed = true
             it.canBeResolved = true
             it.extendsFrom(runtimeApiConfiguration.get())
             it.attributes {
                 it.attribute(Usage.USAGE_ATTRIBUTE, profileUsage)
+                it.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objectFactory.named(LibraryElements, LibraryElements.JAR))
                 it.attribute(Category.CATEGORY_ATTRIBUTE, objectFactory.named(Category, Category.LIBRARY))
+                it.attribute(Bundling.BUNDLING_ATTRIBUTE, objectFactory.named(Bundling, Bundling.EXTERNAL))
+            }
+            profileComponent.addVariantsFromConfiguration(it) {
+                it.mapToMavenScope('runtime')
             }
         }
 
-        project.components.withType(AdhocComponentWithVariants).configureEach { AdhocComponentWithVariants comp ->
-            comp.addVariantsFromConfiguration(runtimeOnlyConfiguration.get()) { ConfigurationVariantDetails details ->
-                // do not publish the configuration, only it's files for use in the compiler
-                details.mapToOptional()
-            }
-        }
-
-        TaskProvider<Task> processProfileResourcesTask = project.tasks.register("processProfileResources")
+        TaskProvider<Task> processProfileResourcesTask = project.tasks.register('processProfileResources')
         processProfileResourcesTask.configure { Task task ->
-            task.group = "build"
+            task.group = 'build'
             task.inputs.dir(project.provider {
                 def directory = project.layout.projectDirectory.dir('commands')
                 directory.asFile.exists() ? directory : null
@@ -195,50 +206,51 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             it.classpath = runtimeOnlyConfiguration.get()
         }
 
-        TaskProvider<Jar> profileJarTask = project.tasks.register("profileJar", Jar)
-        profileJarTask.configure { Jar jar ->
-            jar.setGroup(BUILD_GROUP)
+        TaskProvider<Jar> jarTask = project.tasks.register('profileJar', Jar)
+        jarTask.configure { Jar jar ->
+            jar.group = BUILD_GROUP
             jar.dependsOn(processProfileResourcesTask, compileTask, project.tasks.named('jar', Jar).orNull)
 
             jar.from(project.files(project.layout.buildDirectory.dir('resources/profile'), project.layout.buildDirectory.dir('classes/profile')))
             jar.destinationDirectory.set(project.layout.buildDirectory.dir('libs'))
-            jar.setDescription("Assembles a jar archive containing the profile classes.")
+            jar.description = 'Assembles a jar archive containing the profile classes.'
 
 //            ArchivePublishArtifact jarArtifact = new ArchivePublishArtifact(jar)
 //            project.artifacts.add(CONFIGURATION_NAME, jarArtifact)
         }
 
-        TaskProvider<Jar> sourcesJar = project.tasks.register("sourcesProfileJar", Jar)
-        sourcesJar.configure { Jar jar ->
+        TaskProvider<Jar> sourcesJarTask = project.tasks.register('sourcesProfileJar', Jar)
+        sourcesJarTask.configure { Jar jar ->
             jar.from(project.layout.projectDirectory.dir('commands'))
-            if (project.file("profile.yml").exists()) {
-                jar.from(project.file("profile.yml"))
+            if (project.file('profile.yml').exists()) {
+                jar.from(project.file('profile.yml'))
             }
             jar.from(project.layout.projectDirectory.dir('templates')) { CopySpec spec ->
-                spec.into("templates")
+                spec.into('templates')
             }
             jar.from(project.layout.projectDirectory.dir('skeleton')) { CopySpec spec ->
-                spec.into("skeleton")
+                spec.into('skeleton')
             }
-            jar.archiveClassifier.set("sources")
-            jar.destinationDirectory.set(new File(project.layout.buildDirectory.getAsFile().get(), "libs"))
-            jar.setDescription("Assembles a jar archive containing the profile sources.")
-            jar.setGroup(BUILD_GROUP)
+            jar.archiveClassifier.set('sources')
+            jar.destinationDirectory.set(new File(project.layout.buildDirectory.asFile.get(), 'libs'))
+            jar.description = 'Assembles a jar archive containing the profile sources.'
+            jar.group = BUILD_GROUP
         }
 
-        project.tasks.register('javadocProfileJar', Jar).configure { Jar jar ->
+        TaskProvider<Jar> javadocJarTask = project.tasks.register('javadocProfileJar', Jar)
+        javadocJarTask.configure { Jar jar ->
             final File tempReadmeForJavadoc = Files.createTempFile('README', 'txt').toFile()
             // https://central.sonatype.org/publish/requirements/#supply-javadoc-and-sources
             tempReadmeForJavadoc << 'Profiles are templates and do not have javadoc.'
             jar.from(tempReadmeForJavadoc)
             jar.archiveClassifier.set('javadoc')
-            jar.destinationDirectory.set(new File(project.layout.buildDirectory.getAsFile().get(), 'libs'))
-            jar.setDescription('Assembles a jar archive containing the profile javadoc.')
-            jar.setGroup(BUILD_GROUP)
+            jar.destinationDirectory.set(new File(project.layout.buildDirectory.asFile.get(), 'libs'))
+            jar.description = 'Assembles a jar archive containing the profile javadoc.'
+            jar.group = BUILD_GROUP
         }
 
-        project.tasks.named("assemble").configure { Task it ->
-            it.dependsOn(profileJarTask)
+        project.tasks.named('assemble').configure { Task it ->
+            it.dependsOn(jarTask)
         }
     }
 }
