@@ -60,7 +60,7 @@ class GrailsTestCompilerAutoConfiguration extends CompilerAutoConfiguration {
     @Override
     void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         if(lastMatch != null) {
-            def annotation = GrailsApplicationCompilerAutoConfiguration.createGrabAnnotation("org.grails", "grails-plugin-testing", Environment.class.getPackage().getImplementationVersion(), null, null, true)
+            def annotation = GrailsApplicationCompilerAutoConfiguration.createGrabAnnotation("org.apache.grails.testing", "grails-testing-support-core", Environment.class.getPackage().getImplementationVersion(), null, null, true)
             lastMatch.addAnnotation(annotation);
         }
     }

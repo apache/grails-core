@@ -42,7 +42,10 @@ import org.grails.cli.compiler.dependencies.DependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -76,8 +79,8 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
     public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         addManagedDependencies(dependencies);
         if(lastMatch != null) {
-            lastMatch.addAnnotation(createGrabAnnotation("org.grails", "grails-dependencies", Environment.class.getPackage().getImplementationVersion(), null, "pom", true));
-            lastMatch.addAnnotation(createGrabAnnotation("org.grails", "grails-web-boot", Environment.class.getPackage().getImplementationVersion(), null, null, true));
+            lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-dependencies", Environment.class.getPackage().getImplementationVersion(), null, "pom", true));
+            lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-web-boot", Environment.class.getPackage().getImplementationVersion(), null, null, true));
         }
         new SpringMvcCompilerAutoConfiguration().applyDependencies(dependencies);
     }
