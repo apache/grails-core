@@ -51,7 +51,7 @@ dependencies:
     - scope: implementation
       coords: "org.apache.grails:grails-async"
     - scope: implementation
-      coords: "org.apache.grails.web:grails-web-boot"
+      coords: "org.apache.grails:grails-web-boot"
     - scope: implementation
       coords: "org.apache.grails:grails-logging"
     - scope: testImplementation
