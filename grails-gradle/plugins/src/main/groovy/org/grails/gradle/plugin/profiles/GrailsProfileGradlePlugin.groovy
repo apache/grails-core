@@ -214,6 +214,8 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             jar.from(project.files(project.layout.buildDirectory.dir('resources/profile'), project.layout.buildDirectory.dir('classes/profile')))
             jar.destinationDirectory.set(project.layout.buildDirectory.dir('libs'))
             jar.description = 'Assembles a jar archive containing the profile classes.'
+            jar.reproducibleFileOrder = true
+            jar.preserveFileTimestamps = false
         }
 
         TaskProvider<Jar> sourcesJarTask = project.tasks.register('sourcesProfileJar', Jar)
@@ -231,6 +233,8 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             jar.archiveClassifier.set('sources')
             jar.destinationDirectory.set(new File(project.layout.buildDirectory.asFile.get(), 'libs'))
             jar.description = 'Assembles a jar archive containing the profile sources.'
+            jar.reproducibleFileOrder = true
+            jar.preserveFileTimestamps = false
             jar.group = BUILD_GROUP
         }
 
@@ -244,6 +248,8 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             jar.destinationDirectory.set(new File(project.layout.buildDirectory.asFile.get(), 'libs'))
             jar.description = 'Assembles a jar archive containing the profile javadoc.'
             jar.group = BUILD_GROUP
+            jar.reproducibleFileOrder = true
+            jar.preserveFileTimestamps = false
         }
 
         project.tasks.named('assemble').configure { Task it ->
