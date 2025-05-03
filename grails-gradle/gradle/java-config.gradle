@@ -25,9 +25,17 @@ extensions.configure(JavaPluginExtension) {
     it.withSourcesJar()
 }
 
-tasks.withType(Javadoc).configureEach { Javadoc it ->
-    it.options.noTimestamp true // prevent the file header with the date
-    it.options.bottom "Generated ${formattedBuildDate} (UTC)"
+tasks.named('sourcesJar', Jar).configure { Jar jar ->
+    SourceSetContainer sourceSets = project.extensions.getByType(JavaPluginExtension).sourceSets
+    jar.reproducibleFileOrder = true
+    jar.preserveFileTimestamps = false
+    jar.dirMode = 0755 // To avoid platform specific defaults
+    jar.fileMode = 0644 // to avoid platform specific defaults
+    jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // don't only include main, but any source set
+    jar.from sourceSets.collect { it.allSource }
+    jar.inputs.files(sourceSets.collect { it.allSource })
 }
 
 // JavaCompile is not configured because we put java files inside of the groovy source sets

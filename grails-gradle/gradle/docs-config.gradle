@@ -23,36 +23,47 @@ dependencies {
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-    add('documentation', 'org.codehaus.groovy:groovy')
-    add('documentation', 'org.codehaus.groovy:groovy-ant')
-    add('documentation', 'org.codehaus.groovy:groovy-docgenerator')
-    add('documentation', 'org.codehaus.groovy:groovy-templates')
+    add('documentation', "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-groovydoc:${bomDependencyVersions['groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-docgenerator:${bomDependencyVersions['groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-templates:${bomDependencyVersions['groovy.version']}")
 }
 
 ext {
     includeInApiDocs = true
 }
 
-tasks.named('groovydoc', Groovydoc).configure {
-    classpath = configurations.documentation
-    groovyClasspath = configurations.documentation
-    access = GroovydocAccess.PROTECTED
-    includeAuthor = true
-    includeMainForScripts = false
-    processScripts = false
-    destinationDir = project.file('build/docs/api')
+TaskProvider<Groovydoc> groovydocTask = tasks.named('groovydoc', Groovydoc)
+groovydocTask.configure { Groovydoc it ->
+    it.classpath = configurations.documentation
+    it.groovyClasspath = configurations.documentation
+    it.access = GroovydocAccess.PROTECTED
+    it.includeAuthor = false
+    it.includeMainForScripts = false
+    it.processScripts = false
+    it.noTimestamp = true
+    it.destinationDir = project.file('build/docs/api')
 }
 
-tasks.named('javadoc', Javadoc).configure { Javadoc it ->
-    (it.options as StandardJavadocDocletOptions).with {
-        encoding = 'UTF-8'
-        docEncoding = 'UTF-8'
-        charSet = 'UTF-8'
-        addStringOption('Xms64M')
-        addStringOption('Xmx512M')
-    }
+tasks.named('javadoc').configure {
+    it.enabled = false
 }
 
-tasks.named('build').configure {
-    finalizedBy('groovydoc')
+tasks.named('javadocJar', Jar).configure { Jar jar ->
+    jar.reproducibleFileOrder = true
+    jar.preserveFileTimestamps = false
+    jar.dirMode = 0755 // To avoid platform specific defaults
+    jar.fileMode = 0644 // to avoid platform specific defaults
+
+    jar.dependsOn(groovydocTask)
+
+    // Ensure the java source set is included in the groovydoc source set
+    SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
+    groovydocTask.get().source(project.files(sourceSets.main.java.srcDirs))
+
+    ConfigurableFileCollection groovyDocFiles = project.files(groovydocTask.get().destinationDir)
+    jar.from(groovyDocFiles)
+    jar.inputs.files(groovyDocFiles)
 }
+
