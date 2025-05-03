@@ -16,10 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+configurations.register('documentation') {
+    canBeConsumed = false
+    canBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+    }
+}
 
-configurations.register('documentation')
 dependencies {
-    add('documentation', platform("org.apache.grails:grails-bom:${projectVersion}"))
+    add('documentation', platform(project(':grails-bom')))
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')

@@ -17,7 +17,15 @@
  *  under the License.
  */
 
-configurations.register('documentation')
+configurations.register('documentation') {
+    canBeConsumed = false
+    canBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+    }
+}
 dependencies {
     add('documentation', platform(project(':grails-gradle-bom')))
     add('documentation', 'org.fusesource.jansi:jansi')
