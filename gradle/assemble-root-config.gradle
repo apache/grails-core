@@ -116,7 +116,7 @@ tasks.register('assemble', Zip).configure {
 
     into("grails-$grailsVersion") {
         from(rootProject.layout.projectDirectory) {
-            include 'bin/grails', 'bin/grails.bat', 'lib/', 'media/icons/grails.icns', 'LICENSE', 'INSTALL'
+            include 'bin/grails', 'bin/grails.bat', 'lib/', 'media/icons/grails.icns', 'LICENSE', 'INSTALL', 'NOTICE'
 
             def pathsToExclude = [
                     'ant/bin', 'src/grails', 'src/war'
