@@ -507,12 +507,7 @@ class GrailsCli {
     private initializeProfile() {
         BuildSettings.TARGET_DIR?.mkdirs()
 
-        if(!new File(BuildSettings.BASE_DIR, "profile.yml").exists()) {
-            populateContextLoader()
-        }
-        else {
-            this.profileRepository = createMavenProfileRepository()
-        }
+        this.profileRepository = createMavenProfileRepository()
 
         String profileName = applicationConfig.get(BuildSettings.PROFILE) ?: getSetting(BuildSettings.PROFILE, String, DEFAULT_PROFILE_NAME)
         this.profile = profileRepository.getProfile(profileName)
