@@ -1,4 +1,5 @@
 plugins {
+    id 'groovy'
     id 'org.apache.grails.gradle.grails-profile'
 }
 
