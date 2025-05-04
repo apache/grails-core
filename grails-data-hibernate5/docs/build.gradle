@@ -62,7 +62,7 @@ tasks.named('asciidoctor', AsciidoctorTask) {
     outputs.dir layout.buildDirectory.dir('asciidoc/manual')
     baseDirFollowsSourceDir()
     resources {
-        from("$project.projectDir/src/docs/asciidoc/images")
+        from(project.layout.projectDirectory.dir("src/docs/asciidoc/images"))
         into './images'
     }
 
