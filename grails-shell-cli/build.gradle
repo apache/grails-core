@@ -27,45 +27,10 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
-application {
-    mainClass = 'org.grails.cli.GrailsCli'
-}
+configurations.register('shellCliDependencies').configure {
+    it.transitive = true
 
-configurations {
-    // This is a workaround that can optimize the performance of the Shell CLI by reducing the length of the CLASSPATH,
-    // while also solving the problem of the length limit of command line parameters in the Windows environment
-    // This can be removed when we solve the dependencies of grails-bootstrap, grails-shell-cli
-    runtimeClasspath {
-        exclude group: 'commons-codec', module: 'commons-codec'
-        exclude group: 'com.github.ben-manes.caffeine', module: 'caffeine'
-        exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
-        exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
-        exclude group: 'javax.annotation', module: 'javax.annotation-api'
-        exclude group: 'javax.inject', module: 'javax.inject'
-        exclude group: 'javax.persistence', module: 'javax.persistence-api'
-        exclude group: 'javax.transaction', module: 'javax.transaction-api'
-        exclude group: 'junit', module: 'junit'
-        exclude group: 'io.micrometer', module: 'micrometer-observation'
-        exclude group: 'io.micrometer', module: 'micrometer-commons'
-        exclude group: 'org.checkerframework', module: 'checker-qual'
-        exclude group: 'org.apache.ant', module: 'ant-antlr'
-        exclude group: 'org.apache.ant', module: 'ant-junit'
-        exclude group: 'org.apache.commons', module: 'commons-compress'
-        exclude group: 'org.apache.groovy', module: 'groovy-groovydoc'
-        exclude group: 'org.apache.groovy', module: 'groovy-jmx'
-        exclude group: 'org.codehaus.plexus', module: 'plexus-classworlds'
-        exclude group: 'org.codehaus.plexus', module: 'plexus-component-annotations'
-        exclude group: 'org.codehaus.plexus', module: 'plexus-sec-dispatcher'
-        exclude group: 'org.hamcrest', module: 'hamcrest'
-        exclude group: 'org.hamcrest', module: 'hamcrest-core'
-        exclude group: 'org.javassist', module: 'javassist'
-        exclude group: 'org.springframework', module: 'spring-aop'
-        exclude group: 'org.springframework', module: 'spring-expression'
-        exclude group: 'org.springframework', module: 'spring-jcl'
-        exclude group: 'org.springframework', module: 'spring-tx'
-        exclude group: 'org.springframework', module: 'spring-web'
-        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
-    }
+    configurations.runtimeClasspath.extendsFrom(it)
 }
 
 dependencies {
@@ -98,25 +63,20 @@ dependencies {
     compileOnly 'org.springframework:spring-web'
     api 'org.springframework.boot:spring-boot-cli'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    implementation "org.apache.maven:maven-resolver-provider:$apacheMavenVersion"
-    // TODO: replace ServiceLocator with RepositorySystemSupplier
-    // implementation "org.apache.maven:maven-resolver-supplier:$apacheMavenVersion"
     compileOnly "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
 
-    implementation("org.apache.maven:maven-settings-builder:$apacheMavenVersion") {
-        exclude group: "javax.inject", module: "javax.inject"
-    }
-
-    implementation "org.sonatype.plexus:plexus-sec-dispatcher:$plexusSecDispatcherVersion"
-    implementation("org.sonatype.sisu:sisu-inject-plexus:$plexusSisuInjectVersion") {
-        exclude group: 'javax.enterprise', module: 'cdi-api'
-        exclude group: 'org.sonatype.sisu', module: 'sisu-inject-bean'
-    }
-
-    implementation("org.apache.maven.resolver:maven-resolver-connector-basic:$apacheMavenResolverVersion")
-    implementation("org.apache.maven.resolver:maven-resolver-impl:$apacheMavenResolverVersion")
-    implementation("org.apache.maven.resolver:maven-resolver-transport-file:$apacheMavenResolverVersion")
+    // Maven Resolver API & friends
+    implementation "org.apache.maven.resolver:maven-resolver-api:$apacheMavenResolverVersion"
+    implementation "org.apache.maven.resolver:maven-resolver-spi:$apacheMavenResolverVersion"
+    implementation "org.apache.maven.resolver:maven-resolver-util:$apacheMavenResolverVersion"
+    implementation "org.apache.maven.resolver:maven-resolver-impl:$apacheMavenResolverVersion"
+    implementation "org.apache.maven.resolver:maven-resolver-connector-basic:$apacheMavenResolverVersion"
+    implementation "org.apache.maven.resolver:maven-resolver-transport-file:$apacheMavenResolverVersion"
     implementation "org.apache.maven.resolver:maven-resolver-transport-http:$apacheMavenResolverVersion"
+    implementation "org.apache.maven:maven-resolver-provider:$apacheMavenVersion"
+    implementation "org.apache.maven:maven-model-builder:$apacheMavenVersion"
+    implementation "org.apache.maven:maven-settings-builder:$apacheMavenVersion"
+    //implementation "org.eclipse.sisu:org.eclipse.sisu.inject:0.9.0.M3" // upstream from the maven resolver examples project
 
     testImplementation "net.sf.expectit:expectit-core:$expectitCoreVersion"
     testImplementation "com.github.jnr:jnr-posix:$jnrPosixVersion"
@@ -126,7 +86,6 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-ant'
 
     runtimeOnly 'org.slf4j:slf4j-simple'
-    runtimeOnly "org.codehaus.plexus:plexus-component-api:$plexusComponentApiVersion"
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -144,13 +103,56 @@ dependencies {
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
+
+    // any project that should be included in the end distribution should be included here
+    // historically these were the included projects so we have trimmed them back down to pre7.0
+    shellCliDependencies project(':grails-codecs-core')
+    shellCliDependencies project(':grails-codecs')
+    shellCliDependencies project(':grails-console')
+    shellCliDependencies project(':grails-controllers')
+    shellCliDependencies project(':grails-converters')
+    shellCliDependencies project(':grails-core')
+    shellCliDependencies project(':grails-databinding-core')
+    shellCliDependencies project(':grails-datasource')
+    shellCliDependencies project(':grails-domain-class')
+    shellCliDependencies project(':grails-i18n')
+    shellCliDependencies project(':grails-interceptors')
+    shellCliDependencies project(':grails-mimetypes')
+    shellCliDependencies project(':grails-rest-transforms')
+    shellCliDependencies project(':grails-services')
+    shellCliDependencies project(':grails-test-core')
+    shellCliDependencies project(':grails-testing-support-core')
+    shellCliDependencies project(':grails-url-mappings')
+    shellCliDependencies project(':grails-validation')
+    shellCliDependencies project(':grails-web-boot')
+    shellCliDependencies project(':grails-web-common')
+    shellCliDependencies project(':grails-web-core')
+    shellCliDependencies project(':grails-web-databinding')
+    shellCliDependencies project(':grails-web-url-mappings')
 }
 
 apply {
     // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/assemble-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+extensions.configure(JavaApplication) {
+    it.applicationName = 'grails'
+    it.mainClass = 'org.grails.cli.GrailsCli'
+    it.applicationDefaultJvmArgs = ['-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3']
+    it.applicationDistribution.with {
+        it.from(rootProject.layout.projectDirectory.file('LICENSE')) { it.into '' }
+        it.from(rootProject.layout.projectDirectory.file('NOTICE')) { it.into '' }
+        it.from(rootProject.layout.projectDirectory.file('INSTALL')) { it.into '' }
+    }
+}
+
+tasks.named('startScripts').configure { it ->
+    it.doLast {
+        File win  = project.layout.buildDirectory.file("scripts/grails.bat").get().asFile
+        win.text = win.text.replaceFirst(/(?m)^set CLASSPATH=.*$/,'set CLASSPATH=%APP_HOME%\\\\lib\\\\*')
+    }
 }

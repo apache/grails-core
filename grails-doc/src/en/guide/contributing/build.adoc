@@ -19,7 +19,7 @@ under the License.
 
 If you're interested in contributing fixes and features to any part of grails, you will have to learn how to get hold of the project's source, build it and test it with your own applications. Before you start, make sure you have:
 
-* A JDK (11 or above)
+* A JDK (17 or above)
 * A git client
 
 Once you have all the pre-requisite packages installed, the next step is to download the Grails source code, which is hosted at http://github.com[GitHub] in several repositories owned by the http://github.com/grails["grails" GitHub user]. This is a simple case of cloning the repository you're interested in. For example, to get the core framework run:
@@ -39,12 +39,12 @@ If you look at the project structure, you'll see that it doesn't look much like 
 
 [source,groovy]
 ----
-./gradlew install
+./gradlew grails-shell-cli:installDist
 ----
 
 This will fetch all the standard dependencies required by Grails and then build a `GRAILS_HOME` installation. Note that this target skips the extensive collection of Grails test classes, which can take some time to complete.
 
-Once the above command has finished, simply set the `GRAILS_HOME` environment variable to the checkout directory and add the "bin" directory to your path. When you next type `grails` command to run, you'll be using the version you just built.
+Once the above command has finished, simply set the `GRAILS_HOME` environment variable to the directory `grails-shell-cli/build/install/grails` and add the `bin` directory to your path. When you next type `grails` command to run, you'll be using the version you just built.
 
 If you are using http://sdkman.io[SDKMAN] then that can also be used to work with this local installation via the following:
 

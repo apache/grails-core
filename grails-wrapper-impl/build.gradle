@@ -39,8 +39,6 @@ dependencies {
     implementation "org.apache.groovy:groovy"
     implementation "org.apache.groovy:groovy-ant"
     implementation "org.apache.groovy:groovy-templates"
-    // TODO: This is using an ancient version of the plexus-sec-dispatcher
-    implementation "org.sonatype.plexus:plexus-sec-dispatcher:$plexusSecDispatcherVersion"
 }
 
 apply {

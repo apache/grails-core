@@ -34,14 +34,6 @@ ext {
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
-    // Directories created during the build which are related
-    // to turning the workspace root into a GRAILS_HOME
-    distInstallDir = layout.buildDirectory.dir('dist-tmp')
-    homeDistDir = layout.projectDirectory.dir('dist')
-    homeBinDir = layout.projectDirectory.dir('bin')
-    homeConfDir = layout.projectDirectory.dir('conf')
-    homeLibDir = layout.projectDirectory.dir('lib')
-
     testProjectsStartWith = [
             'grails-test-suite',
             'grails-test-examples'
@@ -93,16 +85,7 @@ subprojects {
     apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
 
-tasks.register('clean', Delete).configure {
-    group = 'build'
-
-    doFirst {
-        delete(layout.buildDirectory, homeBinDir, homeConfDir, homeDistDir, homeLibDir)
-    }
-}
-
 apply {
-    from layout.projectDirectory.file('gradle/assemble-root-config.gradle')
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }

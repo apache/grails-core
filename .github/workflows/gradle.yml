@@ -53,7 +53,7 @@ jobs:
       - name: "🔨 Build project"
         working-directory: 'grails-gradle'
         run: >
-          ./gradlew build assemble
+          ./gradlew build
           --continue --stacktrace
   build:
     name: 'Build Grails-Core'
@@ -79,7 +79,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         run: >
-          ./gradlew build assemble groovydoc
+          ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace
           -PskipFunctionalTests
           -PskipMongodbTests
