@@ -19,6 +19,7 @@
 package org.grails.cli.compiler.maven;
 
 import java.io.File;
+import java.util.Map;
 
 import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.building.DefaultSettingsBuilderFactory;
@@ -30,7 +31,6 @@ import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
 import org.apache.maven.settings.crypto.SettingsDecrypter;
 import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.sonatype.plexus.components.cipher.DefaultPlexusCipher;
-import org.sonatype.plexus.components.cipher.PlexusCipherException;
 import org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher;
 
 import org.springframework.boot.cli.util.Log;
@@ -84,24 +84,10 @@ public class MavenSettingsReader {
 	}
 
 	private SettingsDecrypter createSettingsDecrypter() {
-		return new DefaultSettingsDecrypter(new SpringBootSecDispatcher());
+		String SECURITY_XML = ".m2/settings-security.xml";
+		File configurationFile = new File(homeDir, SECURITY_XML);
+
+		DefaultSecDispatcher dispatcher = new DefaultSecDispatcher(new DefaultPlexusCipher(), Map.of(), configurationFile.getAbsolutePath());
+		return new DefaultSettingsDecrypter(dispatcher);
 	}
-
-	private class SpringBootSecDispatcher extends DefaultSecDispatcher {
-
-		private static final String SECURITY_XML = ".m2/settings-security.xml";
-
-		SpringBootSecDispatcher() {
-			File file = new File(MavenSettingsReader.this.homeDir, SECURITY_XML);
-			this._configurationFile = file.getAbsolutePath();
-			try {
-				this._cipher = new DefaultPlexusCipher();
-			}
-			catch (PlexusCipherException ex) {
-				throw new IllegalStateException(ex);
-			}
-		}
-
-	}
-
 }
