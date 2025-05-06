@@ -22,7 +22,6 @@ tasks.named('rat') {
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
             '**/build/**', // Gradle generated build directories
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
-            '**/*.html', // html files are only in test
             '**/resources/*', // exclude test artifacts
             'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
             'src/*', // exclude build artifacts
