@@ -35,14 +35,13 @@ plugins {
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
-def isAuthenticated = System.getenv().containsKey('GRAILS_DEVELOCITY_ACCESS_KEY')
 
 develocity {
     server = 'https://ge.grails.org'
     buildScan {
         tag('grails')
         tag('grails-forge')
-        publishing.onlyIf { isAuthenticated }
+        publishing.onlyIf { it.authenticated }
         uploadInBackground = isLocal
     }
 }
@@ -50,7 +49,7 @@ develocity {
 buildCache {
     local { enabled = isLocal }
     remote(develocity.buildCache) {
-        push = isCI && isAuthenticated
+        push = isCI
         enabled = true
     }
 }
