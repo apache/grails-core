@@ -28,8 +28,6 @@ on:
   workflow_dispatch:
 jobs:
   rat-audit:
-    permissions:
-      contents: read  #  to fetch code (actions/checkout)
     runs-on: ubuntu-latest
     steps:
       - name: "📥 Checkout repository"
