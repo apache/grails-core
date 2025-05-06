@@ -17,8 +17,8 @@
 
 apply plugin: 'org.nosphere.apache.rat'
 
-tasks.named('rat').configure {
-    it.excludes = [
+tasks.named('rat') {
+    excludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
             '**/build/**', // Gradle generated build directories
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
