@@ -31,6 +31,7 @@ tasks.named('rat') {
             '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
             '**/*.gitkeep', // Empty Gitkeep file
             '**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
+            '**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
     ]
     // never cache license audits
     it.outputs.upToDateWhen { false }
