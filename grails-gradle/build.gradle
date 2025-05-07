@@ -31,6 +31,7 @@ allprojects {
         // mavenLocal()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }

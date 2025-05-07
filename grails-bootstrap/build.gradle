@@ -38,12 +38,10 @@ dependencies {
         exclude group: 'org.codehaus.groovy'
     }
 
-    // we have to continue to compile with groovy 3 only because of grails-shell
-    // the grails-shell will run under gradle and thus this must remain compatible
-    compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-templates:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-xml:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-ant:$GroovySystem.version"
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.apache.groovy:groovy-templates'
+    compileOnly 'org.apache.groovy:groovy-xml'
+    compileOnly 'org.apache.groovy:groovy-ant'
 
     compileOnly 'io.methvin:directory-watcher'
     compileOnly 'org.fusesource.jansi:jansi'

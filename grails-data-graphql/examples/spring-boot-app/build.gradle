@@ -22,7 +22,7 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath platform("org.apache.grails:grails-bom:$projectVersion")
+		classpath platform(project(":grails-bom"))
 		classpath("org.springframework.boot:spring-boot-gradle-plugin")
 	}
 }
