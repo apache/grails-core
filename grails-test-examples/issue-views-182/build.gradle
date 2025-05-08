@@ -18,11 +18,6 @@
  */
 
 buildscript {
-    repositories {
-        // mavenLocal()
-        maven { url = 'https://repo.grails.org/grails/core' }
-        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
-    }
     dependencies {
         classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
         classpath 'org.apache.grails:grails-gradle-plugins'
