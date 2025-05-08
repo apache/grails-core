@@ -31,7 +31,26 @@ As you can see, the database structure is highly normalized.
 The `AclClass` domain class contains entries for the names of each application domain class that has associated permissions:
 [source,groovy]
 ----
-include::../code/grails-app/domain/grails/plugin/springsecurity/acl/AclClass.groovy[]
+package grails.plugin.springsecurity.acl
+
+class AclClass {
+
+	String className
+
+	@Override
+	String toString() {
+		"AclClass id $id, className $className"
+	}
+
+	static mapping = {
+		className column: 'class'
+		version false
+	}
+
+	static constraints = {
+		className unique: true, blank: false
+	}
+}
 ----
 
 ==== AclSid
@@ -40,7 +59,27 @@ The `AclSid` domain class contains entries for the names of grant recipients (a 
 
 [source,groovy]
 ----
-include::../code/grails-app/domain/grails/plugin/springsecurity/acl/AclSid.groovy[]
+package grails.plugin.springsecurity.acl
+
+class AclSid {
+
+	String sid
+	boolean principal
+
+	@Override
+	String toString() {
+		"AclSid id $id, sid $sid, principal $principal"
+	}
+
+	static mapping = {
+		version false
+	}
+
+	static constraints = {
+		principal unique: 'sid'
+		sid blank: false, size: 1..255
+	}
+}
 ----
 
 ==== AclObjectIdentity
@@ -49,7 +88,30 @@ The `AclObjectIdentity` domain class contains entries representing individual do
 
 [source,groovy]
 ----
-include::../code/grails-app/domain/grails/plugin/springsecurity/acl/AclObjectIdentity.groovy[]
+package grails.plugin.springsecurity.acl
+
+class AclObjectIdentity extends AbstractAclObjectIdentity {
+
+    Long objectId
+
+    @Override
+    String toString() {
+        "AclObjectIdentity id $id, aclClass $aclClass.className, " +
+        "objectId $objectId, entriesInheriting $entriesInheriting"
+    }
+
+    static mapping = {
+        version false
+        aclClass column: 'object_id_class'
+        owner column: 'owner_sid'
+        parent column: 'parent_object'
+        objectId column: 'object_id_identity'
+    }
+
+    static constraints = {
+        objectId unique: 'aclClass'
+    }
+}
 ----
 
 `AclObjectIdentity` actually extends a base class, `AbstractAclObjectIdentity`:
@@ -80,5 +142,32 @@ The `mask` field holds the permission. This can be a source of confusion because
 
 [source,groovy]
 ----
-include::../code/grails-app/domain/grails/plugin/springsecurity/acl/AclEntry.groovy[]
+package grails.plugin.springsecurity.acl
+
+class AclEntry {
+
+	AclObjectIdentity aclObjectIdentity
+	int aceOrder
+	AclSid sid
+	int mask
+	boolean granting
+	boolean auditSuccess
+	boolean auditFailure
+
+	@Override
+	String toString() {
+		"AclEntry id $id, aceOrder $aceOrder, mask $mask, granting $granting, " +
+		"aclObjectIdentity $aclObjectIdentity"
+	}
+
+	static mapping = {
+		version false
+		sid column: 'sid'
+		aclObjectIdentity column: 'acl_object_identity'
+	}
+
+	static constraints = {
+		aceOrder unique: 'aclObjectIdentity'
+	}
+}
 ----
