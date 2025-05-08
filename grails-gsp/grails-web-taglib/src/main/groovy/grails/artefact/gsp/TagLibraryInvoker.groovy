@@ -40,7 +40,7 @@ trait TagLibraryInvoker extends WebAttributes{
 
 
     private TagLibraryLookup tagLibraryLookup
-    private boolean developmentMode = Environment.isDevelopmentMode();
+    private boolean developmentMode = Environment.isDevelopmentMode()
 
     @Autowired(required = false)
     void setTagLibraryLookup(TagLibraryLookup tagLibraryLookup) {

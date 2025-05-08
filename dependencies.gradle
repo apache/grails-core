@@ -84,7 +84,7 @@ ext {
             'bootstrap.version'            : '5.3.3',
             'commons-codec.version'        : '1.17.1',
             'geb-spock.version'            : '7.0',
-            'groovy.version'               : '4.0.27-SNAPSHOT',
+            'groovy.version'               : '4.0.26',
             'h2.version'                   : '2.3.232',
             'jackson.version'              : '2.18.2',
             'jquery.version'               : '3.7.1',
