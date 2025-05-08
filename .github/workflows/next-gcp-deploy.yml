@@ -41,7 +41,7 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: [build]
     env:
-      IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}:next
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}/${{ secrets.GCP_APP_NAME }}:next
     steps:
       - name: "🔑 Login"
         uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a
@@ -73,11 +73,18 @@ jobs:
           ./gradlew
           grails-forge-web-netty:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-      - name: "📤 Push image to Google Cloud Container Registry"
-        run: >
-          ./gradlew
-          grails-forge-web-netty:dockerPushNative
-          -PdockerImageName=${{ env.IMAGE_NAME }}
+      - name: "Log in to GitHub Container Registry"
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.40
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Push Docker image"
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 #v6.16.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
       - name: "🚀 Deploy Docker image"
         run: >
           gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-next
@@ -93,7 +100,7 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: [build]
     env:
-      IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}-analytics:next
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}/${{ secrets.GCP_APP_NAME }}-analytics:next
     steps:
       - name: "🔑 Login"
         uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a
@@ -122,11 +129,18 @@ jobs:
           ./gradlew
           grails-forge-analytics-postgres:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-      - name: "📤 Push image to Google Cloud Container Registry"
-        run: >
-          ./gradlew
-          grails-forge-analytics-postgres:dockerPushNative
-          -PdockerImageName=${{ env.IMAGE_NAME }}
+      - name: "Log in to GitHub Container Registry"
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.40
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Push Docker image"
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 #v6.16.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
       - name: "🚀 Deploy Docker image"
         run: |
           gcloud components install beta --quiet
