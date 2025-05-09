@@ -32,6 +32,7 @@ allprojects {
         mavenCentral()
         gradlePluginPortal()
         maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+        maven { url = 'https://repo.spring.io/milestone' }
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }
