@@ -24,11 +24,11 @@ buildscript {
     }
 }
 
-
 plugins {
     id 'groovy'
     id 'idea'
     id 'eclipse'
+    id 'grails.functional-test'
 }
 
 version = projectVersion

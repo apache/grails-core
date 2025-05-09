@@ -24,6 +24,10 @@ buildscript {
     }
 }
 
+plugins {
+    id 'grails.functional-test'
+}
+
 version = rootProject.version
 group = 'pubsub.demo'
 

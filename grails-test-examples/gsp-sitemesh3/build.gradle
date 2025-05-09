@@ -25,6 +25,10 @@ buildscript {
     }
 }
 
+plugins {
+    id 'grails.functional-test'
+}
+
 version = '0.0.1'
 group = 'org.sitemesh.grails.plugins.sitemesh3'
 
