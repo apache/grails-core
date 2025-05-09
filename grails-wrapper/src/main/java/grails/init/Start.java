@@ -146,8 +146,7 @@ public class Start {
                     detailedVersion = getSnapshotVersion(baseVersion);
                 }
                 updateJar(baseVersion, detailedVersion);
-                // remove "update-wrapper" command argument
-                if (args.length > 0) {
+                if (args.length > 0 && args[0].trim().equals("update-wrapper")) {
                     args[0] = null;
                 }
             }
