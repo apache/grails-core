@@ -31,6 +31,7 @@ class FunctionalTestPlugin implements Plugin<Project> {
             maven { url = 'https://repo.grails.org/grails/core' }
             maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
             maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+            maven { url = 'https://repo.spring.io/milestone' }
         }
     }
 }
