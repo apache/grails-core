@@ -18,6 +18,8 @@
  */
 package grails.gorm.specs
 
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Team
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.orm.hibernate.HibernateDatastore
@@ -33,7 +35,7 @@ import spock.lang.Specification
 class SubqueryAliasSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(
-        Club, Team
+            Club, Team
     )
 
     @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()

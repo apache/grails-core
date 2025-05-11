@@ -17,15 +17,17 @@
  *  under the License.
  */
 
-package grails.gorm.specs
+package grails.gorm.specs.entities
 
+import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.annotation.Entity
 
-/**
- * Created by graemerocher on 21/10/16.
- */
 @Entity
-class Contract {
-    BigDecimal salary
-    static belongsTo = [player:Player]
+class Club implements HibernateEntity<Club> {
+    String name
+
+    @Override
+    String toString() {
+        name
+    }
 }

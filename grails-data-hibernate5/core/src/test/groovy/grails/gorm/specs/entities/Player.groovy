@@ -16,18 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.specs.entities
 
 import grails.gorm.annotation.Entity
-import groovy.transform.ToString
 
 /**
  * Created by graemerocher on 21/10/16.
  */
 @Entity
-@ToString(includes = 'name')
-class Team {
-    Club club
+class Player {
     String name
-    static hasMany = [players: Player]
+    static belongsTo = [team:Team]
+    static hasOne = [contract:Contract]
 }

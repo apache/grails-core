@@ -18,11 +18,11 @@
  */
 package grails.gorm.specs
 
+import grails.gorm.specs.entities.Club
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
-import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 

@@ -16,18 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package grails.gorm.specs.entities
 
-package grails.gorm.specs
-
-import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.annotation.Entity
+import groovy.transform.ToString
 
+/**
+ * Created by graemerocher on 21/10/16.
+ */
 @Entity
-class Club implements HibernateEntity<Club> {
+@ToString(includes = 'name')
+class Team {
+    Club club
     String name
-
-    @Override
-    String toString() {
-        name
-    }
+    static hasMany = [players: Player]
 }

@@ -16,7 +16,8 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+
+package grails.gorm.specs.entities
 
 import grails.gorm.annotation.Entity
 
@@ -24,8 +25,7 @@ import grails.gorm.annotation.Entity
  * Created by graemerocher on 21/10/16.
  */
 @Entity
-class Player {
-    String name
-    static belongsTo = [team:Team]
-    static hasOne = [contract:Contract]
+class Contract {
+    BigDecimal salary
+    static belongsTo = [player:Player]
 }
