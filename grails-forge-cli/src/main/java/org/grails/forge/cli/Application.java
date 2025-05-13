@@ -29,7 +29,7 @@ import java.util.function.BiFunction;
 
 
 
-@CommandLine.Command(name = "grails", description = {
+@CommandLine.Command(name = "grails-forge-cli", description = {
         "Grails Forge CLI command line interface for generating projects and services.",
         "Application generation commands are:",
         "",

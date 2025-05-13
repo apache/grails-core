@@ -76,7 +76,7 @@ graalvmNative {
         main {
             // Main options
             sharedLibrary = false
-            imageName = "grails"
+            imageName = "grails-forge-cli"
             buildArgs(
                 "--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.configure=ALL-UNNAMED",
                 "--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED",
