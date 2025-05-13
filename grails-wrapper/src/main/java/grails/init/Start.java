@@ -18,40 +18,44 @@ package grails.init;
 
 import grails.proxy.SystemPropertiesAuthenticator;
 
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.Authenticator;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
 import java.util.Arrays;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import java.util.List;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * The purpose of this class is to download the expanded Grails wrapper jars into GRAILS_HOME (`.grails` in the project root)
  * This class is not meant to be distributed as part of SDKMAN since we'll distribute the expanded jars with it.
- * After downloading the jars, it will delegate to the downloaded wrapper impl project
+ * After downloading the jars, it will delegate to the downloaded grails-cli project.
+ *
+ * There are 3 ways this class can be used:
+ * 1. in testing a grails release (run from a non-project directory) // will require GRAILS_HOME to be manually set
+ * 2. running from a non-project directory (end user usage)
+ * 3. running from inside a grails project
  */
 public class Start {
     public static void main(String[] args) {
         Authenticator.setDefault(new SystemPropertiesAuthenticator());
 
         try {
-            GrailsUpdater updater = new GrailsUpdater();
+            List<GrailsReleaseType> allowedTypes = getAllowedReleaseTypes();
+            GrailsVersion preferredGrailsVersion = getPreferredGrailsVersion();
+
+            GrailsUpdater updater = new GrailsUpdater(allowedTypes, preferredGrailsVersion);
             boolean forceUpdate = (args.length > 0 && args[0].trim().equals("update-wrapper"));
 
+            boolean updated = false;
             String[] adjustedArgs = args;
             if (forceUpdate || updater.needsUpdating()) {
-                updater.update();
+                System.out.println("Updating Grails wrapper...");
+                updated = updater.update();
 
                 // remove "update-wrapper" command argument
                 if (forceUpdate) {
@@ -59,7 +63,11 @@ public class Start {
                 }
             }
 
-            URLClassLoader child = new URLClassLoader(new URL[]{updater.getExecutedVersion().toURI().toURL()});
+            if(updated) {
+                System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
+            }
+
+            URLClassLoader child = new URLClassLoader(new URL[]{updater.getExecutedJarFile().toURI().toURL()});
             Class<?> classToLoad = Class.forName("grails.init.RunCommand", true, child);
             Method main = classToLoad.getMethod("main", String[].class);
             main.invoke(null, (Object[]) adjustedArgs);
@@ -67,5 +75,58 @@ public class Start {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private static GrailsVersion getPreferredGrailsVersion() {
+        // Check for a properties file in case inside a grails project
+        File gradleProperties = new File("gradle.properties");
+        if(!gradleProperties.exists()) {
+            return null;
+        }
+
+        Properties properties = new Properties();
+        try {
+            try (InputStream in = new FileInputStream(gradleProperties)) {
+                properties.load(in);
+            }
+        }
+        catch(Exception e) {
+            System.err.println("Failed to load gradle.properties from "+ gradleProperties);
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        if(!properties.containsKey("grailsVersion")) {
+            return null;
+        }
+
+        String grailsVersion = properties.getProperty("grailsVersion");
+        if(grailsVersion == null) {
+            System.out.println("gradle.properties does not contain grailsVersion; downloading latest Grails Version");
+            return null;
+        }
+
+        try {
+            return new GrailsVersion(grailsVersion);
+        }
+        catch(Exception e) {
+            System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return null;
+    }
+
+    private static List<GrailsReleaseType> getAllowedReleaseTypes() {
+        String raw = System.getenv("GRAILS_WRAPPER_ALLOWED_TYPES");
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .map(GrailsReleaseType::valueOf)
+                .collect(Collectors.toList());
     }
 }

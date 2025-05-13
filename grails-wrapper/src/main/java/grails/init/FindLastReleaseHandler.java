@@ -23,7 +23,7 @@ import org.xml.sax.helpers.DefaultHandler;
 /**
  * Created by jameskleeh on 11/2/16.
  */
-public class FindReleaseHandler extends DefaultHandler {
+public class FindLastReleaseHandler extends DefaultHandler {
 
     private String releaseVersion;
     private String latestVersion;

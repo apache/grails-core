@@ -30,26 +30,39 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
+import java.util.List;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class GrailsUpdater {
-    private static final String WRAPPER_MAVEN_PATH = "/org/apache/grails/" + GrailsHome.CLI_COMBINED_PROJECT_NAME;
-    private static final String GRAILS_RELEASE_MAVEN_REPO_BASE_URL = "https://repository.apache.org/content/groups/public";
 
     private final GrailsHome grailsHome;
+    private final GrailsVersion preferredVersion;
     private GrailsVersion updatedVersion;
 
-    public GrailsUpdater() throws IOException {
-        this(null);
+    public GrailsUpdater(List<GrailsReleaseType> allowedTypes, GrailsVersion preferredVersion) throws IOException {
+        this(allowedTypes, preferredVersion, null);
     }
 
-    public GrailsUpdater(String possibleGrailsHome) throws IOException {
-        grailsHome = new GrailsHome(possibleGrailsHome);
+    public GrailsUpdater(List<GrailsReleaseType> allowedTypes, GrailsVersion preferredVersion, String possibleGrailsHome) throws IOException {
+        grailsHome = new GrailsHome(allowedTypes, possibleGrailsHome);
+        this.preferredVersion = preferredVersion;
     }
 
-    public File getExecutedVersion() {
-        return updatedVersion == null ? grailsHome.getLatestWrapperImplementation() : grailsHome.getWrapperImplementation(grailsHome.getVersionDirectory(updatedVersion));
+    public GrailsVersion getSelectedVersion() {
+        if(preferredVersion != null) {
+            return preferredVersion;
+        }
+
+        if(updatedVersion != null) {
+            return updatedVersion;
+        }
+
+        return grailsHome.latestVersion;
+    }
+
+    public File getExecutedJarFile() {
+        return grailsHome.getWrapperImplementation(grailsHome.getVersionDirectory(getSelectedVersion()));
     }
 
     /**
@@ -63,43 +76,57 @@ public class GrailsUpdater {
             return true;
         }
 
-        // TODO: Should we force updates for snapshots?
+        if(preferredVersion != null) {
+            if(!grailsHome.versions.contains(preferredVersion)) {
+                return true;
+            }
+
+            // Force snapshots to update always
+            return preferredVersion.releaseType.isSnapshot();
+        }
 
         return false;
     }
 
     public boolean update() {
-        GrailsVersion baseVersion = null;
-        try {
-            baseVersion = getVersion();
-        }
-        catch(Exception e) {
-            System.err.println("You must be connected to the internet the first time you use the Grails wrapper");
-            e.printStackTrace();
-            System.exit(1);
-        }
+        GrailsWrapperRepo repo = GrailsWrapperRepo.getSelectedRepo();
 
-        String detailedVersion = null;
-        if (baseVersion.releaseType.isSnapshot()) {
+        GrailsVersion latestVersion = null;
+        if(preferredVersion != null) {
+            latestVersion = preferredVersion;
+        }
+        else {
             try {
-                detailedVersion = getSnapshotVersion(baseVersion);
+                latestVersion = getLastVersion(repo);
             }
             catch(Exception e) {
-                System.err.println("Could not parse snapshot version.  You must be connected to the internet the first time you use the Grails wrapper");
+                System.err.println("Unable to fetch latest Grails CLI.");
                 e.printStackTrace();
                 System.exit(1);
             }
         }
 
-        boolean theResult = updateJar(baseVersion, detailedVersion);
+        String detailedVersion = null;
+        if (latestVersion.releaseType.isSnapshot()) {
+            try {
+                detailedVersion = fetchSnapshotForVersion(repo, latestVersion);
+            }
+            catch(Exception e) {
+                System.err.println("Could not parse snapshot version from maven metadata.");
+                e.printStackTrace();
+                System.exit(1);
+            }
+        }
+
+        boolean theResult = updateJar(repo, latestVersion, detailedVersion);
         if(theResult) {
-            updatedVersion = baseVersion;
+            updatedVersion = latestVersion;
         }
 
         return theResult;
     }
 
-    private boolean updateJar(GrailsVersion version, String snapshotVersion) {
+    private boolean updateJar(GrailsWrapperRepo repo, GrailsVersion version, String snapshotVersion) {
         boolean success = false;
 
         final String localJarFilename = GrailsHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version;
@@ -108,9 +135,22 @@ public class GrailsUpdater {
 
         try {
             File downloadedJar = File.createTempFile(localJarFilename, jarFileExtension);
-            String wrapperUrl = getMavenBaseUrl() + WRAPPER_MAVEN_PATH + "/" + version.version + "/" + remoteJarFilename + jarFileExtension;
-            HttpURLConnection conn = createHttpURLConnection(wrapperUrl);
-            success = downloadWrapperJar(version, downloadedJar, conn.getInputStream());
+            String wrapperUrl = repo.getFileUrl(version, remoteJarFilename + jarFileExtension);
+
+            InputStream inputStream;
+            if(repo.isFile) {
+                File jarFile = new File(wrapperUrl);
+                if(!jarFile.exists()) {
+                    throw new IllegalStateException("Could not determine local metadata file from local maven repository: " + jarFile.getAbsolutePath() + " does not exist");
+                }
+                inputStream = Files.newInputStream(jarFile.toPath());
+            }
+            else {
+                HttpURLConnection conn = createHttpURLConnection(wrapperUrl);
+                inputStream = conn.getInputStream();
+            }
+
+            success = downloadWrapperJar(version, downloadedJar, inputStream);
         } catch (Exception e) {
             System.err.println("There was an error downloading the wrapper jar");
             e.printStackTrace();
@@ -138,30 +178,33 @@ public class GrailsUpdater {
         return true;
     }
 
-    private static String getMavenBaseUrl() {
-        String baseUrl = System.getProperty("grails.maven.repo.baseUrl");
-        if (baseUrl != null) {
-            return baseUrl;
+    private static InputStream retrieveMavenMetadata(GrailsWrapperRepo repo, String metadataUrl) throws IOException {
+        if(repo.isFile) {
+            File metadataFile = new File(metadataUrl);
+            if(!metadataFile.exists()) {
+                throw new IllegalStateException("Could not determine local metadata file from local maven repository: " + metadataFile.getAbsolutePath() + " does not exist");
+            }
+            return Files.newInputStream(metadataFile.toPath());
         }
-
-        baseUrl = System.getenv("GRAILS_RELEASE_MAVEN_REPO_BASE_URL");
-        if (baseUrl != null) {
-            return baseUrl;
+        else {
+            HttpURLConnection connection = createHttpURLConnection(metadataUrl);
+            try {
+                return connection.getInputStream();
+            }
+            catch(Exception e) {
+                throw new RuntimeException("There was an error downloading the metadata file", e);
+            }
         }
-
-        return GRAILS_RELEASE_MAVEN_REPO_BASE_URL;
     }
 
-    private static GrailsVersion getVersion() throws IOException, SAXException, ParserConfigurationException {
+    private GrailsVersion getLastVersion(GrailsWrapperRepo repo) throws IOException, SAXException, ParserConfigurationException {
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser saxParser = factory.newSAXParser();
-        FindReleaseHandler findReleaseHandler = new FindReleaseHandler();
-        final String mavenMetadataFileUrl = getMavenBaseUrl() + WRAPPER_MAVEN_PATH + "/maven-metadata.xml";
-        HttpURLConnection conn = createHttpURLConnection(mavenMetadataFileUrl);
+        FindLastReleaseHandler findLastReleaseHandler = new FindLastReleaseHandler();
 
-        try(InputStream stream = conn.getInputStream()) {
-            saxParser.parse(stream, findReleaseHandler);
-            String parsedVersion = findReleaseHandler.getVersion();
+        try(InputStream stream = retrieveMavenMetadata(repo, repo.getRootMetadataUrl())) {
+            saxParser.parse(stream, findLastReleaseHandler);
+            String parsedVersion = findLastReleaseHandler.getVersion();
             try {
                 return new GrailsVersion(parsedVersion);
             }
@@ -171,14 +214,14 @@ public class GrailsUpdater {
         }
     }
 
-    private static String getSnapshotVersion(GrailsVersion baseVersion) throws IOException, SAXException, ParserConfigurationException {
+    private String fetchSnapshotForVersion(GrailsWrapperRepo repo, GrailsVersion baseVersion) throws IOException, SAXException, ParserConfigurationException {
         System.out.println("A Grails snapshot version has been detected.  Downloading latest snapshot.");
+
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser saxParser = factory.newSAXParser();
-        FindSnapshotHandler findVersionHandler = new FindSnapshotHandler();
-        final String mavenMetadataFileUrl = getMavenBaseUrl() + WRAPPER_MAVEN_PATH + "/" + baseVersion.version + "/maven-metadata.xml";
-        HttpURLConnection conn = createHttpURLConnection(mavenMetadataFileUrl);
-        try(InputStream stream = conn.getInputStream()) {
+        FindLastSnapshotHandler findVersionHandler = new FindLastSnapshotHandler();
+
+        try(InputStream stream = retrieveMavenMetadata(repo, repo.getMetadataUrl(baseVersion))) {
             saxParser.parse(stream, findVersionHandler);
             return findVersionHandler.getVersion();
         }

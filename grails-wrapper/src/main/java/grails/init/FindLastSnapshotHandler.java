@@ -19,7 +19,7 @@ package grails.init;
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class FindSnapshotHandler extends DefaultHandler {
+public class FindLastSnapshotHandler extends DefaultHandler {
 
     private boolean insideSnapshotVersion = false;
     private boolean insideVersion = false;

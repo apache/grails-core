@@ -33,7 +33,7 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
     public final String major;
     public final String minor;
     public final String patch;
-    public final ReleaseType releaseType;
+    public final GrailsReleaseType releaseType;
     public final int patchNumber;
 
     GrailsVersion(String version) {
@@ -54,16 +54,16 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
 
         Matcher m;
         if ((m = RELEASE.matcher(patch)).matches()) {
-            releaseType = ReleaseType.RELEASE;
+            releaseType = GrailsReleaseType.RELEASE;
             patchNumber = Integer.parseInt(m.group(1));
         } else if ((m = RC.matcher(patch)).matches()) {
-            releaseType = ReleaseType.RC;
+            releaseType = GrailsReleaseType.RC;
             patchNumber = Integer.parseInt(m.group(1));
         } else if ((m = MILESTONE.matcher(patch)).matches()) {
-            releaseType = ReleaseType.MILESTONE;
+            releaseType = GrailsReleaseType.MILESTONE;
             patchNumber = Integer.parseInt(m.group(1));
         } else if ((m = SNAPSHOT.matcher(patch)).matches()) {
-            releaseType = ReleaseType.SNAPSHOT;
+            releaseType = GrailsReleaseType.SNAPSHOT;
             patchNumber = Integer.parseInt(m.group(1));
         } else {
             throw new IllegalArgumentException("Unrecognized patch version: " + patch);
@@ -109,14 +109,8 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         return Integer.compare(patchNumber, o.patchNumber);
     }
 
-    public enum ReleaseType {
-        RELEASE,
-        RC,
-        MILESTONE,
-        SNAPSHOT;
-
-        boolean isSnapshot() {
-            return this == SNAPSHOT;
-        }
+    @Override
+    public String toString() {
+        return version;
     }
 }

@@ -31,10 +31,12 @@ public class GrailsHome {
     public final File home;
     public final File wrapperDirectory;
     public final List<GrailsVersion> versions;
+    public final List<GrailsReleaseType> allowedReleaseTypes;
     public final GrailsVersion latestVersion;
 
-    public GrailsHome(String grailsHome) throws IOException {
-        home = findGrailsHome(grailsHome).getCanonicalFile();
+    public GrailsHome(List<GrailsReleaseType> allowedReleaseTypes, String forcedGrailsHome) throws IOException {
+        home = findGrailsHome(forcedGrailsHome).getCanonicalFile();
+        this.allowedReleaseTypes = allowedReleaseTypes == null ? new ArrayList<>() : allowedReleaseTypes;
 
         wrapperDirectory = new File(home, "wrapper");
         if(!wrapperDirectory.exists()) {
@@ -107,16 +109,16 @@ public class GrailsHome {
         GrailsVersion lastMilestone = null;
         GrailsVersion lastSnapshot = null;
         for (GrailsVersion version : versions) {
-            if(version.releaseType == GrailsVersion.ReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
+            if(version.releaseType == GrailsReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
                 lastRelease = version;
             }
-            else if(version.releaseType == GrailsVersion.ReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
+            else if(version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
                 lastReleaseCandidate = version;
             }
-            else if(version.releaseType == GrailsVersion.ReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
+            else if(version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
                 lastMilestone = version;
             }
-            else if(version.releaseType == GrailsVersion.ReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
+            else if(version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
                 lastSnapshot = version;
             }
         }
@@ -151,6 +153,9 @@ public class GrailsHome {
 
             try {
                 GrailsVersion version = new GrailsVersion(child.getName());
+                if(!allowedReleaseTypes.isEmpty() && !allowedReleaseTypes.contains(version.releaseType)) {
+                    continue;
+                }
                 versions.add(version);
             }
             catch(Exception ignored) {
@@ -169,13 +174,14 @@ public class GrailsHome {
      * 2. using the environment variable
      * 3. Looking in the current directory for a GRAILS_HOME_MARKERS or for a .grails directory
      * and all parent directories.  If none, is found, the current directory will be returned.
+     * There is a special case for the current directory if inside of the grails core repository.
      *
      * @return the GRAILS_HOME directory
      * @throws IOException if canonicalization fails
      */
-    public static File findGrailsHome(String possibleGrailsHome) throws IOException {
-        if (possibleGrailsHome != null && !possibleGrailsHome.isEmpty()) {
-            return validateGrailsHome(possibleGrailsHome, "Specified Grails Home");
+    public static File findGrailsHome(String grailsHomeOverride) throws IOException {
+        if (grailsHomeOverride != null && !grailsHomeOverride.isEmpty()) {
+            return validateGrailsHome(grailsHomeOverride, "Specified Grails Home");
         }
 
         String environmentOverride = System.getenv("GRAILS_HOME");
@@ -204,9 +210,15 @@ public class GrailsHome {
         return file.exists();
     }
 
+    private static boolean directoryExists(File baseDirectory, String name) {
+        File file = new File(baseDirectory, name);
+        return file.exists() && file.isDirectory();
+    }
+
     /**
      * Locate the “Grails" home by first looking in `directory` for a GRAILS_HOME_MARKERS or for a .grails directory
-     * and all parent directories.  If none, is found, the original directory will be returned.
+     * and all parent directories.  If none, is found, the original directory will be returned.  Short circuit on the
+     * home directory to avoid traversing into the root if possible.
      *
      * @param directory where to begin the search
      * @return the directory containing one of the markers, or original directory
@@ -220,25 +232,32 @@ public class GrailsHome {
         File userHome = new File(System.getProperty("user.home")).getCanonicalFile();
 
         File searchDirectory = directory.getCanonicalFile();
+
         if (searchDirectory.equals(userHome)) {
-            throw new IllegalStateException("GRAILS_HOME is no longer allowed to be at the user home directory.");
+            // if run from the user home directory, allow it to exist
+            return searchDirectory;
         }
 
         if (searchDirectory.getParentFile() == null) {
-            throw new IllegalStateException("GRAILS_HOME is not permitted to be at the root of the file system.");
+            // if run from the root, allow it to exist
+            return searchDirectory;
         }
 
         File originalDirectory = searchDirectory;
         while (searchDirectory != null && searchDirectory.exists() && !searchDirectory.equals(userHome)) {
+            if (directoryExists(searchDirectory, ".grails")) {
+                return searchDirectory;
+            }
+
+            // Assume this is nested under the grails core directory, so assume the current directory is the root of the project
+            if(directoryExists(searchDirectory, "grails-core") && directoryExists(searchDirectory, "grails-bom")) {
+                return originalDirectory;
+            }
+
             for (String name : GRAILS_HOME_MARKERS) {
                 if (exists(searchDirectory, name)) {
                     return searchDirectory;
                 }
-            }
-
-            File grailsDir = new File(searchDirectory, ".grails");
-            if (grailsDir.exists() && grailsDir.isDirectory()) {
-                return searchDirectory;
             }
 
             searchDirectory = searchDirectory.getParentFile();
