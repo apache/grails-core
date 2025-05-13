@@ -51,10 +51,10 @@ configurations {
 dependencies {
     annotationProcessor "io.micronaut:micronaut-inject-java"
     annotationProcessor "io.micronaut:micronaut-graal"
-    api project(":grails-forge-core")
-    api "info.picocli:picocli:$picocliVersion"
-    api "info.picocli:picocli-shell-jline3:$picocliVersion"
-    api "com.fizzed:rocker-runtime:$rockerVersion"
+    implementation project(":grails-forge-core")
+    implementation "info.picocli:picocli:$picocliVersion"
+    implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
+    implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "org.slf4j:slf4j-nop:$slf4jVersion"
     implementation "org.fusesource.jansi:jansi:$jansiVersion"
     implementation "org.yaml:snakeyaml:$snakeyamlVersion"
