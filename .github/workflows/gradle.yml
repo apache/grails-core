@@ -223,6 +223,19 @@ jobs:
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         run: ./gradlew publish
+      - name: "✅ Verify grails-wrapper"
+        if: success()
+        run: |
+          cp grails-wrapper/build/distributions/grails-wrapper-*.zip build/wrapper.zip
+          cd build
+          unzip wrapper -d tmp
+          mv tmp/grails-wrapper-* tmp/wrapper
+          ./tmp/wrapper/grailsw --version
+      - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-wrapper-snapshot
+          path: build/wrapper.zip
   docs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publish ]
