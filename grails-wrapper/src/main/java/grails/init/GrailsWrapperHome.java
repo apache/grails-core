@@ -64,15 +64,15 @@ public class GrailsWrapperHome {
 
     File getLatestWrapperImplementation() {
         File implDirectory = getLatestVersionDirectory();
-        return getWrapperImplementation(implDirectory);
+        return getWrapperImplementation(latestVersion, implDirectory);
     }
 
-    File getWrapperImplementation(File implDirectory) {
+    File getWrapperImplementation(GrailsVersion version, File implDirectory) {
         if(implDirectory == null) {
             return null;
         }
 
-        return new File(implDirectory, CLI_COMBINED_PROJECT_NAME + ".jar");
+        return new File(implDirectory, CLI_COMBINED_PROJECT_NAME + "-" + version.version + ".jar");
     }
 
     void cleanupOtherVersions(GrailsVersion toKeep) {

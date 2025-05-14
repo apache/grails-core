@@ -63,7 +63,8 @@ public class GrailsUpdater {
     }
 
     public File getExecutedJarFile() {
-        return grailsWrapperHome.getWrapperImplementation(grailsWrapperHome.getVersionDirectory(getSelectedVersion()));
+        GrailsVersion selectedVersion = getSelectedVersion();
+        return grailsWrapperHome.getWrapperImplementation(selectedVersion, grailsWrapperHome.getVersionDirectory(selectedVersion));
     }
 
     /**
@@ -221,7 +222,7 @@ public class GrailsUpdater {
     }
 
     private String fetchSnapshotForVersion(GrailsWrapperRepo repo, GrailsVersion baseVersion) throws IOException, SAXException, ParserConfigurationException {
-        System.out.println("...A Grails snapshot version has been detected.  Downloading latest snapshot.");
+        System.out.println("...A Grails snapshot version has been detected. Downloading latest snapshot.");
 
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser saxParser = factory.newSAXParser();

@@ -54,7 +54,7 @@ public class GrailsWrapperRepo {
 
         String configured = getConfiguredMavenUrl();
         if (configured != null) {
-            System.out.println("... Update Repository is overridden to: " + configured);
+            System.out.println("...Update Repository is overridden to: " + configured);
             repo.baseUrl = configured;
         } else {
             // default to upstream snapshots or groups

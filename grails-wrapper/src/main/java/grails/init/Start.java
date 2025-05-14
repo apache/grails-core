@@ -70,7 +70,7 @@ public class Start {
             URLClassLoader child = new URLClassLoader(new URL[]{updater.getExecutedJarFile().toURI().toURL()});
             Class<?> classToLoad = Class.forName("org.apache.grails.cli.DelegatingShellApplication", true, child);
             Method main = classToLoad.getMethod("main", String[].class);
-            main.invoke(null, (Object[]) adjustedArgs);
+            main.invoke(null, (Object) adjustedArgs);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);
