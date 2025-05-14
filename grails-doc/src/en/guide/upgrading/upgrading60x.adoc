@@ -188,21 +188,25 @@ After comparing to a generated build & updating your gradle files, you can now b
 
 This will initiate the build process with the new Gradle version.
 
-==== 11. Breaking changes
+==== 11. Grails CLI
+
+Both the legacy `grails-shell-cli` and `grails-forge-cli` are now included with Grails 7. Please see the xref:../guide/gettingStarted#downloadingAndInstalling[Downloading & Installing] section of this guide for important background on how to use the Grails CLI commands.
+
+==== 12. Breaking changes
 
 Grails 7.0.0 introduces several breaking changes that may require updates to your application.
 
-===== 11.0
+===== 12.0
 
 Due to the significant changes in Grails 7, all prior Grails Plugin will need updated to work with Grails 7. For plugins in the https://github.com/grails-plugins/[Grails Plugins] GitHub organization, the Grails Core team is updating them as time permits and when requested.
 If there is a plugin that you require updating, please reach out via https://github.com/apache/grails-core/issues[ticket] to see if we can help.
 
-===== 11.1 javax -> Jakarta
+===== 12.1 javax -> Jakarta
 
 Spring has switched from javax to https://jakarta.ee/[jakarta] packages.
 Please consult the Spring upgrade guides for the impacts of this change.
 
-===== 11.2 Removed libraries/classes
+===== 12.2 Removed libraries/classes
 - The `grails-web-fileupload` library, including its sole class `ContentLengthAwareCommonsMultipartResolver`, has been removed. This change was necessitated by the removal of the superclass `CommonsMultipartResolver` in Spring 6. The `ContentLengthAwareCommonsMultipartResolver` was originally introduced to address a bug in Safari back in 2007, but it is likely no longer needed. Spring has transitioned away from `CommonsMultipartResolver` and now recommends using the built-in support for multipart uploads provided by servlet containers. For more information on handling file uploads in Spring Boot, please refer to the relevant sections of the https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.multipart-file-uploads[Spring Boot documentation] and the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x#web-applications-1[Spring Framework 6 upgrade guide].
 - `org.grails.spring.beans.factory.OptimizedAutowireCapableBeanFactory` was previously deprecated and is now removed.
 - The following deprecated classes were removed, please use the suggested replacement:
@@ -211,7 +215,7 @@ Please consult the Spring upgrade guides for the impacts of this change.
 2. `org.grails.core.artefact.TagLibArtefactHandler` -> `org.grails.core.artefact.gsp.TagLibArtefactHandler`
 3. `org.grails.core.DefaultGrailsTagLibClass` -> `org.grails.core.gsp.DefaultGrailsTagLibClass`
 
-===== 11.3 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
+===== 12.3 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
 - This change was made based on community input: https://github.com/orgs/grails/discussions/13517
 - The removal of Micronaut enabled simplification of the Grails codebase and the return of Live Reload via https://github.com/HotswapProjects/HotswapAgent
 - The Micronaut Parent Context is no longer in Grails by default.
@@ -220,7 +224,7 @@ Please consult the Spring upgrade guides for the impacts of this change.
 - Using Micronaut Parent Context: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springParentContext
 - Using a Bean Post Processor: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#beanPostProcessor
 
-===== 11.4 hibernate-ehcache
+===== 12.4 hibernate-ehcache
 
 The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.apache.grails:grails-hibernate5` plugin. If
 your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
@@ -242,17 +246,17 @@ dependencies {
 }
 ----
 
-===== 11.5 H2
+===== 12.5 H2
 
 The test database H2 is stricter about reserved keywords.
 If you use H2 in your application, please take a look at this https://github.com/grails/grails-data-hibernate5/pull/910/commits/c8de45df204966ccc228b46b94beeb2142ae0f59[pull request] for examples of these new restrictions.
 
-===== 11.6 Removal of Test Dependencies from Production Classpath
+===== 12.6 Removal of Test Dependencies from Production Classpath
 
 Prior versions of Grails included test dependencies on the production classpath.
 These are now removed in Grails 7. If you still need them, you can add them to your `implementation` configuration in your build.gradle file.
 
-===== 11.7 Jar Artifact name changes
+===== 12.7 Jar Artifact name changes
 
 Jar artifacts produced by Grails Plugins will no longer have the suffix `-plain`.
 Please see ticket https://github.com/apache/grails-gradle-plugin/pull/347[#347] for details.

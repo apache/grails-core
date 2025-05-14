@@ -17,9 +17,26 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The first step to getting up and running with Grails is to install the distribution.
+There are many ways to create a Grails application.
+The best way is to use either https://start.grails.org[start.grails.org] or use the Grails CLI via https://sdkman.io[SDKMAN].
+SDKMAN greatly simplifies installing and managing multiple Grails versions.
 
-The best way to install Grails on *nix systems is with https://sdkman.io[SDKMAN] which greatly simplifies installing and managing multiple Grails versions.
+=== Types of CLI
+
+Historically, Grails had one CLI - `grails shell`.
+In Grails 6, a new CLI was introduced `grails forge` that was meant to replace `grails shell`.
+Unfortunately, IntelliJ's Grails plugin relies on the legacy shell to provide functions for the IDE.
+For this reason, the decision was made to restore publishing of the `grails-shell` in later versions of Grails 6. The other problem is to customize application generation, `grails forge` would need to be forked, customized, published, and hosted some where.
+The process of building & hosting a custom version of `grails-forge` was found to be cumbersome for some people because the previous shell allowed for customization by providing a directory that laid out a skeleton of what create.
+Worse, some critical plugins, such as the database migration plugin had custom commands that cannot be easily imported into the forge cli.
+
+For this reason, Grails 7 adds the following commands to any Grails install:
+
+1. `grails-forge-cli` - the forge cli that was shipped as `grails` initially in Grails 6. This CLI has autocompletion and long term we intend to fold the legacy shell functions into it - including the ability to create custom commands & supporting a custom layout.
+2. `grails-shell-cli` - the legacy shell cli that IntelliJ uses.
+Historically, this shell has not had autocompletion.
+3. `grails` - a new, delegating shell application that will call either `grails-shell-cli` or `grails-forge-cli`.
+A specific version can be forced by passing the `-t` or `--type` argument with a value of `shell` or `forge`.
 
 === Install with SDKMAN
 
@@ -33,20 +50,21 @@ You can also specify a version
 [source,console,subs=attributes+]
 $ sdk install grails {version}
 
-You can find more information about SDKMAN usage on the https://sdkman.io/usage[SDKMAN Docs]
+You can find more information about SDKMAN usage on the https://sdkman.io/usage[SDKMAN Docs].
+After installing, all three CLI commands should be available.
 
 === Manual installation
 
 For manual installation follow these steps:
 
-* https://github.com/apache/grails-core/releases[Download] a binary distribution of Grails and extract the resulting zip file to a location of your choice.
+* https://github.com/apache/grails-forge/releases[Download] a binary distribution of Grails and extract the resulting zip file to a location of your choice.
 Then add the bin directory to your system path.
 
-=== Unix/Linux
+==== Unix/Linux
 
 ** This can be done by adding `export PATH="$PATH:/path/to/grails/bin"` to your profile
 
-=== Windows
+==== Windows
 ** Copy the path to the bin directory inside the grails folder you have downloaded, for example,
 
 ----
@@ -68,3 +86,11 @@ If Grails is working correctly you should now be able to type `grails --version`
 ----
 Grails Version: {version}
 ----
+
+=== Grails Wrapper
+
+The original CLI binaries can be quite large.
+When installing via SDKMAN or via a download, we include a single shadowJar that contains both shells and the associated scripts to invoke them.
+However, when a project is generated, we also include a wrapper `grailsw` that can be checked into source control.
+This wrapper will download the CLI's to `.grails/wrapper/myGrailsVersion` and invoke them when calling `grailsw`.
+It is meant to be a light weight option if SDKMAN is not available.
