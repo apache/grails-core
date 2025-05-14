@@ -49,8 +49,8 @@ jobs:
         run: |
           cp grails-forge-cli/build/distributions/grails-forge-cli-*.zip forge-cli.zip
           unzip forge-cli -d tmp
-          mv tmp/grails-forge-cli-* tmp/forge-cli
-          ./tmp/grails-forge-cli/bin/grails-forge-cli --version
+          mv tmp/forge-cli-* tmp/forge-cli
+          ./tmp/forge-cli/bin/grails-forge-cli --version
       - name: "✅ Verify Combined CLI"
         if: success()
         run: |
