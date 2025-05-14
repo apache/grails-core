@@ -50,7 +50,7 @@ public abstract class PicocliBuildCompletionTask extends DefaultTask {
             spec.jvmArgs("-Dpicocli.autocomplete.systemExitOnError");
             spec.args(
                     getMainClass().get(),
-                    "--completionScript=" + getOutputDirectory().file("grails_completion").get().getAsFile().getAbsolutePath(),
+                    "--completionScript=" + getOutputDirectory().file("grails_forge_cli_completion").get().getAsFile().getAbsolutePath(),
                     "--force",
                     "--factory=org.grails.forge.cli.GrailsPicocliFactory"
             );

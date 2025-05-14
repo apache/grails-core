@@ -158,21 +158,30 @@ project.extensions.getByType(DistributionContainer).configureEach {
             fileMode = 0755
         }
 
+        from(rootProject.project(':grails-forge-cli').layout.buildDirectory.file('exploded/bin/grails_forge_cli_completion')) {
+            into ''
+            fileMode = 0755
+        }
+
         from(rootProject.layout.projectDirectory.file('LICENSE')) { it.into '' }
         from(rootProject.layout.projectDirectory.file('NOTICE')) { it.into '' }
         from(rootProject.layout.projectDirectory.file('INSTALL')) { it.into '' }
     }
 }
 
+def distZipTask = tasks.named('distZip')
+distZipTask.configure {
+    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('exploded')
+}
+tasks.named('build').configure {
+    it.dependsOn(distZipTask)
+}
 tasks.named('assemble').configure {
-    it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts
+    it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, rootProject.project(':grails-forge-cli').tasks.named('exploded')
 }
 tasks.named('installDist').configure {
     it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts
 }
-tasks.named('distZip').configure {
-    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask
-}
 tasks.named('distTar').configure {
-    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask
+    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('exploded')
 }

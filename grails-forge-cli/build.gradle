@@ -100,7 +100,7 @@ rocker {
 }
 
 startScripts {
-    applicationName = 'grails'
+    applicationName = 'grails-forge-cli'
 }
 
 sdkman {
