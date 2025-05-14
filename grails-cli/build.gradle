@@ -55,7 +55,9 @@ dependencies {
     implementation 'org.apache.groovy:groovy-templates'
 
     // forge dependencies
-    implementation project(':grails-forge-cli')
+    implementation project(':grails-forge-cli'), {
+        exclude group: 'org.slf4j', module: 'slf4j-nop'
+    }
 }
 
 apply {
