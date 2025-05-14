@@ -26,7 +26,6 @@ import java.util.stream.Stream;
 
 public class GrailsWrapperHome {
     public static final String CLI_COMBINED_PROJECT_NAME = "grails-cli";
-    public static final List<String> GRAILS_MARKERS = List.of("settings.gradle", "gradlew", "gradlew.bat");
 
     public final File home;
     public final File wrapperDirectory;
@@ -222,60 +221,6 @@ public class GrailsWrapperHome {
     private static boolean directoryExists(File baseDirectory, String name) {
         File file = new File(baseDirectory, name);
         return file.exists() && file.isDirectory();
-    }
-
-    /**
-     * Locate the “Grails" home by first looking in `directory` for a GRAILS_MARKERS or for a .grails directory
-     * and all parent directories.  If none, is found, the original directory will be returned.  Short circuit on the
-     * home directory to avoid traversing into the root if possible.
-     *
-     * @param directory where to begin the search
-     * @return the directory containing one of the markers, or original directory
-     * @throws IOException if canonicalization fails
-     */
-    private static File locateGrailsHome(File directory) throws IOException {
-        if (directory == null) {
-            throw new IllegalArgumentException("Cannot search for GRAILS_WRAPPER_HOME from a null directory.");
-        }
-
-        File userHome = new File(System.getProperty("user.home")).getCanonicalFile();
-
-        File searchDirectory = directory.getCanonicalFile();
-
-        if (searchDirectory.equals(userHome)) {
-            // if run from the user home directory, allow it to exist
-            return searchDirectory;
-        }
-
-        if (searchDirectory.getParentFile() == null) {
-            // if run from the root, allow it to exist
-            return searchDirectory;
-        }
-
-        File originalDirectory = searchDirectory;
-        while (searchDirectory != null && searchDirectory.exists() && !searchDirectory.equals(userHome)) {
-            if (directoryExists(searchDirectory, ".grails")) {
-                return searchDirectory;
-            }
-
-            // Assume this is nested under the grails core directory, so assume the current directory is the root of the project
-            if(directoryExists(searchDirectory, "grails-core") && directoryExists(searchDirectory, "grails-bom")) {
-                return originalDirectory;
-            }
-
-            for (String name : GRAILS_MARKERS) {
-                if (exists(searchDirectory, name)) {
-                    return searchDirectory;
-                }
-            }
-
-            searchDirectory = searchDirectory.getParentFile();
-            if (searchDirectory != null) {
-                searchDirectory = searchDirectory.getCanonicalFile();
-            }
-        }
-
-        return originalDirectory;
     }
 }
 
