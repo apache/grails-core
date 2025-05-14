@@ -43,7 +43,7 @@ class DelegatingShellApplication {
         validateShellType(preferredShell)
 
         if(!args) {
-            new Tuple2<>(preferredShell == 'forge', args)
+            return new Tuple2<>(preferredShell == 'forge', args)
         }
 
         List<String> listArgs = args.toList()
