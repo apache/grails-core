@@ -76,6 +76,7 @@ jarTask.configure { Jar it ->
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier.set('')
+    it.mergeServiceFiles()
 }
 
 TaskProvider<CreateStartScripts> cliStartScripts = tasks.register('createCliStartScripts', CreateStartScripts)
