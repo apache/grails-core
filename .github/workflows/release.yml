@@ -22,7 +22,7 @@ jobs:
     name: "Release artifacts to GitHub release and SDKMAN plus publish source & documentation"
     runs-on: ubuntu-latest
     permissions:
-      contents: write  #  to create release
+      contents: write  #  to create release & upload wrapper
       issues: write  #  to modify milestones
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
@@ -48,7 +48,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.publish.outputs.release_version }}
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
       - name: "🔨 Build All"
-        run: ./gradlew grails-forge-cli:assemble
+        run: ./gradlew assemble
       - name: "📦 Generate Docs"
         run: >
           ./gradlew
@@ -63,6 +63,25 @@ jobs:
           asset_path: grails-cli/build/distributions/grails-cli-${{ steps.release_version.outputs.value }}.zip
           asset_name: grails-cli-${{ steps.release_version.outputs.value }}.zip
           asset_content_type: application/zip
+      - name: "🔐 Generate secring file"
+        env:
+          SECRING_FILE: ${{ secrets.SECRING_FILE }}
+        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
+      - name: "📤 Publish to Sonatype OSSRH"
+        id: publish
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
+          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: >
+          ./gradlew
+          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
+          publishToSonatype 
+          closeSonatypeStagingRepository
       - name: "🚀 Publish to Github Pages"
         if: success()
         uses: grails/grails-github-actions/deploy-github-pages@asf
