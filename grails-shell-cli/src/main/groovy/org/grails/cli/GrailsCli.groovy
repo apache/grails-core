@@ -42,7 +42,14 @@ import org.grails.cli.interactive.completers.EscapingFileNameCompletor
 import org.grails.cli.interactive.completers.RegexCompletor
 import org.grails.cli.interactive.completers.SortedAggregateCompleter
 import org.grails.cli.interactive.completers.StringsCompleter
-import org.grails.cli.profile.*
+import org.grails.cli.profile.Command
+import org.grails.cli.profile.CommandArgument
+import org.grails.cli.profile.CommandCancellationListener
+import org.grails.cli.profile.ExecutionContext
+import org.grails.cli.profile.Profile
+import org.grails.cli.profile.ProfileRepoConfig
+import org.grails.cli.profile.ProfileRepository
+import org.grails.cli.profile.ProjectContext
 import org.grails.cli.profile.commands.CommandCompleter
 import org.grails.cli.profile.commands.CommandRegistry
 import org.grails.cli.profile.repository.GrailsRepositoryConfiguration
@@ -52,7 +59,11 @@ import org.grails.config.CodeGenConfig
 import org.grails.config.NavigableMap
 import org.grails.exceptions.ExceptionUtils
 
-import java.util.concurrent.*
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
  * Main class for the Grails command line. Handles interactive mode and running Grails commands within the context of a profile
@@ -116,7 +127,7 @@ class GrailsCli {
     CodeGenConfig applicationConfig
     ProjectContext projectContext
     Profile profile = null
-    List<GrailsRepositoryConfiguration> profileRepositories = [MavenProfileRepository.APACHE_REPO]
+    List<GrailsRepositoryConfiguration> profileRepositories = [MavenProfileRepository.APACHE_REPO, MavenProfileRepository.GRAILS_REPO]
 
     /**
      * Obtains a value from .grails/settings.yml
@@ -303,9 +314,8 @@ class GrailsCli {
     protected MavenProfileRepository createMavenProfileRepository() {
         List<ProfileRepoConfig> profileRepoOverrides = ProfileRepoConfig.getConfiguredRepositories()
         if (profileRepoOverrides) {
-            profileRepositories.clear()
             for (ProfileRepoConfig override : profileRepoOverrides) {
-                profileRepositories.add(new GrailsRepositoryConfiguration(override.name, new URI(override.url), override.snapshots, override.username, override.password))
+                profileRepositories.add(0, new GrailsRepositoryConfiguration(override.name, new URI(override.url), override.snapshots, override.username, override.password))
             }
         }
         return new MavenProfileRepository(profileRepositories)
