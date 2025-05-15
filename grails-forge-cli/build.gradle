@@ -33,10 +33,6 @@ sourceSets {
     }
 }
 
-ext {
-    picocliVersion = '4.7.5'
-}
-
 configurations.all {
     resolutionStrategy {
         // prevent fatJar result containing multiple versions of picocli
