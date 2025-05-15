@@ -31,7 +31,16 @@ dependencies {
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
 }
 
+tasks.named('compileTestGroovy') {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
+tasks.named('compileGroovy') {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
 tasks.withType(Test).configureEach {
+    systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
     onlyIf {
         ![
                 'onlyFunctionalTests',

@@ -61,11 +61,21 @@ if ('assetCompile' in tasks.names) {
     }
 }
 
+tasks.named('compileTestGroovy') {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
+tasks.named('compileGroovy') {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
 List<String> debugArguments = [
         '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
 ]
 tasks.withType(Test).configureEach { Test task ->
+
+    systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
+
     boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
     boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
 
