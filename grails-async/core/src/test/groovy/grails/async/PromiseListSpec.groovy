@@ -18,6 +18,7 @@
  */
 package grails.async
 
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -73,6 +74,10 @@ class PromiseListSpec extends Specification {
 
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise list with an exception'() {
 
         when: 'a promise list with a promise that throws an exception is used'

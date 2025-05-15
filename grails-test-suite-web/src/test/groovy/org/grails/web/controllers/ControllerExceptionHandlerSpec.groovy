@@ -22,6 +22,7 @@ package org.grails.web.controllers
 import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
+import spock.lang.PendingFeatureIf
 
 import java.sql.BatchUpdateException
 import java.sql.SQLException
@@ -126,6 +127,10 @@ class ControllerExceptionHandlerSpec extends Specification implements Controller
         model.problemDescription == 'A Number Was Invalid'
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test throwing an exception that does not have a handler'() {
         when:
         params.exceptionToThrow = 'grails.web.mapping.mvc.exceptions.CannotRedirectException'
@@ -135,6 +140,10 @@ class ControllerExceptionHandlerSpec extends Specification implements Controller
         thrown(CannotRedirectException)
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test throwing an exception that does not have a handler and does match a private method in the parent controller'() {
         when: 'a controller action throws an exception which matches an inherited private method which should not be treated as an exception handler'
         params.exceptionToThrow = 'java.io.IOException'
@@ -144,6 +153,10 @@ class ControllerExceptionHandlerSpec extends Specification implements Controller
         thrown IOException
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test action throws an exception that does not have a corresponding error handler'() {
         when:
         params.exceptionToThrow = 'java.lang.UnsupportedOperationException'
@@ -153,6 +166,10 @@ class ControllerExceptionHandlerSpec extends Specification implements Controller
         thrown UnsupportedOperationException
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test command object action throws an exception that does not have a corresponding error handler'() {
         when:
         params.exceptionToThrow = 'java.lang.UnsupportedOperationException'
@@ -162,6 +179,10 @@ class ControllerExceptionHandlerSpec extends Specification implements Controller
         thrown UnsupportedOperationException
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test typed parameter action throws an exception that does not have a corresponding error handler'() {
         when:
         params.exceptionToThrow = 'java.lang.UnsupportedOperationException'

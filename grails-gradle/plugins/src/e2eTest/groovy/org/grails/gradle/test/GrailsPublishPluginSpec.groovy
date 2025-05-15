@@ -22,6 +22,7 @@ package org.grails.gradle.test
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import spock.lang.PendingFeature
+import spock.lang.PendingFeatureIf
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -461,6 +462,10 @@ class GrailsPublishPluginSpec extends GradleSpecification {
     }
 
     @PendingFeature(reason = "lazy eval and maven publish local cannot be distinguished between normal publish")
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     def "project fails on maven publish without url"() {
         given:
         Path projectDir = createProjectDir("invalid-sources")
@@ -539,6 +544,10 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         bf.buildResult.output.contains("Could not locate a project property of `mavenPublishUrl` or an environment variable of `MAVEN_PUBLISH_URL`. A URL is required for maven publishing.")
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     def "project without java plugin fails grailsPublish apply"() {
         given:
         Path projectDir = createProjectDir("invalid-sources")
@@ -574,8 +583,11 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         bf.buildResult.output.contains("Grails Publish Plugin requires the Java Plugin to be applied to the project.")
     }
 
-    @PendingFeature
-    // because it could be valid to publish only dependencies, sources may not exist. disable this test for now
+    @PendingFeature(reason = 'because it could be valid to publish only dependencies, sources may not exist. disable this test for now')
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     def "project without sources fails grailsPublish apply"() {
         given:
         Path projectDir = createProjectDir("invalid-sources")
@@ -771,6 +783,10 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         findJarFileEntry("org/grails/example/MyProject.class", classesJar)
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     def "source artifact test - groovydoc disabled"() {
         given:
         File tempDir = File.createTempDir("groovy-doc-disabled")

@@ -20,10 +20,15 @@ package org.grails.databinding.xml
 
 import grails.databinding.DataBindingSource
 import groovy.xml.XmlSlurper
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class GPathCollectionDataBindingSourceSpec extends Specification {
 
+    @PendingFeatureIf({
+        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test multiple child elements'() {
         given:
         def xml = new XmlSlurper().parseText('''

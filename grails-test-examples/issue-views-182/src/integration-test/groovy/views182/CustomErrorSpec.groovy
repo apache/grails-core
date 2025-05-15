@@ -28,6 +28,7 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import spock.lang.PendingFeatureIf
 
 @Integration
 @Rollback
@@ -39,6 +40,10 @@ class CustomErrorSpec extends HttpClientCommonSpec {
         this.client = HttpClient.create(new URL(baseUrl))
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'it is possible to use gson views for handling exception errors'() {
         when: 'executing get to custom error'
         HttpResponse<String> response = client.toBlocking().exchange(HttpRequest.GET("/customError"), Argument.of(String), Argument.of(String))

@@ -22,6 +22,7 @@ import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import spock.lang.IgnoreIf
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 import java.util.regex.Pattern
@@ -40,7 +41,10 @@ import java.util.regex.Pattern
  * @author Tom Bujok
  * @since 2.3
  */
-@IgnoreIf({ !GrailsConsole.instance.isAnsiEnabled() })
+@IgnoreIf({
+    !GrailsConsole.instance.isAnsiEnabled() ||
+    GroovySystem.version.startsWith('5') // Mock() does currently not work with Groovy 5
+})
 class GrailsConsoleSpec extends Specification {
 
     static final String RESET = Pattern.quote(Ansi.ansi().reset().toString())

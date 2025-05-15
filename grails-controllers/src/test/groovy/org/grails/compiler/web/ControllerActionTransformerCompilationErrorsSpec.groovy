@@ -24,7 +24,7 @@ import grails.compiler.ast.ClassInjector
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.grails.compiler.injection.GrailsAwareClassLoader
 import org.grails.compiler.web.ControllerActionTransformer
-
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class ControllerActionTransformerCompilationErrorsSpec extends Specification {
@@ -40,6 +40,10 @@ class ControllerActionTransformerCompilationErrorsSpec extends Specification {
         gcl.classInjectors = [transformer]as ClassInjector[]
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test overloaded method actions'() {
         when: 'A controller overloads a method action'
             gcl.parseClass('''
@@ -53,6 +57,10 @@ class ControllerActionTransformerCompilationErrorsSpec extends Specification {
             e.message.contains 'Controller actions may not be overloaded.  The [methodAction] action has been overloaded in [TestController].'
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "Test default parameter values"() {
         when: 'A method action has default parameter values'
             gcl.parseClass('''

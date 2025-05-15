@@ -22,11 +22,16 @@ package org.grails.databinding.compiler
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class BindingFormatCompilationErrorsSpec extends Specification {
 
 	@Issue('GRAILS-11321')
+	@PendingFeatureIf({
+		// thrown() does currently not work with Groovy 5
+		GroovySystem.version.startsWith('5')
+	})
     void 'Test compiling @BindingFormat with no code and no value'() {
         given:
         def gcl = new GroovyClassLoader()

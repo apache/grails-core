@@ -23,7 +23,7 @@ import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import grails.compiler.ast.ClassInjector
 import org.grails.compiler.injection.GrailsAwareClassLoader
 import org.grails.compiler.web.ControllerActionTransformer
-
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class ControllerExceptionHandlerCompilationErrorsSpec extends Specification {
@@ -39,6 +39,10 @@ class ControllerExceptionHandlerCompilationErrorsSpec extends Specification {
         gcl.classInjectors = [transformer]as ClassInjector[]
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test multiple exception handlers for the same exception type'() {
         when: 'Two handlers exist for the same exception type'
             gcl.parseClass('''

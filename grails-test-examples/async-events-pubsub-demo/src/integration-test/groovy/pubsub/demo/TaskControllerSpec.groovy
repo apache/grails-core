@@ -27,6 +27,7 @@ import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.AutoCleanup
 import spock.lang.PendingFeature
+import spock.lang.PendingFeatureIf
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -49,6 +50,10 @@ class TaskControllerSpec extends Specification {
         However, when starting the application with bootRun,
         the response body is as expected.
     ''')
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'test async error handling'() {
 
         when: 'we invoke an endpoint that throws an exception'

@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.testing
 
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -82,6 +83,10 @@ class GrailsMockHttpServletRequestTests extends Specification {
         verifyXmlResult request.XML
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testGetXMLNoContent() {
 
         given:
@@ -98,6 +103,10 @@ class GrailsMockHttpServletRequestTests extends Specification {
         e.message == 'Error parsing XML'
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testGetXMLContentNotXml() {
 
         given:

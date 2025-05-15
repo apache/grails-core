@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.stereotype.Component
 import spock.lang.AutoCleanup
+import spock.lang.PendingFeatureIf
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
@@ -37,6 +38,10 @@ class PublishSubscribeSpringSpec extends Specification {
     @SuppressWarnings('unused')
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore()
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     def 'Test event publisher within Spring'() {
 
         given: 'a Spring application context with an event bus'

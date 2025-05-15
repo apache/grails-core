@@ -22,6 +22,7 @@ package pubsub.demo
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
 import jakarta.inject.Inject
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -86,6 +87,10 @@ class PubSubSpec extends Specification {
 
 
     @Rollback
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test synchronous event listener'() {
 
         when: 'when a event listener cancels an insert'

@@ -25,6 +25,7 @@ import org.grails.web.util.GrailsApplicationAttributes
 import grails.artefact.Artefact
 import grails.web.mapping.mvc.RedirectEventListener
 import org.springframework.http.HttpStatus
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -121,6 +122,10 @@ class RedirectMethodTests extends Specification implements UrlMappingsUnitTest<U
         fired
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testRedirectAlreadyCalledException() {
 
         when:

@@ -19,6 +19,7 @@
 package org.grails.databinding.converters
 
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 
 import java.text.ParseException
 
@@ -103,6 +104,10 @@ class DateConversionHelperSpec extends Specification {
         0 == calendar.get(SECOND)
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test invalid format String'() {
         given:
         def helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd HH:mm:ss.S'])
@@ -137,6 +142,10 @@ class DateConversionHelperSpec extends Specification {
     }
 
     @Issue("https://github.com/apache/grails-core/issues/10387")
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test lenient date'() {
         given:
         DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd'])

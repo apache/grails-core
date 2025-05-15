@@ -21,6 +21,7 @@ package org.grails.compiler.logging
 import org.slf4j.Logger
 import grails.compiler.ast.ClassInjector
 import org.grails.compiler.injection.GrailsAwareClassLoader
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class LoggingTransformerSpec extends Specification {
@@ -124,6 +125,10 @@ class LoggingController {
 
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     def "Test log field is not added to Application classes"() {
         given:
         def gcl = new GrailsAwareClassLoader()

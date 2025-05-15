@@ -21,6 +21,7 @@ package grails.async
 import grails.async.decorator.PromiseDecorator
 import org.grails.async.factory.SynchronousPromiseFactory
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -127,6 +128,10 @@ class SynchronousPromiseFactorySpec extends Specification {
             result == 10
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise chaining with exception'() {
 
         when: 'a promise is chained'
@@ -140,6 +145,10 @@ class SynchronousPromiseFactorySpec extends Specification {
     }
 
     @Issue('GRAILS-9229')
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise is executed without calling get'() {
 
         given: 'a closure'
@@ -153,6 +162,10 @@ class SynchronousPromiseFactorySpec extends Specification {
     }
 
     @Issue('GRAILS-10152')
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise closure is not executed multiple times if it returns null'() {
 
         given: 'a closure that returns null'

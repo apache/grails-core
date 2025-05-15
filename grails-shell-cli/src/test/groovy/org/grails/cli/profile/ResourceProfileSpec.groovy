@@ -23,6 +23,7 @@ import org.eclipse.aether.artifact.DefaultArtifact
 import org.eclipse.aether.graph.Dependency
 import org.grails.cli.profile.commands.factory.YamlCommandFactory
 import org.grails.io.support.Resource
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -30,6 +31,10 @@ import spock.lang.Specification
  */
 class ResourceProfileSpec extends Specification {
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "Test resource version"() {
         given:"A resource profile"
         def mockResource = Mock(Resource)
@@ -78,6 +83,10 @@ class ResourceProfileSpec extends Specification {
 
     }
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "test YamlCommandFactory readCommands"() {
 
         given: "A resource and profile"
@@ -94,6 +103,10 @@ class ResourceProfileSpec extends Specification {
         data.description == "Cleans a Grails application's compiled sources"
     }
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "Test dependencies"() {
         given:"A resource profile"
 
@@ -132,6 +145,10 @@ class ResourceProfileSpec extends Specification {
     }
 
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "Test dependency exclusions"() {
         given:"A resource profile"
 

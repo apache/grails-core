@@ -19,10 +19,15 @@
 package grails.databinding
 
 import groovy.xml.XmlSlurper
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class XMLBindingSpec extends Specification {
 
+    @PendingFeatureIf({
+        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test simple XML binding'() {
         given:
         def binder = new SimpleDataBinder()

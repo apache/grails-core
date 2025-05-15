@@ -25,6 +25,7 @@ import grails.testing.web.UrlMappingsUnitTest
 import junit.framework.ComparisonFailure
 import org.springframework.web.context.WebApplicationContext
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -131,6 +132,10 @@ class AnotherUrlMappingsSpec extends Specification implements UrlMappingsUnitTes
         [GrailsUrlMappingsTestCaseFakeController]
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testGrails5222Again() {
         when:
         assertForwardUrlMapping("/alias/param1value", controller: "grailsUrlMappingsTestCaseFake", action: "action1") {
@@ -210,6 +215,10 @@ class GRAILS5222UrlMappingsSpec extends Specification implements UrlMappingsUnit
         [UserController]
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testGRAILS5222() {
         when:
         assertForwardUrlMapping("/user", controller: "user", action: "publicProfile") {
@@ -260,6 +269,10 @@ class GRAILS9110UrlMappingsSpec extends Specification implements UrlMappingsUnit
         [UserController]
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testGrails9110() {
         when:
         assertForwardUrlMapping("/user", controller:"user", action:"publicProfile") {

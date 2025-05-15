@@ -23,6 +23,7 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletWebRequest
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 import jakarta.servlet.http.Cookie
@@ -32,6 +33,10 @@ import jakarta.servlet.http.Cookie
  */
 class CookieTenantResolverSpec extends Specification {
 
+    @PendingFeatureIf({
+        // thrown does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "Test subdomain resolver throws an exception outside a web request"() {
         when:
         new CookieTenantResolver().resolveTenantIdentifier()
@@ -41,7 +46,10 @@ class CookieTenantResolverSpec extends Specification {
         e.message == "Tenant could not be resolved outside a web request"
     }
 
-
+    @PendingFeatureIf({
+        // thrown does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "Test not tenant id found"() {
         setup:
         def request = new MockHttpServletRequest("GET", "/foo")

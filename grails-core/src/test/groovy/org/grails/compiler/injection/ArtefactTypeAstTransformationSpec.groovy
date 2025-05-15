@@ -30,6 +30,7 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.grails.core.artefact.ControllerArtefactHandler
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -68,6 +69,10 @@ class ArtefactTypeAstTransformationSpec extends Specification {
         returnValue == "Controller"
     }
 
+	@PendingFeatureIf({
+		// thrown() does currently not work with Groovy 5
+		GroovySystem.version.startsWith('5')
+	})
     void "test resolveArtefactType with null"() {
         given:
         ArtefactTypeAstTransformation ast = new ArtefactTypeAstTransformation()
@@ -107,6 +112,10 @@ class ArtefactTypeAstTransformationSpec extends Specification {
 	}
 
 	@Issue("https://github.com/apache/grails-core/issues/10531")
+	@PendingFeatureIf({
+		// thrown() does currently not work with Groovy 5
+		GroovySystem.version.startsWith('5')
+	})
 	void "TraitInjector with SupportsClassNode gets applied only if supports return true"() {
 		setup:
 		TraitInjectionUtils.@traitInjectors = [new TestTraitInjectorForSupportsClassNode(false)]

@@ -21,10 +21,15 @@ package grails.test.mixin
 import grails.artefact.Artefact
 import grails.persistence.Entity
 import grails.testing.web.controllers.ControllerUnitTest
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class TestForControllerWithoutMockDomainTests extends Specification implements ControllerUnitTest<ImpedimentsController> {
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void testEditImpediment() {
         def impedimentInstance = new Impediment(text:"blah")
 

@@ -19,6 +19,7 @@
 package org.grails.async.factory.rxjava
 
 import grails.async.PromiseList
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -77,6 +78,10 @@ class RxJavaPromiseListSpec extends Specification{
             result == [1,2,3]
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise list with an exception'() {
 
         given: 'a promise list with a promise that throws an exception'

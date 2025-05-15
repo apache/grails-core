@@ -20,6 +20,7 @@ package org.grails.async.factory.rxjava2
 
 import grails.async.Promises
 import grails.async.decorator.PromiseDecorator
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -48,6 +49,10 @@ class RxPromiseSpec extends Specification {
 
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise timeout handling'() {
 
         when: 'a promise that takes a while is created'
@@ -154,6 +159,10 @@ class RxPromiseSpec extends Specification {
             value == 10
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise chaining with exception'() {
 
         when: 'a promise is chained'

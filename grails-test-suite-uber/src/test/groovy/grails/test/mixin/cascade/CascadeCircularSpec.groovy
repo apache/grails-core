@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import grails.testing.gorm.DataTest
 import grails.validation.ValidationException
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -31,6 +32,10 @@ import spock.lang.Specification
 class CascadeCircularSpec extends Specification implements DataTest{
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/967')
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "test cascade circular"() {
         given:
         Person splinter = new Person(name: 'Master Splinter')

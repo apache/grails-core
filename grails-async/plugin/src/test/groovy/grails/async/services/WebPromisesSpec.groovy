@@ -22,6 +22,7 @@ import grails.async.Promises
 import grails.async.web.WebPromises
 import grails.util.GrailsWebMockUtil
 import org.springframework.web.context.request.RequestContextHolder
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -29,6 +30,10 @@ import spock.lang.Specification
  */
 class WebPromisesSpec extends Specification {
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test web promises handling'() {
 
         setup:

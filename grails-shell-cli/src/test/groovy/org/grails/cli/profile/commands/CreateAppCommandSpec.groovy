@@ -22,6 +22,7 @@ import grails.build.logging.GrailsConsole
 import org.grails.cli.profile.Feature
 import org.grails.cli.profile.Profile
 import org.spockframework.util.StringMessagePrintStream
+import spock.lang.PendingFeatureIf
 import spock.lang.Shared
 import spock.lang.Specification
 /**
@@ -46,6 +47,10 @@ class CreateAppCommandSpec extends Specification {
         GrailsConsole.instance.out = originalOut
     }
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "test evaluateFeatures - multiple, some valid"() {
         given:
         Feature bar = Mock(Feature) {
@@ -66,6 +71,10 @@ class CreateAppCommandSpec extends Specification {
         sps.toString() == "Warning |\nFeature foo does not exist in the profile web!\n"
     }
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "test evaluateFeatures - multiple, all valid"() {
         given:
         Feature foo = Mock(Feature) {
@@ -90,6 +99,10 @@ class CreateAppCommandSpec extends Specification {
         sps.toString() == ""
     }
 
+    @PendingFeatureIf({
+        // Mock() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void "test evaluateFeatures fat finger"() {
         given:
         Feature bar = Mock(Feature) {

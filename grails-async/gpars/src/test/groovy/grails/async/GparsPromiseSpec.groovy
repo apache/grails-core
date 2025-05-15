@@ -20,6 +20,7 @@ package grails.async
 
 import grails.async.decorator.PromiseDecorator
 import org.grails.async.factory.gpars.GparsPromiseFactory
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -47,7 +48,11 @@ class GparsPromiseSpec extends Specification {
         then: 'the result is decorated'
             result == '*10*'
     }
-    
+
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise timeout handling'() {
         
         when: 'a promise that takes longer than the timeout'
@@ -142,6 +147,10 @@ class GparsPromiseSpec extends Specification {
             value == 10
     }
 
+    @PendingFeatureIf({
+        // thrown() does currently not work with Groovy 5
+        GroovySystem.version.startsWith('5')
+    })
     void 'Test promise chaining with exception'() {
         
         when: 'a promise with an exception is chained'
