@@ -1,20 +1,18 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 package org.grails.gradle.plugin.core
 
@@ -28,7 +26,11 @@ import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.api.*
+import org.gradle.api.Action
+import org.gradle.api.NamedDomainObjectProvider
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
@@ -39,7 +41,12 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.AbstractCopyTask
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetOutput
+import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -54,7 +61,10 @@ import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
 import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
 
 import javax.inject.Inject
 
@@ -342,13 +352,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureMicronaut(Project project) {
         final String micronautVersion = project.properties['micronautVersion']
         if (micronautVersion) {
-            project.configurations.all({ Configuration configuration ->
+            project.configurations.configureEach({ Configuration configuration ->
                 configuration.resolutionStrategy.eachDependency({ DependencyResolveDetails details ->
                     String dependencyName = details.requested.name
                     String group = details.requested.group
                     if (group == 'io.micronaut' && dependencyName.startsWith('micronaut')) {
                         details.useVersion(micronautVersion)
-                        return
                     }
                 } as Action<DependencyResolveDetails>)
             } as Action<Configuration>)
@@ -533,6 +542,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureConsoleTask(Project project) {
         TaskContainer tasks = project.tasks
         if (!project.configurations.names.contains('console')) {
+            if (!tasks.names.contains('findMainClass')) {
+                project.logger.info("Project ${project.name} does not contain the findMainClass task so the console & shell tasks will not be created.")
+                return
+            }
+
             NamedDomainObjectProvider<Configuration> consoleConfiguration = project.configurations.register('console')
             def consoleTask = createConsoleTask(project, tasks, consoleConfiguration)
             def shellTask = createShellTask(project, tasks, consoleConfiguration)
@@ -540,6 +554,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
             tasks.named('findMainClass').configure {
                 it.doLast {
                     ExtraPropertiesExtension extraProperties = (ExtraPropertiesExtension) project.getExtensions().getByName("ext")
+                    if (!extraProperties.has('mainClassName')) {
+                        return // disabled because we don't expect to run a grails app (likely a plugin)
+                    }
+
                     def mainClassName = extraProperties.get('mainClassName')
                     if (mainClassName) {
                         consoleTask.get().args mainClassName
@@ -597,14 +615,34 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     protected void registerFindMainClassTask(Project project) {
         TaskContainer taskContainer = project.tasks
-        def findMainClassTask = taskContainer.findByName("findMainClass")
-        if (findMainClassTask == null) {
-            findMainClassTask = project.tasks.register("findMainClass", FindMainClassTask).get()
-            findMainClassTask.mustRunAfter(project.tasks.withType(GroovyCompile))
-        } else if (!FindMainClassTask.class.isAssignableFrom(findMainClassTask.class)) {
-            def grailsFindMainClass = project.tasks.register("grailsFindMainClass", FindMainClassTask).get()
-            grailsFindMainClass.dependsOn(findMainClassTask)
-            findMainClassTask.finalizedBy(grailsFindMainClass)
+
+        def existingTask = taskContainer.findByName("findMainClass")
+        if (existingTask == null) {
+            TaskProvider<FindMainClassTask> findMainClassTask = project.tasks.register("findMainClass", FindMainClassTask)
+
+            Provider<RegularFile> mainClassFileContainer = project.layout.buildDirectory.file('resolvedMainClassName')
+            Provider<String> mainClassProvider = project.providers.fileContents(mainClassFileContainer).asText.map {
+                it.trim()
+            }
+            project.tasks.withType(BootArchive).configureEach { BootArchive bootTask ->
+                bootTask.dependsOn(findMainClassTask)
+                bootTask.inputs.file(mainClassFileContainer)
+                bootTask.mainClass.convention(mainClassProvider)
+            }
+            project.tasks.withType(BootRun).configureEach { BootRun it ->
+                it.dependsOn(findMainClassTask)
+                it.inputs.file(mainClassFileContainer)
+                it.mainClass.convention(mainClassProvider)
+            }
+
+            findMainClassTask.configure {
+                it.mustRunAfter(project.tasks.withType(GroovyCompile))
+            }
+            project.tasks.withType(ResolveMainClassName).configureEach {
+                it.dependsOn findMainClassTask
+            }
+        } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
+            project.logger.warn("Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.")
         }
     }
 
