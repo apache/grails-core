@@ -21,6 +21,7 @@ package org.grails.config
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -30,12 +31,11 @@ import java.util.regex.Pattern
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
  */
+@Slf4j
 @Deprecated
-@EqualsAndHashCode
 @CompileStatic
+@EqualsAndHashCode
 class NavigableMap implements Map<String, Object>, Cloneable {
-
-    private static final Logger LOG = LoggerFactory.getLogger(NavigableMap.class);
 
     private static final Pattern SPLIT_PATTERN = ~/\./
     private static final String SPRING_PROFILES = 'spring.profiles.active'
@@ -359,9 +359,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         Object result = get(name)
         if (!(result instanceof NavigableMap)) {
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Accessing config key '{}' through dot notation is deprecated, and it will be removed in a future release. Use 'config.getProperty(key, targetClass)' instead.", name)
-            }
+            log.warn("Accessing config key '{}' through dot notation is deprecated, and it will be removed in a future release. Use 'config.getProperty(key, targetClass)' instead.", name)
         }
         return result
     }
@@ -373,7 +371,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     Object navigate(String... path) {
         return navigateMap(this, path)
     }
-    
+
     private Object navigateMap(Map<String, Object> map, String... path) {
         if(map==null || path == null) return null
         if(path.length == 0) {
@@ -411,7 +409,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                 accumulatedPath.append(pathElement)
             }
 
-            Object currentItem = currentMap.get(pathElement) 
+            Object currentItem = currentMap.get(pathElement)
             if(currentItem instanceof NavigableMap) {
                 currentMap = (NavigableMap)currentItem
             } else if (createMissing) {
@@ -433,19 +431,19 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         currentMap
     }
-    
+
     Map<String, Object> toFlatConfig() {
         Map<String, Object> flatConfig = [:]
         flattenKeys(flatConfig, this, [], false)
         flatConfig
     }
-    
+
     Properties toProperties() {
         Properties properties = new Properties()
         flattenKeys((Map<Object, Object>) properties, this, [], true)
         properties
     }
-    
+
     private void flattenKeys(Map<? extends Object, Object> flatConfig, Map currentMap, List<String> path, boolean forceStrings) {
         currentMap.each { key, value ->
             String stringKey = String.valueOf(key)
@@ -465,22 +463,22 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                     if(value instanceof Collection) {
                         if(forceStrings) {
-                            flatConfig.put(fullKey, ((Collection)value).join(","))
+                            ((Map<Object, Object>) flatConfig).put(fullKey, ((Collection)value).join(","))
                         } else {
-                            flatConfig.put(fullKey, value)
+                            ((Map<Object, Object>) flatConfig).put(fullKey, value)
                         }
                         int index = 0
                         for(Object item: (Collection)value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
-                            flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
+                            ((Map<Object, Object>) flatConfig).put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++
                         }
                     } else {
-                        flatConfig.put(fullKey, forceStrings ? String.valueOf(value) : value)
+                        ((Map<Object, Object>) flatConfig).put(fullKey, forceStrings ? String.valueOf(value) : value)
                     }
                 }
             }
-        }        
+        }
     }
 
     @Override
@@ -496,6 +494,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     /**
      * @deprecated This class should be avoided due to known performance reasons. Use {@code config.getProperty(String key, Class<T> targetType)} instead of dot based navigation.
      */
+    @Slf4j
     @Deprecated
     @CompileStatic
     static class NullSafeNavigator implements Map<String, Object>{
@@ -505,9 +504,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         NullSafeNavigator(NavigableMap parent, List<String> path) {
             this.parent = parent
             this.path = path
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
-            }
+            log.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
         }
 
         Object getAt(Object key) {
