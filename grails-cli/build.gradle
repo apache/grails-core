@@ -54,6 +54,12 @@ dependencies {
     implementation 'org.apache.groovy:groovy-ant'
     implementation 'org.apache.groovy:groovy-templates'
 
+    // The commands are pulled from the shellCliDependencies in the shell project, but they are not in the shell jar file,
+    // so they must be added here. To keep the jar file smaller, only a subset is included here
+    implementation 'org.apache.grails:grails-core' // for ApplicationContextCommandFactory to lookup commands
+    implementation 'org.apache.grails:grails-url-mappings' // for UrlMappingsReportCommand
+    // profiles will add additional libraries as needed to surface commands
+
     // forge dependencies
     implementation project(':grails-forge-cli'), {
         exclude group: 'org.slf4j', module: 'slf4j-nop'
@@ -78,7 +84,10 @@ jarTask.configure { Jar it ->
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier.set('')
+
+    // services & custom grails.factories have to be merged since commands can be created from both sources
     it.mergeServiceFiles()
+    it.mergeServiceFiles('META-INF/grails.factories')
 }
 
 TaskProvider<CreateStartScripts> cliStartScripts = tasks.register('createCliStartScripts', CreateStartScripts)
