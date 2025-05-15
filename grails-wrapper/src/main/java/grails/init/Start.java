@@ -87,10 +87,8 @@ public class Start {
         }
 
         Properties properties = new Properties();
-        try {
-            try (InputStream in = new FileInputStream(gradleProperties)) {
-                properties.load(in);
-            }
+        try (InputStream in = new FileInputStream(gradleProperties)) {
+            properties.load(in);
         }
         catch(Exception e) {
             System.err.println("Failed to load gradle.properties from "+ gradleProperties);
