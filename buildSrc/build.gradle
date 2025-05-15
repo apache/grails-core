@@ -51,7 +51,7 @@ dependencies {
     implementation "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleJvmVersion"
     implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
     implementation "io.spring.nohttp:nohttp-gradle:$nohttpGradleVersion"
-    implementation "gradle.plugin.com.github.johnrengelman:shadow:$shadowVersion"
+    implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
     implementation "io.github.gradle-nexus:publish-plugin:$nexusPublishVersion"
     implementation "org.gradle.test-retry:org.gradle.test-retry.gradle.plugin:$testRetryVersion"
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"

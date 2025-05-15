@@ -18,10 +18,10 @@
  */
 
 plugins {
-    id "org.grails.forge.internal.convention"
-    id "application"
-    id "com.github.johnrengelman.shadow"
-    id "org.grails.forge.rocker"
+    id 'org.grails.forge.internal.convention'
+    id 'application'
+    id 'com.gradleup.shadow'
+    id 'org.grails.forge.rocker'
 }
 
 sourceSets {
