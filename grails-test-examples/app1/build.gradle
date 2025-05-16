@@ -17,20 +17,6 @@
  *  under the License.
  */
 
-buildscript {
-    repositories {
-        // mavenLocal()
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        mavenCentral()
-        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
-    }
-    dependencies {
-        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
-        classpath 'org.apache.grails:grails-gradle-plugins'
-        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
-    }
-}
-
 version = '0.1'
 group = 'functionaltests'
 

@@ -17,18 +17,6 @@
  *  under the License.
  */
 
-buildscript {
-    repositories {
-        // mavenLocal()
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
-    }
-    dependencies {
-        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
-        classpath 'org.apache.grails:grails-gradle-plugins'
-    }
-}
-
 version = '0.1'
 group = 'grails301.domain.save.npe'
 

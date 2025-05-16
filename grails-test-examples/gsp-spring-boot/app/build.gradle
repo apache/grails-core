@@ -17,21 +17,6 @@
  *  under the License.
  */
 
-buildscript {
-    repositories {
-        // mavenLocal()
-        maven { url 'https://repo.grails.org/grails/restricted/' }
-        maven {
-            name = 'ASF Snapshot repo'
-            url = 'https://repository.apache.org/content/groups/snapshots'
-        }
-    }
-    dependencies {
-        classpath platform("org.apache.grails:grails-gradle-bom:$projectVersion")
-        classpath 'org.apache.grails:grails-gradle-plugins'
-    }
-}
-
 plugins {
     id 'java'
     id 'war'
