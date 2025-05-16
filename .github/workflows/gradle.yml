@@ -60,7 +60,7 @@ jobs:
           ./tmp1/cli/grails --version
       - name: Debug Directory
         run: |
-          cd tmp1/cli/
+          cd tmp1/cli/.grails
           ls -la
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
         if: ${{ matrix.java == '17' }}
