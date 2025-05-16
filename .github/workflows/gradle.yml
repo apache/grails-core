@@ -69,7 +69,7 @@ jobs:
           name: grails-cli-snapshot
           path: |
             tmp1/cli/**
-            tmp1/cli/.grails/** # include .grails directory
+            tmp1/cli/.grails/**/* # include .grails directory
   publish:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ build ]
