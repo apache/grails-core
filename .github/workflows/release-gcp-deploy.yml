@@ -22,15 +22,10 @@ on:
         required: true
 jobs:
   build:
-    name: "Build Project"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    name: "Build project"
+    runs-on: ubuntu-24.04
     outputs:
       release_version: ${{ github.event.inputs.release }}
-    env:
-      GIT_USER_NAME: 'grails-build'
-      GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -43,11 +38,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔨 Build All"
+      - name: "🧩 Assemble"
         run: ./gradlew grails-forge-cli:assemble
   deploy:
-    name: "Deploy To Google Cloud Run"
-    runs-on: ubuntu-latest
+    name: "Deploy to Google Cloud Run"
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: "📥 Checkout repository"
@@ -71,12 +66,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "✅ Run Tests"
+      - name: "🏃 Run tests"
         run: >
           ./gradlew
           grails-forge-api:test
           grails-forge-web-netty:test
-      - name: "🔨 Build Docker Native Image"
+      - name: "🔨 Build Docker native image"
         env:
           IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}:${{ needs.build.outputs.release_version }}
         run: >
@@ -99,8 +94,8 @@ jobs:
           version="$(echo "${release_version//./}" | tr '[A-Z]' '[a-z]')"
           gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-$version --image $IMAGE_NAME --region us-central1 --update-env-vars=HOSTNAME="grailsforge-600-cjmq3uyfcq-uc.a.run.app",CORS_ALLOWED_ORIGIN="https://start.grails.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_LATEST_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_LATEST_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }} --platform managed --allow-unauthenticated --service-account=${{ secrets.GCLOUD_EMAIL }}
   deployAnalytics:
-    name: "Deploy Analytics To Google Cloud Run"
-    runs-on: ubuntu-latest
+    name: "Deploy analytics to Google Cloud Run"
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: "📥 Checkout repository"
@@ -124,11 +119,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "✅ Run Tests"
+      - name: "🏃 Run tests"
         run: >
           ./gradlew
           grails-forge-analytics-postgres:test
-      - name: "🔨 Build Docker Native Image"
+      - name: "🔨 Build Docker native image"
         env:
           IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}-analytics:${{ needs.build.outputs.release_version }}
         run: >

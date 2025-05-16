@@ -24,11 +24,11 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    name: "Build Project"
-    runs-on: ubuntu-latest
+    name: "Build project"
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        java: ['17', '21']
+        java: [ '17', '21' ]
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -41,18 +41,16 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔨 Run Build"
+      - name: "🔨 Build"
         id: build
         run: ./gradlew build
       - name: "✅ Verify Forge CLI"
-        if: success()
         run: |
           cp grails-forge-cli/build/distributions/grails-forge-cli-*.zip forge-cli.zip
           unzip forge-cli -d tmp
           mv tmp/grails-forge-cli-* tmp/forge-cli
           ./tmp/forge-cli/bin/grails-forge-cli --version
-      - name: "✅ Verify Combined CLI"
-        if: success()
+      - name: "✅ Verify combined CLI"
         run: |
           cp grails-cli/build/distributions/grails-cli-*.zip cli.zip
           unzip cli -d tmp1
@@ -69,23 +67,23 @@ jobs:
             tmp1/cli/.grails/**/* # include .grails directory
   publish:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
-    needs: [ build ]
+    needs: build
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+      - name: 'Ensure common build date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: liberica
-          java-version: 17
+          distribution: 'liberica'
+          java-version: '17'
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "📤 Publish Grails-Core Snapshot Artifacts"
+      - name: "📤 Publish Snapshot artifacts"
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}

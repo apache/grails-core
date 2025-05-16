@@ -18,53 +18,58 @@
  */
 
 plugins {
-    id "com.github.johnrengelman.shadow"
-    id "io.micronaut.application" version "$micronautApplicationPluginVersion"
+    id 'com.gradleup.shadow'
+    id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
 }
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    annotationProcessor "io.micronaut.data:micronaut-data-processor"
-    annotationProcessor "io.micronaut:micronaut-graal"
-    implementation project(":grails-forge-core")
-    runtimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    implementation "io.micronaut.data:micronaut-data-jdbc"
-    implementation "org.postgresql:postgresql:$postgresqlVersion"
+
+    annotationProcessor 'io.micronaut:micronaut-graal'
+    annotationProcessor 'io.micronaut.data:micronaut-data-processor'
+
+    implementation project(':grails-forge-core')
     implementation "com.google.cloud.sql:postgres-socket-factory:$postgresSocketFactoryVersion"
-    implementation "io.micronaut.sql:micronaut-jdbc-hikari"
-    implementation "io.micronaut.flyway:micronaut-flyway"
+    implementation 'io.micronaut.data:micronaut-data-jdbc'
+    implementation 'io.micronaut.flyway:micronaut-flyway'
+    implementation 'io.micronaut.sql:micronaut-jdbc-hikari'
+    implementation "org.postgresql:postgresql:$postgresqlVersion"
+
+    runtimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+
     testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    testImplementation "io.micronaut:micronaut-http-client"
-    testImplementation "org.testcontainers:postgresql"
+
     testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'org.testcontainers:postgresql'
 }
 application {
-    mainClass = "org.grails.forge.analytics.postgres.Main"
+    mainClass = 'org.grails.forge.analytics.postgres.Main'
 }
 graalvmNative.toolchainDetection = false
 micronaut {
-    runtime("netty")
-    testRuntime("junit5")
+    runtime('netty')
+    testRuntime('junit5')
     processing {
         incremental(true)
-        annotations("org.grails.forge.*")
+        annotations('org.grails.forge.*')
     }
 }
 tasks.named('dockerfileNative') {
     // https://www.graalvm.org/latest/docs/getting-started/container-images/
-    baseImage("ghcr.io/graalvm/jdk:ol8-java17-22.3.3")
+    baseImage('ghcr.io/graalvm/jdk:ol8-java17-22.3.3')
 }
 
-tasks.named("dockerBuildNative") {
-    images = [project.hasProperty("dockerImageName") ? project.getProperty("dockerImageName") : "grailsforge"]
+tasks.named('dockerBuildNative') {
+    images = [findProperty('dockerImageName') ?: 'grailsforge']
 }
 
-tasks.named("dockerBuild") {
-    images = [project.hasProperty("dockerImageName") ? project.getProperty("dockerImageName") : "grailsforge"]
+tasks.named('dockerBuild') {
+    images = [findProperty('dockerImageName') ?: 'grailsforge']
 }

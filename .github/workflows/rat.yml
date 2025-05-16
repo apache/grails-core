@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: RAT Report
+name: "RAT Report"
 on:
   push:
     branches:
@@ -24,28 +24,28 @@ on:
   workflow_dispatch:
 jobs:
   rat-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: liberica
-          java-version: 17
+          distribution: 'liberica'
+          java-version: '17'
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🧐 Apache License - Release Audit Tool"
         run: ./gradlew rat
-      - name: Upload RAT HTML report
+      - name: "📤 Upload RAT HTML report"
         if: always()
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: rat-report
           path: build/reports/rat/index.html
-      - name: Publish RAT report in Job Summary
+      - name: "🗞️ Publish RAT report in Job Summary"
         if: always()
         run: |
           echo "## 📋 Apache RAT Report" >> $GITHUB_STEP_SUMMARY

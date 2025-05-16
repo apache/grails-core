@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Release to SDKMan"
+name: "Release to SDKMAN"
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +22,7 @@ on:
         required: true
 jobs:
   sdkmanMinorRelease:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -39,14 +39,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🚀 Grails SDK Minor Release"
+      - name: "🚀 Grails SDK minor release"
         run: ./gradlew sdkMinorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
-      - name: "Set output"
-        id: set_output
-        run: |
-          echo ::set-output name=release_version::$(cat $GITHUB_OUTPUT)
-        env:
-          GITHUB_OUTPUT: ${{ github.workspace }}/build/release_version

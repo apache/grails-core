@@ -18,48 +18,44 @@
  */
 
 plugins {
-    id "org.grails.forge.internal.test-module"
-    id "org.grails.forge.rocker"
+    id 'org.grails.forge.internal.test-module'
+    id 'org.grails.forge.rocker'
 }
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 sourceSets {
     test {
         rocker {
-            srcDir("src/test/groovy")
+            srcDir('src/test/groovy')
         }
     }
 }
 
-configurations {
-    generateConfig
-    all {
-        resolutionStrategy {
-            // prevent fatJar result containing multiple versions of picocli
-            force("info.picocli:picocli:$picocliVersion")
-        }
+configurations.register('generateConfig')
+configurations.configureEach {
+    resolutionStrategy {
+        // prevent fatJar result containing multiple versions of picocli
+        force("info.picocli:picocli:$picocliVersion")
     }
 }
 
 dependencies {
-//    testImplementation project(":test-utils")
-    testImplementation project(":grails-forge-core")
-    testImplementation project(":grails-forge-cli")
-    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "io.micronaut.picocli:micronaut-picocli"
+
+    generateConfig "info.picocli:picocli-codegen:$picocliVersion"
+
     implementation "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    generateConfig "info.picocli:picocli-codegen:${picocliVersion}"
+
+    testImplementation project(':grails-forge-cli')
+    testImplementation project(':grails-forge-core')
+    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation 'io.micronaut.picocli:micronaut-picocli'
 }
 
 tasks.withType(Test).configureEach {
     onlyIf {
-        ![
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
+        !['skipTests'].find { project.hasProperty(it) }
     }
     forkEvery = 10
 }

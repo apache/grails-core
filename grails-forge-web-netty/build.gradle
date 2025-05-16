@@ -18,33 +18,37 @@
  */
 
 plugins {
-    id "com.github.johnrengelman.shadow"
-    id "io.micronaut.application" version "$micronautApplicationPluginVersion"
+    id 'com.gradleup.shadow'
+    id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
 }
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation project(":grails-forge-api")
-    implementation "io.micronaut.gcp:micronaut-gcp-http-client"
-    runtimeOnly "ch.qos.logback:logback-classic"
+
+    implementation project(':grails-forge-api')
+    implementation 'io.micronaut.gcp:micronaut-gcp-http-client'
+
+    runtimeOnly 'ch.qos.logback:logback-classic'
+
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'io.micronaut.test:micronaut-test-spock'
+
     testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    testImplementation "io.micronaut.test:micronaut-test-spock"
-    testImplementation "io.micronaut:micronaut-http-client"
 }
-tasks.named("test", Test) {
+tasks.named('test', Test) {
     useJUnitPlatform()
     classpath += configurations.developmentOnly
 }
 application {
-    mainClass = "org.grails.forge.netty.Application"
+    mainClass = 'org.grails.forge.netty.Application'
 }
-tasks.named("run") {
+tasks.named('run') {
     classpath += configurations.developmentOnly
 }
 graalvmNative.toolchainDetection = false
@@ -58,13 +62,13 @@ micronaut {
 }
 tasks.named('dockerfileNative') {
     // https://www.graalvm.org/latest/docs/getting-started/container-images/
-    baseImage("ghcr.io/graalvm/jdk:ol8-java17-22.3.3")
+    baseImage('ghcr.io/graalvm/jdk:ol8-java17-22.3.3')
 }
 
-tasks.named("dockerBuildNative") {
-    images = [project.hasProperty("dockerImageName") ? project.getProperty("dockerImageName") : "grailsforge"]
+tasks.named('dockerBuildNative') {
+    images = [findProperty('dockerImageName') ?: 'grailsforge']
 }
 
-tasks.named("dockerBuild") {
-    images = [project.hasProperty("dockerImageName") ? project.getProperty("dockerImageName") : "grailsforge"]
+tasks.named('dockerBuild') {
+    images = [findProperty('dockerImageName') ?: 'grailsforge']
 }

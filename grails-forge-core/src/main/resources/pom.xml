@@ -60,9 +60,9 @@
             <version>4.0.4</version>
         </dependency>
         <dependency>
-            <groupId>com.github.johnrengelman.shadow</groupId>
-            <artifactId>shadow</artifactId>
-            <version>8.1.1</version>
+            <groupId>com.gradleup.shadow</groupId>
+            <artifactId>shadow-gradle-plugin</artifactId>
+            <version>8.3.6</version>
         </dependency>
         <dependency>
             <groupId>com.github.erdi</groupId>

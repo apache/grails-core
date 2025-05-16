@@ -18,8 +18,8 @@
  */
 
 plugins {
-    id "java-gradle-plugin"
-    id "groovy-gradle-plugin"
+    id 'java-gradle-plugin'
+    id 'groovy-gradle-plugin'
 }
 
 Properties properties = new Properties()
@@ -39,8 +39,8 @@ repositories {
 }
 
 
-configurations.all {
-    exclude group: "io.github.groovylang.groovydoc", module: "io.github.groovylang.groovydoc.gradle.plugin"
+configurations.configureEach {
+    exclude group: 'io.github.groovylang.groovydoc', module: 'io.github.groovylang.groovydoc.gradle.plugin'
 }
 
 dependencies {
@@ -61,8 +61,8 @@ dependencies {
 gradlePlugin {
     plugins {
         rockerPlugin {
-            id = "org.grails.forge.rocker"
-            implementationClass = "org.grails.forge.rocker.plugin.RockerPlugin"
+            id = 'org.grails.forge.rocker'
+            implementationClass = 'org.grails.forge.rocker.plugin.RockerPlugin'
         }
     }
 }

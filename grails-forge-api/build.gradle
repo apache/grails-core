@@ -21,33 +21,36 @@ plugins {
     id 'org.grails.forge.internal.build.openapi-module'
 }
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 dependencies {
-    annotationProcessor "io.micronaut.openapi:micronaut-openapi"
-    annotationProcessor "com.google.code.findbugs:jsr305"
 
+    annotationProcessor 'com.google.code.findbugs:jsr305'
     annotationProcessor "io.micronaut.docs:micronaut-docs-asciidoc-config-props:$micronautDocsVersion"
+    annotationProcessor 'io.micronaut.openapi:micronaut-openapi'
+
     api platform("io.micronaut:micronaut-bom:$micronautVersion")
 
-    api project(":grails-forge-core"), {
+    api project(':grails-forge-core'), {
         exclude group:'org.slf4j', module:'slf4j-nop'
     }
-    implementation "io.swagger.core.v3:swagger-annotations"
-    api "io.micronaut:micronaut-inject"
-    api "io.micronaut:micronaut-runtime"
-    api "io.micronaut:micronaut-http"
-    api "io.micronaut:micronaut-http-client"
-    api "io.micronaut:micronaut-validation"
+    api 'io.micronaut:micronaut-http'
+    api 'io.micronaut:micronaut-http-client'
+    api 'io.micronaut:micronaut-inject'
+    api 'io.micronaut:micronaut-runtime'
+    api 'io.micronaut:micronaut-validation'
     api group: 'javax.inject', name: 'javax.inject', version: '1'
-    implementation "io.projectreactor:reactor-core"
+
+    implementation 'io.swagger.core.v3:swagger-annotations'
+    implementation 'io.projectreactor:reactor-core'
+
+    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'io.micronaut:micronaut-http-server-netty'
+    testImplementation 'io.micronaut.test:micronaut-test-spock'
 
     testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    testImplementation "io.micronaut:micronaut-http-server-netty"
-    testImplementation "io.micronaut:micronaut-http-client"
-    testImplementation "io.micronaut.test:micronaut-test-spock"
-    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
 }
 
 apply {

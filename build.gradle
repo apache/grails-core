@@ -21,8 +21,8 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 // we must apply the publish configuration first or the aggregator plugin will not work
 apply from: layout.projectDirectory.file('gradle/publish-root-config.gradle')
@@ -30,17 +30,17 @@ apply plugin: 'org.grails.forge.internal.aggregator'
 
 
 ext {
-    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+    buildInstant = java.util.Optional.ofNullable(System.getenv('SOURCE_DATE_EPOCH'))
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
-            .orElseGet(Instant::now)
+            .orElseGet(Instant::now) as Instant
     formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
 }
 
 // buildSrc tests fail occasionally without running clean first
 build {
-    dependsOn clean
+    dependsOn('clean')
 }
 
 apply {

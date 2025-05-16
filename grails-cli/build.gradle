@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -16,11 +14,13 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id 'groovy'
     id 'distribution'
     id 'com.gradleup.shadow'
-    id "io.sdkman.vendors"
+    id 'io.sdkman.vendors'
 }
 
 ext {
@@ -101,11 +101,11 @@ cliStartScripts.configure { CreateStartScripts t ->
     // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
     doLast {
         t.unixScript.text = t.unixScript.text
-                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/${grailsVersion}/")
+                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/$grailsVersion/")
                 .replace('"${APP_HOME:-./}.."', '"${APP_HOME:-./}"')
 
         t.windowsScript.text = t.windowsScript.text
-                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\${grailsVersion}\\")
+                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\$grailsVersion\\")
                 .replace('%DIRNAME%..', '%DIRNAME%')
     }
 }
@@ -141,11 +141,11 @@ forgeCliStartScripts.configure { CreateStartScripts t ->
     // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
     doLast {
         t.unixScript.text = t.unixScript.text
-                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/${grailsVersion}/")
+                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/$grailsVersion/")
                 .replace('"${APP_HOME:-./}.."', '"${APP_HOME:-./}"')
 
         t.windowsScript.text = t.windowsScript.text
-                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\${grailsVersion}\\")
+                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\$grailsVersion\\")
                 .replace('%DIRNAME%..', '%DIRNAME%')
     }
 }
@@ -153,7 +153,7 @@ forgeCliStartScripts.configure { CreateStartScripts t ->
 project.extensions.getByType(DistributionContainer).configureEach {
     it.contents {
         from(shadowJarTask) {
-            into ".grails/${grailsVersion}"
+            into ".grails/$grailsVersion"
         }
 
         from(cliStartScripts) {
@@ -200,16 +200,16 @@ tasks.named('distTar').configure {
 }
 
 sdkman {
-    api = "https://vendors.sdkman.io"
-    consumerKey = System.getenv("GVM_SDKVENDOR_KEY") ?: project.hasProperty("gvmSdkvendorKey") ? project.gvmSdkvendorKey : ''
-    consumerToken = System.getenv("GVM_SDKVENDOR_TOKEN") ?: project.hasProperty("gvmSdkvendorToken") ? project.gvmSdkvendorToken : ''
-    candidate = "grails"
+    api = 'https://vendors.sdkman.io'
+    consumerKey = System.getenv('GVM_SDKVENDOR_KEY') ?: project.findProperty('gvmSdkvendorKey')
+    consumerToken = System.getenv('GVM_SDKVENDOR_TOKEN') ?: project.findProperty('gvmSdkvendorToken')
+    candidate = 'grails'
     version = project.version
-    hashtag = "#grailsfw"
+    hashtag = '#grailsfw'
     platforms = [
-            "MAC_ARM64":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip",
-            "MAC_OSX":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip",
-            "WINDOWS_64":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip",
-            "LINUX_64":"https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip"
-    ]
+            'MAC_ARM64' : "https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip",
+            'MAC_OSX'   : "https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip",
+            'WINDOWS_64': "https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip",
+            'LINUX_64'  : "https://github.com/apache/grails-forge/releases/download/v${project.version}/grails-cli-v${project.version}.zip"
+    ] as Map<? extends String, ? extends String>
 }

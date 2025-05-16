@@ -20,17 +20,17 @@
 import org.grails.forge.internal.tasks.WriteGrailsVersionInfoTask
 
 plugins {
-    id "org.grails.forge.internal.convention"
-    id "org.grails.forge.rocker"
+    id 'org.grails.forge.internal.convention'
+    id 'org.grails.forge.rocker'
 }
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 sourceSets {
     main {
         rocker {
-            srcDir("src/main/java")
+            srcDir('src/main/java')
         }
     }
 }
@@ -44,26 +44,30 @@ configurations {
 }
 
 dependencies {
-    api platform("io.micronaut:micronaut-bom:$micronautVersion")
+
+    api platform("io.micronaut:micronaut-bom:$micronautVersion") // TODO: Should this be api?
     api "com.fizzed:rocker-runtime:$rockerVersion"
-    api "io.micronaut:micronaut-inject"
-    api "io.micronaut:micronaut-http"
-    api "io.micronaut:micronaut-http-client"
     api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
+    api 'io.micronaut:micronaut-http'
+    api 'io.micronaut:micronaut-http-client'
+    api 'io.micronaut:micronaut-inject'
     api "org.eclipse.jgit:org.eclipse.jgit:$jgitVersion"
-    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
+
     implementation "com.typesafe:config:$typesafeConfigVersion"
     implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
-    compileOnly "com.google.code.findbugs:jsr305"
-    testImplementation "org.codehaus.groovy:groovy-yaml"
+    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
+
+    compileOnly 'com.google.code.findbugs:jsr305'
+
+    testImplementation 'org.codehaus.groovy:groovy-yaml'
 
     grailsWrapper "org.apache.grails.profiles:base:$grailsVersion@jar"
 }
 
 
-def grailsVersionInfo = tasks.register("grailsVersionInfo", WriteGrailsVersionInfoTask) {
+def grailsVersionInfo = tasks.register('grailsVersionInfo', WriteGrailsVersionInfoTask) {
     version = grailsVersion
-    outputDirectory = layout.buildDirectory.dir("version-info")
+    outputDirectory = layout.buildDirectory.dir('version-info')
 }
 
 sourceSets.main.resources.srcDir(grailsVersionInfo)
@@ -73,7 +77,7 @@ rocker {
 }
 
 nohttp {
-    source.exclude "**/pom.rocker.raw"
+    source.exclude('**/pom.rocker.raw')
 }
 
 repositories {
@@ -89,9 +93,11 @@ copyGrailsWrapper.configure { Sync it ->
     it.includeEmptyDirs = false
 
     it.from(zipTree(configurations.grailsWrapper.singleFile)) {
-        include 'META-INF/grails-profile/skeleton/grailsw',
+        include(
+                'META-INF/grails-profile/skeleton/grailsw',
                 'META-INF/grails-profile/skeleton/grailsw.bat',
                 'META-INF/grails-profile/skeleton/grails-wrapper.jar'
+        )
         eachFile { details -> details.path = details.name } // flatten
     }
     it.into(layout.projectDirectory.dir('src/main/resources/grails-wrapper'))

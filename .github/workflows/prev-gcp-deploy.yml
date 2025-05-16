@@ -18,11 +18,8 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    name: "Build Project"
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: ['17']
+    name: "Build project"
+    runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -30,19 +27,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'liberica'
-          java-version: ${{ matrix.java }}
+          java-version: '17'
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔨 Run Build"
-        id: build
+      - name: "🔨 Build"
         run: ./gradlew build
   deploy:
-    name: "Deploy To Google Cloud Run"
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    needs: [build]
+    name: "Deploy to Google Cloud Run"
+    runs-on: ubuntu-24.04
+    needs: build
     env:
       IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}:prev
     steps:
@@ -65,13 +60,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "✅ Run Tests"
+      - name: "🏃 Run tests"
         run: >
           ./gradlew
           grails-forge-api:test
           grails-forge-web-netty:test
       - name: "🔨 Build Docker image"
-        # To deploy native executables built with GraalVM replace dockerBuild with dockerBuildNative and dockerPush with dockerPushNative. First, try that it works locally.
+        # To deploy native executables built with GraalVM, replace dockerBuild with dockerBuildNative and dockerPush
+        # with dockerPushNative. First, try that it works locally.
         run: >
           ./gradlew
           grails-forge-web-netty:dockerBuildNative
@@ -91,10 +87,9 @@ jobs:
           --allow-unauthenticated
           --service-account=${{ secrets.GCLOUD_EMAIL }}
   deployAnalytics:
-    name: "Deploy Analytics To Google Cloud Run"
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    needs: [build]
+    name: "Deploy analytics to Google Cloud Run"
+    runs-on: ubuntu-24.04
+    needs: build
     env:
       IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}-analytics:prev
     steps:
@@ -117,10 +112,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "✅ Run Tests"
+      - name: "🏃 Run tests"
         run: ./gradlew grails-forge-analytics-postgres:test
       - name: "🔨 Build Docker image"
-        # To deploy native executables built with GraalVM replace dockerBuild with dockerBuildNative and dockerPush with dockerPushNative. First, try that it works locally.
+        # To deploy native executables built with GraalVM, replace dockerBuild with dockerBuildNative and dockerPush
+        # with dockerPushNative. First, try that it works locally.
         run: >
           ./gradlew
           grails-forge-analytics-postgres:dockerBuildNative

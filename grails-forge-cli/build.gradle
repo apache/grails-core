@@ -18,22 +18,22 @@
  */
 
 plugins {
-    id "org.grails.forge.internal.build.cli-module"
+    id 'org.grails.forge.internal.build.cli-module'
     id 'org.graalvm.buildtools.native' version '0.10.6'
 }
 
-version = project.projectVersion
-group = "org.apache.grails.forge"
+version = projectVersion
+group = 'org.apache.grails.forge'
 
 sourceSets {
     main {
         rocker {
-            srcDir("src/main/java")
+            srcDir('src/main/java')
         }
     }
 }
 
-configurations.all {
+configurations.configureEach {
     resolutionStrategy {
         // prevent fatJar result containing multiple versions of picocli
         force("info.picocli:picocli:$picocliVersion")
@@ -45,22 +45,27 @@ configurations {
 }
 
 dependencies {
-    annotationProcessor "io.micronaut:micronaut-inject-java"
-    annotationProcessor "io.micronaut:micronaut-graal"
-    implementation project(":grails-forge-core")
+
+    generateConfig "info.picocli:picocli-codegen:$picocliVersion"
+
+    annotationProcessor 'io.micronaut:micronaut-graal'
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+
+    implementation project(':grails-forge-core')
+    implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
-    implementation "com.fizzed:rocker-runtime:$rockerVersion"
-    implementation "org.slf4j:slf4j-nop:$slf4jVersion"
-    implementation "org.fusesource.jansi:jansi:$jansiVersion"
-    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
     implementation "jakarta.inject:jakarta.inject-api:$jakartaInjectVersion"
-    generateConfig "info.picocli:picocli-codegen:$picocliVersion"
-    compileOnly "com.google.code.findbugs:jsr305"
-    compileOnly "org.graalvm.nativeimage:svm"
-    testImplementation "io.micronaut.picocli:micronaut-picocli"
-    testImplementation "org.testcontainers:spock"
+    implementation "org.fusesource.jansi:jansi:$jansiVersion"
+    implementation "org.slf4j:slf4j-nop:$slf4jVersion"
+    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
+
+    compileOnly 'com.google.code.findbugs:jsr305'
+    compileOnly 'org.graalvm.nativeimage:svm'
+
+    testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
+    testImplementation 'org.testcontainers:spock'
 }
 
 graalvmNative {
@@ -70,25 +75,25 @@ graalvmNative {
         main {
             // Main options
             sharedLibrary = false
-            imageName = "grails-forge-cli"
+            imageName = 'grails-forge-cli'
             buildArgs(
-                "--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.configure=ALL-UNNAMED",
-                "--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED",
-                "--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jni=ALL-UNNAMED",
-                "--add-exports=org.graalvm.sdk/org.graalvm.nativeimage.impl=ALL-UNNAMED",
-                "-H:+ReportExceptionStackTraces"
+                    '--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.configure=ALL-UNNAMED',
+                    '--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED',
+                    '--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jni=ALL-UNNAMED',
+                    '--add-exports=org.graalvm.sdk/org.graalvm.nativeimage.impl=ALL-UNNAMED',
+                    '-H:+ReportExceptionStackTraces'
             )
-            if (project.hasProperty("musl")) {
-                logger.lifecycle("Using musl libc")
-                buildArgs("--libc=musl", "--static")
+            if (project.hasProperty('musl')) {
+                logger.lifecycle('Using musl libc')
+                buildArgs('--libc=musl', '--static')
             }
-            mainClass = "org.grails.forge.cli.Application"
+            mainClass = 'org.grails.forge.cli.Application'
         }
     }
 }
 
 application {
-    mainClass = "org.grails.forge.cli.Application"
+    mainClass = 'org.grails.forge.cli.Application'
 }
 
 rocker {
