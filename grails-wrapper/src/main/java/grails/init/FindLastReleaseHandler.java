@@ -21,9 +21,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * Created by jameskleeh on 11/2/16.
+ * A SAX handler to parse the metadata-maven.xml file and extract the latest release version
  */
-public class FindReleaseHandler extends DefaultHandler {
+public class FindLastReleaseHandler extends DefaultHandler {
 
     private String releaseVersion;
     private String latestVersion;

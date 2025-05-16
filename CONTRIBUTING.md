@@ -152,26 +152,6 @@ This will create a `grails-core` directory in your current working directory con
 
     sdk env .
 
-##### 3. Grails Home Setup
-
-If you look at the project structure, you'll see that it does not look like a standard `GRAILS_HOME` installation. But, it's very simple to turn it into one. Just run this from the root directory of the project:
-
-    ./gradlew install
-
-This will fetch all the standard dependencies required by Grails and then build a `GRAILS_HOME` installation. Note that this target skips the extensive collection of Grails test classes, which can take some time to complete.
-
-Once the above command has finished, simply set the `GRAILS_HOME` environment variable to the checkout directory and add the "bin" directory to your path. When you next type `grails` command to run, you'll be using the version you just built.
-
-If you are using http://sdkman.io[SDKMAN] then that can also be used to work with this local installation via the following:
-
-    sdk install grails dev /path/to/grails-core
-
-You will also need to publish your local installation to your local maven.
-
-    ./gradlew publishToMavenLocal
-
-Now you will have a dev version in your local which you can use to test your features.
-
 <!-- omit in toc -->
 #### Testing Your Change
 Grails has both local test coverage in the form of `unit` and `integration` tests.

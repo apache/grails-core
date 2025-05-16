@@ -41,7 +41,7 @@ To build the project you can run the `assemble` task:
 To install the jar files for the various subprojects into your local Maven repository you can run:
 
 ----
-./gradlew publishToMavenLocal
+cd grails-gradle && ./gradlew publishToMavenLocal && cd - && ./gradlew publishToMavenLocal
 ----
 
 === Project Structure

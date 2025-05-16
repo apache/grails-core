@@ -51,7 +51,7 @@ class TagLibraryTransformerSpec extends Specification {
     }
     
     @Issue('GRAILS-11241')
-    void 'Test that a tag libary can be marked with @CompileStatic without generating compile errors'() {
+    void 'Test that a tag library can be marked with @CompileStatic without generating compile errors'() {
         given:
         def gcl = new GrailsAwareClassLoader()
         def transformer = new TagLibraryTransformer() {

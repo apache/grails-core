@@ -29,7 +29,8 @@ ext {
     pomDevelopers = [
             'graemerocher'  : 'Graeme Rocher',
             'jeffscottbrown': 'Jeff Brown',
-            'puneetbehl'    : 'Puneet Behl'
+            'puneetbehl'    : 'Puneet Behl',
+            'jdaugherty'    : 'James Daugherty'
     ]
     cliProject = true
     startMainClass = 'grails.init.Start'

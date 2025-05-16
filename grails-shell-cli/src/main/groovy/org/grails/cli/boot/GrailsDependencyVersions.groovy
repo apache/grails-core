@@ -76,7 +76,7 @@ class GrailsDependencyVersions implements DependencyManagement {
             grape.addResolver([name:"mavenCentral", root:"https://repo1.maven.org/maven2"] as Map<String, Object>)
         }
 
-        grape.addResolver([name:"grailsCentral", root:"https://repo.grails.org/grails/core"] as Map<String, Object>)
+        grape.addResolver([name:"grailsCentral", root:"https://repo.grails.org/grails/restricted"] as Map<String, Object>)
 
         grape
     }

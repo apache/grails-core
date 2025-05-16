@@ -5642,7 +5642,7 @@ Commands such as <code>profile-info</code> or <code>list-profiles</code> are not
 <div class="sect3">
 <h4 id="_profile_repositories">Profile Repositories</h4>
 <div class="paragraph">
-<p>By default Grails will resolve profiles from the <a href="https://repo.grails.org/grails/core/org/grails/profiles/">Grails central repository</a>. However, you can override what repositories will be searched by specifying repositories in the <code>USER_HOME/.grails/settings.groovy</code> file.</p>
+<p>By default Grails will resolve profiles from the <a href="https://repo.grails.org/grails/restricted/org/grails/profiles/">Grails central repository</a>. However, you can override what repositories will be searched by specifying repositories in the <code>USER_HOME/.grails/settings.groovy</code> file.</p>
 </div>
 <div class="paragraph">
 <p>If you want profiles to be resolved with a custom repository in addition to the Grails central repository, you must specify Grails central in the file as well:</p>
@@ -5657,7 +5657,7 @@ Commands such as <code>profile-info</code> or <code>list-profiles</code> are not
         snapshotsEnabled = <span class="predefined-constant">true</span>
       }
       grailsCentral {
-        url = <span class="string"><span class="delimiter">&quot;</span><span class="content">https://repo.grails.org/grails/core</span><span class="delimiter">&quot;</span></span>
+        url = <span class="string"><span class="delimiter">&quot;</span><span class="content">https://repo.grails.org/grails/restricted</span><span class="delimiter">&quot;</span></span>
         snapshotsEnabled = <span class="predefined-constant">true</span>
       }
     }
@@ -6042,7 +6042,7 @@ The <code>githubSlug</code> argument should point to the path to your Github rep
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml"><span class="key">repositories</span>:
-    - <span class="string"><span class="delimiter">&quot;</span><span class="content">https://repo.grails.org/grails/core</span><span class="delimiter">&quot;</span></span></code></pre>
+    - <span class="string"><span class="delimiter">&quot;</span><span class="content">https://repo.grails.org/grails/restricted</span><span class="delimiter">&quot;</span></span></code></pre>
 </div>
 </div>
 </div>
@@ -6055,7 +6055,7 @@ The <code>githubSlug</code> argument should point to the path to your Github rep
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml"><span class="key">build</span>:
     <span class="key">repositories</span>:
-        - <span class="string"><span class="delimiter">&quot;</span><span class="content">https://repo.grails.org/grails/core</span><span class="delimiter">&quot;</span></span></code></pre>
+        - <span class="string"><span class="delimiter">&quot;</span><span class="content">https://repo.grails.org/grails/restricted</span><span class="delimiter">&quot;</span></span></code></pre>
 </div>
 </div>
 </div>

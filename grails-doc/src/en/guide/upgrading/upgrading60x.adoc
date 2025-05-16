@@ -17,69 +17,170 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-### Upgrade Instructions for Grails and Related Dependencies
+=== Upgrade Instructions for Grails and Related Dependencies
 
-To ensure compatibility with Grails {GrailsVersion}, you must update the following versions in your project:
+To ensure compatibility with Grails 7.0.0, please review the following upgrade instructions carefully.
+This guide outlines the necessary steps & warnings to upgrade your Grails project.
 
-#### 1. Java 17 as baseline:
+==== 1. Java 17 as baseline:
 
-Starting from Grails {GrailsVersion}, Java 17 serves as the baseline requirement for the framework. When upgrading to Grails {GrailsVersion}, ensure that your project is configured to use Java 17. This compatibility with Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
+Starting from Grails 7.0.0, Java 17 serves as the baseline requirement for the framework.
+When upgrading to Grails 7.0.0, ensure that your project is configured to use Java 17. Updating to Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
 
-Please make sure to update your project's Java version to 17 before proceeding with the Grails {GrailsVersion} upgrade. Doing so will ensure a seamless transition to the latest version of Grails and enable you to enjoy all the benefits that Java 17 has to offer.
+Please make sure to update your project's Java version to 17 before proceeding with the Grails 7.0.0 upgrade.
+Doing so will ensure a seamless transition to the latest version of Grails and enable you to enjoy all the benefits that Java 17 has to offer.
 
-#### 2. Setting Grails Version and Grails Gradle Plugin:
+==== 2. Groovy 4.0.27 as a baseline:
 
-To upgrade to Grails {GrailsVersion}, it's important to configure the appropriate versions in the `gradle.properties` file as shown below:
+Grails 7.0.0 adopts Groovy 4.0.27 as it's baseline requirement.
+Several changes in Groovy 4 can affect your application.
+Notable changes include:
+
+1. https://issues.apache.org/jira/browse/GROOVY-10621[GROOVY-10621] - Primitive booleans will no longer generate the form of isProperty & getProperty.
+They will only generate isProperty().
+For Grails Domain objects, grails sometimes generates these properties.
+It is advisable to switch to the new form of the property.
+2. https://issues.apache.org/jira/browse/GROOVY-5169[GROOVY-5169] & https://issues.apache.org/jira/browse/GROOVY-10449[GROOVY-10449] - Fields with a public modifier were not returned with MetaClassImpl#getProperties() in groovy 3, but are now.
+
+Some older libraries may include an older version of groovy, but still be compatible with Groovy 4. One example is GPars.
+In your gradle file, you can force a dependency upgrade via this code:
+
+[source,groovy]
+.build.gradle
+----
+  configurations.configureEach {
+      resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+          if (details.requested.group == 'org.codehaus.groovy') {
+              details.useTarget(group: 'org.apache.groovy', name: details.requested.name, version: '4.0.27')
+          }
+      }
+  }
+----
+
+==== 3. Unified Project Version
+
+Grails 7.0.0 moved to a mono repository.
+As part of this move, all projects that make up a grails release now have a common version.
+Setting `grailsVersion` in `gradle.properties` is the proper way to specify a set of dependencies that are compatible with each other for a given Grails release.
+Please remove older properties such as `gormVersion` & `grailsGradlePluginVersion` and exclusively use this property going forward.
 
 .gradle.properties
 [,,subs="attributes"]
 ----
-grailsVersion={GrailsVersion}
-grailsGradlePluginVersion={grailsGradlePluginVersion}
+grailsVersion=7.0.0
 ----
 
-By specifying the above versions, you'll gain access to the latest features, improvements, and bug fixes introduced in Grails {GrailsVersion}. Upgrading to this version empowers your application with enhanced performance and improved security. Additionally, it allows you to leverage the latest advancements in the Grails framework for a more efficient and secure development experience.
+==== 4. Unified Bill of Materials
 
-#### 4. GORM Version
+Previously Grails did not have a single Bill of Materials (BOM).
+Instead it had a `micronaut-bom` and a `spring-bom`.
+With the removal of Micronaut from the Grails, the `micronaut-bom` is no longer needed.
+Instead, we can have a single bom that inherits from the `spring-bom`.
 
-If your project utilizes GORM, ensure to update the version in the `gradle.properties` file as demonstrated below:
+Grails 7.0.0 introduces a BOM that includes all the dependencies required for a Grails application.
+This BOM is available in the `org.apache.grails:grails-bom` artifact.
+The BOM is automatically applied when a Grails Gradle plugin is applied via the Spring Dependency Management plugin.
+For projects that do not use a Grails Gradle plugin, you can apply the BOM via a https://docs.gradle.org/current/userguide/java_platform_plugin.html#sec:java_platform_consumption[Gradle Platform]:
 
-.gradle.properties
-[,,subs="attributes"]
+[source,groovy]
+.build.gradle
 ----
-gormVersion={gormVersion}
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+}
 ----
 
-By upgrading to GORM {gormVersion}, you will benefit from essential updates and optimizations. This upgrade guarantees seamless interactions with your database and enhances your data management experience. Staying current with GORM allows you to take advantage of the latest database features and improvements, thereby optimizing the performance and functionality of your application.
+Because all Grails projects will apply the Grails Gradle plugin, the BOM is automatically applied.
+You can override a version in the BOM by setting the associated Gradle property.
+The possible gradle properties are generated as part of this documentation.
+Please see xref:../ref/Versions/Grails BOM.adoc[Grails BOM Dependencies] for a quick reference.
 
-#### 5. Gradle Version:
+==== 5. Coordinate Changes
 
-Grails {GrailsVersion} uses Gradle {gradleVersion} which offers performance improvements, bug fixes, and new features over previous versions. Upgrading to the latest Gradle version helps accelerate your build processes and ensures compatibility with other dependencies.
+Grails has transitioned to the Apache Software Foundation (ASF).
+As a result, the group ID for Grails artifacts has changed to `org.apache.grails`.
+This change applies to all Grails packages, including core plugins and core dependencies, maintained by the Grails team.
+When upgrading to Grails 7.0.0, ensure that you update your build configuration to use the new group ID.
 
-##### 5.1. Upgrade to Gradle {gradleVersion}
+There is a https://github.com/apache/grails-core/blob/7.0.x/RENAME.md[RENAME.md] in the grails-core repository that maps previous coordinate names to new names.
+Additionally, there is a script to aid in the updating of Grails projects to the new coordinates.
+The script is located in the `etc/bin` directory of the https://github.com/apache/grails-core/tree/7.0.x/etc/bin[grails-core] repository and can be run as follows:
 
-Run the following command to update the Gradle wrapper to the desired version (e.g., Gradle {gradleVersion}):
+```shell
+  ./rename_gradle_artifacts.sh -l my/project/location
+```
+
+This script will scan any gradle file and attempt to update both exclusions & dependencies to the new coordinates.
+
+==== 6. Gradle Changes:
+
+One of the major changes in Grails 7.0.0 is the modernization of it's build system.
+As a side effect of this modernization, the Grails build is fully parallel & https://docs.gradle.org/current/userguide/task_configuration_avoidance.html[lazy].
+When updating to Grails 7.0.0, there may be required updates to various tasks we distribute since the inputs of those tasks have changed to support lazy configuration.
+
+===== 6.1. Upgrading Gradle:
+
+It is recommended to set your gradle version to a version of 8.14 or higher:
 
 [,console,subs="attributes"]
 ----
-./gradlew wrapper --gradle-version {gradleVersion}
+./gradlew wrapper --gradle-version 8.14
 ----
 
 This command will download the specified Gradle version and update the Gradle wrapper settings in your project.
 
-##### 5.2. Check Gradle Version:
+===== 6.2. Check Gradle Version:
 
-After the command finishes, you can verify that the Gradle version has been updated by checking the `gradle-wrapper.properties` file located in the `gradle/wrapper` directory. The `distributionUrl` in the file should now point to the Gradle {gradleVersion} distribution:
+After the command finishes, you can verify that the Gradle version has been updated by checking the `gradle-wrapper.properties` file located in the `gradle/wrapper` directory.
+The `distributionUrl` in the file should now point to the specified Gradle version's distribution:
 
 [,,subs="attributes"]
 ----
-distributionUrl=https\://services.gradle.org/distributions/gradle-{gradleVersion}-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-bin.zip
 ----
 
+==== 7. Reproducible Builds:
 
-##### 5.3. Build the Project:
+The ASF strongly encourages https://reproducible-builds.org/[reproducible builds] as part of it's security requirements.
+We have begun making the Grails build reproducible - that is, if you build with the same settings as the GitHub action the produced artifacts should be identical.
+We have starting addressing reproducible builds under the ticket https://github.com/apache/grails-core/issues/14679[#14679].
 
-After updating the Gradle wrapper, you can now build your Grails project using the updated Gradle version:
+A side effect of making our builds reproducible is that Grails applications can also now be reproducible.
+The benefits of reproducible builds are well documented, but for Grails applications, some of the side effects include:
+
+1. Improved build times - since the build is reproducible, Gradle can cache the results of the build and reuse them in future builds.
+2. Minimizing rebuilds - if the build is reproducible, Gradle can avoid unnecessary rebuilds of tasks that have not changed.
+3. Improved security - reproducible builds can help to ensure that the build process is not tampered with, and that the resulting artifacts are exactly what was intended.
+
+To make your local build reproducible, you'll want to set the environment variable `SOURCE_DATE_EPOCH` to a fixed date.
+For Grails, we set this value to the last commit in git via the bash command: `SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)`
+
+==== 8. Spring 6.2.6:
+
+Grails 7.0.0 is built on the Spring Framework, version 6.2.6. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
+
+This update introduces enhancements and fixes to the Spring Framework, providing you with the latest improvements in dependency injection, web frameworks, and other Spring-related functionalities.
+
+==== 9. Spring Boot 3.5.0:
+
+Grails 6 used Spring Boot 2.7. Grails 7.0.0 updates this to Spring Boot 3.5.0. For more information, consult the release notes for previous Spring Boot releases:
+1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.5-Release-Notes[Spring Boot 3.5 Release Notes]
+2. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.4 Release Notes]
+3. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.3 Release Notes]
+4. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.2 Release Notes]
+5. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.1 Release Notes]
+6. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.0 Release Notes]
+
+==== 10. Upgrading Your Project:
+
+In addition to the coordinate changes, the version updates, and the build updates, to upgrade your project it is advised to use an application generator and compare it to your existing project.
+The preferred app generator for Grails is https://start.grails.org/[start.grails.org].
+Please note that several previously required gradle configurations have been integrated into the Grails Gradle Plugins as defaults.
+Compare a freshly generated application to your application and apply any associated changes.
+
+===== 10.1 Building the Project:
+
+After comparing to a generated build & updating your gradle files, you can now build your Grails project using the updated Gradle version:
 
 ```console
 ./gradlew build
@@ -87,27 +188,34 @@ After updating the Gradle wrapper, you can now build your Grails project using t
 
 This will initiate the build process with the new Gradle version.
 
-#### 6. Spring {springVersion}:
+==== 11. Grails CLI
 
-Grails {GrailsVersion} is built on Spring {springVersion}. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
+Both the legacy `grails-shell-cli` and `grails-forge-cli` are now included with Grails 7. Please see the xref:../guide/gettingStarted#downloadingAndInstalling[Downloading & Installing] section of this guide for important background on how to use the Grails CLI commands.
 
-Spring {springVersion} introduces enhancements and fixes to the Spring framework, providing you with the latest improvements in dependency injection, web frameworks, and other Spring-related functionalities.
+==== 12. Breaking changes
 
-#### 7. Spring Boot {springBootVersion}:
+Grails 7.0.0 introduces several breaking changes that may require updates to your application.
 
-Grails {GrailsVersion} updates to Spring Boot {springBootVersion}. For more information, consult the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.3-Release-Notes[Spring Boot 3 Release Notes]
+===== 12.0
 
-Spring Boot {springBootVersion} comes with new features, performance enhancements, and compatibility improvements, making it a solid foundation for your Grails application.
+Due to the significant changes in Grails 7, all prior Grails Plugin will need updated to work with Grails 7. For plugins in the https://github.com/grails-plugins/[Grails Plugins] GitHub organization, the Grails Core team is updating them as time permits and when requested.
+If there is a plugin that you require updating, please reach out via https://github.com/apache/grails-core/issues[ticket] to see if we can help.
 
-#### 8. Breaking changes
+===== 12.1 javax -> Jakarta
 
-Grails {GrailsVersion} introduces several breaking changes that may require updates to your application.
+Spring has switched from javax to https://jakarta.ee/[jakarta] packages.
+Please consult the Spring upgrade guides for the impacts of this change.
 
-#### 8.1. Removed libraries/classes
+===== 12.2 Removed libraries/classes
 - The `grails-web-fileupload` library, including its sole class `ContentLengthAwareCommonsMultipartResolver`, has been removed. This change was necessitated by the removal of the superclass `CommonsMultipartResolver` in Spring 6. The `ContentLengthAwareCommonsMultipartResolver` was originally introduced to address a bug in Safari back in 2007, but it is likely no longer needed. Spring has transitioned away from `CommonsMultipartResolver` and now recommends using the built-in support for multipart uploads provided by servlet containers. For more information on handling file uploads in Spring Boot, please refer to the relevant sections of the https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.multipart-file-uploads[Spring Boot documentation] and the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x#web-applications-1[Spring Framework 6 upgrade guide].
-- `org.grails.spring.beans.factory.OptimizedAutowireCapableBeanFactory` was deprecated and is now removed.
+- `org.grails.spring.beans.factory.OptimizedAutowireCapableBeanFactory` was previously deprecated and is now removed.
+- The following deprecated classes were removed, please use the suggested replacement:
 
-#### 8.2. Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
+1. `grails.core.GrailsTagLibClass` -> `grails.core.gsp.GrailsTagLibClass`
+2. `org.grails.core.artefact.TagLibArtefactHandler` -> `org.grails.core.artefact.gsp.TagLibArtefactHandler`
+3. `org.grails.core.DefaultGrailsTagLibClass` -> `org.grails.core.gsp.DefaultGrailsTagLibClass`
+
+===== 12.3 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
 - This change was made based on community input: https://github.com/orgs/grails/discussions/13517
 - The removal of Micronaut enabled simplification of the Grails codebase and the return of Live Reload via https://github.com/HotswapProjects/HotswapAgent
 - The Micronaut Parent Context is no longer in Grails by default.
@@ -116,7 +224,7 @@ Grails {GrailsVersion} introduces several breaking changes that may require upda
 - Using Micronaut Parent Context: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springParentContext
 - Using a Bean Post Processor: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#beanPostProcessor
 
-#### 8.3 hibernate-ehcache
+===== 12.4 hibernate-ehcache
 
 The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.apache.grails:grails-hibernate5` plugin. If
 your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
@@ -137,3 +245,18 @@ dependencies {
     }
 }
 ----
+
+===== 12.5 H2
+
+The test database H2 is stricter about reserved keywords.
+If you use H2 in your application, please take a look at this https://github.com/grails/grails-data-hibernate5/pull/910/commits/c8de45df204966ccc228b46b94beeb2142ae0f59[pull request] for examples of these new restrictions.
+
+===== 12.6 Removal of Test Dependencies from Production Classpath
+
+Prior versions of Grails included test dependencies on the production classpath.
+These are now removed in Grails 7. If you still need them, you can add them to your `implementation` configuration in your build.gradle file.
+
+===== 12.7 Jar Artifact name changes
+
+Jar artifacts produced by Grails Plugins will no longer have the suffix `-plain`.
+Please see ticket https://github.com/apache/grails-gradle-plugin/pull/347[#347] for details.

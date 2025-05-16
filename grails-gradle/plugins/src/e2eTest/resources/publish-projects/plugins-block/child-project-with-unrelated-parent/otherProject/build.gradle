@@ -21,7 +21,7 @@ buildscript {
     repositories {
         maven { url "${System.getenv('LOCAL_MAVEN_PATH')}" }
         mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/core' }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
         maven { url = 'https://repository.apache.org/content/groups/snapshots' }
     }
     dependencies {
@@ -36,7 +36,7 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/core' }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
     maven { url = 'https://repository.apache.org/content/groups/snapshots' }
 }
 

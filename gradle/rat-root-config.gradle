@@ -38,8 +38,6 @@ tasks.named('rat') {
             'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
-            'grails-test-suite-uber/test/test-projects/plugin-build-settings/plugins/hibernate-1.2-SNAPSHOT/**/*', // exclude example test data for test cases
-            'grails-test-suite-uber/test/test-projects/plugin-build-settings/plugins/webflow-1.2-SNAPSHOT/**/*', // exclude example test data for test cases
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application

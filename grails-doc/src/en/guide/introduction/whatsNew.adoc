@@ -21,11 +21,11 @@ This section covers all the new features introduced in Grails 7
 
 === Overview
 
-Grails framework {GrailsVersion} updates Spring Boot to version {springBootVersion}. We recommend checking the following Spring technologies release notes for more information.
+Grails {GrailsVersion} is a major release that includes new features, improvements, and dependency upgrades.
+This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
 
-* https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.4]
-
-The minimum Java version required to run Grails {GrailsVersion} has been updated to Java 17.
+For detailed information on how to upgrade to Grails 7, including major dependency changes, please see the xref:upgrading#upgrading60x[Upgrading from Grails 6 to Grails 7] section.
+Notable new features are included below.
 
 === External Configuration
 
@@ -60,5 +60,34 @@ Once a compatible container runtime is installed, no additional configuration is
 2. The container will be configured to launch a browser capable of accessing your application under test.
 
 With this setup, you gain the benefits of containerized testing, such as isolation, reproducibility, and reduced setup complexity.
+
+==== formActionSubmit tag
+
+A new tag `formActionSubmit` has been added to replace `actionSubmit`.
+Dispatching actions via a parameter name on a form submit will be removed in a future version of grails.
+See ticket https://github.com/grails/grails-gsp/issues/551[#551] for details.
+
+==== @Scaffold support for Controllers and Services
+
+The `@Scaffold` annotation was added to customize scaffolding generation for controllers and services.
+
+==== Bootstrap 5.3.3 support
+
+Bootstrap 5.3.3 support.
+Saffolding and Fields tags now optionally support boostrap classes.
+
+==== Prioritization of AutoConfiguration over bean overriding.
+
+The core dependencies of Grails are moving to using `@Configuration` to better integrate with the Spring Boot ecosystem.
+Please note that this does mean that some beans are now initialized earlier in the application context lifecycle.
+
+==== Significant Dependency Removals
+
+With the removal of Micronaut, and the fixes to the asset pipeline plugin, Grails build sizes should now be significantly reduced.
+
+==== g:form & CSRF protection
+
+The `g:form` tag now automatically provides csrf protection when Spring Security CSRF is enabled.
+
 
 

@@ -158,7 +158,6 @@ include (
         'grails-data-test-report',
 
         // wrapper
-        'grails-wrapper-impl',
         'grails-wrapper'
 )
 

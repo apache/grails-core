@@ -32,25 +32,44 @@ Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/gra
 
 You need a Java Development Kit (JDK) installed, but it is not necessary to install Groovy because it's bundled with the Grails distribution.
 
-To install Grails, visit https://grails.org/download.html and download the version you would like to use. Set a `GRAILS_HOME` environment variable to point to the root of the extracted download and add `GRAILS_HOME/bin` to your executable `PATH`. Then in a shell, type the following:
+It's recommended to use the [SDKMAN!](https://sdkman.io/) tool to install & manage multiple Grails version.
+Alternatively, visit https://grails.org/download.html for other install options. If downloading the binary, the only
+requirement is it be added to your path.
+
+To create your first Grails Application, you can use [Grails Forge](https://start.grails.org) or you can use the command
+line. For legacy reasons, there exists 2 ways to generate Grails applications.  `Grails Forge` and `Grails Shell`. The
+grails binary allows you to use either to generate an app.
+
+For example purposes, using the legacy shell:
 
 	grails create-app sampleapp
 	cd sampleapp
-	grails run-app
+	./gradlew bootRun
 
-To build Grails, clone this GitHub repository and execute the install Gradle target:
+To build Grails, clone this GitHub repository and execute the build Gradle target:
 
     git clone https://github.com/apache/grails-core.git
     cd grails-core
-    ./gradlew install
+    ./gradlew build -PskipTests
 
-If you encounter out of memory errors when trying to run the install target, try adjusting Gradle build settings. For example:
+If you encounter out of memory errors when trying to run the build, try adjusting Gradle build settings. For example:
 
     export GRADLE_OPTS="-Xmx2G -Xms2G -XX:NewSize=512m -XX:MaxNewSize=512m"
+
+Please note that a valid container runtime is required to run Grails Tests. The example above omits the tests so the
+build will pass.
 
 ## Performing a Release
 
 See [RELEASE.md](RELEASE.md).
+
+## Friends of Apache Grails Open Collective
+As an independent initiative, community members have set up an open collective for Apache Grails:
+
+https://opencollective.com/friends-of-grails
+
+This initiative is designed to complement the Apache project and the many contributions we get from our great community and supporters.
+
 
 ## License
 

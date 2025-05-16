@@ -14,26 +14,34 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.grails.cli.profile.commands.factory
+package grails.init;
 
-import groovy.transform.CompileStatic
-import org.grails.cli.profile.Command
-import org.grails.cli.profile.Profile
-import org.grails.cli.profile.ProfileCommand
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Uses the service registry pattern to locate commands
- *
- * @author Graeme Rocher
- * @since 3.0
+ * The type of releases that a Grails version may represent
  */
-@CompileStatic
-class ServiceCommandFactory implements CommandFactory {
-    @Override
-    Collection<Command> findCommands(Profile profile, boolean inherited) {
-        if(inherited) return Collections.emptyList()
-        ServiceLoader.load(Command, getClass().classLoader).findAll() { Command cmd ->
-            cmd instanceof ProfileCommand
-        }
+public enum GrailsReleaseType {
+    RELEASE,
+    RC,
+    MILESTONE,
+    SNAPSHOT;
+
+    /**
+     * @return true if this is a snapshot release
+     */
+    boolean isSnapshot() {
+        return this == SNAPSHOT;
+    }
+
+    /**
+     * @return this release type and all higher priority release types
+     */
+    public List<GrailsReleaseType> upTo() {
+        return Arrays.stream(GrailsReleaseType.values())
+                .filter(e -> e.ordinal() <= this.ordinal())
+                .collect(Collectors.toList());
     }
 }

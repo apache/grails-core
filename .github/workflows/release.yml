@@ -24,7 +24,7 @@ env:
 jobs:
   publish:
     permissions:
-      contents: write  #  to create release
+      contents: write  #  to create release & upload wrapper
       issues: write  #  to modify milestones
       packages: write # purge pre-release packages
     runs-on: ubuntu-latest
@@ -63,6 +63,16 @@ jobs:
       - name: "🧩 Run Assemble"
         id: assemble
         run: ./gradlew assemble
+      - name: "📤 Upload grails wrapper Zip"
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: grails-wrapper/build/distributions/grails-wrapper-${{ steps.release_version.outputs.value }}.zip
+          asset_name: grails-wrapper-${{ steps.release_version.outputs.value }}.zip
+          asset_content_type: application/zip
       - name: "📤 Upload Distribution"
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:

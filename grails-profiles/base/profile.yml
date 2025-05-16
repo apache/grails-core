@@ -18,11 +18,11 @@ skeleton:
     binaryExtensions: ['png','gif','jpg','jpeg','ico','icns','pdf','zip','jar','class']
 repositories:
     - "https://repository.apache.org/content/groups/public"
-    - "https://repo.grails.org/grails/core"
+    - "https://repo.grails.org/grails/restricted"
 build:
     repositories:
         - "https://repository.apache.org/content/groups/public"
-        - "https://repo.grails.org/grails/core"
+        - "https://repo.grails.org/grails/restricted"
     plugins:
         - eclipse
         - idea

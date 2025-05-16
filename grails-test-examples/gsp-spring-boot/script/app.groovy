@@ -19,7 +19,7 @@
 
 package demo
 
-@GrabResolver(name='grails-repo', root='https://repo.grails.org/grails/core/')
+@GrabResolver(name='grails-repo', root='https://repo.grails.org/grails/restricted/')
 @Grab("org.grails:grails-gsp-spring-boot:7.0.0-SNAPSHOT")
 // if you need to clear snapshots, they are saved to ~/.groovy/grapes
 

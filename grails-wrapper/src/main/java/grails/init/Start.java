@@ -18,148 +18,129 @@ package grails.init;
 
 import grails.proxy.SystemPropertiesAuthenticator;
 
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.Authenticator;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-
+/**
+ * The purpose of this class is to download the expanded Grails wrapper jars into GRAILS_WRAPPER_HOME (`.grails` in the project root)
+ * This class is not meant to be distributed as part of SDKMAN since we'll distribute the expanded jars with it.
+ * After downloading the jars, it will delegate to the downloaded grails-cli project.
+ * <p>
+ * There are 3 ways this class can be used:
+ * 1. in testing a grails release (run from a non-project directory) - requires GRAILS_REPO_URL set to `~/.m2/repository`
+ * 2. running from a non-project directory (end user usage)
+ * 3. running from inside a grails project
+ */
 public class Start {
-
-    private static final String PROJECT_NAME = "grails-wrapper-impl";
-    private static final String WRAPPER_PATH = "/org/apache/grails/" + PROJECT_NAME;
-    private static final String GRAILS_RELEASE_MAVEN_REPO_BASE_URL = "https://repository.apache.org/content/groups/public";
-    private static final File WRAPPER_DIR = new File(System.getProperty("user.home") + "/.grails/wrapper");
-    private static final File NO_VERSION_JAR = new File(WRAPPER_DIR, PROJECT_NAME + ".jar");
-
-    private static String getMavenBaseUrl() {
-        String baseUrl = System.getProperty("grails.maven.repo.baseUrl");
-        if (baseUrl != null) {
-            return baseUrl;
-        }
-        baseUrl = System.getenv("GRAILS_RELEASE_MAVEN_REPO_BASE_URL");
-        if (baseUrl != null) {
-            return baseUrl;
-        }
-        return GRAILS_RELEASE_MAVEN_REPO_BASE_URL;
-    }
-
-    private static String getSnapshotVersion(String baseVersion) {
-        System.out.println("A Grails snapshot version has been detected.  Downloading latest snapshot.");
-        try {
-            SAXParserFactory factory = SAXParserFactory.newInstance();
-            SAXParser saxParser = factory.newSAXParser();
-            FindSnapshotHandler findVersionHandler = new FindSnapshotHandler();
-            final String mavenMetadataFileUrl = getMavenBaseUrl() + WRAPPER_PATH + "/" + baseVersion + "/maven-metadata.xml";
-            HttpURLConnection conn = createHttpURLConnection(mavenMetadataFileUrl);
-            saxParser.parse(conn.getInputStream(), findVersionHandler);
-            return findVersionHandler.getVersion();
-        } catch (Exception e) {
-            if (!NO_VERSION_JAR.exists()) {
-                System.out.println("You must be connected to the internet the first time you use the Grails wrapper");
-                e.printStackTrace();
-                System.exit(1);
-            }
-            return null;
-        }
-    }
-
-    private static String getVersion() {
-        try {
-            SAXParserFactory factory = SAXParserFactory.newInstance();
-            SAXParser saxParser = factory.newSAXParser();
-            FindReleaseHandler findReleaseHandler = new FindReleaseHandler();
-            final String mavenMetadataFileUrl = getMavenBaseUrl() + WRAPPER_PATH + "/maven-metadata.xml";
-            HttpURLConnection conn = createHttpURLConnection(mavenMetadataFileUrl);
-            saxParser.parse(conn.getInputStream(), findReleaseHandler);
-            return findReleaseHandler.getVersion();
-        } catch (Exception e) {
-            if (!NO_VERSION_JAR.exists()) {
-                System.out.println("You must be connected to the internet the first time you use the Grails wrapper");
-                e.printStackTrace();
-                System.exit(1);
-            }
-            return null;
-        }
-    }
-
-    private static HttpURLConnection createHttpURLConnection(String mavenMetadataFileUrl) throws IOException {
-        final URL url = new URL(mavenMetadataFileUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestProperty("User-Agent", "Apache-Maven/3.9.6");
-        conn.setInstanceFollowRedirects(true);
-        return conn;
-    }
-
-
-    private static boolean updateJar(String baseVersion, String detailedVersion) {
-        boolean success = false;
-
-        final String localJarFilename = PROJECT_NAME + "-" + baseVersion;
-        final String remoteJarFilename = detailedVersion != null ? PROJECT_NAME + "-" + detailedVersion : PROJECT_NAME + "-" + baseVersion;
-        final String jarFileExtension = ".jar";
-
-        if (WRAPPER_DIR.exists() || WRAPPER_DIR.mkdirs()) {
-            try {
-                File downloadedJar = File.createTempFile(localJarFilename, jarFileExtension);
-                String wrapperUrl = getMavenBaseUrl() + WRAPPER_PATH + "/" + baseVersion + "/" + remoteJarFilename + jarFileExtension;
-                HttpURLConnection conn = createHttpURLConnection(wrapperUrl);
-                success = downloadWrapperJar(downloadedJar, conn.getInputStream());
-            } catch (Exception e) {
-                System.out.println("There was an error downloading the wrapper jar");
-                e.printStackTrace();
-            }
-        }
-
-
-        return success;
-    }
-
-    private static boolean downloadWrapperJar(File downloadedJar, InputStream inputStream) throws IOException {
-        ReadableByteChannel rbc = Channels.newChannel(inputStream);
-        try (FileOutputStream fos = new FileOutputStream(downloadedJar)) {
-            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-        }
-        Files.move(downloadedJar.getAbsoluteFile().toPath(), NO_VERSION_JAR.getAbsoluteFile().toPath(), REPLACE_EXISTING);
-        return true;
-    }
 
     public static void main(String[] args) {
         Authenticator.setDefault(new SystemPropertiesAuthenticator());
 
         try {
-            if (!NO_VERSION_JAR.exists() || (args.length > 0 && args[0].trim().equals("update-wrapper"))) {
-                String baseVersion = getVersion();
-                String detailedVersion = null;
-                if (baseVersion != null && baseVersion.endsWith("SNAPSHOT")) {
-                    detailedVersion = getSnapshotVersion(baseVersion);
-                }
-                updateJar(baseVersion, detailedVersion);
+            GrailsVersion preferredGrailsVersion = getPreferredGrailsVersion();
+            List<GrailsReleaseType> allowedTypes = getAllowedReleaseTypes(preferredGrailsVersion);
+
+            GrailsUpdater updater = new GrailsUpdater(allowedTypes, preferredGrailsVersion);
+            boolean forceUpdate = (args.length > 0 && args[0].trim().equals("update-wrapper"));
+
+            boolean updated = false;
+            String[] adjustedArgs = args;
+            if (forceUpdate || updater.needsUpdating()) {
+                String allowTypesString = allowedTypes.stream().map(GrailsReleaseType::name).collect(Collectors.joining(","));
+                System.out.printf("Updating Grails wrapper, allowed versions to update to are [%s]...%n", allowTypesString);
+
+                updated = updater.update();
+
                 // remove "update-wrapper" command argument
-                if (args.length > 0 && args[0].trim().equals("update-wrapper")) {
-                    args[0] = null;
+                if (forceUpdate) {
+                    adjustedArgs = Arrays.copyOfRange(args, 1, args.length);
                 }
             }
 
-            URLClassLoader child = new URLClassLoader(new URL[]{NO_VERSION_JAR.toURI().toURL()});
-            Class<?> classToLoad = Class.forName("grails.init.RunCommand", true, child);
-            Method main = classToLoad.getMethod("main", String[].class);
-            main.invoke(null, (Object) args);
+            if(updated) {
+                System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
+            }
 
+            URLClassLoader child = new URLClassLoader(new URL[]{updater.getExecutedJarFile().toURI().toURL()});
+            Class<?> classToLoad = Class.forName("org.apache.grails.cli.DelegatingShellApplication", true, child);
+            Method main = classToLoad.getMethod("main", String[].class);
+            main.invoke(null, (Object) adjustedArgs);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private static GrailsVersion getPreferredGrailsVersion() {
+        // Check for a properties file in case inside a grails project
+        File gradleProperties = new File("gradle.properties");
+        if(!gradleProperties.exists()) {
+            return null;
+        }
+
+        Properties properties = new Properties();
+        try (InputStream in = new FileInputStream(gradleProperties)) {
+            properties.load(in);
+        }
+        catch(Exception e) {
+            System.err.println("Failed to load gradle.properties from "+ gradleProperties);
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        if(!properties.containsKey("grailsVersion")) {
+            return null;
+        }
+
+        String grailsVersion = properties.getProperty("grailsVersion");
+        if(grailsVersion == null) {
+            System.out.println("gradle.properties does not contain grailsVersion; downloading latest Grails Version");
+            return null;
+        }
+
+        try {
+            return new GrailsVersion(grailsVersion);
+        }
+        catch(Exception e) {
+            System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return null;
+    }
+
+    private static List<GrailsReleaseType> getAllowedReleaseTypes(GrailsVersion preferredVersion) {
+        String raw = System.getenv("GRAILS_WRAPPER_ALLOWED_TYPES");
+        if (raw == null || raw.trim().isEmpty()) {
+            if (preferredVersion != null) {
+                //inside a grails project pull the equivalent version type or newer
+                return preferredVersion.releaseType.upTo();
+            } else {
+                String grailsVersion = Start.class.getPackage().getImplementationVersion();
+                GrailsVersion myVersion = new GrailsVersion(grailsVersion);
+
+                if (myVersion.releaseType != GrailsReleaseType.RELEASE) {
+                    return Arrays.asList(GrailsReleaseType.values());
+                }
+
+                // Only consider releases unless this wrapper
+                return List.of(GrailsReleaseType.RELEASE);
+            }
+        }
+
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .map(GrailsReleaseType::valueOf)
+                .collect(Collectors.toList());
     }
 }
