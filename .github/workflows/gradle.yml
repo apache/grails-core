@@ -119,7 +119,7 @@ jobs:
       fail-fast: false
       matrix:
         java: [ 17, 21 ]
-        mongodb-version: [ '7.0', '8.0' ]
+        mongodb-version: [ '7.0', '8.0' ] # test with supported versions https://www.mongodb.com/legal/support-policy/lifecycles
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
