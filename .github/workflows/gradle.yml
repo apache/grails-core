@@ -214,7 +214,7 @@ jobs:
           -Dorg.gradle.internal.publish.checksums.insecure=true
   publish:
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
-    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.publshGradle.result == 'success' && needs.build.result == 'success' && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
+    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && needs.build.result == 'success' && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
