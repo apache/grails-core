@@ -63,6 +63,7 @@ jobs:
           ./gradlew build
           --continue --stacktrace
   build:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core'
     strategy:
       fail-fast: false
@@ -84,14 +85,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔨 Build project without tests"
-        if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
-        run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc
-          --continue --stacktrace
-          -PskipTests
-      - name: "🔨 Build project with tests"
-        if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+      - name: "🔨 Build project"
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace
@@ -214,7 +208,7 @@ jobs:
           -Dorg.gradle.internal.publish.checksums.insecure=true
   publish:
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
-    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && needs.build.result == 'success' && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
+    if: ${{ github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') }}
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
