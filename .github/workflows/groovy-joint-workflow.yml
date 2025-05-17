@@ -26,6 +26,7 @@ permissions:
   contents: read
 jobs:
   build_groovy:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     runs-on: ubuntu-latest
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
