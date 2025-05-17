@@ -22,6 +22,10 @@ on:
     branches:
       - '[4-9]+.[0-9]+.x'
   workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:

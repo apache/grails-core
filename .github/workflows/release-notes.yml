@@ -27,6 +27,10 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   update_release_draft:
     permissions:
