@@ -18,7 +18,7 @@ limitations under the License.
 
 Experienced while upgrading modules for Grails 7
 
-- NOTE: Several items have been directly integrated into the upgrade guide. Please refer there for the full list.
+- NOTE: Several items have been directly integrated into the upgrade guide. Please refer to it for the full list.
 - The amount of boilerplate required in gradle files has been reduced:  
   - When `org.grails.grails-plugin` gradle plugin is applied, the bootJar task is disabled by default.  No more needing to explicitly set it to false!
   - We no longer have a `micronaut-bom` and a `spring-bom`.  We only have the `spring-bom` now, which allows `grails-bom` to inherit from it and be applied as part of the Spring Dependency Management plugin.  This means versions do not need included for any library in the bom.  Override bom versions via gradle properties.

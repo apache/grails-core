@@ -62,19 +62,19 @@ class FindMainClassTask extends DefaultTask {
         def bootJarTask = project.tasks.findByName(SpringBootPlugin.BOOT_JAR_TASK_NAME)
         def bootWarTask = project.tasks.findByName(SpringBootPlugin.BOOT_WAR_TASK_NAME)
         if ((!bootJarTask || !bootJarTask.enabled) && (!bootWarTask || !bootWarTask.enabled)) {
-            project.logger.info("There is neither a ${SpringBootPlugin.BOOT_JAR_TASK_NAME} or ${SpringBootPlugin.BOOT_WAR_TASK_NAME} task that will run. Skipping finding main Application class.")
+            project.logger.info('There is neither a {} or {} task that will run. Skipping finding main Application class.', SpringBootPlugin.BOOT_JAR_TASK_NAME, SpringBootPlugin.BOOT_WAR_TASK_NAME)
             return
         }
 
         String mainClass = findMainClass()
         if (mainClass) {
-            ExtraPropertiesExtension extraProperties = (ExtraPropertiesExtension) project.getExtensions().getByName('ext')
+            def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
             extraProperties.set('mainClassName', mainClass)
 
-            SpringBootExtension springBootExtension = project.getExtensions().getByType(SpringBootExtension)
+            def springBootExtension = project.extensions.getByType(SpringBootExtension)
             springBootExtension.mainClass.convention(mainClass)
         } else {
-            project.logger.warn("No main class found. Please set 'springBoot.mainClass'.")
+            project.logger.warn('No main class found. Please set \'springBoot.mainClass\'.')
         }
     }
 
@@ -129,11 +129,11 @@ class FindMainClassTask extends DefaultTask {
                 } else {
                     if (project.plugins.hasPlugin(GrailsPluginGradlePlugin)) {
                         // this is ok if the project is a plugin because it's likely not going to be a runnable grails app
-                        project.logger.lifecycle("WARNING: this plugin project does not have an Application.class and thus the bootJar / bootRun will be invalid.")
+                        project.logger.lifecycle('WARNING: this plugin project does not have an Application.class and thus the bootJar / bootRun will be invalid.')
                         return null
                     }
 
-                    throw new RuntimeException("Could not find Application main class. Please set 'springBoot.mainClass' or disable BootJar & BootArchive tasks.")
+                    throw new RuntimeException('Could not find Application main class. Please set \'springBoot.mainClass\' or disable BootJar & BootArchive tasks.')
                 }
             }
             return mainClass
@@ -141,7 +141,7 @@ class FindMainClassTask extends DefaultTask {
     }
 
     protected FileCollection resolveClassesDirs(SourceSetOutput output, Project project) {
-        output?.classesDirs ?: project.files(new File(project.buildDir, 'classes/main'))
+        output?.classesDirs ?: project.files(project.layout.buildDirectory.dir('classes/main'))
     }
 
     protected MainClassFinder createMainClassFinder() {

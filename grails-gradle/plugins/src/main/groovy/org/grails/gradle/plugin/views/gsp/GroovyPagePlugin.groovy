@@ -53,7 +53,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
-        output?.dir("gsp-classes")
+        output?.dir('gsp-classes')
 
         FileCollection allClasspath = project.getObjects().fileCollection().from(
                 [
@@ -64,19 +64,19 @@ class GroovyPagePlugin implements Plugin<Project> {
                 ].findAll { it }
         )
 
-        def compileGroovyPages = tasks.register("compileGroovyPages", GroovyPageForkCompileTask) {
+        def compileGroovyPages = tasks.register('compileGroovyPages', GroovyPageForkCompileTask) {
             it.destinationDirectory.set(destDir)
             it.tmpDirPath = getTmpDirPath(project)
             it.source = project.layout.projectDirectory.dir('grails-app/views')
-            it.serverpath.set("/WEB-INF/grails-app/views/")
+            it.serverpath.set('/WEB-INF/grails-app/views/')
             it.classpath = allClasspath
         }
 
-        def compileWebappGroovyPages = tasks.register("compileWebappGroovyPages", GroovyPageForkCompileTask) {
+        def compileWebappGroovyPages = tasks.register('compileWebappGroovyPages', GroovyPageForkCompileTask) {
             it.destinationDirectory.set(destDir)
             it.source = project.layout.projectDirectory.dir('src/main/webapp')
             it.tmpDirPath = getTmpDirPath(project)
-            it.serverpath.set("/")
+            it.serverpath.set('/')
             it.classpath = allClasspath
         }
 
@@ -92,7 +92,7 @@ class GroovyPagePlugin implements Plugin<Project> {
             war.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (war.name == 'bootWar') {
                 war.from(destDir) { CopySpec it ->
-                    it.into("WEB-INF/classes")
+                    it.into('WEB-INF/classes')
                 }
             } else if (war.name == 'war') {
                 war.from destDir
@@ -111,7 +111,7 @@ class GroovyPagePlugin implements Plugin<Project> {
             if (!(jar instanceof War)) {
                 if (jar.name == 'bootJar') {
                     jar.from(destDir) { CopySpec it ->
-                        it.into("BOOT-INF/classes")
+                        it.into('BOOT-INF/classes')
                     }
                 } else if (jar.name == 'jar') {
                     jar.from destDir

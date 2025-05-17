@@ -1,18 +1,20 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.gradle.plugin.publishing
 
@@ -136,40 +138,40 @@ Note: if project properties are used, the properties must be defined prior to ap
             isRelease = Boolean.parseBoolean(System.getenv(ENVIRONMENT_VARIABLE_BASED_RELEASE))
             isSnapshot = !isRelease
 
-            project.rootProject.logger.lifecycle("Environment Variable `$ENVIRONMENT_VARIABLE_BASED_RELEASE` detected - using variable instead of project version.")
+            project.rootProject.logger.lifecycle('Environment Variable `{}` detected - using variable instead of project version.', ENVIRONMENT_VARIABLE_BASED_RELEASE)
         } else {
             String detectedVersion = (project.version == Project.DEFAULT_VERSION ? (project.findProperty('projectVersion') ?: Project.DEFAULT_VERSION) : project.version) as String
             if (detectedVersion == Project.DEFAULT_VERSION) {
                 throw new IllegalStateException("Project ${project.name} has an unspecified version (neither `version` or the property `projectVersion` is defined). Release state cannot be determined.")
             }
-            project.rootProject.logger.info("Version $detectedVersion detected for project ${project.name}")
+            project.rootProject.logger.info('Version {} detected for project {}', detectedVersion, project.name)
 
             isSnapshot = detectedVersion.endsWith('SNAPSHOT')
             isRelease = !isSnapshot
 
             if (project.version == Project.DEFAULT_VERSION) {
                 if (isRelease) {
-                    project.rootProject.logger.warn("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
+                    project.rootProject.logger.warn('Project {} does not have a version defined. Using the gradle property `projectVersion` to assume version is {}.', project.name, detectedVersion)
                 } else {
-                    project.rootProject.logger.info("Project ${project.name} does not have a version defined. Using the gradle property `projectVersion` to assume version is ${detectedVersion}.")
+                    project.rootProject.logger.info('Project {} does not have a version defined. Using the gradle property `projectVersion` to assume version is {}.', project.name, detectedVersion)
                 }
             }
         }
 
         if (isSnapshot) {
-            project.rootProject.logger.info("Project ${project.name} will be a snapshot.")
+            project.rootProject.logger.info('Project {} will be a snapshot.', project.name)
         }
         if (isRelease) {
-            project.rootProject.logger.info("Project ${project.name} will be a release.")
+            project.rootProject.logger.info('Project {} will be a release.', project.name)
         }
 
         boolean useMavenPublish = (isSnapshot && snapshotPublishType == PublishType.MAVEN_PUBLISH) || (isRelease && releasePublishType == PublishType.MAVEN_PUBLISH)
         if (useMavenPublish) {
-            project.rootProject.logger.info("Maven Publish is enabled for project ${project.name}")
+            project.rootProject.logger.info('Maven Publish is enabled for project {}', project.name)
         }
         boolean useNexusPublish = (isSnapshot && snapshotPublishType == PublishType.NEXUS_PUBLISH) || (isRelease && releasePublishType == PublishType.NEXUS_PUBLISH)
         if (useNexusPublish) {
-            project.rootProject.logger.info("Nexus Publish is enabled for project ${project.name}")
+            project.rootProject.logger.info('Nexus Publish is enabled for project {}', project.name)
         }
 
         // Required for the pom always
@@ -178,7 +180,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         if (isRelease || useNexusPublish) {
             if (project.pluginManager.hasPlugin(SIGNING_PLUGIN_ID)) {
-                project.rootProject.logger.debug("Signing Plugin already applied to project {}", project.name)
+                project.rootProject.logger.debug('Signing Plugin already applied to project {}', project.name)
             } else {
                 projectPluginManager.apply(SigningPlugin)
             }
@@ -194,7 +196,7 @@ Note: if project properties are used, the properties must be defined prior to ap
             final PluginManager rootProjectPluginManager = project.rootProject.pluginManager
             boolean hasNexusPublishApplied = rootProjectPluginManager.hasPlugin(NEXUS_PUBLISH_PLUGIN_ID)
             if (hasNexusPublishApplied) {
-                project.rootProject.logger.debug("Nexus Publish Plugin already applied to root project")
+                project.rootProject.logger.debug('Nexus Publish Plugin already applied to root project')
             } else {
                 rootProjectPluginManager.apply(NexusPublishPlugin)
             }
@@ -435,7 +437,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
     protected void registerValidationTask(Project project, String taskName, Closure c) {
         project.plugins.withId(MAVEN_PUBLISH_PLUGIN_ID) {
-            TaskProvider<? extends Task> publishTask = project.tasks.named("publish")
+            TaskProvider<? extends Task> publishTask = project.tasks.named('publish')
 
             TaskProvider validateTask = project.tasks.register(taskName, c)
             publishTask.configure {
@@ -450,7 +452,7 @@ Note: if project properties are used, the properties must be defined prior to ap
             publication.from project.components.javaPlatform
 
             if (gpe.publishTestSources) {
-                throw new RuntimeException("BOM publishes may only contain dependencies.")
+                throw new RuntimeException('BOM publishes may only contain dependencies.')
             }
 
             return
@@ -490,10 +492,10 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         if (!hasJavaPlugin && !hasJavaPlatform) {
             if (!hasJavaPlugin) {
-                throw new RuntimeException("Grails Publish Plugin requires the Java Plugin to be applied to the project.")
+                throw new RuntimeException('Grails Publish Plugin requires the Java Plugin to be applied to the project.')
             }
 
-            throw new RuntimeException("Grails Publish Plugin requires the Java Platform Plugin to be applied to the project.")
+            throw new RuntimeException('Grails Publish Plugin requires the Java Platform Plugin to be applied to the project.')
         }
 
         if (hasJavaPlatform) {
@@ -509,7 +511,7 @@ Note: if project properties are used, the properties must be defined prior to ap
         tasks.named('javadoc').configure {
             Task groovyDocTask = tasks.findByName('groovydoc')
             if (groovyDocTask) {
-                project.rootProject.logger.info("Configuring javadocJar task for project {} to include groovydoc", project.name)
+                project.rootProject.logger.info('Configuring javadocJar task for project {} to include groovydoc', project.name)
                 it.enabled = false
             }
         }
@@ -578,11 +580,11 @@ Note: if project properties are used, the properties must be defined prior to ap
 //            throw new RuntimeException("Cannot apply Grails Publish Plugin. Project ${project.name} does not have anything to publish.")
 //        }
 
-        registerValidationTask(project, "grailsPublishValidation") {
+        registerValidationTask(project, 'grailsPublishValidation') {
             Task groovyDocTask = project.tasks.findByName('groovydoc')
             if (groovyDocTask) {
                 if (!groovyDocTask.enabled) {
-                    throw new RuntimeException("Groovydoc task is disabled. Please enable it to ensure javadoc can be published correctly with the Grails Publish Plugin.")
+                    throw new RuntimeException('Groovydoc task is disabled. Please enable it to ensure javadoc can be published correctly with the Grails Publish Plugin.')
                 }
             }
         }
