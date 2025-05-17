@@ -71,7 +71,6 @@ jobs:
     name: 'Build Grails-Core'
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         java: [ 17, 21, 24 ]
         os: [ ubuntu-latest, windows-latest, macos-latest ]
@@ -93,7 +92,7 @@ jobs:
       - name: "🔨 Build project"
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
-          --continue --stacktrace
+          --continue --stacktrace -PonlyCoreTests
   functional:
     name: "Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
