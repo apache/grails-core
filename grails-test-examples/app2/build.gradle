@@ -60,3 +60,7 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
 }
+
+//bootRun {
+//    jvmArgs("-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005")
+//}
