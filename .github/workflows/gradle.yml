@@ -81,11 +81,10 @@ jobs:
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace
-          -PskipFunctionalTests
-          -PskipMongodbTests
-          -PskipHibernate5Tests
+          -PskipTests
   functional:
     name: "Functional Tests"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -113,6 +112,7 @@ jobs:
           -PskipHibernate5Tests
           -PskipMongodbTests
   mongodbFunctional:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"
     runs-on: ubuntu-24.04
     strategy:
@@ -143,6 +143,7 @@ jobs:
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
   hibernate5Functional:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests"
     runs-on: ubuntu-24.04
     strategy:
@@ -199,8 +200,8 @@ jobs:
           ./gradlew publish
           -Dorg.gradle.internal.publish.checksums.insecure=true
   publish:
-    if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
+    if: github.repository_owner == 'apache' && github.event_name == 'push' && needs.publshGradle.result == 'success' && needs.build.result == 'success' && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
