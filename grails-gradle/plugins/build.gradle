@@ -34,12 +34,11 @@ dependencies {
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
     compileOnly "org.codehaus.groovy:groovy"
 
-    implementation project(':grails-gradle-tasks')
-
-    implementation project(':grails-gradle-model'), {
+    implementation project(':grails-gradle-tasks'), {
         exclude group: 'org.apache.groovy'
-        exclude group: 'org.spockframework'
     }
+
+    implementation project(':grails-gradle-model')
 
     implementation 'io.github.gradle-nexus:publish-plugin'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
