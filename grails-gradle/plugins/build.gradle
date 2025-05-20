@@ -32,10 +32,9 @@ dependencies {
     // compile grails-gradle-plugin with the Groovy version provided by Gradle
     // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    // TODO: tasks are isolated as of Gradle 7 so we must expose the version of the groovy.
-    // We could upgrade to groovy 4 for the tasks, but gradle plugins are not isolated and still
-    // need groovy 3.
-    implementation "org.codehaus.groovy:groovy"
+    compileOnly "org.codehaus.groovy:groovy"
+
+    implementation project(':grails-gradle-tasks')
 
     implementation project(':grails-gradle-model'), {
         exclude group: 'org.apache.groovy'

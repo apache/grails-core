@@ -91,7 +91,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc
+          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace -PonlyCoreTests
   functional:
     name: "Functional Tests"
@@ -117,7 +117,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🏃 Run Functional Tests"
         run: >
-          ./gradlew bootJar check
+          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository bootJar check
           --continue --stacktrace
           -PonlyFunctionalTests
           -PskipHibernate5Tests
@@ -149,7 +149,7 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew bootJar cleanTest check
+          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository bootJar cleanTest check
           --continue --stacktrace
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
@@ -179,7 +179,7 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew bootJar cleanTest check
+          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository bootJar cleanTest check
           --continue --stacktrace
           -PonlyHibernate5Tests
   publishGradle:
