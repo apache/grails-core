@@ -29,10 +29,9 @@ group = 'org.apache.grails'
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
-    implementation "org.codehaus.groovy:groovy"
+    implementation "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}"
 
     implementation project(':grails-gradle-model'), {
-        exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
     }
 
