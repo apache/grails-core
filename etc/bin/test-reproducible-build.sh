@@ -44,12 +44,12 @@ fi
 
 git clean -xdf
 killall -e java || true
-$SCRIPT_DIR/../../gradlew build --rerun-tasks -PskipTests --no-build-cache
+$SCRIPT_DIR/../../gradlew :grails-bom:publishMavenPublicationToLocalBomRepository build --rerun-tasks -PskipTests --no-build-cache
 FIRST_BUILD=$("$SCRIPT_DIR/generate-build-artifact-hashes.groovy" "$PROJECT_LOCATION")
 
 git clean -xdf
 killall -e java || true
-$SCRIPT_DIR/../../gradlew build --rerun-tasks -PskipTests --no-build-cache
+$SCRIPT_DIR/../../gradlew :grails-bom:publishMavenPublicationToLocalBomRepository build --rerun-tasks -PskipTests --no-build-cache
 SECOND_BUILD=$("$SCRIPT_DIR/generate-build-artifact-hashes.groovy" "$PROJECT_LOCATION")
 
 cd -

@@ -16,7 +16,7 @@ limitations under the License.
 
 # Apache Grails Release Process
 
-This document outlines the steps to release a new version of Apache Grails. It is important to follow these steps carefully to ensure a smooth release process. The release process can be divided into 3 stages across 2 repositories: `grails-core` & `grails-forge`.
+This document outlines the steps to release a new version of Apache Grails. It is important to follow these steps carefully to ensure a smooth release process. The release process can be divided into 4 stages across 2 repositories: `grails-core` & `grails-forge`.
 
 ## Prerequisites
 
@@ -51,7 +51,57 @@ During the staging step, we must create a source distribution & stage any binary
 
 Once `grails-forge` & `grails-core` are published the end source distribution should be staged. 
 
-## 2. Voting
+## 2. Verifying
+
+Prior to releasing a vote, we need to verify the staged artifacts. At a high level, the following must be completed to verify these artifacts:
+1. Download the zipped source distribution artifacts from the grails-core release page:
+   * `apache-grails-<version>-incubating-src.zip` - the source distribution
+   * `apache-grails-<version>-incubating-src.zip.asc` - the public key to verify the source distribution
+   * `apache-grails-<version>-incubating-src.zip.sha512` - the checksum to verify the source distribution
+2. Verify the distribution checksum via the command:
+   ```bash
+   shasum -a 512 -c apache-grails-<version>-incubating-src.zip.sha512
+   ```
+3. Verify the distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-<version>-incubating-src.zip.asc apache-grails-<version>-incubating-src.zip
+    ```
+4. Extract the zip file and verify the contents:
+   * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+   * Ensure `README.md` & `CONTRIBUTING.md` are present to ensure project build & usage instructions are present.
+   * Ensure the `PUBLISHED` file is present so we know how to pull the various jar files.
+5. Verify the signed jar files by downloading all jars inside of the `PUBLISHED` file.
+   * For each jar, verify the jar file matches the published one:
+   ```bash
+    gpg --verify <jar>.asc <jar>
+    ```
+6. Run the `verify-distribution.sh` shell script to compare the published jar files to a locally built version of them.
+7. For any differences, extract the jar files, use IntelliJ to compare each differing file. Assuming differences are ordering related, we can continue with the verification.
+8. Download the cli's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`.  For each CLI, verify the published signature in the `PUBLISHED` file:
+   ```bash
+    gpg --verify <cli>.asc <cli>
+   ```
+10. testing `grailsw`:
+    * set GRAILS_REPO_URL to the staging repository
+    * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars)
+11. testing `grails-forge-cli`:
+    * create a forge project
+    * modify the application to include the staging repo
+    * start the project
+12. testing `grails-shell-cli`:
+    * create a basic app:
+    ```bash
+    grails-shell-cli create-app test
+    ```
+    * modify the application to include the staging repo
+    * start the app:
+    ```bash
+    grails-shell-cli run-app
+    ```
+13. Perform the same tests as 11. & 12, but use the delegating cli `grails`
+
+
+## 3. Voting
 
 TODO
 

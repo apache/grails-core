@@ -25,18 +25,20 @@ CWD=$(pwd)
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "${SCRIPT_DIR}/../.."
 
-rm -rf "${SCRIPT_DIR}/results" || true
 mkdir -p "${SCRIPT_DIR}/results"
+if [[ -f "${SCRIPT_DIR}/results/PUBLISHED" ]]; then
+  echo "✓ File 'PUBLISHED' exists."
+else
+  echo "✗ File 'PUBLISHED' not found. Please place the PUBLISHED distribution file under ${SCRIPT_DIR}/results/PUBLISHED..."
+  exit 1
+fi
 
-git clean -xdf --exclude='etc/bin'
-killall -e java || true
-cd grails-gradle
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
-./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository build --rerun-tasks -PskipTests --no-build-cache
-"${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/first.txt"
-mkdir -p "${SCRIPT_DIR}/results/first"
-find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/first/"
+if [[ -d "${SCRIPT_DIR}/results/published_artifacts" ]]; then
+  echo "✓ Directory 'published_artifacts' exists."
+else
+  echo "✗ Directory 'published_artifacts' not found. Please place the PUBLISHED jar files under ${SCRIPT_DIR}/results/published_artifacts..."
+  exit 1
+fi
 
 git clean -xdf --exclude='etc/bin'
 killall -e java || true
@@ -46,20 +48,20 @@ cd ..
 ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository build --rerun-tasks -PskipTests --no-build-cache
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/second.txt"
 mkdir -p "${SCRIPT_DIR}/results/second"
-find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/second/"
+find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -exec cp -t "${SCRIPT_DIR}/results/second/" -- {} +
 
 cd "${SCRIPT_DIR}/results"
 
-# diff -u first.txt second.txt
-DIFF_RESULTS=$(comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort)
+# diff -u PUBLISHED second.txt
+DIFF_RESULTS=$(comm -3 PUBLISHED second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort)
 echo "Differing artifacts:"
 echo "$DIFF_RESULTS" > diff.txt
 cat diff.txt
 
 printf '%s\n' "$DIFF_RESULTS" | sed 's|^etc/bin/results/||' > toPurge.txt
-find first -type f -name '*.jar' -print | sed 's|^first/||' | grep -F -x -v -f toPurge.txt |
+find published_artifacts -type f -name '*.jar' -print | sed 's|^published_artifacts/||' | grep -F -x -v -f toPurge.txt |
   while IFS= read -r f; do
-    rm -f "./first/$f"
+    rm -f "./published_artifacts/$f"
   done
 find second -type f -name '*.jar' -print | sed 's|^second/||' | grep -F -x -v -f toPurge.txt |
   while IFS= read -r f; do
