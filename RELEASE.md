@@ -48,13 +48,16 @@ During the staging step, we must create a source distribution & stage any binary
    * The Github workflow 'release.yml' will kick off, which will run the `publish` job steps. This job will perform the similar steps as above, but will perform these additional steps: 
      * download the tagged grails source
      * generate a source distribution for apache
+     * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/sources
+     * upload the binary CLIs that will be uploaded to sdkman to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution
+     * upload the binary CLIs to the GitHub forge-release
 
-Once `grails-forge` & `grails-core` are published the end source distribution should be staged. 
+Once `grails-forge` & `grails-core` are published the end source & binary distributions should be staged. 
 
 ## 2. Verifying
 
 Prior to releasing a vote, we need to verify the staged artifacts. At a high level, the following must be completed to verify these artifacts:
-1. Download the zipped source distribution artifacts from the grails-core release page:
+1. Download the zipped source distribution artifacts:
    * `apache-grails-<version>-incubating-src.zip` - the source distribution
    * `apache-grails-<version>-incubating-src.zip.asc` - the public key to verify the source distribution
    * `apache-grails-<version>-incubating-src.zip.sha512` - the checksum to verify the source distribution
@@ -77,7 +80,7 @@ Prior to releasing a vote, we need to verify the staged artifacts. At a high lev
     ```
 6. Run the `verify-distribution.sh` shell script to compare the published jar files to a locally built version of them.
 7. For any differences, extract the jar files, use IntelliJ to compare each differing file. Assuming differences are ordering related, we can continue with the verification.
-8. Download the cli's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`.  For each CLI, verify the published signature in the `PUBLISHED` file:
+8. Download the binary distrubtion & expand it to test the various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`.  For each CLI, verify the published signature in the `PUBLISHED` file:
    ```bash
     gpg --verify <cli>.asc <cli>
    ```
