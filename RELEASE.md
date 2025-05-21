@@ -87,11 +87,7 @@ Prior to releasing a vote, we need to verify the staged artifacts. At a high lev
 10. testing `grailsw`:
     * set GRAILS_REPO_URL to the staging repository
     * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars)
-11. testing `grails-forge-cli`:
-    * create a forge project
-    * modify the application to include the staging repo
-    * start the project
-12. testing `grails-shell-cli`:
+11. testing `grails-shell-cli`:
     * create a basic app:
     ```bash
     grails-shell-cli create-app test
@@ -101,7 +97,16 @@ Prior to releasing a vote, we need to verify the staged artifacts. At a high lev
     ```bash
     grails-shell-cli run-app
     ```
-13. Perform the same tests as 11. & 12, but use the delegating cli `grails`
+12. Perform the same tests, but use the delegating cli `grails` with type forge
+    * create a basic app:
+    ```bash
+    grails -t forge create-app test
+    ```
+    * modify the application to include the staging repo
+    * start the app:
+    ```bash
+    gradlew bootRun
+    ```
 
 
 ## 3. Voting
