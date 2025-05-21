@@ -111,9 +111,9 @@ class DefaultDateHelperSpec extends Specification {
 
         where:
         style    | expected
-        'LONG'   | '8:00:00 AM UTC'
-        'MEDIUM' | '8:00:00 AM'
-        null     | '8:00 AM'
+        'LONG'   | '8:00:00\u202FAM UTC'
+        'MEDIUM' | '8:00:00\u202FAM'
+        null     | '8:00\u202FAM'
     }
 
     @Requires({ Jvm.current.isJava17() })
@@ -149,7 +149,7 @@ class DefaultDateHelperSpec extends Specification {
 
         where:
         style  | expected
-        'FULL' | '8:00:00 AM Coordinated Universal Time'
+        'FULL' | '8:00:00\u202FAM Coordinated Universal Time'
     }
 
     @Requires({ jvm.isJava8() })
@@ -209,10 +209,10 @@ class DefaultDateHelperSpec extends Specification {
 
         where:
         dateStyle | timeStyle | expected
-        'FULL'    | 'FULL'    | 'Sunday, January 5, 1941, 8:00:00 AM Coordinated Universal Time'
-        'LONG'    | 'LONG'    | 'January 5, 1941, 8:00:00 AM UTC'
-        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8:00:00 AM'
-        null      | null      | '1/5/41, 8:00 AM'
+        'FULL'    | 'FULL'    | 'Sunday, January 5, 1941, 8:00:00\u202FAM Coordinated Universal Time'
+        'LONG'    | 'LONG'    | 'January 5, 1941, 8:00:00\u202FAM UTC'
+        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8:00:00\u202FAM'
+        null      | null      | '1/5/41, 8:00\u202FAM'
     }
 
     void "test supportsDatePickers"() {
