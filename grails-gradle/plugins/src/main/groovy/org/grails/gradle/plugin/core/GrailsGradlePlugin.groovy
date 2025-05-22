@@ -806,10 +806,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         project.afterEvaluate {
             // prepareKotlinBuildScriptModel runs when a project is created or synced in IntelliJ
             // cleanGroovyCompilerConfig is run by most other tasks
-            ['prepareKotlinBuildScriptModel', 'cleanGroovyCompilerConfig'].each { String taskName ->
-                it.tasks.findByName(taskName)?.configure { Task dependent ->
-                    dependent?.dependsOn verifyGrailsProjectDirectoriesTask
-                }
+            it.tasks.matching { it.name in ['prepareKotlinBuildScriptModel', 'cleanGroovyCompilerConfig'] }.configureEach { Task dependent ->
+                dependent.dependsOn verifyGrailsProjectDirectoriesTask
             }
         }
     }
