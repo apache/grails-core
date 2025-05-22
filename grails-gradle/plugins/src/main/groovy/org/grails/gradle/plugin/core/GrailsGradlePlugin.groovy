@@ -781,7 +781,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
      * - grails-app/taglib
      * - grails-app/migrations
      *
-     * Additionally, it sets up dependencies for tasks like 'prepareKotlinBuildScriptModel' and
+     * Additionally, it sets up dependencies for tasks 'prepareKotlinBuildScriptModel' and
      * 'cleanGroovyCompilerConfig' to ensure that the directories are verified before these tasks run.
      *
      * @param project The Gradle project for which the directories are verified and tasks are configured.
