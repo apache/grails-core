@@ -229,12 +229,17 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
-        run: ./gradlew publish
+        with: 
+          timeout_seconds: 900 # normal range 360-720s
+          max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
+          retry_wait_seconds: 180
+          command: ./gradlew publish
       - name: "🔨 Create Grails Wrapper Distribution Zip"
         run: >
           ./gradlew :grails-wrapper:distZip
