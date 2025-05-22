@@ -35,10 +35,15 @@ exist and are provided by the Apache Grails team.
 
 ## Getting help
 
-Ask questions on the [Grails User Mailing List](https://lists.apache.org/list.html?users@grails.apache.org)
-Join the discussions on [Slack](https://slack.grails.org/)
-Check the [Documentation](https://docs.grails.org/) for your preferred Apache Grails version.
-Check for a [Grails Guide](https://github.com/grails-guides/).
+- Check the [Documentation](https://docs.grails.org/) for your preferred Apache Grails version.
+- Check for a [Grails Guide](https://github.com/grails-guides/).
+- Ask questions on the [Grails User Mailing List](https://lists.apache.org/list.html?users@grails.apache.org)
+- Submit an issue: [Grails Issues](https://github.com/apache/grails-core/issues)
+- Join the discussions on [Slack](https://slack.grails.org/)
+
+Please note that the Apache Software Foundation does not offer commercial support for Apache Grails or related applications.
+
+[Commercial support](https://grails.org/support.html) options are available.  The products and services listed at this link are provided for information use only to our users. The Apache Grails Project does not endorse or recommend any of the products or services.
 
 ## Application Generation
 
