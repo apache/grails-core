@@ -28,6 +28,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 > - Talk about it on Social Media
 > - Refer to this project in your project's readme
 > - Mention the project at local meetups and tell your friends/colleagues
+> - As an independent initiative, community members have set up an open collective for Apache Grails - https://opencollective.com/friends-of-grails. This initiative is designed to complement the Apache project and the many contributions we get from our great community and supporters.
 
 <!-- omit in toc -->
 ## Table of Contents
