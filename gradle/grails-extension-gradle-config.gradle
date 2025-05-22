@@ -17,21 +17,18 @@
  *  under the License.
  */
 
-version = '0.1-SNAPSHOT'
-group 'issue11767.plugin'
+// do not cache SNAPSHOT dependencies
+//dependencyManagement {
+//    resolutionStrategy {
+//        cacheChangingModulesFor 0, 'seconds'
+//        cacheDynamicVersionsFor 0, 'seconds'
+//    }
+//}
 
-apply plugin: 'org.apache.grails.gradle.grails-plugin'
-
-dependencies {
-    implementation platform(project(':grails-bom'))
-
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-    implementation 'org.apache.grails:grails-core'
-    compileOnly 'io.micronaut:micronaut-inject-groovy'
-}
-
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+grails {
+    // WARNING: enabling spring dependency management in core can have unintended side effects.
+    // since it loads the bom via a pom file, it can't use a gradle project() reference
+    // this means you MUST publish locally via ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository
+    // this causes unexpected version mismatches in the various plugin projects
+    springDependencyManagement = false
 }
