@@ -776,7 +776,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         verifyGrailsProjectDirectoriesTask.configure { Task task ->
             task.group = 'other'
-
+            task.description = 'Ensures essential Grails project directories exist and creates them if missing.'
             task.doFirst {
                 ['grails-app/services', 'grails-app/domain',
                  'grails-app/taglib', 'grails-app/migrations'].each { String dir ->
