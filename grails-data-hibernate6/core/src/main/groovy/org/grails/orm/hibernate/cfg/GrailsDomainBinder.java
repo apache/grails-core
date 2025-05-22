@@ -2744,6 +2744,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig config = getPropertyConfig(grailsProperty);
         if (config != null && config.getCascade() != null) {
             cascadeStrategy = config.getCascade();
+            LOG.debug("Cascade strategy for property ${grailsProperty.getName()} is ${cascadeStrategy}");
         } else if (grailsProperty instanceof Association) {
             Association association = (Association) grailsProperty;
             PersistentEntity referenced = association.getAssociatedEntity();
@@ -2791,6 +2792,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                 }
             }
             logCascadeMapping(association, cascadeStrategy, referenced);
+        } else {
+            LOG.debug("No cascade strategy for property: " + grailsProperty);
         }
         prop.setCascade(cascadeStrategy);
     }
