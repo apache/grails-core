@@ -20,14 +20,15 @@ apply plugin: 'org.nosphere.apache.rat'
 tasks.named('rat') {
     excludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            'CODE_OF_CONDUCT.md',
+            'LICENSE',
+            'NOTICE',
             '**/build/**', // Gradle generated build directories
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
             '**/*.html', // html files are only in test
             '**/resources/*', // exclude test artifacts
             'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
             'src/*', // exclude build artifacts
-            'LICENSE',
-            'NOTICE',
             '**/.sdkmanrc', // tool selection files aren't code
             '**/.gitignore', // git configuration isn't code
             '**/.gitkeep', // git configuration isn't code

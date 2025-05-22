@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter
 
 
 ext {
+    isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
@@ -80,7 +81,7 @@ subprojects {
 
     configurations.configureEach {
         resolutionStrategy {
-            def cacheHours = isCiBuild ? 0 : 24
+            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
         }

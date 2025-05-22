@@ -14,33 +14,105 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Grails Core Release Process
+# Apache Grails Release Process
 
-1. Perform the release of any other dependent library and update the version in `gradle.properties`/`grails-bom/plugins.properties`
-1. Ensure you have the latest changes locally `git pull`
-1. Ensure all changes from previous branches are merged up `git merge ...`
-1. Ensure there are no snapshot dependencies 
-1. Ensure the latest build passed
-1. Run the pre-release workflow with the desired version # & branch; give a description to reflect you are starting the release process
-1. For each project in the following list, draft a new release (tag should start with v, when generating release notes, be sure the release version doesn't have a v prefix), wait for release to publish, then update the grails-bom in grails core, & repeat the pre-release workflow in grails-core
-    * grails-gsp
-    * grails-data-mapping
-    * gorm-hibernate5
-    * gorm-mongodb
-    * gorm-neo4j
-    * fields
-    * scaffolding
-    * grails-views
-    * geb
-    * grails-cache
-    * grails-profiles
-1. Verify the release worked 
- * Run `sdk install grails XXX` and perform smoke tests or creating an application etc.
- * Check the documentation published to docs.grails.org/XXX
-1. Run the maven central sync `./gradlew sWMC`. Requires BINTRAY_USER/BINTRAY_KEY env vars or bintrayUser/bintrayKey gradle properties
-1. Ensure grails.org shows the new release version
-1. Ensure the documentation published correctly docs.grails.org
-1. Create a release in Github. Copy the previous release and change the relevant info
-1. Change the version in `build.gradle` back to a snapshot of next release
-1. Push the code `git push` 
-1. Announce the Release
+This document outlines the steps to release a new version of Apache Grails. It is important to follow these steps carefully to ensure a smooth release process. The release process can be divided into 4 stages across 2 repositories: `grails-core` & `grails-forge`.
+
+## Prerequisites
+
+Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present.
+
+## 1. Staging 
+
+During the staging step, we must create a source distribution & stage any binary artifacts that end users will consume - including the grails-cli & grails-forge-cli located in the grails-forge repository.
+1. Create a release in `grails-core`:
+   * Click "Draft a new release" here: https://github.com/apache/grails-core/releases
+   * On the draft new release screen, we execute the following steps:
+     * The tag will have the prefix 'v', so for our release it would be 'v7.0.0-M4'
+     * The "Target" will be the branch we build out of (this case it's the default, 7.0.x)
+     * Previous tag will be auto
+     * Click "Generate Release Notes"
+       * This will then scan our commit history and we adjust the release notes per project agreement.
+     * Check "pre-release"
+     * Click "Publish Release"
+2. (grails-core) The Github workflow 'release.yml' will kick off, which will run the `publish` job steps. This job will:
+   * checkout the project
+   * setup gradle
+   * extract the version # from the tag
+   * run the pre-release workflow (updates gradle.properties to be the version specified by the user)
+   * extract signing secrets from github action variables 
+   * build the project, sign the jar files, and stage them to the necessary location
+3. Create a matching release in `grails-forge`:
+   * Follow the same steps to create a release in grails-forge. Update any release notes specific to the delegating cli & grails forge.
+4. (grails-forge)
+   * The Github workflow 'release.yml' will kick off, which will run the `publish` job steps. This job will perform the similar steps as above, but will perform these additional steps: 
+     * download the tagged grails source
+     * generate a source distribution for apache
+     * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/sources
+     * upload the binary CLIs that will be uploaded to sdkman to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution
+     * upload the binary CLIs to the GitHub forge-release
+
+Once `grails-forge` & `grails-core` are published the end source & binary distributions should be staged. 
+
+## 2. Verifying
+
+Prior to releasing a vote, we need to verify the staged artifacts. At a high level, the following must be completed to verify these artifacts:
+1. Download the zipped source distribution artifacts:
+   * `apache-grails-<version>-incubating-src.zip` - the source distribution
+   * `apache-grails-<version>-incubating-src.zip.asc` - the public key to verify the source distribution
+   * `apache-grails-<version>-incubating-src.zip.sha512` - the checksum to verify the source distribution
+2. Verify the distribution checksum via the command:
+   ```bash
+   shasum -a 512 -c apache-grails-<version>-incubating-src.zip.sha512
+   ```
+3. Verify the distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-<version>-incubating-src.zip.asc apache-grails-<version>-incubating-src.zip
+    ```
+4. Extract the zip file and verify the contents:
+   * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+   * Ensure `README.md` & `CONTRIBUTING.md` are present to ensure project build & usage instructions are present.
+   * Ensure the `PUBLISHED` file is present so we know how to pull the various jar files.
+5. Verify the signed jar files by downloading all jars inside of the `PUBLISHED` file.
+   * For each jar, verify the jar file matches the published one:
+   ```bash
+    gpg --verify <jar>.asc <jar>
+    ```
+6. Run the `verify-distribution.sh` shell script to compare the published jar files to a locally built version of them.
+7. For any differences, extract the jar files, use IntelliJ to compare each differing file. Assuming differences are ordering related, we can continue with the verification.
+8. Download the binary distrubtion & expand it to test the various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`.  For each CLI, verify the published signature in the `PUBLISHED` file:
+   ```bash
+    gpg --verify <cli>.asc <cli>
+   ```
+10. testing `grailsw`:
+    * set GRAILS_REPO_URL to the staging repository
+    * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars)
+11. testing `grails-shell-cli`:
+    * create a basic app:
+    ```bash
+    grails-shell-cli create-app test
+    ```
+    * modify the application to include the staging repo
+    * start the app:
+    ```bash
+    grails-shell-cli run-app
+    ```
+12. Perform the same tests, but use the delegating cli `grails` with type forge
+    * create a basic app:
+    ```bash
+    grails -t forge create-app test
+    ```
+    * modify the application to include the staging repo
+    * start the app:
+    ```bash
+    gradlew bootRun
+    ```
+
+
+## 3. Voting
+
+TODO
+
+## 3. Releasing
+
+TODO

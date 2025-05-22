@@ -16,7 +16,6 @@ limitations under the License.
 
 # GORM for MongoDB
 [![Maven Central](https://img.shields.io/maven-central/v/org.grails/grails-datastore-gorm-mongodb.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails/grails-datastore-gorm-mongodb)
-[![Java CI](https://github.com/grails/gorm-mongodb/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/grails/gorm-mongodb/actions/workflows/gradle.yml)
 
 This project implements [GORM](https://gorm.grails.org) for the MongoDB Document Database.
 

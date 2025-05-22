@@ -104,6 +104,18 @@ public class Start {
         String grailsVersion = properties.getProperty("grailsVersion");
         if(grailsVersion == null) {
             System.out.println("gradle.properties does not contain grailsVersion; downloading latest Grails Version");
+
+            String overrideGrailsVersion = System.getenv("PREFERRED_GRAILS_VERSION");
+            if (overrideGrailsVersion != null) {
+                try {
+                    return new GrailsVersion(overrideGrailsVersion);
+                } catch (Exception e) {
+                    System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in PREFERRED_GRAILS_VERSION");
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            }
+
             return null;
         }
 
