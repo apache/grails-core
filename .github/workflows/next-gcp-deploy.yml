@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build
     env:
-      IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}:next
+      IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:next
     steps:
       - name: "🔑 Login"
         uses: google-github-actions/setup-gcloud@20c93dacc1d70ddbce76c63ab32c35595345bdd1
@@ -72,13 +72,6 @@ jobs:
           ./gradlew
           grails-forge-web-netty:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-      - name: "🚀 Create artifacts repository"
-        run: >
-          gcloud artifacts repositories create ${{ secrets.GCP_APP_NAME }}
-          --repository-format=docker
-          --location=us
-          --project=${{ secrets.GCP_PROJECT_ID }}
-          --description="Repository for grails-forge"
       - name: "🚀 Deploy Docker image"
         run: >
           gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-next
