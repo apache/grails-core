@@ -162,6 +162,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 }
             """.stripIndent(16)
         }
+
+        verifyGrailsProjectDirectories(project)
     }
 
     private void configureGroovyCompiler(Project project) {
@@ -767,5 +769,33 @@ class GrailsGradlePlugin extends GroovyPlugin {
             fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
         }
         fileCollection
+    }
+
+    private void verifyGrailsProjectDirectories(Project project) {
+        TaskProvider<Task> verifyGrailsProjectDirectoriesTask = project.tasks.register('verifyGrailsProjectDirectories')
+
+        verifyGrailsProjectDirectoriesTask.configure { Task task ->
+            task.group = 'other'
+
+            task.doFirst {
+                ['grails-app/services', 'grails-app/domain',
+                 'grails-app/taglib', 'grails-app/migrations'].each { String dir ->
+                    Directory directory = project.layout.projectDirectory.dir(dir)
+                    if (!directory.asFile.exists()) {
+                        directory.asFile.mkdirs()
+                    }
+                }
+            }
+        }
+
+        project.afterEvaluate {
+            // prepareKotlinBuildScriptModel runs when a project is created or synced in IntelliJ
+            // cleanGroovyCompilerConfig is run by most other tasks
+            ['prepareKotlinBuildScriptModel', 'cleanGroovyCompilerConfig'].each { String taskName ->
+                it.tasks.findByName(taskName)?.configure { Task dependent ->
+                    dependent?.dependsOn verifyGrailsProjectDirectoriesTask
+                }
+            }
+        }
     }
 }
