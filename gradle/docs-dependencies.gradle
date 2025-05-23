@@ -31,7 +31,6 @@ dependencies {
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-    // not every project includes groovy, so include it in the documentation config so it can be found
     add('documentation', 'org.apache.groovy:groovy')
     add('documentation', 'org.apache.groovy:groovy-groovydoc')
     add('documentation', 'org.apache.groovy:groovy-ant')

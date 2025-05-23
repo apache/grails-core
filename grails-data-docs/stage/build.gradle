@@ -70,8 +70,6 @@ combinedGroovydoc.configure { Groovydoc task ->
     task.classpath = files(sources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
 
-    task.dependsOn(docProjects.collect { ":$it.name:groovydoc" })
-
     task.inputs.files(task.source)
     task.outputs.dir(task.destinationDir)
 }
