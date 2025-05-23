@@ -26,12 +26,6 @@ plugins {
     id 'groovy'
 }
 
-// Make sure doc projects are evaluated last so they pick up all projects with documentation since they are dynamically
-// found by the aggregateGroovydoc task
-rootProject.subprojects
-        .findAll { !(it.name in testProjects) && it.name != project.name && !(it.name in cliProjects) && !(it.name in profileProjects) }
-        .each { project.evaluationDependsOn(it.path) }
-
 compileJava.options.release = javaVersion.toInteger()
 
 version = projectVersion

@@ -110,7 +110,11 @@ For further information, please consult the [documentation](https://docs.grails.
 
 ## Building Grails
 
-For building Grails, please consult the [CONTRIBUTING.md](CONTRIBUTING.md) file.
+For detailed building Grails, please consult the [CONTRIBUTING.md](CONTRIBUTING.md) file. To bootstrap the project from a source distribution, you can execute: 
+
+     gradle wrapper
+
+Then you can proceed with running any valid gradle command from [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licensing
 

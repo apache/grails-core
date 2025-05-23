@@ -23,6 +23,7 @@ tasks.named('rat') {
             'CODE_OF_CONDUCT.md',
             'LICENSE',
             'NOTICE',
+            'gradle/wrapper/gradle-wrapper.properties', // gradle wrapper excluded from src zip
             '**/build/**', // Gradle generated build directories
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
             '**/*.html', // html files are only in test

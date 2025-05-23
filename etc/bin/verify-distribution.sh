@@ -40,7 +40,7 @@ else
   exit 1
 fi
 
-git clean -xdf --exclude='etc/bin'
+git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
 killall -e java || true
 cd grails-gradle
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache

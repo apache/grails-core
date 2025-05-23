@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
-apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
-
-ext {
-    includeInApiDocs = true
+def props = new Properties()
+project.rootProject.layout.projectDirectory.file('.sdkmanrc').asFile.withInputStream {
+    props.load(it)
+}
+tasks.withType(Wrapper).configureEach {
+    gradleVersion = props.gradle
 }

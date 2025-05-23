@@ -42,33 +42,8 @@ ext {
             'objenesis.version'                  : '3.4',
             'gradle-spock.version'               : '2.3-groovy-3.0',
             'gradle-nexus-publish-plugin.version': '2.0.0',
-            'spring-boot.version'                : '3.5.0-RC1',
+            'spring-boot.version'                : '3.5.0',
             'springloaded.version'               : '1.2.8.RELEASE',
-            // Because 3.5.0-RC1 contains 6.2.6 instead of 6.2.7, we need to override the various spring versions
-            // https://github.com/spring-projects/spring-framework/issues/34796 which prevents running apps via jar (nested jar failures)
-            'spring-websocket.version'           : '6.2.7',
-            'spring-webmvc.version'              : '6.2.7',
-            'spring-webflux.version'             : '6.2.7',
-            'spring-web.version'                 : '6.2.7',
-            'spring-tx.version'                  : '6.2.7',
-            'spring-test.version'                : '6.2.7',
-            'spring-r2dbc.version'               : '6.2.7',
-            'spring-oxm.version'                 : '6.2.7',
-            'spring-orm.version'                 : '6.2.7',
-            'spring-messaging.version'           : '6.2.7',
-            'spring-jms.version'                 : '6.2.7',
-            'spring-jdbc.version'                : '6.2.7',
-            'spring-jcl.version'                 : '6.2.7',
-            'spring-instrument.version'          : '6.2.7',
-            'spring-expression.version'          : '6.2.7',
-            'spring-core-test.version'           : '6.2.7',
-            'spring-core.version'                : '6.2.7',
-            'spring-context-support.version'     : '6.2.7',
-            'spring-context-indexer.version'     : '6.2.7',
-            'spring-context.version'             : '6.2.7',
-            'spring-beans.version'               : '6.2.7',
-            'spring-aspects.version'             : '6.2.7',
-            'spring-aop.version'                 : '6.2.7',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -99,31 +74,6 @@ ext {
             'spring-boot-cli'            : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
             'spring-boot-gradle'         : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
             'springloaded'               : "org.springframework:springloaded:${gradleBomDependencyVersions['springloaded.version']}",
-            // Because 3.5.0-RC1 contains 6.2.6 instead of 6.2.7, we need to override the various spring versions
-            // https://github.com/spring-projects/spring-framework/issues/34796 which prevents running apps via jar (nested jar failures)
-            'spring-websocket'           : "org.springframework:spring-websocket:${gradleBomDependencyVersions['spring-websocket.version']}",
-            'spring-webmvc'              : "org.springframework:spring-webmvc:${gradleBomDependencyVersions['spring-webmvc.version']}",
-            'spring-webflux'             : "org.springframework:spring-webflux:${gradleBomDependencyVersions['spring-webflux.version']}",
-            'spring-web'                 : "org.springframework:spring-web:${gradleBomDependencyVersions['spring-web.version']}",
-            'spring-tx'                  : "org.springframework:spring-tx:${gradleBomDependencyVersions['spring-tx.version']}",
-            'spring-test'                : "org.springframework:spring-test:${gradleBomDependencyVersions['spring-test.version']}",
-            'spring-r2dbc'               : "org.springframework:spring-r2dbc:${gradleBomDependencyVersions['spring-r2dbc.version']}",
-            'spring-oxm'                 : "org.springframework:spring-oxm:${gradleBomDependencyVersions['spring-oxm.version']}",
-            'spring-orm'                 : "org.springframework:spring-orm:${gradleBomDependencyVersions['spring-orm.version']}",
-            'spring-messaging'           : "org.springframework:spring-messaging:${gradleBomDependencyVersions['spring-messaging.version']}",
-            'spring-jms'                 : "org.springframework:spring-jms:${gradleBomDependencyVersions['spring-jms.version']}",
-            'spring-jdbc'                : "org.springframework:spring-jdbc:${gradleBomDependencyVersions['spring-jdbc.version']}",
-            'spring-jcl'                 : "org.springframework:spring-jcl:${gradleBomDependencyVersions['spring-jcl.version']}",
-            'spring-instrument'          : "org.springframework:spring-instrument:${gradleBomDependencyVersions['spring-instrument.version']}",
-            'spring-expression'          : "org.springframework:spring-expression:${gradleBomDependencyVersions['spring-expression.version']}",
-            'spring-core-test'           : "org.springframework:spring-core-test:${gradleBomDependencyVersions['spring-core-test.version']}",
-            'spring-core'                : "org.springframework:spring-core:${gradleBomDependencyVersions['spring-core.version']}",
-            'spring-context-support'     : "org.springframework:spring-context-support:${gradleBomDependencyVersions['spring-context-support.version']}",
-            'spring-context-indexer'     : "org.springframework:spring-context-indexer:${gradleBomDependencyVersions['spring-context-indexer.version']}",
-            'spring-context'             : "org.springframework:spring-context:${gradleBomDependencyVersions['spring-context.version']}",
-            'spring-beans'               : "org.springframework:spring-beans:${gradleBomDependencyVersions['spring-beans.version']}",
-            'spring-aspects'             : "org.springframework:spring-aspects:${gradleBomDependencyVersions['spring-aspects.version']}",
-            'spring-aop'                 : "org.springframework:spring-aop:${gradleBomDependencyVersions['spring-aop.version']}",
     ]
 
     bomDependencyVersions = [
@@ -132,7 +82,9 @@ ext {
             'bootstrap.version'            : '5.3.3',
             'commons-codec.version'        : '1.17.1',
             'geb-spock.version'            : '7.0',
-            'groovy.version'               : '4.0.26',
+            // vote is starting soon on 4.0.27-SNAPSHOT and we require this for M4
+            // this is a temporary workaround so we can test the release process
+            'groovy.version'               : '4.0.27-SNAPSHOT',
             'h2.version'                   : '2.3.232',
             'jackson.version'              : '2.18.2',
             'jquery.version'               : '3.7.1',
