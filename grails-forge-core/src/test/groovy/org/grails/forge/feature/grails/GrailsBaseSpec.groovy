@@ -25,6 +25,7 @@ import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
+import spock.lang.Unroll
 
 class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
 
@@ -48,5 +49,35 @@ class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
         output.containsKey("src/main/groovy/.gitkeep")
         output.containsKey("src/test/groovy/.gitkeep")
         output.containsKey("src/integration-test/groovy/.gitkeep")
+    }
+
+    @Unroll
+    void "test domain, services and taglib directories are present for ApplicationTypes other than REST_API"() {
+        when:
+        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+
+        then:
+
+        output.containsKey("grails-app/services/.gitkeep")
+        output.containsKey("grails-app/domain/.gitkeep")
+        output.containsKey("grails-app/taglib/.gitkeep")
+
+        where:
+        applicationType << ApplicationType.values() - ApplicationType.REST_API
+    }
+
+    @Unroll
+    void "test domain and services directories are present for ApplicationType.REST_API"() {
+        when:
+        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+
+        then:
+
+        output.containsKey("grails-app/services/.gitkeep")
+        output.containsKey("grails-app/domain/.gitkeep")
+        !output.containsKey("grails-app/taglib/.gitkeep")
+
+        where:
+        applicationType << [ApplicationType.REST_API]
     }
 }

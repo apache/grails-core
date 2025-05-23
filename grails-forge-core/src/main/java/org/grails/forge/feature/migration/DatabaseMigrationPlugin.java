@@ -20,6 +20,7 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.migration.templates.dbMigrationGradle;
 import org.grails.forge.template.RockerWritable;
+import org.grails.forge.template.URLTemplate;
 
 @Singleton
 public class DatabaseMigrationPlugin implements MigrationFeature {
@@ -60,6 +61,9 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
                 .groupId("org.apache.grails")
                 .artifactId("grails-data-hibernate5-dbmigration")
                 .implementation());
+
+        final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        generatorContext.addTemplate(srcDirPath, new URLTemplate(srcDirPath + "/.gitkeep", classLoader.getResource(".gitkeep")));
     }
 
     private String getSrcDirPath() {
