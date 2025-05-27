@@ -71,25 +71,9 @@ jobs:
       - name: "📤 Upload grails wrapper Zip"
         uses: softprops/action-gh-release@v2
         with:
-          files: grails-wrapper/build/distributions/grails-wrapper-${{ steps.release_version.outputs.value }}.zip
+          files: grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: "📤 Upload Distribution"
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        with:
-          name: grails-${{ steps.release_version.outputs.value }}.zip
-          path: build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
-      - name: "📤 Upload artifacts to the Github release"
-        id: upload_artifact
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          gh release upload v${{ steps.release_version.outputs.value }}
-          build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
-      - name: "🔐 Generate secring file"
-        env:
-          SECRING_FILE: ${{ secrets.SECRING_FILE }}
-        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
       - name: "Create Staging Repository"
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
@@ -100,8 +84,7 @@ jobs:
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         working-directory: 'grails-gradle'
         run: >
-          ./gradlew 
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
+          ./gradlew x
           initializeSonatypeStagingRepository
       - name: "📤 Publish Gradle Plugins"
         env:
@@ -114,7 +97,6 @@ jobs:
         working-directory: 'grails-gradle'
         run: >
           ./gradlew
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
           -x initializeSonatypeStagingRepository
           findSonatypeStagingRepository 
           publishToSonatype 
@@ -130,7 +112,6 @@ jobs:
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
           -x initializeSonatypeStagingRepository
           findSonatypeStagingRepository 
           publishToSonatype 

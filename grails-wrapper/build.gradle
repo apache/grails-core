@@ -75,6 +75,8 @@ startScripts.configure { CreateStartScripts t ->
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {
+    it.distributionBaseName = 'apache-grails-wrapper'
+    it.distributionClassifier = 'incubating-bin'
     it.contents {
         from(jarTask) {
             into ''
