@@ -105,7 +105,7 @@ The credentials and connection url must be specified as a project property or an
     NEXUS_PUBLISH_SNAPSHOT_URL
     NEXUS_PUBLISH_STAGING_PROFILE_ID
 
-When using `NEXUS_PUBLISH`, the property `signing.secretKeyRingFile` must be set to the path of the GPG keyring file.
+When using `NEXUS_PUBLISH`, either the property `signing.secretKeyRingFile` must be set to the path of the GPG keyring file or local gpg must be configured to sign artifacts.
 
 Note: if project properties are used, the properties must be defined prior to applying this plugin.
 """
@@ -124,10 +124,6 @@ Note: if project properties are used, the properties must be defined prior to ap
         final String nexusPublishStagingProfileId = project.findProperty('nexusPublishStagingProfileId') ?: System.getenv('NEXUS_PUBLISH_STAGING_PROFILE_ID') ?: ''
 
         final ExtraPropertiesExtension extraPropertiesExtension = project.extensions.findByType(ExtraPropertiesExtension)
-
-        extraPropertiesExtension.setProperty('signing.keyId', project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
-        extraPropertiesExtension.setProperty('signing.password', project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE'))
-        extraPropertiesExtension.setProperty('signing.secretKeyRingFile', project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING'))
 
         PublishType snapshotPublishType = project.hasProperty(SNAPSHOT_PUBLISH_TYPE_PROPERTY) ? PublishType.valueOf(project.property(SNAPSHOT_PUBLISH_TYPE_PROPERTY) as String) : PublishType.MAVEN_PUBLISH
         PublishType releasePublishType = project.hasProperty(RELEASE_PUBLISH_TYPE_PROPERTY) ? PublishType.valueOf(project.property(RELEASE_PUBLISH_TYPE_PROPERTY) as String) : PublishType.NEXUS_PUBLISH
@@ -177,6 +173,26 @@ Note: if project properties are used, the properties must be defined prior to ap
         // Required for the pom always
         final PluginManager projectPluginManager = project.pluginManager
         projectPluginManager.apply(MavenPublishPlugin)
+
+        boolean localSigning = false
+        if(isRelease) {
+            String signingKeyId = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
+            extraPropertiesExtension.setProperty('signing.keyId', signingKeyId)
+            String secringFile = project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING')
+            if(!secringFile) {
+                project.logger.info("No keyring file has been specified. Assuming the use of local gpgCommand instead.")
+                localSigning = true
+                extraPropertiesExtension.setProperty('signing.gnupg.keyName', signingKeyId)
+            }
+            else {
+                extraPropertiesExtension.setProperty('signing.secretKeyRingFile', secringFile)
+
+                String signingPassphrase = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
+                if(signingPassphrase) {
+                    extraPropertiesExtension.setProperty('signing.password', signingPassphrase)
+                }
+            }
+        }
 
         if (isRelease || useNexusPublish) {
             if (project.pluginManager.hasPlugin(SIGNING_PLUGIN_ID)) {
@@ -407,6 +423,9 @@ Note: if project properties are used, the properties must be defined prior to ap
             if (isRelease) {
                 extensionContainer.configure(SigningExtension, {
                     it.required = isRelease
+                    if(localSigning) {
+                        it.useGpgCmd()
+                    }
                     it.sign project.publishing.publications.maven
                 })
             }

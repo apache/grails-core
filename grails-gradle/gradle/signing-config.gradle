@@ -24,6 +24,8 @@ if (isReleaseVersion) {
     afterEvaluate {
         signing {
             required { isReleaseVersion && gradle.taskGraph.hasTask('publish') }
+            useGpgCmd()
+
             Publication[] publications = new Publication[publishing.publications.size()]
             publishing.publications.findAll().toArray(publications)
             sign(publications)
