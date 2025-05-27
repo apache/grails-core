@@ -41,4 +41,4 @@ jobs:
           GRAILS_PUBLISH_RELEASE: 'true'
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
-          NEXUS_PUBLISH_URL: 'https://repository.apache.org/content/repositories/releases/'
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/'
