@@ -21,7 +21,8 @@ on:
         description: 'ID of the staging repository to drop - i.e. orgapachegrails-1000'
         required: true
 jobs:
-  publish:
+  dropStaging:
+    name: "Drop Staging Repository"
     runs-on: ubuntu-latest
     steps:
       - name: Drop staging repository from Nexus
