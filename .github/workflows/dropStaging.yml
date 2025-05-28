@@ -16,6 +16,10 @@
 name: "Release - Drop Staging"
 on:
   workflow_dispatch:
+    inputs:
+      staging_repository_id:
+        description: 'ID of the staging repository to drop - i.e. orgapachegrails-1000'
+        required: true
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -24,18 +28,18 @@ jobs:
         env:
           NEXUS_STAGE_DEPLOYER_USER: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_STAGE_DEPLOYER_PW: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
-          STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          STAGING_REPOSITORY_ID: ${{ github.event.inputs.staging_repository_id }}
         run: |
           response=$(curl -s --request POST -u "$NEXUS_STAGE_DEPLOYER_USER:$NEXUS_STAGE_DEPLOYER_PW" \
             --url https://repository.apache.org/service/local/staging/bulk/drop \
             --header 'Content-Type: application/json' \
             --header 'Accept: application/json' \
             --header 'User-Agent: Grails Github Actions' \
-            --data '{ "data" : {"stagedRepositoryIds":["'"$STAGING_PROFILE_ID"'"], "description":"Drop '"$STAGING_PROFILE_ID"'." } }')
+            --data '{ "data" : {"stagedRepositoryIds":["'"$STAGING_REPOSITORY_ID"'"], "description":"Drop '"$STAGING_REPOSITORY_ID"'." } }')
 
           if [ ! -z "$response" ]; then
-              echo "Error while dropping staged repository $STAGING_PROFILE_ID : $response."
+              echo "Error while dropping staged repository $STAGING_REPOSITORY_ID : $response."
               exit 1
           else
-              echo "Successfully dropped repository $STAGING_PROFILE_ID."
+              echo "Successfully dropped repository $STAGING_REPOSITORY_ID."
           fi
