@@ -60,6 +60,7 @@ jobs:
         if: ${{ matrix.java == '17' }}
         uses: actions/upload-artifact@v4
         with:
+          name: 'apache-grails-SNAPSHOT-incubating-bin.zip'
           path: grails-cli/build/distributions/apache-grails-*.zip
           if-no-files-found: 'error'
   publish:
