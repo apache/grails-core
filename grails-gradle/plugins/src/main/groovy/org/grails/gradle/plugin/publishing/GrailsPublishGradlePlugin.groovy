@@ -35,6 +35,7 @@ import org.gradle.api.plugins.PluginManager
 import org.gradle.api.publish.Publication
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
@@ -43,6 +44,7 @@ import org.gradle.api.tasks.javadoc.Groovydoc
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
+import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
@@ -437,8 +439,12 @@ Note: if project properties are used, the properties must be defined prior to ap
                     it.sign(publications)
                 })
 
-                project.tasks.withType(Jar).configureEach {
-                    it.finalizedBy(project.tasks.named('signMavenPublication'))
+                // The sign task does not properly setup dependencies, see https://github.com/gradle/gradle/issues/26091
+                project.tasks.withType(Sign).configureEach {
+                    it.dependsOn(project.tasks.withType(Jar))
+                }
+                project.tasks.withType(PublishToMavenRepository).configureEach {
+                    it.mustRunAfter(project.tasks.withType(Sign))
                 }
             }
 
