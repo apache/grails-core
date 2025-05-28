@@ -227,7 +227,7 @@ Note: if project properties are used, the properties must be defined prior to ap
             if (!hasNexusPublishApplied) {
                 project.rootProject.nexusPublishing {
                     if(nexusPublishDescription) {
-                        description = "${nexusPublishDescription}"
+                        repositoryDescription = "${nexusPublishDescription}"
                     }
                     repositories {
                         sonatype {

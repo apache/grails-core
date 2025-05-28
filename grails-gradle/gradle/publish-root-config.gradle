@@ -30,7 +30,7 @@ if (isReleaseVersion) {
     nexusPublishing {
         String projectDescription = System.getenv('NEXUS_PUBLISH_DESCRIPTION')
         if(projectDescription) {
-            description = "${projectDescription}"
+            repositoryDescription = "${projectDescription}"
         }
         repositories {
             sonatype {
