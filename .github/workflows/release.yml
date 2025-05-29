@@ -64,7 +64,7 @@ jobs:
           gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip
       - name: "📦 Create CLI checksum"
         run: |
-          sha512sum grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip | awk '{print $1}' > "grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512"
+          sha512sum grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip > "grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512"
       - name: "📤 Upload CLI ZIP"
         uses: softprops/action-gh-release@v2
         with:
