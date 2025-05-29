@@ -35,18 +35,19 @@ During the staging step, we must create a source distribution & stage any binary
        * This will then scan our commit history and we adjust the release notes per project agreement.
      * Check "pre-release"
      * Click "Publish Release"
-2. (grails-core) The Github workflow 'release.yml' will kick off, which will run the `publish` job steps. This job will:
+2. (grails-core) The Github workflow from `release.yml`, titled `Release - Create grails-core`, will kick off.  The `publish` job will:
    * checkout the project
    * setup gradle
    * extract the version # from the tag
    * run the pre-release workflow (updates gradle.properties to be the version specified by the user)
    * extract signing secrets from github action variables 
-   * build the project, sign the jar files, and stage them to the necessary location
+   * build the project, sign the jar files, and stage them to the necessary locations
+   * add the grails wrapper to the `grails-core` release
+   * close the staging repository so the `grails-core` artifacts can be accessed
 3. Create a matching release in `grails-forge`:
    * Follow the same steps to create a release in grails-forge. Update any release notes specific to the delegating cli & grails forge.
-4. (grails-forge)
-   * The Github workflow 'release.yml' will kick off, which will run the `publish` job steps. This job will perform the similar steps as above
-5. Kick off the `Distribution` workflow in `grails-core`, which will: 
+4. (grails-forge) The Github workflow `release.yml`, titled `Release - Create grails-forge`, will kick off.  This workflow will run a `publish` job that will complete similar steps to the `grails-core` publish job.
+5. Kick off the `Release - Grails Distribution` workflow from `distribution.yml` in `grails-core`. This job will: 
      * download the tagged grails source
      * download the tagged grails-forge source
      * generate a source distribution meeting the ASF requirements
