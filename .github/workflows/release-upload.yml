@@ -101,25 +101,29 @@ jobs:
         run: |
           TAG=${{ github.event.inputs.release_tag }}
           VERSION=${{ steps.release_version.outputs.version }}
-          mkdir -p dev-repo/$VERSION/source
-          cd dev-repo/$VERSION/source
+          cd dev-repo
+          mkdir -p $VERSION/source          
+          cd $VERSION/source
           curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip
           curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.asc
           echo "Adding the following files:"
           ls -l
-          svn add . --force
+          cd ../..
+          svn add $VERSION --force
           svn commit -m "Upload grails source files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
       - name: "Upload grails binary distribution"
         run: |
           TAG=${{ github.event.inputs.release_tag }}
           VERSION=${{ steps.release_version.outputs.version }}
-          mkdir -p dev-repo/$VERSION/distribution
-          cd dev-repo/$VERSION/distribution
+          cd dev-repo
+          mkdir -p $VERSION/distribution
+          cd $VERSION/distribution
           curl -LO https://github.com/apache/grails-forge/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip
           curl -LO https://github.com/apache/grails-forge/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.asc
           echo "Adding the following files:"
           ls -l
-          svn add . --force
+          cd ../..
+          svn add $VERSION --force
           svn commit -m "Upload grails binary distribution for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
       - name: "Upload grails wrapper binary distribution"
         run: |
@@ -130,5 +134,6 @@ jobs:
           curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.asc
           echo "Adding the following files:"
           ls -l
-          svn add . --force
+          cd ../..
+          svn add $VERSION --force
           svn commit -m "Upload grails wrapper binary distribution for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
