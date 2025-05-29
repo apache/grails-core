@@ -19,8 +19,6 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-
-
 Properties props = new Properties()
 file('../gradle.properties').withInputStream {
     props.load(it)
@@ -53,77 +51,8 @@ ext {
     isCiBuild = System.getenv().get('CI') as Boolean
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
 }
-if (isReleaseVersion) {
-    apply plugin: 'io.github.gradle-nexus.publish-plugin'
-    apply plugin: 'signing'
 
-    nexusPublishing {
-        repositories {
-            sonatype {
-                nexusUrl = uri('https://s01.oss.sonatype.org/service/local/')
-                username = System.getenv('SONATYPE_USERNAME') ?: project.findProperty('sonatypeOssUsername')
-                password = System.getenv('SONATYPE_PASSWORD') ?: project.findProperty('sonatypeOssPassword')
-                stagingProfileId = System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: project.findProperty('sonatypeOssStagingProfileId')
-            }
-        }
-    }
-
-    afterEvaluate {
-        signing {
-            required { isReleaseVersion && gradle.taskGraph.hasTask('publish') }
-            Publication[] publications = new Publication[publishing.publications.size()]
-            publishing.publications.findAll().toArray(publications)
-            sign(publications)
-        }
-    }
-
-    tasks.withType(Sign) {
-        onlyIf { isReleaseVersion }
-    }
-
-    tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
-        shouldRunAfter(tasks.withType(Sign))
-    }
+apply {
+    from layout.projectDirectory.file('gradle/gradle-wrapper-root-config.gradle')
+    from layout.projectDirectory.file('gradle/publish-root-config.gradle')
 }
-
-tasks.register("aggregateChecksums") {
-    group = "publishing"
-    description = "Aggregates all SHA-256 checksums from subprojects into a single file."
-
-    def outputFileProvider = rootProject.layout.buildDirectory.file("checksums.txt")
-    outputs.file(outputFileProvider)
-
-    outputs.upToDateWhen { false } // not worth caching
-
-    doLast {
-        def outputFile = outputFileProvider.get().asFile
-        outputFile.withPrintWriter { writer ->
-            subprojects.each { sub ->
-                def checksumDir = sub.layout.buildDirectory.dir("checksums").get().asFile
-                if (checksumDir.exists()) {
-                    checksumDir.listFiles(new FilenameFilter() {
-                        boolean accept(File dir, String name) {
-                            return name.endsWith(".sha256")
-                        }
-                    })?.each { checksumFile ->
-                        def jarName = checksumFile.name - ".sha256"
-                        def checksumLine = checksumFile.text.trim()
-                        def checksum = checksumLine.tokenize()[0]
-                        writer.println("${jarName} ${checksum}")
-                    }
-                }
-            }
-        }
-
-        println "Checksum manifest written to ${outputFile}"
-    }
-}
-
-def sdkmanProps = new Properties()
-project.rootProject.layout.projectDirectory.file('../.sdkmanrc').asFile.withInputStream {
-    sdkmanProps.load(it)
-}
-tasks.withType(Wrapper).configureEach {
-    gradleVersion = sdkmanProps.gradle
-}
-

@@ -32,8 +32,10 @@ import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.JavaPlatformExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.plugins.PluginManager
+import org.gradle.api.publish.Publication
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
@@ -42,6 +44,7 @@ import org.gradle.api.tasks.javadoc.Groovydoc
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
+import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
@@ -105,7 +108,7 @@ The credentials and connection url must be specified as a project property or an
     NEXUS_PUBLISH_SNAPSHOT_URL
     NEXUS_PUBLISH_STAGING_PROFILE_ID
 
-When using `NEXUS_PUBLISH`, the property `signing.secretKeyRingFile` must be set to the path of the GPG keyring file.
+When using `NEXUS_PUBLISH`, either the property `signing.secretKeyRingFile` must be set to the path of the GPG keyring file or local gpg must be configured to sign artifacts.
 
 Note: if project properties are used, the properties must be defined prior to applying this plugin.
 """
@@ -122,12 +125,9 @@ Note: if project properties are used, the properties must be defined prior to ap
         final String nexusPublishUsername = project.findProperty('nexusPublishUsername') ?: System.getenv('NEXUS_PUBLISH_USERNAME') ?: ''
         final String nexusPublishPassword = project.findProperty('nexusPublishPassword') ?: System.getenv('NEXUS_PUBLISH_PASSWORD') ?: ''
         final String nexusPublishStagingProfileId = project.findProperty('nexusPublishStagingProfileId') ?: System.getenv('NEXUS_PUBLISH_STAGING_PROFILE_ID') ?: ''
+        final String nexusPublishDescription = project.findProperty('nexusPublishDescription') ?: System.getenv('NEXUS_PUBLISH_DESCRIPTION') ?: ''
 
         final ExtraPropertiesExtension extraPropertiesExtension = project.extensions.findByType(ExtraPropertiesExtension)
-
-        extraPropertiesExtension.setProperty('signing.keyId', project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
-        extraPropertiesExtension.setProperty('signing.password', project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE'))
-        extraPropertiesExtension.setProperty('signing.secretKeyRingFile', project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING'))
 
         PublishType snapshotPublishType = project.hasProperty(SNAPSHOT_PUBLISH_TYPE_PROPERTY) ? PublishType.valueOf(project.property(SNAPSHOT_PUBLISH_TYPE_PROPERTY) as String) : PublishType.MAVEN_PUBLISH
         PublishType releasePublishType = project.hasProperty(RELEASE_PUBLISH_TYPE_PROPERTY) ? PublishType.valueOf(project.property(RELEASE_PUBLISH_TYPE_PROPERTY) as String) : PublishType.NEXUS_PUBLISH
@@ -178,6 +178,26 @@ Note: if project properties are used, the properties must be defined prior to ap
         final PluginManager projectPluginManager = project.pluginManager
         projectPluginManager.apply(MavenPublishPlugin)
 
+        boolean localSigning = false
+        if(isRelease) {
+            String signingKeyId = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
+            extraPropertiesExtension.setProperty('signing.keyId', signingKeyId)
+            String secringFile = project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING')
+            if(!secringFile) {
+                project.logger.info("No keyring file has been specified. Assuming the use of local gpgCommand instead.")
+                localSigning = true
+                extraPropertiesExtension.setProperty('signing.gnupg.keyName', signingKeyId)
+            }
+            else {
+                extraPropertiesExtension.setProperty('signing.secretKeyRingFile', secringFile)
+
+                String signingPassphrase = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
+                if(signingPassphrase) {
+                    extraPropertiesExtension.setProperty('signing.password', signingPassphrase)
+                }
+            }
+        }
+
         if (isRelease || useNexusPublish) {
             if (project.pluginManager.hasPlugin(SIGNING_PLUGIN_ID)) {
                 project.rootProject.logger.debug('Signing Plugin already applied to project {}', project.name)
@@ -209,6 +229,9 @@ Note: if project properties are used, the properties must be defined prior to ap
 
             if (!hasNexusPublishApplied) {
                 project.rootProject.nexusPublishing {
+                    if(nexusPublishDescription) {
+                        repositoryDescription = "${nexusPublishDescription}"
+                    }
                     repositories {
                         sonatype {
                             if (nexusPublishUrl) {
@@ -407,8 +430,22 @@ Note: if project properties are used, the properties must be defined prior to ap
             if (isRelease) {
                 extensionContainer.configure(SigningExtension, {
                     it.required = isRelease
-                    it.sign project.publishing.publications.maven
+                    if(localSigning) {
+                        it.useGpgCmd()
+                    }
+
+                    Publication[] publications = new Publication[project.publishing.publications.size()]
+                    project.publishing.publications.findAll().toArray(publications)
+                    it.sign(publications)
                 })
+
+                // The sign task does not properly setup dependencies, see https://github.com/gradle/gradle/issues/26091
+                project.tasks.withType(Sign).configureEach {
+                    it.dependsOn(project.tasks.withType(Jar))
+                }
+                project.tasks.withType(PublishToMavenRepository).configureEach {
+                    it.mustRunAfter(project.tasks.withType(Sign))
+                }
             }
 
             addInstallTaskAliases(project)

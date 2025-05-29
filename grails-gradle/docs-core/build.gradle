@@ -145,4 +145,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
 }

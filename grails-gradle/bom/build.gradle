@@ -60,7 +60,11 @@ dependencies {
     }
 }
 
-tasks.register('validateNoSnapshotDependencies').configure {
+def noSnapshotDependenciesTask = tasks.register('validateNoSnapshotDependencies')
+noSnapshotDependenciesTask.configure {
+    it.group = 'publishing'
+    it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
+
     doLast {
         configurations.each { config ->
             config.allDependencies.each { dep ->
@@ -73,12 +77,15 @@ tasks.register('validateNoSnapshotDependencies').configure {
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
+project.afterEvaluate {
+    // after eval is required since publications aren't added until after evaluation
     tasks.named('generateMetadataFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+        dependsOn(noSnapshotDependenciesTask)
     }
     tasks.named('generatePomFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+        dependsOn(noSnapshotDependenciesTask)
     }
+}
 }
 
 Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
@@ -175,4 +182,5 @@ publishing {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
 }

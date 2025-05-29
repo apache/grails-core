@@ -256,16 +256,16 @@ jobs:
       - name: "✅ Verify grails-wrapper"
         if: success()
         run: |
-          cp grails-wrapper/build/distributions/grails-wrapper-*.zip build/wrapper.zip
+          cp grails-wrapper/build/distributions/apache-grails-wrapper-*.zip build/wrapper.zip
           cd build
           unzip wrapper -d tmp
-          mv tmp/grails-wrapper-* tmp/wrapper
+          mv tmp/apache-grails-wrapper-* tmp/wrapper
           ./tmp/wrapper/grailsw --version
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
         uses: actions/upload-artifact@v4
         with:
-          name: grails-wrapper-snapshot
-          path: build/tmp/wrapper/
+          name: wrapper-artifacts
+          path: grails-wrapper/build/distributions/apache-grails-wrapper-*.zip
   docs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publish ]

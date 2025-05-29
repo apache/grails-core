@@ -44,7 +44,7 @@ e2eTestTask.configure { Test it ->
     }
     it.beforeTest { descriptor -> logger.quiet ' -- $descriptor' }
 
-    it.dependsOn 'publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-tasks:publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-bom:publishAllPublicationsToTestCaseMavenRepoRepository'
+    it.dependsOn 'publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-tasks:publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-model:publishAllPublicationsToTestCaseMavenRepoRepository', ':grails-gradle-bom:publishAllPublicationsToTestCaseMavenRepoRepository'
 }
 
 tasks.named('check').configure {

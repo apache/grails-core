@@ -16,28 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
-
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.0-M4", GrailsUtil.getGrailsVersion());
-    }
-
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
-    }
+def sdkmanProps = new Properties()
+project.rootProject.layout.projectDirectory.file('../.sdkmanrc').asFile.withInputStream {
+    sdkmanProps.load(it)
 }
+tasks.withType(Wrapper).configureEach {
+    gradleVersion = sdkmanProps.gradle
+}
+

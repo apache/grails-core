@@ -16,28 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+if (isReleaseVersion) {
+    apply plugin: 'signing'
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+    afterEvaluate {
+        signing {
+            required { isReleaseVersion && gradle.taskGraph.hasTask('publish') }
+            useGpgCmd()
 
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
-
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.0-M4", GrailsUtil.getGrailsVersion());
+            Publication[] publications = new Publication[publishing.publications.size()]
+            publishing.publications.findAll().toArray(publications)
+            sign(publications)
+        }
     }
 
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+    tasks.withType(Sign) {
+        onlyIf { isReleaseVersion }
+    }
+
+    project.rootProject.tasks.withType(InitializeNexusStagingRepository).configureEach { InitializeNexusStagingRepository task ->
+        task.shouldRunAfter = project.tasks.withType(Sign)
     }
 }
+

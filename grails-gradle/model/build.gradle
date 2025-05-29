@@ -81,6 +81,15 @@ publishing {
         }
     }
 
+    // used for e2e testing
+    // publishAllPublicationsToTestCaseMavenRepoRepository
+    repositories {
+        maven {
+            name = 'TestCaseMavenRepo'
+            url = rootProject.layout.buildDirectory.dir('local-maven')
+        }
+    }
+
     publications {
         maven(MavenPublication) {
             groupId = project.group
@@ -124,4 +133,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
 }
