@@ -1,3 +1,12 @@
+This file contains the GPG keys used to sign Apache Grails releases.
+
+To import these keys:
+    gpg --import KEYS
+
+To add a key to this file:
+     (gpg --list-sigs <your email> && gpg --armor --export <your email>) >> KEYS
+
+
 pub   rsa4096 2025-05-22 [SC]
       08E2CEC47E38FE415F080AB62ADECADC11775306
 uid           [ unknown] Apache Grails Automated Release Signing <private@grails.apache.org>
