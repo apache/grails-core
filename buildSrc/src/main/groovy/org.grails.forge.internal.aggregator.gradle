@@ -21,11 +21,6 @@ plugins {
     id "io.micronaut.build.internal.docs"
 }
 
-repositories {
-    // Needed for Javadoc generation
-    maven { url = 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
-}
-
 configurations {
     asciidocs {
         canBeResolved = true

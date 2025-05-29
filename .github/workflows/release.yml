@@ -70,13 +70,27 @@ jobs:
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
-          NEXUS_PUBLISH_DESCRIPTION: 'grails-release:${{ steps.release_version.outputs.value }}'
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-forge:${{ steps.release_version.outputs.value }}'
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew
           -x initializeSonatypeStagingRepository
           findSonatypeStagingRepository 
           publishToSonatype
+      - name: "📤 Close Staging Repository"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-forge:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
+        run: >
+          ./gradlew
+          -x initializeSonatypeStagingRepository
+          findSonatypeStagingRepository 
+          closeSonatypeStagingRepository
   release:
     environment: release
     needs: publish
