@@ -99,7 +99,7 @@ jobs:
           fi
       - name: "Upload source distribution"
         run: |
-          TAG=${{ steps.release_version.outputs.tag_name }}
+          TAG=${{ github.event.inputs.release_tag }}
           VERSION=${{ steps.release_version.outputs.version }}
           mkdir -p dev-repo/$VERSION/source
           cd dev-repo/$VERSION/source
@@ -111,7 +111,7 @@ jobs:
           svn commit -m "Upload grails source files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
       - name: "Upload grails binary distribution"
         run: |
-          TAG=${{ steps.release_version.outputs.tag_name }}
+          TAG=${{ github.event.inputs.release_tag }}
           VERSION=${{ steps.release_version.outputs.version }}
           mkdir -p dev-repo/$VERSION/distribution
           cd dev-repo/$VERSION/distribution
@@ -123,7 +123,7 @@ jobs:
           svn commit -m "Upload grails binary distribution for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
       - name: "Upload grails wrapper binary distribution"
         run: |
-          TAG=${{ steps.release_version.outputs.tag_name }}
+          TAG=${{ github.event.inputs.release_tag }}
           VERSION=${{ steps.release_version.outputs.version }}
           cd dev-repo/$VERSION/distribution
           curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip
