@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Release - Grails Source Distribution"
+name: "Release - Source Distribution"
 on:
   workflow_dispatch:
 jobs:
