@@ -58,8 +58,6 @@ During the staging step, we must create a source distribution & stage any binary
      * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution
      * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution (note: this is the sdkman artifact)
 
-Once `grails-forge` & `grails-core` are published the end source & binary distributions should be staged. 
-
 ## 2. Verifying
 
 Prior to releasing a vote, we need to verify the staged artifacts. Follow the below steps to verify each staged artifact.
