@@ -28,7 +28,7 @@ cd "${SCRIPT_DIR}/../.."
 rm -rf "${SCRIPT_DIR}/results" || true
 mkdir -p "${SCRIPT_DIR}/results"
 
-git clean -xdf --exclude='etc/bin'
+git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
 killall -e java || true
 cd grails-gradle
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache
@@ -38,7 +38,7 @@ cd ..
 mkdir -p "${SCRIPT_DIR}/results/first"
 find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/first/"
 
-git clean -xdf --exclude='etc/bin'
+git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
 killall -e java || true
 cd grails-gradle
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache

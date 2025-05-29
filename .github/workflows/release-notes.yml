@@ -34,10 +34,13 @@ concurrency:
 jobs:
   update_release_draft:
     permissions:
-      contents: read # limit to read access
+      # write permission is required to create a github release
+      contents: write
+      # write permission is required for autolabeler
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: "📝 Update Release Draft"
         uses: release-drafter/release-drafter@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Release"
+name: "Release - Create grails-core"
 on:
   release:
     types: [published]
@@ -26,16 +26,23 @@ jobs:
     permissions:
       contents: write  #  to create release & upload wrapper
       issues: write  #  to modify milestones
-      packages: write # purge pre-release packages
     runs-on: ubuntu-latest
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
       target_branch: ${{ steps.extract_branch.outputs.value }}
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: '🔐 Set up GPG'
+        run: |
+          echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
+          gpg --list-keys
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -64,67 +71,87 @@ jobs:
         id: assemble
         run: ./gradlew assemble
       - name: "📤 Upload grails wrapper Zip"
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        with:
+          files: grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: grails-wrapper/build/distributions/grails-wrapper-${{ steps.release_version.outputs.value }}.zip
-          asset_name: grails-wrapper-${{ steps.release_version.outputs.value }}.zip
-          asset_content_type: application/zip
-      - name: "📤 Upload Distribution"
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        with:
-          name: grails-${{ steps.release_version.outputs.value }}.zip
-          path: build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
-      - name: "📤 Upload artifacts to the Github release"
-        id: upload_artifact
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          gh release upload v${{ steps.release_version.outputs.value }}
-          build/distributions/grails-${{ steps.release_version.outputs.value }}.zip
-      - name: "🔐 Generate secring file"
-        env:
-          SECRING_FILE: ${{ secrets.SECRING_FILE }}
-        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
-      - name: "📤 Publish Gradle Plugins to Sonatype OSSRH"
+      - name: "Create Staging Repository"
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
-          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
-          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
-          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
-          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
+        working-directory: 'grails-gradle'
+        run: >
+          ./gradlew initializeSonatypeStagingRepository
+      - name: "📤 Publish Gradle Plugins"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         working-directory: 'grails-gradle'
         run: >
           ./gradlew
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
+          -x initializeSonatypeStagingRepository
+          findSonatypeStagingRepository 
           publishToSonatype 
-          closeSonatypeStagingRepository
-      - name: "📤 Publish Grails-Core to Sonatype OSSRH"
+          aggregateChecksums
+      - name: "📤 Publish Grails-Core"
         id: publish
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
-          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_PUBLISH_USERNAME }}
-          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PUBLISH_PASSWORD }}
-          NEXUS_PUBLISH_URL: ${{ secrets.NEXUS_PUBLISH_RELEASE_URL }}
-          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg 
+          -x initializeSonatypeStagingRepository
+          findSonatypeStagingRepository 
           publishToSonatype 
+          aggregateChecksums
+      - name: "📤 Close Staging Repository"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
+        run: >
+          ./gradlew
+          -x initializeSonatypeStagingRepository
+          findSonatypeStagingRepository 
           closeSonatypeStagingRepository
+      - name: "🩹Combine checksums"
+        run: |
+          combined_file="build/combined-checksums.txt"
+          cat build/checksums.txt > "$combined_file"
+          cat grails-gradle/build/checksums.txt >> "$combined_file"
+      - name: "Upload combined checksums"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/combined-checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release:
     environment: release
     needs: publish
     runs-on: ubuntu-latest
     permissions:
-      contents: read # limit to read access
+      contents: write # required for gradle.properties revert
+      issues: write # required for milestone closing
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -142,27 +169,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🚪 Nexus Staging Close And Release for Gradle Plugins"
-        env:
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_NEXUS_URL: ${{ secrets.SONATYPE_NEXUS_URL }}
-          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
-        working-directory: 'grails-gradle'
-        run: >
-          ./gradlew
-          findSonatypeStagingRepository 
-          releaseSonatypeStagingRepository
-      - name: "🚪 Nexus Staging Close And Release for Grails-Core"
-        env:
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_NEXUS_URL: ${{ secrets.SONATYPE_NEXUS_URL }}
-          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
-        run: >
-          ./gradlew
-          findSonatypeStagingRepository 
-          releaseSonatypeStagingRepository
       - name: "⚙️ Run post-release"
         uses: apache/grails-github-actions/post-release@asf
         env:

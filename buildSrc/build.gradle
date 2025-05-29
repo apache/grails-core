@@ -50,4 +50,5 @@ dependencies {
     implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
     implementation 'org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:0.8.1'
+    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
 }

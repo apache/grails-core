@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+import org.gradle.crypto.checksum.Checksum
 import org.grails.gradle.plugin.publishing.GrailsPublishExtension
 
 extensions.configure(GrailsPublishExtension) {
@@ -29,4 +30,37 @@ extensions.configure(GrailsPublishExtension) {
     it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher']
     it.pomCustomization = findProperty('pomCustomization') as Closure
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
+}
+
+apply plugin: 'org.gradle.crypto.checksum'
+
+afterEvaluate {
+    if (project.plugins.hasPlugin("maven-publish")) {
+        def checksumTask = tasks.register("publishedChecksums", Checksum)
+        checksumTask.configure { Checksum check ->
+            check.checksumAlgorithm = Checksum.Algorithm.SHA256
+            check.outputDirectory.set(project.layout.buildDirectory.dir("checksums"))
+            check.dependsOn(tasks.withType(Jar))
+        }
+
+        gradle.taskGraph.whenReady {
+            List filesToChecksum = []
+            publishing.publications.withType(MavenPublication).all { publication ->
+                publication.artifacts.each { artifact ->
+                    filesToChecksum << artifact.file
+                }
+            }
+
+            checksumTask.configure { Checksum check ->
+                check.inputFiles.setFrom(filesToChecksum.unique())
+            }
+        }
+
+        Set<String> publishTasks = tasks.names.findAll { it.startsWith('publishMavenPublication') }
+        publishTasks.each { taskName ->
+            tasks.named(taskName).configure { publishTask ->
+                publishTask.finalizedBy checksumTask
+            }
+        }
+    }
 }

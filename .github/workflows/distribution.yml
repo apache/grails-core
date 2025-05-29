@@ -1,0 +1,76 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Release - Grails Distribution"
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag for both grails-core and grails-forge (e.g., v7.0.0-M4)'
+        required: true
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout grails-core repository"
+        uses: actions/checkout@v4
+        with:
+          repository: apache/grails-core
+          ref: ${{ github.event.inputs.release_tag }}
+          path: grails-core
+      - name: "📥 Checkout grails-forge repository"
+        uses: actions/checkout@v4
+        with:
+          repository: apache/grails-forge
+          ref: ${{ github.event.inputs.release_tag }}
+          path: grails-core/grails-forge
+      - name: "🗑️ Remove binaries"
+        run: |
+          rm -f grails-core/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails-core/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails-core/gradlew
+          rm -f grails-core/grails-gradle/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails-core/grails-gradle/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails-core/grails-gradle/gradlew
+          rm -f grails-core/grails-forge/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails-core/grails-forge/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails-core/grails-forge/gradlew
+      - name: "Download combined-checksums.txt and rename to PUBLISHED"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd grails-core
+          release_url=$(gh release view ${{ github.event.inputs.release_tag }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "combined-checksums.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED "$release_url"
+      - name: "📦 Create source distribution ZIP"
+        run: |
+          version="${{ github.event.inputs.release_tag }}"
+          version="${version#v}"  # Strip 'v' prefix
+          zip -r "apache-grails-${version}-incubating-src.zip" grails-core -x '*.git*'
+      - name: "🔏 Sign source distribution ZIP"
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
+            --armor --detach-sign apache-grails-*-incubating-src.zip
+      - name: "🚀 Upload ZIP and Signature to GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          files: |
+            apache-grails-*-incubating-src.zip
+            apache-grails-*-incubating-src.zip.asc

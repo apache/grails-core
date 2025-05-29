@@ -74,6 +74,18 @@ dependencies {
         api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
         api "org.apache.grails:grails-docs-core:${projectVersion}"
+
+        // because we are not yet publishing hibernate6, just force the hibernate5 version for now
+        api("org.liquibase:liquibase-core") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
+        api("org.liquibase.ext:liquibase-hibernate5") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
     }
 }
 
@@ -94,7 +106,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
 }
 
-tasks.register('validateNoSnapshotDependencies').configure { Task it ->
+def validateNoSnapshotDependencies = tasks.register('validateNoSnapshotDependencies')
+validateNoSnapshotDependencies.configure { Task it ->
+    it.group = 'publishing'
+    it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
+
     it.doLast {
         configurations.each { config ->
             config.allDependencies.each { dep ->
@@ -107,11 +123,13 @@ tasks.register('validateNoSnapshotDependencies').configure { Task it ->
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
-    tasks.named('generateMetadataFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
-    }
-    tasks.named('generatePomFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+    project.afterEvaluate {
+        tasks.named('generateMetadataFileForMavenPublication').configure {
+            dependsOn(validateNoSnapshotDependencies)
+        }
+        tasks.named('generatePomFileForMavenPublication').configure {
+            dependsOn(validateNoSnapshotDependencies)
+        }
     }
 }
 

@@ -134,6 +134,7 @@ include (
         'grails-web-gsp-taglib',
         'grails-web-jsp',
         'grails-web-taglib',
+        'grails-gsp-spring-boot',
 
         'grails-datastore-core',
         'grails-datastore-web',
@@ -188,6 +189,7 @@ project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
 project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
+project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
@@ -409,7 +411,7 @@ project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
 project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
-project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot')
+project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')

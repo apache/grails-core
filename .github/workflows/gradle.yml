@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Java CI"
+name: "CI"
 on:
   push:
     branches:
@@ -91,7 +91,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         run: >
-          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository build :grails-shell-cli:installDist groovydoc
+          ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace -PonlyCoreTests
   functional:
     name: "Functional Tests"
@@ -117,7 +117,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🏃 Run Functional Tests"
         run: >
-          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository bootJar check
+          ./gradlew bootJar check
           --continue --stacktrace
           -PonlyFunctionalTests
           -PskipHibernate5Tests
@@ -149,7 +149,7 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository bootJar cleanTest check
+          ./gradlew bootJar cleanTest check
           --continue --stacktrace
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
@@ -179,7 +179,7 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository bootJar cleanTest check
+          ./gradlew bootJar cleanTest check
           --continue --stacktrace
           -PonlyHibernate5Tests
   publishGradle:
@@ -208,8 +208,13 @@ jobs:
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         working-directory: 'grails-gradle'
         run: >
-          ./gradlew publish
+          ./gradlew publish aggregateChecksums
           -Dorg.gradle.internal.publish.checksums.insecure=true
+      - name: "📤 Upload grails-gradle checksums"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-gradle-checksums
+          path: grails-gradle/build/checksums.txt
   publish:
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
     if: ${{ always() && github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') }}
@@ -229,28 +234,38 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
-        run: ./gradlew publish
+        with: 
+          timeout_seconds: 900 # normal range 360-720s
+          max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
+          retry_wait_seconds: 180
+          command: ./gradlew publish aggregateChecksums
+      - name: "📤 Upload grails-core checksums"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-checksums
+          path: build/checksums.txt
       - name: "🔨 Create Grails Wrapper Distribution Zip"
         run: >
           ./gradlew :grails-wrapper:distZip
       - name: "✅ Verify grails-wrapper"
         if: success()
         run: |
-          cp grails-wrapper/build/distributions/grails-wrapper-*.zip build/wrapper.zip
+          cp grails-wrapper/build/distributions/apache-grails-wrapper-*.zip build/wrapper.zip
           cd build
           unzip wrapper -d tmp
-          mv tmp/grails-wrapper-* tmp/wrapper
+          mv tmp/apache-grails-wrapper-* tmp/wrapper
           ./tmp/wrapper/grailsw --version
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
         uses: actions/upload-artifact@v4
         with:
-          name: grails-wrapper-snapshot
-          path: build/tmp/wrapper/
+          name: wrapper-artifacts
+          path: grails-wrapper/build/distributions/apache-grails-wrapper-*.zip
   docs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publish ]

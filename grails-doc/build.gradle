@@ -26,12 +26,6 @@ plugins {
     id 'groovy'
 }
 
-// Make sure doc projects are evaluated last so they pick up all projects with documentation since they are dynamically
-// found by the aggregateGroovydoc task
-rootProject.subprojects
-        .findAll { !(it.name in testProjects) && it.name != project.name && !(it.name in cliProjects) && !(it.name in profileProjects) }
-        .each { project.evaluationDependsOn(it.path) }
-
 compileJava.options.release = javaVersion.toInteger()
 
 version = projectVersion
@@ -62,11 +56,16 @@ dependencies {
 }
 
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
+def combinedGroovydoc = tasks.register('aggregateGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
-tasks.register('aggregateGroovydoc', Groovydoc).configure { Groovydoc gdoc ->
-    gdoc.group = 'documentation'
-    def sources = rootProject.subprojects
+combinedGroovydoc.configure { Groovydoc gdoc ->
+    gdoc.windowTitle = "Grails $projectVersion"
+    gdoc.docTitle = "Grails $projectVersion"
+
+    def docProjects = rootProject.subprojects
             .findAll { it.findProperty('includeInApiDocs') }
+
+    def sources = docProjects
             .collectMany {Project it ->
                 List possibleSources = [it.sourceSets.main]
 
@@ -89,32 +88,12 @@ tasks.register('aggregateGroovydoc', Groovydoc).configure { Groovydoc gdoc ->
 
         srcDir.exists()
     }.unique())
-    gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
+
     gdoc.classpath = files(sources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
-    gdoc.groovyClasspath = configurations.documentation
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
-    gdoc.windowTitle = "Grails $projectVersion"
-    gdoc.docTitle = "Grails $projectVersion"
-    gdoc.access = GroovydocAccess.PROTECTED
-    gdoc.includeAuthor = true
-    gdoc.includeMainForScripts = false
-    gdoc.processScripts = false
+
     gdoc.inputs.files(gdoc.source)
     gdoc.outputs.dir(gdoc.destinationDir)
-
-    def gebVersion = getVersion('geb-spock')
-    def testContainersVersion = getVersion('testcontainers')
-    def springVersion = getVersion('spring-core')
-    def springBootVersion = getVersion('spring-boot')
-
-    gdoc.link("https://www.gebish.org/manual/${gebVersion}/api/", 'geb.')
-    gdoc.link("https://javadoc.io/doc/org.testcontainers/testcontainers/${testContainersVersion}/", 'org.testcontainers.')
-    gdoc.link("https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/", 'org.springframework.core.')
-    gdoc.link("https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/", 'org.springframework.boot.')
-
-    gdoc.doLast {
-        delete(project.layout.buildDirectory.dir('tmp'))
-    }
 }
 
 // use jsoup in PdfBuilder for cleaning input html

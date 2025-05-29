@@ -38,7 +38,7 @@ tasks.withType(GroovyCompile).configureEach {
     groovyOptions.parameters = true
     options.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
     options.fork = true
-    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx1G']
+    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
 }
 
 // Grails determines the grails version via the META-INF/MANIFEST.MF file

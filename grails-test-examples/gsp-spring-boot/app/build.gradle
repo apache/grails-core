@@ -27,15 +27,6 @@ plugins {
 
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
-repositories {
-    mavenCentral()
-    maven {
-        name = 'ASF Snapshot repo'
-        url = 'https://repository.apache.org/content/groups/snapshots'
-    }
-    maven { url 'https://repo.grails.org/grails/restricted/' }
-}
-
 jar {
     processResources.exclude('**/*.gsp')
 }

@@ -35,19 +35,11 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    // compile grails-shell-cli with the Groovy version provided by Gradle
-    // to ensure build compatibility with Gradle, currently Groovy 3.0.x
-    // when used by grails-gradle-plugin
-    // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly "org.codehaus.groovy:groovy:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-templates:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-xml:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-ant:$GroovySystem.version"
-    compileOnly "org.codehaus.groovy:groovy-json:$GroovySystem.version"
-
-    runtimeOnly 'org.apache.groovy:groovy-ant'
-    runtimeOnly 'org.apache.groovy:groovy-json'
-    runtimeOnly 'org.apache.groovy:groovy-xml'
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-templates'
+    implementation 'org.apache.groovy:groovy-xml'
+    implementation 'org.apache.groovy:groovy-ant'
+    implementation 'org.apache.groovy:groovy-json'
 
     api project(':grails-bootstrap')
     api 'org.apache.grails.gradle:grails-gradle-model'

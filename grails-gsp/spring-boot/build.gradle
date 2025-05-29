@@ -33,5 +33,15 @@ ext {
 }
 
 dependencies {
+    implementation platform(project(':grails-bom'))
     api project(':grails-sitemesh3')
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    //TODO: no docs until this is a publish project (its docs likely will need to be handled differently)
+    // from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
