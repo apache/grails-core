@@ -181,6 +181,11 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         String[] packagesToScan
 
         /**
+         * JPA Settings
+         */
+        JpaSettings jpa = new JpaSettings()
+
+        /**
          * Any additional properties that should be passed through as is.
          */
         Properties additionalProperties = new Properties()
@@ -219,6 +224,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 props.put("hibernate.config_class".toString(), configClass.name)
             }
             props.put('hibernate.use_query_cache', String.valueOf(cache.queries))
+            props.put('hibernate.jpa.compliance.cascade', String.valueOf(jpa.compliance.cascade))
 
             if (entity_dirtiness_strategy != null && !hibernateDirtyChecking) {
                 props.put('hibernate.entity_dirtiness_strategy', entity_dirtiness_strategy.name)
@@ -315,6 +321,17 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
              * Whether OSIV is enabled
              */
             boolean enabled = true
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        @AutoClone
+        static class JpaSettings {
+            JpaComplianceSettings compliance = new JpaComplianceSettings();
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        static class JpaComplianceSettings {
+            boolean cascade = true
         }
 
 

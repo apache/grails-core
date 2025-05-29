@@ -27,7 +27,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
                 'hibernate.flush.mode'         : 'COMMIT',
                 'hibernate.cache.queries'      : 'true',
                 'hibernate.hbm2ddl.auto'       : 'create',
-                'hibernate.type.descriptor.sql': 'true'
+                'hibernate.jpa.compliance.cascade': 'true',
         ]
     }
 }

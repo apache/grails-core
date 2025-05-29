@@ -86,7 +86,7 @@ class ParentB implements Serializable {
 
     String code
     String desc
-    TreeSet<ChildB> children
+    SortedSet<ChildB> children
 
     static hasMany = [children: ChildB]
 

@@ -57,7 +57,7 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 @Entity
 class Tooth {
     Integer id
-    TreeSet<ToothDisease> toothDisease = new TreeSet<>()
+    SortedSet<ToothDisease> toothDisease
     static mapping = {
         table name: 'AK_TOOTH'
         id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']

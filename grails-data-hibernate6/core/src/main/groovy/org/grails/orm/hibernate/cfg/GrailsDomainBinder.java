@@ -907,6 +907,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         // make nullable and non-updateable
         key.setNullable(true);
         key.setUpdateable(false);
+        //JPA now requires to check for sorting
+        key.setSorted(collection.isSorted());
         return key;
     }
 

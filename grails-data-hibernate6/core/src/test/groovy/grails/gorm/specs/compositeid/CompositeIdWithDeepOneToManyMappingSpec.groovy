@@ -75,7 +75,7 @@ class Child implements Serializable, Comparable<Child> {
 @Entity
 class Parent implements Serializable, Comparable<Parent> {
     String name
-    TreeSet<Child> children
+    SortedSet<Child> children
 
     static belongsTo = [grandParent: GrandParent]
     static hasMany = [children: Child]
@@ -94,7 +94,7 @@ class Parent implements Serializable, Comparable<Parent> {
 class GrandParent implements Serializable {
     String name
     Integer luckyNumber
-    TreeSet<Parent> parents
+    SortedSet<Parent> parents
 
     static hasMany = [parents: Parent]
 

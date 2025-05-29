@@ -39,7 +39,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
                 'hibernate.hbm2ddl.auto': 'create',
                 'hibernate.cache':['region.factory_class':'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'],
                 'hibernate.configLocations':'file:hibernate.cfg.xml',
-                'org.hibernate.foo':'bar'
+                'hibernate.jpa.compliance.cascade': 'true',
         ]
         HibernateConnectionSourceSettingsBuilder builder = new HibernateConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver(config))
         HibernateConnectionSourceSettings settings = builder.build()
@@ -60,6 +60,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         expectedHibernateProperties.put('hibernate.use_query_cache','true')
         expectedHibernateProperties.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
         expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory')
+        expectedHibernateProperties.put('hibernate.jpa.compliance.cascade', 'true')
         expectedHibernateProperties.put('org.hibernate.foo','bar')
 
         def expectedCombinedProperties = new Properties()
