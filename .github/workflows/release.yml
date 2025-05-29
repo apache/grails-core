@@ -36,7 +36,7 @@ jobs:
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
           gpg --list-keys
         env:
-          GPG_KEY_ID: '08E2CEC47E38FE415F080AB62ADECADC11775306'
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -71,7 +71,7 @@ jobs:
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
           NEXUS_PUBLISH_DESCRIPTION: 'grails-forge:${{ steps.release_version.outputs.value }}'
-          SIGNING_KEY: '08E2CEC47E38FE415F080AB62ADECADC11775306'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew initializeSonatypeStagingRepository
       - name: "📤 Publish grails-forge"
@@ -82,7 +82,7 @@ jobs:
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
           NEXUS_PUBLISH_DESCRIPTION: 'grails-forge:${{ steps.release_version.outputs.value }}'
-          SIGNING_KEY: '08E2CEC47E38FE415F080AB62ADECADC11775306'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew
           -x initializeSonatypeStagingRepository
@@ -96,7 +96,7 @@ jobs:
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
           NEXUS_PUBLISH_DESCRIPTION: 'grails-forge:${{ steps.release_version.outputs.value }}'
-          SIGNING_KEY: '08E2CEC47E38FE415F080AB62ADECADC11775306'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew
           -x initializeSonatypeStagingRepository
