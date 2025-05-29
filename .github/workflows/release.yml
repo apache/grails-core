@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Release"
+name: "Release - Create grails-forge"
 on:
   release:
     types: [ published ]
@@ -48,7 +48,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: '⚙️ Run pre-release'
-        uses: grails/grails-github-actions/pre-release@asf
+        uses: apache/grails-github-actions/pre-release@asf
         env:
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
       - name: "📝 Store the current release version"
