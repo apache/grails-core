@@ -32,7 +32,7 @@ jobs:
           repository: apache/grails-forge
           ref: ${{ github.ref_name }}
           path: grails/grails-forge
-      - name: "🗑️ Remove binaries"
+      - name: "🗑️ Remove unnecessary files"
         run: |
           rm -f grails/gradle/wrapper/gradle-wrapper.jar
           rm -f grails/gradle/wrapper/gradle-wrapper.properties
@@ -43,6 +43,7 @@ jobs:
           rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.jar
           rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.properties
           rm -f grails/grails-forge/gradlew
+          rm -f grails/KEYS
       - name: "Download combined-checksums.txt and rename to PUBLISHED"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
