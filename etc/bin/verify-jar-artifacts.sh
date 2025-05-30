@@ -46,11 +46,6 @@ if [ ! -f "${CHECKSUMS_FILE}" ]; then
   exit 1
 fi
 
-if [ ! -f "${BUILD_DATE_FILE}" ]; then
-  echo "Required file ${BUILD_DATE_FILE} not found."
-  exit 1
-fi
-
 export GRAILS_GPG_HOME=$(mktemp -d)
 cleanup() {
   rm -rf "${GRAILS_GPG_HOME}"
