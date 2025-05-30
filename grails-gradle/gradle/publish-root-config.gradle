@@ -49,7 +49,7 @@ tasks.register("aggregateChecksums") {
     group = "publishing"
     description = "Aggregates all SHA-256 checksums from subprojects into a single file."
 
-    def outputFileProvider = rootProject.layout.buildDirectory.file("checksums.txt")
+    def outputFileProvider = rootProject.layout.buildDirectory.file("grails-gradle-checksums.txt")
     outputs.file(outputFileProvider)
 
     outputs.upToDateWhen { false } // not worth caching

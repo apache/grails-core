@@ -44,13 +44,13 @@ jobs:
           rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.properties
           rm -f grails/grails-forge/gradlew
           rm -f grails/KEYS
-      - name: "Download combined-checksums.txt and rename to PUBLISHED"
+      - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd grails
-          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "combined-checksums.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED "$release_url"
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
       - name: "📦 Create source distribution ZIP"
         run: |
           version="${{ github.ref_name }}"

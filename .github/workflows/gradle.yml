@@ -249,7 +249,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: grails-checksums
-          path: build/checksums.txt
+          path: build/CHECKSUMS.txt
       - name: "🔨 Create Grails Wrapper Distribution Zip"
         run: >
           ./gradlew :grails-wrapper:distZip

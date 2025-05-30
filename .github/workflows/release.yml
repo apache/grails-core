@@ -147,13 +147,13 @@ jobs:
           closeSonatypeStagingRepository
       - name: "🩹Combine checksums"
         run: |
-          combined_file="build/combined-checksums.txt"
-          cat build/checksums.txt > "$combined_file"
-          cat grails-gradle/build/checksums.txt >> "$combined_file"
+          combined_file="build/CHECKSUMS.txt"
+          cat build/grails-core-checksums.txt > "$combined_file"
+          cat grails-gradle/build/grails-gradle-checksums.txt >> "$combined_file"
       - name: "Upload combined checksums"
         uses: softprops/action-gh-release@v2
         with:
-          files: build/combined-checksums.txt
+          files: build/CHECKSUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release:
