@@ -234,22 +234,22 @@ Originally from https://github.com/stleary/JSON-java
 
 Java Servlet 2.2, 2.3, 2.4, 2.5 and JSP 1.1, 1.2, 2.0, 2.1
 The following files are licensed under the Sun Microsystems, Inc. license terms:
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_2.dtd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_3.dtd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_4.xsd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_5.xsd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_1_1.dtd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_1_2.dtd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_2_0.xsd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_2_1.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_2.dtd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_3.dtd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_4.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_2_5.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_1_1.dtd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_1_2.dtd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_2_0.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_2_1.xsd
 See licenses/LICENSE-servlet-jsp-sun.txt for the full license terms.
 
 Jakarta Servlet 4.0, 5.0, 6.0 and JSP 3.0
 The following files are licensed under the Eclipse Public License 2.0:
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_4_0.xsd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_5_0.xsd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_6_0.xsd
-- grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_3_0.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_4_0.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_5_0.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_6_0.xsd
+    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_3_0.xsd
 See licenses/LICENSE-jakarta-ee.txt for the full license terms.
 
 --------------------------------------------------------------------------
