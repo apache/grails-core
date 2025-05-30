@@ -86,6 +86,10 @@ project.extensions.getByType(DistributionContainer).configureEach {
             into ''
             fileMode = 0755
         }
+
+        from(layout.projectDirectory.dir('distribution-artifacts')) {
+            into ''
+        }
     }
 }
 
