@@ -58,7 +58,7 @@ During the staging step, we must create a source distribution & stage any binary
      * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution
      * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution (note: this is the sdkman artifact)
 
-## 2. Verifying
+## 2. Verifying Artifacts are Authenticate
 
 Prior to releasing a vote, we need to verify the staged artifacts. Follow the below steps to verify each staged artifact.
 
@@ -122,8 +122,8 @@ Grails has 2 binary distributions:
 
 The following are the Grails Wrapper distribution artifacts:
 * `apache-grails-wrapper-<version>-incubating-bin.zip` - the wrapper distribution
-* `apache-grails-wrapper-<version>-incubating-bin.zip.asc` - the generated signature of the source distribution
-* `apache-grails-wrapper-<version>-incubating-bin.zip.sha512` - the checksum to verify the source distribution
+* `apache-grails-wrapper-<version>-incubating-bin.zip.asc` - the generated signature of the wrapper distribution
+* `apache-grails-wrapper-<version>-incubating-bin.zip.sha512` - the checksum to verify the wrapper distribution
 
 Use `etc/bin/verify-wrapper-distribution.sh` to verify the wrapper distribution. This script performs the following:
 
@@ -134,7 +134,7 @@ Verifies the wrapper distribution checksum via the command:
 
 Verifies the wrapper distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-wrapper-<version>-incubating-bin.zip.asc apache-grails-<version>-incubating-bin.zip
+    gpg --verify apache-grails-wrapper-<version>-incubating-bin.zip.asc apache-grails-wrapper-<version>-incubating-bin.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -142,14 +142,29 @@ Extracts the zip file and verifies the contents:
 
 #### Verify Grails Delegating CLI Binary Distribution
 
-Download the binary distribution & expand it to test the various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`.  For each CLI, verify the published signature in the `PUBLISHED` file:
+The following are the Grails distribution artifacts:
+* `apache-grails-<version>-incubating-bin.zip` - the cli distribution that will be uploaded to sdkman
+* `apache-grails-<version>-incubating-bin.zip.asc` - the generated signature of the cli distribution
+* `apache-grails-<version>-incubating-bin.zip.sha512` - the checksum to verify the cli distribution
+
+Use `etc/bin/verify-cli-distribution.sh` to verify the cli distribution. This script performs the following:
+
+Verifies the cli distribution checksum via the command:
    ```bash
-    gpg --verify <cli>.asc <cli>
+   shasum -a 512 -c apache-grails-<version>-incubating-bin.zip.sha512
    ```
 
-### CLI Testing
+Verifies the cli distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-<version>-incubating-bin.zip.asc apache-grails-<version>-incubating-bin.zip
+   ```
 
-Each CLI needs tested to ensure it's functional prior to release:
+Extracts the zip file and verifies the contents:
+* Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+
+## 3. Verifying CLI Functional
+
+The CLI distribution consists of various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`. Each CLI needs tested to ensure it's functional prior to release:
 
 * testing `grailsw`:
     * set GRAILS_REPO_URL to the staging repository
@@ -175,12 +190,11 @@ Each CLI needs tested to ensure it's functional prior to release:
     gradlew bootRun
     ```
 
-
-## 3. Voting
+## 4. Voting
 
 TODO
 
-## 4. Releasing
+## 5. Releasing
 
 TODO
 
@@ -196,7 +210,7 @@ To remove a Nexus staging repo, run the workflow `Release - Drop Nexus Staging` 
 
 To remove the staged distribution, use your SVN credentials to remove the version directory at [https://dist.apache.org/repos/dist/dev/grails](https://dist.apache.org/repos/dist/dev/grails)
 
-## Appendix: GPG Configuration
+# Appendix: GPG Configuration
 If you wish to verify any artifact manually, you must trust the key used to build Grails. To do so:
 
 Download the latest KEYS file and make sure it's imported into gpg:
