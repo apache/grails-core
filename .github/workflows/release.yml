@@ -47,7 +47,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: 17
+          java-version: '17.0.14' # this must be a specific version for reproducible builds
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
