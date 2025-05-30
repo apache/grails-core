@@ -62,7 +62,7 @@ jobs:
         run: |
           version="${{ github.ref_name }}"
           version="${version#v}"  # Strip 'v' prefix
-          zip -r "apache-grails-${version}-incubating-src.zip" grails -x '*.git*'
+          zip -r "apache-grails-${version}-incubating-src.zip" grails -x '.git' -x '.github'
       - name: '🔐 Set up GPG'
         run: |
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
