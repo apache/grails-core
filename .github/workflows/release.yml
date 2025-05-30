@@ -115,6 +115,7 @@ jobs:
           findSonatypeStagingRepository 
           publishToSonatype 
           aggregateChecksums
+          aggregatePublishedArtifacts
       - name: "📤 Publish Grails-Core"
         id: publish
         env:
@@ -131,6 +132,7 @@ jobs:
           findSonatypeStagingRepository 
           publishToSonatype 
           aggregateChecksums
+          aggregatePublishedArtifacts
       - name: "📤 Close Staging Repository"
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
@@ -154,6 +156,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/CHECKSUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "🩹Combine published artifacts"
+        run: |
+          combined_file="build/PUBLISHED_ARTIFACTS.txt"
+          cat build/grails-core-artifacts.txt > "$combined_file"
+          cat grails-gradle/build/grails-gradle-artifacts.txt >> "$combined_file"
+      - name: "Upload combined published artifacts"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/PUBLISHED_ARTIFACTS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release:

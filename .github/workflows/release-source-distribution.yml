@@ -51,6 +51,13 @@ jobs:
           cd grails
           release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
+      - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd grails
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
       - name: "📦 Create source distribution ZIP"
         run: |
           version="${{ github.ref_name }}"

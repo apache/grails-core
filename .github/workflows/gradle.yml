@@ -208,13 +208,18 @@ jobs:
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         working-directory: 'grails-gradle'
         run: >
-          ./gradlew publish aggregateChecksums
+          ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
           -Dorg.gradle.internal.publish.checksums.insecure=true
       - name: "📤 Upload grails-gradle checksums"
         uses: actions/upload-artifact@v4
         with:
           name: grails-gradle-checksums
-          path: grails-gradle/build/checksums.txt
+          path: grails-gradle/build/grails-gradle-checksums.txt
+      - name: "📤 Upload grails-gradle published artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-gradle-artifacts.txt
+          path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
     if: ${{ always() && github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') }}
@@ -244,12 +249,17 @@ jobs:
           timeout_seconds: 900 # normal range 360-720s
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
-          command: ./gradlew publish aggregateChecksums
+          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
       - name: "📤 Upload grails-core checksums"
         uses: actions/upload-artifact@v4
         with:
-          name: grails-checksums
-          path: build/CHECKSUMS.txt
+          name: grails-core-checksums.txt
+          path: build/grails-core-checksums.txt
+      - name: "📤 Upload grails-core published artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-core-artifacts.txt
+          path: build/grails-core-artifacts.txt
       - name: "🔨 Create Grails Wrapper Distribution Zip"
         run: >
           ./gradlew :grails-wrapper:distZip
