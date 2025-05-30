@@ -25,7 +25,7 @@ Any profile created with the link:../ref/Command%20Line/create-profile.html[crea
 
 [source,groovy]
 ----
-apply plugin: "org.grails.grails-profile-publish"
+apply plugin: "org.apache.grails.gradle.grails-publish-profile"
 ----
 
 To publish a profile using this plugin to the Grails central repository first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on http://bintray.com[Bintray] and configure your keys as follows in the profile's `build.gradle` file:

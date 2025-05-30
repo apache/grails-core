@@ -126,8 +126,8 @@ Create App
 A project created with a typical `grails create-app --profile=web`
 
 ```
-apply plugin: "org.grails.grails-web"
-apply plugin: "org.grails.grails-gsp"
+apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-gsp"
 ```
 
 <h4>Grails Web API Project</h4>
@@ -135,7 +135,7 @@ apply plugin: "org.grails.grails-gsp"
 A project created with a typical `grails create-app --profile=web-api`
 
 ```
-apply plugin: "org.grails.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-web"
 ```
 
 <h4>Grails Web Micro Project</h4>
@@ -152,15 +152,15 @@ Create Plugin
 A project created with a typical `grails create-plugin --profile=web-plugin`
 
 ```
-apply plugin: "org.grails.grails-plugin"
-apply plugin: "org.grails.grails-gsp"
+apply plugin: "org.apache.grails.gradle.grails-plugin"
+apply plugin: "org.apache.grails.gradle.grails-gsp"
 ```
 
 <h4>Grails Plugin Web API Project</h4>
-A project created with a typical `grails create-plugin --profile=web-api`. _Note: No org.grails.grails-plugin include_
+A project created with a typical `grails create-plugin --profile=web-api`. _Note: No org.apache.grails.gradle.grails-plugin include_
 
 ```
-apply plugin: "org.grails.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-web"
 ```
 
 
@@ -168,7 +168,7 @@ apply plugin: "org.grails.grails-web"
 A project created with a typical `grails create-plugin --profile=plugin`.
 
 ```
-apply plugin: "org.grails.grails-plugin"
+apply plugin: "org.apache.grails.gradle.grails-plugin"
 ```
 
 <h4>Grails Plugin Web Micro Project</h4>

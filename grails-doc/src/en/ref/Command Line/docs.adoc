@@ -35,7 +35,7 @@ Add the plugin in your `build.gradle`:
 
 [source,groovy]
 ----
-apply plugin: "org.grails.grails-doc"
+apply plugin: "org.apache.grails.gradle.grails-docs"
 ----
 
 Now run the command

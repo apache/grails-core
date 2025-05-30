@@ -23,8 +23,8 @@ When you create a new project with the link:../ref/Command%20Line/create-app.htm
 ----
 plugins {
     id "groovy"
-    id "org.grails.grails-web"
-    id "org.grails.grails-gsp"
+    id "org.apache.grails.gradle.grails-web"
+    id "org.apache.grails.gradle.grails-gsp"
     id "com.github.erdi.webdriver-binaries"
     id "war"
     id "idea"
@@ -45,12 +45,13 @@ The default plugins are as follows:
 
 Many of these are built in plugins provided by Gradle or third party plugins. The Gradle plugins that Grails provides are as follows:
 
-* `org.grails.grails-doc` - A plugin for Gradle for using Grails 2.0's documentation engine.
-* `org.grails.grails-gsp` - The Grails GSP plugin adds pre-compilation of GSP files for production deployments.
-* `org.grails.grails-plugin` - A plugin for Gradle for building Grails plugins.
-* `org.grails.grails-web` - The Grails Web gradle plugin configures Gradle to understand the Grails conventions and directory structure.
-* `org.grails.grails-plugin-publish` - A plugin for publishing Grails plugins to the central repository.
-* `org.grails.grails-profile` - A plugin for use when creating Grails <<profiles,Profiles>>.
-* `org.grails.grails-profile-publish` - A plugin for publishing Grails profiles to the central repository.
-
-
+* `org.apache.grails.gradle.grails-app` - The main Grails gradle plugin implementation
+* `org.apache.grails.gradle.grails-docs` - Adds Grails doc publishing support
+* `org.apache.grails.gradle.grails-gsp` - Adds support for compiling Groovy Server Pages (GSP)
+* `org.apache.grails.gradle.grails-gson` - Adds support for compiling Groovy Json Views (GSON)
+* `org.apache.grails.gradle.grails-markup` - Adds support for compiling Markup Views
+* `org.apache.grails.gradle.grails-plugin` - Adds support Grails plugins
+* `org.apache.grails.gradle.grails-web` - Adds web specific extensions
+* `org.apache.grails.gradle.grails-publish` - Adds support for publishing Grails related artifacts
+* `org.apache.grails.gradle.grails-profile` - Adds support for compiling a Grails profile into a JAR file for distribution
+* `org.apache.grails.gradle.grails-publish-profile` - Adds support for publishing profiles
