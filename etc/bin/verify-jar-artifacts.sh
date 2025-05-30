@@ -97,7 +97,7 @@ while IFS= read -r line; do
   gpg --homedir "${GRAILS_GPG_HOME}" --verify "${FILE_NAME}.asc" "${FILE_NAME}"
   echo "✅ Verified GPG signature for ${FILE_NAME}"
 
-  EXPECTED_CHECKSUM=$(grep "^${FILE_NAME} " "${CHECKSUMS_FILE}" | awk '{print $2}')
+  EXPECTED_CHECKSUM=$(grep "^${FILE_NAME} " "${CHECKSUMS_FILE}" | awk '{print $2}' || true)
   if [ -z "${EXPECTED_CHECKSUM}" ]; then
     echo "❌ Checksum not found for ${FILE_NAME}"
     exit 1
