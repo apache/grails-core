@@ -21,6 +21,7 @@ set -euo pipefail
 
 RELEASE_TAG=$1
 DOWNLOAD_LOCATION="${2:-downloads}"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 if [ -z "${RELEASE_TAG}" ]; then
   echo "Usage: $0 [release-tag] <optional download location>"
@@ -37,11 +38,20 @@ if [ -z "$ZIP_FILE" ]; then
   exit 1
 fi
 
+export GRAILS_GPG_HOME=$(mktemp -d)
+cleanup() {
+  rm -rf "${GRAILS_GPG_HOME}"
+}
+trap cleanup EXIT
+
 echo "Verifying checksum..."
 shasum -a 512 -c "apache-grails-${VERSION}-incubating-src.zip.sha512"
+echo "✅ Checksum Verified"
 
 echo "Verifying GPG signature..."
-gpg --verify "apache-grails-${VERSION}-incubating-src.zip.asc" "apache-grails-${VERSION}-incubating-src.zip"
+gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-grails-${VERSION}-incubating-src.zip.asc" "apache-grails-${VERSION}-incubating-src.zip"
+echo "✅ GPG Verified"
 
 rm -rf grails || true
 echo "Extracting zip file..."
@@ -61,6 +71,8 @@ for FILE in "${REQUIRED_FILES[@]}"; do
     echo "Missing required file: $FILE"
     exit 1
   fi
+
+  echo "✅ Found required file: $FILE"
 done
 
-echo "✅ All checks passed successfully for Apache Grails ${VERSION}."
+echo "✅ All source distribution checks passed successfully for Apache Grails ${VERSION}."
