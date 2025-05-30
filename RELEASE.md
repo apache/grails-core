@@ -58,9 +58,18 @@ During the staging step, we must create a source distribution & stage any binary
      * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution
      * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution (note: this is the sdkman artifact)
 
-## 2. Verifying Artifacts are Authenticate
+## 2. Verifying Artifacts are Authentic
 
-Prior to releasing a vote, we need to verify the staged artifacts. Follow the below steps to verify each staged artifact.
+Prior to releasing a vote, we need to verify the staged artifacts. The below sections detail all of the necessary steps to ensure the source & binary distributions are authentic and have not been changed. To verify all of these at once, use the script: 
+
+```bash
+    verify.sh <staging repo id> <release tag> <download location>
+```
+
+For Example:
+```bash
+    verify.sh orgapachegrails-1030 v7.0.0-M4 /tmp/grails-verify
+```
 
 ### Download the Staged Artifacts
 

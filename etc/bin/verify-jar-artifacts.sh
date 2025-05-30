@@ -32,9 +32,8 @@ fi
 
 VERSION=${RELEASE_TAG#v}
 
-ARTIFACTS_FILE="${DOWNLOAD_LOCATION}/PUBLISHED_ARTIFACTS"
-CHECKSUMS_FILE="${DOWNLOAD_LOCATION}/CHECKSUMS"
-BUILD_DATE_FILE="${DOWNLOAD_LOCATION}/BUILD_DATE.txt"
+ARTIFACTS_FILE="${DOWNLOAD_LOCATION}/grails/PUBLISHED_ARTIFACTS"
+CHECKSUMS_FILE="${DOWNLOAD_LOCATION}/grails/CHECKSUMS"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 if [ ! -f "${ARTIFACTS_FILE}" ]; then
@@ -61,9 +60,8 @@ gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
 
 REPO_BASE_URL="https://repository.apache.org/content/repositories/${STAGING_REPO_ID}"
 
-# cp the artifacts file to the expected location for reproducible build check
-cp "${ARTIFACTS_FILE}" etc/bin/results/
-cp "${BUILD_DATE_FILE}" etc/bin/results/
+# switch to the extracted Grails source directory
+cd grails
 
 # Create a temporary directory to work in
 WORK_DIR='etc/bin/results/published_artifacts'

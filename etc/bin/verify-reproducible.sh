@@ -25,28 +25,28 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 CWD=$(pwd)
 
-cd "${DOWNLOAD_LOCATION}"
+cd "${DOWNLOAD_LOCATION}/grails"
 
-mkdir -p "${DOWNLOAD_LOCATION}/results"
-if [[ -f "${DOWNLOAD_LOCATION}/results/PUBLISHED_ARTIFACTS" ]]; then
+mkdir -p "${DOWNLOAD_LOCATION}/grails/etc/bin/results"
+if [[ -f "${DOWNLOAD_LOCATION}/grails/PUBLISHED_ARTIFACTS" ]]; then
   echo "✅ File 'PUBLISHED_ARTIFACTS' exists."
 else
-  echo "❌ File 'PUBLISHED_ARTIFACTS' not found. Please place the PUBLISHED_ARTIFACTS distribution file under ${DOWNLOAD_LOCATION}/results/PUBLISHED_ARTIFACTS..."
+  echo "❌ File 'PUBLISHED_ARTIFACTS' not found. Grails Source Distributions should have a PUBLISHED_ARTIFACTS file at the root..."
   exit 1
 fi
 
-if [[ -f "${DOWNLOAD_LOCATION}/results/BUILD_DATE.txt" ]]; then
-  echo "✅ File 'BUILD_DATE.txt' exists."
+if [[ -f "${DOWNLOAD_LOCATION}/grails/BUILD_DATE" ]]; then
+  echo "✅ File 'BUILD_DATE' exists."
 else
-  echo "❌ File 'BUILD_DATE.txt' not found. Please place the BUILD_DATE.txt distribution file under ${DOWNLOAD_LOCATION}/results/BUILD_DATE.txt..."
+  echo "❌ File 'BUILD_DATE' not found. Grails Source Distributions should have a BUILD_DATE file at the root..."
   exit 1
 fi
-export SOURCE_DATE_EPOCH=$(cat "${DOWNLOAD_LOCATION}/results/BUILD_DATE.txt")
+export SOURCE_DATE_EPOCH=$(cat "${DOWNLOAD_LOCATION}/grails/BUILD_DATE")
 
-if [[ -d "${DOWNLOAD_LOCATION}/results/published" ]]; then
+if [[ -d "${DOWNLOAD_LOCATION}/grails/etc/bin/results/published" ]]; then
   echo "✅ Directory 'published' exists."
 else
-  echo "❌ Directory 'published' not found. Please place the PUBLISHED jar files under ${DOWNLOAD_LOCATION}/results/published..."
+  echo "❌ Directory 'published' not found. Please place the PUBLISHED jar files under ${DOWNLOAD_LOCATION}/grails/etc/bin/results/published..."
   exit 1
 fi
 
@@ -55,14 +55,14 @@ cd grails-gradle
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache
 cd ..
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache
-"${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${DOWNLOAD_LOCATION}/results/second.txt"
-mkdir -p "${DOWNLOAD_LOCATION}/results/second"
-find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -exec cp -t "${DOWNLOAD_LOCATION}/results/second/" -- {} +
+"${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt"
+mkdir -p "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second"
+find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -exec cp -t "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second/" -- {} +
 
-cd "${DOWNLOAD_LOCATION}/results"
+cd "${DOWNLOAD_LOCATION}/grails/etc/bin/results"
 
 # diff -u PUBLISHED_ARTIFACTS second.txt
-DIFF_RESULTS=$(comm -3 <(cut -d' ' -f1 PUBLISHED_ARTIFACTS | sort) <(sort second.txt) | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort)
+DIFF_RESULTS=$(comm -3 <(cut -d' ' -f1 ../../../PUBLISHED_ARTIFACTS | sort) <(sort second.txt) | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort)
 echo "Differing artifacts:"
 echo "$DIFF_RESULTS" > diff.txt
 cat diff.txt

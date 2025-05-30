@@ -46,12 +46,3 @@ curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-wrapper-$VERSION-incubating-bin.z
 curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip" "https://github.com/apache/grails-forge/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip"
 curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip.asc" "https://github.com/apache/grails-forge/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip.asc"
 curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip.sha512" "https://github.com/apache/grails-forge/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip.sha512"
-
-# checksums
-curl -L -o "${DOWNLOAD_LOCATION}/CHECKSUMS.txt" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/CHECKSUMS.txt"
-
-# published artifacts
-curl -L -o "${DOWNLOAD_LOCATION}/PUBLISHED_ARTIFACTS.txt" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/PUBLISHED_ARTIFACTS.txt"
-
-# build date for reproducible build testing
-curl -L -o "${DOWNLOAD_LOCATION}/BUILD_DATE.txt" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/BUILD_DATE.txt"
