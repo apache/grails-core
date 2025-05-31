@@ -17,15 +17,11 @@ Project Reactor
 This product includes software from Project Reactor, licensed under Apache License, Version 2.0.
 2011-2014 Pivotal Software, Inc.
 
-This product includes Java Servlet and JSP specification files, which are licensed as follows:
+The original XML Schemas for Java EE Deployment Descriptors:
+ - web-app_4_0.xsd
 
-- Java Servlet 2.2, 2.3, 2.4, 2.5 and JSP 1.1, 1.2, 2.0, 2.1
-  Copyright (c) 1997-2010 Sun Microsystems, Inc. All rights reserved.
-  See licenses/LICENSE-servlet-jsp-sun.txt for license terms.
-
-- Jakarta Servlet 4.0, 5.0, 6.0 and JSP 3.0
-  Copyright (c) 2009, 2021 Oracle and/or its affiliates. All rights reserved.
-  See licenses/LICENSE-jakarta-ee.txt for license terms.
+may be obtained from:
+http://www.oracle.com/webfolder/technetwork/jsc/xml/ns/javaee/index.html
 
 This product includes software from Spring Framework 5.3, developed by Pivotal Software, Inc.
 Copyright 2002-2020 the original author or authors.
