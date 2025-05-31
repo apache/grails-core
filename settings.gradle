@@ -29,6 +29,11 @@ plugins {
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
+gradle.settingsEvaluated {
+    logger.warn("*************** Remote Build Cache Disabled due to Reproducible Build ********************")
+    logger.warn("Build date will be set to (SOURCE_DATE_EPOCH=${System.getenv("SOURCE_DATE_EPOCH")})")
+}
 
 develocity {
     server = 'https://ge.grails.org'
@@ -41,10 +46,10 @@ develocity {
 }
 
 buildCache {
-    local { enabled = isLocal }
+    local { enabled = isLocal || isReproducibleBuild }
     remote(develocity.buildCache) {
         push = isCI
-        enabled = true
+        enabled = !isReproducibleBuild
     }
 }
 
