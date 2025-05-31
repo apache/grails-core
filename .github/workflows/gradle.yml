@@ -43,8 +43,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -78,8 +76,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -104,8 +100,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -134,8 +128,6 @@ jobs:
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -164,8 +156,6 @@ jobs:
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -189,8 +179,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -227,8 +215,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -283,8 +269,6 @@ jobs:
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "🔀 Store current branch name"
         run: |
           TARGET_BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}"
