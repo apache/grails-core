@@ -85,12 +85,12 @@ while IFS= read -r line; do
   JAR_URL="${REPO_BASE_URL}/${GROUP_ID}/${ARTIFACT_ID}/${VERSION}/${FILE_NAME}"
   ASC_URL="${JAR_URL}.asc"
 
-  echo "🔎 Checking artifact: ${FILE_NAME}"
-  if [ ! -f "${FILE_NAME}" ]; then
-    echo "... Downloading: ${JAR_URL}"
-    curl -sSfLO "${JAR_URL}"
+  echo "🔎 Checking artifact: ${FILE_NAME} as ${JAR_FILE}"
+  if [ ! -f "${JAR_FILE}" ]; then
+    echo "... Downloading: ${JAR_URL} to ${JAR_FILE}"
+    curl -sSfL "${JAR_URL} -o ${JAR_FILE}"
   else
-    echo "... Skipping download, already exists: ${FILE_NAME}"
+    echo "... Skipping download, already exists: ${JAR_FILE}"
   fi
 
 
@@ -102,8 +102,8 @@ while IFS= read -r line; do
   fi
 
   echo "... Verifying GPG signature..."
-  gpg --homedir "${GRAILS_GPG_HOME}" --verify "${FILE_NAME}.asc" "${FILE_NAME}"
-  echo "✅ Verified GPG signature for ${FILE_NAME}"
+  gpg --homedir "${GRAILS_GPG_HOME}" --verify "${FILE_NAME}.asc" "${JAR_FILE}"
+  echo "✅ Verified GPG signature for ${JAR_FILE}"
 
   EXPECTED_CHECKSUM=$(grep "^${JAR_FILE} " "${CHECKSUMS_FILE}" | awk '{print $2}' || true)
   if [ -z "${EXPECTED_CHECKSUM}" ]; then
@@ -112,17 +112,17 @@ while IFS= read -r line; do
   fi
 
   echo "... Verifying checksum..."
-  ACTUAL_CHECKSUM=$(shasum -a 512 "${FILE_NAME}" | awk '{print $1}')
-  echo "✅ Verified Checksum for ${FILE_NAME}: ${ACTUAL_CHECKSUM}"
+  ACTUAL_CHECKSUM=$(shasum -a 512 "${JAR_FILE}" | awk '{print $1}')
+  echo "✅ Verified Checksum for ${JAR_FILE}: ${ACTUAL_CHECKSUM}"
 
   if [ "${ACTUAL_CHECKSUM}" != "${EXPECTED_CHECKSUM}" ]; then
-    echo "❌ Checksum mismatch for ${FILE_NAME}"
+    echo "❌ Checksum mismatch for ${JAR_FILE}"
     echo "Expected: ${EXPECTED_CHECKSUM}"
     echo "Actual:   ${ACTUAL_CHECKSUM}"
     exit 1
   fi
 
-  echo "✅ Verified: ${FILE_NAME}"
+  echo "✅ Verified: ${JAR_FILE}"
 done < "${ARTIFACTS_FILE}"
 
 echo "✅✅✅ All artifacts verified successfully. ✅✅✅"
