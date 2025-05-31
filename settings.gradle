@@ -48,7 +48,7 @@ develocity {
 }
 
 buildCache {
-    local { enabled = isLocal || isReproducibleBuild }
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
         push = isCI
         enabled = !isReproducibleBuild
