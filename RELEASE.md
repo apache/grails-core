@@ -243,3 +243,19 @@ Setup the key for validity:
 ```bash
    gpg --lsign-key 08E2CEC47E38FE415F080AB62ADECADC11775306
 ```
+
+# Appendix: Verification from a Container
+
+The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container locally, you can use the following command:
+
+```bash
+    docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project grails:testing bash
+    cd grails-verify
+    verify.sh orgapachegrails-1038 v7.0.0-M4 .
+    cd grails 
+    gradlew wrapper
+    cd grails-gradle 
+    gradlew wrapper
+    cd ../..
+    verify-reproducible.sh .
+```
