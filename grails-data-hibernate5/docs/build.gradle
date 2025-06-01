@@ -114,6 +114,7 @@ tasks.withType(Groovydoc).configureEach {
     it.includeAuthor = false
     it.classpath = configurations.documentation
     it.groovyClasspath += configurations.documentation
+    it.noVersionStamp = false
 }
 
 tasks.register('docs', Sync).configure { Sync docTask ->
