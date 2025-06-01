@@ -112,16 +112,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          gh release delete-asset ${{ github.event.inputs.release_tag }} CHECKSUMS.txt --yes
+          cd grails
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.event.inputs.release_tag }} CHECKSUMS.txt --yes
       - name: "Remove BUILD_DATE.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          gh release delete-asset ${{ github.event.inputs.release_tag }} BUILD_DATE.txt --yes
+          cd grails
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.event.inputs.release_tag }} BUILD_DATE.txt --yes
       - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          gh release delete-asset ${{ github.event.inputs.release_tag }} PUBLISHED_ARTIFACTS.txt --yes
+          cd grails
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.event.inputs.release_tag }} PUBLISHED_ARTIFACTS.txt --yes
