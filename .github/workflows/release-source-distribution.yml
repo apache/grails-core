@@ -65,6 +65,10 @@ jobs:
           cd grails
           release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
+      - name: "Ensure source files use common date"
+        run: |
+          SOURCE_DATE_EPOCH=$(cat BUILD_DATE)
+          find . -type f -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: |
           version="${{ github.ref_name }}"
