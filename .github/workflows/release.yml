@@ -31,6 +31,12 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+      - name: 'Ensure Common Build Date'
+        run: |
+          echo "SOURCE_DATE_EPOCH=$(cat BUILD_DATE)" >> "$GITHUB_ENV"
+      - name: "Ensure source files use common date"
+        run: |
+          find . -type f -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: '🔐 Set up GPG'
         run: |
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
