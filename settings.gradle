@@ -35,6 +35,7 @@ plugins {
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
 
 develocity {
     server = 'https://ge.grails.org'
@@ -47,10 +48,10 @@ develocity {
 }
 
 buildCache {
-    local { enabled = isLocal }
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
         push = isCI
-        enabled = true
+        enabled = !isReproducibleBuild
     }
 }
 
