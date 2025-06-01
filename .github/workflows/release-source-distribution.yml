@@ -70,7 +70,7 @@ jobs:
       - name: "Ensure source files use common date"
         run: |
           SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
-          find . -type f -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: |
           version="${{ github.ref_name }}"
