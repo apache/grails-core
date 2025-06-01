@@ -116,3 +116,7 @@ tasks.named('distZip').configure {
 tasks.named('distTar').configure {
     dependsOn startScripts
 }
+
+tasks.withType(Groovydoc).configureEach {
+    it.enabled = false // no documentation for the wrapper as it's used by end users directly
+}
