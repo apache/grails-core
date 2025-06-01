@@ -23,6 +23,13 @@ tasks.named('rat') {
             'CODE_OF_CONDUCT.md',
             'LICENSE',
             'NOTICE',
+            'licenses/**', // licenses directory excluded
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONTokener.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONElement.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONException.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONWriter.java',
             'gradle/wrapper/gradle-wrapper.properties', // gradle wrapper excluded from src zip
             '**/build/**', // Gradle generated build directories
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip

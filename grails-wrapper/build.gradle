@@ -17,6 +17,7 @@
 
 plugins {
     id 'java'
+    id 'groovy'
     id 'distribution'
 }
 
@@ -36,11 +37,21 @@ ext {
     startMainClass = 'grails.init.Start'
 }
 
-// Intentionally no dependencies to prevent bloat
+dependencies {
+    // Intentionally no implementation dependencies to prevent bloat
+
+    testImplementation platform(project(':grails-bom'))
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+}
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
