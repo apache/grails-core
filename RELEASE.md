@@ -121,7 +121,11 @@ Bootstrap the source distribution so that it can be built:
     gradlew wrapper
     cd -
 
-Run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. For any differences, extract the jar files, use IntelliJ to compare each differing file. Assuming differences are ordering related, we can continue with the verification.
+Run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
+
+If there are any jar file differences, confirm they are relevant by following the following steps: 
+1. Extract the differing jar file using the `etc/bin/extract-build-artifact.sh <jarfilepath from diff.txt>`
+2. In IntelliJ, under `etc/bin/results` there will now be a `firstArtifact` & `secondArtifact` folder. Select them both, right click, and select `Compared Directories`  
 
 ### Binary Distribution Verification
 
@@ -257,4 +261,11 @@ The Grails image is officially built on linux in a GitHub action using an Ubuntu
     gradlew wrapper
     cd ../..
     verify-reproducible.sh .
+```
+
+In the event that artifacts differ, simply copy them to your project directory and work on your local machine instead of the docker image: 
+
+```bash
+    cd ~/project
+    rsync -av grails-verify/grails/etc/bin/results/ etc/bin/results/
 ```
