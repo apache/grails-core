@@ -222,7 +222,7 @@ Grails now utilizes the Gradle Build System for project management. The project'
 [source, groovy]
 ----
 plugins {
-    id 'org.grails.grails-web' version 'x.y.z' // Grails plugin
+    id 'org.apache.grails.gradle.grails-web' version 'x.y.z' // Grails plugin
 }
 
 repositories {

@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Generates a user guide and Javadoc + Groovydoc API documentation for the current Grails project.
+Generates a user guide for the given Gradle project.
 
 
 === Examples
@@ -35,7 +35,7 @@ Add the plugin in your `build.gradle`:
 
 [source,groovy]
 ----
-apply plugin: "org.grails.grails-doc"
+apply plugin: "org.apache.grails.gradle.grails-docs"
 ----
 
 Now run the command
@@ -55,8 +55,6 @@ It's often useful to have API documentation as well. Since Grails is a mixed sou
 
 The documentation is generated to the following directories:
 
-* `docs/api` - Location of javadoc comments
-* `docs/gapi` - Location of groovydoc comments
 * `docs/guide` - Location of the user guide
 * `docs/ref` - Location of the reference section of the user guide
 
