@@ -90,8 +90,8 @@ echo "☑️   Run the cli ForgeApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VER
 echo "☑️   run the reproducible build test (see below)"
 
 # I have no idea why this needs done manually, but if it's run from this script gradle happily ignores the settings.gradle and tries to build (so it fails)
-echo "\tUnable to bootstrap gradle manually. Please bootstrap by running the gradle `wrapper` task in grails & grails/grails-gradle."
-echo "\tAfter bootstrapping, call verify-reproducible.sh '${DOWNLOAD_LOCATION}'"
-echo "\n"
+echo "     Unable to bootstrap gradle manually. Please bootstrap by running the gradle 'wrapper' task in grails & grails/grails-gradle."
+echo "     After bootstrapping, call verify-reproducible.sh '${DOWNLOAD_LOCATION}'"
+echo ""
 
 echo "✅✅✅ Verification finished, see above instructions for remaining manual testing."
