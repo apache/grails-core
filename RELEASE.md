@@ -226,11 +226,11 @@ To remove a Nexus staging repo, run the workflow `Release - Drop Nexus Staging` 
 To remove the staged distribution, use your SVN credentials to remove the version directory at [https://dist.apache.org/repos/dist/dev/grails](https://dist.apache.org/repos/dist/dev/grails)
 
 # Appendix: GPG Configuration
-If you wish to verify any artifact manually, you must trust the key used to build Grails. To do so:
+If you wish to verify any artifact manually, you must trust the key used to build Grails. To do so, it's best to download the KEYS file that was published to the official location:
 
 Download the latest KEYS file and make sure it's imported into gpg:
 ```bash
-    wget https://github.com/apache/grails-core/blob/7.0.x/KEYS
+    wget wget https://raw.githubusercontent.com/apache/grails-core/refs/heads/7.0.x/KEYS
     gpg --import KEYS
 ```
 
