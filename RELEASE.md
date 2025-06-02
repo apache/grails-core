@@ -267,7 +267,59 @@ Here is my vote:
 
 As an incubating project under Apache Groovy, after 72 hours & a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). The vote template follows:
 
-TODO
+Subject: [VOTE] Approval of Apache Grails 7.0.0-M4 release by Groovy PMC
+
+Body:
+```
+Dear Groovy PMC,
+
+The Grails PPMC has voted to approve the release of Apache Grails 7.0.0-M4. The vote results were as follows:
+
+- +1 votes: [List of voters]
+- 0 votes: [List of voters]
+- -1 votes: [List of voters]
+
+With [number] +1 votes and [number] -1 votes, the Podling PPMC vote passed.
+
+Grails PPMC vote: [mailing list link]
+
+We now request that the Groovy PMC (incubation host) vote on whether to approve this release. Per Apache Incubator policy, at least three +1 votes from Groovy PMC (incubation host) members are required for approval.
+
+The vote is open for the next 72 hours.
+
+[ ] +1 Release Apache Grails (incubating) 7.0.0-M4
+[ ]  0 I don't have a strong opinion about this, but I assume it's ok
+[ ] -1 Do not release Apache Grails (incubating) 7.0.0-M4 because...
+
+This release is the first Grails release under the ASF. Further details of the release can be found on the GitHub pre-release & in the discussion thread at:
+https://lists.apache.org/thread/3tqw39b1v542rc026gopj0kbqs5zbr5q
+
+Releases for the Grails project consist of 2 repositories, so there are two tags:
+grails-core Tag:
+https://github.com/apache/grails-core/releases/tag/v7.0.0-M4
+Tag commit id: <commit hash>
+
+grails-forge Tag:
+https://github.com/apache/grails-forge/releases/tag/v7.0.0-M4
+Tag commit id: <commit hash>
+
+The artifacts to be voted on are located as follows (<svn version revision>):
+Source release: https://dist.apache.org/repos/dist/dev/grails/7.0.0-M4/sources
+Binary distributions: https://dist.apache.org/repos/dist/dev/grails/7.0.0-M4/distribution
+
+Release artifacts are signed with a key from the following file: 
+https://dist.apache.org/repos/dist/release/grails/KEYS
+
+Hints on validating checksums/signatures (but replace md5sum with
+sha512sum):
+https://www.apache.org/info/verification.html
+
+Details of our release process is documented at: https://github.com/apache/grails-core/blob/7.0.x/RELEASE.md
+
+Thank you,
+[Your Name]
+Grails Release Manager
+```
 
 ## 5. Releasing
 
