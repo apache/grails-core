@@ -44,12 +44,21 @@ cleanup() {
 }
 trap cleanup EXIT
 
+error() {
+  echo "❌ CLI Verification failed ❌"
+  exit 1
+}
+trap error ERR
+
 echo "Verifying checksum..."
 shasum -a 512 -c "apache-grails-${VERSION}-incubating-bin.zip.sha512"
 echo "✅ Checksum Verified"
 
-echo "Verifying GPG signature..."
+echo "Importing GPG key to independent GPG home ..."
 gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+echo "✅ GPG Key Imported"
+
+echo "Verifying GPG signature..."
 gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-grails-${VERSION}-incubating-bin.zip.asc" "apache-grails-${VERSION}-incubating-bin.zip"
 echo "✅ GPG Verified"
 
@@ -75,4 +84,14 @@ for FILE in "${REQUIRED_FILES[@]}"; do
   echo "✅ Found required file: $FILE"
 done
 
-echo "✅ All cli binary distribution checks passed successfully for Apache Grails ${VERSION}."
+export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging
+cd "${SRC_DIR}"
+echo "Checking Shell CLI ..."
+./grails-shell-cli create-app ShellApp
+echo "✅ Generated Shell App"
+
+echo "Checking Forge CLI ..."
+./grails-forge-cli create-app -x -g mongodb ForgeApp
+echo "✅ Generated Forge App"
+
+echo "✅✅✅ All cli binary distribution checks passed successfully for Apache Grails ${VERSION}."

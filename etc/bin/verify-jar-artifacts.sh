@@ -51,7 +51,14 @@ cleanup() {
   rm -rf "${GRAILS_GPG_HOME}"
 }
 trap cleanup EXIT
+error() {
+  echo "❌ JAR Verification failed ❌"
+}
+trap error ERR
+
+echo "Importing GPG key to independent GPG home ..."
 gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+echo "✅ GPG Key Imported"
 
 REPO_BASE_URL="https://repository.apache.org/content/repositories/${STAGING_REPO_ID}"
 
@@ -93,7 +100,6 @@ while IFS= read -r line; do
     echo "... Skipping download, already exists: ${JAR_FILE}"
   fi
 
-
  if [ ! -f "${FILE_NAME}.asc" ]; then
     echo "... Downloading signature: ${ASC_URL}"
      curl -sSfLO "${ASC_URL}"
@@ -124,5 +130,36 @@ while IFS= read -r line; do
 
   echo "✅ Verified: ${JAR_FILE}"
 done < "${ARTIFACTS_FILE}"
+
+# check to make sure the base profile jar contains the wrapper since it's dynamically generated & copied into position as part of the build
+echo "🔍 Locating base profile jar for wrapper inspection..."
+cd "${DOWNLOAD_LOCATION}"
+mkdir -p "profile-wrapper-check"
+cp "${DOWNLOAD_LOCATION}/grails/etc/bin/results/first/grails-profiles-base-${VERSION}.jar" "profile-wrapper-check/base.jar"
+echo "✅ Located base profile jar, extracting ..."
+unzip "profile-wrapper-check/base.jar" -d "profile-wrapper-check"
+echo "✅ Extracted base profile jar ..."
+
+cd "profile-wrapper-check"
+if [ ! -s "META-INF/grails-profile/skeleton/grailsw" ]; then
+  echo "❌ Missing grailsw in base profile jar"
+  exit 1
+else
+  echo "✅ Found grailsw in base profile jar"
+fi
+
+if [ ! -s "META-INF/grails-profile/skeleton/grailsw.bat" ]; then
+  echo "❌ Missing grailsw.bat in base profile jar"
+  exit 1
+else
+  echo "✅ Found grailsw.bat in base profile jar"
+fi
+
+if [ ! -s "META-INF/grails-profile/skeleton/grails-wrapper.jar" ]; then
+  echo "❌ Missing grails-wrapper.jar in base profile jar"
+  exit 1
+else
+  echo "✅ Found grails-wrapper.jar in base profile jar"
+fi
 
 echo "✅✅✅ All artifacts verified successfully. ✅✅✅"

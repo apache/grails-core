@@ -40,17 +40,24 @@ fi
 
 export GRAILS_GPG_HOME=$(mktemp -d)
 cleanup() {
-  echo "❌ Wrapper Verification failed ❌"
   rm -rf "${GRAILS_GPG_HOME}"
 }
 trap cleanup EXIT
+error() {
+  echo "❌ Wrapper Verification failed ❌"
+  exit 1
+}
+trap cleanup ERR
 
 echo "Verifying checksum..."
 shasum -a 512 -c "apache-grails-wrapper-${VERSION}-incubating-bin.zip.sha512"
 echo "✅ Checksum Verified"
 
-echo "Verifying GPG signature..."
+echo "Importing GPG key to independent GPG home ..."
 gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+echo "✅ GPG Key Imported"
+
+echo "Verifying GPG signature..."
 gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-grails-wrapper-${VERSION}-incubating-bin.zip.asc" "apache-grails-wrapper-${VERSION}-incubating-bin.zip"
 echo "✅ GPG Verified"
 
@@ -85,4 +92,4 @@ echo "Checking forge command"
 ./grailsw -t forge create-app -x -g mongodb ForgeApp
 echo "✅ Generated Forge App"
 
-echo "✅ All wrapper binary distribution checks passed successfully for Apache Grails ${VERSION}."
+echo "✅✅✅ All wrapper binary distribution checks passed successfully for Apache Grails ${VERSION}."

@@ -30,11 +30,11 @@ fi
 
 VERSION=${RELEASE_TAG#v}
 
-cd $DOWNLOAD_LOCATION
+cd "${DOWNLOAD_LOCATION}"
 ZIP_FILE=$(ls "apache-grails-${VERSION}-incubating-src.zip" 2>/dev/null | head -n 1)
 
-if [ -z "$ZIP_FILE" ]; then
-  echo "Error: Could not find apache-grails-${VERSION}-incubating-src.zip in $DOWNLOAD_LOCATION"
+if [ -z "${ZIP_FILE}" ]; then
+  echo "Error: Could not find apache-grails-${VERSION}-incubating-src.zip in ${DOWNLOAD_LOCATION}"
   exit 1
 fi
 
@@ -48,13 +48,26 @@ echo "Verifying checksum..."
 shasum -a 512 -c "apache-grails-${VERSION}-incubating-src.zip.sha512"
 echo "✅ Checksum Verified"
 
-echo "Verifying GPG signature..."
+echo "Importing GPG key to independent GPG home ..."
 gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+echo "✅ GPG Key Imported"
+
+echo "Verifying GPG signature..."
 gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-grails-${VERSION}-incubating-src.zip.asc" "apache-grails-${VERSION}-incubating-src.zip"
 echo "✅ GPG Verified"
 
 SRC_DIR="grails"
-rm -rf "${SRC_DIR}" || true
+
+if [ -d "${SRC_DIR}" ]; then
+  echo "Previous grails directory found, purging"
+  cd grails
+  find . -mindepth 1 -path ./etc -prune -o -exec rm -rf {} +
+  cd etc
+  find . -mindepth 1 -path ./bin -prune -o -exec rm -rf {} +
+  cd bin
+  find . -mindepth 1 -path ./results -prune -o -exec rm -rf {} +
+  cd "${DOWNLOAD_LOCATION}"
+fi
 echo "Extracting zip file..."
 unzip -q "apache-grails-${VERSION}-incubating-src.zip"
 
