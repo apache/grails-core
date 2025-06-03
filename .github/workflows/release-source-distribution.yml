@@ -46,6 +46,7 @@ jobs:
           rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.properties
           rm -f grails/grails-forge/gradlew
           rm -f grails/KEYS
+          find grails -type f -name '.gitattributes' -delete
       - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
