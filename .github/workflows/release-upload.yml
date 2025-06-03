@@ -37,24 +37,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: apache/grails-core
-          ref: '7.0.x' # TODO: Temporary to minimize staging
+          ref: '7.0.x' # TODO: Temporary to minimize having to restage to test this workflow, remove once the input tag is removed
           path: grails-core
       - name: "Setup SVN and Tools"
         run: sudo apt-get install -y subversion subversion-tools
-      - name: "Ensure grails release folder exists"
-        run: |
-          set -e
-
-          if svn ls https://dist.apache.org/repos/dist/release/grails --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
-            echo "Release Folder 'grails' already exists — skipping creation"
-          else
-            echo "Release Folder 'grails' does not exist, creating"
-            svnmucc --non-interactive \
-              --username "$SVN_USERNAME" \
-              --password "$SVN_PASSWORD" \
-              mkdir https://dist.apache.org/repos/dist/release/grails \
-              -m "Create 'grails' release folder"
-          fi
       - name: "Ensure grails dev folder exists"
         run: |
           set -e
@@ -69,20 +55,6 @@ jobs:
               mkdir https://dist.apache.org/repos/dist/dev/grails \
               -m "Create 'grails' dev folder"
           fi
-#      - name: "Checkout release repo"
-#        run: |
-#          svn checkout --non-interactive --username "$SVN_USERNAME" --password "$SVN_PASSWORD" https://dist.apache.org/repos/dist/release/grails release-repo
-#      - name: "Update KEYS file"
-#        run: |
-#          if ! cmp -s grails-core/KEYS release-repo/KEYS; then
-#            echo "KEYS file differs — committing update"
-#            cp grails-core/KEYS release-repo/
-#            cd release-repo
-#            svn add KEYS --force
-#            svn commit -m "Update grails KEYS file" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
-#          else
-#            echo "KEYS file unchanged — skipping commit"
-#          fi
       - name: "Checkout dev repo"
         run: |
           svn checkout --non-interactive --username "$SVN_USERNAME" --password "$SVN_PASSWORD" https://dist.apache.org/repos/dist/dev/grails dev-repo
