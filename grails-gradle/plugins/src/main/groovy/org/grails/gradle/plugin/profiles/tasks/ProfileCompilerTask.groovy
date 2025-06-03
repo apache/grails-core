@@ -151,10 +151,10 @@ class ProfileCompilerTask extends AbstractCompile {
             profileData.put('extends', dependencies.join(','))
         }
 
-        List<File> groovySourceFiles = (commandsDirectory.getOrNull()?.files()?.findAll { File f ->
+        List<File> groovySourceFiles = (commandsDirectory.getOrNull()?.asFileTree?.findAll { File f ->
             f.name.endsWith('.groovy')
         } ?: []) as List<File>
-        List<File> ymlSourceFiles = (commandsDirectory.getOrNull()?.files()?.findAll { File f ->
+        List<File> ymlSourceFiles = (commandsDirectory.getOrNull()?.asFileTree?.findAll { File f ->
             f.name.endsWith('.yml')
         } ?: []) as List<File>
 
@@ -213,7 +213,7 @@ class ProfileCompilerTask extends AbstractCompile {
         if (groovySourceFiles) {
             CompilerConfiguration configuration = new CompilerConfiguration()
             configuration.setScriptBaseClass('org.grails.cli.profile.commands.script.GroovyScriptCommand')
-            configuration.setTargetDirectory(destination.asFile)
+            configuration.setTargetDirectory(destination.getAsFile())
             configuration.setClasspath(classpath.asPath)
 
             def importCustomizer = new ImportCustomizer()
