@@ -1,6 +1,3 @@
-html, code, kbd, pre, samp {
-    -ms-text-size-adjust: 100%;
-    -webkit-text-size-adjust: 100%;
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -20,6 +17,8 @@ html, code, kbd, pre, samp {
  *  under the License.
  */
 
+table.scaffold tr>td:first-child, tr>th:first-child {
+    padding-left: 1.25em;
 }
 
 html, body {

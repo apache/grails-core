@@ -1,10 +1,4 @@
 /*
- *= require reset.css
- *= require jquery-ui.css
- *= require jquery.jdMenu.css
- *= require jquery.jdMenu.slate.css
- *= require jquery.jgrowl.css
- *= require spring-security-ui-common.css
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
@@ -23,4 +17,11 @@
  *  under the License.
  */
 
+/*
+ *= require reset
+ *= require webjars/jquery-ui-themes/1.10.3/smoothness/jquery-ui
+ *= require jquery.jdMenu
+ *= require jquery.jdMenu.slate
+ *= require webjars/jgrowl/1.4.6/jquery.jgrowl
+ *= require spring-security-ui-common
  */
