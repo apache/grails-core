@@ -88,6 +88,11 @@ cd "${DOWNLOAD_LOCATION}/grails/gradle-bootstrap"
 gradlew
 echo "✅ Gradle Bootstrapped"
 
+echo "Applying License Audit ..."
+cd "${DOWNLOAD_LOCATION}/grails"
+./gradlew rat
+echo "✅ RAT passed"
+
 echo "Verifying Reproducible Build ..."
 verify-reproducible.sh "${DOWNLOAD_LOCATION}"
 echo "✅ Reproducible Build Verified"
