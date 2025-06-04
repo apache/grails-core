@@ -81,17 +81,22 @@ echo """
   }
 
 """ > "${DOWNLOAD_LOCATION}/custom-repos.gradle"
+echo "✅ Custom repo script written"
+
+echo "Bootstrap Gradle ..."
+cd "${DOWNLOAD_LOCATION}/grails/gradle-bootstrap"
+gradlew
+echo "✅ Gradle Bootstrapped"
+
+echo "Verifying Reproducible Build ..."
+verify-reproducible.sh "${DOWNLOAD_LOCATION}"
+echo "✅ Reproducible Build Verified"
 
 echo "Be sure to do the following:"
 echo "☑️   Run the wrapper ShellApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
 echo "☑️   Run the wrapper ForgeApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
 echo "☑️   Run the cli ShellApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
 echo "☑️   Run the cli ForgeApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
-echo "☑️   run the reproducible build test (see below)"
-
-# I have no idea why this needs done manually, but if it's run from this script gradle happily ignores the settings.gradle and tries to build (so it fails)
-echo "     Unable to bootstrap gradle manually. Please bootstrap by running the gradle 'wrapper' task in grails & grails/grails-gradle."
-echo "     After bootstrapping, call verify-reproducible.sh '${DOWNLOAD_LOCATION}'"
-echo ""
+echo "☑️   Run the shell cli from one of the applications and ensure all commands show as expected - pay attention to the scaffolding ones since they are dynamically loaded"
 
 echo "✅✅✅ Verification finished, see above instructions for remaining manual testing."
