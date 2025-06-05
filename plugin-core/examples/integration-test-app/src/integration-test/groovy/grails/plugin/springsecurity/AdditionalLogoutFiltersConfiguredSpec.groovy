@@ -53,7 +53,7 @@ class AdditionalLogoutFiltersConfiguredSpec extends AbstractIntegrationSpec {
 		AdditionalLogoutHandler additionalLogoutHandler = grailsApplication.mainContext.additionalLogoutHandler
 		additionalLogoutHandler.called = false
 
-		logoutFilter.doFilter new MockHttpServletRequest(servletPath: '/logoff'),
+		logoutFilter.doFilter new MockHttpServletRequest(requestURI: '/logoff'),
 		                      new MockHttpServletResponse(), new MockFilterChain()
 
 		then:

@@ -55,15 +55,19 @@ class MutableLogoutFilterSpec extends AbstractUnitSpec {
 		given:
 		SecurityTestUtils.authenticate()
 
-		def request1 = new MockHttpServletRequest(method: 'GET', servletPath: '/foo/bar')
+		def request1 = new MockHttpServletRequest(method: 'GET', requestURI: '/foo/bar')
 		def response1 = new MockHttpServletResponse()
-		def request2 = new MockHttpServletRequest(method: 'GET', servletPath: filterProcessesUrl)
+		def request2 = new MockHttpServletRequest(method: 'GET', requestURI: filterProcessesUrl)
 		def response2 = new MockHttpServletResponse()
 
 		boolean chain1Called = false
 		boolean chain2Called = false
-		def chain1 = [doFilter: { req, res -> chain1Called = true }] as FilterChain
-		def chain2 = [doFilter: { req, res -> chain2Called = true }] as FilterChain
+		def chain1 = [doFilter: { req, res ->
+			chain1Called = true
+		}] as FilterChain
+		def chain2 = [doFilter: { req, res ->
+			chain2Called = true
+		}] as FilterChain
 
 		when:
 		// not a logout url, so chain.doFilter() is called
