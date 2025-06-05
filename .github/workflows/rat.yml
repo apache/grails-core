@@ -1,0 +1,57 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: RAT Report
+on:
+  push:
+    branches:
+      - '[3-9]+.[0-9]+.x'
+  pull_request:
+    branches:
+      - '[3-9]+.[0-9]+.x'
+  workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  rat-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🧐 Apache License - Release Audit Tool"
+        run: ./gradlew rat
+      - name: Upload RAT HTML report
+        if: always()
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        with:
+          name: rat-report
+          path: build/reports/rat/index.html
+      - name: Publish RAT report in Job Summary
+        if: always()
+        run: |
+          echo "## 📋 Apache RAT Report" >> $GITHUB_STEP_SUMMARY
+          # inject raw HTML (it will render as HTML in the summary)
+          sed -n '/<body[^>]*>/,/<\/body>/ { /<h3>Archives:<\/h3>/,/<\/body>/d; /<body[^>]*>/d; /<\/body>/d; s/^[[:space:]]*//; p; }' build/reports/rat/index.html >> $GITHUB_STEP_SUMMARY

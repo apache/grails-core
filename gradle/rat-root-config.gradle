@@ -1,0 +1,57 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+apply plugin: 'org.nosphere.apache.rat'
+
+tasks.named('rat') {
+    excludes = [
+            '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            '**/build/**', // Gradle generated build directories
+            'etc/bin/results/**', // exclude build directories
+            '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
+            '**/*.html', // html files are only in test
+            '**/resources/*', // exclude test artifacts
+            'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
+            'src/*', // exclude build artifacts
+            'LICENSE',
+            'licenses/**', // licenses directory excluded
+            'NOTICE',
+            'CODE_OF_CONDUCT.md',
+            '**/.sdkmanrc', // tool selection files aren't code
+            '**/.gitignore', // git configuration isn't code
+            '**/.gitkeep', // git configuration isn't code
+            '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
+            '**/*.db', // H2 database test files
+            '**/*.gitkeep', // Empty Gitkeep file
+            'plugin-rest/spring-security-rest-testapp-profile/skeleton/**', // template files that people are expected to use in the end application
+            'plugin-rest/spring-security-rest-testapp-profile/features/**', // template files that people are expected to use in the end application
+            'plugin-rest/spring-security-rest-testapp-profile/commands/**', // template files that people are expected to use in the end application
+            'plugin-rest/spring-security-rest-testapp-profile/templates/**', // template files that people are expected to use in the end application
+            'plugin-core/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            'plugin-ui/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            'plugin-oauth2/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            'plugin-rest/spring-security-rest-testapp-profile/profile.yml', // generated file
+            'plugin-rest/spring-security-rest-testapp-profile/profile.yml.tmpl', // template that will be included in an end application
+            'plugin-ldap/examples/functional-test-app/grails-app/ldap-servers/d1/data/users.ldif', // test database that does not support comments
+            'plugin-ui/plugin/grails-app/assets/javascripts/jquery/jquery.jdMenu.js', // See license file, MIT licensed
+            'plugin-ui/plugin/grails-app/assets/javascripts/jquery/jquery.positionBy.js', // See license file, MIT licensed
+            'plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.slate.css', // See license file, MIT licensed
+            'plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css', // See license file, MIT licensed
+    ]
+    // never cache license audits
+    outputs.upToDateWhen { false }
+}

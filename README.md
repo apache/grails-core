@@ -1,3 +1,19 @@
+<!--
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 [![Java CI](https://github.com/apache/grails-spring-security/actions/workflows/gradle.yml/badge.svg)](https://github.com/apache/grails-spring-security/actions/workflows/gradle.yml)
 
 Grails Spring Security
@@ -28,3 +44,19 @@ spring:
       - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 ```
+
+### Building
+
+To build this project from source, first bootstrap gradle:
+
+     cd gradle-bootstrap
+     gradle
+     cd -
+
+After bootstrap the project, you can build it with the command: 
+
+     ./gradlew build
+
+To run the build only, and skip the tests, run:
+    
+     ./gradlew build -PskipTests

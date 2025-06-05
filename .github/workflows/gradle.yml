@@ -1,18 +1,35 @@
-name: "Java CI"
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "CI"
 on:
   push:
     branches:
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'
+      - '[3-9]+.[0-9]+.x'
   pull_request:
     branches:
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'      
+      - '[3-9]+.[0-9]+.x'  
   workflow_dispatch:
 permissions:
   packages: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  core-tests:
+  coreTests:
+    if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
@@ -28,7 +45,8 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃‍♂️ Run Tests"
         run: ./gradlew check --max-workers=2 --refresh-dependencies --continue
-  functional-test:
+  functionalTests:
+    if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -48,8 +66,9 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃‍♂️ Run Different Config Functional Tests"
         run: ./gradlew core-examples-functional-test-app:check -DTESTCONFIG=${{ matrix.test-config }}
-  build:
-    if: github.event_name == 'push'
+  publish:
+    needs: [ coreTests, functionalTests ]
+    if: ${{ always() && github.repository_owner == 'apache' && github.event_name == 'push' && (needs.coreTests.result == 'success' || needs.coreTests.result == 'skipped') && (needs.functionalTests.result == 'success' || needs.functionalTests.result == 'skipped') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -67,12 +86,11 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📤 Publish Snapshot artifacts"
         env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
-        run: ./gradlew --no-build-cache publish
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
+        run: ./gradlew publish --no-build-cache --rerun-tasks
       - name: "🔨 Generate Snapshot Documentation"
         run: ./gradlew aggregateDocs
       - name: "🚀 Publish to Github Pages"

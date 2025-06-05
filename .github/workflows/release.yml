@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: "Release"
 on:
   release:
@@ -5,21 +20,38 @@ on:
 permissions:
   contents: write
   packages: read
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
-  release:
-    runs-on: ubuntu-24.04
+  publish:
     permissions:
       packages: read  #  pre-release workflow
       contents: write  #  to create release
       issues: write  #  to modify milestones
+    runs-on: ubuntu-24.04
+    outputs:
+      release_version: ${{ steps.release_version.outputs.value }}
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "Ensure source files use common date"
+        run: |
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+      - name: '🔐 Set up GPG'
+        run: |
+          echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
+          gpg --list-keys
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          java-version: 17
           distribution: liberica
+          java-version: '17.0.14' # this must be a specific version for reproducible builds
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -29,33 +61,86 @@ jobs:
         run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "⚙️ Run pre-release"
         uses: apache/grails-github-actions/pre-release@asf
-      - name: "🔐 Generate key file for artifact signing"
         env:
-          SECRING_FILE: ${{ secrets.SECRING_FILE }}
-        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
-      - name: "📤 Publish to Sonatype - close and release staging repository"
+          RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
+      - name: "📤 Publish to staging repository"
         env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'true'
-          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
-          NEXUS_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_RELEASE_URL }}
-          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }} # TODO: What about this secret?
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: 'grails-spring-security:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew --refresh-dependencies
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
           publishToSonatype
-          closeAndReleaseSonatypeStagingRepository
+          closeSonatypeStagingRepository
+      - name: "Generate Build Date file"
+        run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
+      - name: "Upload Build Date file"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/BUILD_DATE.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  docs:
+    environment: docs
+    name: "Publish Documentation"
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required for gradle.properties revert
+      issues: write # required for milestone closing
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Documentation"
         run: ./gradlew aggregateDocs
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
       - name: "🚀 Publish to Github Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: build/docs
-          VERSION: ${{ steps.release_version.outputs.release_version }}
+          VERSION: ${{ steps.release_version.outputs.value }}
+  release:
+    environment: release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "⚙️ Run post-release"
         uses: apache/grails-github-actions/post-release@asf
