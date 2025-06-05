@@ -32,6 +32,7 @@ repositories {
 
 dependencies {
 
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation project(':acl-plugin')
     implementation project(':core-plugin')
     implementation project(':ui-plugin')

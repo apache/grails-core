@@ -25,6 +25,7 @@ group = 'misc.functional.test.app'
 
 dependencies {
 
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation project(':acl-plugin')
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'

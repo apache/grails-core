@@ -27,3 +27,8 @@ if ('assetCompile' in tasks.names) {
         outputs.dir(rootProject.layout.buildDirectory.dir('asset-serialize'))
     }
 }
+
+grails {
+    // turn off dependency management so we *know* we're testing with the right versions and not from a remote repository
+    springDependencyManagement = false
+}

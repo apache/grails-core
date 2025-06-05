@@ -26,6 +26,7 @@ group = 'spring.security.cas'
 
 dependencies {
 
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation project(':cas-plugin')
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'

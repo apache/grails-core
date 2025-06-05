@@ -26,6 +26,7 @@ group = 'misc.functional.test.app'
 
 dependencies {
 
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-web-boot'

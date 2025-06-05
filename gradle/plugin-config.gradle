@@ -20,3 +20,8 @@
 // The plugins do not have an Application class and are not runnable by themselves
 tasks.named('bootRun') { enabled = false }
 tasks.named('findMainClass') { enabled = false }
+
+grails {
+    // turn off dependency management so we *know* we're testing with the right versions and not from a remote repository
+    springDependencyManagement = false
+}

@@ -25,6 +25,7 @@ group = 'grails.spring.security.hierarchical.roles'
 
 dependencies {
 
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation project(':core-plugin')
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.data:grails-datastore-core', {

@@ -28,6 +28,7 @@ group = 'com.test'
 
 dependencies {
 
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation project(':ldap-plugin')
     implementation "org.apache.directory.server:apacheds-core:$apacheDsVersion"
     implementation "org.apache.directory.server:apacheds-protocol-ldap:$apacheDsVersion"
