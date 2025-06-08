@@ -26,6 +26,7 @@ class RequestmapEditPage extends EditPage {
 
 	static url = 'requestmap/edit'
 	static typeName = { 'Requestmap' }
+	static at = { waitFor { title == 'Edit Requestmap' } }
 	static content = {
 		configAttribute { $(name: 'configAttribute').module(TextInput) }
 		urlPattern { $(name: 'url').module(TextInput) }
