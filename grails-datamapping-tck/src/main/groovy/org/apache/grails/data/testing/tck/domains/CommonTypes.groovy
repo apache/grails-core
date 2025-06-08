@@ -41,4 +41,8 @@ class CommonTypes implements Serializable {
     Locale loc
     Currency cur
     byte[] ba
+     static constraints = {
+         d precision: 5
+         f precision: 5
+     }
 }
