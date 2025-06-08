@@ -390,7 +390,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public ProjectionList min(String propertyName, String alias) {
-        hibernateQuery.projections().max(getFullyQualifiedColumn(propertyName,alias));
+        hibernateQuery.projections().min(getFullyQualifiedColumn(propertyName,alias));
         return this;
     }
 
