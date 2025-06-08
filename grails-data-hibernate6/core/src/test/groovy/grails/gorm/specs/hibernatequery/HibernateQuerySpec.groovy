@@ -355,8 +355,6 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
         new Pet(name: "Lucky", owner: oldBob).save(flush:true)
-        def one = Person.findAll()
-        def two =  Pet.findAll()
         hibernateQuery.exists(
                 new DetachedCriteria(Pet).property("name").eq("owner", oldBob)
         )
