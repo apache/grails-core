@@ -975,7 +975,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Order instance
      */
     public Criteria order(String propertyName, String directionString) {
-        Query.Order.Direction direction = Query.Order.Direction.DESC.name().equals(directionString) ? Query.Order.Direction.DESC : Query.Order.Direction.ASC;
+        Query.Order.Direction direction = Query.Order.Direction.DESC.name().equalsIgnoreCase(directionString) ? Query.Order.Direction.DESC : Query.Order.Direction.ASC;
         hibernateQuery.order(new Query.Order(propertyName, direction));
         return this;
     }
