@@ -27,6 +27,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class OrderBySpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([TestEntity, ChildEntity])
+    }
+
     void "Test order with criteria"() {
         given:
         def age = 40

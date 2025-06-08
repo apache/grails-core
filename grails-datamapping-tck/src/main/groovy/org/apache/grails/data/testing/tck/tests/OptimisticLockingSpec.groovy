@@ -29,6 +29,10 @@ import spock.lang.IgnoreIf
  */
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([OptLockVersioned, OptLockNotVersioned])
+    }
+
     void "Test versioning"() {
 
         given:

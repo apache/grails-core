@@ -39,14 +39,11 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
     @Issue('https://github.com/grails/grails-data-mapping/issues/835')
     void "Test composite id many to one and sequence"() {
 
-        when: "a many to one association is created"
+        when:"a many to one association is created"
         ToothDisease td = new ToothDisease(nrVersion: 1).save()
+        new Tooth(toothDisease: td).save(flush:true)
 
-        def tooth = new Tooth()
-        tooth.toothDisease << td
-        tooth.save(flush: true)
-
-        then: "The object was saved"
+        then:"The object was saved"
         Tooth.count() == 1
         Tooth.list().first().toothDisease != null
     }
@@ -57,7 +54,7 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 @Entity
 class Tooth {
     Integer id
-    SortedSet<ToothDisease> toothDisease
+    ToothDisease toothDisease
     static mapping = {
         table name: 'AK_TOOTH'
         id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']
@@ -69,7 +66,7 @@ class Tooth {
 }
 
 @Entity
-class ToothDisease implements Serializable, Comparable<ToothDisease> {
+class ToothDisease implements Serializable {
     Integer idColumn
     Integer nrVersion
     static mapping = {
@@ -77,10 +74,5 @@ class ToothDisease implements Serializable, Comparable<ToothDisease> {
         idColumn column: 'ID', generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH_DISEASE']
         nrVersion column: 'NR_VERSION'
         id composite: ['idColumn', 'nrVersion']
-    }
-
-    @Override
-    int compareTo(@Nonnull ToothDisease o) {
-        return idColumn <=> ((ToothDisease) o).idColumn
     }
 }

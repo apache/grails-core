@@ -27,6 +27,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class ListOrderBySpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([TestEntity, ChildEntity])
+    }
+
     void "Test listOrderBy property name method"() {
         given:
         def child = new ChildEntity(name: "Child")

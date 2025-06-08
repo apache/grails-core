@@ -42,7 +42,7 @@ public class PredicateGenerator {
 
         List<Predicate> list = criteriaList.stream().
                 map(criterion -> {
-                        if (criterion instanceof Query.Disjunction) {
+                    if (criterion instanceof Query.Disjunction) {
                         List<Query.Criterion> criterionList = ((Query.Disjunction) criterion).getCriteria();
                         return cb.or(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
                     } else if (criterion instanceof Query.DistinctProjection) {
@@ -135,7 +135,8 @@ public class PredicateGenerator {
                         return cb.lt(cb.size(getFullyQualifiedPath(tablesByName, c.getProperty())), (Number) c.getValue());
                     } else if (criterion instanceof Query.SizeLessThanEquals c) {
                         return cb.le(cb.size(getFullyQualifiedPath(tablesByName, c.getProperty())), (Number) c.getValue());
-                    } else if (criterion instanceof Query.In c
+                    } else if (
+                            criterion instanceof Query.In c
                             && Objects.nonNull(c.getSubquery())
                             && !c.getSubquery().getProjections().isEmpty()
                             && c.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
@@ -152,6 +153,24 @@ public class PredicateGenerator {
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
                         subquery.select(getFullyQualifiedPath(newMap,projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
                         return in.value(subquery);
+                    } else if (
+                            criterion instanceof Query.NotIn c
+                                    && Objects.nonNull(c.getSubquery())
+                                    && !c.getSubquery().getProjections().isEmpty()
+                                    && c.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
+                    ) {
+                        JpaInPredicate in = cb.in(root_.get(c.getProperty()));
+                        Query.PropertyProjection projection = (Query.PropertyProjection) c.getSubquery().getProjections().get(0);
+                        boolean distinct = projection instanceof Query.DistinctPropertyProjection;
+                        Subquery subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
+                        Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
+                        List subCriteria = c.getSubquery().getCriteria();
+                        Map<String,From> newMap = new HashMap<>();
+                        newMap.putAll(tablesByName);
+                        newMap.put("root", from);
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
+                        subquery.select(getFullyQualifiedPath(newMap,projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
+                        return cb.not(in.value(subquery));
                     } else if (criterion instanceof Query.In c
                             && Objects.nonNull(c.getSubquery())
                             && !c.getSubquery().getProjections().isEmpty()
@@ -167,9 +186,27 @@ public class PredicateGenerator {
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
                         subquery.select(from).where(cb.and(predicates));
                         return in.value(subquery);
+                    } else if (criterion instanceof Query.NotIn c
+                            && Objects.nonNull(c.getSubquery())
+                            && !c.getSubquery().getProjections().isEmpty()
+                            && c.getSubquery().getProjections().get(0) instanceof Query.IdProjection
+                    ) {
+                        JpaInPredicate in = cb.in(root_.get("id"));
+                        Subquery subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
+                        Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
+                        List subCriteria = c.getSubquery().getCriteria();
+                        Map<String,From> newMap = new HashMap<>();
+                        newMap.putAll(tablesByName);
+                        newMap.put("root", from);
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
+                        subquery.select(from).where(cb.and(predicates));
+                        return cb.not(in.value(subquery));
                     } else if (criterion instanceof Query.In c && !c.getValues().isEmpty()
                     ) {
                         return cb.in(getFullyQualifiedPath(tablesByName, c.getProperty()), c.getValues());
+                    } else if (criterion instanceof Query.NotIn c
+                    ) {
+                        return cb.not(cb.in(getFullyQualifiedPath(tablesByName, c.getProperty()), c.getValue()));
                     } else if (criterion instanceof Query.Exists c) {
                         Subquery subquery = criteriaQuery.subquery(Object.class);
                         Root subRoot = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());

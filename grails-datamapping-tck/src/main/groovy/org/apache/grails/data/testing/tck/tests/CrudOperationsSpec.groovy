@@ -29,6 +29,10 @@ import spock.lang.IgnoreRest
  */
 class CrudOperationsSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([TestEntity, ChildEntity])
+    }
+
     void "Test get using a string-based key"() {
         given:
         def t = new TestEntity(name: "Bob", child: new ChildEntity(name: "Child"))

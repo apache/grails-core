@@ -431,7 +431,8 @@ public abstract class AbstractHibernateQuery extends Query {
         org.hibernate.query.Query query = createQuery();
         try {
 
-            return proxyHandler.unwrap(query.getSingleResult());
+            Object singleResult = query.getSingleResult();
+            return proxyHandler.unwrap(singleResult);
         }
         catch (NonUniqueResultException e) {
             return proxyHandler.unwrap(query.getResultList().get(0));

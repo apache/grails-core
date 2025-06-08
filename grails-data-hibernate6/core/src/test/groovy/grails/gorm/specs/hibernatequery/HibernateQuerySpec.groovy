@@ -31,7 +31,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.domainClasses.addAll([Person, Pet, EagerOwner])
+        manager.domainClasses.clear()
+        manager.domainClasses.addAll([Person, Pet, Face, EagerOwner])
     }
 
     def equals() {
@@ -301,30 +302,29 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def inSubQuery() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        def oldPet = new Pet(name: "Lucky")
-        oldBob.addToPets(oldPet)
-        oldBob.save(flush: true)
-        petHibernateQuery.in("owner",
-            new DetachedCriteria(Person).eq("lastName", "Builder")
+        hibernateQuery.in("firstName",
+            new DetachedCriteria(Person)
+                    .eq("lastName", "Builder")
+                    .property("firstName")
         )
         when:
-        def newPet = petHibernateQuery.singleResult()
+        def newBob = hibernateQuery.singleResult()
         then:
-        oldPet == newPet
+        oldBob == newBob
     }
 
     def notInSubQuery() {
         given:
-        def oldPet = new Pet(name: "Lucky")
-        oldBob.addToPets(oldPet)
-        oldBob.save(flush: true)
-        DetachedCriteria detachedCriteria = new DetachedCriteria(Person)
-        detachedCriteria.eq("owner.lastName", "Rogers")
-        petHibernateQuery.join("owner").notIn("owner", detachedCriteria)
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        hibernateQuery.notIn("firstName",
+                new DetachedCriteria(Person)
+                        .eq("lastName", "Rogers")
+                        .property("firstName")
+        )
         when:
-        def newPet = petHibernateQuery.singleResult()
+        def newBob = hibernateQuery.singleResult()
         then:
-        oldPet == newPet
+        oldBob == newBob
     }
 
 //    @Ignore("Exits subquery is broken")
@@ -353,14 +353,18 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
      */
     def exists() {
         given:
-        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
         new Pet(name: "Lucky", owner: oldBob).save(flush:true)
-        petHibernateQuery.singleResult()
-        hibernateQuery.exists(new DetachedCriteria(Pet).eq("owner", oldBob))
+        def one = Person.findAll()
+        def two =  Pet.findAll()
+        hibernateQuery.exists(
+                new DetachedCriteria(Pet).property("name").eq("owner", oldBob)
+        )
         when:
-        def newBob = hibernateQuery.singleResult()
+        def list = hibernateQuery.list()
         then:
-        oldBob == newBob
+        list.size() == 1
+        oldBob == list.get(0)
     }
 
     /**

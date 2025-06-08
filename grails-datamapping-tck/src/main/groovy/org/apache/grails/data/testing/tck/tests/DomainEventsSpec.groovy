@@ -30,6 +30,10 @@ import spock.lang.PendingFeature
  */
 class DomainEventsSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([ModifyPerson, PersonEvent])
+    }
+
     def setup() {
         PersonEvent.resetStore()
     }

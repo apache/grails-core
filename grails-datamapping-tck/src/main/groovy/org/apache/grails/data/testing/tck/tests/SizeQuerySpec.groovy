@@ -26,6 +26,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  * Tests for querying the size of collections etc.
  */
 class SizeQuerySpec extends GrailsDataTckSpec {
+    void setupSpec() {
+        manager.domainClasses.addAll([Country, Person])
+    }
+
 
     void "Test sizeLe criterion"() {
         given: "A country with only 1 resident"

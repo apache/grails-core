@@ -23,6 +23,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class PagedResultSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([Person])
+    }
+
     void "Test that a getTotalCount will return 0 on empty result from the list() method"() {
         when: "A query is executed that returns no results"
         def results = Person.list(max: 1)

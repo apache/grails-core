@@ -29,5 +29,6 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
                 'hibernate.hbm2ddl.auto'       : 'create',
                 'hibernate.jpa.compliance.cascade': 'true',
         ]
+        manager.domainClasses.clear()
     }
 }

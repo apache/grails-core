@@ -27,6 +27,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class QueryAfterPropertyChangeSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([Person])
+    }
+
     void "Test that an entity is de-indexed after a change to an indexed property"() {
         given:
         def person = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)

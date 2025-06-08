@@ -28,6 +28,10 @@ import spock.lang.PendingFeature
  */
 class NamedQuerySpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([Publication, PlantCategory])
+    }
+
     void "Test Named Query Passing Multiple Params To Nested Named Query"() {
         given:
         def now = new Date()

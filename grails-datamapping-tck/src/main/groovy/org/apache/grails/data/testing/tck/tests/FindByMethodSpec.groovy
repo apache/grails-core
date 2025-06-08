@@ -28,6 +28,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class FindByMethodSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([Person, Book, Highway])
+    }
+
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {
         given:
         new Person(firstName: 'Jake', lastName: 'Brown', age: 11).save()
@@ -450,5 +454,3 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 //            thrown MissingMethodException
     }
 }
-
-

@@ -27,6 +27,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class QueryByAssociationSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([TestEntity, ChildEntity])
+    }
+
     void "Test query entity by single-ended association"() {
         given:
         def age = 40

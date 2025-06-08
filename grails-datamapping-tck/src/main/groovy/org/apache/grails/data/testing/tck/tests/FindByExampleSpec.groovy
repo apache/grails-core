@@ -23,6 +23,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class FindByExampleSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.domainClasses.addAll([Plant])
+    }
+
     def "Test findAll by example"() {
         given:
         new Plant(name: "Pineapple", goesInPatch: false).save()
