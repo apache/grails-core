@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: "Java CI"
 on:
   push:
@@ -9,9 +24,13 @@ on:
   workflow_dispatch:
 permissions:
   packages: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  build:
-    name: "Build (Redis ${{ matrix.redis-version }})"
+  tests:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: "Test (Redis ${{ matrix.redis-version }})"
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -45,8 +64,8 @@ jobs:
           REDIS_PORT: 6379
         run: ./gradlew build --continue
   publish_snapshot:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: build
+    needs: tests
+    if: ${{ always() && github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (needs.tests.result == 'success' || needs.tests.result == 'skipped') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -65,11 +84,10 @@ jobs:
       - name: "📤 Publish Snapshot Artifacts"
         id: publish
         env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         run: ./gradlew --no-build-cache publish
       - name: "🔨 Generate Snapshot Documentation"
         run: ./gradlew :grails-redis:groovydoc

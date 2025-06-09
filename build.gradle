@@ -1,19 +1,72 @@
-// Workaround needed for nexus publishing bug
-// version and group must be specified in the root project
-// https://github.com/gradle-nexus/publish-plugin/issues/310
-version = projectVersion
-group = 'this.will.be.overridden'
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 
-subprojects {
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
+ext {
+    isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
+    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
+            .map(Long::parseLong)
+            .map(Instant::ofEpochSecond)
+            .orElseGet(Instant::now)
+    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
+    isCiBuild = System.getenv().get('CI') as Boolean
+}
+
+allprojects {
     repositories {
         mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/core' }
-        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeGroupByRegex 'org[.]apache[.]grails.*'
+            }
+        }
     }
 
-    if (name == 'grails-redis') {
-        // This has to be applied here
-        apply plugin: 'org.apache.grails.gradle.grails-publish'
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.seleniumhq.selenium') {
+                details.useVersion('4.25.0')
+                details.because('Temporary workaround because of https://issues.chromium.org/issues/42323769')
+            }
+        }
     }
+}
+
+subprojects {
+    configurations.configureEach {
+        resolutionStrategy {
+            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
+            cacheDynamicVersionsFor(cacheHours, 'hours')
+            cacheChangingModulesFor(cacheHours, 'hours')
+        }
+    }
+}
+
+apply {
+    from layout.projectDirectory.file('gradle/publish-root-config.gradle')
+    from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }
