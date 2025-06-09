@@ -4,16 +4,22 @@
 version = projectVersion
 group = 'this.will.be.overridden'
 
-subprojects {
 
+allprojects {
     repositories {
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/core' }
         maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
     }
+}
 
+subprojects {
     if (name == 'grails-redis') {
         // This has to be applied here
         apply plugin: 'org.apache.grails.gradle.grails-publish'
     }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }

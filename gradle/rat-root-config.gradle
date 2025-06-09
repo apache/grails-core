@@ -1,0 +1,45 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+apply plugin: 'org.nosphere.apache.rat'
+
+tasks.named('rat') {
+    excludes = [
+            '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            'CODE_OF_CONDUCT.md',
+            'LICENSE',
+            'NOTICE',
+            'BUILD_DATE', // build artifact for storing the build date / verifying
+            'CHECKSUMS', // build artifact for storing checksums for easy verification
+            'PUBLISHED_ARTIFACTS', // build artifact for storing published artifacts coordinates & paths
+            'licenses/**', // licenses directory excluded
+            '**/build/**', // Gradle generated build directories
+            '**/.gitattributes', // git configuration isn't code
+            '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
+            '**/*.html', // html files are only in test
+            '**/resources/*', // exclude test artifacts
+            'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
+            'src/*', // exclude build artifacts
+            '**/.sdkmanrc', // tool selection files aren't code
+            '**/.gitignore', // git configuration isn't code
+            '**/.gitkeep', // git configuration isn't code
+            'etc/bin/results/**', // exclude build directories
+            '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
+    ]
+    // never cache license audits
+    it.outputs.upToDateWhen { false }
+}
