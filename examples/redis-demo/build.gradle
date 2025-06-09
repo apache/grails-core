@@ -40,6 +40,7 @@ dependencies {
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails.web:grails-web-boot'
+    implementation 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
@@ -59,4 +60,13 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')
+}
+
+assets {
+    excludes = [
+            'webjars/jquery/**',
+    ]
+    includes = [
+            'webjars/jquery/*/dist/jquery.js',
+    ]
 }
