@@ -13,3 +13,4 @@ build
 *.iws
 *.swp
 out
+!etc/bin
