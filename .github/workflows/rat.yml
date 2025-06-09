@@ -17,13 +17,11 @@ name: RAT Report
 on:
   push:
     branches:
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'
+      - '[3-9]+.[0-9]+.x'
       - license-audit
   pull_request:
     branches:
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'
+      - '[3-9]+.[0-9]+.x'
       - license-audit
   workflow_dispatch:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits

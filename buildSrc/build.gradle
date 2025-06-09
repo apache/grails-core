@@ -28,13 +28,20 @@ file('../gradle.properties').withInputStream {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/core' }
-    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/staging'
+        content {
+            includeGroupByRegex 'org[.]apache[.]grails.*'
+        }
+    }
 }
 
 dependencies {
     implementation platform("org.apache.grails:grails-bom:${versions.get('grailsVersion')}")
-    implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    implementation 'org.apache.grails:grails-gradle-plugins'
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:${versions.get('ratVersion')}"
+    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${versions.get('gradleCryptoChecksumVersion')}"
 }

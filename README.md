@@ -19,9 +19,26 @@ limitations under the License.
 Grails Redis Plugin
 ===================
 
-For integration between [Redis][redis] and Grails GORM layer, see the [Redis GORM plugin][redisgorm].
+Building
+--------------
 
-That plugin was originally called "redis" (the name of this plugin), but it has since been refactored to "redis-gorm" and now relies on this plugin for connectivity.
+To build this project from source, first bootstrap gradle:
+
+     cd gradle-bootstrap
+     gradle
+     cd -
+
+After bootstrap the project, you can build it with the command:
+
+     ./gradlew build
+
+To run the build only, and skip the tests, run:
+
+     ./gradlew build -PskipTests
+
+Then publish the jar files to mavenLocal for usage:
+
+    ./gradlew publishToMavenLocal
 
 What is Redis?
 --------------
@@ -46,21 +63,18 @@ What is Jedis?
 Installation
 ------------
 
-# Grails 3
+# Grails 7+
 
 Add the following dependency to build.gradle:
 
 ```
 dependencies {
   ...
-  implementation 'org.grails.plugins:grails-redis:3.0.0'
+  implementation 'org.apache.grails:grails-redis:5.0.0'
 
 
 }
 ```
-
-NOTE: The 2.X is compatible only with Grails 3.
-
 
 Out of the box, the plugin expects that Redis is running on `localhost:6379`.  You can modify this (as well as any other pool config options) by adding a stanza like this to your `grails-app/conf/Config.groovy` file:
 
@@ -643,7 +657,6 @@ Release Notes Grails 2.x
 * 1.6.0 - released 11/04/2014 - Changed how `RedisService` is spring injected so that it's easier to mock out for tests by clients.  Upgraded to Jedis 2.6.0.
 * 1.6.2 - released 02/06/2015 - Port and timeout properties injected by external properties file are now converted to Integer.  If not integer, then defaults used.
 
-[redisgorm]: http://grails.github.com/inconsequential/redis/
 [redis]: http://redis.io
 [redisgroovy]: http://naleid.com/blog/2010/12/28/intro-to-using-redis-with-groovy/
 [slideshareggr]: http://naleid.com/blog/2011/06/27/redis-groovy-and-grails-presentation-at-gr8conf-2011-and-gum/

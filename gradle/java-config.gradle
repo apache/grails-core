@@ -18,3 +18,24 @@
  */
 
 compileJava.options.release = javaVersion.toInteger()
+
+extensions.configure(JavaPluginExtension)  {
+    it.withJavadocJar()
+    it.withSourcesJar()
+}
+
+tasks.withType(Javadoc).configureEach { Javadoc it ->
+    it.options.noTimestamp true // prevent the file header with the date
+    it.options.bottom "Generated ${formattedBuildDate} (UTC)"
+}
+
+// JavaCompile is not configured because we put java files inside of the groovy source sets
+
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
+    // Preserve method parameter names in Groovy classes for IDE parameter hints.
+    groovyOptions.parameters = true
+    options.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
+    options.fork = true
+    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+}

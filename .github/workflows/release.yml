@@ -20,17 +20,43 @@ on:
 permissions:
   contents: write
   packages: read
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
-  release:
+  publish:
+    permissions:
+      packages: read  #  pre-release workflow
+      contents: write  #  to create release
+      issues: write  #  to modify milestones
     runs-on: ubuntu-24.04
+    outputs:
+      release_version: ${{ steps.release_version.outputs.value }}
+      extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "Extract repository name"
+        id: extract_repository_name
+        run: |
+          echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "Ensure source files use common date"
+        run: |
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+      - name: '🔐 Set up GPG'
+        run: |
+          echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
+          gpg --list-keys
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          java-version: 17
           distribution: liberica
+          java-version: '17.0.15' # this must be a specific version for reproducible builds
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -40,33 +66,200 @@ jobs:
         run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "⚙️ Run pre-release"
         uses: apache/grails-github-actions/pre-release@asf
-      - name: "🔐 Generate key file for artifact signing"
         env:
-          SECRING_FILE: ${{ secrets.SECRING_FILE }}
-        run: echo $SECRING_FILE | base64 -d > ${{ github.workspace }}/secring.gpg
-      - name: "📤 Publish to Sonatype - close and release staging repository"
+          RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
+      - name: "📤 Publish to staging repository"
         env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'true'
-          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
-          NEXUS_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_RELEASE_URL }}
-          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.NEXUS_PUBLISH_STAGING_PROFILE_ID }} # TODO: What about this secret?
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: '${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
-          ./gradlew --refresh-dependencies
-          -Psigning.secretKeyRingFile=${{ github.workspace }}/secring.gpg
+          ./gradlew
           publishToSonatype
-          closeAndReleaseSonatypeStagingRepository
+          closeSonatypeStagingRepository
+          aggregateChecksums
+          aggregatePublishedArtifacts
+      - name: "Upload checksums"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/CHECKSUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Upload published artifacts"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/PUBLISHED_ARTIFACTS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Generate Build Date file"
+        run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
+      - name: "Upload Build Date file"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/BUILD_DATE.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  source:
+    # to ensure we never publish any build artifacts, run the source distribution as a separate build workflow
+    environment: source
+    name: "Source Distribution"
+    needs: publish
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
+    steps:
+      - name: "Extract repository name"
+        id: extract_repository_name
+        run: |
+          echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+          path: project
+      - name: "🗑️ Remove unnecessary files"
+        run: |
+          rm -f project/gradle/wrapper/gradle-wrapper.jar
+          rm -f project/gradle/wrapper/gradle-wrapper.properties
+          rm -f project/gradlew
+          rm -f project/.asf.yaml
+      - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd project
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
+      - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd project
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
+      - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd project
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
+      - name: "Ensure source files use common date"
+        run: |
+          SOURCE_DATE_EPOCH=$(cat project/BUILD_DATE)
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+      - name: "📦 Create source distribution ZIP"
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"  # Strip 'v' prefix
+          zip -r "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip" project -x 'project/.git/*' -x 'project/.github/*'
+      - name: '🔐 Set up GPG'
+        run: |
+          echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
+          gpg --list-keys
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+      - name: "🔏 Sign source distribution ZIP"
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"  # Strip 'v' prefix
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip
+      - name: "📦 Create source distribution checksum"
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"  # Strip 'v' prefix
+          sha512sum apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip > "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip.sha512"
+      - name: "🚀 Upload ZIP and Signature to GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            apache-${{ steps.extract_repository_name.outputs.repository_name }}-*-incubating-src.zip
+            apache-${{ steps.extract_repository_name.outputs.repository_name }}-*-incubating-src.zip.sha512
+            apache-${{ steps.extract_repository_name.outputs.repository_name }}-*-incubating-src.zip.asc
+      - name: "Remove CHECKSUMS.txt asset from release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cd project
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} CHECKSUMS.txt --yes
+      - name: "Remove BUILD_DATE.txt asset from release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cd project
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} BUILD_DATE.txt --yes
+      - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cd project
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} PUBLISHED_ARTIFACTS.txt --yes
+  release:
+    environment: release
+    needs: [publish, source]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: '17.0.15'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "⚙️ Run post-release"
+        uses: apache/grails-github-actions/post-release@asf
+  docs:
+    environment: docs
+    name: "Publish Documentation"
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required for gradle.properties revert
+      issues: write # required for milestone closing
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17.0.15'
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Documentation"
         run: ./gradlew :grails-redis:groovydoc
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
       - name: "🚀 Publish to Github Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: plugin/build/docs
-          VERSION: ${{ steps.release_version.outputs.release_version }}
-      - name: "⚙️ Run post-release"
-        uses: apache/grails-github-actions/post-release@asf
+          VERSION: ${{ needs.publish.outputs.release_version }}
