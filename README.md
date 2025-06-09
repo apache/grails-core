@@ -19,7 +19,27 @@ limitations under the License.
 Grails Spring Security
 ======================
 
-See [documentation](https://apache.github.io/grails-spring-security/latest) for further information.
+See [documentation](https://apache.github.io/grails-spring-security/latest) for detailed information.
+
+### Building
+
+To build this project from source, first bootstrap gradle:
+
+     cd gradle-bootstrap
+     gradle
+     cd -
+
+After bootstrap the project, you can build it with the command:
+
+     ./gradlew build
+
+To run the build only, and skip the tests, run:
+
+     ./gradlew build -PskipTests
+
+Then publish the jar files to mavenLocal for usage:
+
+    ./gradlew publishToMavenLocal
 
 ### Branch structure 
 
@@ -44,19 +64,3 @@ spring:
       - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 ```
-
-### Building
-
-To build this project from source, first bootstrap gradle:
-
-     cd gradle-bootstrap
-     gradle
-     cd -
-
-After bootstrap the project, you can build it with the command: 
-
-     ./gradlew build
-
-To run the build only, and skip the tests, run:
-    
-     ./gradlew build -PskipTests
