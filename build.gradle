@@ -17,28 +17,57 @@
  *  under the License.
  */
 
-// Workaround needed for nexus publishing bug
-// version and group must be specified in the root project
-// https://github.com/gradle-nexus/publish-plugin/issues/310
-version = projectVersion
-group = 'this.will.be.overridden'
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
+subprojects {
+
+ext {
+    isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
+    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
+            .map(Long::parseLong)
+            .map(Instant::ofEpochSecond)
+            .orElseGet(Instant::now)
+    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
+    isCiBuild = System.getenv().get('CI') as Boolean
+}
 
 allprojects {
     repositories {
         mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/core' }
-        maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeGroupByRegex 'org[.]apache[.]grails.*'
+            }
+        }
     }
-}
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.seleniumhq.selenium') {
+                details.useVersion('4.25.0')
+                details.because('Temporary workaround because of https://issues.chromium.org/issues/42323769')
+            }
+        }
+    }
 
 subprojects {
-    if (name == 'grails-redis') {
-        // This has to be applied here
-        apply plugin: 'org.apache.grails.gradle.grails-publish'
+    configurations.configureEach {
+        resolutionStrategy {
+            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
+            cacheDynamicVersionsFor(cacheHours, 'hours')
+            cacheChangingModulesFor(cacheHours, 'hours')
+        }
     }
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/rat-root-config.gradle')
+    from layout.projectDirectory.file('gradle/publish-root-config.gradle')
+    from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }

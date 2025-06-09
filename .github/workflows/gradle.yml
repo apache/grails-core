@@ -24,9 +24,13 @@ on:
   workflow_dispatch:
 permissions:
   packages: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  build:
-    name: "Build (Redis ${{ matrix.redis-version }})"
+  tests:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: "Test (Redis ${{ matrix.redis-version }})"
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -60,8 +64,8 @@ jobs:
           REDIS_PORT: 6379
         run: ./gradlew build --continue
   publish_snapshot:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: build
+    needs: tests
+    if: ${{ always() && github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (needs.tests.result == 'success' || needs.tests.result == 'skipped') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -80,11 +84,10 @@ jobs:
       - name: "📤 Publish Snapshot Artifacts"
         id: publish
         env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GRAILS_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW }}
           MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         run: ./gradlew --no-build-cache publish
       - name: "🔨 Generate Snapshot Documentation"
         run: ./gradlew :grails-redis:groovydoc

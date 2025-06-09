@@ -17,25 +17,16 @@
  *  under the License.
  */
 
-dependencies {
-    // In Gradle 9, this needs to be declared
-    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
-    add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
-}
-
-tasks.withType(Test).configureEach {
-    onlyIf {
-        ![
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
+// Any jar, zip, or archive should be reproducible
+// No longer needed after https://github.com/gradle/gradle/issues/30871
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false // to prevent timestamp mismatches
+    reproducibleFileOrder = true // to keep the same ordering
+    // to avoid platform specific defaults, set the permissions consistently
+    filePermissions { permissions ->
+        permissions.unix(0644)
     }
-
-    useJUnitPlatform()
-    testLogging {
-        exceptionFormat = 'full'
-        events 'passed', 'skipped', 'failed'//, 'standardOut', 'standardError'
+    dirPermissions { permissions ->
+        permissions.unix(0755)
     }
-    beforeTest { descriptor -> logger.quiet(" -- $descriptor") }
 }

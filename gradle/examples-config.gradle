@@ -20,3 +20,15 @@
 tasks.withType(Groovydoc).configureEach {
     enabled = false
 }
+
+// Workaround for parallel builds due to https://github.com/bertramdev/asset-pipeline/issues/177
+if ('assetCompile' in tasks.names) {
+    tasks.named('assetCompile') {
+        outputs.dir(rootProject.layout.buildDirectory.dir('asset-serialize'))
+    }
+}
+
+grails {
+    // turn off dependency management so we *know* we're testing with the right versions and not from a remote repository
+    springDependencyManagement = false
+}
