@@ -243,6 +243,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
             HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
             hibernateQuery.max(this.max);
             hibernateQuery.offset(this.offset);
+            hibernateQuery.setDetachedCriteria(this.detachedCriteria);
             this.projections.getProjectionList().forEach(projection -> {hibernateQuery.projections().add(projection);});;
             getCriteria().getCriteria().forEach(hibernateQuery::add);
             return hibernateQuery;
