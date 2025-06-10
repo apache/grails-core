@@ -212,6 +212,7 @@ jobs:
           cd ${{ steps.extract_repository_name.outputs.repository_name }}
           gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} PUBLISHED_ARTIFACTS.txt --yes
   release:
+    name: "Close Release"
     environment: release
     needs: [publish, source, docs]
     runs-on: ubuntu-latest
