@@ -1,4 +1,4 @@
-<!--
+x<!--
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,6 +70,8 @@ For Example:
 ```bash
     verify.sh orgapachegrails-1030 v7.0.0-M4 /tmp/grails-verify
 ```
+
+The `staging repo id` can be found under https://github.com/apache/grails-core/actions/workflows/release.yml, click `publish`, open the stage `Create Staging Repository` and look for the line starting with `Created staging repository` 
 
 ### Download the Staged Artifacts
 
