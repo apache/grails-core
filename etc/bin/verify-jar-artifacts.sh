@@ -20,13 +20,12 @@
 
 set -euo pipefail
 
-STAGING_REPO_ID=$1
-RELEASE_TAG=$2
-DOWNLOAD_LOCATION="${3:-downloads}"
+RELEASE_TAG=$1
+DOWNLOAD_LOCATION="${2:-downloads}"
 DOWNLOAD_LOCATION=$(realpath "${DOWNLOAD_LOCATION}")
 
-if [ -z "${STAGING_REPO_ID}" ] || [ -z "${RELEASE_TAG}" ]; then
-  echo "Usage: $0 [staging-repo-id] [release-tag] <optional download location>"
+if [ -z "${RELEASE_TAG}" ]; then
+  echo "Usage: $0 [release-tag] <optional download location>"
   exit 1
 fi
 
@@ -60,7 +59,7 @@ echo "Importing GPG key to independent GPG home ..."
 gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
 echo "✅ GPG Key Imported"
 
-REPO_BASE_URL="https://repository.apache.org/content/repositories/${STAGING_REPO_ID}"
+REPO_BASE_URL="https://repository.apache.org/content/groups/staging"
 
 # switch to the extracted Grails source directory
 cd grails

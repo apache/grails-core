@@ -154,8 +154,9 @@ ext {
                     inlineVersion = null
                 }
 
-                PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
                 if (inlineVersion) {
+                    PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
+                    propertyNameCalculator.addProjects(rootProject.subprojects)
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
@@ -164,6 +165,13 @@ ext {
 
                         // Add an entry in the <properties> node with the actual version number
                         pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
+                    }
+
+                    if (gradle.includedBuilds*.any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
+                        String baseVersionName = artifactId.replaceAll('-', '.')
+                        String versionName = "${baseVersionName}.version" as String
+                        dep.version[0].value = "\${${versionName}}" as String
+                        pomProperties.put(versionName, inlineVersion)
                     }
                 } else if (!inlineVersion) {
                     throw new GradleException("Dependency $groupId:$artifactId does not have a version.")

@@ -51,7 +51,7 @@ export SOURCE_DATE_EPOCH=$(cat "${DOWNLOAD_LOCATION}/grails/BUILD_DATE")
 export TEST_BUILD_REPRODUCIBLE='true'
 
 if [[ -d "${DOWNLOAD_LOCATION}/grails/etc/bin/results/first" ]]; then
-  echo "✅ Directory 'first' exists."
+  echo "✅ Directory containing downloaded jar files exists ('first')."
 else
   echo "❌ Directory 'first' not found. Please place the published jar files under ${DOWNLOAD_LOCATION}/grails/etc/bin/results/first..."
   exit 1
@@ -93,9 +93,60 @@ DIFF_RESULTS=$(comm -3 <(sort ../../../CHECKSUMS) <(sort second.txt) | cut -d' '
 echo "$DIFF_RESULTS" > diff.txt
 
 if [ -s diff.txt ]; then
+  echo "Differences were found, diffing jar files ..."
+  if [[ ! -f "vineflower.jar" ]]; then
+      echo "Downloading Vineflower decompiler..."
+      curl -sL -o "vineflower.jar" https://github.com/Vineflower/vineflower/releases/download/1.11.1/vineflower-1.11.1.jar
+      if [[ $? -ne 0 ]]; then
+          echo "❌ Failed to download vineflower.jar ❌"
+          exit 1
+      fi
+  fi
+
+  while IFS= read -r jar_file; do
+      echo "Checking jar ${jar_file}..."
+
+      echo "Extracting ${jar_file}"
+      "${SCRIPT_DIR}/extract-build-artifact.sh" "${jar_file}" "${DOWNLOAD_LOCATION}/grails/etc/bin/results"
+      echo "✅ Extracted ${jar_file} to firstArtifact and secondArtifact directories."
+
+      # Check extraction success
+      if [[ ! -d "firstArtifact" || ! -d "secondArtifact" ]]; then
+          echo "❌ Missing extracted artifacts for ${jar_file} ❌"
+          echo "${jar_file}" >> diff_purged.txt
+          continue
+      fi
+
+      rm -rf "firstSource" "secondSource" || true
+      mkdir -p "firstSource" "secondSource"
+
+      echo "Decompiling ${jar_file} class files..."
+      java -jar vineflower.jar firstArtifact firstSource > /dev/null 2>&1
+      java -jar vineflower.jar secondArtifact secondSource > /dev/null 2>&1
+      echo "✅ Decompiled ${jar_file}"
+
+      set +e
+      DIFF_RESULT=$(diff -r -q "firstSource" "secondSource")
+      set -e
+
+      if [[ -z "${DIFF_RESULT}" ]]; then
+          echo "✅ No differences remain for ${jar_file}. Removing from diff.txt."
+      else
+          echo "❌ Differences still found in ${jar_file}."
+          echo "${jar_file}" >> diff_purged.txt
+      fi
+
+  done < diff.txt
+  mv diff_purged.txt diff.txt
+  rm -rf firstArtifact secondArtifact firstSource secondSource || true
+
+  if [ -s diff.txt ]; then
   echo "❌ Differences Found ❌"
   cat diff.txt
   echo "❌ Differences Found ❌"
+  else
+    echo "✅ Differences were resolved via decompilation. ✅"
+  fi
 else
   echo "✅ No Differences Found. ✅"
   exit 0
