@@ -33,6 +33,9 @@ jobs:
       release_version: ${{ steps.release_version.outputs.value }}
       extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
     steps:
+      - name: "📝 Store the current release version"
+        id: release_version
+        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "Extract repository name"
@@ -41,6 +44,9 @@ jobs:
           echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ steps.release_version.outputs.value }}
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "Ensure source files use common date"
@@ -61,9 +67,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "📝 Store the current release version"
-        id: release_version
-        run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "⚙️ Run pre-release"
         uses: apache/grails-github-actions/pre-release@asf
         env:
@@ -121,45 +124,45 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref_name }}
-          path: project
+          path: ${{ steps.extract_repository_name.outputs.repository_name }}
       - name: "🗑️ Remove unnecessary files"
         run: |
-          rm -f project/gradle/wrapper/gradle-wrapper.jar
-          rm -f project/gradle/wrapper/gradle-wrapper.properties
-          rm -f project/gradlew
-          rm -f project/.asf.yaml
+          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradle/wrapper/gradle-wrapper.jar
+          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradle/wrapper/gradle-wrapper.properties
+          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradlew
+          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/.asf.yaml
       - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd project
+          cd ${{ steps.extract_repository_name.outputs.repository_name }}
           release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
       - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd project
+          cd ${{ steps.extract_repository_name.outputs.repository_name }}
           release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
       - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd project
+          cd ${{ steps.extract_repository_name.outputs.repository_name }}
           release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
       - name: "Ensure source files use common date"
         run: |
-          SOURCE_DATE_EPOCH=$(cat project/BUILD_DATE)
+          SOURCE_DATE_EPOCH=$(cat ${{ steps.extract_repository_name.outputs.repository_name }}/BUILD_DATE)
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: |
           version="${{ github.ref_name }}"
           version="${version#v}"  # Strip 'v' prefix
-          zip -r "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip" project -x 'project/.git/*' -x 'project/.github/*'
+          zip -r "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip" ${{ steps.extract_repository_name.outputs.repository_name }} -x '${{ steps.extract_repository_name.outputs.repository_name }}/.git/*' -x '${{ steps.extract_repository_name.outputs.repository_name }}/.github/*'
       - name: '🔐 Set up GPG'
         run: |
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
@@ -191,25 +194,25 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd project
+          cd ${{ steps.extract_repository_name.outputs.repository_name }}
           gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} CHECKSUMS.txt --yes
       - name: "Remove BUILD_DATE.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd project
+          cd ${{ steps.extract_repository_name.outputs.repository_name }}
           gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} BUILD_DATE.txt --yes
       - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd project
+          cd ${{ steps.extract_repository_name.outputs.repository_name }}
           gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} PUBLISHED_ARTIFACTS.txt --yes
   release:
     environment: release
-    needs: [publish, source]
+    needs: [publish, source, docs]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -218,12 +221,13 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: '17.0.15' # this must be a specific version for reproducible builds
+          java-version: '17.0.15'
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -233,7 +237,7 @@ jobs:
   docs:
     environment: docs
     name: "Publish Documentation"
-    needs: publish
+    needs: [publish, source]
     runs-on: ubuntu-latest
     permissions:
       contents: write # required for gradle.properties revert
@@ -242,11 +246,12 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          java-version: '17.0.15' # this must be a specific version for reproducible builds
+          java-version: '17.0.15'
           distribution: liberica
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
