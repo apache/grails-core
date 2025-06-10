@@ -28,8 +28,13 @@ file('../gradle.properties').withInputStream {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/core' }
-    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex  'org[.]apache[.]grails.*', '.*','.*SNAPSHOT'
+        }
+    }
     maven {
         url = 'https://repository.apache.org/content/groups/staging'
         content {

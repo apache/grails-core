@@ -25,11 +25,6 @@ plugins {
 
 group = 'functional.test'
 
-repositories {
-    maven { url = 'https://repo.grails.org/grails/core' }
-    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
-}
-
 dependencies {
 
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
