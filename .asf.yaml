@@ -5,14 +5,20 @@ github:
       required_reviewers:
         - id: grails-committers
           type: Team
+        - id: jdaugherty
+          type: User
       wait_timer: 0
     release:
       required_reviewers:
         - id: grails-committers
           type: Team
+        - id: jdaugherty
+          type: User
       wait_timer: 0
     docs:
       required_reviewers:
         - id: grails-committers
           type: Team
+        - id: jdaugherty
+          type: User
       wait_timer: 0
