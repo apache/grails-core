@@ -27,6 +27,7 @@ dependencies {
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation 'org.springframework.security:spring-security-core'
     implementation 'org.apache.grails.data:grails-datamapping-core'
+    implementation 'org.apache.groovy:groovy' // because groovy is applied, we need to provide a version
 }
 
 String getGrailsDocumentationVersion(String version) {

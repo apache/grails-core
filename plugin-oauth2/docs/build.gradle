@@ -53,6 +53,12 @@ ext {
     ]
 }
 
+// because the groovy plugin is being applied, a version of groovy must be provided
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+    implementation 'org.apache.groovy:groovy'
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
