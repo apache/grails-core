@@ -1,0 +1,17 @@
+github:
+  environments:
+    source:
+      required_reviewers:
+        - id: grails-committers
+          type: Team
+      wait_timer: 0
+    release:
+      required_reviewers:
+        - id: grails-committers
+          type: Team
+      wait_timer: 0
+    docs:
+      required_reviewers:
+        - id: grails-committers
+          type: Team
+      wait_timer: 0
