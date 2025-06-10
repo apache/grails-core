@@ -24,6 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   publish:
+    name: "Stage Jar Files"
     permissions:
       packages: read  #  pre-release workflow
       contents: write  #  to create release
