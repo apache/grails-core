@@ -1,4 +1,5 @@
 github:
+  # deployment environments to delay releasing until the necessary steps have completed
   environments:
     source:
       required_reviewers:
