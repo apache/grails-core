@@ -127,9 +127,9 @@ class ProfileCompilerTask extends AbstractCompile {
         boolean profileYmlExists = configFile?.exists()
 
         Yaml yaml = createYamlHandler()
-        Map<String, Object> profileData
+        LinkedHashMap<String, Object> profileData
         if (profileYmlExists) {
-            profileData = (Map<String, Object>) configFile.withReader { BufferedReader r ->
+            profileData = (LinkedHashMap<String, Object>) configFile.withReader { BufferedReader r ->
                 yaml.load(r)
             }
         } else {
@@ -139,7 +139,7 @@ class ProfileCompilerTask extends AbstractCompile {
 
         if (!profileData.containsKey('extends')) {
             List<String> dependencies = []
-            project.configurations.named(GrailsProfileGradlePlugin.RUNTIME_ONLY_CONFIGURATION).get().dependencies.all { Dependency d ->
+            project.configurations.named(GrailsProfileGradlePlugin.PROFILE_API_CONFIGURATION).get().dependencies.all { Dependency d ->
                 String profileName = d.name
                 if (d instanceof DefaultProjectDependency) {
                     DefaultProjectDependency projectDependency = (DefaultProjectDependency) d
@@ -151,10 +151,10 @@ class ProfileCompilerTask extends AbstractCompile {
             profileData.put('extends', dependencies.join(','))
         }
 
-        List<File> groovySourceFiles = (commandsDirectory.getOrNull()?.files()?.findAll { File f ->
+        List<File> groovySourceFiles = (commandsDirectory.getOrNull()?.asFileTree?.findAll { File f ->
             f.name.endsWith('.groovy')
         } ?: []) as List<File>
-        List<File> ymlSourceFiles = (commandsDirectory.getOrNull()?.files()?.findAll { File f ->
+        List<File> ymlSourceFiles = (commandsDirectory.getOrNull()?.asFileTree?.findAll { File f ->
             f.name.endsWith('.yml')
         } ?: []) as List<File>
 
@@ -176,9 +176,9 @@ class ProfileCompilerTask extends AbstractCompile {
             File parentDir = configFile.parentFile.canonicalFile
             File[] featureDirs = new File(parentDir, 'features').listFiles({ File f -> f.isDirectory() && !f.name.startsWith('.') } as FileFilter)
             if (featureDirs) {
-                Map map = (Map) profileData.get('features')
+                LinkedHashMap map = (LinkedHashMap) profileData.get('features')
                 if (map == null) {
-                    map = [:]
+                    map = [:] as LinkedHashMap
                     profileData.put('features', map)
                 }
                 List featureNames = []
@@ -186,7 +186,7 @@ class ProfileCompilerTask extends AbstractCompile {
                     featureNames.add f.name
                 }
                 if (featureNames) {
-                    map.put('provided', featureNames)
+                    map.put('provided', featureNames.sort())
                 }
                 profileData.put('features', map)
             }
@@ -203,7 +203,7 @@ class ProfileCompilerTask extends AbstractCompile {
         }
 
         if (templates) {
-            profileData.put('templates', templates)
+            profileData.put('templates', templates.sort())
         }
 
         profileRegularFile.asFile.withWriter { BufferedWriter w ->
@@ -213,7 +213,7 @@ class ProfileCompilerTask extends AbstractCompile {
         if (groovySourceFiles) {
             CompilerConfiguration configuration = new CompilerConfiguration()
             configuration.setScriptBaseClass('org.grails.cli.profile.commands.script.GroovyScriptCommand')
-            configuration.setTargetDirectory(destination.asFile)
+            configuration.setTargetDirectory(destination.getAsFile())
             configuration.setClasspath(classpath.asPath)
 
             def importCustomizer = new ImportCustomizer()

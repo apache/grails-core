@@ -51,6 +51,7 @@ groovydocTask.configure { Groovydoc it ->
     it.includeMainForScripts = false
     it.processScripts = false
     it.noTimestamp = true
+    it.noVersionStamp = false
     it.destinationDir = project.file('build/docs/api')
 }
 

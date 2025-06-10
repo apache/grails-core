@@ -38,6 +38,7 @@ allprojects {
 
 ext {
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
@@ -53,6 +54,5 @@ ext {
 }
 
 apply {
-    from layout.projectDirectory.file('gradle/gradle-wrapper-root-config.gradle')
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
 }

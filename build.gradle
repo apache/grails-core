@@ -19,11 +19,10 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-
-
 ext {
     isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
@@ -91,7 +90,6 @@ subprojects {
 }
 
 apply {
-    from layout.projectDirectory.file('gradle/gradle-wrapper-root-config.gradle')
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }

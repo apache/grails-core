@@ -47,53 +47,144 @@ During the staging step, we must create a source distribution & stage any binary
 3. Create a matching release in `grails-forge`:
    * Follow the same steps to create a release in grails-forge. Update any release notes specific to the delegating cli & grails forge.
 4. (grails-forge) The Github workflow `release.yml`, titled `Release - Create grails-forge`, will kick off.  This workflow will run a `publish` job that will complete similar steps to the `grails-core` publish job.
-5. Kick off the `Release - Grails Distribution` workflow from `distribution.yml` in `grails-core`. This job will: 
+5. Kick off the `Release - Source Distribution` workflow from `release-source-distribution.yml` in `grails-core`. This job will: 
      * download the tagged grails source
      * download the tagged grails-forge source
      * generate a source distribution meeting the ASF requirements
-     * upload the source distribution to the Github release `grails-core` release
-     * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/VERSION/sources
-6. Kick off the `Distribution` workflow in `grails-forge`, which will:
-     * create a binary distribution of the grails CLIs
-     * upload the binary distribution to the Github release `grails-forge` release
-     * upload the binary distribution that will be uploaded to sdkman to https://dist.apache.org/repos/dist/dev/grails/VERSION/distribution
+     * upload the source distribution to the Github `grails-core` release
+6. Kick off the `Release - Upload to dist.apache.org` workflow from `release-upload.yml` in `grails-core`. This job will:
+     * update the KEYS file under https://dist.apache.org/repos/dist/release/grails/KEYS with the version in the tagged source code
+     * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/sources
+     * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
+     * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
 
-Once `grails-forge` & `grails-core` are published the end source & binary distributions should be staged. 
+## 2. Verifying Artifacts are Authentic
 
-## 2. Verifying
+Prior to releasing a vote, we need to verify the staged artifacts. The below sections detail all of the necessary steps to ensure the source & binary distributions are authentic and have not been changed. To verify all of these at once, use the script: 
 
-Prior to releasing a vote, we need to verify the staged artifacts. At a high level, the following must be completed to verify these artifacts:
-1. Download the zipped source distribution artifacts:
+```bash
+    verify.sh <staging repo id> <release tag> <download location>
+```
+
+For Example:
+```bash
+    verify.sh orgapachegrails-1030 v7.0.0-M4 /tmp/grails-verify
+```
+
+### Download the Staged Artifacts
+
+Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
+
+### Source Distribution Verification
+
+The following are the source distribution artifacts:
    * `apache-grails-<version>-incubating-src.zip` - the source distribution
-   * `apache-grails-<version>-incubating-src.zip.asc` - the public key to verify the source distribution
+   * `apache-grails-<version>-incubating-src.zip.asc` - the generated signature of the source distribution
    * `apache-grails-<version>-incubating-src.zip.sha512` - the checksum to verify the source distribution
-2. Verify the distribution checksum via the command:
+
+Use `etc/bin/verify-source-distribution.sh` to verify the source distribution. This script performs the following:
+
+Verifies the source distribution checksum via the command:
    ```bash
    shasum -a 512 -c apache-grails-<version>-incubating-src.zip.sha512
    ```
-3. Verify the distribution signature via the command:
+
+Verifies the source distribution signature via the command:
    ```bash
     gpg --verify apache-grails-<version>-incubating-src.zip.asc apache-grails-<version>-incubating-src.zip
-    ```
-4. Extract the zip file and verify the contents:
+   ```
+
+Extracts the zip file and verifies the contents:
    * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
    * Ensure `README.md` & `CONTRIBUTING.md` are present to ensure project build & usage instructions are present.
-   * Ensure the `PUBLISHED` file is present so we know how to pull the various jar files.
-5. Verify the signed jar files by downloading all jars inside of the `PUBLISHED` file.
-   * For each jar, verify the jar file matches the published one:
+   * Ensure the `PUBLISHED_ARTIFACTS` file is present so we know how to pull the various jar files.
+   * Ensure the `CHECKSUMS` file is present so we can ensure those checksums match the staged artifacts.
+
+### Jar file Signature Verification (Nexus Staging Repositories)
+
+As part of uploading to repository.apache.org the signatures are verified to match a KEY that has been distributed, but RAO does not verify that the jar files are built with a key trusted by the Grails project.
+
+To ensure checksums match the server & signatures match, run the script `etc/bin/verify-jar-artifacts.sh` in the `grails-core` repository. This script will download the jar files from the staging repository, verify their signatures, and ensure they match the checksums provided in the source distribution.
+
+Example: 
+```bash
+    ./etc/bin/verify-jar-artifacts.sh orgapachegrails-1026 v7.0.0-M4 <grailsdownloadlocation>
+```
+
+### Reproducible Jar File
+After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base.
+
+Bootstrap the source distribution so that it can be built: 
+
+    gradle wrapper
+    cd grails-gradle
+    gradlew wrapper
+    cd -
+
+Run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
+
+If there are any jar file differences, confirm they are relevant by following the following steps: 
+1. Extract the differing jar file using the `etc/bin/extract-build-artifact.sh <jarfilepath from diff.txt>`
+2. In IntelliJ, under `etc/bin/results` there will now be a `firstArtifact` & `secondArtifact` folder. Select them both, right click, and select `Compared Directories`  
+
+### Binary Distribution Verification
+
+Grails has 2 binary distributions:
+   * `grailsw` - the Grails wrapper, which is a script that downloads the necessary jars to run Grails. This will exist inside of the generated applications, but can be optionally downloaded as a standalone binary distribution.
+   * `grails` - the delegating CLI, which is a script that delegates to the Grails Forge CLI. This is the `sdkman` distribution.
+
+#### Verify Grails Wrapper Binary Distribution
+
+The following are the Grails Wrapper distribution artifacts:
+* `apache-grails-wrapper-<version>-incubating-bin.zip` - the wrapper distribution
+* `apache-grails-wrapper-<version>-incubating-bin.zip.asc` - the generated signature of the wrapper distribution
+* `apache-grails-wrapper-<version>-incubating-bin.zip.sha512` - the checksum to verify the wrapper distribution
+
+Use `etc/bin/verify-wrapper-distribution.sh` to verify the wrapper distribution. This script performs the following:
+
+Verifies the wrapper distribution checksum via the command:
    ```bash
-    gpg --verify <jar>.asc <jar>
-    ```
-6. Run the `verify-distribution.sh` shell script to compare the published jar files to a locally built version of them.
-7. For any differences, extract the jar files, use IntelliJ to compare each differing file. Assuming differences are ordering related, we can continue with the verification.
-8. Download the binary distrubtion & expand it to test the various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`.  For each CLI, verify the published signature in the `PUBLISHED` file:
-   ```bash
-    gpg --verify <cli>.asc <cli>
+   shasum -a 512 -c apache-grails-wrapper-<version>-incubating-bin.zip.sha512
    ```
-10. testing `grailsw`:
+
+Verifies the wrapper distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-wrapper-<version>-incubating-bin.zip.asc apache-grails-wrapper-<version>-incubating-bin.zip
+   ```
+
+Extracts the zip file and verifies the contents:
+* Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+
+#### Verify Grails Delegating CLI Binary Distribution
+
+The following are the Grails distribution artifacts:
+* `apache-grails-<version>-incubating-bin.zip` - the cli distribution that will be uploaded to sdkman
+* `apache-grails-<version>-incubating-bin.zip.asc` - the generated signature of the cli distribution
+* `apache-grails-<version>-incubating-bin.zip.sha512` - the checksum to verify the cli distribution
+
+Use `etc/bin/verify-cli-distribution.sh` to verify the cli distribution. This script performs the following:
+
+Verifies the cli distribution checksum via the command:
+   ```bash
+   shasum -a 512 -c apache-grails-<version>-incubating-bin.zip.sha512
+   ```
+
+Verifies the cli distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-<version>-incubating-bin.zip.asc apache-grails-<version>-incubating-bin.zip
+   ```
+
+Extracts the zip file and verifies the contents:
+* Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+
+## 3. Verifying the CLIs are Functional
+
+The CLI distribution consists of various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and `grails-shell-cli`. Each CLI needs tested to ensure it's functional prior to release:
+
+* testing `grailsw`:
     * set GRAILS_REPO_URL to the staging repository
     * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars)
-11. testing `grails-shell-cli`:
+* testing `grails-shell-cli`:
     * create a basic app:
     ```bash
     grails-shell-cli create-app test
@@ -103,7 +194,7 @@ Prior to releasing a vote, we need to verify the staged artifacts. At a high lev
     ```bash
     grails-shell-cli run-app
     ```
-12. Perform the same tests, but use the delegating cli `grails` with type forge
+* Perform the same tests, but use the delegating cli `grails` with type forge
     * create a basic app:
     ```bash
     grails -t forge create-app test
@@ -114,11 +205,181 @@ Prior to releasing a vote, we need to verify the staged artifacts. At a high lev
     gradlew bootRun
     ```
 
+## 4. Voting
 
-## 3. Voting
+After all artifacts are uploaded, verified, and tested, we can vote on the release.  As an ASF project, we follow the voting guidelines set forth by the [Apache Voting Process](https://www.apache.org/foundation/voting.html). We are also an incubating ASF software project, so there are 2 votes.  Details for each follow: 
+
+### Apache Grails Incubating PPMC
+
+The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).  The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to express their support. The vote template follows: 
+
+Subject: [VOTE] Release Apache Grails (incubating) <version>
+
+Body:
+```
+Hi Everyone,
+
+I am happy to start the VOTE thread for an Apache Grails (incubating) release of version 7.0.0-M4!
+
+This release is our first release under the ASF. Further details of the release can be found on the GitHub pre-release & in the discussion thread at:
+https://lists.apache.org/thread/3tqw39b1v542rc026gopj0kbqs5zbr5q
+
+Releases for the Grails project consist of 2 repositories, so there are two tags:
+grails-core Tag:
+https://github.com/apache/grails-core/releases/tag/v7.0.0-M4
+Tag commit id: <commit hash>
+
+grails-forge Tag:
+https://github.com/apache/grails-forge/releases/tag/v7.0.0-M4
+Tag commit id: <commit hash>
+
+The artifacts to be voted on are located as follows (<svn version revision>):
+Source release: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/sources
+Binary distributions: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/distribution
+
+Release artifacts are signed with a key from the following file: 
+https://dist.apache.org/repos/dist/release/grails/KEYS
+
+Please vote on releasing this package as Apache Grails (incubating) 7.0.0-M4.
+
+Reminder on ASF release approval requirements for PPMC members:
+https://www.apache.org/legal/release-policy.html#release-approval
+
+Hints on validating checksums/signatures (but replace md5sum with
+sha512sum):
+https://www.apache.org/info/verification.html
+
+Details of our release process is documented at: https://github.com/apache/grails-core/blob/7.0.x/RELEASE.md
+
+The vote is open for the next 72 hours and passes if a majority of at least
+three +1 PPMC votes are cast.
+
+[ ] +1 Release Apache Grails (incubating) 7.0.0-M4
+[ ]  0 I don't have a strong opinion about this, but I assume it's ok
+[ ] -1 Do not release Apache Grails (incubating) 7.0.0-M4 because...
+
+Here is my vote:
+
++1 (binding)
+```
+
+### Apache Groovy PMC
+
+As an incubating project under Apache Groovy, after 72 hours & a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). The vote template follows:
+
+Subject: [VOTE] Approval of Apache Grails 7.0.0-M4 release by Groovy PMC
+
+Body:
+```
+Dear Groovy PMC,
+
+The Grails PPMC has voted to approve the release of Apache Grails 7.0.0-M4. The vote results were as follows:
+
+- +1 votes: [List of voters]
+- 0 votes: [List of voters]
+- -1 votes: [List of voters]
+
+With [number] +1 votes and [number] -1 votes, the Podling PPMC vote passed.
+
+Grails PPMC vote: [mailing list link]
+
+We now request that the Groovy PMC (incubation host) vote on whether to approve this release. Per Apache Incubator policy, at least three +1 votes from Groovy PMC (incubation host) members are required for approval.
+
+The vote is open for the next 72 hours.
+
+[ ] +1 Release Apache Grails (incubating) 7.0.0-M4
+[ ]  0 I don't have a strong opinion about this, but I assume it's ok
+[ ] -1 Do not release Apache Grails (incubating) 7.0.0-M4 because...
+
+This release is the first Grails release under the ASF. Further details of the release can be found on the GitHub pre-release & in the discussion thread at:
+https://lists.apache.org/thread/3tqw39b1v542rc026gopj0kbqs5zbr5q
+
+Releases for the Grails project consist of 2 repositories, so there are two tags:
+grails-core Tag:
+https://github.com/apache/grails-core/releases/tag/v7.0.0-M4
+Tag commit id: <commit hash>
+
+grails-forge Tag:
+https://github.com/apache/grails-forge/releases/tag/v7.0.0-M4
+Tag commit id: <commit hash>
+
+The artifacts to be voted on are located as follows (<svn version revision>):
+Source release: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/sources
+Binary distributions: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/distribution
+
+Release artifacts are signed with a key from the following file: 
+https://dist.apache.org/repos/dist/release/grails/KEYS
+
+Hints on validating checksums/signatures (but replace md5sum with
+sha512sum):
+https://www.apache.org/info/verification.html
+
+Details of our release process is documented at: https://github.com/apache/grails-core/blob/7.0.x/RELEASE.md
+
+Thank you,
+[Your Name]
+Grails Release Manager
+```
+
+## 5. Releasing
 
 TODO
 
-## 3. Releasing
+# Rollback
 
-TODO
+In the event a staged artifact needs rolled back, follow the below steps:
+
+## Rollback Nexus Artifacts (Jars)
+
+To remove a Nexus staging repo, run the workflow `Release - Drop Nexus Staging` in `grails-core`.  The input of this task can be obtained by logging into [repository.apache.org](https://repository.apache.org/index.html#stagingRepositories) and finding the staging repository name. Please note that there will always be 2 staging repositories for a Grails release because we keep `grails-forge` separate from `grails-core`.
+
+## Rollback Distribution
+
+To remove the staged distribution, use your SVN credentials to remove the version directory at [https://dist.apache.org/repos/dist/dev/grails/core](https://dist.apache.org/repos/dist/dev/grails/core)
+
+# Appendix: GPG Configuration
+If you wish to verify any artifact manually, you must trust the key used to build Grails. To do so, it's best to download the KEYS file that was published to the official location:
+
+Download the latest KEYS file and make sure it's imported into gpg:
+```bash
+    wget https://dist.apache.org/repos/dist/release/grails/KEYS
+    gpg --import KEYS
+```
+
+Setup the key for trust:
+```bash
+   gpg --edit-key <key id>
+   gpg> trust
+   gpg> 4
+   gpg> quit
+```
+
+Setup the key for validity:
+```bash
+   gpg --lsign-key 08E2CEC47E38FE415F080AB62ADECADC11775306
+```
+
+# Appendix: Verification from a Container
+
+The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container locally, you can use the following command:
+
+```bash
+    docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project -p 8080:8080 grails:testing bash
+    cd grails-verify
+    verify.sh orgapachegrails-1038 v7.0.0-M4 .
+    cd grails 
+    gradlew wrapper
+    cd grails-gradle 
+    gradlew wrapper
+    cd ../..
+    verify-reproducible.sh .
+```
+
+Please note that the argument `-p 8080:8080` is used to expose the port 8080 of the container to the host machine's port 8080 (fromContainerPort:toHostPort). This allows you to access any running Grails application in the container from your host. If you have another application on port 8080, you can change the port mapping to avoid conflicts, e.g., `-p 8080:8081`. 
+
+In the event that artifacts differ, simply copy them to your project directory and work on your local machine instead of the docker image: 
+
+```bash
+    cd ~/project
+    rsync -av grails-verify/grails/etc/bin/results/ etc/bin/results/
+```

@@ -36,6 +36,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
@@ -79,7 +80,6 @@ import javax.inject.Inject
 @CompileStatic
 class GrailsGradlePlugin extends GroovyPlugin {
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
-    public static final String PROFILE_CONFIGURATION = 'profile'
 
     protected static final List<String> CORE_GORM_LIBRARIES = ['async', 'core', 'simple', 'web', 'rest-client', 'gorm', 'gorm-validation', 'gorm-plugin-support', 'gorm-support', 'test-support', 'hibernate-core', 'gorm-test', 'rx', 'rx-plugin-support']
     // NOTE: mongodb, neo4j etc. should NOT be included here so they can be independently versioned
@@ -269,11 +269,28 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     protected void configureProfile(Project project) {
-        if(!project.configurations.names.contains(PROFILE_CONFIGURATION)) {
-            project.configurations.register(PROFILE_CONFIGURATION).configure { Configuration profileConfiguration ->
-                profileConfiguration.incoming.beforeResolve() {
-                    if (!profileConfiguration.allDependencies) {
-                        addDefaultProfile(project, profileConfiguration)
+        if(!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
+            project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
+                profileConfiguration.description = "Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell"
+                profileConfiguration.canBeConsumed = false
+                profileConfiguration.canBeResolved = true
+                profileConfiguration.transitive = true
+
+                profileConfiguration.defaultDependencies { DependencySet deps ->
+                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
+                    project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
+                    deps.add (
+                            project.dependencies.create(defaultProfileCoordinates)
+                    )
+                }
+
+                profileConfiguration.resolutionStrategy.eachDependency { details ->
+                    if(details.requested.group == 'org.apache.grails.profiles' && !details.requested.version) {
+                        String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+                        project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
+
+                        details.useVersion(grailsVersion)
+                        details.because("Grails Profile defined without a version, defaulting to configured Grails Version")
                     }
                 }
             }
@@ -315,12 +332,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     protected String getDefaultProfile() {
         'web'
-    }
-
-    void addDefaultProfile(Project project, Configuration profileConfig) {
-        def bomProject = project.rootProject.subprojects.find { it.name == 'grails-bom' }
-        project.dependencies.add(PROFILE_CONFIGURATION, project.dependencies.platform(bomProject ?: "org.apache.grails:grails-bom:${project.properties.get('grailsVersion')}"))
-        project.dependencies.add(PROFILE_CONFIGURATION, "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: defaultProfile}:")
     }
 
     @CompileDynamic

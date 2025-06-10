@@ -60,6 +60,7 @@ tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
     gdoc.includeMainForScripts = false
     gdoc.processScripts = false
     gdoc.noTimestamp = true
+    gdoc.noVersionStamp = false
 
     doFirst {
         def gebVersion = resolveProjectVersion('geb-spock')

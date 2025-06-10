@@ -43,8 +43,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -66,6 +64,7 @@ jobs:
         run: >
           ./gradlew build
           --continue --stacktrace
+          --rerun-tasks
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core'
@@ -78,8 +77,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -93,6 +90,7 @@ jobs:
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace -PonlyCoreTests
+          --rerun-tasks
   functional:
     name: "Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -104,8 +102,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -122,6 +118,7 @@ jobs:
           -PonlyFunctionalTests
           -PskipHibernate5Tests
           -PskipMongodbTests
+          --rerun-tasks
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"
@@ -134,8 +131,6 @@ jobs:
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -153,6 +148,7 @@ jobs:
           --continue --stacktrace
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
+          --rerun-tasks
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests"
@@ -164,8 +160,6 @@ jobs:
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -182,6 +176,7 @@ jobs:
           ./gradlew bootJar cleanTest check
           --continue --stacktrace
           -PonlyHibernate5Tests
+          --rerun-tasks
   publishGradle:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ buildGradle ]
@@ -189,8 +184,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -208,13 +201,18 @@ jobs:
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         working-directory: 'grails-gradle'
         run: >
-          ./gradlew publish aggregateChecksums
-          -Dorg.gradle.internal.publish.checksums.insecure=true
+          ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
+          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
         uses: actions/upload-artifact@v4
         with:
           name: grails-gradle-checksums
-          path: grails-gradle/build/checksums.txt
+          path: grails-gradle/build/grails-gradle-checksums.txt
+      - name: "📤 Upload grails-gradle published artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-gradle-artifacts.txt
+          path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
     if: ${{ always() && github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') }}
@@ -222,8 +220,6 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -244,12 +240,17 @@ jobs:
           timeout_seconds: 900 # normal range 360-720s
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
-          command: ./gradlew publish aggregateChecksums
+          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
         uses: actions/upload-artifact@v4
         with:
-          name: grails-checksums
-          path: build/checksums.txt
+          name: grails-core-checksums.txt
+          path: build/grails-core-checksums.txt
+      - name: "📤 Upload grails-core published artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-core-artifacts.txt
+          path: build/grails-core-artifacts.txt
       - name: "🔨 Create Grails Wrapper Distribution Zip"
         run: >
           ./gradlew :grails-wrapper:distZip
@@ -273,8 +274,6 @@ jobs:
     steps:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "🔀 Store current branch name"
         run: |
           TARGET_BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}"

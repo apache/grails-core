@@ -1,0 +1,125 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Release - Source Distribution"
+on:
+  workflow_dispatch:
+jobs:
+  source:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout grails-core repository"
+        uses: actions/checkout@v4
+        with:
+          repository: apache/grails-core
+          ref: ${{ github.ref_name }}
+          path: grails
+      - name: "📥 Checkout grails-forge repository"
+        uses: actions/checkout@v4
+        with:
+          repository: apache/grails-forge
+          ref: ${{ github.ref_name }}
+          path: grails/grails-forge
+      - name: "🗑️ Remove unnecessary files"
+        run: |
+          rm -f grails/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails/gradlew
+          rm -f grails/grails-gradle/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails/grails-gradle/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails/grails-gradle/gradlew
+          rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails/grails-forge/gradlew
+          rm -f grails/KEYS
+      - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd grails
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
+      - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd grails
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
+      - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd grails
+          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
+      - name: "Ensure source files use common date"
+        run: |
+          SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+      - name: "📦 Create source distribution ZIP"
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"  # Strip 'v' prefix
+          zip -r "apache-grails-${version}-incubating-src.zip" grails -x 'grails/.git/*' -x 'grails/.github/*'
+      - name: '🔐 Set up GPG'
+        run: |
+          echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
+          gpg --list-keys
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+      - name: "🔏 Sign source distribution ZIP"
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"  # Strip 'v' prefix
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign apache-grails-${version}-incubating-src.zip
+      - name: "📦 Create source distribution checksum"
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"  # Strip 'v' prefix
+          sha512sum apache-grails-${version}-incubating-src.zip > "apache-grails-${version}-incubating-src.zip.sha512"
+      - name: "🚀 Upload ZIP and Signature to GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            apache-grails-*-incubating-src.zip
+            apache-grails-*-incubating-src.zip.sha512
+            apache-grails-*-incubating-src.zip.asc
+      - name: "Remove CHECKSUMS.txt asset from release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cd grails
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} CHECKSUMS.txt --yes
+      - name: "Remove BUILD_DATE.txt asset from release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cd grails
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} BUILD_DATE.txt --yes
+      - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cd grails
+          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} PUBLISHED_ARTIFACTS.txt --yes

@@ -21,7 +21,6 @@ package org.grails.gradle.plugin.profiles
 import groovy.transform.CompileStatic
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.attributes.Usage
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.GenerateMavenPom
@@ -75,18 +74,6 @@ class GrailsProfilePublishGradlePlugin extends GrailsPublishGradlePlugin {
 
     @Override
     protected void doAddArtefact(Project project, MavenPublication publication) {
-        publication.from(project.components.named(GrailsProfileGradlePlugin.COMPONENT_NAME).get())
-        publication.artifact(project.tasks.named('profileJar'))
-        publication.artifact(project.tasks.named('sourcesProfileJar'))
-        publication.artifact(project.tasks.named('javadocProfileJar'))
-
-        publication.versionMapping {
-            it.variant(Usage.USAGE_ATTRIBUTE, objectFactory.named(Usage, GrailsProfileGradlePlugin.USAGE_PROFILE_NAME)) {
-                it.fromResolutionOf(GrailsProfileGradlePlugin.RUNTIME_API_CONFIGURATION)
-            }
-            it.variant(Usage.USAGE_ATTRIBUTE, objectFactory.named(Usage, GrailsProfileGradlePlugin.USAGE_PROFILE_NAME)) {
-                it.fromResolutionOf(GrailsProfileGradlePlugin.RUNTIME_ONLY_CONFIGURATION)
-            }
-        }
+        publication.from project.components.named('java').get()
     }
 }

@@ -30,9 +30,8 @@ final class PropertyFileUtils {
             return
         }
 
-        Instant buildInstant = Instant.ofEpochSecond(sourceDateEpoch as Long)
         List<String> lines = factoriesFile.readLines(StandardCharsets.ISO_8859_1.name())
-        lines[1] = "# ${Date.from(buildInstant).toString()}" as String
+        lines[1] = "# SOURCE_DATE_EPOCH = ${sourceDateEpoch}" as String
         factoriesFile.withWriter { BufferedWriter writer ->
             lines.each { String line ->
                 writer.writeLine(line)

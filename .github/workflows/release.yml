@@ -37,6 +37,9 @@ jobs:
         uses: actions/checkout@v4
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "Ensure source files use common date"
+        run: |
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: '🔐 Set up GPG'
         run: |
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
@@ -47,7 +50,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: 17
+          java-version: '17.0.14' # this must be a specific version for reproducible builds
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -70,10 +73,24 @@ jobs:
       - name: "🧩 Run Assemble"
         id: assemble
         run: ./gradlew assemble
-      - name: "📤 Upload grails wrapper Zip"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+      - name: "🔏 Sign wrapper ZIP"
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip
+      - name: "📦 Create wrapper checksum"
+        run: |
+          cd grails-wrapper/build/distributions
+          sha512sum apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip > "apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512"
+      - name: "📤 Upload grails wrapper ZIP"
         uses: softprops/action-gh-release@v2
         with:
-          files: grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip
+          files: |
+            grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip
+            grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512
+            grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip.asc
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Create Staging Repository"
@@ -104,6 +121,7 @@ jobs:
           findSonatypeStagingRepository 
           publishToSonatype 
           aggregateChecksums
+          aggregatePublishedArtifacts
       - name: "📤 Publish Grails-Core"
         id: publish
         env:
@@ -120,6 +138,7 @@ jobs:
           findSonatypeStagingRepository 
           publishToSonatype 
           aggregateChecksums
+          aggregatePublishedArtifacts
       - name: "📤 Close Staging Repository"
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
@@ -136,13 +155,32 @@ jobs:
           closeSonatypeStagingRepository
       - name: "🩹Combine checksums"
         run: |
-          combined_file="build/combined-checksums.txt"
-          cat build/checksums.txt > "$combined_file"
-          cat grails-gradle/build/checksums.txt >> "$combined_file"
+          combined_file="build/CHECKSUMS.txt"
+          cat build/grails-core-checksums.txt > "$combined_file"
+          cat grails-gradle/build/grails-gradle-checksums.txt >> "$combined_file"
       - name: "Upload combined checksums"
         uses: softprops/action-gh-release@v2
         with:
-          files: build/combined-checksums.txt
+          files: build/CHECKSUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "🩹Combine published artifacts"
+        run: |
+          combined_file="build/PUBLISHED_ARTIFACTS.txt"
+          cat build/grails-core-artifacts.txt > "$combined_file"
+          cat grails-gradle/build/grails-gradle-artifacts.txt >> "$combined_file"
+      - name: "Upload combined published artifacts"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/PUBLISHED_ARTIFACTS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Generate Build Date file"
+        run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
+      - name: "Upload Build Date file"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/BUILD_DATE.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release:
@@ -196,6 +234,8 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
         run: ./gradlew grails-doc:build -PgithubBranch=${{ needs.publish.outputs.target_branch }}
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
       - name: "🚀 Publish to Github Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:

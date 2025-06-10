@@ -23,8 +23,19 @@ tasks.named('rat') {
             'CODE_OF_CONDUCT.md',
             'LICENSE',
             'NOTICE',
+            'BUILD_DATE', // build artifact for storing the build date / verifying
+            'CHECKSUMS', // build artifact for storing checksums for easy verification
+            'PUBLISHED_ARTIFACTS', // build artifact for storing published artifacts coordinates & paths
+            'licenses/**', // licenses directory excluded
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONTokener.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONElement.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONException.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONWriter.java',
             'gradle/wrapper/gradle-wrapper.properties', // gradle wrapper excluded from src zip
             '**/build/**', // Gradle generated build directories
+            '.gitattributes', // git configuration isn't code
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
             '**/*.html', // html files are only in test
             '**/resources/*', // exclude test artifacts
