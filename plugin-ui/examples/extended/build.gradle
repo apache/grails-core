@@ -38,7 +38,7 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
 
     implementation "dumbster:dumbster:$dumbsterVersion", { transitive = false } // Uses javax
-    implementation "org.grails.plugins:mail:$mailVersion"
+    implementation "org.grails.plugins:grails-mail:$mailVersion"
 
     compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during gsp compilation
 
