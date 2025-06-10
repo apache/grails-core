@@ -88,7 +88,13 @@ cd "${DOWNLOAD_LOCATION}/${PROJECT_NAME}/etc/bin/results"
 echo "Checking for differences in checksums"
 # diff -u CHECKSUMS second.txt
 DIFF_RESULTS=$(comm -3 <(sort ../../../CHECKSUMS) <(sort second.txt) | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort)
-echo "$DIFF_RESULTS" > diff.txt
+echo "${DIFF_RESULTS}" > diff.txt
+
+if [ -n "${DIFF_RESULTS}" ]; then
+  echo "${DIFF_RESULTS}" > diff.txt
+else
+  > diff.txt  # Empty the file explicitly
+fi
 
 if [ -s diff.txt ]; then
   echo "Differences were found, diffing jar files ..."
