@@ -38,6 +38,10 @@ cleanup() {
 }
 trap cleanup ERR
 
+echo "Downloading KEYS file ..."
+curl -sSfLO "https://dist.apache.org/repos/dist/release/grails/KEYS"
+echo "✅ KEYS Downloaded"
+
 echo "Downloading Artifacts ..."
 "${SCRIPT_DIR}/download-release-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
 echo "✅ Artifacts Downloaded"

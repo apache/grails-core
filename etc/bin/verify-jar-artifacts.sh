@@ -60,7 +60,7 @@ trap error ERR
 cd "${DOWNLOAD_LOCATION}"
 
 echo "Importing GPG key to independent GPG home ..."
-gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+gpg --homedir "${GRAILS_GPG_HOME}" --import "${DOWNLOAD_LOCATION}/KEYS"
 echo "✅ GPG Key Imported"
 
 REPO_BASE_URL="https://repository.apache.org/content/groups/staging"
