@@ -305,7 +305,73 @@ The vote for this release is open for the next 72 hours.
 
 ## 5. Releasing
 
+After voting has passed, several steps must be completed to finalize the release. Please complete these steps in teh order listed below.
+
+### Release the Staged Artifacts
+
+In repository.apache.org, the staged artifacts must be released by opening the `grails-core` & `grails-forge` staging repositories and clicking the `Release` button. It took almost 2 hours for the initial ASF release to publish these jars to Maven Central.
+
+### Publish `grails-core` documentation
+
+Open the release workflow in `grails-core` and approve the `Publish Documentation` step.  Wait until finished, and a workflow should eventually kick off in `grails-doc` to publish the gh-pages branch that was updated.
+
+### Move the distributions from `dev` to `release`
+
+On dist.apache.org, the staged source distribution & binary distributions must be moved from `dev` to `release`. 
+
+### Upon move, you will get an email from the ASF reporter
+
+Click the link in this email and mark the release published. For example, if the release is out of core with version 7.0.0-M4, then the release name with be `CORE-7.0.0-M4`.  Enter the date you moved the distribution artifacts and report the release.
+
+### Advertise the release via SDKMAN
+
+In `grails-forge`, kick off the step `Release to SDKMAN!` in the release create workflow.  This will cause SDKMAN to pull the new version from Maven Central.
+
+### Publish `start.grails.org` 
+
 TODO
+
+### Close out the `grails-forge` release
+
+The last step in the `grails-forge` release workflow is to run the `Close Release` step.  This will either open a PR or merge the tag into the matching branch.  If it opens a PR, you will need to merge it into the branch after correcting any merge conflict.
+
+### Close out the `grails-core` release
+
+The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will either open a PR or merge the tag into the matching branch.  If it opens a PR, you will need to merge it into the branch after correcting any merge conflict.
+
+### Update the `grails-static-website`
+
+Update the `grails-static-website` repository to point to announce the new version. Further instructions are a TODO
+
+### Announce the release
+
+Announcements should come from your apache email address and have an expected format.  The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, & `announce@apache.org`.  Here's an example email: 
+
+        Subject: [ANNOUNCE] Apache Grails (incubating) 7.0.0-M4
+
+        Hi Everyone,
+
+        The Apache Grails (incubating) community is pleased to announce that Apache Grails (incubating) 7.0.0-M4 has been released!
+
+        Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend it's functionality.
+
+        The release notes are available here:
+        https://github.com/apache/grails-core/releases/tag/v7.0.0-M4
+
+        For the complete list of changes:
+        https://github.com/apache/grails-core/compare/v7.0.0-M3...v7.0.0-M4
+
+        Apache Grails website: https://grails.apache.org/
+
+        Download Links: https://grails.apache.org/download.html
+
+        Grails Resources:
+        - Grails Github repo: https://github.com/apache/grails-core
+        - Issue: https://github.com/apache/grails-core/issues
+        - Mailing list: dev@grails.apache.org
+
+        Regards,
+        The Apache Grails (incubating) Team
 
 # Rollback
 
