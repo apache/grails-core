@@ -212,7 +212,7 @@ jobs:
           gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} PUBLISHED_ARTIFACTS.txt --yes
   release:
     environment: release
-    needs: [publish, source]
+    needs: [publish, source, docs]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -237,7 +237,7 @@ jobs:
   docs:
     environment: docs
     name: "Publish Documentation"
-    needs: publish
+    needs: [publish, source]
     runs-on: ubuntu-latest
     permissions:
       contents: write # required for gradle.properties revert
