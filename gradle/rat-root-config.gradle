@@ -23,13 +23,15 @@ tasks.named('rat') {
             '**/build/**', // Gradle generated build directories
             'etc/bin/results/**', // exclude build directories
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
-            '**/*.html', // html files are only in test
-            '**/resources/*', // exclude test artifacts
+            '**/integration-test/resources/*', // exclude test artifacts
             'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
             'src/*', // exclude build artifacts
             'LICENSE',
             'licenses/**', // licenses directory excluded
             'NOTICE',
+            'BUILD_DATE', // build artifact for storing the build date / verifying
+            'CHECKSUMS', // build artifact for storing checksums for easy verification
+            'PUBLISHED_ARTIFACTS', // build artifact for storing published artifacts coordinates & paths
             'CODE_OF_CONDUCT.md',
             '**/.sdkmanrc', // tool selection files aren't code
             '**/.gitignore', // git configuration isn't code
