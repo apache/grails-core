@@ -24,6 +24,7 @@ PROJECT_NAME='grails-spring-security'
 RELEASE_TAG=$1
 DOWNLOAD_LOCATION="${2:-downloads}"
 DOWNLOAD_LOCATION=$(realpath "${DOWNLOAD_LOCATION}")
+CWD=$(pwd)
 
 if [ -z "${RELEASE_TAG}" ]; then
   echo "Usage: $0 [release-tag] <optional download location>"
@@ -49,15 +50,17 @@ fi
 export GRAILS_GPG_HOME=$(mktemp -d)
 cleanup() {
   rm -rf "${GRAILS_GPG_HOME}"
+  cd "$CWD"
 }
 trap cleanup EXIT
 error() {
   echo "❌ JAR Verification failed ❌"
 }
 trap error ERR
+cd "${DOWNLOAD_LOCATION}"
 
 echo "Importing GPG key to independent GPG home ..."
-gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+gpg --homedir "${GRAILS_GPG_HOME}" --import "${DOWNLOAD_LOCATION}/KEYS"
 echo "✅ GPG Key Imported"
 
 REPO_BASE_URL="https://repository.apache.org/content/groups/staging"

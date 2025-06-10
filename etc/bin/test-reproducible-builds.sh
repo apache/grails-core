@@ -45,7 +45,7 @@ find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs 
 cd "${SCRIPT_DIR}/results"
 
 # diff -u first.txt second.txt
-DIFF_RESULTS=$(comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort)
+DIFF_RESULTS=$(comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort)
 echo "Differing artifacts:"
 echo "$DIFF_RESULTS" > diff.txt
 cat diff.txt

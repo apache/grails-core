@@ -50,7 +50,7 @@ shasum -a 512 -c "apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
 echo "✅ Checksum Verified"
 
 echo "Importing GPG key to independent GPG home ..."
-gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
+gpg --homedir "${GRAILS_GPG_HOME}" --import "${DOWNLOAD_LOCATION}/KEYS"
 echo "✅ GPG Key Imported"
 
 echo "Verifying GPG signature..."
@@ -78,7 +78,7 @@ if [ ! -d "${SRC_DIR}" ]; then
 fi
 
 echo "Checking for required files existence..."
-REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "CONTRIBUTING.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE" "DISCLAIMER")
+REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE" "DISCLAIMER")
 
 for FILE in "${REQUIRED_FILES[@]}"; do
   if [ ! -f "${SRC_DIR}/$FILE" ]; then
