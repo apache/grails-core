@@ -29,8 +29,14 @@ jobs:
       GIT_USER_NAME: 'grails-build'
       GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
     steps:
+      - name: "📝 Store the current release version"
+        id: release_version
+        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+        with:
+          ref: v${{ steps.release_version.outputs.value }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: "Download grails-core BUILD_DATE.txt and rename to BUILD_DATE"
         run: |
           release_url=$(gh release view ${{ github.ref_name }} --json assets --repo apache/grails-core --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
@@ -62,9 +68,6 @@ jobs:
         uses: apache/grails-github-actions/pre-release@asf
         env:
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
-      - name: "📝 Store the current release version"
-        id: release_version
-        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "🧩 Assemble"
         run: ./gradlew assemble
       - name: "📦 Generate docs"
@@ -135,6 +138,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
