@@ -202,5 +202,9 @@ class MemoizeObjectASTTransformation extends AbstractMemoizeASTTransformation {
 			sourceUnit.AST.addImport(importClass.simpleName, ClassHelper.make(importClass))
 		}
 	}
-	
+
+	@Override
+	int priority() {
+		RedisTransformOrder.MEMOIZE_OBJECT_ORDER
+	}
 }

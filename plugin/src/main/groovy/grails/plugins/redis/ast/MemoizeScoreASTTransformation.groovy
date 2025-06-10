@@ -45,4 +45,9 @@ class MemoizeScoreASTTransformation extends MemoizeASTTransformation {
     protected ConstantExpression makeRedisServiceConstantExpression() {
         new ConstantExpression('memoizeScore')
     }
+
+    @Override
+    int priority() {
+        RedisTransformOrder.MEMOIZE_SCORE_ORDER
+    }
 }

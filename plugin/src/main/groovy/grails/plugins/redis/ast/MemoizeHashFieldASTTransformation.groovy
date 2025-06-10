@@ -45,4 +45,9 @@ class MemoizeHashFieldASTTransformation extends MemoizeASTTransformation {
     protected ConstantExpression makeRedisServiceConstantExpression() {
         new ConstantExpression('memoizeHashField')
     }
+
+    @Override
+    int priority() {
+        RedisTransformOrder.MEMOIZE_HASH_FIELD_ORDER
+    }
 }

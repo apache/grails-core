@@ -83,4 +83,9 @@ class MemoizeDomainObjectASTTransformation extends AbstractMemoizeASTTransformat
         }
         argumentListExpression
     }
+
+    @Override
+    int priority() {
+        RedisTransformOrder.MEMOIZE_DOMAIN_OBJECT_ORDER
+    }
 }

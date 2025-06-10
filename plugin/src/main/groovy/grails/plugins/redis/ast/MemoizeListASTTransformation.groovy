@@ -30,4 +30,9 @@ class MemoizeListASTTransformation extends MemoizeASTTransformation {
     protected ConstantExpression makeRedisServiceConstantExpression() {
         new ConstantExpression('memoizeList')
     }
+
+    @Override
+    int priority() {
+        RedisTransformOrder.MEMOIZE_LIST_ORDER
+    }
 }
