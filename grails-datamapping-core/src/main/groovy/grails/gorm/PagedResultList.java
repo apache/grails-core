@@ -106,6 +106,7 @@ public class PagedResultList<E> implements Serializable, List<E> {
                 totalCount = 0;
             } else {
                 Query newQuery = (Query)query.clone();
+                newQuery.offset(0);
                 newQuery.projections().count();
                 Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();
