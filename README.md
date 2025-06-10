@@ -28,7 +28,7 @@ To build this project from source, first bootstrap gradle:
      gradle
      cd -
 
-After bootstrap the project, you can build it with the command:
+After bootstrapping the project, you can build & run the tests (requires redis) with the command:
 
      ./gradlew build
 
