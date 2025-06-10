@@ -34,7 +34,7 @@ See the xref:conf.adoc#externalConfiguration[Configuration] section for details.
 
 === Ubiquitous Containerized Browser Testing with Geb
 
-The https://github.com/apache/grails-geb[Grails Geb Plugin] has received a significant update, introducing test fixtures that enable ubiquitous containerized browser testing.
+The https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme[Grails Geb Plugin] has received a significant update, introducing test fixtures that enable ubiquitous containerized browser testing.
 
 This new approach is now the recommended way to write functional tests in Grails. However, the previous method using WebDriver binaries remains supported for backward compatibility.
 
