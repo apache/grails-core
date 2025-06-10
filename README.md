@@ -28,7 +28,7 @@ To build this project from source, first bootstrap gradle:
      gradle
      cd -
 
-After bootstrap the project, you can build it with the command:
+After bootstrapping the project, you can build & run the tests (requires redis) with the command:
 
      ./gradlew build
 
@@ -76,7 +76,11 @@ dependencies {
 }
 ```
 
-Out of the box, the plugin expects that Redis is running on `localhost:6379`.  You can modify this (as well as any other pool config options) by adding a stanza like this to your `grails-app/conf/Config.groovy` file:
+Out of the box, the plugin expects that Redis is running on `localhost:6379`.  It's easiest to run a local docker instance for testing: 
+
+    docker run -d --name redis -p 6379:6379 redis
+
+Otherwise, you can modify this (as well as any other pool config options) by adding a stanza like this to your `grails-app/conf/Config.groovy` file:
 
     grails {
         redis {

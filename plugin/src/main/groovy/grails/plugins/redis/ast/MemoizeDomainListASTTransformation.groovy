@@ -30,4 +30,9 @@ class MemoizeDomainListASTTransformation extends MemoizeDomainObjectASTTransform
     protected ConstantExpression makeRedisServiceConstantExpression() {
         new ConstantExpression('memoizeDomainList')
     }
+
+    @Override
+    int priority() {
+        RedisTransformOrder.MEMOIZE_DOMAIN_LIST_ORDER
+    }
 }

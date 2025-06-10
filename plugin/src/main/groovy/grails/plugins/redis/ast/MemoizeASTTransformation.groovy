@@ -82,4 +82,9 @@ class MemoizeASTTransformation extends AbstractMemoizeASTTransformation {
         }
         argumentListExpression
     }
+
+    @Override
+    int priority() {
+        RedisTransformOrder.MEMOIZE_ORDER
+    }
 }

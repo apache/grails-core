@@ -34,6 +34,7 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 import org.springframework.beans.factory.annotation.Autowired
 
 import static org.springframework.asm.Opcodes.ACC_PUBLIC
@@ -42,7 +43,7 @@ import static org.springframework.asm.Opcodes.ACC_STATIC
 /**
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-abstract class AbstractMemoizeASTTransformation implements ASTTransformation {
+abstract class AbstractMemoizeASTTransformation implements ASTTransformation, TransformWithPriority {
 
     protected static final String KEY = 'key'
     protected static final String MEMOIZE_KEY = 'memKey'
