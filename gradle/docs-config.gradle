@@ -30,10 +30,6 @@ tasks.register('createReleaseDropDown', CreateReleaseDropDownTask) {
     index = layout.buildDirectory.file('docs/index.html')
 }
 
-tasks.register('pluginName') {
-    ext.value = name - '-docs'
-}
-
 apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
 tasks.withType(Groovydoc).configureEach {
     def firstDocTitle
@@ -46,10 +42,10 @@ tasks.withType(Groovydoc).configureEach {
                 firstWindowTitle = firstWindowTitle ?: (project.findProperty('apiDocsProjects') as Map)[it.name]['windowTitle']
                 sources += it.files('src/main/groovy')
             }
-    docTitle = firstDocTitle
-    windowTitle = firstWindowTitle
-    source = sources
-    destinationDir = rootProject.layout.buildDirectory.dir("docs/$pluginName.value-plugin/groovydoc").get().asFile
+    it.docTitle = firstDocTitle
+    it.windowTitle = firstWindowTitle
+    it.source = sources
+    it.destinationDir = rootProject.layout.buildDirectory.dir("docs/${project.name - '-docs'}-plugin/groovydoc").get().asFile
 }
 
 tasks.named('asciidoctor', AsciidoctorTask) {
@@ -87,7 +83,7 @@ tasks.register('copyGhPages', Copy) {
 
 tasks.register('copyGuide', Copy) {
     def sourceDir = layout.buildDirectory.dir('docs')
-    def targetDir = rootProject.layout.buildDirectory.dir("docs/${pluginName.value}-plugin/guide")
+    def targetDir = rootProject.layout.buildDirectory.dir("docs/${project.name - '-docs'}-plugin/guide")
     from(sourceDir)
     into(targetDir)
     if ('core-docs' == project.name) {
