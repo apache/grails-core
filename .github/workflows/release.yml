@@ -33,6 +33,9 @@ jobs:
       release_version: ${{ steps.release_version.outputs.value }}
       extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
     steps:
+      - name: "📝 Store the current release version"
+        id: release_version
+        run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "Extract repository name"
@@ -41,6 +44,9 @@ jobs:
           echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ steps.release_version.outputs.value }}
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "Ensure source files use common date"
@@ -61,9 +67,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "📝 Store the current release version"
-        id: release_version
-        run: echo "release_version=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
       - name: "⚙️ Run pre-release"
         uses: apache/grails-github-actions/pre-release@asf
         env:
@@ -121,7 +124,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref_name }}
           path: project
       - name: "🗑️ Remove unnecessary files"
@@ -218,6 +221,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
@@ -242,6 +246,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
