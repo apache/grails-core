@@ -84,13 +84,13 @@ jobs:
           aggregateChecksums
           aggregatePublishedArtifacts
       - name: "Upload checksums"
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
           files: build/CHECKSUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Upload published artifacts"
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
           files: build/PUBLISHED_ARTIFACTS.txt
         env:
@@ -98,7 +98,7 @@ jobs:
       - name: "Generate Build Date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "Upload Build Date file"
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
           files: build/BUILD_DATE.txt
         env:
@@ -179,7 +179,7 @@ jobs:
           version="${version#v}"  # Strip 'v' prefix
           sha512sum apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip > "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip.sha512"
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
           tag_name: ${{ github.ref_name }}
           files: |
