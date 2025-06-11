@@ -55,7 +55,7 @@ jobs:
           cp grails-cli/build/distributions/apache-grails-*.zip cli.zip
           unzip cli -d tmp1
           mv tmp1/apache-grails-* tmp1/cli
-          ./tmp1/cli/grails --version
+          ./tmp1/cli/bin/grails --version
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
         if: ${{ matrix.java == '17' }}
         uses: actions/upload-artifact@v4
