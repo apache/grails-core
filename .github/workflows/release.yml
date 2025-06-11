@@ -133,6 +133,7 @@ jobs:
           rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradle/wrapper/gradle-wrapper.jar
           rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradle/wrapper/gradle-wrapper.properties
           rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradlew
+          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradlew.bat
           rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/.asf.yaml
       - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
         env:
