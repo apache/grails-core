@@ -36,7 +36,10 @@ jobs:
     steps:
       - name: "📝 Store the current release version"
         id: release_version
-        run: echo "value=${GITHUB_REF:11}" >> $GITHUB_OUTPUT
+        run: | 
+          export RELEASE_VERSION="${GITHUB_REF:11}"
+          echo "Found Release Version: ${RELEASE_VERSION}"
+          echo "value=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "Extract repository name"
