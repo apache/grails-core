@@ -351,7 +351,6 @@ The last step in the `grails-forge` release workflow is to run the `Close Releas
 
 The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will either open a PR or merge the tag into the matching branch.  If it opens a PR, you will need to merge it into the branch after correcting any merge conflict.
 
-
 ### Update the `grails-static-website`
 
 Update the `grails-static-website` repository to point to announce the new version. Further instructions are a TODO
