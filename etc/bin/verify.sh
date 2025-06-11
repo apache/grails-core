@@ -38,6 +38,8 @@ cleanup() {
 }
 trap cleanup ERR
 
+cd "${DOWNLOAD_LOCATION}"
+
 echo "Downloading KEYS file ..."
 curl -sSfLO "https://dist.apache.org/repos/dist/release/grails/KEYS"
 echo "✅ KEYS Downloaded"
@@ -70,8 +72,10 @@ echo "✅ RAT passed"
 
 echo "Verifying Reproducible Build ..."
 set +e # because we have known issues here
-verify-reproducible.sh "${DOWNLOAD_LOCATION}"
+"${SCRIPT_DIR}/verify-reproducible.sh" "${DOWNLOAD_LOCATION}"
 set -e
 echo "✅ Reproducible Build Verified"
 
 echo "✅✅✅ Verification finished, see above instructions for remaining manual testing."
+
+cd "${CWD}"
