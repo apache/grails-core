@@ -42,6 +42,9 @@ extractTck.configure { Sync it ->
 
     it.from { zipTree(configurations.tck.singleFile) }
     it.into(layout.buildDirectory.dir('extracted-tck-classes'))
+    if (project.name == 'grails-data-hibernate6-core') {
+        it.exclude('**/NamedQuerySpec.class')
+    }
 }
 
 // There is a known issue with IntelliJ that can cause it's inspection process to lock up.
