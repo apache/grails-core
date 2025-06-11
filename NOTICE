@@ -16,3 +16,12 @@ jdMenu.js
 This product includes software from jdmMenu.js, licensed under MIT License.
 Copyright (c) 2006,2007 Jonathan Sharp (http://jdsharp.us).
 See licenses/LICENSE-MIT.txt for the full license terms.
+
+The following files are licensed under the MIT:
+
+    plugin-ui/plugin/grails-app/assets/javascripts/jquery/jquery.jdMenu.js
+    plugin-ui/plugin/grails-app/assets/javascripts/jquery/jquery.positionBy.js
+    plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.slate.css
+    plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css
+
+See licenses/LICENSE-MIT.txt for the full license terms.
