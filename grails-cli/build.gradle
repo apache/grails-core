@@ -143,11 +143,9 @@ forgeCliStartScripts.configure { CreateStartScripts t ->
     doLast {
         t.unixScript.text = t.unixScript.text
                 .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/$grailsVersion/")
-                .replace('"${APP_HOME:-./}.."', '"${APP_HOME:-./}"')
 
         t.windowsScript.text = t.windowsScript.text
                 .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\$grailsVersion\\")
-                .replace('%DIRNAME%..', '%DIRNAME%')
     }
 }
 
@@ -156,26 +154,26 @@ project.extensions.getByType(DistributionContainer).configureEach {
     it.distributionClassifier.set('incubating-bin')
     it.contents {
         from(shadowJarTask) {
-            into ".grails/$grailsVersion"
+            into "bin/.grails/$grailsVersion"
         }
 
         from(cliStartScripts) {
-            into ''
+            into 'bin'
             fileMode = 0755
         }
 
         from(shellCliStartScripts) {
-            into ''
+            into 'bin'
             fileMode = 0755
         }
 
         from(forgeCliStartScripts) {
-            into ''
+            into 'bin'
             fileMode = 0755
         }
 
         from(rootProject.project(':grails-forge-cli').layout.buildDirectory.file('exploded/bin/grails_forge_cli_completion')) {
-            into ''
+            into 'bin'
             fileMode = 0755
         }
 
