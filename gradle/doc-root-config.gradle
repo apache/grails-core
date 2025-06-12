@@ -17,9 +17,7 @@
  *  under the License.
  */
 
-plugins {
-    id "io.micronaut.build.internal.docs"
-}
+apply plugin: 'io.micronaut.build.internal.docs'
 
 configurations {
     asciidocs {
