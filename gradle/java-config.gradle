@@ -45,9 +45,9 @@ tasks.withType(GroovyCompile).configureEach {
 // Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
 tasks.withType(Jar).configureEach {
     manifest.attributes(
-            'Implementation-Title': 'Grails',
+            'Implementation-Title': 'Apache Grails',
             'Implementation-Version': grailsVersion,
-            'Implementation-Vendor': 'grails.org'
+            'Implementation-Vendor': 'grails.apache.org'
     )
 }
 
