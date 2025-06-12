@@ -98,7 +98,7 @@ project.extensions.getByType(DistributionContainer).configureEach {
         from(startScripts) {
             into ''
             filePermissions { permissions ->
-                permissions.unix("755")
+                permissions.unix(0755)
             }
         }
 
