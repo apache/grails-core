@@ -162,27 +162,6 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
                 }
                 project.files(dirs)
             }
-            it.templatesDirectory.set project.provider {
-                def templatesDirectory = project.layout.projectDirectory.dir('templates')
-                if (templatesDirectory.asFile.exists()) {
-                    return templatesDirectory
-                }
-                return null
-            }
-            it.skeletonDirectory.set project.provider {
-                def skeletonDirectory = project.layout.projectDirectory.dir('skeleton')
-                if (skeletonDirectory.asFile.exists()) {
-                    return skeletonDirectory
-                }
-                return null
-            }
-            it.commandsDirectory.set project.provider {
-                def commandsDirectory = project.layout.projectDirectory.dir('commands')
-                if (commandsDirectory.asFile.exists()) {
-                    return commandsDirectory
-                }
-                return null
-            }
             it.classpath = project.files(runtimeOnlyConfiguration.get(), project.configurations.named('runtimeClasspath').get())
         }
 
