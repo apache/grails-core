@@ -68,10 +68,8 @@ Prior to releasing a vote, we need to verify the staged artifacts. The below sec
 
 For Example:
 ```bash
-    verify.sh orgapachegrails-1030 v7.0.0-M4 /tmp/grails-verify
+    verify.sh v7.0.0-M4 /tmp/grails-verify
 ```
-
-The `staging repo id` can be found under https://github.com/apache/grails-core/actions/workflows/release.yml, click `publish`, open the stage `Create Staging Repository` and look for the line starting with `Created staging repository` 
 
 ### Download the Staged Artifacts
 
@@ -434,7 +432,7 @@ The Grails image is officially built on linux in a GitHub action using an Ubuntu
 ```bash
     docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project -p 8080:8080 grails:testing bash
     cd grails-verify
-    verify.sh orgapachegrails-1038 v7.0.0-M4 .
+    verify.sh v7.0.0-M4 .
     cd grails 
     gradlew wrapper
     cd grails-gradle 
