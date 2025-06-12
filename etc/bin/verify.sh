@@ -21,7 +21,7 @@ set -euo pipefail
 
 PROJECT_NAME='grails-redis'
 RELEASE_TAG=$1
-DOWNLOAD_LOCATION="${2:-downloads}"
+DOWNLOAD_LOCATION="${2:-.}"
 DOWNLOAD_LOCATION=$(realpath "${DOWNLOAD_LOCATION}")
 
 if [ -z "${RELEASE_TAG}" ]; then
