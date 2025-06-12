@@ -18,7 +18,7 @@ under the License.
 ////
 
 
-== Help
+== help
 
 
 
@@ -94,9 +94,11 @@ Usage:
 
 To use the `--help` syntax, simply append it to a Grails command, as shown in the examples above. This triggers the display of detailed help and information related to the specified command.
 
-[source,shell]
+From the terminal, run:
+
+[source,console]
 ----
-grails> --help
+$grails --help
 Usage: grails [-hvVx] [COMMAND]
 Grails CLI command line interface for generating projects and services.
 Application generation commands are:
@@ -124,8 +126,11 @@ Commands:
 By using the `--help` syntax with specific command names, Grails developers can access in-depth documentation, making it easier
 to work with Grails commands and ensuring they are used correctly in their projects.
 
+
+Here is an example of using `--help` with the `create-app` command.
+
 // NEW: Clarify correct CLI usage for help with create-app
-Here is an example of using `--help` with the `create-app` command. Since `create-app` is part of the Forge CLI, it must be invoked via `grails -t forge`:
+NOTE: To access help for Forge-only options such as `--features`, `--jdk`, or `--list-features`, you must run `create-app` through the Forge CLI using `-t forge`.
 
 [source,shell]
 ----

@@ -21,6 +21,7 @@ Grails provides a set of useful CLI commands for various tasks, including the cr
 
 For instance, to create the foundation of an application, you typically need to generate a domain model using Grails Commands:
 
+// Reviewed — no changes needed
 [source,console]
 ----
 $ grails create-app myapp

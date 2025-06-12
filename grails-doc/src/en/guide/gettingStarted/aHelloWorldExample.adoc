@@ -26,10 +26,13 @@ Navigate to the directory where you want to create your Grails project:
 [source,console]
 $ cd your_project_directory
 
-Create a new Grails project with the following command:
+//NEW
+Create a new Grails 7 project with the following command:
 
 [source,console]
-$ grails create-app myapp
+$ grails -t forge create-app myapp
+
+NOTE: If you're using Grails 6 or earlier, you can omit -t forge, but for Grails 7, -t forge is required to access the new CLI structure.
 
 === Step 2: Access the Project Directory
 

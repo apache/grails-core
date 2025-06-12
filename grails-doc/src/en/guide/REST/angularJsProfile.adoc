@@ -21,6 +21,8 @@ Since Grails 3.1, Grails supports a profile for creating applications with Angul
 
 To get started with the AngularJS profile, create an application specifying `angularjs` as the name of the profile:
 
+// Reviewed — no changes needed
+
 [source,bash]
 ----
 $ grails create-app my-api --profile angularjs

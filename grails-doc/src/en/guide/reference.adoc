@@ -22,7 +22,9 @@ under the License.
 
 [[ref-command-line]]
 === Command Line
-
+////
+NOTE: This file serves as the centralized reference index for all CLI commands, constraints, domain class methods, tags, and more. Each section includes modular AsciiDoc files stored under `ref/`. When adding a new command or feature, update this file accordingly to maintain navigation integrity.
+////
 [[ref-command-line-bug-report]]
 ==== bug-report
 
@@ -48,7 +50,6 @@ include::ref/Command Line/console.adoc[]
 
 include::ref/Command Line/create-app.adoc[]
 
-[[ref-command-line-create-command]]
 ==== create-command
 [[ref-command-line-assemble]]
 ==== assemble
@@ -97,6 +98,8 @@ include::ref/Command Line/create-plugin.adoc[]
 ==== create-rest-api
 
 include::ref/Command Line/create-profile.adoc[]
+include::ref/Command Line/create-rest-api.adoc[]
+// NOTE: These commands share overlapping functionality and are grouped together for CLI reference continuity.
 
 [[ref-command-line-create-script]]
 ==== create-script
@@ -121,8 +124,8 @@ include::ref/Command Line/create-unit-test.adoc[]
 
 [[ref-command-line-dependency-report]]
 ==== dependency-report
-
 include::ref/Command Line/dependency-report.adoc[]
+
 [[ref-command-line-create-web-plugin]]
 ==== create-web-plugin
 

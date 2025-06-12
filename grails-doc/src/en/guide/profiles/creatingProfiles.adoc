@@ -82,16 +82,19 @@ $ gradle install
 
 Your profile is now usable with the `create-app` command:
 
-[source,bash]
+// NEW: The following commands use the Forge CLI, which supports profile-based application generation.
+// NEW: Updated to use Forge CLI
+[source,console]
 ----
-$ grails create-app myapp --profile mycompany
+$ grails -t forge create-app myapp --profile mycompany
 ----
 
 With the above command the application will be created with the "mycompany" profile which includes an additional dependency on the "myplugin" plugin and also includes the "hibernate" and "asset-pipeline" features (more on features later).
 
 Note that if you customize the dependency coordinates of the profile (group, version etc.) then you may need to use the fully qualified coordinates to create an application:
 
-[source,bash]
+// NEW: Updated to use Forge CLI
+[source,console]
 ----
-$ grails create-app myapp --profile com.mycompany:mycompany:1.0.1
+$ grails -t forge create-app myapp --profile com.mycompany:mycompany:1.0.1
 ----

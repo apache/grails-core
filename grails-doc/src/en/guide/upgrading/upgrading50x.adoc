@@ -31,6 +31,8 @@ Please make sure to update your project's Java version to 11 before proceeding w
 
 Grails 6 comes with a completely revamped and highly efficient Command Line Interface (CLI) that enables you to generate applications and plugins at a remarkable speed. For instance, you can now use the new CLI to create a new Grails 6 application with the following command:
 
+// Reviewed — no changes needed
+
 ```bash
 grails create-app my-app
 ```

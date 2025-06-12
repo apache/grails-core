@@ -23,6 +23,18 @@ The biggest change in this profile is that the profile creates a multi project g
 
 To get started with the Angular profile, create an application specifying `angular` as the name of the profile:
 
+//NEW
+NOTE: As of **Grails 7**, CLI commands such as `create-app` must include the `-t forge` flag to access the correct Grails Forge toolchain.
+For example, the command should be written as:
+
+[source,bash]
+----
+grails -t forge create-app my-app --profile angular
+----
+
+Older versions (Grails 6 and below) do not require this flag.
+====
+
 [source,bash]
 ----
 $ grails create-app my-app --profile angular
@@ -111,3 +123,6 @@ grails:
 ----
 
 See the section on link:theWebLayer.html#cors[CORS] in the user guide for information on configuring this feature for your needs.
+
+//NEW
+NOTE: It is necessary to do so in parallel because by default Gradle executes tasks synchronously, and neither of the `bootRun` tasks will "finish".

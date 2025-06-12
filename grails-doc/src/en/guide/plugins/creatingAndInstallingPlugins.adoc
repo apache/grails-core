@@ -20,7 +20,7 @@ under the License.
 
 ==== Creating Plugins
 
-
+// Not updated for Grails 7
 Creating a Grails plugin is a simple matter of running the command:
 
 [source,groovy]

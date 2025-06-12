@@ -19,13 +19,16 @@ under the License.
 
 To create a Grails application you first need to familiarize yourself with the usage of the `grails` command which is used in the following manner:
 
+//NEW
+NOTE: You must use Forge-powered CLI with the `grails -t forge` syntax.
+
 [source,console]
 $ grails <<command name>>
 
 Run link:../ref/Command%20Line/create-app.html[create-app] to create an application:
 
 [source,console]
-$ grails create-app myapp
+grails -t forge create-app myapp
 
 This will create a new directory inside the current one that contains the project. Navigate to this directory in your console:
 
