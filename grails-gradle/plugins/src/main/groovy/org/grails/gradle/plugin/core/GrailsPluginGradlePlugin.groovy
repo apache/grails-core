@@ -140,7 +140,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @Override
     protected void applySpringBootPlugin(Project project) {
         super.applySpringBootPlugin(project)
-        project.tasks.withType(BootJar) { BootJar bootJar ->
+        project.tasks.withType(BootJar).configureEach { BootJar bootJar ->
             bootJar.enabled = false
         }
     }
