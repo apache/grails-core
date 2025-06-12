@@ -143,7 +143,8 @@ class ProfileCompilerTask extends AbstractCompile {
                 String profileName = d.name
                 if (d instanceof DefaultProjectDependency) {
                     DefaultProjectDependency projectDependency = (DefaultProjectDependency) d
-                    profileName = projectDependency.dependencyProject.findProperty('pomArtifactId') ?: profileName
+                    Project dependentProject = project.project(projectDependency.path)
+                    profileName = dependentProject.findProperty('pomArtifactId') ?: profileName
                 }
 
                 dependencies.add("${d.group}:${profileName}:${d.version}".toString())
