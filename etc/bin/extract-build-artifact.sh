@@ -40,7 +40,7 @@ if [ -z "${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}" ]; then
     echo "❌ Second Artifact Not found: ${ARTIFACT_NAME} could not be found under ${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}"
     exit 1;
 else
-  echo "     ✅ Second Artifact Found @ ${EXTRACT_LOCATION}/first/${ARTIFACT_NAME}"
+  echo "     ✅ Second Artifact Found @ ${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}"
 fi
 
 rm -rf "${EXTRACT_LOCATION}/firstArtifact" || true

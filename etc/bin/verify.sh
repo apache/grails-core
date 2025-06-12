@@ -21,7 +21,7 @@ set -euo pipefail
 
 PROJECT_NAME='grails-spring-security'
 RELEASE_TAG=$1
-DOWNLOAD_LOCATION="${2:-downloads}"
+DOWNLOAD_LOCATION="${2:-.}"
 DOWNLOAD_LOCATION=$(realpath "${DOWNLOAD_LOCATION}")
 
 if [ -z "${RELEASE_TAG}" ]; then
@@ -61,7 +61,16 @@ java -version
 
 echo "Bootstrap Gradle ..."
 cd "${DOWNLOAD_LOCATION}/${PROJECT_NAME}/gradle-bootstrap"
-gradlew
+
+if GRADLE_CMD="$(command -v gradlew 2>/dev/null)"; then
+    :   # found the wrapper on PATH
+elif GRADLE_CMD="$(command -v gradle 2>/dev/null)"; then
+    :   # fall back to system-wide Gradle
+else
+    echo "ERROR: Neither gradlew nor gradle found on \$PATH." >&2
+    exit 1
+fi
+${GRADLE_CMD}
 echo "✅ Gradle Bootstrapped"
 
 echo "Applying License Audit ..."
