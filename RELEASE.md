@@ -249,7 +249,7 @@ Hints on validating checksums/signatures (but replace md5sum with
 sha512sum):
 https://www.apache.org/info/verification.html
 
-Details of our release process is documented at: https://github.com/apache/grails-core/blob/7.0.x/RELEASE.md
+Details of our release process is documented at: https://github.com/apache/grails-core/blob/HEAD/RELEASE.md
 
 The vote is open for the next 72 hours and passes if a majority of at least
 three +1 PPMC votes are cast.
@@ -293,7 +293,7 @@ Binary distributions: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M
 Release artifacts are signed with a key from the following file:
 https://dist.apache.org/repos/dist/release/grails/KEYS
 
-Our release process, including verification steps, are documented here: https://github.com/apache/grails-core/blob/7.0.x/RELEASE.md The last section of this document `Appendix: Verification from a Container` is likely relevant.  For the differing artifacts, we have compared the decompiled classes to ensure they are as we expect to meet the ASF security team's requirements.
+Our release process, including verification steps, are documented here: https://github.com/apache/grails-core/blob/HEAD/RELEASE.md The last section of this document `Appendix: Verification from a Container` is likely relevant.  For the differing artifacts, we have compared the decompiled classes to ensure they are as we expect to meet the ASF security team's requirements.
 
 The vote for this release is open for the next 72 hours.
 [ ] +1 Release Apache Grails (incubating) 7.0.0-M4
@@ -351,7 +351,11 @@ The last step in the `grails-core` release workflow is to run the `Close Release
 
 ### Update the `grails-static-website`
 
-Update the `grails-static-website` repository to point to announce the new version. Further instructions are a TODO
+On the `grails-static-website` repository:
+
+Create a release (https://github.com/apache/grails-static-website/releases), which runs https://github.com/apache/grails-static-website/actions/workflows/release.yml and updates https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml.  This will trigger publishing to the `asf-site-production` branch and https://grails.apache.org
+
+Create a new `.md` file in the `/posts` directory announcing the release.  The PR will stage this change on https://grails.staged.apache.org/ and when the PR is merged it will deploy to https://grails.apache.org
 
 ### Flag release in `grails-core` as latest
 
