@@ -138,7 +138,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
             }
 
             ExtractedDependencyConstraint extractConstraint = propertyNameCalculator.calculate(groupId, artifactId, artifactVersion, false) ?: new ExtractedDependencyConstraint(groupId: groupId, artifactId: artifactId, version: artifactVersion)
-            extractConstraint.source = project.name
+            extractConstraint.source = constraint.name // this will be the project name
             constraints.put(new CoordinateHolder(groupId: extractConstraint.groupId, artifactId: extractConstraint.artifactId), extractConstraint)
         }
     }
