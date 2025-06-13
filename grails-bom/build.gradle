@@ -102,6 +102,15 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
     it.versions = combinedVersions
+    Map<String, String> artifactIdMappings = [:]
+    rootProject.subprojects.each { p ->
+        evaluationDependsOn(p.path)
+        String artifactId = p.findProperty('pomArtifactId')
+        if(artifactId) {
+            artifactIdMappings[p.name] = artifactId
+        }
+    }
+    it.projectArtifactIds.set(artifactIdMappings)
 
     it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
 }

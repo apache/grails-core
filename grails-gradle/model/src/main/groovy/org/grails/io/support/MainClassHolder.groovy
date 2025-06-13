@@ -17,27 +17,12 @@
  *  under the License.
  */
 
-package org.grails.gradle.plugin.views.json
+package org.grails.io.support
 
 import groovy.transform.CompileStatic
-import org.gradle.api.model.ObjectFactory
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.process.ExecOperations
-import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
 
-import javax.inject.Inject
-
-/**
- * Concrete implementation that compiles JSON templates
- *
- * @author Graeme Rocher
- */
 @CompileStatic
-@CacheableTask
-class GsonViewCompilerTask extends AbstractGroovyTemplateCompileTask {
-
-    @Inject
-    GsonViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {
-        super(execOperations, objectFactory, 'gson', 'grails.plugin.json.view.JsonViewTemplate', 'grails.plugin.json.view.JsonViewCompiler')
-    }
+class MainClassHolder {
+    File classFile
+    String className
 }

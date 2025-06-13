@@ -121,6 +121,7 @@ tasks.register('copyGuides').configure { Task task ->
 
     Set<Project> dataHeaderGuides = rootProject.subprojects.findAll { it.name.startsWith('grails-data-docs-guide-') }
     task.dependsOn(dataHeaderGuides.tasks*.named('asciidoctor'))
+    def guideDataDirectory = project.layout.buildDirectory.dir('guides/grails-data')
     doLast {
         copy {
             for (Project subproject : dataHeaderGuides) {
@@ -132,7 +133,7 @@ tasks.register('copyGuides').configure { Task task ->
                 }
             }
 
-            into(project.layout.buildDirectory.dir('guides/grails-data'))
+            into(guideDataDirectory)
         }
     }
 }

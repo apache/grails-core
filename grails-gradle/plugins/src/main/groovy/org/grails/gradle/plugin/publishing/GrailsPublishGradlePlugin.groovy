@@ -554,8 +554,13 @@ Note: if project properties are used, the properties must be defined prior to ap
         tasks.named('javadocJar', Jar).configure { Jar jar ->
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
 
             Groovydoc groovyDocTask = tasks.findByName('groovydoc')
             if (groovyDocTask) {
@@ -575,8 +580,13 @@ Note: if project properties are used, the properties must be defined prior to ap
             SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
             // don't only include main, but any source set
@@ -592,8 +602,13 @@ Note: if project properties are used, the properties must be defined prior to ap
             jar.dependsOn('testClasses')
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
             SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
             jar.from sourceSets.test.output
             jar.inputs.files(sourceSets.test.output)

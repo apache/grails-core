@@ -262,14 +262,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
         // It would be nice to have documented in a comment why this global exclude is in here
         String slf4jPreventExclusion = project.properties['slf4jPreventExclusion']
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
-            project.configurations.configureEach {Configuration configuration ->
+            project.configurations.configureEach { Configuration configuration ->
                 configuration.exclude group: 'org.slf4j', module: 'slf4j-simple'
             }
         }
     }
 
     protected void configureProfile(Project project) {
-        if(!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
+        if (!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
             project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
                 profileConfiguration.description = "Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell"
                 profileConfiguration.canBeConsumed = false
@@ -279,13 +279,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 profileConfiguration.defaultDependencies { DependencySet deps ->
                     String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
                     project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
-                    deps.add (
+                    deps.add(
                             project.dependencies.create(defaultProfileCoordinates)
                     )
                 }
 
                 profileConfiguration.resolutionStrategy.eachDependency { details ->
-                    if(details.requested.group == 'org.apache.grails.profiles' && !details.requested.version) {
+                    if (details.requested.group == 'org.apache.grails.profiles' && !details.requested.version) {
                         String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
                         project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
 
@@ -302,7 +302,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         project.afterEvaluate {
             GrailsExtension ge = project.extensions.getByType(GrailsExtension)
-            if(ge.springDependencyManagement) {
+            if (ge.springDependencyManagement) {
                 Plugin dependencyManagementPlugin = project.plugins.findPlugin(DependencyManagementPlugin)
                 if (dependencyManagementPlugin == null) {
                     project.plugins.apply(DependencyManagementPlugin)
@@ -634,28 +634,87 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         def existingTask = taskContainer.findByName('findMainClass')
         if (existingTask == null) {
-            def findMainClassTask = project.tasks.register('findMainClass', FindMainClassTask)
-
             def mainClassFileContainer = project.layout.buildDirectory.file('resolvedMainClassName')
-            def mainClassProvider = project.providers.fileContents(mainClassFileContainer).asText.map {
-                it.trim()
-            }
-            project.tasks.withType(BootArchive).configureEach { BootArchive bootTask ->
-                bootTask.dependsOn(findMainClassTask)
-                bootTask.inputs.file(mainClassFileContainer)
-                bootTask.mainClass.convention(mainClassProvider)
-            }
-            project.tasks.withType(BootRun).configureEach { BootRun it ->
-                it.dependsOn(findMainClassTask)
-                it.inputs.file(mainClassFileContainer)
-                it.mainClass.convention(mainClassProvider)
-            }
-
+            TaskProvider<FindMainClassTask> findMainClassTask = project.tasks.register('findMainClass', FindMainClassTask)
             findMainClassTask.configure {
                 it.mustRunAfter(project.tasks.withType(GroovyCompile))
+                it.mainClassCacheFile.set(mainClassFileContainer)
+                it.outputs.upToDateWhen {
+                    mainClassFileContainer.orNull?.asFile?.exists()
+                }
             }
+
+            // Set it on the extensions & spring boot extension "just" to be complete in case any other tasks use these values
+            project.afterEvaluate {
+                def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
+                extraProperties.set('mainClassName', project.provider {
+                    if (extraProperties.has('mainClassName')) {
+                        return extraProperties.get('mainClassName')
+                    }
+
+                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                    if (!cacheFile.exists()) {
+                        return null
+                    }
+
+                    cacheFile?.text
+                })
+
+                def springBootExtension = project.extensions.getByType(SpringBootExtension)
+                springBootExtension.mainClass.set(project.provider {
+                    if (springBootExtension.mainClass.isPresent()) {
+                        return springBootExtension.mainClass.get() as String
+                    }
+
+                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                    if (!cacheFile.exists()) {
+                        return null
+                    }
+
+                    cacheFile?.text
+                })
+            }
+
+            project.tasks.withType(BootArchive).configureEach { BootArchive bootTask ->
+                bootTask.dependsOn(findMainClassTask)
+                bootTask.mainClass.convention(project.provider {
+                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                    if (!cacheFile.exists()) {
+                        return null
+                    }
+
+                    cacheFile?.text
+                })
+            }
+
+            project.tasks.withType(BootRun).configureEach { BootRun it ->
+                it.dependsOn(findMainClassTask)
+                it.mainClass.convention(project.provider {
+                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                    if (!cacheFile.exists()) {
+                        return null
+                    }
+
+                    cacheFile?.text
+                })
+            }
+
             project.tasks.withType(ResolveMainClassName).configureEach {
                 it.dependsOn(findMainClassTask)
+
+                it.configuredMainClassName.set(project.provider {
+                    def springBootExtension = project.extensions.getByType(SpringBootExtension)
+                    if (springBootExtension.mainClass.isPresent()) {
+                        return springBootExtension.mainClass.get() as String
+                    }
+
+                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                    if (!cacheFile.exists()) {
+                        return null
+                    }
+
+                    cacheFile?.text
+                })
             }
         } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
             project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
@@ -737,7 +796,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileDynamic
     protected void configureRunScript(Project project) {
-        if(!project.tasks.names.contains('runScript')) {
+        if (!project.tasks.names.contains('runScript')) {
             project.tasks.register('runScript', ApplicationContextScriptTask).configure {
                 SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                 it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
@@ -752,7 +811,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileDynamic
     protected void configureRunCommand(Project project) {
-        if(!project.tasks.names.contains('runCommand')) {
+        if (!project.tasks.names.contains('runCommand')) {
             project.tasks.register('runCommand', ApplicationContextCommandTask).configure {
                 SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                 it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')

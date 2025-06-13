@@ -97,7 +97,9 @@ project.extensions.getByType(DistributionContainer).configureEach {
 
         from(startScripts) {
             into ''
-            fileMode = 0755
+            filePermissions { permissions ->
+                permissions.unix(0755)
+            }
         }
 
         from(layout.projectDirectory.dir('distribution-artifacts')) {

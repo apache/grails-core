@@ -133,6 +133,16 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
         compileTask.configure { ProfileCompilerTask it ->
             it.destinationDirectory.set project.layout.buildDirectory.dir('classes/profile')
             it.config.set project.layout.projectDirectory.file('profile.yml')
+            Map<String, String> artifactIdMappings = [:]
+            project.rootProject.subprojects.each { p ->
+                project.evaluationDependsOn(p.path)
+                String artifactId = p.findProperty('pomArtifactId')
+                if(artifactId) {
+                    artifactIdMappings[p.name] = artifactId
+                }
+            }
+            it.projectArtifactIds.set(artifactIdMappings)
+
             // The profile task serves 2 purposes, it compiles the groovy files & it generates the profile.yml
             // for this reason the source must be set to include all possible files
             it.source project.provider {
@@ -152,27 +162,6 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
                 }
                 project.files(dirs)
             }
-            it.templatesDirectory.set project.provider {
-                def templatesDirectory = project.layout.projectDirectory.dir('templates')
-                if (templatesDirectory.asFile.exists()) {
-                    return templatesDirectory
-                }
-                return null
-            }
-            it.skeletonDirectory.set project.provider {
-                def skeletonDirectory = project.layout.projectDirectory.dir('skeleton')
-                if (skeletonDirectory.asFile.exists()) {
-                    return skeletonDirectory
-                }
-                return null
-            }
-            it.commandsDirectory.set project.provider {
-                def commandsDirectory = project.layout.projectDirectory.dir('commands')
-                if (commandsDirectory.asFile.exists()) {
-                    return commandsDirectory
-                }
-                return null
-            }
             it.classpath = project.files(runtimeOnlyConfiguration.get(), project.configurations.named('runtimeClasspath').get())
         }
 
@@ -187,8 +176,13 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             jar.from(project.files(project.layout.buildDirectory.dir('resources/profile'), project.layout.buildDirectory.dir('classes/profile')))
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
         }
 
         TaskProvider<Jar> sourcesJarTask = project.tasks.register('sourcesJar', Jar)
@@ -208,8 +202,13 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             jar.description = 'Assembles a jar archive containing the profile sources.'
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
         }
 
         def profileReadme = project.layout.buildDirectory.file('profile.txt')
@@ -233,8 +232,13 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
         javadocJarTask.configure { Jar jar ->
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
 
             jar.dependsOn(readmeGeneration)
             // https://central.sonatype.org/publish/requirements/#supply-javadoc-and-sources

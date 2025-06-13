@@ -28,6 +28,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.AntBuilder
 import org.gradle.api.tasks.*
 
 import javax.inject.Inject
@@ -80,8 +81,11 @@ class PublishGuide extends DefaultTask {
     @OutputDirectory
     final DirectoryProperty targetDir
 
+    private final AntBuilder ant
+
     @Inject
     PublishGuide(ObjectFactory objects, Project project) {
+        this.ant = project.ant
         language = objects.property(String).convention(null as String)
         sourceRepo = objects.property(String)
         properties = objects.mapProperty(String, Object).convention([:])
@@ -120,7 +124,7 @@ class PublishGuide extends DefaultTask {
         apiDir.mkdirs()
 
         def publisher = new DocPublisher(sourceDir.get().asFile, apiDir)
-        publisher.ant = project.ant
+        publisher.ant = ant
         publisher.asciidoc = asciidoc
         publisher.workDir = workDir.get().asFile
         publisher.apiDir = apiDir
