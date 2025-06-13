@@ -36,6 +36,7 @@ dependencies {
 
     implementation project(":grails-plugin")
 
+    developmentOnly platform(project(':grails-bom'))
     developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:$assetPipelineVersion"

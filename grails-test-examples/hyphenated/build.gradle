@@ -40,6 +40,7 @@ dependencies {
 
     implementation 'org.apache.grails:grails-data-hibernate5'
 
+    developmentOnly platform(project(':grails-bom'))
     developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {

@@ -37,6 +37,7 @@ dependencies {
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails.data:grails-data-mongodb-core'
 
+    developmentOnly platform(project(':grails-bom'))
     developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
