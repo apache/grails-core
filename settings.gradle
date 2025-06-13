@@ -356,7 +356,8 @@ include (
         // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
         'grails-test-examples-cache',
         'grails-test-examples-views-functional-tests',
-        'grails-test-examples-views-functional-tests-plugin'
+        'grails-test-examples-views-functional-tests-plugin',
+        'grails-test-examples-views-markup-compilation-test'
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
@@ -384,6 +385,7 @@ project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-te
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
+project(':grails-test-examples-views-markup-compilation-test').projectDir = file('grails-test-examples/markup-compilation-test')
 
 includeBuild ('./grails-gradle')
 
