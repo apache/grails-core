@@ -27,12 +27,12 @@ plugins {
 group = "com.example.markup"
 
 dependencies {
-    implementation platform(project(':grails-bom'))
-
+    developmentOnly platform(project(':grails-bom'))
     developmentOnly "org.webjars.npm:bootstrap"
     developmentOnly "org.webjars.npm:bootstrap-icons"
     developmentOnly "org.webjars.npm:jquery"
 
+    implementation platform(project(':grails-bom'))
     implementation "org.apache.grails:grails-core"
     implementation "org.apache.grails:grails-data-hibernate5"
     implementation "org.apache.grails:grails-databinding"
