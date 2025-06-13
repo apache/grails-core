@@ -155,7 +155,6 @@ Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompat
         String targetCompatibility = args[2]
         String[] packageImports = args[3].trim().split(',')
         String packageName = args[4].trim()
-        File configFile = new File(args[5])
         String encoding = new File(args[6])
 
         GenericViewConfiguration configuration = configurationClass.getDeclaredConstructor().newInstance()
@@ -163,7 +162,12 @@ Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompat
         configuration.encoding = encoding
         configuration.packageImports = packageImports
 
-        configuration.readConfiguration(configFile)
+        for (String configFilePath : args[5].trim().split(',')) {
+            File configFile = new File(configFilePath)
+            if(configFile.exists()) {
+                configuration.readConfiguration(configFile)
+            }
+        }
 
         AbstractGroovyTemplateCompiler compiler = compilerClass.getDeclaredConstructor(ViewConfiguration, File).newInstance(configuration, srcDir)
         compiler.setTargetDirectory( destinationDir )
