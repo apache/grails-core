@@ -54,7 +54,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    implementation 'org.webjars.npm:jquery'
+    developmentOnly 'org.webjars.npm:jquery'
 
     compileOnly 'org.slf4j:slf4j-api' // Provided by Tomcat
 

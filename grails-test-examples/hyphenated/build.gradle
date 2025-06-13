@@ -40,7 +40,7 @@ dependencies {
 
     implementation 'org.apache.grails:grails-data-hibernate5'
 
-    implementation 'org.webjars.npm:jquery'
+    developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
         // exclude javax variant of hibernate-core

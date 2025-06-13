@@ -35,7 +35,7 @@ dependencies {
     implementation 'org.apache.grails:grails-gsp'
     implementation 'org.apache.grails:grails-data-hibernate5'
 
-    implementation 'org.webjars.npm:jquery'
+    developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'

@@ -48,8 +48,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    implementation 'org.webjars.npm:bootstrap'
-    implementation 'org.webjars.npm:jquery'
+    developmentOnly 'org.webjars.npm:bootstrap'
+    developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'

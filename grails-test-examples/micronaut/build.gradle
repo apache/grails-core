@@ -60,8 +60,8 @@ dependencies {
     implementation 'org.apache.grails:grails-gsp'
     compileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    implementation 'org.webjars.npm:bootstrap'
-    implementation 'org.webjars.npm:jquery'
+    developmentOnly 'org.webjars.npm:bootstrap'
+    developmentOnly 'org.webjars.npm:jquery'
 
     console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:web'
