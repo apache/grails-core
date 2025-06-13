@@ -39,15 +39,6 @@ import javax.inject.Inject
 @CacheableTask
 class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
-    @Input
-    final Property<String> fileExtension
-
-    @Input
-    final Property<String> scriptBaseName
-
-    @Input
-    final Property<String> compilerName
-
     @Inject
     MarkupViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {
         super(execOperations, objectFactory, 'gml', 'grails.plugin.markup.view.MarkupViewTemplate', 'grails.plugin.markup.view.MarkupViewCompiler')
