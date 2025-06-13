@@ -23,17 +23,6 @@ The biggest change in this profile is that the profile creates a multi project g
 
 To get started with the Angular profile, create an application specifying `angular` as the name of the profile:
 
-NOTE: As of **Grails 7**, CLI commands such as `create-app` must include the `-t forge` flag to access the correct Grails Forge toolchain.
-For example, the command should be written as:
-
-[source,bash]
-----
-grails -t forge create-app my-app --profile angular
-----
-
-Older versions (Grails 6 and below) do not require this flag.
-====
-
 [source,bash]
 ----
 $ grails create-app my-app --profile angular
@@ -52,6 +41,27 @@ settings.gradle
 ----
 
 The entire client application lives in the `client` folder and the entire server application lives in the `server` folder.
+
+[NOTE]
+====
+As of **Grails 7**, both the Grails Shell CLI and the Forge CLI are available.
+
+To use the Forge CLI for generating a `rest-api` app, include the `-t forge` flag:
+
+[source,bash]
+----
+grails -t forge create-restapi my-app
+----
+
+To use the traditional Grails Shell CLI for profile-based generation (like Angular):
+
+[source,bash]
+----
+grails create-app --profile angular my-app
+----
+
+Use `-t forge` only when accessing Forge-specific generation options. Older versions (Grails 6 and below) do not require this flag.
+====
 
 ==== Prerequisites
 

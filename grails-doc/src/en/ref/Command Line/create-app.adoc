@@ -23,38 +23,71 @@ under the License.
 
 The `create-app` command serves as the initial step in Grails application development. When invoked, this command generates a Grails application with a user-specified name. Subsequently, it creates a subdirectory based on the provided application name within the directory where the command is executed.
 
-NOTE: In Grails 7+, `create-app` is part of the Forge CLI. It must be executed using `grails -t forge`. Attempting to run `create-app` from the interactive shell (`grails>`) will result in an error.
+[NOTE]
+====
+In Grails 7, `create-app` is available in both the **Grails Shell CLI** and the **Forge CLI**.
+
+- Most users should use the **Grails Shell CLI** by default (`grails create-app bookstore`). This version supports core development commands and project lifecycle management, and includes basic `create-*` flags like `--inplace`, `--features`, and `--profile`.
+
+- The **Forge CLI** (`grails -t forge create-app bookstore`) is intended solely for **application generation** with extended configuration flags such as `--jdk`, `--gorm`, and `--servlet`.
+
+Forge-specific flags will result in an error if used with the Shell CLI.
+====
 
 === Usage
 
-To create a Grails default web application, use the following command:
+This uses the **Shell CLI** to create a standard Grails application in a new `bookstore` folder.
 
 [source,console]
 ----
-$ grails -t forge create-app [OPTIONS] name
+$ grails create-app bookstore
+$ cd bookstore
 ----
 
-- `NAME`: The desired name for the Grails application.
+This uses the **Forge CLI** to generate an application with extended configuration options.
 
-Options include specifying features, configuring the GORM implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails application to your specific requirements using these options.
+[source,console]
+----
+$ grails -t forge create-app bookstore \
+    --jdk=17 \
+    --gorm=hibernate \
+    --servlet=tomcat \
+    --test=spock \
+    --features=asciidoctor,github-workflow-java-ci
+----
 
-=== Options
+=== Options (Forge CLI)
 
-Here are the available options for the `create-app` command:
+These options are available only when using `grails -t forge`:
 
 - `NAME`: The desired name for the application.
-- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, micronaut-inject-groovy, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties.
-- `-g, --gorm=GORM Implementation`: Specifies the GORM Implementation to configure, with options like hibernate, mongodb, neo4j.
-- `-i, --inplace`: Creates the application within the current directory.
-- `--jdk=<javaVersion>`: Specifies the JDK version for the project.
-- `-s, --servlet=Servlet Implementation`: Specifies the Servlet Implementation, with choices including none, tomcat, jetty, undertow.
-- `-t, --test=TEST`: Specifies the test framework, with options such as junit, spock.
+- `-f, --features=FEATURE[,FEATURE...]`: Enable features like `gorm-hibernate5`, `postgres`, `asciidoctor`, `grails-gsp`, etc.
+- `-g, --gorm=GORM Implementation`: Choose GORM implementation: `hibernate`, `mongodb`, `neo4j`.
+- `--jdk=<javaVersion>`: Target JDK version (e.g., 11 or 17).
+- `-s, --servlet=Servlet Implementation`: Choose embedded servlet: `tomcat`, `jetty`, `undertow`, `none`.
+- `-t, --test=TEST`: Select test framework: `spock`, `junit`.
+- `-i, --inplace`: Create app in current directory.
+
+=== Shell CLI Support
+
+The following minimal flags are supported with the Shell CLI (`grails`):
+
+[source,shell]
+----
+$ grails create-app bookstore
+$ grails create-app --inplace
+----
+
+Available flags:
+- `--inplace`
+- `--features` _(limited support depending on profile)_
+- `--profile`
+
+Forge-only options such as `--jdk`, `--gorm`, or `--servlet` are **not supported** in the Shell CLI and will fail.
 
 === Examples
 
-Here are examples for the `create-app` command:
-
-1. Create an application within a directory named "bookstore":
+1. **Create an app using the Shell CLI**:
 +
 [source,console]
 ----
@@ -62,9 +95,17 @@ $ grails create-app bookstore
 $ cd bookstore
 ----
 
-NOTE: For basic project creation (e.g., just providing a project name), you can use `grails create-app` directly. Use `grails -t forge create-app` when passing Forge-specific options like `--jdk`, `--features`, `--gorm`, or `--profile`.
+2. **Create an app using the Forge CLI with advanced options**:
++
+[source,console]
+----
+$ grails -t forge create-app bookstore \
+    --jdk=17 \
+    --gorm=hibernate \
+    --features=asciidoctor,grails-gsp
+----
 
-2. Create an application directly in the current directory:
+3. **Create an app in the current directory (both CLIs)**:
 +
 [source,console]
 ----
@@ -72,10 +113,8 @@ $ mkdir bookstore
 $ cd bookstore
 $ grails create-app --inplace
 ----
-
-3. Customize the application by adding specific features:
-+
+_or_
 [source,console]
 ----
-$ grails -t forge create-app bookstore --features github-workflow-java-ci,asciidoctor
+$ grails -t forge create-app --inplace
 ----

@@ -19,14 +19,26 @@ under the License.
 
 Creating a project is the primary usage of the Forge CLI.
 
-The `create-app` and other project scaffolding commands are part of the **Forge CLI**, which must now be run using the following format:
+[NOTE]
+====
+The `create-app` and related commands are available in both the Grails Shell CLI and the Forge CLI.
+
+- To create a basic project using the default Shell CLI:  
+`$ grails create-app myapp`
+- To use Forge-specific options (such as `--java-version`, `--features`, etc.):  
+`$ grails -t forge create-app myapp`
+
+Use the Forge CLI only when you need advanced scaffolding options. Otherwise, the traditional Shell CLI is preferred and supports typical project creation.
+====
+
+The `create-app` and other advanced scaffolding commands support extended options in Forge, which must be run using the following format:
 
 [source,console]
 ----
 $ ./grails -t forge create-app myapp
 ----
 
-Do *not* use `create-app` directly with just `./grails`, as that now runs the legacy shell CLI and will not recognize Forge commands.
+You can generate an application with grails-shell, which uses profiles. The primary command for creating a new project is create-app, which creates a standard Grails web application that communicates over HTTP. For other types of applications, see the documentation below.
 
 After generating a project with Forge, switch to the created directory and use the default Grails shell CLI (`./grails`) to manage, run, test, and deploy your application.
 
@@ -121,9 +133,7 @@ After generating a project with Forge, switch to the created directory and use t
     --features=github-workflow-java-ci \
     com.example.demo
 ----
-
 |===
-| Flag  | Description | Example
 
 === The `create-` command flags
 
@@ -142,8 +152,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -s, --servlet
-| Which Servlet Implementation to configure. Possible values: none, tomcat,
-jetty, undertow.
+| Which Servlet Implementation to configure. Possible values: none, tomcat, jetty, undertow.
 |
 [source,shell]
 ----
@@ -151,8 +160,7 @@ jetty, undertow.
 ----
 
 | -g, --gorm
-| Which GORM Implementation to configure. Possible values: hibernate,
-mongodb, neo4j.
+| Which GORM Implementation to configure. Possible values: hibernate, mongodb, neo4j.
 |
 [source,shell]
 ----

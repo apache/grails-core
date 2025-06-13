@@ -44,8 +44,15 @@ With Grails Forge, when you execute the `grails` command without any arguments, 
 
 One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. Here's an example of the available options in interactive mode:
 
-NOTE: Forge commands like `create-app` require terminal execution via `grails -t forge`. They will not run inside the Grails shell (`grails>` prompt), but the shell still supports many other dev commands and tab-completion.
+[NOTE]
+====
+The `create-app` command is available in both the Grails Shell CLI and the Forge CLI.
 
+- To run it using the traditional shell (Grails Shell CLI), simply use: `grails create-app myapp`
+- To access Forge-specific options such as `--java-version` and `--list-features`, use: `grails -t forge create-app myapp`
+====
+
+The Grails Shell CLI (`grails`) supports interactive tab-completion and most developer commands. However, advanced configuration flags are only available via the Forge CLI (`grails -t forge`).
 Here's an example of the available options in interactive mode:
 
 [source,shell]
@@ -59,11 +66,9 @@ grails>
 
 You can access general usage information for Grails commands using the help flag associated with a specific command.
 
-The `create-app` command is part of the Forge CLI. To view its help information, you must use `./grails -t forge` from the terminal. You cannot access this output from the Grails shell (`grails>` prompt).
-
 [source,shell]
 ----
-grails -t forge create-app -h
+grails create-app -h
 Usage: grails create-app [-hivVx] [--list-features] [-g=GORM Implementation] [--jdk=<javaVersion>]
                          [-s=Servlet Implementation] [-t=TEST] [-f=FEATURE[,FEATURE...]]... [NAME]
 Creates an application
@@ -94,6 +99,16 @@ Creates an application
   -V, --version         Print version information and exit.
   -x, --stacktrace      Show full stack trace when exceptions occur.
 ----
+
+[NOTE]
+====
+To view the full set of Forge-specific options for the `create-app` command, use `grails -t forge create-app -h`.
+This will show additional flags not available in the Grails Shell CLI.
+[source,shell]
+----
+grails -t forge create-app -h
+----
+====
 
 You can also obtain a list of available features by using the --list-features flag with any of the create commands.
 

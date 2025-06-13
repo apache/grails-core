@@ -21,14 +21,14 @@ When you create a Grails application with the link:../ref/Command%20Line/create-
 
 [source,console]
 ----
-$ grails -t forge create-app myapp
+$ grails create-app myapp
 ----
 
 You can specify a different profile with the `--profile` argument:
 
 [source,console]
 ----
-$ grails -t forge create-app myapp --profile=rest-api
+$ grails create-app myapp --profile=rest-api
 ----
 
 Profiles encapsulate the project commands, templates, and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/grails-profiles[on GitHub], and the profiles themselves are published as JAR files to the Grails central repository.
@@ -37,14 +37,14 @@ To find out what profiles are available, use the link:../ref/Command%20Line/list
 
 [source,console]
 ----
-$ grails -t forge list-profiles
+$ grails list-profiles
 ----
 
 For more information on a particular profile, use the link:../ref/Command%20Line/profile-info.html[profile-info] command:
 
 [source,console]
 ----
-$ grails -t forge profile-info rest-api
+$ grails profile-info rest-api
 ----
 
 NOTE: Commands such as `profile-info` or `list-profiles` are not available when you invoke the Grails CLI inside a grails project.
@@ -100,7 +100,7 @@ To create an application that uses a custom profile, you must specify the full a
 
 [source,console]
 ----
-$ grails -t forge create-app myapp --profile=com.mycompany.grails.profiles:myprofile:1.0.0
+$ grails create-app myapp --profile=com.mycompany.grails.profiles:myprofile:1.0.0
 ----
 
 To simplify this process, you can define defaults for that profile in your `USER_HOME/.grails/settings.groovy` file:
@@ -124,6 +124,6 @@ With the defaults set, the following command will use the defined group ID and v
 
 [source,console]
 ----
-$ grails -t forge create-app myapp --profile=myprofile
+$ grails create-app myapp --profile=myprofile
 ----
 

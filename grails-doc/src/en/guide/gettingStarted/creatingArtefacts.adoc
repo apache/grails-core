@@ -28,6 +28,8 @@ $ cd myapp
 $ grails create-domain-class book
 ----
 
+The `create-app` command is supported in both the Grails Shell CLI and the newer Forge CLI. Use the default `grails create-app` command with the Shell CLI unless you need Forge-specific options like `--java-version`, in which case you should run it with `grails -t forge create-app`.
+
 Executing these commands will result in the creation of a domain class located at `grails-app/domain/myapp/Book.groovy`, as shown in the following code:
 
 [source,groovy]
