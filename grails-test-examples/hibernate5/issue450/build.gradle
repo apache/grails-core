@@ -34,8 +34,9 @@ dependencies {
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-gsp'
 
-    implementation 'org.webjars.npm:bootstrap'
-    implementation 'org.webjars.npm:jquery'
+    developmentOnly platform(project(':grails-bom'))
+    developmentOnly 'org.webjars.npm:bootstrap'
+    developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
