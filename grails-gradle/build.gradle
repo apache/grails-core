@@ -36,12 +36,9 @@ allprojects {
             }
         }
         maven {
-            name = 'Central Portal Snapshots'
-            url = 'https://central.sonatype.com/repository/maven-snapshots/'
-
-            // Only search this repository for the specific dependency
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
             content {
-                includeGroupByRegex('cloud[.]wondrify.*-SNAPSHOT')
+                includeVersionByRegex 'cloud[.]wondrify.*', '.*', '.*-SNAPSHOT'
             }
             mavenContent {
                 snapshotsOnly()
