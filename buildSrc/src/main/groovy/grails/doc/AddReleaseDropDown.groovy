@@ -81,6 +81,10 @@ abstract class AddReleaseDropDown extends DefaultTask {
     void addReleaseDropDown() {
         String projectVersion = version.get()
 
+        final Object result = listRepoTags("apache/grails-core")
+        List<SoftwareVersion> softwareVersions = parseSoftwareVersions(result)
+        logger.lifecycle("Detected Project Version: ${projectVersion} and Software Versions: ${softwareVersions*.versionText.join(',')}")
+
         final String versionHtml = "<p><strong>Version:</strong> ${projectVersion}</p>"
         Path guideDirectory = docsDirectory.get().asFile.toPath()
         Path targetOutputDirectory = outputDir.get().asFile.toPath()
@@ -107,7 +111,7 @@ abstract class AddReleaseDropDown extends DefaultTask {
                 if (filesToChange.containsKey(absolutePath)) {
                     //Need to add the version dropdown
                     String page = guideDirectory.toFile().relativePath(file.toFile())
-                    String selectHtml = select(options(projectVersion, page))
+                    String selectHtml = select(options(projectVersion, page, softwareVersions))
 
                     final String versionWithSelectHtml = "<p><strong>Version:</strong>&nbsp;<span style='width:100px;display:inline-block;'>${selectHtml}</span></p>"
                     targetFile.toFile().text = file.text.replace(versionHtml, versionWithSelectHtml)
@@ -130,15 +134,15 @@ abstract class AddReleaseDropDown extends DefaultTask {
      *
      * @param version The current version of the documentation
      * @param page The page to add the dropdown to
+     * @param softwareVersions The list of software versions to include in the dropdown
      * @return The list of options for the select tag
      */
-    private List<String> options(String version, String page) {
+    private List<String> options(String version, String page, List<SoftwareVersion> softwareVersions) {
         List<String> options = []
         final String snapshotHref = GRAILS_DOC_BASE_URL + "/snapshot" + page
         options << option(snapshotHref, "SNAPSHOT", version.endsWith("-SNAPSHOT"))
 
-        final Object result = listRepoTags("apache/grails-core")
-        parseSoftwareVersions(result)
+        softwareVersions
                 .forEach { softwareVersion ->
                     final String versionName = softwareVersion.versionText
                     final String href = GRAILS_DOC_BASE_URL + "/" + versionName  + page
