@@ -30,7 +30,7 @@ ext {
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
 
     grailsVersion = projectVersion
-    isCiBuild = System.getenv().get('CI') as Boolean
+    isCiBuild = System.getenv().containsKey('CI')
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 

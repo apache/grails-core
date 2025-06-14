@@ -64,7 +64,7 @@ ext {
     ext.'signing.keyId' = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
     ext.'signing.password' = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
     ext.'signing.secretKeyRingFile' = project.findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
-    isCiBuild = System.getenv().get('CI') as Boolean
+    isCiBuild = System.getenv().containsKey('CI')
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
 }
 
