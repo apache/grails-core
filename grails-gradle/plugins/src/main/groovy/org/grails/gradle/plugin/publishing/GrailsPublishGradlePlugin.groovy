@@ -274,7 +274,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
                 final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
                 publications {
-                    maven(MavenPublication) {
+                    it.create(gpe.publicationName, MavenPublication) {
                         delegate.artifactId = gpe.artifactId ?: project.name
                         delegate.groupId = gpe.groupId ?: project.group
 
