@@ -22,21 +22,15 @@ package org.grails.cli.profile.commands
 import groovy.transform.CompileStatic
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile
-/**
- * A command for creating a plugin
- *
- *
- * @author Graeme Rocher
- * @since 3.0
- */
+
 @CompileStatic
-class CreatePluginCommand extends CreateAppCommand {
+class CreateWebPluginCommand extends CreateAppCommand {
 
-    public static final String NAME = "create-plugin"
+    public static final String NAME = "create-web-plugin"
 
-    CreatePluginCommand() {
-        description.description = "Creates a plugin"
-        description.usage = "create-plugin [NAME]"
+    CreateWebPluginCommand() {
+        description.description = "Creates a web plugin"
+        description.usage = "create-web-plugin [NAME]"
     }
 
     @Override
@@ -48,7 +42,7 @@ class CreatePluginCommand extends CreateAppCommand {
     String getName() { NAME }
 
     @Override
-    protected String getDefaultProfile() { "plugin" }
+    protected String getDefaultProfile() { "web-plugin" }
 
     protected boolean validateProfile(Profile profileInstance, String profileName, ExecutionContext executionContext) {
         def pluginProfile = profileInstance.extends.find() { Profile parent -> parent.name == 'plugin' }
