@@ -86,6 +86,11 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
         tasks.named('resolveMainClassName').configure { Task task ->
             task.dependsOn(templateCompileTask)
         }
+        if(tasks.names.contains('compileTestGroovy')) {
+            tasks.named('compileTestGroovy').configure { Task task ->
+                task.dependsOn(templateCompileTask)
+            }
+        }
         if(project.plugins.hasPlugin(IntegrationTestGradlePlugin)) {
             project.plugins.withType(IntegrationTestGradlePlugin).configureEach { plugin ->
                 if(tasks.names.contains('compileIntegrationTestGroovy')) {

@@ -141,8 +141,9 @@ extensions.configure(JavaApplication) {
 }
 
 tasks.named('startScripts').configure { it ->
+    def batFile = project.layout.buildDirectory.file('scripts/grails-shell-cli.bat')
     it.doLast {
-        File win = project.layout.buildDirectory.file('scripts/grails-shell-cli.bat').get().asFile
+        File win = batFile.get().asFile
         win.text = win.text.replaceFirst(/(?m)^set CLASSPATH=.*$/,'set CLASSPATH=%APP_HOME%\\\\lib\\\\*')
     }
 }

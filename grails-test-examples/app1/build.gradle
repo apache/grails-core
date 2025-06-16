@@ -42,7 +42,9 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-cache'
     implementation 'org.apache.grails:grails-scaffolding'
-    implementation 'org.webjars.npm:jquery'
+
+    developmentOnly platform(project(':grails-bom'))
+    developmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'org.apache.grails:grails-fields'

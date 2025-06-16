@@ -85,7 +85,7 @@ for FILE in "${REQUIRED_FILES[@]}"; do
 done
 
 export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging
-cd "${SRC_DIR}"
+cd "${SRC_DIR}/bin"
 echo "Checking Shell CLI ..."
 ./grails-shell-cli create-app ShellApp
 echo "✅ Generated Shell App"

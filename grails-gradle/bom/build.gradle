@@ -77,18 +77,27 @@ noSnapshotDependenciesTask.configure {
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
-project.afterEvaluate {
-    // after eval is required since publications aren't added until after evaluation
-    tasks.named('generateMetadataFileForMavenPublication').configure {
-        dependsOn(noSnapshotDependenciesTask)
+    project.afterEvaluate {
+        // after eval is required since publications aren't added until after evaluation
+        tasks.named('generateMetadataFileForMavenPublication').configure {
+            dependsOn(noSnapshotDependenciesTask)
+        }
+        tasks.named('generatePomFileForMavenPublication').configure {
+            dependsOn(noSnapshotDependenciesTask)
+        }
     }
-    tasks.named('generatePomFileForMavenPublication').configure {
-        dependsOn(noSnapshotDependenciesTask)
-    }
-}
 }
 
 Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
+    Project foundProject = rootProject.subprojects.find {
+        it.name == artifactId &&
+                it.group == groupId
+        it.version == version
+    }
+    if (foundProject) {
+        return "${artifactId.replaceAll('-', '.')}.version" as String
+    }
+
     Map<String, String> toSearch = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
 
     Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }

@@ -228,22 +228,25 @@ tasks.register('generateBomDocumentation').configure { Task it ->
     it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
 
+    def versionsDir = project.layout.projectDirectory.dir('src/en/ref/Versions')
     it.doFirst {
-        project.layout.projectDirectory.dir('src/en/ref/Versions').asFile.mkdirs()
+        versionsDir.asFile.mkdirs()
     }
 
+    def bomDocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc')
+    def grailsBomConstraintFile = project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc')
     it.doLast {
-        def bomDocument = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc').asFile
+        def bomDocument = bomDocumentFile.asFile
         bomDocument.withWriter { writer ->
             writer.writeLine '== Grails BOM Dependencies'
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in the Grails BOM - also known as `org.apache.grails:grails-bom`. It includes the artifact coordinates, where in the hierarchy the coordinate was defined, and the maven property that defines the version.'
             writer.writeLine ''
-            writer.write(project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc').get().asFile.text)
+            writer.write(grailsBomConstraintFile.get().asFile.text)
             writer.writeLine ''
         }
 
-        project.logger.lifecycle "BOM Dependency Page generated to: ${bomDocument.absolutePath}"
+        it.logger.lifecycle "BOM Dependency Page generated to: ${bomDocument.absolutePath}"
     }
 }
 

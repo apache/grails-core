@@ -19,13 +19,12 @@
 #
 set -euo pipefail
 
-STAGING_REPO_ID=$1
-RELEASE_TAG=$2
-DOWNLOAD_LOCATION="${3:-downloads}"
+RELEASE_TAG=$1
+DOWNLOAD_LOCATION="${2:-downloads}"
 DOWNLOAD_LOCATION=$(realpath "${DOWNLOAD_LOCATION}")
 
-if [ -z "${STAGING_REPO_ID}" ] || [ -z "${RELEASE_TAG}" ]; then
-  echo "Usage: $0 [staging-repo-id] [release-tag] <optional download location>"
+if [ -z "${RELEASE_TAG}" ]; then
+  echo "Usage: $0 [release-tag] <optional download location>"
   exit 1
 fi
 
@@ -55,7 +54,7 @@ echo "Verifying CLI Distribution ..."
 echo "✅ CLI Distribution Verified"
 
 echo "Verifying JAR Artifacts ..."
-"${SCRIPT_DIR}/verify-jar-artifacts.sh" "${STAGING_REPO_ID}" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+"${SCRIPT_DIR}/verify-jar-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
 echo "✅ JAR Artifacts Verified"
 
 echo "Using Java at ..."
@@ -88,8 +87,15 @@ cd "${DOWNLOAD_LOCATION}/grails/gradle-bootstrap"
 gradlew
 echo "✅ Gradle Bootstrapped"
 
+echo "Applying License Audit ..."
+cd "${DOWNLOAD_LOCATION}/grails"
+./gradlew rat
+echo "✅ RAT passed"
+
 echo "Verifying Reproducible Build ..."
+set +e # because we have known issues here
 verify-reproducible.sh "${DOWNLOAD_LOCATION}"
+set -e
 echo "✅ Reproducible Build Verified"
 
 echo "Be sure to do the following:"

@@ -62,8 +62,13 @@ tasks.named('javadoc').configure {
 tasks.named('javadocJar', Jar).configure { Jar jar ->
     jar.reproducibleFileOrder = true
     jar.preserveFileTimestamps = false
-    jar.dirMode = 0755 // To avoid platform specific defaults
-    jar.fileMode = 0644 // to avoid platform specific defaults
+    // to avoid platform specific defaults, set the permissions consistently
+    jar.filePermissions { permissions ->
+        permissions.unix(0644)
+    }
+    jar.dirPermissions { permissions ->
+        permissions.unix(0755)
+    }
 
     jar.dependsOn(groovydocTask)
 

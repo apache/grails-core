@@ -60,6 +60,9 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     abstract MapProperty<String, String> getPlatformDefinitions()
 
     @Input
+    abstract MapProperty<String, String> getProjectArtifactIds()
+
+    @Input
     abstract MapProperty<String, String> getDefinitions()
 
     void setConfiguration(NamedDomainObjectProvider<Configuration> config) {
@@ -121,6 +124,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     private populateExplicitConstraints(Configuration configuration,
                                         Map<CoordinateHolder, ExtractedDependencyConstraint> constraints,
                                         PropertyNameCalculator propertyNameCalculator) {
+        Map<String, String> artifactIdMappings = getProjectArtifactIds().get()
         configuration.getAllDependencyConstraints().all { DependencyConstraint constraint ->
             String groupId = constraint.module.group as String
             String artifactId = constraint.module.name as String
@@ -128,12 +132,13 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
             //TODO: need to look for project property ? or manually find the project?
             if (constraint instanceof DefaultProjectDependencyConstraint) {
-                DefaultProjectDependencyConstraint pConstraint = (DefaultProjectDependencyConstraint) constraint
-                artifactId = pConstraint.projectDependency.dependencyProject.findProperty('pomArtifactId') ?: artifactId
+                if(artifactIdMappings.containsKey(constraint.name)) {
+                    artifactId = artifactIdMappings.get(constraint.name)
+                }
             }
 
             ExtractedDependencyConstraint extractConstraint = propertyNameCalculator.calculate(groupId, artifactId, artifactVersion, false) ?: new ExtractedDependencyConstraint(groupId: groupId, artifactId: artifactId, version: artifactVersion)
-            extractConstraint.source = project.name
+            extractConstraint.source = constraint.name // this will be the project name
             constraints.put(new CoordinateHolder(groupId: extractConstraint.groupId, artifactId: extractConstraint.artifactId), extractConstraint)
         }
     }

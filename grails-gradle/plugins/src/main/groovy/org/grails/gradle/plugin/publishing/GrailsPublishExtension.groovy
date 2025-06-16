@@ -90,6 +90,11 @@ class GrailsPublishExtension {
      */
     Closure pomCustomization
 
+    /**
+     * The name of the publication
+     */
+    String publicationName = 'maven'
+
     License getLicense() {
         return license
     }

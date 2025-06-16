@@ -44,7 +44,6 @@ import org.gradle.api.tasks.javadoc.Groovydoc
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
-import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
@@ -179,20 +178,19 @@ Note: if project properties are used, the properties must be defined prior to ap
         projectPluginManager.apply(MavenPublishPlugin)
 
         boolean localSigning = false
-        if(isRelease) {
+        if (isRelease) {
             String signingKeyId = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
             extraPropertiesExtension.setProperty('signing.keyId', signingKeyId)
             String secringFile = project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING')
-            if(!secringFile) {
+            if (!secringFile) {
                 project.logger.info("No keyring file has been specified. Assuming the use of local gpgCommand instead.")
                 localSigning = true
                 extraPropertiesExtension.setProperty('signing.gnupg.keyName', signingKeyId)
-            }
-            else {
+            } else {
                 extraPropertiesExtension.setProperty('signing.secretKeyRingFile', secringFile)
 
                 String signingPassphrase = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
-                if(signingPassphrase) {
+                if (signingPassphrase) {
                     extraPropertiesExtension.setProperty('signing.password', signingPassphrase)
                 }
             }
@@ -229,7 +227,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
             if (!hasNexusPublishApplied) {
                 project.rootProject.nexusPublishing {
-                    if(nexusPublishDescription) {
+                    if (nexusPublishDescription) {
                         repositoryDescription = "${nexusPublishDescription}"
                     }
                     repositories {
@@ -276,7 +274,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
                 final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
                 publications {
-                    maven(MavenPublication) {
+                    it.create(gpe.publicationName, MavenPublication) {
                         delegate.artifactId = gpe.artifactId ?: project.name
                         delegate.groupId = gpe.groupId ?: project.group
 
@@ -430,7 +428,7 @@ Note: if project properties are used, the properties must be defined prior to ap
             if (isRelease) {
                 extensionContainer.configure(SigningExtension, {
                     it.required = isRelease
-                    if(localSigning) {
+                    if (localSigning) {
                         it.useGpgCmd()
                     }
 
@@ -556,8 +554,13 @@ Note: if project properties are used, the properties must be defined prior to ap
         tasks.named('javadocJar', Jar).configure { Jar jar ->
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
 
             Groovydoc groovyDocTask = tasks.findByName('groovydoc')
             if (groovyDocTask) {
@@ -577,8 +580,13 @@ Note: if project properties are used, the properties must be defined prior to ap
             SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
             // don't only include main, but any source set
@@ -594,8 +602,13 @@ Note: if project properties are used, the properties must be defined prior to ap
             jar.dependsOn('testClasses')
             jar.reproducibleFileOrder = true
             jar.preserveFileTimestamps = false
-            jar.dirMode = 0755 // To avoid platform specific defaults
-            jar.fileMode = 0644 // to avoid platform specific defaults
+            // to avoid platform specific defaults, set the permissions consistently
+            jar.filePermissions { permissions ->
+                permissions.unix(0644)
+            }
+            jar.dirPermissions { permissions ->
+                permissions.unix(0755)
+            }
             SourceSetContainer sourceSets = SourceSets.findSourceSets(project)
             jar.from sourceSets.test.output
             jar.inputs.files(sourceSets.test.output)

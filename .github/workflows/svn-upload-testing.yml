@@ -1,0 +1,58 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "SVN Upload Testing"
+on:
+  workflow_dispatch:
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Setup SVN and Tools"
+        run: sudo apt-get install -y subversion subversion-tools
+      - name: "Ensure test folder exists"
+        run: |
+          set -e
+
+          if svn ls https://dist.apache.org/repos/dist/dev/grails/test --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" --non-interactive; then
+            echo "Test Folder already exists — skipping creation"
+          else
+            echo "Test Folder does not exist, creating"
+            svnmucc --non-interactive \
+              --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" \
+              --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" \
+              mkdir https://dist.apache.org/repos/dist/dev/grails/test \
+              -m "Create 'test' folder"
+          fi
+      - name: "Checkout dev repo"
+        run: |
+          svn checkout --non-interactive --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" https://dist.apache.org/repos/dist/dev/grails/core/test dev-repo
+      - name: "Remove existing test file"
+        run: |
+          cd dev-repo
+          if [ -d "testfile.txt" ]; then
+            svn delete "testfile.txt"
+            svn commit -m "Remove test file" --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}"
+          else
+            echo "No existing testfile.txt to remove"
+          fi
+      - name: "Upload test file"
+        run: |
+          cd dev-repo
+          echo 'This is a test' > testfile.txt
+          echo "Adding the following files:"
+          ls -l
+          svn add testfile.txt --force
+          svn commit -m "Uploading a test file" --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}"
