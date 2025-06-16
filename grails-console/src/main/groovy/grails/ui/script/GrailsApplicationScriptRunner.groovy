@@ -103,11 +103,12 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
      */
     public static void main(String[] args) {
         if(args.size() > 1) {
-            Class applicationClass
+            Class applicationClass = null
+            String className = args.last()
             try {
-                applicationClass = Thread.currentThread().contextClassLoader.loadClass(args.last())
+                applicationClass = Thread.currentThread().contextClassLoader.loadClass(className)
             } catch (Throwable e) {
-                System.err.println("Application class not found")
+                System.err.println("runScript: Application class ${className} not found")
                 System.exit(1)
             }
             String[] scriptNames = args.init() as String[]
