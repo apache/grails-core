@@ -54,3 +54,4 @@ tmp/
 !grails-fields/src/main/groovy/org/grails/scaffolding/registry/output
 !etc/bin
 etc/bin/results
+.vscode/
