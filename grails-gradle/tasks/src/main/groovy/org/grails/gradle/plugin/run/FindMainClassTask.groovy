@@ -123,9 +123,9 @@ abstract class FindMainClassTask extends DefaultTask {
             return
         }
 
-        if(mainClassName.isPresent()) {
+        if (mainClassName.isPresent()) {
             def overrideClassName = mainClassName.get()
-            logger.info("Overriding main class with: ${ overrideClassName}")
+            logger.info('Overriding main class with: {}', overrideClassName)
             File cacheFile = mainClassCacheFile.get().asFile
             cacheFile.parentFile.mkdirs()
             cacheFile.text = overrideClassName

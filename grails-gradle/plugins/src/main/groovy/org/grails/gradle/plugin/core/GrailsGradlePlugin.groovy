@@ -169,7 +169,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
         project.provider {
             File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-            if (!cacheFile.exists()) {
+            if (!cacheFile?.exists()) {
                 return null
             }
 
@@ -450,7 +450,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     project.tasks.register(taskName, ApplicationContextCommandTask).configure {
                         it.classpath = fileCollection
                         it.command = commandName
-                        it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
+                        it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
                         List<Object> args = []
                         def otherArgs = project.findProperty('args')
                         if (otherArgs) {
@@ -596,7 +596,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         def consoleTask = tasks.register('console', JavaExec)
         project.afterEvaluate {
             consoleTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass', FindMainClassTask))
+                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
                 it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
                 it.mainClass.set('grails.ui.console.GrailsSwingConsole')
 
@@ -615,7 +615,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         def shellTask = tasks.register('shell', JavaExec)
         project.afterEvaluate {
             shellTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass', FindMainClassTask))
+                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
                 it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
                 it.mainClass.set('grails.ui.shell.GrailsShell')
                 it.standardInput = System.in
@@ -659,7 +659,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
             project.afterEvaluate {
                 // Support overrides - via mainClass property
                 def propertyMainClassName = project.findProperty('mainClass')
-                if(propertyMainClassName) {
+                if (propertyMainClassName) {
                     findMainClassTask.configure {
                         it.mainClassName.set(propertyMainClassName)
                     }
@@ -668,25 +668,25 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 // Support overrides - via mainClass springboot extension
                 def springBootExtension = project.extensions.getByType(SpringBootExtension)
                 String springBootMainClassName = springBootExtension.mainClass.getOrNull()
-                if(springBootMainClassName) {
+                if (springBootMainClassName) {
                     findMainClassTask.configure {
                         it.mainClassName.set(springBootMainClassName)
                     }
                 }
 
-                if(springBootMainClassName && propertyMainClassName) {
-                    if(springBootMainClassName != propertyMainClassName) {
+                if (springBootMainClassName && propertyMainClassName) {
+                    if (springBootMainClassName != propertyMainClassName) {
                         throw new GradleException("If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value")
                     }
                 }
 
                 def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
                 def overriddenMainClass = propertyMainClassName ?: springBootMainClassName
-                if(!overriddenMainClass) {
+                if (!overriddenMainClass) {
                     // the findMainClass task needs to set these values
                     extraProperties.set('mainClassName', project.provider {
                         File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                        if (!cacheFile.exists()) {
+                        if (!cacheFile?.exists()) {
                             return null
                         }
 
@@ -695,14 +695,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                     springBootExtension.mainClass.set(project.provider {
                         File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                        if (!cacheFile.exists()) {
+                        if (!cacheFile?.exists()) {
                             return null
                         }
 
                         cacheFile?.text
                     })
-                }
-                else {
+                } else {
                     // we need to set the overridden value on both
                     extraProperties.set('mainClass', overriddenMainClass)
                     springBootExtension.mainClass.set(overriddenMainClass)
@@ -809,7 +808,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 runTask.configure {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                    it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
+                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
                     if (otherArgs) {
@@ -835,7 +834,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 runTask.configure {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                    it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
+                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
