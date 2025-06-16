@@ -237,8 +237,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
         Query.Criterion lastNameWrong = new Query.Equals("lastName", "Rogers")
-        Query.Criterion ageIncorrect = new Query.Equals("age", 51)
-        hibernateQuery.not(lastNameWrong, ageIncorrect)
+        hibernateQuery.not(lastNameWrong)
         when:
         def newBob = hibernateQuery.singleResult()
         then:

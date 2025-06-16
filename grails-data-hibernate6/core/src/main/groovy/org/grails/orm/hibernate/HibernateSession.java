@@ -178,11 +178,7 @@ public class HibernateSession extends AbstractHibernateSession {
 
     @Override
     public Query createQuery(Class type, String alias) {
-        final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
-        GrailsHibernateTemplate hibernateTemplate = getHibernateTemplate();
-        Session currentSession = hibernateTemplate.getSessionFactory().getCurrentSession();
-        final CriteriaQuery criteria = currentSession.getCriteriaBuilder().createQuery(type);
-        return new HibernateQuery(this, persistentEntity);
+        return new HibernateQuery(this, getMappingContext().getPersistentEntity(type.getName()));
     }
 
     protected GrailsHibernateTemplate getHibernateTemplate() {

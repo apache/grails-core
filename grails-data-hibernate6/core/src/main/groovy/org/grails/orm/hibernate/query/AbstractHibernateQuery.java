@@ -164,45 +164,36 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
+    /**
+     * This is called for ANDS and is only used by DymamicFinder
+     * It has the limitation of only one OR operator per Query
+     * @param criterion The criterion instance
+     */
     public void add(Criterion criterion) {
-        if (criterion instanceof Between c) {
-           between(c.getProperty(),c.getFrom(),c.getTo());
-        } else if (criterion instanceof Equals c) {
-            eq(c.getProperty(),c.getValue());
-        } else if (criterion instanceof GreaterThanEquals c) {
-            ge(c.getProperty(),c.getValue());
-        } else if (criterion instanceof GreaterThan c) {
-            gt(c.getProperty(),c.getValue());
-        } else if (criterion instanceof IdEquals c) {
-            idEq(c.getValue());
-        } else if (criterion instanceof ILike c) {
-            ilike(c.getProperty(), c.getValue().toString());
-        } else if (criterion instanceof In c) {
-            if (Objects.nonNull(c.getSubquery())) {
-                in(c.getProperty(),c.getSubquery());
-            } else {
-                in(c.getProperty(), c.getValues().stream().toList());
-            }
-        } else if (criterion instanceof IsEmpty c) {
-            isEmpty(c.getProperty());
-        } else if (criterion instanceof IsNotEmpty c) {
-            isNotEmpty(c.getProperty());
-        } else if (criterion instanceof IsNull c) {
-            isNull(c.getProperty());
-        } else if (criterion instanceof IsNotNull c) {
-            isNotNull(c.getProperty());
-        } else if (criterion instanceof RLike c) {
-            rlike(c.getProperty(), c.getValue().toString());
-        } else if (criterion instanceof Like c) {
-            like(c.getProperty(), c.getValue().toString());
-        } else if (criterion instanceof LessThanEquals c) {
-            le(c.getProperty(),c.getValue());
-        } else if (criterion instanceof LessThan c) {
-            lt(c.getProperty(),c.getValue());
-        } else {
-            //TODO It could be that this is the only call needed!
-            detachedCriteria.add(criterion);
-        }
+        Conjunction  conjunction = (Conjunction) detachedCriteria.getCriteria()
+                .stream()
+                .filter(it -> it instanceof Conjunction)
+                .map(Criterion.class::cast)
+                .findFirst()
+                .orElse(new Conjunction());
+        conjunction.add(criterion);
+        detachedCriteria.add(conjunction);
+    }
+
+
+    /**
+     * This is called for ORS and is only used by DymamicFinder
+     * It has the limitation of only one OR operator per Query
+     * @param criterion The criterion instance
+     */
+    public void add(Junction currentJunction, Criterion criterion) {
+        Disjunction disjunction = (Disjunction)  detachedCriteria.getCriteria()
+                .stream()
+                .filter(it -> it instanceof Disjunction)
+                .findFirst()
+                .orElse(new Disjunction());
+        disjunction.add(criterion);
+        detachedCriteria.add(disjunction);
     }
 
     @Override
@@ -225,15 +216,20 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query and(Criterion a, Criterion b) {
-        Closure addClosure = new Closure(this) {
+        and(new Closure(AbstractHibernateQuery.this) {
             public void doCall() {
                 DetachedCriteria owner = (DetachedCriteria) getDelegate();
                 owner.add(Restrictions.and(a,b));
             }
-        };
-        detachedCriteria.and(addClosure);
+        });
         return this;
     }
+
+    public Query and(Closure closure) {
+        detachedCriteria.and(closure);
+        return this;
+    }
+
 
     @Override
     public Query or(Criterion a, Criterion b) {
@@ -244,7 +240,27 @@ public abstract class AbstractHibernateQuery extends Query {
             }
         };
         detachedCriteria.or(orClosure);
-           return this;
+        return this;
+    }
+
+
+    public Query or(Closure closure) {
+        detachedCriteria.or(closure);
+        return this;
+    }
+
+    public Query not(Criterion a) {
+        not(new Closure(AbstractHibernateQuery.this) {
+            public void doCall() {
+                ((DetachedCriteria) getDelegate()).add(a);
+            }
+        });
+        return this;
+    }
+
+    public Query not(Closure closure) {
+        detachedCriteria.not(closure);
+        return this;
     }
 
     @Override

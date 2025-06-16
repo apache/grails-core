@@ -719,7 +719,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    protected DetachedCriteria<T> clone() {
+    DetachedCriteria<T> clone() {
         return (DetachedCriteria)super.clone()
     }
 

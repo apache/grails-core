@@ -118,31 +118,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
         return this;
     }
 
-    public Query and(Closure closure) {
-        detachedCriteria.and(closure);
-        return this;
-    }
 
-    public Query or(Closure closure) {
-        detachedCriteria.or(closure);
-        return this;
-    }
-
-    public Query not(Criterion a, Criterion b) {
-        Closure addClosure = new Closure(this) {
-            public void doCall() {
-                DetachedCriteria owner = (DetachedCriteria) getDelegate();
-                owner.add(Restrictions.or(a,b));
-            }
-        };
-        detachedCriteria.not(addClosure);
-        return this;
-    }
-
-    public Query not(Closure closure) {
-        detachedCriteria.not(closure);
-        return this;
-    }
 
     public Query ne(String propertyName, Object propertyValue) {
         detachedCriteria.ne(propertyName, propertyValue);
@@ -243,9 +219,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
             HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
             hibernateQuery.max(this.max);
             hibernateQuery.offset(this.offset);
-            hibernateQuery.setDetachedCriteria(this.detachedCriteria);
-            this.projections.getProjectionList().forEach(projection -> {hibernateQuery.projections().add(projection);});;
-            getCriteria().getCriteria().forEach(hibernateQuery::add);
+            hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
             return hibernateQuery;
         });
     }
