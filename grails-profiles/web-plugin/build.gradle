@@ -29,7 +29,8 @@ ext {
 }
 
 dependencies {
-    profileRuntimeApi project(':grails-profiles-base')
+    profileRuntimeApi project(':grails-profiles-web')
+    profileRuntimeApi project(':grails-profiles-plugin')
 }
 
 apply {
