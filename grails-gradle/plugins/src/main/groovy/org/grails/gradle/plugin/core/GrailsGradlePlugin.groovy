@@ -29,6 +29,7 @@ import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -161,6 +162,18 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     }
                 }
             """.stripIndent(16)
+        }
+    }
+
+    private static Provider<String> getMainClassProvider(Project project) {
+        Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
+        project.provider {
+            File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+            if (!cacheFile?.exists()) {
+                return null
+            }
+
+            cacheFile?.text
         }
     }
 
@@ -433,13 +446,22 @@ class GrailsGradlePlugin extends GroovyPlugin {
             for (ctxCommand in applicationContextCommands) {
                 String taskName = GrailsNameUtils.getLogicalPropertyName(ctxCommand, 'Command')
                 String commandName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(ctxCommand, 'Command'))
-                if (project.tasks.findByName(taskName) == null) {
-                    project.tasks.create(taskName, ApplicationContextCommandTask) {
-                        classpath = fileCollection
-                        command = commandName
-                        systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
-                        if (project.hasProperty('args')) {
-                            args(CommandLineParser.translateCommandline(project.args))
+                if (!project.tasks.names.contains(taskName)) {
+                    project.tasks.register(taskName, ApplicationContextCommandTask).configure {
+                        it.classpath = fileCollection
+                        it.command = commandName
+                        it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+                        List<Object> args = []
+                        def otherArgs = project.findProperty('args')
+                        if (otherArgs) {
+                            args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
+                        }
+
+                        def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+
+                        it.doFirst {
+                            args << appClassProvider.get()
+                            it.args(args)
                         }
                     }
                 }
@@ -564,46 +586,26 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
 
             NamedDomainObjectProvider<Configuration> consoleConfiguration = project.configurations.register('console')
-            def consoleTask = createConsoleTask(project, tasks, consoleConfiguration)
-            def shellTask = createShellTask(project, tasks, consoleConfiguration)
-
-            tasks.named('findMainClass').configure {
-                it.doLast {
-                    def extraProperties = project.getExtensions().getByType(ExtraPropertiesExtension)
-                    if (!extraProperties.has('mainClassName')) {
-                        return // disabled because we don't expect to run a grails app (likely a plugin)
-                    }
-
-                    def mainClassName = extraProperties.get('mainClassName')
-                    if (mainClassName) {
-                        consoleTask.get().args mainClassName
-                        shellTask.get().args mainClassName
-                        project.tasks.withType(ApplicationContextCommandTask) { ApplicationContextCommandTask task ->
-                            task.args mainClassName
-                        }
-                    }
-                    project.tasks.withType(ApplicationContextScriptTask) { ApplicationContextScriptTask task ->
-                        task.args mainClassName
-                    }
-                }
-            }
-
-            consoleTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
-            }
-
-            shellTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
-            }
+            createConsoleTask(project, tasks, consoleConfiguration)
+            createShellTask(project, tasks, consoleConfiguration)
         }
     }
 
     @CompileDynamic
     protected TaskProvider<JavaExec> createConsoleTask(Project project, TaskContainer tasks, NamedDomainObjectProvider<Configuration> configuration) {
         def consoleTask = tasks.register('console', JavaExec)
-        consoleTask.configure {
-            it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
-            it.mainClass.set('grails.ui.console.GrailsSwingConsole')
+        project.afterEvaluate {
+            consoleTask.configure {
+                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
+                it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
+                it.mainClass.set('grails.ui.console.GrailsSwingConsole')
+
+                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
+
+                it.doFirst {
+                    it.args(appClass.get())
+                }
+            }
         }
         consoleTask
     }
@@ -611,10 +613,19 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileDynamic
     protected TaskProvider<JavaExec> createShellTask(Project project, TaskContainer tasks, NamedDomainObjectProvider<Configuration> configuration) {
         def shellTask = tasks.register('shell', JavaExec)
-        shellTask.configure {
-            it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
-            it.mainClass.set('grails.ui.shell.GrailsShell')
-            it.standardInput = System.in
+        project.afterEvaluate {
+            shellTask.configure {
+                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
+                it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
+                it.mainClass.set('grails.ui.shell.GrailsShell')
+                it.standardInput = System.in
+
+                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
+
+                it.doFirst {
+                    it.args(appClass.get())
+                }
+            }
         }
         shellTask
     }
@@ -629,6 +640,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
+    @CompileDynamic
     protected void registerFindMainClassTask(Project project) {
         TaskContainer taskContainer = project.tasks
 
@@ -644,77 +656,71 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 }
             }
 
-            // Set it on the extensions & spring boot extension "just" to be complete in case any other tasks use these values
             project.afterEvaluate {
-                def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
-                extraProperties.set('mainClassName', project.provider {
-                    if (extraProperties.has('mainClassName')) {
-                        return extraProperties.get('mainClassName')
+                // Support overrides - via mainClass property
+                def propertyMainClassName = project.findProperty('mainClass')
+                if (propertyMainClassName) {
+                    findMainClassTask.configure {
+                        it.mainClassName.set(propertyMainClassName)
                     }
+                }
 
-                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                    if (!cacheFile.exists()) {
-                        return null
-                    }
-
-                    cacheFile?.text
-                })
-
+                // Support overrides - via mainClass springboot extension
                 def springBootExtension = project.extensions.getByType(SpringBootExtension)
-                springBootExtension.mainClass.set(project.provider {
-                    if (springBootExtension.mainClass.isPresent()) {
-                        return springBootExtension.mainClass.get() as String
+                String springBootMainClassName = springBootExtension.mainClass.getOrNull()
+                if (springBootMainClassName) {
+                    findMainClassTask.configure {
+                        it.mainClassName.set(springBootMainClassName)
                     }
+                }
 
-                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                    if (!cacheFile.exists()) {
-                        return null
+                if (springBootMainClassName && propertyMainClassName) {
+                    if (springBootMainClassName != propertyMainClassName) {
+                        throw new GradleException("If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value")
                     }
+                }
 
-                    cacheFile?.text
-                })
+                def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
+                def overriddenMainClass = propertyMainClassName ?: springBootMainClassName
+                if (!overriddenMainClass) {
+                    // the findMainClass task needs to set these values
+                    extraProperties.set('mainClassName', project.provider {
+                        File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                        if (!cacheFile?.exists()) {
+                            return null
+                        }
+
+                        cacheFile?.text
+                    })
+
+                    springBootExtension.mainClass.set(project.provider {
+                        File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                        if (!cacheFile?.exists()) {
+                            return null
+                        }
+
+                        cacheFile?.text
+                    })
+                } else {
+                    // we need to set the overridden value on both
+                    extraProperties.set('mainClass', overriddenMainClass)
+                    springBootExtension.mainClass.set(overriddenMainClass)
+                }
             }
 
             project.tasks.withType(BootArchive).configureEach { BootArchive bootTask ->
                 bootTask.dependsOn(findMainClassTask)
-                bootTask.mainClass.convention(project.provider {
-                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                    if (!cacheFile.exists()) {
-                        return null
-                    }
-
-                    cacheFile?.text
-                })
+                bootTask.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
             }
 
             project.tasks.withType(BootRun).configureEach { BootRun it ->
                 it.dependsOn(findMainClassTask)
-                it.mainClass.convention(project.provider {
-                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                    if (!cacheFile.exists()) {
-                        return null
-                    }
-
-                    cacheFile?.text
-                })
+                it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
                 it.dependsOn(findMainClassTask)
-
-                it.configuredMainClassName.set(project.provider {
-                    def springBootExtension = project.extensions.getByType(SpringBootExtension)
-                    if (springBootExtension.mainClass.isPresent()) {
-                        return springBootExtension.mainClass.get() as String
-                    }
-
-                    File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                    if (!cacheFile.exists()) {
-                        return null
-                    }
-
-                    cacheFile?.text
-                })
+                it.configuredMainClassName.convention(GrailsGradlePlugin.getMainClassProvider(project))
             }
         } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
             project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
@@ -797,13 +803,24 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileDynamic
     protected void configureRunScript(Project project) {
         if (!project.tasks.names.contains('runScript')) {
-            project.tasks.register('runScript', ApplicationContextScriptTask).configure {
-                SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-                it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
-                def argsProperty = project.findProperty('args')
-                if (argsProperty) {
-                    it.args(CommandLineParser.translateCommandline(argsProperty))
+            def runTask = project.tasks.register('runScript', ApplicationContextScriptTask)
+            project.afterEvaluate {
+                runTask.configure {
+                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
+                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+                    List<Object> args = []
+                    def otherArgs = project.findProperty('args')
+                    if (otherArgs) {
+                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
+                    }
+
+                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+
+                    it.doFirst {
+                        args << appClassProvider.get()
+                        it.args(args)
+                    }
                 }
             }
         }
@@ -812,13 +829,26 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileDynamic
     protected void configureRunCommand(Project project) {
         if (!project.tasks.names.contains('runCommand')) {
-            project.tasks.register('runCommand', ApplicationContextCommandTask).configure {
-                SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-                it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
-                def argsProperty = project.findProperty('args')
-                if (argsProperty) {
-                    it.args(CommandLineParser.translateCommandline(argsProperty))
+            def runTask = project.tasks.register('runCommand', ApplicationContextCommandTask)
+            project.afterEvaluate {
+                runTask.configure {
+                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
+                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+
+                    List<Object> args = []
+                    def otherArgs = project.findProperty('args')
+                    if (otherArgs) {
+                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
+                    }
+
+                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+
+                    it.doFirst {
+                        args << appClassProvider.get()
+                        it.args(args)
+                    }
+
                 }
             }
         }

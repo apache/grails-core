@@ -29,6 +29,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -58,6 +59,13 @@ abstract class FindMainClassTask extends DefaultTask {
 
     @OutputFile
     final RegularFileProperty mainClassCacheFile
+
+    /**
+     * allows forcing the main class name & ensures this task retriggers to save to the cache file if overridden
+     */
+    @Input
+    @Optional
+    final Property<String> mainClassName
 
     @Input
     final Property<Boolean> isGrailsPlugin
@@ -100,6 +108,7 @@ abstract class FindMainClassTask extends DefaultTask {
             Task bootWarTask = project.tasks.findByName(SpringBootPlugin.BOOT_WAR_TASK_NAME)
             (bootWarTask && bootWarTask.enabled) as boolean
         })
+        mainClassName = objects.property(String)
     }
 
     @TaskAction
@@ -111,6 +120,15 @@ abstract class FindMainClassTask extends DefaultTask {
 
         if (!enabledBootJarTask.get() && !enabledBootWarTask.get()) {
             logger.info('There is neither a {} or {} task that will run. Skipping finding main Application class.', SpringBootPlugin.BOOT_JAR_TASK_NAME, SpringBootPlugin.BOOT_WAR_TASK_NAME)
+            return
+        }
+
+        if (mainClassName.isPresent()) {
+            def overrideClassName = mainClassName.get()
+            logger.info('Overriding main class with: {}', overrideClassName)
+            File cacheFile = mainClassCacheFile.get().asFile
+            cacheFile.parentFile.mkdirs()
+            cacheFile.text = overrideClassName
             return
         }
 

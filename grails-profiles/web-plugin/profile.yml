@@ -31,9 +31,9 @@ features:
 build:
     merge:
         - base
+        - web
         - plugin
     excludes:
         - war
-        - org.apache.grails.gradle.grails-web
 
 
