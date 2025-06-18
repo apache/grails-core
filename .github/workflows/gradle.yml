@@ -90,8 +90,8 @@ jobs:
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         with: 
           timeout_seconds: 3600 # normal range 20-40m
-          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 180
+          max_attempts: 5 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 240
           command: >
             ./gradlew build :grails-shell-cli:installDist groovydoc
             --continue --stacktrace -PonlyCoreTests
@@ -120,8 +120,8 @@ jobs:
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         with: 
           timeout_seconds: 1200 # normal range 10-12m
-          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 180
+          max_attempts: 5 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 240
           command: >
             ./gradlew bootJar check
             --continue --stacktrace
@@ -156,8 +156,8 @@ jobs:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         with: 
           timeout_seconds: 1500 # normal range 15m
-          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 180
+          max_attempts: 5 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 240
           command: >
             ./gradlew bootJar cleanTest check
             --continue --stacktrace
@@ -190,8 +190,8 @@ jobs:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         with: 
           timeout_seconds: 1200 # normal range 10-12m
-          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 180
+          max_attempts: 5 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 240
           command: >
             ./gradlew bootJar cleanTest check
             --continue --stacktrace
