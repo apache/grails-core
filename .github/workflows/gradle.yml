@@ -91,7 +91,7 @@ jobs:
         with: 
           timeout_seconds: 3600 # normal range 20-40m
           max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 360
+          retry_wait_seconds: 600
           command: >
             ./gradlew build :grails-shell-cli:installDist groovydoc
             --continue --stacktrace -PonlyCoreTests
@@ -121,7 +121,7 @@ jobs:
         with: 
           timeout_seconds: 1200 # normal range 10-12m
           max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 360
+          retry_wait_seconds: 600
           command: >
             ./gradlew bootJar check
             --continue --stacktrace
@@ -157,7 +157,7 @@ jobs:
         with: 
           timeout_seconds: 1500 # normal range 15m
           max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 360
+          retry_wait_seconds: 600
           command: >
             ./gradlew bootJar cleanTest check
             --continue --stacktrace
@@ -191,7 +191,7 @@ jobs:
         with: 
           timeout_seconds: 1200 # normal range 10-12m
           max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 360
+          retry_wait_seconds: 600
           command: >
             ./gradlew bootJar cleanTest check
             --continue --stacktrace
