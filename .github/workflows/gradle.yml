@@ -117,13 +117,18 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🏃 Run Functional Tests"
-        run: >
-          ./gradlew bootJar check
-          --continue --stacktrace
-          -PonlyFunctionalTests
-          -PskipHibernate5Tests
-          -PskipMongodbTests
-          --rerun-tasks
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
+        with: 
+          timeout_seconds: 1200 # normal range 10-12m
+          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 180
+          command: >
+            ./gradlew bootJar check
+            --continue --stacktrace
+            -PonlyFunctionalTests
+            -PskipHibernate5Tests
+            -PskipMongodbTests
+            --rerun-tasks
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"
@@ -146,14 +151,19 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          ./gradlew bootJar cleanTest check
-          --continue --stacktrace
-          -PonlyMongodbTests
-          -PmongodbContainerVersion=${{ matrix.mongodb-version }}
-          --rerun-tasks
+        with: 
+          timeout_seconds: 1500 # normal range 15m
+          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 180
+          command: >
+            ./gradlew bootJar cleanTest check
+            --continue --stacktrace
+            -PonlyMongodbTests
+            -PmongodbContainerVersion=${{ matrix.mongodb-version }}
+            --rerun-tasks
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests"
@@ -175,13 +185,18 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          ./gradlew bootJar cleanTest check
-          --continue --stacktrace
-          -PonlyHibernate5Tests
-          --rerun-tasks
+        with: 
+          timeout_seconds: 1200 # normal range 10-12m
+          max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 180
+          command: >
+            ./gradlew bootJar cleanTest check
+            --continue --stacktrace
+            -PonlyHibernate5Tests
+            --rerun-tasks
   publishGradle:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ buildGradle ]
