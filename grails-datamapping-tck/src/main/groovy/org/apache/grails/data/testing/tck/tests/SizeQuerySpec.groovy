@@ -18,7 +18,7 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Country
+import org.apache.grails.data.testing.tck.domains.SimpleCountry
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
@@ -27,24 +27,24 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class SizeQuerySpec extends GrailsDataTckSpec {
     void setupSpec() {
-        manager.domainClasses.addAll([Country, Person])
+        manager.domainClasses.addAll([SimpleCountry, Person])
     }
 
 
     void "Test sizeLe criterion"() {
         given: "A country with only 1 resident"
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        Country c = new Country(name: "Dinoville")
+        SimpleCountry c = new SimpleCountry(name: "Dinoville")
                 .addToResidents(p)
                 .save(flush: true)
 
-        new Country(name: "Springfield")
+        new SimpleCountry(name: "Springfield")
                 .addToResidents(firstName: "Homer", lastName: "Simpson")
                 .addToResidents(firstName: "Bart", lastName: "Simpson")
                 .addToResidents(firstName: "Marge", lastName: "Simpson")
                 .save(flush: true)
 
-        new Country(name: "Miami")
+        new SimpleCountry(name: "Miami")
                 .addToResidents(firstName: "Dexter", lastName: "Morgan")
                 .addToResidents(firstName: "Debra", lastName: "Morgan")
                 .save(flush: true)
@@ -52,7 +52,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         when: "We query for countries with 1 resident"
-        def results = Country.withCriteria {
+        def results = SimpleCountry.withCriteria {
             sizeLe "residents", 3
             order "name"
         }
@@ -65,7 +65,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[2].name == 'Springfield'
 
         when: "We query for countries with 2 resident"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeLe "residents", 2
             order "name"
         }
@@ -77,7 +77,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[1].name == 'Miami'
 
         when: "We query for countries with 2 residents"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeLe "residents", 1
         }
 
@@ -88,17 +88,17 @@ class SizeQuerySpec extends GrailsDataTckSpec {
     void "Test sizeLt criterion"() {
         given: "A country with only 1 resident"
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        Country c = new Country(name: "Dinoville")
+        SimpleCountry c = new SimpleCountry(name: "Dinoville")
                 .addToResidents(p)
                 .save(flush: true)
 
-        new Country(name: "Springfield")
+        new SimpleCountry(name: "Springfield")
                 .addToResidents(firstName: "Homer", lastName: "Simpson")
                 .addToResidents(firstName: "Bart", lastName: "Simpson")
                 .addToResidents(firstName: "Marge", lastName: "Simpson")
                 .save(flush: true)
 
-        new Country(name: "Miami")
+        new SimpleCountry(name: "Miami")
                 .addToResidents(firstName: "Dexter", lastName: "Morgan")
                 .addToResidents(firstName: "Debra", lastName: "Morgan")
                 .save(flush: true)
@@ -106,7 +106,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         when: "We query for countries with 1 resident"
-        def results = Country.withCriteria {
+        def results = SimpleCountry.withCriteria {
             sizeLt "residents", 3
             order "name"
         }
@@ -118,7 +118,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[1].name == 'Miami'
 
         when: "We query for countries with 2 resident"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeLt "residents", 2
         }
 
@@ -128,7 +128,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[0].name == 'Dinoville'
 
         when: "We query for countries with 2 residents"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeLt "residents", 1
         }
 
@@ -139,17 +139,17 @@ class SizeQuerySpec extends GrailsDataTckSpec {
     void "Test sizeGt criterion"() {
         given: "A country with only 1 resident"
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        Country c = new Country(name: "Dinoville")
+        SimpleCountry c = new SimpleCountry(name: "Dinoville")
                 .addToResidents(p)
                 .save(flush: true)
 
-        new Country(name: "Springfield")
+        new SimpleCountry(name: "Springfield")
                 .addToResidents(firstName: "Homer", lastName: "Simpson")
                 .addToResidents(firstName: "Bart", lastName: "Simpson")
                 .addToResidents(firstName: "Marge", lastName: "Simpson")
                 .save(flush: true)
 
-        new Country(name: "Miami")
+        new SimpleCountry(name: "Miami")
                 .addToResidents(firstName: "Dexter", lastName: "Morgan")
                 .addToResidents(firstName: "Debra", lastName: "Morgan")
                 .save(flush: true)
@@ -157,7 +157,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         when: "We query for countries with 1 resident"
-        def results = Country.withCriteria {
+        def results = SimpleCountry.withCriteria {
             sizeGt "residents", 1
             order "name"
         }
@@ -169,7 +169,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[1].name == 'Springfield'
 
         when: "We query for countries with 2 resident"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeGt "residents", 2
         }
 
@@ -179,7 +179,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[0].name == 'Springfield'
 
         when: "We query for countries with 2 residents"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeGt "residents", 5
         }
 
@@ -190,17 +190,17 @@ class SizeQuerySpec extends GrailsDataTckSpec {
     void "Test sizeGe criterion"() {
         given: "A country with only 1 resident"
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        Country c = new Country(name: "Dinoville")
+        SimpleCountry c = new SimpleCountry(name: "Dinoville")
                 .addToResidents(p)
                 .save(flush: true)
 
-        new Country(name: "Springfield")
+        new SimpleCountry(name: "Springfield")
                 .addToResidents(firstName: "Homer", lastName: "Simpson")
                 .addToResidents(firstName: "Bart", lastName: "Simpson")
                 .addToResidents(firstName: "Marge", lastName: "Simpson")
                 .save(flush: true)
 
-        new Country(name: "Miami")
+        new SimpleCountry(name: "Miami")
                 .addToResidents(firstName: "Dexter", lastName: "Morgan")
                 .addToResidents(firstName: "Debra", lastName: "Morgan")
                 .save(flush: true)
@@ -208,7 +208,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         when: "We query for countries with 1 resident"
-        def results = Country.withCriteria {
+        def results = SimpleCountry.withCriteria {
             sizeGe "residents", 1
             order "name"
         }
@@ -221,7 +221,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[2].name == 'Springfield'
 
         when: "We query for countries with 2 resident"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeGe "residents", 2
             order "name"
         }
@@ -233,7 +233,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[1].name == 'Springfield'
 
         when: "We query for countries with 2 residents"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeGe "residents", 5
         }
 
@@ -244,11 +244,11 @@ class SizeQuerySpec extends GrailsDataTckSpec {
     void "Test sizeEq criterion"() {
         given: "A country with only 1 resident"
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        Country c = new Country(name: "Dinoville")
+        SimpleCountry c = new SimpleCountry(name: "Dinoville")
                 .addToResidents(p)
                 .save(flush: true)
 
-        new Country(name: "Springfield")
+        new SimpleCountry(name: "Springfield")
                 .addToResidents(firstName: "Homer", lastName: "Simpson")
                 .addToResidents(firstName: "Bart", lastName: "Simpson")
                 .addToResidents(firstName: "Marge", lastName: "Simpson")
@@ -257,7 +257,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         when: "We query for countries with 1 resident"
-        def results = Country.withCriteria {
+        def results = SimpleCountry.withCriteria {
             sizeEq "residents", 1
         }
 
@@ -267,7 +267,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[0].name == 'Dinoville'
 
         when: "We query for countries with 3 resident"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeEq "residents", 3
         }
 
@@ -277,7 +277,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[0].name == 'Springfield'
 
         when: "We query for countries with 2 residents"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeEq "residents", 2
         }
 
@@ -288,11 +288,11 @@ class SizeQuerySpec extends GrailsDataTckSpec {
     void "Test sizeNe criterion"() {
         given: "A country with only 1 resident"
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        Country c = new Country(name: "Dinoville")
+        SimpleCountry c = new SimpleCountry(name: "Dinoville")
                 .addToResidents(p)
                 .save(flush: true)
 
-        new Country(name: "Springfield")
+        new SimpleCountry(name: "Springfield")
                 .addToResidents(firstName: "Homer", lastName: "Simpson")
                 .addToResidents(firstName: "Bart", lastName: "Simpson")
                 .addToResidents(firstName: "Marge", lastName: "Simpson")
@@ -301,7 +301,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         when: "We query for countries that don't have 1 resident"
-        def results = Country.withCriteria {
+        def results = SimpleCountry.withCriteria {
             sizeNe "residents", 1
         }
 
@@ -311,7 +311,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[0].name == 'Springfield'
 
         when: "We query for countries who don't have 3 resident"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             sizeNe "residents", 3
         }
 
@@ -321,7 +321,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         results[0].name == 'Dinoville'
 
         when: "We query for countries with 2 residents"
-        results = Country.withCriteria {
+        results = SimpleCountry.withCriteria {
             and {
                 sizeNe "residents", 1
                 sizeNe "residents", 3

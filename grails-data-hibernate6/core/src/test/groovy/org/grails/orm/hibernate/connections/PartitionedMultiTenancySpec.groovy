@@ -42,7 +42,7 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
     def setupSpec() {
         manager.domainClasses.addAll([MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher])
         manager.grailsConfig = [
-                'dataSource.url'                              : "jdbc:tc:postgresql:latest:///dev_db",
+                'dataSource.url'                              : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'                         : 'create-drop',
                 'dataSource.formatSql'                        : 'true',
                 'dataSource.logSql'                           : 'true',
