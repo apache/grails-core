@@ -162,7 +162,7 @@ jobs:
         with: 
           timeout_seconds: 2700 # normal range 10-30m
           max_attempts: 3 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
-          retry_wait_seconds: 360
+          retry_wait_seconds: 600
           command: >
             ./gradlew build
             -x groovydoc
