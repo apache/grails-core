@@ -158,6 +158,11 @@ jobs:
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
-        run: >
-          ./gradlew build
-          -x groovydoc
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
+        with: 
+          timeout_seconds: 2700 # normal range 10-30m
+          max_attempts: 5 # Attempts to address: Connect to repository.apache.org:443 [repository.apache.org/65.109.119.155] failed: Connect timed out
+          retry_wait_seconds: 240
+          command: >
+            ./gradlew build
+            -x groovydoc
