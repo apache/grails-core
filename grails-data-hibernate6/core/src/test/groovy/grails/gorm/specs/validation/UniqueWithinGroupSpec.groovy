@@ -56,7 +56,7 @@ class UniqueWithinGroupSpec extends HibernateGormDatastoreSpec {
         when:
         Thing thing1 = new Thing(hello: 1, world: 2)
         thing1.save(insert: true, flush: true)
-        sessionFactory.currentSession.flush()
+        manager.sessionFactory.currentSession.flush()
         Thing thing2 = new Thing(hello: 1, world: 2)
         thing2.save(insert: true, flush: true)
 
@@ -71,7 +71,7 @@ class UniqueWithinGroupSpec extends HibernateGormDatastoreSpec {
     void "test validate"() {
         when:
         Thing thing1 = new Thing(hello: 1, world: 2).save(insert: true, flush: true)
-        sessionFactory.currentSession.flush()
+        manager.sessionFactory.currentSession.flush()
         Thing thing2 = new Thing(hello: 1, world: 2)
 
         then:
