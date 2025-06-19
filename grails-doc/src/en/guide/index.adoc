@@ -685,11 +685,6 @@ include::webServices/REST/restfulControllers/generatingRestControllers.adoc[]
 
 include::webServices/REST/restProfile.adoc[]
 
-[[angularProfile]]
-==== The Angular Profile
-
-include::webServices/REST/angularProfile.adoc[]
-
 [[jsonViews]]
 ==== JSON Views
 

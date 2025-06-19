@@ -20,21 +20,34 @@ under the License.
 
 ==== Creating Plugins
 
-
 Creating a Grails plugin is a simple matter of running the command:
 
+Grails Shell CLI
 [source,groovy]
 ----
 grails create-plugin <<PLUGIN NAME>>
 ----
 
-This will create a web-plugin project for the name you specify. For example running `grails create-plugin example` would create a new web-plugin project called `example`.
-
-In Grails 3.0 you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
-
+Grails Forge CLI
 [source,groovy]
 ----
-grails create-plugin <<PLUGIN NAME>> --profile=plugin
+grails -t forge create-plugin <<PLUGIN NAME>>
+----
+
+This will create a plugin project for the name you specify. For example running `grails create-plugin example` would create a new plugin project called `example`.
+
+You should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin requires a web environment then use the "web-plugin" profile instead of the default "plugin" profile:
+
+Grails Shell CLI
+[source,groovy]
+----
+grails create-web-plugin <<PLUGIN NAME>>
+----
+
+Grails Forge CLI
+[source,groovy]
+----
+grails -t forge create-web-plugin <<PLUGIN NAME>>
 ----
 
 Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.

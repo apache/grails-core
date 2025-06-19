@@ -40,9 +40,12 @@ Note that with ! (bang) commands, you get file path auto completion - ideal for 
 To exit interactive mode enter the `exit` command. Note that if the Grails application has been run with `run-app` normally it will terminate when the interactive mode console exits because the JVM will be terminated. An exception to this would be if the application were running in forked mode which means the application is running in a different JVM. In that case the application will be left running after the interactive mode console terminates. If you want to exit interactive mode and stop an application that is running in forked mode, use the `quit` command. The `quit` command will stop the running application and then close interactive mode.
 
 
-With Grails Forge, when you execute the `grails` command without any arguments, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
+With Grails Forge, when you execute the `grails -t forge` command, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
 
 One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. Here's an example of the available options in interactive mode:
+
+The Grails Shell CLI (`grails`) supports interactive tab-completion and most developer commands. However, advanced configuration flags are only available via the Forge CLI (`grails -t forge`).
+Here's an example of the available options in interactive mode:
 
 [source,shell]
 ----
@@ -140,7 +143,7 @@ Available Features
   grails-web-console                  A web-based Groovy console for interactive runtime application management and debugging
 
   Other
-  geb (+)                             This plugins configure Geb for Grails framework to write automation tests.
+  geb (+)                             This plugins configure Geb for the Grails framework to write automation tests.
   grails-console (+)                  Starts the Grails console, which is an extended version of the regular Groovy console.
   scaffolding (+)                     The Grails® framework Scaffolding plugin replicates much of the functionality from Grails 2, but uses the fields plugin instead.
 
@@ -157,7 +160,7 @@ Available Features
   mockito                             Mockito test mocking framework for JUnit
 
   View Rendering
-  asset-pipeline-grails (+)           The Asset-Pipeline is a plugin used for managing and processing static assets in JVM applications primarily via Gradle (however not mandatory). Read more at https://github.com/bertramdev/asset-pipeline
+  asset-pipeline-grails (+)           The Asset-Pipeline is a plugin used for managing and processing static assets in JVM applications primarily via Gradle (however not mandatory). Read more at https://github.com/wondrify/asset-pipeline
   grails-gsp (+)                      grails-gsp
   views-json                          JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
   views-markup                        Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.

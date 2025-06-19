@@ -109,7 +109,7 @@ bootRun{
 ----
 
 
-=== non-interactive mode
+=== Non-interactive mode
 
 
 When you run a script manually and it prompts you for information, you can answer the questions and continue running the script. But when you run a script as part of an automated process, for example a continuous integration build server, there's no way to "answer" the questions. So you can pass the `\--non-interactive` switch to the script command to tell Grails to accept the default answer for any questions, for example whether to install a missing plugin.
