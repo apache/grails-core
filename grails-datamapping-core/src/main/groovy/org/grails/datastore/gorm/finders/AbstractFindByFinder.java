@@ -20,6 +20,7 @@
 package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -44,7 +45,9 @@ public abstract class AbstractFindByFinder extends DynamicFinder {
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
         return execute(new SessionCallback<Object>() {
             public Object doInSession(final Session session) {
-                return invokeQuery(buildQuery(invocation, session));
+                Query query = buildQuery(invocation, session);
+                adjustQuery(query);
+                return invokeQuery(query);
             }
         });
     }
@@ -54,40 +57,11 @@ public abstract class AbstractFindByFinder extends DynamicFinder {
     }
 
     public boolean firstExpressionIsRequiredBoolean() {
-        return false;
+        return super.firstExpressionIsRequiredBoolean();
     }
 
-    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
-        final Class<?> clazz = invocation.getJavaClass();
-        Query q = session.createQuery(clazz);
-        return buildQuery(invocation, clazz, q);
-    }
 
-    protected Query buildQuery(DynamicFinderInvocation invocation, Class<?> clazz, Query query) {
-        applyAdditionalCriteria(query, invocation.getCriteria());
-        applyDetachedCriteria(query, invocation.getDetachedCriteria());
-        configureQueryWithArguments(clazz, query, invocation.getArguments());
-
-        final String operatorInUse = invocation.getOperator();
-
-        if (operatorInUse != null && operatorInUse.equals(OPERATOR_OR)) {
-            if (firstExpressionIsRequiredBoolean()) {
-                MethodExpression expression = invocation.getExpressions().remove(0);
-                query.add(expression.createCriterion());
-            }
-
-            Query.Junction disjunction = query.disjunction();
-
-            for (MethodExpression expression : invocation.getExpressions()) {
-                query.add(disjunction, expression.createCriterion());
-            }
-        }
-        else {
-            for (MethodExpression expression : invocation.getExpressions()) {
-                query.add(expression.createCriterion());
-            }
-        }
-        return query;
+    protected void adjustQuery(Query query) {
     }
 
 }

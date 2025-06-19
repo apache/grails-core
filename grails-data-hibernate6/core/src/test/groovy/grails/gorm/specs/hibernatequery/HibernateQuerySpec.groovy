@@ -224,8 +224,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def or() {
         given:
         new Person(firstName: "Bob", lastName: "Builder", age: 51).save(flush: true)
-        Query.Criterion lastNameWrong = new Query.Equals("lastName", "Rogers")
-        Query.Criterion ageCorrect = new Query.Equals("age", 50)
+        def lastNameWrong = new Query.Equals("lastName", "Rogers")
+        def  ageCorrect = new Query.Equals("age", 50)
+
         hibernateQuery.or(lastNameWrong, ageCorrect)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -237,7 +238,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
         Query.Criterion lastNameWrong = new Query.Equals("lastName", "Rogers")
-        hibernateQuery.not(lastNameWrong)
+        Query.Criterion firstNameWrong = new Query.Equals("firstName", "Fred")
+        hibernateQuery.not([lastNameWrong,firstNameWrong])
         when:
         def newBob = hibernateQuery.singleResult()
         then:

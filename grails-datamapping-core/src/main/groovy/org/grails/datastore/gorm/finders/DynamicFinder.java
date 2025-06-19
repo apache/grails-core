@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.JoinType;
@@ -46,6 +47,7 @@ import org.grails.datastore.gorm.finders.MethodExpression.NotEqual;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -773,4 +775,35 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
 
+    public boolean firstExpressionIsRequiredBoolean() {
+        return false;
+    }
+
+    protected Query.Junction getJunction(DynamicFinderInvocation invocation) {
+       var criteria = invocation.getExpressions().stream().map(MethodExpression::createCriterion).collect(Collectors.toList());
+       Query.Junction junction;
+       if (FindAllByFinder.OPERATOR_OR.equals(invocation.getOperator())) {
+           junction = new Query.Disjunction();
+           if (firstExpressionIsRequiredBoolean()) {
+               var conjunction = new Query.Conjunction();
+               conjunction.add(criteria.remove(0));
+               junction.add(conjunction);
+           }
+       }
+       else {
+          junction = new Query.Conjunction();
+       }
+       criteria.forEach(junction::add);
+       return junction;
+   }
+
+    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
+        final Class<?> clazz = invocation.getJavaClass();
+        var query = session.createQuery(clazz);
+        applyAdditionalCriteria(query, invocation.getCriteria());
+        applyDetachedCriteria(query, invocation.getDetachedCriteria());
+        configureQueryWithArguments(clazz, query, invocation.getArguments());
+        query.add(getJunction(invocation));
+        return query;
+    }
 }

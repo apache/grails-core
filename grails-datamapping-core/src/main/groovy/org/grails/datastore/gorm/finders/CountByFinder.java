@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -49,8 +50,9 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
         return execute(new SessionCallback<Object>() {
             public Object doInSession(final Session session) {
-                Query q = buildQuery(invocation, session);
-                return invokeQuery(q);
+                Query query = buildQuery(invocation, session);
+                adjustQuery(query);
+                return invokeQuery(query);
             }
         });
     }
@@ -59,31 +61,13 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
         return q.singleResult();
     }
 
-    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
-        final Class<?> clazz = invocation.getJavaClass();
-        Query q = session.createQuery(clazz);
-        return buildQuery(invocation, clazz, q);
+
+    protected Query adjustQuery(Query query) {
+        query.projections().count();
+        return query;
     }
 
-    protected Query buildQuery(DynamicFinderInvocation invocation, Class<?> clazz, Query q) {
-        applyAdditionalCriteria(q, invocation.getCriteria());
-        configureQueryWithArguments(clazz, q, invocation.getArguments());
-
-        String operatorInUse = invocation.getOperator();
-        if (operatorInUse != null && operatorInUse.equals(OPERATOR_OR)) {
-            Query.Junction disjunction = q.disjunction();
-
-            for (MethodExpression expression : invocation.getExpressions()) {
-                q.add(disjunction, expression.createCriterion());
-            }
-        }
-        else {
-            for (MethodExpression expression : invocation.getExpressions()) {
-                q.add( expression.createCriterion() );
-            }
-        }
-
-        q.projections().count();
-        return q;
+    public boolean firstExpressionIsRequiredBoolean() {
+        return super.firstExpressionIsRequiredBoolean();
     }
 }

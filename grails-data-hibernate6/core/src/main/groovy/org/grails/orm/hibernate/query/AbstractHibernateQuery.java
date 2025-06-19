@@ -170,14 +170,7 @@ public abstract class AbstractHibernateQuery extends Query {
      * @param criterion The criterion instance
      */
     public void add(Criterion criterion) {
-        Conjunction  conjunction = (Conjunction) detachedCriteria.getCriteria()
-                .stream()
-                .filter(it -> it instanceof Conjunction)
-                .map(Criterion.class::cast)
-                .findFirst()
-                .orElse(new Conjunction());
-        conjunction.add(criterion);
-        detachedCriteria.add(conjunction);
+        detachedCriteria.add(criterion);
     }
 
 
@@ -216,12 +209,14 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query and(Criterion a, Criterion b) {
-        and(new Closure(AbstractHibernateQuery.this) {
-            public void doCall() {
-                DetachedCriteria owner = (DetachedCriteria) getDelegate();
-                owner.add(Restrictions.and(a,b));
-            }
-        });
+        and(List.of(a,b));
+        return this;
+    }
+
+    public Query and(List<Criterion> criteria) {
+        var conjunction = new Conjunction();
+        criteria.forEach(conjunction::add);
+        detachedCriteria.add(conjunction);
         return this;
     }
 
@@ -233,13 +228,14 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query or(Criterion a, Criterion b) {
-        Closure orClosure = new Closure(this) {
-            public void doCall() {
-                DetachedCriteria owner = (DetachedCriteria) getDelegate();
-                owner.add(Restrictions.or(a,b));
-            }
-        };
-        detachedCriteria.or(orClosure);
+        or(List.of(a,b));
+        return this;
+    }
+
+    public Query or(List<Criterion> criteria) {
+        var disjunction = new Disjunction();
+        criteria.forEach(disjunction::add);
+        detachedCriteria.add(disjunction);
         return this;
     }
 
@@ -257,6 +253,16 @@ public abstract class AbstractHibernateQuery extends Query {
         });
         return this;
     }
+
+    public Query not(List<Criterion> criteria) {
+        var conjunction = new Conjunction();
+        criteria.forEach(conjunction::add);
+        var negation = new Negation();
+        negation.add(conjunction);
+        detachedCriteria.add(negation);
+        return this;
+    }
+
 
     public Query not(Closure closure) {
         detachedCriteria.not(closure);

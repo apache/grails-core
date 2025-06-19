@@ -31,10 +31,10 @@ import org.grails.datastore.mapping.query.Query;
  */
 public class FindAllByFinder extends DynamicFinder {
 
-    private static final String OPERATOR_OR = "Or";
-    private static final String OPERATOR_AND = "And";
+    protected static final String OPERATOR_OR = "Or";
+    protected static final String OPERATOR_AND = "And";
     private static final String METHOD_PATTERN = "(findAllBy)([A-Z]\\w*)";
-    private static final String[] OPERATORS = { OPERATOR_AND, OPERATOR_OR };
+    protected static final String[] OPERATORS = { OPERATOR_AND, OPERATOR_OR };
 
     public FindAllByFinder(final Datastore datastore) {
         super(Pattern.compile(METHOD_PATTERN), OPERATORS, datastore);
@@ -48,8 +48,9 @@ public class FindAllByFinder extends DynamicFinder {
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
         return execute(new SessionCallback<Object>() {
             public Object doInSession(final Session session) {
-                Query q = buildQuery(invocation, session);
-                return invokeQuery(q);
+                Query query = buildQuery(invocation, session);
+                adjustQuery(query);
+                return invokeQuery(query);
             }
         });
     }
@@ -58,39 +59,8 @@ public class FindAllByFinder extends DynamicFinder {
         return q.list();
     }
 
-    public boolean firstExpressionIsRequiredBoolean() {
-        return false;
-    }
-
-    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
-        final Class<?> clazz = invocation.getJavaClass();
-        Query q = session.createQuery(clazz);
-        return buildQuery(invocation, clazz, q);
-    }
-
-    protected Query buildQuery(DynamicFinderInvocation invocation, Class<?> clazz, Query query) {
-        applyAdditionalCriteria(query, invocation.getCriteria());
-        applyDetachedCriteria(query, invocation.getDetachedCriteria());
-        configureQueryWithArguments(clazz, query, invocation.getArguments());
-
-        final String operatorInUse = invocation.getOperator();
-        if (operatorInUse != null && operatorInUse.equals(OPERATOR_OR)) {
-            if (firstExpressionIsRequiredBoolean()) {
-                MethodExpression expression = invocation.getExpressions().remove(0);
-                query.add(expression.createCriterion());
-            }
-            Query.Junction disjunction = query.disjunction();
-
-            for (MethodExpression expression : invocation.getExpressions()) {
-                query.add(disjunction, expression.createCriterion());
-            }
-        }
-        else {
-            for (MethodExpression expression : invocation.getExpressions()) {
-                query.add( expression.createCriterion() );
-            }
-        }
+    protected void adjustQuery( Query query) {
         query.projections().distinct();
-        return query;
     }
+
 }
