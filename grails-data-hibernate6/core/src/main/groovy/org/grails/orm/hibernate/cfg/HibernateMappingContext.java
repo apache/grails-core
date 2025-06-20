@@ -32,6 +32,9 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.springframework.validation.Errors;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Optional;
 
 /**
  * A Mapping context for Hibernate
@@ -185,6 +188,15 @@ public class HibernateMappingContext extends AbstractMappingContext {
             name = name.substring(0, proxyIndicator);
         }
         return super.getPersistentEntity(name);
+    }
+
+    public Collection<HibernatePersistentEntity> getHibernatePersistentEntities() {
+        return Optional.ofNullable(persistentEntities)
+                .orElse(new ArrayList<>())
+                .stream()
+                .filter(HibernatePersistentEntity.class::isInstance)
+                .map(HibernatePersistentEntity.class::cast)
+                .toList();
     }
 
     static class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity {
