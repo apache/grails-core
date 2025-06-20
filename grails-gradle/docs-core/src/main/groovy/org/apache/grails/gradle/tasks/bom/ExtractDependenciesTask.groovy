@@ -133,14 +133,13 @@ abstract class ExtractDependenciesTask extends DefaultTask {
             String artifactId = constraint.module.name as String
             String artifactVersion = constraint.version as String
 
-            if (constraint instanceof DefaultProjectDependencyConstraint) {
-                if(artifactIdMappings.containsKey(constraint.name)) {
-                    artifactId = artifactIdMappings.get(constraint.name)
-                }
+            if(artifactIdMappings.containsKey(constraint.name)) {
+                artifactId = artifactIdMappings.get(constraint.name)
             }
 
             ExtractedDependencyConstraint extractConstraint = propertyNameCalculator.calculate(groupId, artifactId, artifactVersion, false) ?: new ExtractedDependencyConstraint(groupId: groupId, artifactId: artifactId, version: artifactVersion)
             extractConstraint.source = getProjectName().get()
+            extractConstraint.versionPropertyReference = "\${${artifactId.replaceAll('-', '.')}.version}"
             constraints.put(new CoordinateHolder(groupId: extractConstraint.groupId, artifactId: extractConstraint.artifactId), extractConstraint)
         }
     }
