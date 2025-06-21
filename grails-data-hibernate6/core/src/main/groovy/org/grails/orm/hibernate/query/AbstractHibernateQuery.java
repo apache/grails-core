@@ -38,6 +38,7 @@ import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaExpression;
 import org.hibernate.transform.ResultTransformer;
 import org.springframework.core.convert.ConversionService;
@@ -489,43 +490,19 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     protected org.hibernate.query.Query createQuery() {
-        HibernateCriteriaBuilder cb = getCriteriaBuilder();
 
+        var projectionList = collectProjections();
+        var cq = createCriteriaQuery(projectionList);
+        From root = cq.from(entity.getJavaClass());
+        var jpaFromProvider = new JpaFromProvider(detachedCriteria);
+        Map<String, From> tablesByName = jpaFromProvider.getFromsByName(cq, root);
 
-        List<DetachedAssociationCriteria> detachedAssociationCriteria = getDetachedAssociationCriteria();
-
-        Map<String, DetachedAssociationCriteria> aliasMap = detachedAssociationCriteria.stream()
-                .collect(Collectors.toMap(
-                        DetachedAssociationCriteria::getAssociationPath,
-                    criteria ->criteria, (oldValue,newValue) -> newValue)
-                );
-
-
-        List<Projection> projections = collectProjections();
+        assignProjections(projectionList, cq, tablesByName);
 
         List<GroupPropertyProjection> groupProjections = collectGroupProjections();
-
-        List<String> joinColumns = Stream.concat(aliasMap.keySet().stream(), collectJoinColumns().stream()).distinct().toList();
-        CriteriaQuery cq = projections.stream()
-                .filter( it -> !(it instanceof DistinctProjection || it instanceof DistinctPropertyProjection))
-                .toList().size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
-        projections.stream()
-                .filter( it -> it instanceof DistinctProjection || it instanceof DistinctPropertyProjection)
-                .findFirst()
-                .ifPresent(projection -> {
-                    cq.distinct(true);
-                });
-        From root = cq.from(entity.getJavaClass());
-        Map<String, From> fromMap = detachedAssociationCriteria.stream()
-                .collect(Collectors.toMap(
-                        DetachedAssociationCriteria::getAssociationPath,
-                        criteria -> cq.from(criteria.getAssociation().getOwner().getJavaClass()) , (oldValue,newValue) -> newValue)
-                );
-        fromMap.put("root", root);
-        Map<String, From> tablesByName = assignJoinTables(joinColumns, root,aliasMap, fromMap);
-        assignProjections(projections, cb, root, cq, tablesByName);
         assignGroupBy(groupProjections, root, cq, tablesByName);
-        assignOrderBy(cq, cb, tablesByName);
+        var cb = getCriteriaBuilder();
+        assignOrderBy(cq, tablesByName);
         assignCriteria(cq, cb, root,tablesByName);
 
         org.hibernate.query.Query query = getSessionFactory()
@@ -545,26 +522,38 @@ public abstract class AbstractHibernateQuery extends Query {
         return query;
     }
 
+
+
+    @SuppressWarnings("unchecked")
+    private Map<String, JoinType> getDetachedCriteriaJoinTypes() {
+        return detachedCriteria.getJoinTypes();
+    }
+
+    private JpaCriteriaQuery<?> createCriteriaQuery(List<Projection> projections) {
+        var cb = getCriteriaBuilder();
+        var cq = projections.stream()
+                .filter( it -> !(it instanceof DistinctProjection || it instanceof DistinctPropertyProjection))
+                .toList().size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
+        projections.stream()
+                .filter( it -> it instanceof DistinctProjection || it instanceof DistinctPropertyProjection)
+                .findFirst()
+                .ifPresent(projection -> {
+                    cq.distinct(true);
+                });
+        return cq;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Query.Criterion> getDetachedCriteria() {
+        return detachedCriteria.getCriteria();
+    }
+
     private List<DetachedAssociationCriteria> getDetachedAssociationCriteria() {
-        List<DetachedAssociationCriteria> detachedAssociationCriteria = detachedCriteria.getCriteria()
+        return getDetachedCriteria()
                 .stream()
-                .map(o -> {
-                    if (o instanceof In c && Objects.nonNull(c.getSubquery()) ) {
-                        return c.getSubquery().getCriteria();
-                    } else if (o instanceof Exists c && Objects.nonNull(c.getSubquery()) ) {
-                        return c.getSubquery().getCriteria();
-                    } else if (o instanceof NotExists c && Objects.nonNull(c.getSubquery()) ) {
-                        return c.getSubquery().getCriteria();
-                    } else if (o instanceof SubqueryCriterion c && Objects.nonNull(c.getValue()) ) {
-                        return c.getValue().getCriteria();
-                    }
-                    return List.of(o);
-                })
-                .flatMap(list -> ((List) list).stream())
-                .filter(DetachedAssociationCriteria.class::isInstance)
-                .map(DetachedAssociationCriteria.class::cast)
+                .map(new DetachedAssociationFunction())
+                .flatMap(List::stream)
                 .toList();
-        return detachedAssociationCriteria;
     }
 
     private List<String> collectJoinColumns() {
@@ -587,22 +576,22 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     private List<Projection> collectProjections() {
-        List<Projection> projections = projections().getProjectionList()
+        return projections().getProjectionList()
                 .stream()
-                .filter(combinePredicates(projectionPredicates))
+                .filter(new ProjectionPredicate())
                 .toList();
-        return projections;
     }
 
     private void assignCriteria(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root, Map<String, From> tablesByName) {
-        List<Criterion>  criteriaList = (List<Criterion>)detachedCriteria.getCriteria();
+        List<Criterion>  criteriaList = getDetachedCriteria();
         if (!criteriaList.isEmpty()) {
             jakarta.persistence.criteria.Predicate[] predicates = PredicateGenerator.getPredicates(cb, cq, root, criteriaList, tablesByName);
             cq.where(cb.and(predicates));
         }
     }
 
-    private void assignOrderBy(CriteriaQuery cq, HibernateCriteriaBuilder cb, Map<String, From> tablesByName) {
+    private void assignOrderBy(CriteriaQuery cq, Map<String, From> tablesByName) {
+        var cb = getCriteriaBuilder();
         List<Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
             cq.orderBy(orders
@@ -643,10 +632,10 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignProjections(List<Projection> projections, HibernateCriteriaBuilder cb, From root, CriteriaQuery cq, Map<String, From> tablesByName) {
+    private void assignProjections(List<Projection> projections, CriteriaQuery cq, Map<String, From> tablesByName) {
         List<Expression> projectionExpressions = projections
                 .stream()
-                .map(projectionToJpaExpression(cb, tablesByName))
+                .map(projectionToJpaExpression(tablesByName))
                 .filter(Objects::nonNull)
                 .map(Expression.class::cast)
                 .toList();
@@ -655,55 +644,13 @@ public abstract class AbstractHibernateQuery extends Query {
         } else if (projectionExpressions.size() > 1){
             cq.multiselect(projectionExpressions);
         } else {
-            cq.select(root);
-        }
-    }
-
-    private Map<String, From> assignJoinTables(List<String> joinColumns, From root, Map<String,DetachedAssociationCriteria> aliasMap, Map<String, From> fromMap) {
-        Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
-        //The join column is column for joining from the root entity
-        Map<String, From> tablesByName = joinColumns.stream().map(joinColumn -> {
-            JoinType joinType = joinTypes.entrySet()
-                    .stream()
-                    .filter(entry -> entry.getKey().equals(joinColumn))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(JoinType.INNER);
-            From from = fromMap.computeIfAbsent(joinColumn, s -> fromMap.get("root"));
-            Join table = from.join(joinColumn, joinType);
-            String column = aliasColumn(aliasMap, joinColumn, table);
-            return new AbstractMap.SimpleEntry<>(column, table);
-        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        tablesByName.put("root", root);
-        return tablesByName;
-    }
-
-    private static String aliasColumn(Map<String, DetachedAssociationCriteria> aliasMap, String associationPath, Join table) {
-        // Attempt to find specific criteria configuration for this association path
-        DetachedAssociationCriteria criteria = aliasMap.get(associationPath);
-
-        if (criteria != null) {
-            // If criteria configuration exists:
-            // Determine the alias: use the one from criteria if it's not null,
-            // otherwise default back to using the associationPath itself.
-            String aliasToUse = Objects.requireNonNullElse(criteria.getAlias(), associationPath);
-
-            // Apply the determined alias explicitly to the Join object
-            table.alias(aliasToUse);
-
-            // Return the alias that was determined and applied
-            return aliasToUse;
-        } else {
-            // If no specific criteria configuration was found,
-            // return the original associationPath as the implicit alias.
-            // We don't explicitly call table.alias() here, letting JPA/Hibernate handle defaults.
-            return associationPath;
+            cq.select(tablesByName.get("root"));
         }
     }
 
     private Function<Projection, JpaExpression> projectionToJpaExpression(
-            HibernateCriteriaBuilder cb,
             Map<String, From> tablesByName) {
+        var cb = getCriteriaBuilder();
         return projection -> {
             if (countProjectionPredicate.test(projection)) {
                 return cb.count(tablesByName.get("root"));
