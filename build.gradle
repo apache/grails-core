@@ -53,16 +53,19 @@ allprojects {
             content { includeModule 'org.apache.grails', 'grails-bom' }
         }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        maven { url = 'https://repo.grails.org/grails/restricted' }
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
-                includeGroupByRegex 'org[.]apache[.]((grails)|(groovy)).*'
-            }
-            mavenContent {
-                snapshotsOnly()
+                includeVersionByRegex 'org[.]apache[.]((grails)|(groovy)).*', '.*', '.*-SNAPSHOT'
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
+            }
+        }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
     }
 }
 

@@ -31,9 +31,6 @@ compileJava.options.release = gradleProperties.javaVersion.toString().toInteger(
 
 repositories {
     // mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
-    maven { url = 'https://repo.grails.org/grails/restricted' }
     maven {
         url = 'https://repository.apache.org/content/groups/snapshots'
         content {
@@ -43,12 +40,12 @@ repositories {
     maven {
         url = 'https://central.sonatype.com/repository/maven-snapshots'
         content {
-            includeVersionByRegex 'cloud[.]wondrify.*', '.*', '.*-SNAPSHOT'
-        }
-        mavenContent {
-            snapshotsOnly()
+            includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
         }
     }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
