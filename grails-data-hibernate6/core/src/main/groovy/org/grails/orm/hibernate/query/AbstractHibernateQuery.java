@@ -15,7 +15,6 @@
 package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
-import grails.gorm.DetachedCriteria;
 import groovy.lang.Closure;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
@@ -33,17 +32,13 @@ import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.QueryException;
-import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
-import org.hibernate.query.ResultListTransformer;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaExpression;
-import org.hibernate.query.sqm.PathElementException;
 import org.hibernate.transform.ResultTransformer;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -56,7 +51,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -531,7 +525,7 @@ public abstract class AbstractHibernateQuery extends Query {
         Map<String, From> tablesByName = assignJoinTables(joinColumns, root,aliasMap, fromMap);
         assignProjections(projections, cb, root, cq, tablesByName);
         assignGroupBy(groupProjections, root, cq, tablesByName);
-        assignOrderBy(cq, cb, root,tablesByName);
+        assignOrderBy(cq, cb, tablesByName);
         assignCriteria(cq, cb, root,tablesByName);
 
         org.hibernate.query.Query query = getSessionFactory()
@@ -608,14 +602,14 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignOrderBy(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root, Map<String, From> tablesByName) {
+    private void assignOrderBy(CriteriaQuery cq, HibernateCriteriaBuilder cb, Map<String, From> tablesByName) {
         List<Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
             cq.orderBy(orders
                     .stream()
                     .map(order -> {
                         Path expression = getFullyQualifiedPath(tablesByName, order.getProperty());
-                        if (order.isIgnoreCase()) {
+                        if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                             if (order.getDirection().equals(Order.Direction.ASC)) {
                                 return cb.asc(cb.lower(expression));
                             }  else {
