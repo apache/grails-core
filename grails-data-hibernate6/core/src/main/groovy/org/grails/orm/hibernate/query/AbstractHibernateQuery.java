@@ -21,7 +21,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
@@ -45,7 +44,6 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
-import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -55,8 +53,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -494,8 +490,8 @@ public abstract class AbstractHibernateQuery extends Query {
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
         From root = cq.from(entity.getJavaClass());
-        var jpaFromProvider = new JpaFromProvider(detachedCriteria);
-        Map<String, From> tablesByName = jpaFromProvider.getFromsByName(cq, root);
+        var tablesByName = new JpaFromProvider(detachedCriteria,cq,root);
+
 
         assignProjections(projectionList, cq, tablesByName);
 
@@ -582,7 +578,7 @@ public abstract class AbstractHibernateQuery extends Query {
                 .toList();
     }
 
-    private void assignCriteria(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root, Map<String, From> tablesByName) {
+    private void assignCriteria(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root, JpaFromProvider tablesByName) {
         List<Criterion>  criteriaList = getDetachedCriteria();
         if (!criteriaList.isEmpty()) {
             jakarta.persistence.criteria.Predicate[] predicates = PredicateGenerator.getPredicates(cb, cq, root, criteriaList, tablesByName);
@@ -590,14 +586,14 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignOrderBy(CriteriaQuery cq, Map<String, From> tablesByName) {
+    private void assignOrderBy(CriteriaQuery cq, JpaFromProvider tablesByName) {
         var cb = getCriteriaBuilder();
         List<Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
             cq.orderBy(orders
                     .stream()
                     .map(order -> {
-                        Path expression = getFullyQualifiedPath(tablesByName, order.getProperty());
+                        Path expression = tablesByName.getFullyQualifiedPath(order.getProperty());
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                             if (order.getDirection().equals(Order.Direction.ASC)) {
                                 return cb.asc(cb.lower(expression));
@@ -618,13 +614,13 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignGroupBy(List<GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq, Map<String, From> tablesByName) {
+    private void assignGroupBy(List<GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq, JpaFromProvider tablesByName) {
         if (!groupProjections.isEmpty()) {
             List<Expression> groupByPaths = groupProjections
                     .stream()
                     .map(groupPropertyProjection -> {
                         String propertyName = groupPropertyProjection.getPropertyName();
-                        return getFullyQualifiedPath(tablesByName, propertyName);
+                        return tablesByName.getFullyQualifiedPath(propertyName);
                     })
                     .map(Expression.class::cast)
                     .toList();
@@ -632,7 +628,7 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private void assignProjections(List<Projection> projections, CriteriaQuery cq, Map<String, From> tablesByName) {
+    private void assignProjections(List<Projection> projections, CriteriaQuery cq, JpaFromProvider tablesByName) {
         List<Expression> projectionExpressions = projections
                 .stream()
                 .map(projectionToJpaExpression(tablesByName))
@@ -644,26 +640,26 @@ public abstract class AbstractHibernateQuery extends Query {
         } else if (projectionExpressions.size() > 1){
             cq.multiselect(projectionExpressions);
         } else {
-            cq.select(tablesByName.get("root"));
+            cq.select(tablesByName.getFullyQualifiedPath("root"));
         }
     }
 
     private Function<Projection, JpaExpression> projectionToJpaExpression(
-            Map<String, From> tablesByName) {
+            JpaFromProvider tablesByName) {
         var cb = getCriteriaBuilder();
         return projection -> {
             if (countProjectionPredicate.test(projection)) {
-                return cb.count(tablesByName.get("root"));
+                return cb.count(tablesByName.getFullyQualifiedPath("root"));
             } else if (countDistinctProjection.test(projection)) {
                 String propertyName = ((PropertyProjection) projection).getPropertyName();
-                return cb.countDistinct(tablesByName.get("root").get(propertyName));
+                return cb.countDistinct(tablesByName.getFullyQualifiedPath("root." + propertyName));
             } else if (idProjectionPredicate.test(projection)) {
-                return (JpaExpression) tablesByName.get("root").get("id");
+                return (JpaExpression) tablesByName.getFullyQualifiedPath("root.id");
             } else if (distinctProjectionPredicate.test(projection)) {
                 return null;
             } else {
                 String propertyName = ((PropertyProjection) projection).getPropertyName();
-                Path path = getFullyQualifiedPath(tablesByName, propertyName);
+                Path path = tablesByName.getFullyQualifiedPath(propertyName);
                 if (maxProjectionPredicate.test(projection)) {
                     return cb.max(path);
                 } else if (minProjectionPredicate.test(projection)) {
@@ -678,13 +674,6 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             return null;
         };
-    }
-
-    public static Path getFullyQualifiedPath(Map<String, From> tablesByName, String propertyName) {
-        String[] parsed = propertyName.split("\\.");
-        String tableName = parsed.length > 1 ? parsed[0] : "root";
-        String columnName = parsed.length > 1 ? parsed[1] : propertyName;
-        return tablesByName.get(tableName).get(columnName);
     }
 
     private SessionFactory getSessionFactory() {

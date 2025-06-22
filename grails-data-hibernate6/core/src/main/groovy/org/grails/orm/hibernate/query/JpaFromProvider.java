@@ -3,12 +3,15 @@ package org.grails.orm.hibernate.query;
 import grails.gorm.DetachedCriteria;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Path;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.query.Query;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 
 import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,24 +19,44 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class JpaFromProvider {
+public class JpaFromProvider implements Cloneable {
 
-    private final DetachedCriteria detachedCriteria;
+    private Map<String, From> fromMap;
 
-    public JpaFromProvider(DetachedCriteria detachedCriteria) {
-        this.detachedCriteria = detachedCriteria;
+    private JpaFromProvider(Map<String, From> fromMap) {
+        this.fromMap = new HashMap<>(fromMap);
     }
 
-    public Map<String, From> getFromsByName(JpaCriteriaQuery<?> cq, From root) {
-        var detachedAssociationCriteriaList = getDetachedAssociationCriteria();
+
+    public JpaFromProvider(DetachedCriteria detachedCriteria, JpaCriteriaQuery<?> cq, From root) {
+        fromMap = getFromsByName(detachedCriteria, cq, root);
+    }
+
+    private Map<String, From> getFromsByName(DetachedCriteria detachedCriteria, JpaCriteriaQuery<?> cq, From root) {
+        var detachedAssociationCriteriaList = ((List<Query.Criterion>) detachedCriteria.getCriteria())
+                .stream()
+                .map(new DetachedAssociationFunction())
+                .flatMap(List::stream)
+                .toList();
 
         var aliasMap = createAliasMap(detachedAssociationCriteriaList);
         //The join column is column for joining from the root entity
         var detachedFroms = createDetachedFroms(cq, detachedAssociationCriteriaList);
-        Map<String, From> fromsByName = Stream.concat(aliasMap.keySet().stream(), collectJoinColumns().stream())
+        Map<String, From> fromsByName = Stream.concat(aliasMap.keySet().stream(), ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
+                        .entrySet()
+                        .stream()
+                        .filter(entry -> entry.getValue().equals(FetchType.EAGER))
+                        .map(Map.Entry::getKey)
+                        .toList().stream())
                 .distinct()
                 .map(joinColumn -> {
-                    var table = detachedFroms.computeIfAbsent(joinColumn, s -> root).join(joinColumn, getJoinType(joinColumn));
+                    var table = detachedFroms.computeIfAbsent(joinColumn, s -> root).join(joinColumn, ((Map<String, JoinType>) detachedCriteria.getJoinTypes())
+                            .entrySet()
+                            .stream()
+                            .filter(entry -> entry.getKey().equals(joinColumn))
+                            .map(Map.Entry::getValue)
+                            .findFirst()
+                            .orElse(JoinType.INNER));
                     // Attempt to find specific criteria configuration for this association path
                     var column = Optional.ofNullable(aliasMap.get(joinColumn))
                             .map(detachedAssociationCriteria -> Objects.requireNonNullElse(detachedAssociationCriteria.getAlias(), joinColumn))
@@ -43,16 +66,6 @@ public class JpaFromProvider {
         }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         fromsByName.put("root", root);
         return fromsByName;
-    }
-
-    private JoinType getJoinType(String joinColumn) {
-        return getDetachedCriteriaJoinTypes()
-        .entrySet()
-        .stream()
-        .filter(entry -> entry.getKey().equals(joinColumn))
-        .map(Map.Entry::getValue)
-        .findFirst()
-        .orElse(JoinType.INNER);
     }
 
     private Map<String, From> createDetachedFroms(JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria> detachedAssociationCriteriaList) {
@@ -69,37 +82,29 @@ public class JpaFromProvider {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    @SuppressWarnings("unchecked")
-    private List<Query.Criterion> getDetachedCriteria() {
-        return detachedCriteria.getCriteria();
+    public Path getFullyQualifiedPath(String propertyName) {
+        if (Objects.isNull(propertyName) || propertyName.trim().isEmpty()) {
+            throw new IllegalArgumentException("propertyName cannot be null");
+        }
+        String[] parsed = propertyName.split("\\.");
+        if (parsed.length == 1) {
+            if (fromMap.containsKey(propertyName)) {
+                return fromMap.get(propertyName);
+            } else {
+               return fromMap.get("root").get(propertyName);
+            }
+        }
+        String tableName =  parsed[0];
+        String columnName =  parsed[1];
+        return fromMap.get(tableName).get(columnName);
     }
 
-    private List<DetachedAssociationCriteria> getDetachedAssociationCriteria() {
-        return getDetachedCriteria()
-                .stream()
-                .map(new DetachedAssociationFunction())
-                .flatMap(List::stream)
-                .toList();
-    }
-
-    private List<String> collectJoinColumns() {
-        return getDetachedCriteriaFetchStrategies()
-                .entrySet()
-                .stream()
-                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
-                .map(Map.Entry::getKey)
-                .toList();
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, JoinType> getDetachedCriteriaJoinTypes() {
-        return detachedCriteria.getJoinTypes();
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String,FetchType> getDetachedCriteriaFetchStrategies() {
-        return detachedCriteria.getFetchStrategies();
+    public Object clone() {
+        return new JpaFromProvider(fromMap);
     }
 
 
+    public void put(String tableName, From child) {
+        fromMap.put(tableName, child);
+    }
 }
