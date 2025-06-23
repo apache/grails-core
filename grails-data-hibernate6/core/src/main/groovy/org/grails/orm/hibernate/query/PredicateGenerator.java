@@ -43,18 +43,10 @@ public class PredicateGenerator {
                     if (criterion instanceof Query.Disjunction) {
                         List<Query.Criterion> criterionList = ((Query.Disjunction) criterion).getCriteria();
                         return cb.or(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
-                    } else if (criterion instanceof Query.DistinctProjection) {
-                            // this returns always true
-                        return cb.conjunction();
+
                     } else if (criterion instanceof Query.Conjunction) {
                         List<Query.Criterion> criterionList = ((Query.Conjunction) criterion).getCriteria();
                         return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
-                    } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
-                            Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
-                            List<Query.Criterion> criterionList = c.getCriteria();
-                            JpaFromProvider childTablesByName = (JpaFromProvider )tablesByName.clone();
-                            childTablesByName.put("root",child);
-                            return cb.and(getPredicates(cb, criteriaQuery, child, criterionList, childTablesByName));
                     } else if (criterion instanceof Query.Negation) {
                         List<Query.Criterion> criterionList = ((Query.Negation) criterion).getCriteria();
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName);
@@ -63,6 +55,15 @@ public class PredicateGenerator {
                             throw new RuntimeException("Must have a single predicate behind a not");
                         }
                         return cb.not(predicates[0]);
+                    } else if (criterion instanceof Query.DistinctProjection) {
+                        // this returns always true
+                        return cb.conjunction();
+                    } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
+                            Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
+                            List<Query.Criterion> criterionList = c.getCriteria();
+                            JpaFromProvider childTablesByName = (JpaFromProvider )tablesByName.clone();
+                            childTablesByName.put("root",child);
+                            return cb.and(getPredicates(cb, criteriaQuery, child, criterionList, childTablesByName));
                     } else if (criterion instanceof Query.IsNull c) {
                         return cb.isNull(tablesByName.getFullyQualifiedPath(c.getProperty()));
                     } else if (criterion instanceof Query.IsNotNull c) {
