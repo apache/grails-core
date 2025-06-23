@@ -42,7 +42,7 @@ ext {
             'objenesis.version'                  : '3.4',
             'gradle-spock.version'               : '2.3-groovy-3.0',
             'gradle-nexus-publish-plugin.version': '2.0.0',
-            'spring-boot.version'                : '3.5.0',
+            'spring-boot.version'                : '3.5.3',
             'springloaded.version'               : '1.2.8.RELEASE',
     ]
 
