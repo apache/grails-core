@@ -41,7 +41,7 @@ class GrailsDocGradlePlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         Configuration docConfiguration = project.configurations.create(DOC_CONFIGURATION)
-        project.dependencies.add(DOC_CONFIGURATION, "org.grails:grails-docs:${BuildSettings.getPackage().getImplementationVersion()}")
+        project.dependencies.add(DOC_CONFIGURATION, "org.apache.grails:grails-docs-core:$BuildSettings.grailsVersion")
 
         Groovydoc groovydocTask = (Groovydoc)project.tasks.findByName('groovydoc')
         Javadoc javadocTask = (Javadoc)project.tasks.findByName('javadoc')
