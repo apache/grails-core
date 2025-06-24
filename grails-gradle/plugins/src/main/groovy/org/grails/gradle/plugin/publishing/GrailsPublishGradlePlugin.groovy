@@ -278,10 +278,12 @@ Note: if project properties are used, the properties must be defined prior to ap
                         delegate.artifactId = gpe.artifactId ?: project.name
                         delegate.groupId = gpe.groupId ?: project.group
 
-                        doAddArtefact(project, delegate)
-                        def extraArtefact = getDefaultExtraArtifact(project)
-                        if (extraArtefact) {
-                            artifact extraArtefact
+                        if(gpe.addComponents) {
+                            doAddArtefact(project, delegate)
+                            def extraArtefact = getDefaultExtraArtifact(project)
+                            if (extraArtefact) {
+                                artifact extraArtefact
+                            }
                         }
 
                         pom.withXml {
