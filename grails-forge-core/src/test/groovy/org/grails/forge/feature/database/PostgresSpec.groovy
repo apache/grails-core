@@ -52,8 +52,8 @@ class PostgresSpec extends ApplicationContextSpec {
         ctx.getConfiguration().get("dataSource.driverClassName") == 'org.postgresql.Driver'
         ctx.getConfiguration().get("dataSource.username") == 'postgres'
         ctx.getConfiguration().get("dataSource.password") == ''
-        ctx.getConfiguration().get("environments.development.dataSource.url") == 'jdbc:postgresql://localhost:5432/devDb'
-        ctx.getConfiguration().get("environments.test.dataSource.url") == 'jdbc:postgresql://localhost:5432/testDb'
-        ctx.getConfiguration().get("environments.production.dataSource.url") == 'jdbc:postgresql://localhost:5432/postgres'
+        ctx.getConfiguration().get("environments.development.dataSource.url") == 'jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true'
+        ctx.getConfiguration().get("environments.test.dataSource.url") == 'jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true'
+        ctx.getConfiguration().get("environments.production.dataSource.url") == 'jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true'
     }
 }

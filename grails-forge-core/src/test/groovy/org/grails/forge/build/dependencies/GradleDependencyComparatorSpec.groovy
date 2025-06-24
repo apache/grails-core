@@ -41,7 +41,7 @@ class GradleDependencyComparatorSpec extends Specification {
                  dep(Dependency.builder().groupId("io.micronaut.sql").artifactId("micronaut-jdbc-hikari").implementation(), ctx),
                  dep(Dependency.builder().groupId("org.apache.grails").artifactId("grails-console").console(), ctx),
                  dep(Dependency.builder().groupId("org.testcontainers").artifactId("testcontainers").testImplementation(), ctx),
-                 dep(Dependency.builder().groupId("mysql").artifactId("mysql-connector-java").runtimeOnly(), ctx),
+                 dep(Dependency.builder().groupId("com.mysql").artifactId("mysql-connector-j").runtimeOnly(), ctx),
                  dep(Dependency.builder().groupId("org.testcontainers").artifactId("junit-jupiter").testImplementation(), ctx),
                  dep(Dependency.builder().groupId("org.testcontainers").artifactId("mysql").testImplementation(), ctx),
                  dep(Dependency.builder().groupId("ch.qos.logback").artifactId("logback-classic").runtimeOnly(), ctx)]
@@ -59,7 +59,7 @@ class GradleDependencyComparatorSpec extends Specification {
         "${str(dependencies[6])}" == 'compileOnly "io.micronaut.openapi:micronaut-openapi"'
         "${str(dependencies[7])}" == 'console "org.apache.grails:grails-console"'
         "${str(dependencies[8])}" == 'runtimeOnly "ch.qos.logback:logback-classic"'
-        "${str(dependencies[9])}" == 'runtimeOnly "mysql:mysql-connector-java"'
+        "${str(dependencies[9])}" == 'runtimeOnly "com.mysql:mysql-connector-j"'
         "${str(dependencies[10])}" == 'testImplementation "org.testcontainers:junit-jupiter"'
         "${str(dependencies[11])}" == 'testImplementation "org.testcontainers:mysql"'
         "${str(dependencies[12])}" == 'testImplementation "org.testcontainers:testcontainers"'

@@ -46,8 +46,8 @@ class AssetPipelineSpec extends ApplicationContextSpec implements CommandOutputF
                 .render()
 
         then:
-        template.contains("apply plugin: \"asset-pipeline\"")
-        template.contains("runtimeOnly \"com.bertramlabs.plugins:asset-pipeline-grails\"")
+        template.contains("apply plugin: \"cloud.wondrify.asset-pipeline\"")
+        template.contains("runtimeOnly \"cloud.wondrify:asset-pipeline-grails\"")
         template.contains('''
 assets {
     excludes = [

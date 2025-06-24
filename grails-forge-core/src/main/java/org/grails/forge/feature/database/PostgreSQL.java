@@ -45,18 +45,18 @@ public class PostgreSQL extends DatabaseDriverFeature {
 
     @Override
     public String getJdbcDevUrl() {
-        return "jdbc:postgresql://localhost:5432/devDb";
+        return "jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true";
     }
 
     @Override
     public String getJdbcTestUrl() {
-        return "jdbc:postgresql://localhost:5432/testDb";
+        return "jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true";
     }
 
     @Override
     public String getJdbcProdUrl() {
         // postgres docker image uses default db name and username of postgres so we use the same
-        return "jdbc:postgresql://localhost:5432/postgres";
+        return "jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true";
     }
 
     @Override

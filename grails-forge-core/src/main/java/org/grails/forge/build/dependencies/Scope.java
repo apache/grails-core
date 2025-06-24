@@ -33,6 +33,7 @@ public class Scope {
     public static final Scope RUNTIME_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.RUNTIME));
     public static final Scope TEST_IMPLEMENTATION = new Scope(Source.TEST, Arrays.asList(Phase.COMPILATION, Phase.RUNTIME));
     public static final Scope TEST_ANNOTATION_PROCESSOR = new Scope(Source.TEST, Collections.singletonList(Phase.ANNOTATION_PROCESSING));
+    public static final Scope TEST_AND_DEVELOPMENT_ONLY = new Scope(Source.MAIN, Arrays.asList(Phase.DEVELOPMENT_ONLY, Phase.TEST_RUNTIME));
     public static final Scope TEST_COMPILE_ONLY = new Scope(Source.TEST, Collections.singletonList(Phase.COMPILATION));
     public static final Scope TEST_RUNTIME_ONLY = new Scope(Source.TEST, Collections.singletonList(Phase.RUNTIME));
     public static final Scope OPENREWRITE = new Scope(Source.MAIN, Collections.singletonList(Phase.OPENREWRITE));

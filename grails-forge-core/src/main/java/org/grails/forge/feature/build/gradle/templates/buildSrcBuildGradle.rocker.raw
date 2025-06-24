@@ -44,6 +44,13 @@ repositories {
         }
     }
 }
+    maven {
+        // This is needed until we have a stable release of cloud.wondrify:asset-pipeline-gradle
+        url = 'https://central.sonatype.com/repository/maven-snapshots'
+        content {
+            includeVersionByRegex('cloud[.]wondrify', '.*', '.*-SNAPSHOT')
+        }
+    }
 }
 dependencies {
     implementation platform("org.apache.grails:grails-gradle-bom:@VersionInfo.getGrailsVersion()")

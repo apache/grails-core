@@ -56,6 +56,13 @@ buildscript {
             }
         }
 }
+        maven {
+            // This is needed until we have a stable release of cloud.wondrify:asset-pipeline-gradle
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify', '.*', '.*-SNAPSHOT')
+            }
+        }
     }
     dependencies { // Not Published to Gradle Plugin Portal
     @for (GradleDependency dependency : gradleBuild.getBuildscriptDependencies()) {
@@ -104,6 +111,13 @@ repositories {
     }
 }
     maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        // This is needed until we have a stable release of cloud.wondrify:asset-pipeline-grails
+        url = 'https://central.sonatype.com/repository/maven-snapshots'
+        content {
+            includeVersionByRegex('cloud[.]wondrify', '.*', '.*-SNAPSHOT')
+        }
+    }
 }
 
 @dependencies.template(applicationType, project, features, gradleBuild)

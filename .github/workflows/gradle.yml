@@ -61,7 +61,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 'apache-grails-SNAPSHOT-incubating-bin.zip'
-          path: grails-cli/build/distributions/apache-grails-*.zip
+          include-hidden-files: true
+          path: tmp1/cli/**/*
           if-no-files-found: 'error'
   publish:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

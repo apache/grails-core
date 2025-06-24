@@ -45,17 +45,17 @@ public class MySQL extends DatabaseDriverFeature {
 
     @Override
     public String getJdbcDevUrl() {
-        return "jdbc:mysql://localhost:3306/devDb";
+        return "jdbc:mysql://localhost:3306/devDb?tcpKeepAlive=true";
     }
 
     @Override
     public String getJdbcTestUrl() {
-        return "jdbc:mysql://localhost:3306/testDb";
+        return "jdbc:mysql://localhost:3306/testDb?tcpKeepAlive=true";
     }
 
     @Override
     public String getJdbcProdUrl() {
-        return "jdbc:mysql://localhost:3306/prodDb";
+        return "jdbc:mysql://localhost:3306/prodDb?tcpKeepAlive=true";
     }
 
     @Override
@@ -86,8 +86,8 @@ public class MySQL extends DatabaseDriverFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("mysql")
-                .artifactId("mysql-connector-java")
+                .groupId("com.mysql")
+                .artifactId("mysql-connector-j")
                 .runtimeOnly());
     }
 }

@@ -199,6 +199,10 @@ public final class Dependency {
             return scope(Scope.DEVELOPMENT_ONLY);
         }
 
+        public Builder testAndDevelopmentOnly() {
+            return scope(Scope.TEST_AND_DEVELOPMENT_ONLY);
+        }
+
         public Builder runtimeOnly() {
             return scope(Scope.RUNTIME_ONLY);
         }

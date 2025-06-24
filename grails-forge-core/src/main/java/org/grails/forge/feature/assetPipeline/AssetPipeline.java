@@ -60,31 +60,31 @@ public class AssetPipeline implements DefaultFeature {
     public void apply(GeneratorContext generatorContext) {
 
         generatorContext.addBuildscriptDependency(Dependency.builder()
-                .groupId("com.bertramlabs.plugins")
+                .groupId("cloud.wondrify")
                 .artifactId("asset-pipeline-gradle")
                 .buildSrc());
 
-        generatorContext.addBuildPlugin(GradlePlugin.builder().id("asset-pipeline").useApplyPlugin(true).build());
+        generatorContext.addBuildPlugin(GradlePlugin.builder().id("cloud.wondrify.asset-pipeline").useApplyPlugin(true).build());
 
         generatorContext.addDependency(Dependency.builder()
-                .groupId("com.bertramlabs.plugins")
+                .groupId("cloud.wondrify")
                 .artifactId("asset-pipeline-grails")
                 .runtimeOnly());
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.webjars.npm")
                 .artifactId("bootstrap")
-                .developmentOnly());
+                .testAndDevelopmentOnly());
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.webjars.npm")
                 .artifactId("bootstrap-icons")
-                .developmentOnly());
+                .testAndDevelopmentOnly());
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.webjars.npm")
                 .artifactId("jquery")
-                .developmentOnly());
+                .testAndDevelopmentOnly());
 
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         generatorContext.addTemplate("advancedgrails_svg", new URLTemplate("grails-app/assets/images/advancedgrails.svg", classLoader.getResource("assets/images/advancedgrails.svg")));

@@ -38,17 +38,18 @@ class GradleConfigurationSpec extends Specification {
         configuration == GradleConfiguration.of(new Scope(source, phases), Language.GROOVY, TestFramework.JUNIT).get()
 
         where:
-        source           | phases                             || configuration
-        Source.MAIN      | [Phase.RUNTIME, Phase.COMPILATION] || GradleConfiguration.IMPLEMENTATION
-        Source.MAIN      | [Phase.RUNTIME]                    || GradleConfiguration.CONSOLE
-        Source.MAIN      | [Phase.RUNTIME]                    || GradleConfiguration.RUNTIME_ONLY
-        Source.TEST      | [Phase.RUNTIME]                    || GradleConfiguration.TEST_RUNTIME_ONLY
-        Source.MAIN      | [Phase.COMPILATION]                || GradleConfiguration.COMPILE_ONLY
-        Source.TEST      | [Phase.COMPILATION]                || GradleConfiguration.TEST_COMPILE_ONLY
-        Source.TEST      | [Phase.RUNTIME, Phase.COMPILATION] || GradleConfiguration.TEST_IMPLEMENTATION
-        Source.MAIN      | [Phase.ANNOTATION_PROCESSING]      || GradleConfiguration.ANNOTATION_PROCESSOR
-        Source.TEST      | [Phase.ANNOTATION_PROCESSING]      || GradleConfiguration.TEST_ANNOTATION_PROCESSOR
-        Source.BUILD_SRC | [Phase.BUILD]                      || GradleConfiguration.BUILD
+        source           | phases                                       || configuration
+        Source.MAIN      | [Phase.RUNTIME, Phase.COMPILATION]           || GradleConfiguration.IMPLEMENTATION
+        Source.MAIN      | [Phase.RUNTIME]                              || GradleConfiguration.CONSOLE
+        Source.MAIN      | [Phase.RUNTIME]                              || GradleConfiguration.RUNTIME_ONLY
+        Source.TEST      | [Phase.RUNTIME]                              || GradleConfiguration.TEST_RUNTIME_ONLY
+        Source.MAIN      | [Phase.COMPILATION]                          || GradleConfiguration.COMPILE_ONLY
+        Source.TEST      | [Phase.COMPILATION]                          || GradleConfiguration.TEST_COMPILE_ONLY
+        Source.TEST      | [Phase.RUNTIME, Phase.COMPILATION]           || GradleConfiguration.TEST_IMPLEMENTATION
+        Source.MAIN      | [Phase.ANNOTATION_PROCESSING]                || GradleConfiguration.ANNOTATION_PROCESSOR
+        Source.TEST      | [Phase.ANNOTATION_PROCESSING]                || GradleConfiguration.TEST_ANNOTATION_PROCESSOR
+        Source.BUILD_SRC | [Phase.BUILD]                                || GradleConfiguration.BUILD
+        Source.MAIN      | [Phase.DEVELOPMENT_ONLY, Phase.TEST_RUNTIME] || GradleConfiguration.TEST_AND_DEVELOPMENT_ONLY
         description = "$source ${phases.join(",")} should return ${configuration.toString()}"
     }
 }

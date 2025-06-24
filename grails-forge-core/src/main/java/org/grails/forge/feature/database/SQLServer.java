@@ -45,17 +45,17 @@ public class SQLServer extends DatabaseDriverFeature {
 
     @Override
     public String getJdbcDevUrl() {
-        return "jdbc:sqlserver://localhost:1433;databaseName=devDb";
+        return "jdbc:sqlserver://localhost:1433;databaseName=devDb;socketKeepAlive=true";
     }
 
     @Override
     public String getJdbcTestUrl() {
-        return "jdbc:sqlserver://localhost:1433;databaseName=testDb";
+        return "jdbc:sqlserver://localhost:1433;databaseName=testDb;socketKeepAlive=true";
     }
 
     @Override
     public String getJdbcProdUrl() {
-        return "jdbc:sqlserver://localhost:1433;databaseName=prodDb";
+        return "jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true";
     }
 
     @Override
