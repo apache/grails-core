@@ -37,6 +37,7 @@ dependencies {
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

@@ -44,6 +44,7 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-views-gson'
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

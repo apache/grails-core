@@ -36,6 +36,7 @@ dependencies {
 
     implementation project(":grails-plugin")
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly "cloud.wondrify:asset-pipeline-grails:$assetPipelineVersion"

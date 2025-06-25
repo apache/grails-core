@@ -35,6 +35,7 @@ dependencies {
     implementation 'org.apache.grails:grails-gsp'
     implementation 'org.apache.grails:grails-data-hibernate5'
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'

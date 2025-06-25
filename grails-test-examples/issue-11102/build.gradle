@@ -50,6 +50,7 @@ dependencies {
     implementation 'org.apache.grails:grails-events'
     implementation 'org.apache.grails:grails-gsp'
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

@@ -60,6 +60,7 @@ dependencies {
     implementation 'org.apache.grails:grails-gsp'
     compileOnly 'io.micronaut:micronaut-inject-groovy'
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

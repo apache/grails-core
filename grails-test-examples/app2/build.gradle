@@ -42,6 +42,7 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-cache'
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
