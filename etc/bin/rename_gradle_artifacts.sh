@@ -184,7 +184,6 @@ declare -a gorm_mappings=(
   "org[.]grails[.]plugins:mongodb|org.apache.grails:grails-data-mongodb"
   "org[.]grails[.]plugins:hibernate6|org.apache.grails:grails-data-hibernate6"
   "org[.]grails[.]plugins:hibernate5|org.apache.grails:grails-data-hibernate5"
-  "org[.]grails[.]plugins:database-migration|org.apache.grails:grails-data-hibernate6-dbmigration"
   "org[.]grails[.]plugins:database-migration|org.apache.grails:grails-data-hibernate5-dbmigration"
   "org[.]grails[.]tck[.]tests:tck|org.apache.grails.data:grails-datamapping-tck-tests"
   "org[.]grails[.]tck[.]domains:tck-domains|org.apache.grails.data:grails-datamapping-tck-domains"
