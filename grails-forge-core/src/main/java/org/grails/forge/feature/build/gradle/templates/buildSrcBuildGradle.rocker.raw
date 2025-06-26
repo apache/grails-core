@@ -32,6 +32,12 @@ GradleBuild gradleBuild,
 String grailsVersion
 )
 
+file('../gradle.properties').withInputStream {
+    Properties props = new Properties()
+    props.load(it)
+    project.ext.gradleProperties = props
+}
+
 repositories {
     mavenCentral()
     maven { url = 'https://repo.grails.org/grails/restricted' }
@@ -53,7 +59,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-gradle-bom:@VersionInfo.getGrailsVersion()")
+    implementation platform("org.apache.grails:grails-gradle-bom:$gradleProperties.grailsVersion")
 @for (GradleDependency dependency : gradleBuild.getBuildSrcDependencies()) {
     @dependency.toSnippet()
 }
