@@ -190,6 +190,7 @@ jobs:
     permissions:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing
+      pull-requests: write # to open PR
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
