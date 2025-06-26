@@ -34,6 +34,7 @@ String grailsVersion
 
 // load the root gradle.properties only for properties not already set
 // (e.g., buildSrc/gradle.properties or by environment variables like ORG_GRADLE_PROJECT_grailsVersion=7.0.0)
+// https://github.com/gradle/gradle/issues/2534
 def props = new Properties()
 file('../gradle.properties').withInputStream { props.load(it) }
 props.each { key, val ->
