@@ -64,7 +64,7 @@ jobs:
         run: >
           ./gradlew build
           --continue --stacktrace
-          --rerun
+          --rerun-tasks
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core'
@@ -88,9 +88,8 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔨 Build project"
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc check
+          ./gradlew build --rerun :grails-shell-cli:installDist --rerun groovydoc --rerun check --rerun
           --continue --stacktrace -PonlyCoreTests
-          --rerun
   functional:
     name: "Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -118,7 +117,7 @@ jobs:
           -PonlyFunctionalTests
           -PskipHibernate5Tests
           -PskipMongodbTests
-          --rerun
+          --rerun-tasks
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"
@@ -148,7 +147,7 @@ jobs:
           --continue --stacktrace
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
-          --rerun
+          --rerun-tasks
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests"
@@ -176,7 +175,7 @@ jobs:
           ./gradlew bootJar cleanTest check
           --continue --stacktrace
           -PonlyHibernate5Tests
-          --rerun
+          --rerun-tasks
   publishGradle:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ buildGradle ]
@@ -202,7 +201,7 @@ jobs:
         working-directory: 'grails-gradle'
         run: >
           ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
-          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun
+          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
         uses: actions/upload-artifact@v4
         with:
@@ -240,7 +239,7 @@ jobs:
           timeout_seconds: 900 # normal range 360-720s
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
-          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun
+          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
         uses: actions/upload-artifact@v4
         with:
