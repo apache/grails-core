@@ -282,7 +282,7 @@ public class PredicateGenerator {
                             return cb.in(root_.get("id")).value(subquery);
                         }
                     }
-                    return null;
+                    throw new IllegalArgumentException("Unsupported criterion: " + criterion);
                 }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) {
             list = List.of(cb.equal(cb.literal(1),cb.literal(1)));
