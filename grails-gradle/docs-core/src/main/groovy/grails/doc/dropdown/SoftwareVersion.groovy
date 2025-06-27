@@ -46,7 +46,8 @@ class SoftwareVersion implements Comparable<SoftwareVersion> {
                 return softVersion
             }
 
-            if (parts[2].charAt(0).digit) {
+            // Filter out invalid patches (e.g. 1.0.RC4)
+            if (parts[2].isInteger()) {
                 softVersion.patch = parts[2].toInteger()
             }
         }
