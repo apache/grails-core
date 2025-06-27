@@ -37,7 +37,8 @@ def HEADER = '''# Licensed to the Apache Software Foundation (ASF) under one or 
 
 '''
 
-def root = Paths.get(".").toRealPath()
+String targetPath = args && args[0] ? args[0] : '.'
+def root = Paths.get(targetPath).toRealPath()
 
 Files.walk(root)
         .filter { path -> Files.isRegularFile(path) && path.toString().endsWith(".yml") }
