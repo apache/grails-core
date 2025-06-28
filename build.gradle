@@ -46,13 +46,8 @@ ext {
 
 allprojects {
     repositories {
-        // workaround for https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/164
-        maven {
-            name = 'localGrailsBom'
-            url = file("$rootDir/grails-bom/build/repo")
-            content { includeModule 'org.apache.grails', 'grails-bom' }
-        }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        maven { url = 'https://repo.grails.org/grails/restricted' }
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
@@ -65,7 +60,6 @@ allprojects {
                 includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
             }
         }
-        maven { url = 'https://repo.grails.org/grails/restricted' }
     }
 }
 

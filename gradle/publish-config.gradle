@@ -30,6 +30,7 @@ extensions.configure(GrailsPublishExtension) {
     it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher']
     it.pomCustomization = findProperty('pomCustomization') as Closure
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
+    it.testRepositoryPath = rootProject.layout.buildDirectory.dir('local-maven')
 }
 
 apply plugin: 'org.gradle.crypto.checksum'

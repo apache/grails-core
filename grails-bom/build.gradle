@@ -201,15 +201,3 @@ ext {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
-
-// Workaround for https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/164
-pluginManager.withPlugin('maven-publish') {
-    publishing {
-        repositories {
-            maven {
-                name = 'localBom'
-                url = layout.buildDirectory.dir('repo')
-            }
-        }
-    }
-}
