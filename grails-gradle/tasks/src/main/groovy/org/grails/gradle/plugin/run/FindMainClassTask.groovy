@@ -86,7 +86,7 @@ abstract class FindMainClassTask extends DefaultTask {
         })
         mainClassCacheFile = objects.fileProperty().convention(project.layout.buildDirectory.file('resolvedMainClassName'))
         isGrailsPlugin = objects.property(Boolean).convention(project.provider {
-            project.plugins.hasPlugin('org.grails.gradle.plugin.core.GrailsPluginGradlePlugin')
+            project.plugins.hasPlugin('org.apache.grails.gradle.grails-plugin')
         })
         mainClassName = objects.property(String)
     }
@@ -142,7 +142,7 @@ abstract class FindMainClassTask extends DefaultTask {
         if (!mainClassHolder) {
             if (isGrailsPlugin.get()) {
                 // this is ok if the project is a plugin because it's likely not going to be a runnable grails app
-                logger.lifecycle('WARNING: this plugin project does not have an Application.class and thus the bootJar / bootWar / bootRun will be invalid.')
+                logger.lifecycle('WARNING: this plugin project does not have an Application.class and thus tasks requiring a main class such as runScript / runCommand / bootJar / bootWar / bootRun / etc will be invalid.')
                 return null
             }
 
