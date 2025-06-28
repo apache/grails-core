@@ -69,6 +69,5 @@ apply {
     // we must apply the publish configuration first or the docs config will not work
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/gradle-wrapper-root-config.gradle')
-    from layout.projectDirectory.file('gradle/rat-root-config.gradle')
     from layout.projectDirectory.file('gradle/doc-root-config.gradle')
 }
