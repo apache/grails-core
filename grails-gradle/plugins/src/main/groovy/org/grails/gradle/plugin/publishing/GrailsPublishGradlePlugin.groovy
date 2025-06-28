@@ -117,7 +117,7 @@ Note: if project properties are used, the properties must be defined prior to ap
     void apply(Project project) {
         project.rootProject.logger.info("Applying Grails Publish Gradle Plugin for `${project.name}`...");
         if (project.extensions.findByName('grailsPublish') == null) {
-            project.extensions.add('grailsPublish', new GrailsPublishExtension())
+            project.extensions.create('grailsPublish', GrailsPublishExtension)
         }
         final String nexusPublishUrl = project.findProperty('nexusPublishUrl') ?: System.getenv('NEXUS_PUBLISH_URL') ?: ''
         final String nexusPublishSnapshotUrl = project.findProperty('nexusPublishSnapshotUrl') ?: System.getenv('NEXUS_PUBLISH_SNAPSHOT_URL') ?: ''
@@ -240,7 +240,7 @@ Note: if project properties are used, the properties must be defined prior to ap
                             }
                             username = nexusPublishUsername
                             password = nexusPublishPassword
-                            if(nexusPublishStagingProfileId) {
+                            if (nexusPublishStagingProfileId) {
                                 stagingProfileId = nexusPublishStagingProfileId
                             }
                         }
@@ -255,6 +255,8 @@ Note: if project properties are used, the properties must be defined prior to ap
             validateProjectPublishable(project as Project)
 
             project.publishing {
+                final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
+
                 final def mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: System.getenv('MAVEN_PUBLISH_URL')
                 if (useMavenPublish) {
                     System.setProperty('org.gradle.internal.publish.checksums.insecure', true as String)
@@ -271,16 +273,23 @@ Note: if project properties are used, the properties must be defined prior to ap
                             }
                             url = mavenPublishUrl
                         }
+
+                        def testRepoPath = gpe.testRepositoryPath.getOrNull()
+                        if (testRepoPath) {
+                            maven {
+                                name = 'TestCaseMavenRepo'
+                                url = testRepoPath
+                            }
+                        }
                     }
                 }
 
-                final GrailsPublishExtension gpe = extensionContainer.findByType(GrailsPublishExtension)
                 publications {
-                    it.create(gpe.publicationName, MavenPublication) {
-                        delegate.artifactId = gpe.artifactId ?: project.name
-                        delegate.groupId = gpe.groupId ?: project.group
+                    it.create(gpe.publicationName.get(), MavenPublication) {
+                        delegate.artifactId = gpe.artifactId.get()
+                        delegate.groupId = gpe.groupId.get()
 
-                        if(gpe.addComponents) {
+                        if (gpe.addComponents.get()) {
                             doAddArtefact(project, delegate)
                             def extraArtefact = getDefaultExtraArtifact(project)
                             if (extraArtefact) {
@@ -300,15 +309,9 @@ Note: if project properties are used, the properties must be defined prior to ap
 
                             if (gpe != null) {
                                 pomNode.children().last() + {
-                                    def title = gpe.title ?: project.name
-                                    delegate.name title
-                                    delegate.description gpe.desc ?: title
-
-                                    def websiteUrl = gpe.websiteUrl ?: gpe.githubSlug ? "https://github.com/$gpe.githubSlug" : ''
-                                    if (!websiteUrl) {
-                                        throw new RuntimeException(getErrorMessage('websiteUrl'))
-                                    }
-                                    delegate.url websiteUrl
+                                    delegate.name gpe.title.get()
+                                    delegate.description gpe.desc.get()
+                                    delegate.url gpe.websiteUrl.get()
 
                                     def license = gpe.license
                                     if (license != null) {
@@ -334,40 +337,20 @@ Note: if project properties are used, the properties must be defined prior to ap
                                         throw new RuntimeException(getErrorMessage('license'))
                                     }
 
-                                    if (gpe.githubSlug) {
-                                        delegate.scm {
-                                            delegate.url "https://github.com/$gpe.githubSlug"
-                                            delegate.connection "scm:git@github.com:${gpe.githubSlug}.git"
-                                            delegate.developerConnection "scm:git@github.com:${gpe.githubSlug}.git"
-                                        }
-                                        delegate.issueManagement {
-                                            delegate.system 'Github Issues'
-                                            delegate.url "https://github.com/$gpe.githubSlug/issues"
-                                        }
-                                    } else {
-                                        if (gpe.vcsUrl) {
-                                            delegate.scm {
-                                                delegate.url gpe.vcsUrl
-                                                delegate.connection "scm:$gpe.vcsUrl"
-                                                delegate.developerConnection "scm:$gpe.vcsUrl"
-                                            }
-                                        } else {
-                                            throw new RuntimeException(getErrorMessage('vcsUrl'))
-                                        }
+                                    delegate.scm {
+                                        delegate.url gpe.scmUrl.get()
+                                        delegate.connection gpe.scmUrlConnection.get()
+                                        delegate.developerConnection gpe.scmUrlConnection.get()
+                                    }
 
-                                        if (gpe.issueTrackerUrl) {
-                                            delegate.issueManagement {
-                                                delegate.system 'Issue Tracker'
-                                                delegate.url gpe.issueTrackerUrl
-                                            }
-                                        } else {
-                                            throw new RuntimeException(getErrorMessage('issueTrackerUrl'))
-                                        }
+                                    delegate.issueManagement {
+                                        delegate.system gpe.issueTrackerName.get()
+                                        delegate.url gpe.issueTrackerUrl.get()
                                     }
 
                                     if (gpe.developers) {
                                         delegate.developers {
-                                            for (entry in gpe.developers.entrySet()) {
+                                            for (entry in gpe.developers.get().entrySet()) {
                                                 delegate.developer {
                                                     delegate.id entry.key
                                                     delegate.name entry.value
@@ -378,7 +361,6 @@ Note: if project properties are used, the properties must be defined prior to ap
                                         throw new RuntimeException(getErrorMessage('developers'))
                                     }
                                 }
-
                             }
 
                             if (gpe.pomCustomization) {
@@ -490,7 +472,7 @@ Note: if project properties are used, the properties must be defined prior to ap
         if (project.extensions.findByType(JavaPlatformExtension)) {
             publication.from project.components.javaPlatform
 
-            if (gpe.publishTestSources) {
+            if (gpe.publishTestSources.get()) {
                 throw new RuntimeException('BOM publishes may only contain dependencies.')
             }
 
@@ -498,7 +480,7 @@ Note: if project properties are used, the properties must be defined prior to ap
         }
 
         publication.from project.components.java
-        if (gpe.publishTestSources) {
+        if (gpe.publishTestSources.get()) {
             publication.artifact(project.tasks.named('testSourcesJar', Jar))
         }
     }
@@ -600,7 +582,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         project.tasks.register('testSourcesJar', Jar).configure { Jar jar ->
             jar.onlyIf {
-                project.extensions.findByType(GrailsPublishExtension).publishTestSources &&
+                project.extensions.findByType(GrailsPublishExtension).publishTestSources.get() &&
                         !jar.source.files.isEmpty()
             }
             jar.dependsOn('testClasses')

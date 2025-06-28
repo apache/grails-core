@@ -19,7 +19,13 @@
 package org.grails.gradle.plugin.publishing
 
 import groovy.transform.CompileStatic
-import groovy.transform.ToString
+import org.gradle.api.Project
+import org.gradle.api.file.Directory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
+
+import javax.inject.Inject
 
 /**
  * @author Puneet Behl
@@ -27,23 +33,32 @@ import groovy.transform.ToString
  * @since 4.0.11
  */
 @CompileStatic
-@ToString(includeNames = true)
 class GrailsPublishExtension {
 
     /**
      * The slug from github
      */
-    String githubSlug
+    final Property<String> githubSlug
 
     /**
-     * The website URL of the published project
+     * The website URL of the published project; defaulted by the github slug if not set
      */
-    String websiteUrl
+    final Property<String> websiteUrl
+
+    /**
+     * The SCM url, defaults based on the github slug to https://github.com/${githubSlug}
+     */
+    final Property<String> scmUrl
+
+    /**
+     * The url to connect via SCM tool, defaults based on the github slug to "scm:git@github.com:${githubSlug}.git"
+     */
+    final Property<String> scmUrlConnection
 
     /**
      * The source control URL of the project
      */
-    String vcsUrl
+    final Property<String> vcsUrl
 
     /**
      * The license of the plugin
@@ -53,37 +68,42 @@ class GrailsPublishExtension {
     /**
      * The developers of the project
      */
-    Map<String, String> developers = [:]
+    final MapProperty<String, String> developers
 
     /**
      * Title of the project, defaults to the project name
      */
-    String title
+    final Property<String> title
 
     /**
      * Description of the plugin
      */
-    String desc
+    final Property<String> desc
+
+    /**
+     * The issue tracker name; github if github slug is set and not overridden
+     */
+    final Property<String> issueTrackerName
 
     /**
      * The issue tracker URL
      */
-    String issueTrackerUrl
+    final Property<String> issueTrackerUrl
 
     /**
      * Overrides the artifactId of the published artifact
      */
-    String artifactId
+    final Property<String> artifactId
 
     /**
      * Overrides the groupId of the published artifact
      */
-    String groupId
+    final Property<String> groupId
 
     /**
      * Whether to publish test sources with a "tests" classifier
      */
-    Boolean publishTestSources
+    final Property<Boolean> publishTestSources
 
     /**
      * An optional closure to be invoked via pom.withXml { } to allow further customization
@@ -93,12 +113,66 @@ class GrailsPublishExtension {
     /**
      * If another process will add the components set this to false so only the publication is created
      */
-    Boolean addComponents = true
+    final Property<Boolean> addComponents
 
     /**
      * The name of the publication
      */
-    String publicationName = 'maven'
+    final Property<String> publicationName
+
+    /**
+     * If set, a local repository will be setup for the given path with the name 'TestCaseMavenRepo'. This can be useful
+     * when testing plugins locally with builds that can't make use of includedBuild
+     */
+    final Property<Directory> testRepositoryPath
+
+    @Inject
+    GrailsPublishExtension(ObjectFactory objects, Project project) {
+        githubSlug = objects.property(String).convention(
+            project.provider {
+                project.findProperty('githubSlug') as String
+            }
+        )
+        websiteUrl = objects.property(String).convention(project.provider {
+            String githubSlug = githubSlug.getOrNull()
+            githubSlug ? "https://github.com/$githubSlug" as String : null
+        })
+        scmUrl = objects.property(String).convention(project.provider {
+            String githubSlug = githubSlug.getOrNull()
+            githubSlug ? "https://github.com/$githubSlug" as String : null
+        })
+        scmUrlConnection = objects.property(String).convention(project.provider {
+            String githubSlug = githubSlug.getOrNull()
+            githubSlug ? "scm:git@github.com:${githubSlug}.git" as String : null
+        })
+        vcsUrl = objects.property(String).convention(project.provider {
+            String githubSlug = githubSlug.getOrNull()
+            githubSlug ? "git@github.com:${githubSlug}.git" as String : null
+        })
+        developers = objects.mapProperty(String, String).convention([:])
+        title = objects.property(String).convention(project.provider { project.name })
+        desc = objects.property(String).convention(project.provider {
+            title.getOrNull()
+        })
+        issueTrackerName = objects.property(String).convention(project.provider {
+            String githubSlug = githubSlug.getOrNull()
+            githubSlug ? "GitHub Issues" as String : "Issues"
+        })
+        issueTrackerUrl = objects.property(String).convention(project.provider {
+            String githubSlug = githubSlug.getOrNull()
+            githubSlug ? "https://github.com/$githubSlug/issues" as String : null
+        })
+        artifactId = objects.property(String).convention(project.provider {
+            project.name
+        })
+        groupId = objects.property(String).convention(project.provider {
+            project.group as String
+        })
+        publishTestSources = objects.property(Boolean).convention(false)
+        addComponents = objects.property(Boolean).convention(true)
+        publicationName = objects.property(String).convention('maven')
+        testRepositoryPath = objects.directoryProperty().convention(null as Directory)
+    }
 
     License getLicense() {
         return license
