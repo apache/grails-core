@@ -56,7 +56,7 @@ allprojects {
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
-                includeVersionByRegex 'org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT'
+                includeVersionByRegex 'org[.]apache[.]((grails)|(groovy)).*', '.*', '.*-SNAPSHOT'
             }
         }
         maven {
