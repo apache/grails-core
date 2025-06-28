@@ -11,12 +11,15 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaInPredicate;
 import org.hibernate.query.criteria.JpaJoin;
 import org.hibernate.query.criteria.JpaPath;
+import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.sqm.tree.domain.SqmPath;
 import org.hibernate.query.sqm.tree.domain.SqmSetJoin;
 import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
@@ -28,12 +31,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 
 @Slf4j
@@ -182,21 +187,43 @@ public class PredicateGenerator {
                             return cb.not(cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue()));
                         }
                     } else if (criterion instanceof Query.Exists c) {
-                        Subquery subquery = criteriaQuery.subquery(Object.class);
-                        Root subRoot = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
+                        Subquery subquery = criteriaQuery.subquery(Integer.class);
+                        PersistentEntity childPersistentEntity = c.getSubquery().getPersistentEntity();
+                        Root subRoot = subquery.from(childPersistentEntity.getJavaClass());
+
+
                         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                         newMap.put("root", subRoot);
-                        Predicate[] predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap);
-                        subquery.select(cb.literal(1)).where(cb.and(predicates));
-                        return cb.exists(subquery);
+                        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap);
+
+                        var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
+                        Predicate[] allPredicates = Stream.concat(
+                                Arrays.stream(predicates),
+                                Stream.of(existsPredicate)
+                        ).toArray(Predicate[]::new);
+
+                        subquery.select(cb.literal(1)).where(cb.and(allPredicates));
+                        JpaPredicate exists = cb.exists(subquery);
+                        return exists;
                     } else if (criterion instanceof Query.NotExists c) {
-                        Subquery subquery = criteriaQuery.subquery(Object.class);
-                        Root subRoot = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
+                        Subquery subquery = criteriaQuery.subquery(Integer.class);
+                        PersistentEntity childPersistentEntity = c.getSubquery().getPersistentEntity();
+                        Root subRoot = subquery.from(childPersistentEntity.getJavaClass());
+
+
                         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                         newMap.put("root", subRoot);
-                        Predicate[] predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), fromsByProvider);
-                        subquery.select(cb.literal(1)).where(cb.and(predicates));
-                        return cb.not(cb.exists(subquery));
+                        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap);
+
+                        var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
+                        Predicate[] allPredicates = Stream.concat(
+                                Arrays.stream(predicates),
+                                Stream.of(existsPredicate)
+                        ).toArray(Predicate[]::new);
+
+                        subquery.select(cb.literal(1)).where(cb.and(allPredicates));
+                        JpaPredicate exists = cb.exists(subquery);
+                        return cb.not(exists);
                     } else if (criterion instanceof Query.SubqueryCriterion c) {
                         Subquery subquery = criteriaQuery.subquery(Number.class);
                         Root from = subquery.from(c.getValue().getPersistentEntity().getJavaClass());
@@ -255,6 +282,16 @@ public class PredicateGenerator {
             list = List.of(cb.equal(cb.literal(1),cb.literal(1)));
         }
         return list.toArray(new Predicate[0]);
+    }
+
+    private static Predicate getExistsPredicate(HibernateCriteriaBuilder cb, From root_, PersistentEntity childPersistentEntity, Root subRoot) {
+        Association owner = childPersistentEntity
+                .getAssociations()
+                .stream()
+                .filter(assoc -> assoc.getAssociatedEntity().getJavaClass().equals(root_.getJavaType()))
+                .findFirst().orElseThrow();
+        Predicate existsPredicate = cb.equal(subRoot.get(owner.getName()), root_);
+        return existsPredicate;
     }
 
     @SuppressWarnings("rawtypes")

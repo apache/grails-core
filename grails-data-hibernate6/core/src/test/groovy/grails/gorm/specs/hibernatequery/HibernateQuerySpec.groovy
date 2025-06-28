@@ -2,12 +2,17 @@ package grails.gorm.specs.hibernatequery
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.JoinType
+import jakarta.persistence.criteria.Path
+import jakarta.persistence.criteria.Root
+import jakarta.persistence.criteria.Subquery
 import org.apache.grails.data.testing.tck.domains.*
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.AbstractHibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.query.criteria.JpaPredicate
 import spock.lang.Ignore
 
 
@@ -327,37 +332,14 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
-//    @Ignore("Exits subquery is broken")
-    /**
-     * org.grails.orm.hibernate.query.PredicateGenerator.getPredicates()
-     * else if (criterion instanceof Query.Exists c)
-     select
-     p1_0.id,
-     p1_0.age,
-     p1_0.face_id,
-     p1_0.first_name,
-     p1_0.last_name,
-     p1_0.my_boolean_property,
-     p1_0.version
-     from
-     person p1_0
-     where
-     exists(select
-     1
-     from
-     pet p2_0
-     where
-     p2_0.owner_id=?)
-     offset
-     ? rows
-     */
     def exists() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
         new Pet(name: "Lucky", owner: oldBob).save(flush:true)
         hibernateQuery.exists(
-                new DetachedCriteria(Pet).property("name").eq("owner", oldBob)
+                new DetachedCriteria(Pet)
         )
+
         when:
         def list = hibernateQuery.list()
         then:
@@ -365,40 +347,16 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == list.get(0)
     }
 
-    /**
-     *  org.grails.orm.hibernate.query.PredicateGenerator.getPredicates()
-     * else if (criterion instanceof Query.NotExists c)
-     select
-     p1_0.id,
-     p1_0.age,
-     p1_0.face_id,
-     p1_0.first_name,
-     p1_0.last_name,
-     p1_0.my_boolean_property,
-     p1_0.version
-     from
-     person p1_0
-     where
-     not exists(select
-     1
-     from
-     pet p2_0
-     where
-     p2_0.owner_id=?)
-     offset
-     ? rows
-     */
+
     def notExists() {
         given:
-        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        def oldPet = new Pet(name: "Lucky")
-        oldBob.addToPets(oldPet)
-        oldBob.save(flush: true)
-        hibernateQuery.notExits(new DetachedCriteria(Pet).eq("owner", fred))
+        def newBob = new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        new Pet(name: "Lucky", owner: newBob).save(flush:true)
+        hibernateQuery.notExits(new DetachedCriteria(Pet))
         when:
-        def newBob = hibernateQuery.singleResult()
+        def result = hibernateQuery.singleResult()
         then:
-        oldBob == newBob
+        oldBob == result
     }
 
     def greaterThanAll() {
