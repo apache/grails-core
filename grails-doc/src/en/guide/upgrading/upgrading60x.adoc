@@ -312,3 +312,12 @@ Once a compatible container runtime is installed, no additional configuration is
 2. The container will be configured to launch a browser capable of accessing your application under test.
 
 With this setup, you gain the benefits of containerized testing, such as isolation, reproducibility, and reduced setup complexity.
+
+===== 12.10 Tomcat 10.1.42 introduced limits for part count and header size in multipart/form-data requests
+
+These limits can be customized using `server.tomcat.max-part-count` and `server.tomcat.max-part-header-size` respectively.
+
+`server.tomcat.max-part-count` default is 10
+`server.tomcat.max-part-header-size` defalt is 512B
+
+https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.server.server.tomcat.max-part-count[Spring Boot Common Application Properties]
