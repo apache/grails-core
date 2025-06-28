@@ -501,11 +501,11 @@ public abstract class AbstractHibernateQuery extends Query {
         assignOrderBy(cq, tablesByName);
         assignCriteria(cq, cb, root,tablesByName);
 
-        org.hibernate.query.Query query = getSessionFactory()
-                .getCurrentSession()
-                .createQuery(cq)
-                .setFirstResult(this.offset)
-                .setHint("org.hibernate.cacheable", queryCache);;
+        org.hibernate.query.Query query = createQuery(cq);
+        if (this.offset > 0) {
+            query.setFirstResult(this.offset);
+        }
+        query.setHint("org.hibernate.cacheable", queryCache);;
         if (this.max > -1) {
             query.setMaxResults(this.max);
         }
@@ -518,6 +518,11 @@ public abstract class AbstractHibernateQuery extends Query {
         return query;
     }
 
+    public org.hibernate.query.Query<?> createQuery(JpaCriteriaQuery<?> cq) {
+        return getSessionFactory()
+                .getCurrentSession()
+                .createQuery(cq);
+    }
 
 
     @SuppressWarnings("unchecked")
@@ -680,7 +685,7 @@ public abstract class AbstractHibernateQuery extends Query {
         return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
     }
 
-    private HibernateCriteriaBuilder getCriteriaBuilder() {
+    public HibernateCriteriaBuilder getCriteriaBuilder() {
         return getSessionFactory().getCriteriaBuilder();
     }
 

@@ -83,6 +83,8 @@ public class PredicateGenerator {
                         return cb.isNotNull(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
                     } else if (criterion instanceof Query.IsEmpty c) {
                         return cb.isEmpty(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
+                    } else if (criterion instanceof Query.IsNotEmpty c) {
+                        return cb.isNotEmpty(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
                     } else if (criterion instanceof Query.Equals c) {
                         return cb.equal(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
                     } else if (criterion instanceof Query.NotEquals c) {

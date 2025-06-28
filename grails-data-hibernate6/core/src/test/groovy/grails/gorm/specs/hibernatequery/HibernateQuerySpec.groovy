@@ -52,7 +52,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def equalsJoins() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
-        oldBob.addToPets(new Pet(name: "Lucky")).save(flush:"true")
+        new Pet(name: "Lucky", age: 1, owner: oldBob).save(flush: true)
         hibernateQuery.join("pets").eq("pets.name", "Lucky")
         when:
         def newBob = hibernateQuery.singleResult()
