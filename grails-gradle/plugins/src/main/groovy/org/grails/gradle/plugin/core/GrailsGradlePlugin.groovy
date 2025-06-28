@@ -165,11 +165,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    private static Provider<String> getMainClassProvider(Project project) {
+    private static Provider<String> getMainClassProvider(String taskName, Project project) {
         Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
         project.provider {
             File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
             if (!cacheFile?.exists()) {
+                if(taskName) {
+                    throw new GradleException("Could not find Application main class. Please set 'springBoot.mainClass' to use the task '$taskName'.")
+                }
                 return null
             }
 
@@ -457,7 +460,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                             args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
                         }
 
-                        def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+                        def appClassProvider = GrailsGradlePlugin.getMainClassProvider(taskName, project)
 
                         it.doFirst {
                             args << appClassProvider.get()
@@ -602,7 +605,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
                 it.mainClass.set('grails.ui.console.GrailsSwingConsole')
 
-                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
+                def appClass = GrailsGradlePlugin.getMainClassProvider(consoleTask.name, project)
 
                 it.doFirst {
                     it.args(appClass.get())
@@ -622,7 +625,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 it.mainClass.set('grails.ui.shell.GrailsShell')
                 it.standardInput = System.in
 
-                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
+                def appClass = GrailsGradlePlugin.getMainClassProvider(shellTask.name, project)
 
                 it.doFirst {
                     it.args(appClass.get())
@@ -713,17 +716,17 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             project.tasks.withType(BootArchive).configureEach { BootArchive bootTask ->
                 bootTask.dependsOn(findMainClassTask)
-                bootTask.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                bootTask.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(null, project))
             }
 
             project.tasks.withType(BootRun).configureEach { BootRun it ->
                 it.dependsOn(findMainClassTask)
-                it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(null, project))
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
                 it.dependsOn(findMainClassTask)
-                it.configuredMainClassName.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                it.configuredMainClassName.convention(GrailsGradlePlugin.getMainClassProvider(null, project))
             }
         } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
             project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
@@ -818,7 +821,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
                     }
 
-                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(runTask.name, project)
 
                     it.doFirst {
                         args << appClassProvider.get()
@@ -845,7 +848,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
                     }
 
-                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(runTask.name, project)
 
                     it.doFirst {
                         args << appClassProvider.get()
