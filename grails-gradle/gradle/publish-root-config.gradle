@@ -45,6 +45,11 @@ if (isReleaseVersion) {
     }
 }
 
+tasks.register('publishAllPublicationsToTestCaseMavenRepoRepository').configure {
+    dependsOn(subprojects
+            .collect { p -> p.tasks.named('publishAllPublicationsToTestCaseMavenRepoRepository') }
+            .flatten())
+}
 
 def aggregatePublishedArtifacts = tasks.register('aggregatePublishedArtifacts')
 

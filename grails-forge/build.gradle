@@ -65,7 +65,10 @@ allprojects {
     }
 
     tasks.withType(Test).configureEach { Task testTask ->
-        testTask.dependsOn(gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'))
+        testTask.dependsOn(
+                gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
+                gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+        )
     }
 }
 
