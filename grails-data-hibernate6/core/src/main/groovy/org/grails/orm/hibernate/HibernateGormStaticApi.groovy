@@ -106,6 +106,8 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
             params = params ? new HashMap(params) : Collections.emptyMap()
             if(params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
+                criteriaQuery = criteriaBuilder.createQuery(Object.class)
+                queryRoot = criteriaQuery.from(persistentEntity.javaClass)
                 return new PagedResultList(
                         hibernateTemplate,
                         persistentEntity,
