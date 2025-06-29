@@ -89,45 +89,45 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
-//    def leProperty() {
-//        given:
-//        def oldEager = new EagerOwner(column1: 1, column2: 2).save(flush: true)
-//        eagerHibernateQuery.leProperty("column1", "column2")
-//        when:
-//        def newEager = eagerHibernateQuery.singleResult()
-//        then:
-//        oldEager == newEager
-//    }
+    def leProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 1, column2: 2).save(flush: true)
+        eagerHibernateQuery.leProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
 
-//    def ltProperty() {
-//        given:
-//        def oldEager = new EagerOwner(column1: 1, column2: 2).save(flush: true)
-//        eagerHibernateQuery.ltProperty("column1", "column2")
-//        when:
-//        def newEager = eagerHibernateQuery.singleResult()
-//        then:
-//        oldEager == newEager
-//    }
+    def ltProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 1, column2: 2).save(flush: true)
+        eagerHibernateQuery.ltProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
 
-//    def geProperty() {
-//        given:
-//        def oldEager = new EagerOwner(column1: 2, column2: 1).save(flush: true)
-//        eagerHibernateQuery.geProperty("column1", "column2")
-//        when:
-//        def newEager = eagerHibernateQuery.singleResult()
-//        then:
-//        oldEager == newEager
-//    }
-//
-//    def gtProperty() {
-//        given:
-//        def oldEager = new EagerOwner(column1: 2, column2: 1).save(flush: true)
-//        eagerHibernateQuery.gtProperty("column1", "column2")
-//        when:
-//        def newEager = eagerHibernateQuery.singleResult()
-//        then:
-//        oldEager == newEager
-//    }
+    def geProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 2, column2: 1).save(flush: true)
+        eagerHibernateQuery.geProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
+
+    def gtProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 2, column2: 1).save(flush: true)
+        eagerHibernateQuery.gtProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
 
 
 //    @Ignore("Need better implementation of Predicate")
@@ -266,7 +266,6 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob.save(flush: true)
         given:
         hibernateQuery.isNotEmpty("pets")
-                .join("pets")
 
         when:
         Person newBob = hibernateQuery.singleResult()
@@ -589,7 +588,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         oldBob.addToPets(new Pet(name:"Lucky")).save(flush:true)
         oldBob.addToPets(new Pet(name:"Lucky")).save(flush:true)
-        hibernateQuery.join("pets").projections().property("pets.name").distinct("pets.name")
+        hibernateQuery.join("pets").projections().distinct("pets.name")
         when:
         def petName = hibernateQuery.singleResult()
         then:
