@@ -27,14 +27,20 @@ file('../gradle.properties').withInputStream {
 allprojects {
     repositories {
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/restricted' }
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
                 includeVersionByRegex  'org[.]apache[.]((grails)|(groovy)).*', '.*','.*SNAPSHOT'
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
+            }
+        }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        mavenCentral()
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }
@@ -55,7 +61,7 @@ ext {
     ext.'signing.keyId' = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
     ext.'signing.password' = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
     ext.'signing.secretKeyRingFile' = project.findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
-    isCiBuild = System.getenv().get('CI') as Boolean
+    isCiBuild = System.getenv().containsKey('CI')
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
 }
 

@@ -51,16 +51,23 @@ class MainClassFinder {
      * Searches for the main class relative to the give path that is within the project tree
      *
      * @param path The path as a URI
+     * @param supportCaching Whether to cache the result for future calls
      * @return The name of the main class
      */
-    static String searchMainClass(URI path) {
+    static String searchMainClass(URI path, boolean supportCaching = true) {
         if (!path) {
             return null
         }
 
         def pathStr = path.toString()
-        if (mainClasses.containsKey(pathStr)) {
-            return mainClasses.get(pathStr).className
+        if (supportCaching && mainClasses.containsKey(pathStr)) {
+            def holder = mainClasses.get(pathStr)
+            if(holder.classFile.exists()) {
+                return holder.className
+            }
+            else {
+                mainClasses.remove(pathStr)
+            }
         }
 
         try {
@@ -89,11 +96,11 @@ class MainClassFinder {
 
             MainClassHolder holder = null
             for (File dir in searchDirs) {
-                holder = findMainClass(dir)
+                holder = findMainClass(dir, supportCaching)
                 if (holder) break
             }
 
-            if (holder != null) {
+            if (supportCaching && holder != null) {
                 mainClasses.put(pathStr, holder)
             }
 
@@ -118,7 +125,7 @@ class MainClassFinder {
         return null
     }
 
-    static MainClassHolder findMainClass(File rootFolder = BuildSettings.CLASSES_DIR) {
+    static MainClassHolder findMainClass(File rootFolder = BuildSettings.CLASSES_DIR, boolean supportCaching = true) {
         if (rootFolder == null) {
             // try current directory
             rootFolder = new File(ROOT_FOLDER_PATH)
@@ -133,8 +140,11 @@ class MainClassFinder {
         }
 
         final String rootFolderCanonicalPath = rootFolder.canonicalPath
-        if (mainClasses.containsKey(rootFolderCanonicalPath)) {
-            return mainClasses.get(rootFolderCanonicalPath)
+        if (supportCaching && mainClasses.containsKey(rootFolderCanonicalPath)) {
+            def holder = mainClasses.get(rootFolderCanonicalPath)
+            if(holder.classFile.exists()) {
+                return holder
+            }
         }
         ArrayDeque<File> stack = new ArrayDeque<>()
         stack.push rootFolder
@@ -150,7 +160,9 @@ class MainClassFinder {
                         holder.className = classReader.getClassName().replace('/', '.').replace('\\', '.')
                         holder.classFile = file
 
-                        mainClasses.put(rootFolderCanonicalPath, holder)
+                        if(supportCaching) {
+                            mainClasses.put(rootFolderCanonicalPath, holder)
+                        }
 
                         return holder
                     }

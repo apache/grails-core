@@ -20,7 +20,7 @@
 version = '0.1'
 group = 'hyphenated'
 
-apply plugin: 'asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
@@ -40,8 +40,8 @@ dependencies {
 
     implementation 'org.apache.grails:grails-data-hibernate5'
 
-    developmentOnly platform(project(':grails-bom'))
-    developmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
         // exclude javax variant of hibernate-core
@@ -55,7 +55,7 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.apache.grails:grails-fields'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'

@@ -27,8 +27,7 @@ The Grails developers have decided on several rules regarding packaging. These r
    are typically not meant to be included in a Grails app directly.
 3. Testing artifacts for Grails applications / plugins, will have the prefix `grails-testing-support-` to remind
    developers these artifacts should not typically be included in the `implementation` scope of their application.
-4. Gradle plugins will be consolidated under a single [repository](https://github.com/apache/grails-gradle-plugin).
-5. As part of the gradle plugin consolidation, we adopt consistent names and remove `views-` from the views gradle
+4. As part of the gradle plugin consolidation, we adopt consistent names and remove `views-` from the views gradle
    plugins. Instead they will match the existing gradle plugin naming pattern - i.e. `grails-gsp`, `grails-markup`, etc.
 5. There will be one artifact published that can be included in either a `buildSrc/build.gradle` or a `buildScript` to
    import all Grails gradle plugins. That plugin will be `org.apache.grails:grails-gradle-plugins`.

@@ -53,7 +53,7 @@ dependencies {
 
     console 'org.apache.grails:grails-console'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
     runtimeOnly 'org.fusesource.jansi:jansi'

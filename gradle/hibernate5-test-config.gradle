@@ -38,8 +38,8 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     systemProperty('hibernate5.gorm.suite', System.getProperty('hibernate5.gorm.suite') ?: true)
-    reports.html.required = !System.getenv('CI')
-    reports.junitXml.required = !System.getenv('CI')
+    reports.html.required = !isCiBuild
+    reports.junitXml.required = !isCiBuild
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true

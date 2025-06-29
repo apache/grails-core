@@ -91,6 +91,11 @@ class GrailsPublishExtension {
     Closure pomCustomization
 
     /**
+     * If another process will add the components set this to false so only the publication is created
+     */
+    Boolean addComponents = true
+
+    /**
      * The name of the publication
      */
     String publicationName = 'maven'

@@ -22,7 +22,7 @@ plugins {
     id 'groovy'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.gradle.grails-web'
-    id 'asset-pipeline'
+    id 'cloud.wondrify.asset-pipeline'
 }
 
 version = "0.0.1"
@@ -54,14 +54,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    developmentOnly platform(project(':grails-bom'))
-    developmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     compileOnly 'org.slf4j:slf4j-api' // Provided by Tomcat
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
 
     testImplementation 'org.apache.grails:grails-testing-support-views-gson'
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'

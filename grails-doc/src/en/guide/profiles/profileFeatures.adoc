@@ -48,7 +48,7 @@ build:
         - asset-pipeline
 dependencies:
     - scope: build
-      coords: 'com.bertramlabs.plugins:asset-pipeline-gradle:2.5.0'
+      coords: 'cloud.wondrify:asset-pipeline-gradle'
     - scope: runtime
       coords: "org.grails.plugins:asset-pipeline"
 ----

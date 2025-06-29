@@ -22,7 +22,7 @@ group = 'examples.mongo.tenant'
 
 apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
-apply plugin: 'asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
 dependencies {
 
@@ -34,10 +34,10 @@ dependencies {
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-gsp'
 
-    developmentOnly platform(project(':grails-bom'))
-    developmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.apache.grails:grails-url-mappings'

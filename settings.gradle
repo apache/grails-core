@@ -29,10 +29,10 @@ plugins {
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
-def isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
-if(isReproducibleBuild) {
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+if (isReproducibleBuild) {
     gradle.settingsEvaluated {
-        logger.warn("*************** Remote Build Cache Disabled due to Reproducible Build ********************")
+        logger.warn('*************** Remote Build Cache Disabled due to Reproducible Build ********************')
         logger.warn("Build date will be set to (SOURCE_DATE_EPOCH=${System.getenv("SOURCE_DATE_EPOCH")})")
     }
 }
@@ -57,7 +57,7 @@ buildCache {
 
 rootProject.name = 'grails.core.ROOT'
 
-include (
+include(
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs-core',
@@ -380,7 +380,7 @@ include 'grails-profiles-web-plugin'
 project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-plugin')
 
 // Functional Tests
-include (
+include(
         'grails-test-examples-async-events-pubsub-demo',
         'grails-test-examples-app1',
         'grails-test-examples-app2',
@@ -435,7 +435,7 @@ project(':grails-test-examples-cache').projectDir = file('grails-test-examples/c
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 
-includeBuild ('./grails-gradle')
+includeBuild('./grails-gradle')
 
 // Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
 for (String pattern in DirectoryScanner.defaultExcludes) {

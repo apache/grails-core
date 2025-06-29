@@ -21,7 +21,7 @@ version = '0.1'
 group = 'micronaut'
 
 apply plugin:'org.apache.grails.gradle.grails-web'
-apply plugin:'com.bertramlabs.asset-pipeline'
+apply plugin:'cloud.wondrify.asset-pipeline'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gsp
@@ -60,16 +60,16 @@ dependencies {
     implementation 'org.apache.grails:grails-gsp'
     compileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    developmentOnly platform(project(':grails-bom'))
-    developmentOnly 'org.webjars.npm:bootstrap'
-    developmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:web'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
     runtimeOnly 'jakarta.xml.bind:jakarta.xml.bind-api'
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.apache.grails:grails-testing-support-web'

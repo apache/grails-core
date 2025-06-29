@@ -22,7 +22,7 @@ group = 'org.sitemesh.grails.plugins.sitemesh3'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
-apply plugin: 'com.bertramlabs.asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
 ext {
     testForked = true
@@ -37,12 +37,12 @@ dependencies {
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'
 
-    developmentOnly platform(project(':grails-bom'))
-    developmentOnly 'org.webjars.npm:bootstrap'
-    developmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'org.apache.grails:grails-gsp'
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-i18n'

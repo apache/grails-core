@@ -21,7 +21,7 @@ group = 'org.example.grails'
 version = '0.0.1'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
-apply plugin: 'asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
 // These two Gradle plugins are not needed for running the functional tests.
 // They are applied as a smoke test to check that compiling gson-views and gsp
@@ -44,11 +44,11 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-views-gson'
 
-    developmentOnly platform(project(':grails-bom'))
-    developmentOnly 'org.webjars.npm:bootstrap'
-    developmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

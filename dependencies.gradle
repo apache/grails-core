@@ -25,7 +25,7 @@ ext {
             'ant.version'                        : '1.10.15',
             'asciidoctor-gradle-jvm.version'     : '4.0.4',
             'asciidoctorj.version'               : '3.0.0',
-            'asset-pipeline-gradle.version'      : '5.0.9',
+            'asset-pipeline-gradle.version'      : '5.0.10-SNAPSHOT',
             'byte-buddy.version'                 : '1.15.5',
             'commons-text.version'               : '1.12.0',
             'directory-watcher.version'          : '0.18.0',
@@ -42,7 +42,7 @@ ext {
             'objenesis.version'                  : '3.4',
             'gradle-spock.version'               : '2.3-groovy-3.0',
             'gradle-nexus-publish-plugin.version': '2.0.0',
-            'spring-boot.version'                : '3.5.0',
+            'spring-boot.version'                : '3.5.3',
             'springloaded.version'               : '1.2.8.RELEASE',
     ]
 
@@ -58,7 +58,7 @@ ext {
             'ant-junit'                  : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
             'asciidoctorj-gradle-jvm'    : "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'               : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
-            'asset-pipeline-gradle'      : "com.bertramlabs.plugins:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
+            'asset-pipeline-gradle'      : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
             'byte-buddy'                 : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
             'commons-text'               : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
             'directory-watcher'          : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
@@ -77,7 +77,7 @@ ext {
     ]
 
     bomDependencyVersions = [
-            'asset-pipeline-grails.version': '5.0.9',
+            'asset-pipeline-grails.version': '5.0.10-SNAPSHOT',
             'bootstrap-icons.version'      : '1.11.3',
             'bootstrap.version'            : '5.3.3',
             'commons-codec.version'        : '1.17.1',
@@ -105,7 +105,7 @@ ext {
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomDependencies = [
-            'asset-pipeline-grails'    : "com.bertramlabs.plugins:asset-pipeline-grails:${bomDependencyVersions['asset-pipeline-grails.version']}",
+            'asset-pipeline-grails'    : "cloud.wondrify:asset-pipeline-grails:${bomDependencyVersions['asset-pipeline-grails.version']}",
             'bootstrap'                : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
             'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",

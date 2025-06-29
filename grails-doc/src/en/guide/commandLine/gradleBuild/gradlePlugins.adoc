@@ -35,7 +35,7 @@ plugins {
     id "eclipse"
 }
 
-apply plugin: "asset-pipeline"
+apply plugin: "cloud.wondrify.asset-pipeline"
 apply plugin: "org.apache.grails.gradle.grails-web"
 apply plugin: "org.apache.grails.gradle.grails-gsp"
 ----
