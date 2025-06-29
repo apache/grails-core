@@ -372,7 +372,7 @@ public abstract class Query implements Cloneable{
     /**
      * Creates an association query
      *
-     * @param associationName The assocation name
+     * @param associationName The association name
      * @return The Query instance
      */
     public AssociationQuery createQuery(String associationName) {

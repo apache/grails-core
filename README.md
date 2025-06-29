@@ -55,7 +55,7 @@ CLI applications exist to assist in Application generation. Instructions for the
 
 The Apache Grails Wrapper is a tiny distribution (25KB) that can manage larger sized CLIs for Grails. It consists of a
 `grailsw` shell script, a `grailsw.bat` batch script, and the jar file `grails-wrapper.jar`. It can be downloaded from
-the latest [Github Release](https://github.com/apache/grails-core/releases) page starting with 7.0.0-M4 & it is included
+the latest [GitHub Release](https://github.com/apache/grails-core/releases) page starting with 7.0.0-M4 & it is included
 in any created project. The wrapper is used to either create an Apache Grails Application or to run commands in an
 existing Grails Application directory. The wrapper is generally meant to be forward compatible and downloads the Apache
 Grails CLIs to the directory `$HOME/.grails/wrapper`.
