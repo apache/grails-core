@@ -91,9 +91,9 @@ public class DefaultGradleRepository implements GradleRepository {
                     .append(filter.artifactRegex()).append("', '")
                     .append(filter.versionRegex())
                     .append("')").append("\n")
-                    .append(basePadding).append(indent).append("}");
+                    .append(basePadding).append(indent).append("}\n");
         }
-        snippet.append(basePadding).append("}\n");
+        snippet.append(basePadding).append("}");
         return snippet.toString();
     }
 

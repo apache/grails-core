@@ -35,6 +35,9 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
 
+    setEnvironment([
+        'GRAILS_REPO_URL': new File(rootProject.projectDir, '../build/local-maven').canonicalFile.absolutePath
+    ])
     jvmArgs('-Duser.country=US', '-Duser.language=en')
     forkEvery = 100
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1

@@ -29,7 +29,11 @@ public interface GradleRepository extends Ordered {
     static Set<GradleRepository> getDefaultRepositories(String grailsVersion) {
         Set<GradleRepository> repositories = new HashSet<>();
 
-        repositories.add(new MavenCentralRepository(0));
+        String overrideRepo = System.getenv("GRAILS_REPO_URL");
+        if (overrideRepo != null && !overrideRepo.isEmpty()) {
+            repositories.add(new DefaultGradleRepository(0, overrideRepo));
+        }
+        repositories.add(new MavenCentralRepository(repositories.size()));
         repositories.add(new DefaultGradleRepository(repositories.size(), "https://repo.grails.org/grails/restricted"));
         if (grailsVersion.endsWith("SNAPSHOT")) {
             repositories.add(new DefaultGradleRepository(

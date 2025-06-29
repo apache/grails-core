@@ -83,10 +83,12 @@ public class GeneratorContext implements DependencyContext {
         this.coordinateResolver = coordinateResolver;
         this.features = new Features(this, features, options);
         this.options = options;
+
+        Set<GradleRepository> repositories = GradleRepository.getDefaultRepositories(VersionInfo.getGrailsVersion());
+        this.buildRepositories = repositories;
+        this.repositories = repositories;
         String grailsVersion = VersionInfo.getGrailsVersion();
         buildProperties.put("grailsVersion", grailsVersion);
-        this.buildRepositories = GradleRepository.getDefaultRepositories(grailsVersion);
-        this.repositories = this.buildRepositories;
     }
 
     /**
