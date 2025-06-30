@@ -22,11 +22,13 @@ import groovy.transform.CompileStatic
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
@@ -98,35 +100,36 @@ abstract class FindMainClassTask extends DefaultTask {
         })
         enabledBootRunTask = objects.property(Boolean).convention(project.provider {
             Task bootRunTask = project.tasks.findByName('bootRun')
-            (bootRunTask && bootRunTask.enabled) as boolean
+            (bootRunTask && bootRunTask.enabled && project.gradle.taskGraph.hasTask(bootRunTask)) as boolean
         })
         enabledBootJarTask = objects.property(Boolean).convention(project.provider {
             Task bootJarTask = project.tasks.findByName(SpringBootPlugin.BOOT_JAR_TASK_NAME)
-            (bootJarTask && bootJarTask.enabled) as boolean
+            (bootJarTask && bootJarTask.enabled && project.gradle.taskGraph.hasTask(bootJarTask)) as boolean
         })
         enabledBootWarTask = objects.property(Boolean).convention(project.provider {
             Task bootWarTask = project.tasks.findByName(SpringBootPlugin.BOOT_WAR_TASK_NAME)
-            (bootWarTask && bootWarTask.enabled) as boolean
+            (bootWarTask && bootWarTask.enabled && project.gradle.taskGraph.hasTask(bootWarTask)) as boolean
         })
         mainClassName = objects.property(String)
     }
 
     @TaskAction
     void setMainClassProperty() {
-        if (!enabledBootRunTask.get()) {
-            logger.info('The bootRun task does not exist or is disabled, so this must not be a runnable grails application. Skipping finding main class.')
-            return
+        File cacheFile = mainClassCacheFile.get().asFile
+        if(cacheFile.exists()) {
+            // the only time this task should invoke is when gradle has deemed it necessary to run, always remove the
+            // the cache file to prevent invalid states when running tasks other than bootRun, bootJar, or bootWar
+            cacheFile.delete()
         }
 
-        if (!enabledBootJarTask.get() && !enabledBootWarTask.get()) {
-            logger.info('There is neither a {} or {} task that will run. Skipping finding main Application class.', SpringBootPlugin.BOOT_JAR_TASK_NAME, SpringBootPlugin.BOOT_WAR_TASK_NAME)
+        if (!enabledBootRunTask.get() && !enabledBootJarTask.get() && !enabledBootWarTask.get()) {
+            logger.info('No Spring Boot tasks were found that will run ({}, {}, or {}). Skipping finding main Application class.', 'bootRun', SpringBootPlugin.BOOT_JAR_TASK_NAME, SpringBootPlugin.BOOT_WAR_TASK_NAME)
             return
         }
 
         if (mainClassName.isPresent()) {
             def overrideClassName = mainClassName.get()
             logger.info('Overriding main class with: {}', overrideClassName)
-            File cacheFile = mainClassCacheFile.get().asFile
             cacheFile.parentFile.mkdirs()
             cacheFile.text = overrideClassName
             return
@@ -134,9 +137,9 @@ abstract class FindMainClassTask extends DefaultTask {
 
         MainClassHolder mainClassHolder = findMainClass()
         if (mainClassHolder) {
-            File cacheFile = mainClassCacheFile.get().asFile
             cacheFile.parentFile.mkdirs()
             cacheFile.text = mainClassHolder.className
+            logger.info('Found main class: {}', mainClassHolder.className)
         } else if (!isGrailsPlugin.get()) {
             logger.warn('No main class found. Please set \'springBoot.mainClass\'.')
         }
@@ -152,8 +155,10 @@ abstract class FindMainClassTask extends DefaultTask {
         }
         MainClassHolder mainClassHolder = null
         for (File classesDir in classesDirs) {
-            mainClassHolder = mainClassFinder.findMainClass(classesDir)
+            logger.debug("Searching for main class in: {}", classesDir.absolutePath)
+            mainClassHolder = mainClassFinder.findMainClass(classesDir, false) // do not cache inside of the finder since gradle is responsible for caching
             if (mainClassHolder) {
+                logger.debug("Found main class: {} at {}", mainClassHolder.className, mainClassHolder.classFile.absolutePath)
                 break
             }
         }
@@ -161,11 +166,11 @@ abstract class FindMainClassTask extends DefaultTask {
         if (!mainClassHolder) {
             if (isGrailsPlugin.get()) {
                 // this is ok if the project is a plugin because it's likely not going to be a runnable grails app
-                logger.lifecycle('WARNING: this plugin project does not have an Application.class and thus the bootJar / bootRun will be invalid.')
+                logger.lifecycle('WARNING: this plugin project does not have an Application.class and thus the bootJar / bootWar / bootRun will be invalid.')
                 return null
             }
 
-            throw new RuntimeException('Could not find Application main class. Please set \'springBoot.mainClass\' or disable BootJar & BootArchive tasks.')
+            throw new RuntimeException('Could not find Application main class. Please set \'springBoot.mainClass\' or disable bootRun & bootArchive (bootJar / bootWar) tasks.')
         }
 
         return mainClassHolder

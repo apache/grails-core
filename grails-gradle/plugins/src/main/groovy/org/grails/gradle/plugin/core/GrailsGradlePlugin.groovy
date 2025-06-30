@@ -651,7 +651,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
             def mainClassFileContainer = project.layout.buildDirectory.file('resolvedMainClassName')
             TaskProvider<FindMainClassTask> findMainClassTask = project.tasks.register('findMainClass', FindMainClassTask)
             findMainClassTask.configure {
-                it.mustRunAfter(project.tasks.withType(GroovyCompile))
+                it.dependsOn(project.tasks.named('compileGroovy', GroovyCompile), project.tasks.named('classes'))
+                it.mustRunAfter(project.tasks.named('classes'))
                 it.mainClassCacheFile.set(mainClassFileContainer)
                 it.outputs.upToDateWhen {
                     mainClassFileContainer.orNull?.asFile?.exists()
