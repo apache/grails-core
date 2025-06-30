@@ -126,11 +126,11 @@ abstract class FindMainClassTask extends DefaultTask {
         // Get the directories from which to try to find the main class.
         Set<File> classesDirs = classesDirectory.getFiles()
         if (!classesDirs) {
-            throw new IllegalStateException("No classes directory configured for FindMainClassTask. Please ensure the task is configured with a valid classes directory.")
+            throw new IllegalStateException('No classes directory configured for FindMainClassTask. Please ensure the task is configured with a valid classes directory.')
         }
         MainClassHolder mainClassHolder = null
         for (File classesDir in classesDirs) {
-            logger.debug("Searching for main class in: {}", classesDir.absolutePath)
+            logger.debug('Searching for main class in: {}', classesDir.absolutePath)
             mainClassHolder = mainClassFinder.findMainClass(classesDir, false)
             // do not cache inside of the finder since gradle is responsible for caching
             if (mainClassHolder) {
