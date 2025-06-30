@@ -19,6 +19,8 @@
 
 package functionaltests
 
+import org.springframework.http.HttpStatus
+
 class ForwardingController {
 
     def one() {
@@ -39,6 +41,19 @@ class ForwardingController {
 
     def forwardToList() {
         forward action: 'list'
+    }
+
+    def forwardWithRender(String anArgument) {
+        if(!anArgument) {
+            forward action: 'renderedView'
+            return
+        }
+
+        render text: 'did not forward', status: HttpStatus.OK
+    }
+
+    def renderedView() {
+        render view: 'forwardedView'
     }
 
     def list() {

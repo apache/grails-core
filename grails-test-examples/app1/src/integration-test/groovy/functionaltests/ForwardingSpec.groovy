@@ -22,6 +22,7 @@ package functionaltests
 import grails.gorm.transactions.Rollback
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
+import spock.lang.PendingFeature
 
 /**
  */
@@ -95,5 +96,14 @@ class ForwardingSpec extends ContainerGebSpec {
 
         then: 'the flash message has been cleared'
         $('div', id: 'message').text() == 'flash.message is []'
+    }
+
+    @PendingFeature
+    void "forwarding to a view"() {
+        when: "A forward is issued to a view"
+        go '/forwarding/forwardWithRender'
+
+        then: "The view is rendered correctly"
+        $('p', id: 'message').text() == 'Hello from a forwarded view'
     }
 }
