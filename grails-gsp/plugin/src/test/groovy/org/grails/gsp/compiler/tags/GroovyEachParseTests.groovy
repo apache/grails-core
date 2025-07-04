@@ -18,12 +18,15 @@
  */
 package org.grails.gsp.compiler.tags
 
-import org.grails.web.pages.ParseTests
 import org.junit.jupiter.api.Test
 
+import static org.grails.web.pages.ParseSpec.parseCode
+import static org.grails.web.pages.ParseSpec.trimAndRemoveCR
+import static org.grails.web.pages.ParseSpec.makeImports
+import static org.grails.web.pages.ParseSpec.GSP_FOOTER
 import static org.junit.jupiter.api.Assertions.assertEquals
 
-class GroovyEachParseTests extends ParseTests {
+class GroovyEachParseTests {
 
     @Test
     void testEachOutput() {
