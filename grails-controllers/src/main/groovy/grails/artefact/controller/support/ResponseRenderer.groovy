@@ -27,6 +27,7 @@ import grails.web.api.WebAttributes
 import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
 import grails.web.mime.MimeUtility
+import grails.web.pages.GrailsRenderViewMutator
 import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
@@ -54,6 +55,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.*
+
 /**
  *
  * A trait that adds behavior to allow rendering of objects to the response
@@ -68,9 +70,15 @@ trait ResponseRenderer extends WebAttributes {
 
     private Collection<ActionResultTransformer> actionResultTransformers = []
 
-
     private MimeUtility mimeUtility
+    private GrailsRenderViewMutator grailsRenderViewMutator
     private GrailsPluginManager pluginManager
+
+    @Generated
+    @Autowired(required = false)
+    void setGrailsRenderViewMutator(GrailsRenderViewMutator grailsRenderViewMutator) {
+        this.grailsRenderViewMutator = grailsRenderViewMutator
+    }
 
     @Generated
     @Autowired(required = false)
@@ -298,14 +306,15 @@ trait ResponseRenderer extends WebAttributes {
                     throw new ControllerExecutionException("Unable to load template for uri [$templateUri]. Template not found.")
                 }
 
-
                 boolean renderWithLayout = (layoutArg || webRequest.getCurrentRequest().getAttribute(WebUtils.LAYOUT_ATTRIBUTE))
                 // if automatic decoration occurred unwrap, since this is a partial
-
                 if (renderWithLayout) {
                     setLayout webRequest.currentRequest, layoutArg
                 }
 
+                if(grailsRenderViewMutator) {
+                    view = grailsRenderViewMutator.mutateView(renderWithLayout, templateUri, webRequest.locale, view)
+                }
 
                 Map binding = [:]
 
