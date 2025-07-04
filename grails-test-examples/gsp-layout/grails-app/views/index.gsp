@@ -1,4 +1,4 @@
-<%@ page import="org.sitemesh.config.ConfigurableSiteMeshFilter; org.springframework.core.SpringVersion; org.springframework.boot.SpringBootVersion" %>
+<%@ page import="org.springframework.core.SpringVersion; org.springframework.boot.SpringBootVersion" %>
 <%--
   ~  Licensed to the Apache Software Foundation (ASF) under one
   ~  or more contributor license agreements.  See the NOTICE file
@@ -40,7 +40,6 @@
             <li class="dropdown-item"><a href="#">Groovy version: ${GroovySystem.getVersion()}</a></li>
             <li class="dropdown-item"><a href="#">Spring Boot version: ${SpringBootVersion.getVersion()}</a></li>
             <li class="dropdown-item"><a href="#">Spring version: ${SpringVersion.getVersion()}</a></li>
-            <li class="dropdown-item"><a href="#">SiteMesh version: ${ConfigurableSiteMeshFilter.class.getPackage().getSpecificationVersion()}</a></li>
             <li class="dropdown-item"><a href="#">JVM version: ${System.getProperty('java.version')}</a></li>
             <li role="separator" class="dropdown-divider"></li>
             <li class="dropdown-item"><a href="#">Reloading active: ${grails.util.Environment.reloadingAgentEnabled}</a></li>

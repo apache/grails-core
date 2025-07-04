@@ -32,7 +32,6 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    implementation 'org.apache.grails:grails-sitemesh3'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'

@@ -102,6 +102,7 @@ public class GroovyPageParser implements Tokens {
     private GrailsTagRegistry tagRegistry = GrailsTagRegistry.getInstance();
     private Environment environment;
     private List<String> htmlParts = new ArrayList<String>();
+    private static GrailsLayoutPreprocessor grailsLayoutPreprocessor = new GrailsLayoutPreprocessor();
 
     Set<Integer> bodyVarsDefined = new HashSet<Integer>();
     Map<Integer, String> attrsVarsMapDefinition = new HashMap<Integer, String>();
@@ -142,7 +143,7 @@ public class GroovyPageParser implements Tokens {
     public static final String CONFIG_PROPERTY_DEFAULT_CODEC = "grails.views.default.codec";
     public static final String CONFIG_PROPERTY_GSP_ENCODING = "grails.views.gsp.encoding";
     public static final String CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR = "grails.views.gsp.keepgenerateddir";
-
+    public static final String CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS = "grails.views.gsp.layout.preprocess";
     public static final String CONFIG_PROPERTY_GSP_COMPILESTATIC = "grails.views.gsp.compileStatic";
     public static final String CONFIG_PROPERTY_GSP_ALLOWED_TAGLIB_NAMESPACES = "grails.views.gsp.compileStaticConfig.taglibs";
     public static final String CONFIG_PROPERTY_GSP_CODECS = "grails.views.gsp.codecs";
@@ -155,6 +156,7 @@ public class GroovyPageParser implements Tokens {
     private static final String STATIC_CODEC_DIRECTIVE = OutputEncodingSettings.STATIC_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
     private static final String OUT_CODEC_DIRECTIVE = OutputEncodingSettings.OUT_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
     private static final String TAGLIB_CODEC_DIRECTIVE = OutputEncodingSettings.TAGLIB_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
+    private static final String GRAILS_LAYOUT_PREPROCESS_DIRECTIVE = "grailsLayoutPreprocess";
 
     private String pluginAnnotation;
     public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
@@ -163,12 +165,14 @@ public class GroovyPageParser implements Tokens {
     private boolean precompileMode;
     private Boolean compileStaticMode;
     private boolean modelFieldsMode;
+    private boolean grailsLayoutPreprocessMode = false;
     private String expressionCodecDirectiveValue = OutputEncodingSettings.getDefaultValue(OutputEncodingSettings.EXPRESSION_CODEC_NAME);
     private String outCodecDirectiveValue = OutputEncodingSettings.getDefaultValue(OutputEncodingSettings.OUT_CODEC_NAME);
     private String staticCodecDirectiveValue = OutputEncodingSettings.getDefaultValue(OutputEncodingSettings.STATIC_CODEC_NAME);
     private String taglibCodecDirectiveValue = OutputEncodingSettings.getDefaultValue(OutputEncodingSettings.TAGLIB_CODEC_NAME);
     private String modelDirectiveValue;
 
+    private boolean enableGrailsLayoutProcessing = true;
     private File keepGeneratedDirectory;
     private Set<String> allowedTaglibNamespaces = new LinkedHashSet<>(DEFAULT_TAGLIB_NAMESPACES);
 
@@ -188,6 +192,9 @@ public class GroovyPageParser implements Tokens {
         this.keepGeneratedDirectory = keepGeneratedDirectory;
     }
 
+    public void setEnableGrailsLayoutProcessing(boolean enableGrailsLayoutProcessing) {
+        this.enableGrailsLayoutProcessing = enableGrailsLayoutProcessing;
+    }
 
     class TagMeta {
         String name;
@@ -229,6 +236,12 @@ public class GroovyPageParser implements Tokens {
             configure(configMap);
         }
 
+        Map<String, String> directives = parseDirectives(gspSource);
+        if (isGrailsLayoutPreprocessingEnabled(directives.get(GRAILS_LAYOUT_PREPROCESS_DIRECTIVE))) {
+            // GSP preprocessing for direct grails layout integration: replace head -> g:captureHead, title -> g:captureTitle, meta -> g:captureMeta, body -> g:captureBody
+            gspSource = grailsLayoutPreprocessor.addGspGrailsLayoutCapturing(gspSource);
+            grailsLayoutPreprocessMode = true;
+        }
         scan = new GroovyPageScanner(gspSource, uri);
         pageName = uri;
         environment = Environment.getCurrent();
@@ -252,6 +265,10 @@ public class GroovyPageParser implements Tokens {
         } else if (allowedTagLibsConfigValue instanceof CharSequence) {
             allowedTaglibNamespaces.addAll(Arrays.asList(allowedTagLibsConfigValue.toString().split("\\s*,\\s*")));
         }
+
+        setEnableGrailsLayoutProcessing(
+                config.getProperty(GroovyPageParser.CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS, Boolean.class, true)
+        );
 
         setExpressionCodecDirectiveValue(
                 config.getProperty(OutputEncodingSettings.CONFIG_PROPERTY_GSP_CODECS + '.' + OutputEncodingSettings.EXPRESSION_CODEC_NAME, String.class,
@@ -294,6 +311,13 @@ public class GroovyPageParser implements Tokens {
             }
         }
         return result;
+    }
+
+    private boolean isGrailsLayoutPreprocessingEnabled(String gspFilePreprocessDirective) {
+        if (gspFilePreprocessDirective != null) {
+            return GrailsStringUtils.toBoolean(gspFilePreprocessDirective.trim());
+        }
+        return enableGrailsLayoutProcessing;
     }
 
     public int[] getLineNumberMatrix() {

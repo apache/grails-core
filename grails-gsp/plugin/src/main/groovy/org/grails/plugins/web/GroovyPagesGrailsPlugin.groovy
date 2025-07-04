@@ -29,6 +29,8 @@ import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import org.apache.grails.web.layout.GrailsLayoutRenderViewMutator
+import org.apache.grails.web.layout.LayoutSelector
 import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.gsp.GroovyPageResourceLoader
 import org.grails.gsp.GroovyPagesTemplateEngine
@@ -38,6 +40,7 @@ import org.grails.plugins.web.taglib.ApplicationTagLib
 import org.grails.plugins.web.taglib.CountryTagLib
 import org.grails.plugins.web.taglib.FormTagLib
 import org.grails.plugins.web.taglib.FormatTagLib
+import org.grails.plugins.web.taglib.GrailsLayoutTagLib
 import org.grails.plugins.web.taglib.JavascriptTagLib
 import org.grails.plugins.web.taglib.PluginTagLib
 import org.grails.plugins.web.taglib.RenderTagLib
@@ -53,6 +56,7 @@ import org.grails.web.pages.DefaultGroovyPagesUriService
 import org.grails.web.pages.FilteringCodecsByContentTypeSettings
 import org.grails.web.pages.GroovyPagesServlet
 import org.grails.web.servlet.view.GroovyPageViewResolver
+import org.apache.grails.web.layout.GroovyPageLayoutFinder
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.beans.factory.config.PropertiesFactoryBean
 import org.springframework.boot.web.servlet.ServletRegistrationBean
@@ -71,6 +75,9 @@ class GroovyPagesGrailsPlugin extends Plugin {
 
     public static final String GSP_RELOAD_INTERVAL = 'grails.gsp.reload.interval'
     public static final String GSP_VIEWS_DIR = 'grails.gsp.view.dir'
+    public static final String GSP_VIEW_LAYOUT_RESOLVER_ENABLED = 'grails.gsp.view.layoutViewResolver'
+    public static final String DEFAULT_LAYOUT = 'grails.views.layout.default'
+    public static final String GRAILS_LAYOUT_ENABLE_NONGSP = 'grails.views.layout.enable.nongsp'
 
     def watchedResources = ['file:./plugins/*/grails-app/taglib/**/*TagLib.groovy',
                             'file:./grails-app/taglib/**/*TagLib.groovy']
@@ -89,7 +96,8 @@ class GroovyPagesGrailsPlugin extends Plugin {
             RenderTagLib,
             UrlMappingTagLib,
             ValidationTagLib,
-            PluginTagLib
+            PluginTagLib,
+            GrailsLayoutTagLib
     ]
 
 
@@ -122,6 +130,10 @@ class GroovyPagesGrailsPlugin extends Plugin {
             long gspCacheTimeout = config.getProperty(GSP_RELOAD_INTERVAL, Long, (developmentMode && env == Environment.DEVELOPMENT) ? 0L : 5000L)
             boolean enableCacheResources = !config.getProperty(GroovyPagesTemplateEngine.CONFIG_PROPERTY_DISABLE_CACHING_RESOURCES, Boolean, false)
             String viewsDir = config.getProperty(GSP_VIEWS_DIR, '')
+            boolean enableLayoutViewResolver = config.getProperty(GSP_VIEW_LAYOUT_RESOLVER_ENABLED, Boolean, true)
+            String defaultDecoratorNameSetting = config.getProperty(DEFAULT_LAYOUT, '')
+            def grailsLayoutEnableNonGspViews = config.getProperty(GRAILS_LAYOUT_ENABLE_NONGSP, Boolean, false)
+
 
             RuntimeSpringConfiguration spring = springConfig
 
@@ -251,6 +263,20 @@ class GroovyPagesGrailsPlugin extends Plugin {
             jspViewResolver(GroovyPageViewResolver) { bean ->
                 bean.lazyInit = true
                 bean.parent = 'abstractViewResolver'
+            }
+
+            // "grails.gsp.view.layoutViewResolver=false" can be used to disable EmbeddedGrailsLayoutViewResolver
+            // containsKey check must be made to check existence of boolean false values in ConfigObject
+
+            if (enableLayoutViewResolver) {
+                groovyPageLayoutFinder(GroovyPageLayoutFinder) {
+                    gspReloadEnabled = enableReload
+                    defaultDecoratorName = defaultDecoratorNameSetting ?: null
+                    enableNonGspViews = grailsLayoutEnableNonGspViews
+                }
+                grailsRenderViewMutator(GrailsLayoutRenderViewMutator)
+                grailsLayoutSelector(LayoutSelector)
+                grailsLayoutViewResolverPostProcessor(GrailsLayoutViewResolverPostProcessor)
             }
 
             // Now go through tag libraries and configure them in Spring too. With AOP proxies and so on

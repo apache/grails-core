@@ -36,7 +36,6 @@ import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.support.GenericWebApplicationContext
-import spock.lang.PendingFeature
 import spock.lang.Specification
 
 /**
@@ -210,7 +209,6 @@ public static final String TAGLIB_CODEC = 'none'
         '\n\n\nThanks' == output.htmlParts[1]
     }
 
-    @PendingFeature
     void 'body with gstring attribute'() {
         given:
         String expected = makeImports() +
@@ -252,7 +250,6 @@ public static final String TAGLIB_CODEC = 'none'
         '\n<body>text</body>' == result.htmlParts[0]
     }
 
-    @PendingFeature
     void 'meta with gstring attribute'() {
         given:
         String expected = makeImports() +

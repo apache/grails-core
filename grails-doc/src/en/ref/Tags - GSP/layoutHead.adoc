@@ -24,7 +24,7 @@ under the License.
 === Purpose
 
 
-Used in layouts to render the contents of the head tag of the decorated page. Equivalent to the SiteMesh `<decorator:head />` tag.
+Used in layouts to render the contents of the head tag of the decorated page.
 
 
 === Examples

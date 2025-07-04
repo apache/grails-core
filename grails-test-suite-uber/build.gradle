@@ -45,6 +45,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation project(':grails-data-hibernate5-core')
     testImplementation project(':grails-gsp')
     testImplementation project(':grails-testing-support-datamapping'), {

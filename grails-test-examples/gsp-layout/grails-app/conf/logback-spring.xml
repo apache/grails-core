@@ -35,5 +35,4 @@
     <root level="error">
         <appender-ref ref="STDOUT" />
     </root>
-    <logger name="org.sitemesh.config.ConfigurableSiteMeshFilter" level="INFO"/>
 </configuration>

@@ -23,13 +23,11 @@ import functionaltests.Application
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import spock.lang.Issue
-import spock.lang.PendingFeature
 
 @Integration(applicationClass = Application)
 class LayoutFunctionalSpec extends ContainerGebSpec {
 
     @Issue('GRAILS-12045')
-    @PendingFeature(reason = 'title is empty')
     void 'test layout by convention'() {
         when:
         go('/layoutByConvention')
@@ -39,7 +37,6 @@ class LayoutFunctionalSpec extends ContainerGebSpec {
     }
 
     @Issue('GRAILS-12045')
-    @PendingFeature(reason='title is empty')
     void 'test layout specified in controller property'() {
         when:
         go('/layoutSpecifiedByProperty')
@@ -50,7 +47,6 @@ class LayoutFunctionalSpec extends ContainerGebSpec {
     }
 
     @Issue('GRAILS-12045')
-    @PendingFeature(reason='text does not contain the value')
     void 'test layout specified in controller property applied to a GSP that does not contain a root html tag'() {
         when:
         go('/layoutSpecifiedByProperty/snippetView')

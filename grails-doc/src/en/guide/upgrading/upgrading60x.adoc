@@ -300,6 +300,27 @@ As part of any major release, APIs can change.  For Grails 7.0, the list of rena
 
 * GrailsClassUtils#isMatchBetweenPrimativeAndWrapperTypes -> GrailsClassUtils#isMatchBetweenPrimitiveAndWrapperTypes
 
+====== 12.13 Layout Configuration
+
+There are several changes related to layout related configuration:
+
+Package Changes:
+* grails.web.sitemesh -> org.apache.grails.web.layout
+* org.grails.web.sitemesh -> org.apache.grails.views.gsp.layout
+
+Notable Class Moves:
+* org.grails.web.servlet.view.GrailsLayoutViewResolver -> org.grails.web.servlet.view.EmbeddedGrailsLayoutViewResolver
+* org.grails.web.servlet.view.SitemeshLayoutViewResolver -> org.grails.web.servlet.view.GrailsLayoutViewResolver
+* org.grails.web.sitemesh.GrailsLayoutView -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView
+* org.grails.web.sitemesh.SitemeshLayoutView -> org.apache.grails.web.layout.GrailsLayoutView
+
+Property Changes:
+* grails.sitemesh.default.layout -> grails.views.layout.default
+* grails.sitemesh.enable.nongsp -> grails.views.layout.enable.nongsp
+
+Tag namespace changes:
+* sitemesh -> grailsLayout
+
 ====== Key Features
 
 By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://www.testcontainers.org[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.

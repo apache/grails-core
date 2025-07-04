@@ -23,8 +23,6 @@ import grails.gorm.transactions.Rollback
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
-import spock.lang.PendingFeature
-
 /**
  * @author graemerocher
  */
@@ -32,7 +30,6 @@ import spock.lang.PendingFeature
 @Rollback
 class AsyncFunctionalSpec extends ContainerGebSpec {
 
-    @PendingFeature(reason = 'pageSource == <html><head></head><body></body></html>')
     void "Test async response rendering works"() {
         when: "When an async response is rendered"
         go('/async/test')

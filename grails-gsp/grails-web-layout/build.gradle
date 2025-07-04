@@ -1,0 +1,59 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails.views'
+
+ext {
+    pomTitle = 'Layout Grails Plugin'
+    pomDescription = 'Provides layout & decoration features for the Grails Framework.'
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.groovy:groovy'
+
+    api 'opensymphony:sitemesh'
+
+    compileOnly project(':grails-web-common')
+    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test', {
+        // impl: MockHttpServletRequest
+    }
+    testImplementation project(':grails-web-common')
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}

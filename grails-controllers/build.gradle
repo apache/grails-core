@@ -35,6 +35,7 @@ dependencies {
     api project(':grails-mimetypes')
     api project(':grails-validation')
     api project(':grails-domain-class')
+    api project(':grails-web-layout')
 
     api 'org.apache.groovy:groovy'
     api 'org.springframework.boot:spring-boot-autoconfigure'

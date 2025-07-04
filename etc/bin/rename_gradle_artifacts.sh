@@ -160,7 +160,9 @@ declare -a views_mappings=(
   "org[.]grails:grails-web-gsp-taglib|org.apache.grails.views:grails-web-gsp-taglib"
   "org[.]grails:grails-web-gsp|org.apache.grails.views:grails-web-gsp"
   "org[.]grails:grails-taglib|org.apache.grails.views:grails-taglib"
-  "org[.]grails:grails-plugin-sitemesh3|org.apache.grails:grails-sitemesh3"
+  #"org[.]grails:grails-plugin-sitemesh3|org.apache.grails:grails-sitemesh3"
+  "org[.]grails[.].plugins:sitemesh2|org.apache.grails:grails-layout"
+  "org[.]grails:grails-web-sitemesh|org.apache.grails:grails-web-layout"
   "org[.]grails:grails-gsp|org.apache.grails.views:grails-gsp-core"
 )
   declare -a excluded_gsp_mappings=(
@@ -171,7 +173,9 @@ declare -a views_mappings=(
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]scaffolding['\"]|exclude module:'grails-scaffolding'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gsp['\"]|exclude module:'grails-gsp'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-web-testing-support['\"]|exclude module:'grails-testing-support-web'"
-  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-sitemesh3['\"]|exclude module:'grails-sitemesh3'"
+  #"exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-sitemesh3['\"]|exclude module:'grails-sitemesh3'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]sitemesh2['\"]|exclude module:'grails-layout'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-web-sitemesh['\"]|exclude module:'grails-web-layout'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-gsp['\"]|exclude module:'grails-gsp-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]fields['\"]|exclude module:'grails-fields'"
   )

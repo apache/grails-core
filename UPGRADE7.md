@@ -48,6 +48,5 @@ Experienced while upgrading modules for Grails 7
 
 ### Cool New Features
 - Hello Exterminator, Good by bugs! Lot's of things started working... and working well! For instance, use of controller namespaces now work seemlessly.
-- Massive decoupling of dependencies and cleanup between modules.  SiteMesh dependencies are no longer compiled into controllers fused between numerous modules. SiteMesh isn't even required to use Grails!
-- GSP can now be used OUTSIDE of Grails! see grails-boot
+- Massive decoupling of dependencies and cleanup between modules.
 - Works with Spring Security 6 out of the box. No plugin needed!
