@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.groovy.control.CompilationFailedException;
 import grails.core.GrailsApplication;
+import org.grails.buffer.GrailsResponseMutator;
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
 import org.grails.core.exceptions.GrailsRuntimeException;
 import org.grails.exceptions.reporting.StackTraceFilterer;
@@ -194,6 +195,10 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             else if (info != null && info.getControllerName() != null) {
                 String uri = determineUri(request);
                 if (!response.isCommitted()) {
+                    if (response instanceof GrailsResponseMutator) {
+                        // prevent further mutation of the request since an error page needs rendered instead
+                        ((GrailsResponseMutator) response).deactivateResponseMutator();
+                    }
                     forwardRequest(info, request, response, mv, uri);
                     // return an empty ModelAndView since the error handler has been processed
                     return new ModelAndView();
