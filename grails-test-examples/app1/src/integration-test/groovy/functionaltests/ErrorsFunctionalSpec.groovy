@@ -32,36 +32,36 @@ import spock.lang.PendingFeature
 class ErrorsFunctionalSpec extends ContainerGebSpec {
 
     void "Test exception handling methods for internal controller exceptions"() {
-        when:"An action that throws a custom error that is handled by a 500 mapping in UrlMappings.groovy"
-            go '/errors/throwCustomError'
+        when: "An action that throws a custom error that is handled by a 500 mapping in UrlMappings.groovy"
+        go('/errors/throwCustomError')
 
-        then:"The correct action is executed"
-            driver.pageSource.contains 'Message = Something bad'
+        then: "The correct action is executed"
+        pageSource.contains 'Message = Something bad'
     }
 
     void "Test 500 mappings for custom exceptions"() {
-        when:"An action that throws a custom error that is handled by a 500 mapping in UrlMappings.groovy"
-            go '/demo/throwCustomError'
+        when: "An action that throws a custom error that is handled by a 500 mapping in UrlMappings.groovy"
+        go('/demo/throwCustomError')
 
-        then:"The correct action is executed"
-            driver.pageSource.contains 'Message = Something bad'
+        then: "The correct action is executed"
+        pageSource.contains 'Message = Something bad'
     }
 
     void "Test default 500 mapping"() {
-        when:"An excetion that throws a general error handled by the default 500 mapping in UrlMapings.groovy"
-            go '/errors/throwGeneralError'
+        when: "An excetion that throws a general error handled by the default 500 mapping in UrlMapings.groovy"
+        go('/errors/throwGeneralError')
 
-            println driver.pageSource
+        println pageSource
 
-        then:"The title is correct"
-            $('ul', class:'errors').text() == 'An error has occurred'
+        then: "The title is correct"
+        $('ul', class: 'errors').text() == 'An error has occurred'
     }
 
     void "Test 404 mapping to controller"() {
-        when:"When an action returns a 404"
-            go '/errors/notFoundTest'
-        then:"Make sure the global 404 handler is triggered"
-            driver.pageSource.contains 'Page Not Found'
+        when: "When an action returns a 404"
+        go('/errors/notFoundTest')
+        then: "Make sure the global 404 handler is triggered"
+        pageSource.contains 'Page Not Found'
     }
 
     @Issue("https://github.com/apache/grails-core/issues/9548")
@@ -70,7 +70,7 @@ class ErrorsFunctionalSpec extends ContainerGebSpec {
         !System.properties[ErrorsControllerInterceptor.PROPERTY]
 
         when: "An action that throws an exception is requested"
-        go '/errors/throwException'
+        go('/errors/throwException')
 
         then:
         System.properties[ErrorsControllerInterceptor.PROPERTY] == 'Oops!'

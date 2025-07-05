@@ -28,13 +28,21 @@ import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
 import groovy.transform.CompileStatic
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.gsp.GroovyPageResourceLoader
 import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.gsp.io.CachingGroovyPageStaticResourceLocator
 import org.grails.gsp.jsp.TagLibraryResolverImpl
-import org.grails.plugins.web.taglib.*
+import org.grails.plugins.web.taglib.ApplicationTagLib
+import org.grails.plugins.web.taglib.CountryTagLib
+import org.grails.plugins.web.taglib.FormTagLib
+import org.grails.plugins.web.taglib.FormatTagLib
+import org.grails.plugins.web.taglib.JavascriptTagLib
+import org.grails.plugins.web.taglib.PluginTagLib
+import org.grails.plugins.web.taglib.RenderTagLib
+import org.grails.plugins.web.taglib.UrlMappingTagLib
+import org.grails.plugins.web.taglib.ValidationTagLib
 import org.grails.spring.RuntimeSpringConfiguration
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
@@ -58,7 +66,7 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver
  * @author Graeme Rocher
  * @since 1.1
  */
-@Commons
+@Slf4j
 class GroovyPagesGrailsPlugin extends Plugin {
 
     public static final String GSP_RELOAD_INTERVAL = "grails.gsp.reload.interval"
@@ -68,7 +76,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
                             "file:./grails-app/taglib/**/*TagLib.groovy"]
 
     def grailsVersion = "7.0.0-SNAPSHOT > *"
-    def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
+    def dependsOn = [core: GrailsUtil.grailsVersion, i18n: GrailsUtil.grailsVersion]
     def observe = ['controllers']
     def loadAfter = ['filters']
 
@@ -101,10 +109,10 @@ class GroovyPagesGrailsPlugin extends Plugin {
         { ->
             def application = grailsApplication
             Config config = application.config
-            boolean developmentMode = isDevelopmentMode()
+            boolean developmentMode = developmentMode
             Environment env = Environment.current
 
-            boolean enableReload = env.isReloadEnabled() ||
+            boolean enableReload = env.reloadEnabled ||
                     config.getProperty(GroovyPagesTemplateEngine.CONFIG_PROPERTY_GSP_ENABLE_RELOAD, Boolean, false) ||
                     (developmentMode && env == Environment.DEVELOPMENT)
 
@@ -134,7 +142,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             // as oppose to in WAR deployment where views are loaded from /WEB-INF
 
             if (viewsDir) {
-                log.info "Configuring GSP views directory as '${viewsDir}'"
+                log.info("Configuring GSP views directory as '{}'", viewsDir)
                 customResourceLoader = true
                 groovyPageResourceLoader(GroovyPageResourceLoader) {
                     baseResource = "file:${viewsDir}"
@@ -158,7 +166,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
                 }
             }
 
-            def deployed = !Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
+            def deployed = !Metadata.current.developmentEnvironmentAvailable
             groovyPageLocator(CachingGrailsConventionGroovyPageLocator) { bean ->
                 bean.lazyInit = true
                 if (customResourceLoader) {
@@ -187,7 +195,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             }
 
             grailsResourceLocator(CachingGroovyPageStaticResourceLocator) { bean ->
-                bean.parent = "abstractGrailsResourceLocator"
+                bean.parent = 'abstractGrailsResourceLocator'
                 if (enableReload) {
                     cacheTimeout = gspCacheTimeout
                 }
@@ -195,7 +203,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
 
             // Setup the main templateEngine used to render GSPs
             groovyPagesTemplateEngine(GroovyPagesTemplateEngine) {
-                classLoader = ref("classLoader")
+                classLoader = ref('classLoader')
                 groovyPageLocator = groovyPageLocator
                 if (enableReload) {
                     reloadEnabled = enableReload
@@ -209,7 +217,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
 
             spring.addAlias('groovyTemplateEngine', 'groovyPagesTemplateEngine')
 
-            groovyPageRenderer(PageRenderer, ref("groovyPagesTemplateEngine")) { bean ->
+            groovyPageRenderer(PageRenderer, ref('groovyPagesTemplateEngine')) { bean ->
                 bean.lazyInit = true
                 groovyPageLocator = groovyPageLocator
             }
@@ -227,7 +235,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             }
 
             boolean jstlPresent = ClassUtils.isPresent(
-                    "jakarta.servlet.jsp.jstl.core.Config", InternalResourceViewResolver.class.getClassLoader())
+                    'jakarta.servlet.jsp.jstl.core.Config', InternalResourceViewResolver.class.classLoader)
 
             abstractViewResolver {
                 prefix = GrailsApplicationAttributes.PATH_TO_VIEWS
@@ -242,7 +250,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             // Configure a Spring MVC view resolver
             jspViewResolver(GroovyPageViewResolver) { bean ->
                 bean.lazyInit = true
-                bean.parent = "abstractViewResolver"
+                bean.parent = 'abstractViewResolver'
             }
 
             // Now go through tag libraries and configure them in Spring too. With AOP proxies and so on
@@ -262,9 +270,9 @@ class GroovyPagesGrailsPlugin extends Plugin {
             errorsViewStackTracePrinter(ErrorsViewStackTracePrinter, ref('grailsResourceLocator'))
             filteringCodecsByContentTypeSettings(FilteringCodecsByContentTypeSettings, application)
 
-            groovyPagesServlet(ServletRegistrationBean, new GroovyPagesServlet(), "*.gsp") {
-                if (Environment.isDevelopmentMode()) {
-                    initParameters = [showSource: "1"]
+            groovyPagesServlet(ServletRegistrationBean, new GroovyPagesServlet(), '*.gsp') {
+                if (Environment.developmentMode) {
+                    initParameters = [showSource: '1']
                 }
             }
 
@@ -273,7 +281,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
     }
 
     protected boolean isDevelopmentMode() {
-        Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
+        Metadata.current.developmentEnvironmentAvailable
     }
 
     static String transformToValidLocation(String location) {
@@ -298,7 +306,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
                     }
                 }
 
-                // The tag library lookup class caches "tag -> taglib class"
+                // The tag library lookup class caches 'tag -> taglib class'
                 // so we need to update it now.
                 def lookup = applicationContext.getBean('gspTagLibraryLookup', TagLibraryLookup)
                 lookup.registerTagLib(taglibClass)

@@ -35,10 +35,10 @@ class AsyncFunctionalSpec extends ContainerGebSpec {
     @PendingFeature(reason = 'pageSource == <html><head></head><body></body></html>')
     void "Test async response rendering works"() {
         when:"When an async response is rendered"
-            go '/async/test'
+        go('/async/test')
 
         then:"The rendered page is correct"
-            driver.pageSource.contains 'Hello'
+        pageSource.contains 'Hello'
     }
 
 }

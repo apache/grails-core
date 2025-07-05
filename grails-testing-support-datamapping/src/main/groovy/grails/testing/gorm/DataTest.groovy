@@ -133,7 +133,7 @@ trait DataTest extends GrailsUnitTest {
         defineBeans {
             "${domain.javaClass.name}"(domain.javaClass) { bean ->
                 bean.singleton = false
-                bean.autowire = "byName"
+                bean.autowire = 'byName'
             }
 
             if (DataTestSetupSpecInterceptor.IS_OLD_SETUP) {
@@ -141,12 +141,12 @@ trait DataTest extends GrailsUnitTest {
 
                 "$validationBeanName"(MockCascadingDomainClassValidator) { bean ->
                     bean.lazyInit = true
-                    delegate.messageSource = ref("messageSource")
+                    delegate.messageSource = ref('messageSource')
                     delegate.domainClass = grailsDomain
                     delegate.grailsApplication = grailsApplication
                 }
             } else {
-                "$validationBeanName"(PersistentEntityValidator, domain, ref("messageSource"), ref(DataTestSetupSpecInterceptor.BEAN_NAME))
+                "$validationBeanName"(PersistentEntityValidator, domain, ref('messageSource'), ref(DataTestSetupSpecInterceptor.BEAN_NAME))
             }
 
         }

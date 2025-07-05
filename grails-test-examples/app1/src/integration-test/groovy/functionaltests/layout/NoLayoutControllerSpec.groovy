@@ -25,12 +25,13 @@ import grails.testing.mixin.integration.Integration
 
 @Integration
 class NoLayoutControllerSpec extends ContainerGebSpec {
-    def "no layout"() {
+
+    def 'no layout'() {
         when:
-        go '/noLayout/index'
+        go('/noLayout/index')
 
         then: "The title is correct"
-        browser.driver.pageSource == """<html><head>
+        pageSource == """<html><head>
     <title>No Default Title</title>
 </head>
 

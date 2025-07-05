@@ -29,7 +29,7 @@ class HyphenateControllerSpec extends ContainerGebSpec {
 
     void "test something"() {
         when:"The home page is visited"
-            go '/hyphenate/long-name'
+        go('/hyphenate/long-name')
 
         then:"The title is correct"
         	$().text() == 'good'

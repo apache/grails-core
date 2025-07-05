@@ -42,7 +42,7 @@ class RootPageSpec extends ContainerGebSpec {
 
     void 'should display the correct title on the home page'() {
         when: 'visiting the home page'
-        go '/'
+        go('/')
 
         then: 'the page title is correct'
         report('root page report')

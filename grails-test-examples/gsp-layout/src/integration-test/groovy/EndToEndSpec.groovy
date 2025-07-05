@@ -1,7 +1,3 @@
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
-import spock.lang.PendingFeature
-
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -20,62 +16,67 @@ import spock.lang.PendingFeature
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
+import spock.lang.PendingFeature
+
 @Integration
 class EndToEndSpec extends ContainerGebSpec {
-    def "simple layout"() {
+
+    def 'simple layout'() {
         when:
-        browser.go 'endToEnd/simpleLayout'
+        go('endToEnd/simpleLayout')
 
         then:
-        browser.driver.pageSource == """<html><head><title>Decorated This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+        pageSource == """<html><head><title>Decorated This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
 <body><h1>Hello</h1>body text
 </body></html>"""
     }
 
-    def "title in subtemplate"() {
+    def 'title in subtemplate'() {
         when:
-        browser.go 'endToEnd/titleInSubtemplate'
+        go('endToEnd/titleInSubtemplate')
 
         then:
-        browser.driver.pageSource == """<html><head><title>Decorated This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        pageSource == """<html><head><title>Decorated This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 </head>
 <body><h1>Hello</h1>body text
 </body></html>"""
     }
 
     @PendingFeature
-    def "multiple levels of layouts"() {
+    def 'multiple levels of layouts'() {
         when:
-        browser.go 'endToEnd/multipleLevelsOfLayouts'
+        go('endToEnd/multipleLevelsOfLayouts')
 
         then:
-        browser.driver.pageSource == """<html><head><title>Decorated Base - Dialog - This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+        pageSource == """<html><head><title>Decorated Base - Dialog - This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
 <body><h1>Hello</h1><div id="base"><div id="dialog">body text</div></div>
 </body></html>"""
     }
 
-    def "parameters"() {
+    def 'parameters'() {
         when:
-        browser.go 'endToEnd/parameters'
+        go('endToEnd/parameters')
 
         then:
-        browser.driver.pageSource == """<html><head></head><body><h1>pageProperty: here!</h1></body></html>"""
+        pageSource == """<html><head></head><body><h1>pageProperty: here!</h1></body></html>"""
     }
 
-    def "parameters with logic"() {
+    def 'parameters with logic'() {
         when:
-        browser.go 'endToEnd/parametersWithLogic'
+        go('endToEnd/parametersWithLogic')
 
         then:
-        browser.driver.pageSource == "<html><head></head><body>good</body></html>"
+        pageSource == "<html><head></head><body>good</body></html>"
     }
 
-    def "multiline title"() {
+    def 'multiline title'() {
         when:
-        browser.go 'endToEnd/multilineTitle'
+        go('endToEnd/multilineTitle')
 
         then:
-        browser.driver.pageSource == """<html><head><title>Decorated 
+        pageSource == """<html><head><title>Decorated 
     This is the title
     </title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     </head>

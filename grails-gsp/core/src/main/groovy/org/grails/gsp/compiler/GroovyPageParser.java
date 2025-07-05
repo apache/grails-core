@@ -22,8 +22,8 @@ import grails.config.ConfigMap;
 import grails.io.IOUtils;
 import grails.util.Environment;
 import grails.util.GrailsStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.buffer.FastStringWriter;
 import org.grails.buffer.StreamByteBuffer;
@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 
 /**
  * NOTE: Based on work done by the GSP standalone project (https://gsp.dev.java.net/).
- *
+ * <p>
  * Parsing implementation for GSP files
  *
  * @author Troy Heninger
@@ -53,7 +53,7 @@ import java.util.regex.Pattern;
  */
 public class GroovyPageParser implements Tokens {
 
-    public static final Log LOG = LogFactory.getLog(GroovyPageParser.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GroovyPageParser.class);
 
     private static final Pattern PARA_BREAK = Pattern.compile(
             "/p>\\s*<p[^>]*>", Pattern.CASE_INSENSITIVE);
@@ -339,8 +339,7 @@ public class GroovyPageParser implements Tokens {
                         new FileOutputStream(keepGeneratedFile),
                         GROOVY_SOURCE_CHAR_ENCODING);
             } catch (IOException e) {
-                LOG.warn("Cannot open keepgenerated file for writing. File's absolute path is '" +
-                        keepGeneratedFile.getAbsolutePath() + "'");
+                LOG.warn("Cannot open keepgenerated file for writing. File's absolute path is '{}'", keepGeneratedFile.getAbsolutePath());
                 keepGeneratedFile = null;
             }
             streamBuffer.connectTo(keepGeneratedWriter, true);
@@ -357,9 +356,7 @@ public class GroovyPageParser implements Tokens {
 
     private void resolveKeepGeneratedDirectory() {
         if (keepGeneratedDirectory != null && !keepGeneratedDirectory.isDirectory()) {
-            LOG.warn("The directory specified with " + CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR +
-                    " config parameter doesn't exist or isn't a readable directory. Absolute path: '" +
-                    keepGeneratedDirectory.getAbsolutePath() + "' Keepgenerated will be disabled.");
+            LOG.warn("The directory specified with {} config parameter doesn't exist or isn't a readable directory. Absolute path: '{}' Keepgenerated will be disabled.", CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR, keepGeneratedDirectory.getAbsolutePath());
             keepGeneratedDirectory = null;
         }
     }
@@ -699,6 +696,7 @@ public class GroovyPageParser implements Tokens {
 
     /**
      * find the simple name of this gsp
+     *
      * @param filename the fully qualified file name
      */
     private void makeSourceName(String filename) {
@@ -905,6 +903,7 @@ public class GroovyPageParser implements Tokens {
 
     /**
      * Determines if the line numbers array should be added to the generated Groovy class.
+     *
      * @return true if they should
      */
     private boolean shouldAddLineNumbers() {
@@ -943,6 +942,7 @@ public class GroovyPageParser implements Tokens {
 
     /**
      * Filters trailing 0s from the line number array
+     *
      * @param lineNumbers the line number array
      * @return a new array that removes all 0s from the end of it
      */

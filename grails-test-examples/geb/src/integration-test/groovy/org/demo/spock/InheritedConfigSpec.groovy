@@ -43,7 +43,7 @@ class NotSuperSpec extends ContainerGebSpec {}
 class InheritedConfigSpec extends SuperSpec {
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go '/serverName'
+        go(('/serverName'))
 
         then: 'the emitted hostname is correct'
         pageSource.contains('Server name: super.example.com')
@@ -54,7 +54,7 @@ class InheritedConfigSpec extends SuperSpec {
 class NotInheritedConfigSpec extends NotSuperSpec {
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go '/serverName'
+        go('/serverName')
 
         then: 'the emitted hostname is correct'
         !pageSource.contains('Server name: not.example.com')
@@ -70,7 +70,7 @@ class ChildPreferenceInheritedConfigSpec extends SuperSpec {
     
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go '/serverName'
+        go('/serverName')
 
         then: 'the emitted hostname is correct'
         pageSource.contains('Server name: child.example.com')
@@ -98,7 +98,7 @@ class SuperSuperInheritedConfigSpec extends SuperSpec {
 class MultipleInheritanceSpec extends SuperSuperInheritedConfigSpec {
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go '/serverName'
+        go('/serverName')
 
         then: 'the emitted hostname is correct'
         pageSource.contains('Server name: super.example.com')

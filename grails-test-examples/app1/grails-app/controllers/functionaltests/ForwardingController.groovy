@@ -24,15 +24,15 @@ import org.springframework.http.HttpStatus
 class ForwardingController {
 
     def one() {
-        forward action:"next"
+        forward action: 'next'
     }
 
     def two() {
-        forward controller:"forwarding", action:"next"
+        forward controller: 'forwarding', action: 'next'
     }
 
     def three() {
-        forward controller:"forwarding", action:"next", params:[param1:'test']
+        forward controller: 'forwarding', action: 'next', params: [param1: 'test']
     }
 
     def next() {
@@ -44,7 +44,7 @@ class ForwardingController {
     }
 
     def forwardWithRender(String anArgument) {
-        if(!anArgument) {
+        if (!anArgument) {
             forward action: 'renderedView'
             return
         }

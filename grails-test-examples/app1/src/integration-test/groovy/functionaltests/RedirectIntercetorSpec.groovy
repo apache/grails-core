@@ -30,9 +30,9 @@ class RedirectInterceptorSpec extends ContainerGebSpec {
 
     void "Test that an interceptor that redirects works"() {
         when:
-        go '/misc/interceptedByInterceptor'
+        go('/misc/interceptedByInterceptor')
 
         then:
-        driver.pageSource.contains 'Test' // the redirect worked
+        pageSource.contains 'Test' // the redirect worked
     }
 }

@@ -30,7 +30,7 @@ class LayoutWithTemplateSpec extends ContainerGebSpec {
 
     void "Test that a layout is not applied to a template rendered by a controller by default"() {
         when:"The home page is visited"
-            go '/layoutTemplate/index'
+        go('/layoutTemplate/index')
         then:"The title is correct"
             title == "Welcome to My Partial"
     }

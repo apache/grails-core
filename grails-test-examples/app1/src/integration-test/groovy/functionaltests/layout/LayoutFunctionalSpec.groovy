@@ -32,7 +32,7 @@ class LayoutFunctionalSpec extends ContainerGebSpec {
     @PendingFeature(reason = 'title is empty')
     void 'test layout by convention'() {
         when:
-        go '/layoutByConvention'
+        go('/layoutByConvention')
 
         then:
         title == 'Convention Layout'
@@ -42,7 +42,7 @@ class LayoutFunctionalSpec extends ContainerGebSpec {
     @PendingFeature(reason='title is empty')
     void 'test layout specified in controller property'() {
         when:
-        go '/layoutSpecifiedByProperty'
+        go('/layoutSpecifiedByProperty')
 
         then:
         title == 'Foo Layout'
@@ -53,7 +53,7 @@ class LayoutFunctionalSpec extends ContainerGebSpec {
     @PendingFeature(reason='text does not contain the value')
     void 'test layout specified in controller property applied to a GSP that does not contain a root html tag'() {
         when:
-        go '/layoutSpecifiedByProperty/snippetView'
+        go('/layoutSpecifiedByProperty/snippetView')
 
         then:
         title  == 'Foo Layout'
