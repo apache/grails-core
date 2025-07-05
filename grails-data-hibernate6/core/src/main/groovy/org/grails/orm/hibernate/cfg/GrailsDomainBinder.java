@@ -1371,7 +1371,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @param mappings    The Hibernate Mappings object
      * @param sessionFactoryBeanName  the session factory bean name
      */
-    private void bindRoot(HibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    protected void bindRoot(HibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
