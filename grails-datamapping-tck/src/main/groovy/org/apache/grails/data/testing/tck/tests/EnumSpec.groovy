@@ -26,7 +26,7 @@ import spock.lang.Issue
 class EnumSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EnumThing])
+        manager.addAllDomainClasses([EnumThing])
     }
 
     void "Test save()"() {

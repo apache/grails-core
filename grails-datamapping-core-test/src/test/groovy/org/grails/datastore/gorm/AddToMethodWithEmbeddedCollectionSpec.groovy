@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AddToMethodWithEmbeddedCollectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Library, LibraryBook])
+        manager.addAllDomainClasses([Library, LibraryBook])
     }
 
     private service = new LibraryService()

@@ -15,7 +15,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 class ValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+        manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
                                       ClassWithOverloadedBeforeValidate])
     }
 

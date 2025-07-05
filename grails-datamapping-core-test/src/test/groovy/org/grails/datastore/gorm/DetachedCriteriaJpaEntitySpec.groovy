@@ -30,7 +30,7 @@ import spock.lang.Issue
 @Issue('GRAILS-9750')
 class DetachedCriteriaJpaEntitySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Todo])
+        manager.addAllDomainClasses([Todo])
     }
 
     def "test a where query on a jpa entity"() {

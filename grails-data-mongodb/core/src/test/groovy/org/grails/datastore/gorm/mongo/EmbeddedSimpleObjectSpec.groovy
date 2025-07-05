@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedSimpleObjectSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Space])
+        manager.addAllDomainClasses([Space])
     }
 
     void "Test embedded non-domain object"() {

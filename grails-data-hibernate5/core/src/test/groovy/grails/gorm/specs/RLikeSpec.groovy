@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([RlikeFoo])
+        manager.addAllDomainClasses([RlikeFoo])
     }
 
     void "test rlike works with H2"() {

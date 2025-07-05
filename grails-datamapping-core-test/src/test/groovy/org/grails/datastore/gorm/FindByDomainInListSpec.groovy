@@ -30,7 +30,7 @@ import spock.lang.Issue
 @Issue('https://github.com/grails/grails-core/issues/2674')
 class FindByDomainInListSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([BookAuthor, AuthorBook])
+        manager.addAllDomainClasses([BookAuthor, AuthorBook])
     }
 
     void "Test fetch books by author"() {

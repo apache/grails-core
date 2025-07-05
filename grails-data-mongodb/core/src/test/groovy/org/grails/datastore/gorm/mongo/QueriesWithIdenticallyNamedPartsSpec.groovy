@@ -30,7 +30,7 @@ import spock.lang.Issue
 @Issue('GPMONGODB-296')
 class QueriesWithIdenticallyNamedPartsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Foo])
+        manager.addAllDomainClasses([Foo])
     }
 
     void "Ors and ands work together"() {

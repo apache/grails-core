@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class AutoTimestampSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([DateCreatedTestA, DateCreatedTestB])
+        manager.addAllDomainClasses([DateCreatedTestA, DateCreatedTestB])
     }
 
     void "autoTimestamp should prevent custom changes to dateCreated and lastUpdated if turned on"() {

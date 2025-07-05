@@ -29,7 +29,7 @@ import spock.lang.Issue
  */
 class SizeConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([SizeConstrainedUser])
+        manager.addAllDomainClasses([SizeConstrainedUser])
     }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/846')

@@ -33,7 +33,7 @@ import spock.lang.IgnoreIf
 class DirtyCheckingSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Person, TestBook, TestAuthor, Card, CardProfile])
+        manager.addAllDomainClasses([Person, TestBook, TestAuthor, Card, CardProfile])
     }
 
     ProxyHandler proxyHandler

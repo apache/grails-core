@@ -45,7 +45,7 @@ import spock.lang.*
 class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([EcmMask, EcmMaskJpa, User2, User])
+        manager.addAllDomainClasses([EcmMask, EcmMaskJpa, User2, User])
     }
 
     @Rollback

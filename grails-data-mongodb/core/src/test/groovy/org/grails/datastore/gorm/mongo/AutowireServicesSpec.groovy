@@ -25,7 +25,7 @@ import org.springframework.context.support.GenericApplicationContext
 
 class AutowireServicesSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Pizza])
+        manager.addAllDomainClasses([Pizza])
     }
 
     void "Test that services can be autowired"() {

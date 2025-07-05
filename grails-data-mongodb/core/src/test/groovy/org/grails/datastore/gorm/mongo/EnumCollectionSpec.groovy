@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EnumCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Teacher, Teacher2, Teacher3, DerivedTeacher])
+        manager.addAllDomainClasses([Teacher, Teacher2, Teacher3, DerivedTeacher])
     }
 
     void "Test persistence of enum"() {

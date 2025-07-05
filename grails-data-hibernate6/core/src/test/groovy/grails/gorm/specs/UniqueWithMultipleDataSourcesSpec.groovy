@@ -31,7 +31,7 @@ import spock.lang.*
 class UniqueWithMultipleDataSourcesSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Abc])
+        manager.addAllDomainClasses([Abc])
         manager.grailsConfig = [
                 'dataSource.url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'   : 'update',

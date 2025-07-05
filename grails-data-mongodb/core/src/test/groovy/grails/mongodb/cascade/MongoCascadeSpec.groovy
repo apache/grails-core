@@ -23,7 +23,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class MongoCascadeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Product, ProductLine])
+        manager.addAllDomainClasses([Product, ProductLine])
     }
 
     void "test association is not cascaded on update or insert"() {

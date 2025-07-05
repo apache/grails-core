@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class IndexWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Lion, Mammal])
+        manager.addAllDomainClasses([Lion, Mammal])
     }
 
     void "Test collection indexes"() {

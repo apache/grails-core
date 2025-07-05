@@ -30,7 +30,7 @@ import spock.lang.Issue
 class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Person])
+        manager.addAllDomainClasses([Person])
     }
 
     @Rollback

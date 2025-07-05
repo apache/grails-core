@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class CustomSequenceIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Book])
+        manager.addAllDomainClasses([Book])
     }
 
     void "Test sequence identifiers"() {

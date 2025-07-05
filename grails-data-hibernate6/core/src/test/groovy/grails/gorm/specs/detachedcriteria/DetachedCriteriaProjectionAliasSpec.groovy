@@ -22,7 +22,7 @@ class DetachedCriteriaProjectionAliasSpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.domainClasses.addAll([Entity1, Entity2, DetachedEntity])
+        manager.addAllDomainClasses([Entity1, Entity2, DetachedEntity])
     }
 
     @Rollback

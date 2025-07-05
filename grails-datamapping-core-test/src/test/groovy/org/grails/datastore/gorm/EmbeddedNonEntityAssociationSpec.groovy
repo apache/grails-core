@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedNonEntityAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Being])
+        manager.addAllDomainClasses([Being])
     }
 
     void "Test persistence of embedded entities"() {

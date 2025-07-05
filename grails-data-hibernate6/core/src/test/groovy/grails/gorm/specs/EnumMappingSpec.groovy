@@ -30,7 +30,7 @@ import java.sql.ResultSet
  */
 class EnumMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Recipe])
+        manager.addAllDomainClasses([Recipe])
     }
 
     void "Test enum mapping"() {

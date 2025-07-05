@@ -29,7 +29,7 @@ import spock.lang.Issue
  */
 class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([River, Lake, Volcano])
+        manager.addAllDomainClasses([River, Lake, Volcano])
     }
 
     void "Test that entities can be saved, retrieved and updated with assigned ids"() {

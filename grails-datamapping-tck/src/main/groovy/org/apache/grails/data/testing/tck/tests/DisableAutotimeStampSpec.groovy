@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class DisableAutotimeStampSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Record])
+        manager.addAllDomainClasses([Record])
     }
 
     void "Test that when auto timestamping is disabled the dateCreated and lastUpdated properties are not set"() {

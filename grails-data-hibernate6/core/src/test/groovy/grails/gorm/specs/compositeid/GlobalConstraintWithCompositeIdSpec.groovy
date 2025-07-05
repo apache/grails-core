@@ -34,7 +34,7 @@ import spock.lang.Issue
 class GlobalConstraintWithCompositeIdSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([ParentB, ChildB, DomainB])
+        manager.addAllDomainClasses([ParentB, ChildB, DomainB])
         manager.grailsConfig = [
                 'dataSource.url'                 : "jdbc:tc:postgresql:latest:///dev_db",
                 'dataSource.dbCreate'            : 'create-drop',

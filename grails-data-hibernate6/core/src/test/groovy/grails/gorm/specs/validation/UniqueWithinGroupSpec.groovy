@@ -32,7 +32,7 @@ import spock.lang.Issue
 class UniqueWithinGroupSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Thing])
+        manager.addAllDomainClasses([Thing])
     }
 
     @Rollback

@@ -30,7 +30,7 @@ import org.bson.types.ObjectId
 class TestSearchSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Product])
+        manager.addAllDomainClasses([Product])
     }
 
     void "Test simple text search"() {

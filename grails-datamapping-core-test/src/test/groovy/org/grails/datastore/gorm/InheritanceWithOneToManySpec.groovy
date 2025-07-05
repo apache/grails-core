@@ -26,7 +26,7 @@ import spock.lang.Issue
 class InheritanceWithOneToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Group, Member, SubMember])
+        manager.addAllDomainClasses([Group, Member, SubMember])
     }
 
     @Issue('GRAILS-9010')

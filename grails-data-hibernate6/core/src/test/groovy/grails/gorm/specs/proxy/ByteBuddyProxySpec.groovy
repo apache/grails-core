@@ -34,7 +34,7 @@ import spock.lang.Shared
 // TODO: are we still supporting proxies?
 class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club])
+        manager.addAllDomainClasses([Team, Club])
     }
 
     @Shared

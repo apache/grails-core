@@ -6,7 +6,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 class NullValueEqualSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([TestEntity, ChildEntity])
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
     void "test null value in equal and not equal"() {

@@ -18,7 +18,7 @@ import spock.lang.Specification
  */
 class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
 
-    def setupSpec() {
+    void setupSpec() {
         manager.grailsConfig = [
                 'dataSource.url'               : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'          : 'create-drop',
@@ -29,6 +29,5 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
                 'hibernate.hbm2ddl.auto'       : 'create',
                 'hibernate.jpa.compliance.cascade': 'true',
         ]
-        manager.domainClasses.clear()
     }
 }

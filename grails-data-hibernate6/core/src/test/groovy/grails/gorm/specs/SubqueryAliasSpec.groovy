@@ -30,7 +30,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Club, Team])
+        manager.addAllDomainClasses([Club, Team])
     }
 
     void "Test subquery with root alias"() {

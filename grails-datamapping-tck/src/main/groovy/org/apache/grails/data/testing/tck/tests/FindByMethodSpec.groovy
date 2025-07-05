@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class FindByMethodSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Person, Book, Highway])
+        manager.addAllDomainClasses([Person, Book, Highway])
     }
 
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {

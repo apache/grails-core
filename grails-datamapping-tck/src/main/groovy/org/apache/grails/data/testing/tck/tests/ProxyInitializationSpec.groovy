@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 class ProxyInitializationSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Patient, ContactDetails])
+        manager.addAllDomainClasses([Patient, ContactDetails])
     }
 
     void "test if proxy is initialized"() {

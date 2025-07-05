@@ -28,7 +28,7 @@ import org.hibernate.mapping.PersistentClass
 class HibernateOptimisticLockingStyleMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([HibernateOptLockingStyleVersioned, HibernateOptLockingStyleNotVersioned])
+        manager.addAllDomainClasses([HibernateOptLockingStyleVersioned, HibernateOptLockingStyleNotVersioned])
     }
 
     void testEvaluateHibernateOptimisticLockStyleIsDefined() {

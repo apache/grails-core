@@ -32,7 +32,7 @@ import spock.lang.Issue
 class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Tooth, ToothDisease])
+        manager.addAllDomainClasses([Tooth, ToothDisease])
     }
 
     @Rollback

@@ -26,6 +26,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     Person oldBob
 
     def setup() {
+
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
         hibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName))
@@ -36,7 +37,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
         manager.domainClasses.clear()
-        manager.domainClasses.addAll([Person, Pet, Face,EagerOwner])
+        manager.addAllDomainClasses([Person, Pet, Face,EagerOwner])
     }
 
     def equals() {

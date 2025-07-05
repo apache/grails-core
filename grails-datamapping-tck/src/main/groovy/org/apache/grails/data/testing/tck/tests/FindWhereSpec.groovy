@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class FindWhereSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([TestEntity])
+        manager.addAllDomainClasses([TestEntity])
     }
 
     def "Test findWhere returns a matching Instance"() {

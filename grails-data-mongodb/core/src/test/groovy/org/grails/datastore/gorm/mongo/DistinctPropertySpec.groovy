@@ -27,7 +27,7 @@ import spock.lang.Issue
 class DistinctPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Student])
+        manager.addAllDomainClasses([Student])
     }
 
     @Issue('GPMONGODB-220')

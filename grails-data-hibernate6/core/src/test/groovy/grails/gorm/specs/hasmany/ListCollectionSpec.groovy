@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 class ListCollectionSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Animal, Leg])
+        manager.addAllDomainClasses([Animal, Leg])
     }
 
     @Rollback

@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class BeforeUpdateEventSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([BeforeUpdateAuthor, BeforeUpdateBook])
+        manager.addAllDomainClasses([BeforeUpdateAuthor, BeforeUpdateBook])
     }
 
     @Issue('GRAILS-8916')

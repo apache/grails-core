@@ -29,7 +29,7 @@ import org.bson.types.ObjectId
 class ObjectIdPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ObjectIdPerson])
+        manager.addAllDomainClasses([ObjectIdPerson])
     }
 
     void "test save and retrieve object id"() {

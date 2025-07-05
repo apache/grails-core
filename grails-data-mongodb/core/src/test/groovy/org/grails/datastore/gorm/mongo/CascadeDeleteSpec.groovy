@@ -26,7 +26,7 @@ import spock.lang.Issue
 
 class CascadeDeleteSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([CascadeUser, CascadeUserSettings])
+        manager.addAllDomainClasses([CascadeUser, CascadeUserSettings])
     }
 
     @Issue(['GPMONGODB-187', 'GPMONGODB-285'])

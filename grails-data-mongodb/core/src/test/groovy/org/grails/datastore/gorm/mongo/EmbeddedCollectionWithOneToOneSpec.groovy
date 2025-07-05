@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedCollectionWithOneToOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Building, Room, RoomCompany])
+        manager.addAllDomainClasses([Building, Room, RoomCompany])
     }
 
     void "Test that embedded collections with one to one associations can be persisted correctly"() {

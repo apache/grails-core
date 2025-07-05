@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class ReadOnlyCriteriaResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([FamilyMember])
+        manager.addAllDomainClasses([FamilyMember])
     }
 
     @Issue('GRAILS-11670')

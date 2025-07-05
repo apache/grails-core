@@ -27,7 +27,7 @@ import spock.lang.Shared
 class WhereQueryInCriteriaSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([InCritOwner, InCritDog])
+        manager.addAllDomainClasses([InCritOwner, InCritDog])
     }
 
     @Shared

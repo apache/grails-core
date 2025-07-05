@@ -29,7 +29,7 @@ import spock.lang.Issue
 class EmbeddedMapSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EmbeddedMapPerson])
+        manager.addAllDomainClasses([EmbeddedMapPerson])
     }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/691')

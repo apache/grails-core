@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedStringListInsideEmbeddedCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ESLIECPerson])
+        manager.addAllDomainClasses([ESLIECPerson])
     }
 
     void "Test that an embedded primitive string can be used inside an embedded collection"() {

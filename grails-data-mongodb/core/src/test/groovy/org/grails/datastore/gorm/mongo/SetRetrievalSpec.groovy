@@ -33,7 +33,7 @@ import spock.lang.Issue
 class SetRetrievalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Player])
+        manager.addAllDomainClasses([Team, Player])
     }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/675')

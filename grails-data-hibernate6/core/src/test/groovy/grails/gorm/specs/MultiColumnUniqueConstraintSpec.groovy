@@ -28,7 +28,7 @@ import spock.lang.Issue
 class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
     void setupSpec() {
         manager.domainClasses.clear()
-        manager.domainClasses.addAll([DomainOne, Task1, TaskLink])
+        manager.addAllDomainClasses([DomainOne, Task1, TaskLink])
     }
 
     void "test generated unique constraints"() {

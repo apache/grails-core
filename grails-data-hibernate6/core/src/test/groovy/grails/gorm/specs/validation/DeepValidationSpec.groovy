@@ -30,7 +30,7 @@ import spock.lang.Issue
  */
 class DeepValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([AnotherCity, Market, Address])
+        manager.addAllDomainClasses([AnotherCity, Market, Address])
     }
 
     @Rollback

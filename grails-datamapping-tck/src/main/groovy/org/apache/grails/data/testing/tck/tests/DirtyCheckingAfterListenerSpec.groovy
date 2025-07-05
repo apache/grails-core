@@ -35,7 +35,7 @@ import spock.util.concurrent.PollingConditions
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([TestPlayer])
+        manager.addAllDomainClasses([TestPlayer])
     }
 
     TestSaveOrUpdateEventListener listener

@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class EnumHasManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Animal])
+        manager.addAllDomainClasses([Animal])
     }
 
     @Issue('GRAILS-9882')

@@ -31,7 +31,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Pet, Person, PetType, Parent, Child])
+        manager.addAllDomainClasses([Pet, Person, PetType, Parent, Child])
     }
 
     void "Test update entity with association proxies"() {

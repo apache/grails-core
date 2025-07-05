@@ -39,7 +39,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class GeoJSONTypePersistenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Place, Loc])
+        manager.addAllDomainClasses([Place, Loc])
     }
 
     void "Test persist GeometryCollection GeoJSON type"() {

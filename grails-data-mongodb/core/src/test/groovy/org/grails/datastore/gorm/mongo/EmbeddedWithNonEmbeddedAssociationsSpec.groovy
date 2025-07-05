@@ -26,7 +26,7 @@ import org.bson.Document
 class EmbeddedWithNonEmbeddedAssociationsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Boat, Sailor, Captain])
+        manager.addAllDomainClasses([Boat, Sailor, Captain])
     }
 
     void "Test that embedded collections can have non-embedded associations"() {

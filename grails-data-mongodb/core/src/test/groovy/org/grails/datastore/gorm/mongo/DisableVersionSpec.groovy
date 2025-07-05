@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class DisableVersionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([NoVersion])
+        manager.addAllDomainClasses([NoVersion])
     }
 
     void "Test that disabling the version does not persist the version field"() {

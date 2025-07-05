@@ -33,7 +33,7 @@ import spock.lang.Shared
  */
 class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club])
+        manager.addAllDomainClasses([Team, Club])
     }
 
     @Shared

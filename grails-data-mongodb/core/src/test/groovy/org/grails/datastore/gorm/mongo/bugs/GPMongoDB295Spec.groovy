@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class GPMongoDB295Spec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([InheritUser, ObjParent, UserGroup, User, UserObject])
+        manager.addAllDomainClasses([InheritUser, ObjParent, UserGroup, User, UserObject])
     }
 
     @Issue('GPMONGODB-295')

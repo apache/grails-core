@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class GormEnhancerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([TestEntity, ChildEntity])
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
     void "Test basic CRUD operations"() {

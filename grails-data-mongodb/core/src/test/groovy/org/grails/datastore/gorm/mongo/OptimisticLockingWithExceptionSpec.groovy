@@ -31,7 +31,7 @@ import spock.lang.Issue
 class OptimisticLockingWithExceptionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Counter])
+        manager.addAllDomainClasses([Counter])
     }
 
     @Issue('GPMONGODB-256')

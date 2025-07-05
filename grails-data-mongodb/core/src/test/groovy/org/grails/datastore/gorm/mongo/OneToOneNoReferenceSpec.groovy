@@ -26,7 +26,7 @@ import org.bson.types.ObjectId
 class OneToOneNoReferenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([OtherNoRef, NoRef])
+        manager.addAllDomainClasses([OtherNoRef, NoRef])
     }
 
     void "Test that associations can be saved with no dbrefs"() {

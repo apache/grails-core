@@ -35,7 +35,7 @@ class CompositeIdWithDeepOneToManyMappingSpec extends HibernateGormDatastoreSpec
     @Override
     def setupSpec() {
         manager.domainClasses.clear()
-        manager.domainClasses.addAll([GrandParent, Parent, Child])
+        manager.addAllDomainClasses([GrandParent, Parent, Child])
     }
 
     @Rollback

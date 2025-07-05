@@ -32,7 +32,7 @@ import spock.lang.IgnoreIf
 class GroovyProxySpec extends GrailsDataTckSpec {
     
     void setupSpec() {
-        manager.domainClasses.addAll([Location])
+        manager.addAllDomainClasses([Location])
     }
 
     void "Test proxying of non-existent instance throws an exception"() {

@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class HasOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Face, Nose])
+        manager.addAllDomainClasses([Face, Nose])
     }
 
     void "Test that a hasOne association is persisted correctly"() {

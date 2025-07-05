@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class BidirectionalOneToOneWithUniqueSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([HibernateFace, HibernateNose])
+        manager.addAllDomainClasses([HibernateFace, HibernateNose])
     }
 
     void "test bidirectional one-to-one with unique"() {

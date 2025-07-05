@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class SizeQuerySpec extends GrailsDataTckSpec {
     void setupSpec() {
-        manager.domainClasses.addAll([SimpleCountry, Person])
+        manager.addAllDomainClasses([SimpleCountry, Person])
     }
 
 

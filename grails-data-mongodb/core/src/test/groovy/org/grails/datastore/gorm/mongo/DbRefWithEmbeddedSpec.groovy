@@ -31,7 +31,7 @@ import spock.lang.Issue
  */
 class DbRefWithEmbeddedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([One, Two])
+        manager.addAllDomainClasses([One, Two])
     }
 
     @Issue('GPMONGODB-260')

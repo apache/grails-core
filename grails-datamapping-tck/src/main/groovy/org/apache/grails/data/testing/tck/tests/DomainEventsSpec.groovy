@@ -31,7 +31,7 @@ import spock.lang.PendingFeature
 class DomainEventsSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ModifyPerson, PersonEvent])
+        manager.addAllDomainClasses([ModifyPerson, PersonEvent])
     }
 
     def setup() {

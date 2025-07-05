@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class InnerEnumSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([InnerPerson])
+        manager.addAllDomainClasses([InnerPerson])
     }
 
     void "Test that inner enums are persisted"() {

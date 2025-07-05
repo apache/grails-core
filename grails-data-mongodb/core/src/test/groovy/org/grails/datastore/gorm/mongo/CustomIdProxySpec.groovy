@@ -29,7 +29,7 @@ import spock.lang.Issue
  */
 class CustomIdProxySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([CustomIdCompany, CustomIdTeam])
+        manager.addAllDomainClasses([CustomIdCompany, CustomIdTeam])
     }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/813')

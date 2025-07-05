@@ -31,7 +31,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class RangeQuerySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Publication, TestEntity, Person, ChildEntity])
+        manager.addAllDomainClasses([Publication, TestEntity, Person, ChildEntity])
     }
 
     void "Test between query with dates"() {

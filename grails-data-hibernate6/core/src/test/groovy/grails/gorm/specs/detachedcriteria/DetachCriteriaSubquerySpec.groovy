@@ -11,7 +11,7 @@ import spock.lang.Ignore
 class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([User, Group, GroupAssignment, Organisation])
+        manager.addAllDomainClasses([User, Group, GroupAssignment, Organisation])
     }
 
 //    @Ignore("Exists Query broken")

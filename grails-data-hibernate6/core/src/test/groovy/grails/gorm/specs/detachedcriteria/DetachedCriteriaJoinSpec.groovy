@@ -11,7 +11,7 @@ import org.grails.orm.hibernate.query.HibernateQuery
 class DetachedCriteriaJoinSpec  extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([Team, Club])
+        manager.addAllDomainClasses([Team, Club])
     }
 
     def "check if count works as expected"() {

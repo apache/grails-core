@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class AutoLinkOneToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([AutoLinkListAuthor, AutoLinkListBook])
+        manager.addAllDomainClasses([AutoLinkListAuthor, AutoLinkListBook])
     }
 
     @Issue('GRAILS-8815')

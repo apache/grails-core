@@ -31,7 +31,7 @@ import spock.lang.Issue
 class ProjectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Dog])
+        manager.addAllDomainClasses([Dog])
     }
 
     void "Test distinct projection with detached criteria"() {

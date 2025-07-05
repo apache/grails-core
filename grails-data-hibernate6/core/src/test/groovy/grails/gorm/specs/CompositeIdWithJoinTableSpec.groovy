@@ -39,7 +39,7 @@ import static grails.gorm.hibernate.mapping.MappingBuilder.define
 //MappingModelCreationHelper assert ( (SortableValue) collectionBootValueMapping.getKey() ).isSorted()
 class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
     def setupSpec() {
-        manager.domainClasses.addAll([CompositeIdParent, CompositeIdChild])
+        manager.addAllDomainClasses([CompositeIdParent, CompositeIdChild])
     }
 
     //    @Rollback

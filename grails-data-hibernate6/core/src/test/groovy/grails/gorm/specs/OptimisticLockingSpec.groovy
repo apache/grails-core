@@ -30,7 +30,7 @@ import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureExcep
 class OptimisticLockingSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.domainClasses.addAll([OptLockVersioned, OptLockNotVersioned])
+        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
     }
 
     void "Test versioning"() {

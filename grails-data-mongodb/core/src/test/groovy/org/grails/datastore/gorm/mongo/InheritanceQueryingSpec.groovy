@@ -26,7 +26,7 @@ import org.bson.Document
 class InheritanceQueryingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([A, B, C])
+        manager.addAllDomainClasses([A, B, C])
     }
 
     def cleanup() {

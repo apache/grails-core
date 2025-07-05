@@ -1,6 +1,10 @@
 package org.grails.orm.hibernate.cfg
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.apache.grails.data.testing.tck.domains.EagerOwner
+import org.apache.grails.data.testing.tck.domains.Face
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.Pet
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.internal.BootstrapContextImpl
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
@@ -15,12 +19,15 @@ import org.hibernate.boot.spi.MetadataContributor
 
 class GrailsDomainBinderSpec extends HibernateGormDatastoreSpec {
 
-    void "Test save()"() {
+
+    void "Test single class"() {
         when:
 
         def collector = getCollector()
         def grailsDomainBinder = getGrailsDomainBinder()
-        def persistentEntity = createPersistentEntity("Book", [title: String, author: String, publishedYear: Integer])
+
+        def args = ["Book", [title: String, author: String, publishedYear: Integer]]
+        def persistentEntity = createPersistentEntity(args[0] as String, args[1] as Map<String, Class>)
         grailsDomainBinder.bindRoot(persistentEntity, collector,"sessionFactoryName")
         println("when")
         then:

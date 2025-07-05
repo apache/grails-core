@@ -26,7 +26,7 @@ import spock.lang.Issue
 class EmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Individual, Individual2, Address, LongAddress])
+        manager.addAllDomainClasses([Individual, Individual2, Address, LongAddress])
     }
 
     @Issue('GPMONGODB-317')

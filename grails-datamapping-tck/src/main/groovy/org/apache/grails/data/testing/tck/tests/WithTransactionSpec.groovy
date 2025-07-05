@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class WithTransactionSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([TestEntity, ChildEntity])
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
     void "Test save() with transaction"() {

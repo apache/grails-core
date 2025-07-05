@@ -29,7 +29,7 @@ import org.bson.types.ObjectId
  */
 class EnumTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Dist])
+        manager.addAllDomainClasses([Dist])
     }
 
     void "Test ordinal mapping for enums"() {

@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class NestedCriteriaWithNamedQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Seller, Ticket, Purchase])
+        manager.addAllDomainClasses([Seller, Ticket, Purchase])
     }
 
     @Issue('GRAILS-9497')

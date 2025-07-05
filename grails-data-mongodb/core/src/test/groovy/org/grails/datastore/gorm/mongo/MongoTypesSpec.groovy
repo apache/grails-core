@@ -28,7 +28,7 @@ import org.bson.types.ObjectId
 class MongoTypesSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MongoTypes])
+        manager.addAllDomainClasses([MongoTypes])
     }
 
     void "Test that an entity can save and load native mongo types"() {

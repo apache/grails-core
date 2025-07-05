@@ -27,7 +27,7 @@ import spock.lang.PendingFeatureIf
 class FirstAndLastMethodSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId])
+        manager.addAllDomainClasses([SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId])
     }
 
     void "Test first and last method with empty datastore"() {

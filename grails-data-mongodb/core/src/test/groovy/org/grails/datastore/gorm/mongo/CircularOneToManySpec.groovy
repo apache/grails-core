@@ -28,7 +28,7 @@ import spock.lang.Issue
 class CircularOneToManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Profile])
+        manager.addAllDomainClasses([Profile])
     }
 
     @Issue('GPMONGODB-254')

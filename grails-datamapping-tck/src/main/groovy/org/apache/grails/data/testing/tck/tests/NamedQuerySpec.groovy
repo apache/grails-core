@@ -29,7 +29,7 @@ import spock.lang.PendingFeature
 class NamedQuerySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Publication, PlantCategory])
+        manager.addAllDomainClasses([Publication, PlantCategory])
     }
 
     void "Test Named Query Passing Multiple Params To Nested Named Query"() {

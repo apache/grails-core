@@ -31,7 +31,7 @@ import spock.lang.Issue
  */
 class DetachedCriteriaAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([BookA, Genre])
+        manager.addAllDomainClasses([BookA, Genre])
     }
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/776')
