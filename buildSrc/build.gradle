@@ -37,12 +37,6 @@ repositories {
             includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
         }
     }
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify', '.*', '.*-SNAPSHOT')
-        }
-    }
     maven { url = 'https://repo.grails.org/grails/restricted' }
     mavenCentral()
     gradlePluginPortal()

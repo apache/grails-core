@@ -50,16 +50,6 @@ public interface GradleRepository extends Ordered {
                     )
             ));
         }
-        repositories.add(new DefaultGradleRepository(
-                repositories.size(),
-                "https://central.sonatype.com/repository/maven-snapshots",
-                null,
-                List.of(
-                        new VersionRegexRepoFilter(
-                                "cloud[.]wondrify", ".*", ".*-SNAPSHOT"
-                        )
-                )
-        ));
 
         return repositories;
     }
