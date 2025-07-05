@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Prev Snapshot GCP Deploy"
+name: "Forge - Prev Snapshot GCP Deploy"
 on:
   workflow_dispatch:
 jobs:
