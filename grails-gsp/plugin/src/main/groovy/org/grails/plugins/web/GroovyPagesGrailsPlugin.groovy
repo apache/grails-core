@@ -76,7 +76,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
                             "file:./grails-app/taglib/**/*TagLib.groovy"]
 
     def grailsVersion = "7.0.0-SNAPSHOT > *"
-    def dependsOn = [core: GrailsUtil.grailsVersion, i18n: GrailsUtil.grailsVersion]
+    def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
     def observe = ['controllers']
     def loadAfter = ['filters']
 
@@ -109,10 +109,10 @@ class GroovyPagesGrailsPlugin extends Plugin {
         { ->
             def application = grailsApplication
             Config config = application.config
-            boolean developmentMode = developmentMode
+            boolean developmentMode = isDevelopmentMode()
             Environment env = Environment.current
 
-            boolean enableReload = env.reloadEnabled ||
+            boolean enableReload = env.isReloadEnabled() ||
                     config.getProperty(GroovyPagesTemplateEngine.CONFIG_PROPERTY_GSP_ENABLE_RELOAD, Boolean, false) ||
                     (developmentMode && env == Environment.DEVELOPMENT)
 
@@ -166,7 +166,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
                 }
             }
 
-            def deployed = !Metadata.current.developmentEnvironmentAvailable
+            def deployed = !Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
             groovyPageLocator(CachingGrailsConventionGroovyPageLocator) { bean ->
                 bean.lazyInit = true
                 if (customResourceLoader) {
@@ -235,7 +235,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             }
 
             boolean jstlPresent = ClassUtils.isPresent(
-                    'jakarta.servlet.jsp.jstl.core.Config', InternalResourceViewResolver.class.classLoader)
+                    "jakarta.servlet.jsp.jstl.core.Config", InternalResourceViewResolver.class.getClassLoader())
 
             abstractViewResolver {
                 prefix = GrailsApplicationAttributes.PATH_TO_VIEWS
@@ -271,7 +271,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             filteringCodecsByContentTypeSettings(FilteringCodecsByContentTypeSettings, application)
 
             groovyPagesServlet(ServletRegistrationBean, new GroovyPagesServlet(), '*.gsp') {
-                if (Environment.developmentMode) {
+                if (Environment.isDevelopmentMode()) {
                     initParameters = [showSource: '1']
                 }
             }
@@ -281,7 +281,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
     }
 
     protected boolean isDevelopmentMode() {
-        Metadata.current.developmentEnvironmentAvailable
+        Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
     }
 
     static String transformToValidLocation(String location) {
