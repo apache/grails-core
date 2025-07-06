@@ -10,10 +10,10 @@ import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
 import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor
 import org.hibernate.CustomEntityDirtinessStrategy
+import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
 import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.Configuration
-import org.hibernate.cfg.ImprovedNamingStrategy
-import org.hibernate.cfg.NamingStrategy
 import org.springframework.core.io.Resource
 
 /**
@@ -89,7 +89,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         /**
          * The naming strategy
          */
-        Class<? extends NamingStrategy> naming_strategy = ImprovedNamingStrategy
+        Class<? extends PhysicalNamingStrategy> naming_strategy = CamelCaseToUnderscoresNamingStrategy
 
         /**
          *
