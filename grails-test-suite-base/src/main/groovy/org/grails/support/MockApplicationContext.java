@@ -45,6 +45,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class MockApplicationContext extends GroovyObjectSupport implements WebApplicationContext {
@@ -436,7 +437,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
         }
 
         public InputStream getInputStream() throws IOException {
-            return new ByteArrayInputStream(contents.getBytes("UTF-8"));
+            return new ByteArrayInputStream(contents.getBytes(StandardCharsets.UTF_8));
         }
     }
 

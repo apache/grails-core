@@ -211,17 +211,17 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
     void testPaginateNamespace() {
         def template = '<g:paginate next="Forward" prev="Back" maxsteps="8" max="10" id="1" total="12" namespace="users" controller="admin" action="index"/>'
-        assertOutputEquals '<span class="currentStep">1</span><a href="/userAdmin/1?offset=10&amp;max=10" class="step">2</a><a href="/userAdmin/1?offset=10&amp;max=10" class="nextLink">Forward</a>', template
+        assertOutputEquals('<span class="currentStep">1</span><a href="/userAdmin/1?offset=10&amp;max=10" class="step">2</a><a href="/userAdmin/1?offset=10&amp;max=10" class="nextLink">Forward</a>', template)
 
         template = '<g:paginate next="Forward" prev="Back" maxsteps="8" max="10" id="1" total="12" namespace="reports" controller="admin" action="index"/>'
-        assertOutputEquals '<span class="currentStep">1</span><a href="/reportAdmin/1?offset=10&amp;max=10" class="step">2</a><a href="/reportAdmin/1?offset=10&amp;max=10" class="nextLink">Forward</a>', template
+        assertOutputEquals('<span class="currentStep">1</span><a href="/reportAdmin/1?offset=10&amp;max=10" class="step">2</a><a href="/reportAdmin/1?offset=10&amp;max=10" class="nextLink">Forward</a>', template)
     }
 
     void testSortableColumnNamespaceNull() {
         webRequest.controllerName = "MockController"
 
         def template = '<g:sortableColumn property="id" title="ID" id="1" />'
-        assertOutputEquals '<th id="1" class="sortable" ><a href="/custompath/mockcontroller/list?sort=id&amp;order=asc">ID</a></th>', template
+        assertOutputEquals('<th id="1" class="sortable" ><a href="/custompath/mockcontroller/list?sort=id&amp;order=asc">ID</a></th>', template)
     }
 
     void testSortableColumnNamespaceNullWithIndexAction() {
@@ -229,14 +229,14 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         webRequest.actionName = "index"
 
         def template = '<g:sortableColumn property="id" title="ID" id="1" />'
-        assertOutputEquals '<th id="1" class="sortable" ><a href="/custompath/mockcontroller/index?sort=id&amp;order=asc">ID</a></th>', template
+        assertOutputEquals('<th id="1" class="sortable" ><a href="/custompath/mockcontroller/index?sort=id&amp;order=asc">ID</a></th>', template)
     }
 
     void testSortableColumnWithCustomNamespace() {
         webRequest.controllerName = "MockController"
 
         def template = '<g:sortableColumn property="id" title="ID" id="1" namespace="custom"/>'
-        assertOutputEquals '<th id="1" class="sortable" ><a href="/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc">ID</a></th>', template
+        assertOutputEquals('<th id="1" class="sortable" ><a href="/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc">ID</a></th>', template)
     }
 
     void testSortableColumnWithCustomNamespaceFromRequest() {
@@ -244,7 +244,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         webRequest.controllerNamespace = "custom"
 
         def template = '<g:sortableColumn property="id" title="ID" id="1" />'
-        assertOutputEquals '<th id="1" class="sortable" ><a href="/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc">ID</a></th>', template
+        assertOutputEquals('<th id="1" class="sortable" ><a href="/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc">ID</a></th>', template)
     }
 
     void testTemplateNamespace() {
@@ -252,19 +252,19 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         resourceLoader.registerMockResource('/table/_tableRow.gsp', '<tr><td class="prop">${label}</td><td class="value">${value}</td></tr>')
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
-        webRequest.controllerName = "table"
+        webRequest.controllerName = 'table'
 
         def template = '<tmpl:tableRow label="one" value="two" encodeAs="raw" />'
 
-        assertOutputEquals '<tr><td class="prop">one</td><td class="value">two</td></tr>', template
+        assertOutputEquals('<tr><td class="prop">one</td><td class="value">two</td></tr>', template)
 
         // now test method call
 
         template = '${tmpl.tableRow(label:"one", value:"two", encodeAs:"raw")}'
 
-        assertOutputEquals '<tr><td class="prop">one</td><td class="value">two</td></tr>', template
+        assertOutputEquals('<tr><td class="prop">one</td><td class="value">two</td></tr>', template)
         // execute twice to make sure methodMissing works
-        assertOutputEquals '<tr><td class="prop">one</td><td class="value">two</td></tr>', template
+        assertOutputEquals('<tr><td class="prop">one</td><td class="value">two</td></tr>', template)
     }
 
     void testRenderWithNonExistantTemplate() {
@@ -272,9 +272,8 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
         try {
             applyTemplate(template)
-            fail "Should have thrown exception"
-        }
-        catch (GrailsTagException e) {
+            fail('Should have thrown exception')
+        } catch (GrailsTagException e) {
             assert e.message.contains("Template not found for name [bad]"): "error message should have contained template name"
         }
     }
@@ -286,21 +285,22 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
         def template = '<g:render contextPath="/amazon" template="/book/book" model="[foo: \'bar\']">hello</g:render>'
 
-        assertOutputEquals 'content bar: hello', template
+        assertOutputEquals('content bar: hello', template)
 
         resourceLoader.registerMockResource('/foo/book/_book.gsp', 'foo ${foo}: ${body()}')
         resourceLoader.registerMockResource("/plugins/controllers-${GrailsUtil.grailsVersion}/foo/book/_book.gsp".toString(), 'plugin foo ${foo}: ${body()}')
         resourceLoader.registerMockResource("/plugins/controllers-${GrailsUtil.grailsVersion}/foo/book/_two.gsp".toString(), 'plugin foo ${foo}: ${body()}')
 
         template = '<g:render plugin="controllers" template="/foo/book/book" model="[foo: \'bar\']">hello</g:render>'
-        assertOutputEquals 'plugin foo bar: hello', template
+        assertOutputEquals('plugin foo bar: hello', template)
 
         template = '<g:render contextPath="" template="/foo/book/book" model="[foo: \'bar\']">hello</g:render>'
 
-        assertOutputEquals 'foo bar: hello', template
+        assertOutputEquals('foo bar: hello', template)
 
         request.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, new GroovyPageBinding("/plugins/controllers-${GrailsUtil.grailsVersion}"))
-        assertOutputEquals 'foo bar: hello', template // application template should be able to override plugin template
+        // application template should be able to override plugin template
+        assertOutputEquals('foo bar: hello', template)
         template = '<g:render contextPath="" template="/foo/book/two" model="[foo: \'bar\']">hello</g:render>'
 
         request.removeAttribute GrailsApplicationAttributes.PAGE_SCOPE
@@ -312,7 +312,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
         def template = '<g:render template="/book/book" model="[foo: \'bar\']">hello</g:render>'
-        assertOutputEquals 'content bar: hello', template
+        assertOutputEquals('content bar: hello', template)
     }
 
     void testRenderTagCollectionAndModel() {
@@ -323,7 +323,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
         def template = '<g:render template="/book/book" collection="${books}" model="[foo: \'bar\']" />'
 
-        assertOutputEquals '[book = The Stand it=The Stand foo=bar][book = The Shining it=The Shining foo=bar]', template, [books: ['The Stand', 'The Shining']]
+        assertOutputEquals('[book = The Stand it=The Stand foo=bar][book = The Shining it=The Shining foo=bar]', template, [books: ['The Stand', 'The Shining']])
     }
 
     void testRenderTagBeforeAndAfterModel() {
@@ -628,7 +628,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         assertEquals g.render(template: '/test', model: [name: 'world']), '[hello world] 2'
         request.setAttribute('someattribute', '3')
         def template = '<g:render template="/test" model="[name: \'world\']" />'
-        assertOutputEquals '[hello world] 3', template
+        assertOutputEquals('[hello world] 3', template)
     }
 
     void testGRAILS7887failsBeforeFixing() {
@@ -642,7 +642,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         assertEquals g.render(template: '/test', model: [name: 'world']), '[hello world] 1'
         webRequest.params.someparam = '2'
         def template = '<g:render template="/test" model="[name: \'world\']" />'
-        assertOutputEquals '[hello world] 2', template
+        assertOutputEquals('[hello world] 2', template)
     }
 
     void testGRAILS7887okBeforeFixing() {
@@ -653,7 +653,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
         webRequest.params.someparam = '1'
         def template = '<g:render template="/test" model="[name: \'world\']" />'
-        assertOutputEquals '[hello world] 1', template
+        assertOutputEquals('[hello world] 1', template)
     }
 
     void testGRAILS7871() {
@@ -664,7 +664,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
         webRequest.params.someparam = '1'
         def template = '<g:render template="/test" model="[name: \'world\']" />'
-        assertOutputEquals '[hello world] 1', template
+        assertOutputEquals('[hello world] 1', template)
 
         def g = appCtx.gspTagLibraryLookup.lookupNamespaceDispatcher('g')
         webRequest.params.someparam = '2'
@@ -681,7 +681,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         assertEquals g.render(template: '/test'), 'hello'
 
         def template = '<%@ page contentType="my/contenttype" %>hello world'
-        assertOutputEquals 'hello world', template
+        assertOutputEquals('hello world', template)
 
         assertEquals 'my/contenttype', response.getContentType()
     }
@@ -689,13 +689,13 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
     void testGspContentTypeSetting2() {
         assertEquals null, response.getContentType()
         def template = '<%@ page contentType="my/contenttype" %>hello world'
-        assertOutputEquals 'hello world', template
+        assertOutputEquals('hello world', template)
         assertEquals 'my/contenttype', response.getContentType()
     }
 
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 class RenderTagLibTestUrlMappings {
     static mappings = {
         name claimTab: "/claim/$id/$action" {

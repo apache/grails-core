@@ -130,8 +130,8 @@ theWebLayer:
       tagsAsMethodCalls: Tags as Method Calls
     viewsAndTemplates: Views and Templates
     layouts:
-      title: Layouts with Sitemesh
-      sitemeshContentBlocks: Sitemesh Content Blocks
+      title: Layouts
+      contentBlocks: Content Blocks
     resources: Static Resources
     makingChangesToADeployedApplication: Making Changes to a Deployed Application
     taglibs:

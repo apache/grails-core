@@ -53,6 +53,7 @@ import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.UrlResource
 
 import java.lang.reflect.Modifier
+import java.nio.charset.StandardCharsets
 
 /**
  * A global transformation that applies Grails' transformations to classes within a Grails project
@@ -282,7 +283,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             PluginAstReader pluginAstReader = new PluginAstReader()
             def info = pluginAstReader.readPluginInfo(pluginClassNode)
 
-            pluginXml.withWriter("UTF-8") { Writer writer ->
+            pluginXml.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->
                 def mkp = new MarkupBuilder(writer)
                 def pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClassNode.name, "GrailsPlugin")
 
@@ -366,7 +367,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 mkp.yield pluginXml
             }
 
-            pluginXmlFile.withWriter("UTF-8") { Writer writer ->
+            pluginXmlFile.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->
                 writable.writeTo(writer)
             }
 

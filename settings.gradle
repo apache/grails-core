@@ -340,7 +340,7 @@ include(
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
         'grails-test-examples-gorm',
-        'grails-test-examples-gsp-sitemesh3',
+        'grails-test-examples-gsp-layout',
         'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-hyphenated',
@@ -367,7 +367,7 @@ project(':grails-test-examples-datasources').projectDir = file('grails-test-exam
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
-project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
+project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
 project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')

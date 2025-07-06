@@ -28,13 +28,13 @@ class UriMatchingInterceptorFunctionalSpec extends ContainerGebSpec {
 
     void "Test that an interceptor that redirects works"() {
         when:
-        go '/interceptorDemo/one'
+        go('/interceptorDemo/one')
 
         then:
         $().text() == 'interceptor did match for the one action'
 
         when:
-        go '/interceptorDemo/two'
+        go('/interceptorDemo/two')
 
         then:
         $().text() == 'interceptor did not match for the two action'

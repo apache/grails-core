@@ -29,7 +29,7 @@ class ConfigTestControllerSpec extends ContainerGebSpec {
 
     void "Test that configuration properties are correctly read"() {
         when:"When evaluting configuration values"
-        go '/configTest/index'
+        go('/configTest/index')
 
         then:"The values are correct"
         $('div', 0).text() == 'test'

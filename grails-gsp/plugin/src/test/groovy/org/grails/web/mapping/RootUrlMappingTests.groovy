@@ -36,7 +36,7 @@ class RootUrlMappingTests extends Specification implements UrlMappingsUnitTest<S
 
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 class StoreUrlMappings {
     static mappings = {
         "/"(controller:"store")

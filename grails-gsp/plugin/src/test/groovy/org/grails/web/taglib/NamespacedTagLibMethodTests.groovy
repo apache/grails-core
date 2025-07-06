@@ -28,6 +28,8 @@ import org.grails.web.pages.GSPResponseWriter
 import org.springframework.mock.web.MockHttpServletResponse
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 /**
  * @author Graeme Rocher
  * @author rvanderwerf
@@ -47,7 +49,7 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         template.allowSettingContentType = true
         def w = template.make()
         MockHttpServletResponse mockResponse = new MockHttpServletResponse()
-        mockResponse.setCharacterEncoding("UTF-8")
+        mockResponse.setCharacterEncoding(StandardCharsets.UTF_8.name())
         GSPResponseWriter writer = GSPResponseWriter.getInstance(mockResponse)
         webRequest.out = writer
         w.writeTo(writer)

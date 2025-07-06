@@ -29,7 +29,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
     @Issue('GRAILS-12039')
     void "Test validation of an invalid Hibernate entity"() {
         when:
-        go '/book/validateBook'
+        go('/book/validateBook')
 
         then:
         $().text() == 'The validate method returned false'
@@ -38,7 +38,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
     @Issue('GRAILS-12039')
     void "Test validation of a valid Hibernate entity"() {
         when:
-        go '/book/validateBook?title=DGG'
+        go('/book/validateBook?title=DGG')
 
         then:
         $().text() == 'The validate method returned true'
