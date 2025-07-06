@@ -33,6 +33,9 @@ Software Foundation. The core framework is very extensible and there are numerou
 available that provide easy integration of add-on features. To assist in getting started, various Application generators
 exist and are provided by the Apache Grails team.
 
+## Using the source distribution
+Please see the [INSTALL](INSTALL) document for instructions on how to build, use, and run Apache Grails CLIs from the source distribution. 
+
 ## Getting help
 
 - Check the [Documentation](https://docs.grails.org/) for your preferred Apache Grails version.
@@ -107,15 +110,6 @@ Once your Apache Grails Application is created, you can start it with the comman
     ./gradlew bootRun
 
 For further information, please consult the [documentation](https://docs.grails.org).
-
-## Building Grails
-
-For detailed building Grails, please consult the [CONTRIBUTING.md](CONTRIBUTING.md) file. To bootstrap the project from a source distribution, you can execute: 
-
-    cd gradle-bootstrap
-    gradle wrapper
-
-Then you can proceed with running any valid gradle command from [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licensing
 

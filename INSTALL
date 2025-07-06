@@ -1,1 +1,82 @@
-For installation instructions see <https://docs.grails.org/latest/guide/single.html#build>.
+Grails Installation Guide
+=======================
+
+Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality. The full documentation for how to install Grails via different mechanisms and use it can be found at `https://docs.grails.org/latest`.  This document specifically covers the basic building and installation of Grails from a source distribution.
+
+How to use the source distribution
+------------------------------
+Grails is ultimately a set of libraries and Gradle build plugins that are used to create a Grails Application.  Getting started with Grails requires knowing which libraries and which Gradle plugins to use. Since these dependencies will vary based on the application type, Grails also ships with a set of CLI commands to assist with application generation.  Thus, the source distribution can be used to build and publish the code used by Grails applications.  It can also be used to build the CLI commands that assist with application generation for that published code.
+
+Requirements & Tooling Setup for Building
+------------------------------
+Grails requires a Java Development Kit (JDK) and Gradle (https://www.gradle.org) to build.  Only specific versions are supported. A configuration file, `.sdkmanrc`, for SDKMAN! (https://sdkman.io) exists in the source root to make it easier to setup the preferred tooling. This file contains the recommended versions for building Grails.
+
+If SDKMAN! is installed, the tooling can be selected by running the following command at the source root:
+
+        sdk env install
+
+Otherwise, Gradle must be bootstrapped so that the correct version is used. The recommended way to do this is to use the Gradle Wrapper, which can be set up with files included in the source distribution. The wrapper will automatically download the correct version of Gradle specified in the `gradle/wrapper/gradle-wrapper.properties` file. To set up the wrapper, run the following commands:
+
+        cd gradle-bootstrap
+        gradle bootstrap
+
+For the remaining commands in this document: `gradle` is used if tooling is installed with SDKMAN & `./gradlew` if the Gradle Wrapper is used.
+
+Requirements for Testing
+------------------------------
+Grails has a comprehensive test suite that includes unit, integration, and functional tests. The functional tests use Testcontainers (https://www.testcontainers.org), which requires a container runtime.  In the event that a container runtime is not available, the tests can be skipped by using the argument the argument `-PskipTests`.  Some container runtimes require more configuration than others.  Please see the Testcontainers documentation at https://java.testcontainers.org/features/configuration for how to customize the container runtime used by Testcontainers.
+
+Project Structure
+------------------------------
+The source of Grails is a multi-project Gradle build that uses composite multi-project builds via Gradle's includeBuild feature. The main project is `grails-core`, which contains the core framework code and all libraries that an end user would use in their application. The `grails-gradle` project contains code meant to run on the gradle build classpath.  `grails-forge` contains tooling related to App Generation.
+
+Building grails-core
+------------------------------
+To build the libraries a Grails Application would use, run the following command at the source root:
+
+        ./gradlew build -PskipTests
+
+This will build the project and skip any tests.
+
+Building grails-gradle
+------------------------------
+To build the libraries for the Gradle to use, run the following command under the `grails-gradle` directory:
+
+        ./gradlew build -PskipTests
+
+Building grails-forge
+------------------------------
+To build the Grails Forge, which is used for application generation, run the following command under the `grails-forge` directory:
+
+        ./gradlew build -PskipTests
+
+Using built libraries
+------------------------------
+To use the built libraries in a Grails Application, libraries must be published to a Maven repository.  Since the source distribution is meant for offline use, this document covers how to publish them locally. To build the full project, run the following commands at the source root:
+
+        cd grails-gradle && ./gradlew build publishToMavenLocal -PskipTests && cd ..
+        ./gradlew build publishToMavenLocal -PskipTests
+        cd grails-forge && ./gradlew build publishToMavenLocal -PskipTests
+
+Creating an Application
+------------------------------
+By default, the Grails CLI uses standard maven repos to retrieve upstream Grails libraries.  However, it's possible to "override" this behavior by setting the environment variable `GRAILS_REPO_URL` to an alternative location.  When wanting to use the libraries generated by a source distribution, set it to your local Maven repository, which is typically `~/.m2/repository`.  This can be done by running the following command in the terminal:
+
+        export GRAILS_REPO_URL=$HOME/.m2/repository
+
+The CLI distributions are located under the `grails-forge/grails-cli` project.  The build directory contains the CLI distribution, which can be used to create a Grails Application. Unzip it to any location, for the purposes of this document, we will use `grails-forge/grails-cli/build/distributions` as the working directory.
+
+        cd grails-forge/grails-cli/build/distributions
+        unzip *.zip
+
+The bin directory of the extracted CLI distribution contains the `grails` command, which can be used to create a Grails Application.  To create a basic application, run the following command from the bin directory of the extracted CLI distribution:
+
+        ./grails -t forge create-app DemoApplication
+
+Run the application by changing into the created directory and running the following command:
+
+        cd DemoApplication
+        ./gradlew bootRun
+
+Then visit it in your webbrowser at `http://localhost:8080`.  The application should display a welcome page.
+
