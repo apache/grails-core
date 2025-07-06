@@ -34,6 +34,7 @@ import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
@@ -109,7 +110,9 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.StringTokenizer;
 
-;import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
+import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
+
+;
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.
@@ -155,6 +158,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private final String sessionFactoryName;
     private final String dataSourceName;
     private final HibernateMappingContext hibernateMappingContext;
+    private final ClassBinder classBinding;
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
@@ -163,19 +167,33 @@ public class GrailsDomainBinder implements MetadataContributor {
         return  metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
     }
 
+    public GrailsDomainBinder(String dataSourceName
+                            , String sessionFactoryName
+                            , HibernateMappingContext hibernateMappingContext
+                            , ClassBinder classBinding) {
+        this.sessionFactoryName = sessionFactoryName;
+        this.dataSourceName = dataSourceName;
+        this.hibernateMappingContext = hibernateMappingContext;
+        this.classBinding = classBinding;
+        // pre-build mappings
+        for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
+            evaluateMapping(persistentEntity);
+        }
+    }
+
+
 
 
     public GrailsDomainBinder(
             String dataSourceName,
             String sessionFactoryName,
             HibernateMappingContext hibernateMappingContext) {
-        this.sessionFactoryName = sessionFactoryName;
-        this.dataSourceName = dataSourceName;
-        this.hibernateMappingContext = hibernateMappingContext;
-        // pre-build mappings
-        for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
-            evaluateMapping(persistentEntity);
-        }
+        this(dataSourceName
+                , sessionFactoryName
+                , hibernateMappingContext
+                , new ClassBinder()
+        );
+
     }
 
     /**
@@ -1380,46 +1398,6 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     /**
-     * Binds the specified persistant class to the runtime model based on the
-     * properties defined in the domain class
-     *
-     * @param domainClass     The Grails domain class
-     * @param persistentClass The persistant class
-     * @param mappings        Existing mappings
-     */
-    private void bindClass(PersistentEntity domainClass, PersistentClass persistentClass, InFlightMetadataCollector mappings) {
-
-        boolean autoImport = mappings.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled();
-        org.grails.datastore.mapping.config.Entity mappedForm = domainClass.getMapping().getMappedForm();
-        if (mappedForm instanceof Mapping) {
-            autoImport = ((Mapping) mappedForm).isAutoImport();
-        }
-
-        // set lazy loading for now
-        persistentClass.setLazy(true);
-        final String entityName = domainClass.getName();
-        persistentClass.setEntityName(entityName);
-        persistentClass.setJpaEntityName(autoImport ? unqualify(entityName) : entityName);
-        persistentClass.setProxyInterfaceName(entityName);
-        persistentClass.setClassName(entityName);
-
-        // set dynamic insert to false
-        persistentClass.setDynamicInsert(false);
-        // set dynamic update to false
-        persistentClass.setDynamicUpdate(false);
-        // set select before update to false
-        persistentClass.setSelectBeforeUpdate(false);
-
-        // add import to mappings
-        String en = persistentClass.getEntityName();
-
-        if (autoImport && en.indexOf('.') > 0) {
-            String unqualified = unqualify(en);
-            mappings.addImport(unqualified, en);
-        }
-    }
-
-    /**
      * Binds a root class (one with no super classes) to the runtime meta model
      * based on the supplied Grails domain class
      *
@@ -1434,7 +1412,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
         RootClass root = new RootClass(this.metadataBuildingContext);
         root.setAbstract(entity.isAbstract());
-        bindClass(entity, root, mappings);
+        classBinding.bindClass(entity, root, mappings);
         bindRootPersistentClassCommonValues(entity, root, mappings, sessionFactoryBeanName);
 
         var children = entity.getMappingContext()
@@ -1604,7 +1582,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private void bindUnionSubclass(HibernatePersistentEntity subClass, UnionSubclass unionSubclass,
                                   InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
-        bindClass(subClass, unionSubclass, mappings);
+        classBinding.bindClass(subClass, unionSubclass, mappings);
 
         Mapping subMapping = getMapping(subClass.getJavaClass());
 
@@ -1650,7 +1628,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      */
     private void bindJoinedSubClass(HibernatePersistentEntity sub, JoinedSubclass joinedSubclass,
                                       InFlightMetadataCollector mappings, Mapping gormMapping, String sessionFactoryBeanName) {
-        bindClass(sub, joinedSubclass, mappings);
+        classBinding.bindClass(sub, joinedSubclass, mappings);
 
         String schemaName = getSchemaName(mappings);
         String catalogName = getCatalogName(mappings);
@@ -1700,7 +1678,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      */
     private void bindSubClass(HibernatePersistentEntity sub, Subclass subClass, InFlightMetadataCollector mappings,
                                 String sessionFactoryBeanName) {
-        bindClass(sub, subClass, mappings);
+        classBinding.bindClass(sub, subClass, mappings);
 
         if (LOG.isDebugEnabled())
             LOG.debug("Mapping subclass: " + subClass.getEntityName() +
@@ -3415,7 +3393,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         return GrailsHibernateUtil.unqualify(qualifiedName);
     }
 
-    private MetadataBuildingContext getMetadataBuildingContext() {
+    public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
     }
 
