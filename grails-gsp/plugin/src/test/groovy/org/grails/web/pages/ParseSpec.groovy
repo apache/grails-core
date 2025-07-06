@@ -216,7 +216,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class GRAILS5598 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { \'GRAILS5598\' }\n' +
+                'public String getGroovyPageFileName() { "GRAILS5598" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
