@@ -65,6 +65,7 @@ import java.util.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import static java.util.Optional.ofNullable;
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.
@@ -1376,24 +1377,19 @@ public class GrailsDomainBinder implements MetadataContributor {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
         }
-
         RootClass root = new RootClass(this.metadataBuildingContext);
         root.setAbstract(entity.isAbstract());
-        final MappingContext mappingContext = entity.getMappingContext();
-
-
-
-        final java.util.Collection<PersistentEntity> children = mappingContext.getDirectChildEntities(entity);
-        if (children.isEmpty()) {
-            root.setPolymorphic(false);
-        }
         bindClass(entity, root, mappings);
-
-        Mapping m = getMapping(entity);
-
         bindRootPersistentClassCommonValues(entity, root, mappings, sessionFactoryBeanName);
 
-        if (!children.isEmpty()) {
+        var children = entity.getMappingContext()
+                .getDirectChildEntities(entity);
+
+        if (children.isEmpty()) {
+            root.setPolymorphic(false);
+        } else {
+            root.setPolymorphic(true);
+            Mapping m = getMapping(entity);
             boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
             if (!tablePerSubclass) {
                 // if the root class has children create a discriminator property
