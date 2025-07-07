@@ -26,19 +26,19 @@ jobs:
         run: |
           set -e
 
-          if svn ls https://dist.apache.org/repos/dist/dev/grails/test --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" --non-interactive; then
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails/test --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" --non-interactive; then
             echo "Test Folder already exists — skipping creation"
           else
             echo "Test Folder does not exist, creating"
             svnmucc --non-interactive \
               --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" \
               --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" \
-              mkdir https://dist.apache.org/repos/dist/dev/grails/test \
+              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails/test \
               -m "Create 'test' folder"
           fi
       - name: "Checkout dev repo"
         run: |
-          svn checkout --non-interactive --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" https://dist.apache.org/repos/dist/dev/grails/core/test dev-repo
+          svn checkout --non-interactive --username "${{ secrets.SVC_DIST_GRAILS_USERNAME }}" --password "${{ secrets.SVC_DIST_GRAILS_PASSWORD }}" https://dist.apache.org/repos/dist/dev/incubator/grails/core/test dev-repo
       - name: "Remove existing test file"
         run: |
           cd dev-repo
