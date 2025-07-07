@@ -111,10 +111,9 @@ jobs:
           REPO: ${{ github.event.inputs.repository_name }}
         run: |
           set -euo pipefail
-          
-          release_json="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$OWNER/$REPO/releases/tags/$TAG" || true)"
-          if [ -n "$release_json" ]; then
-              # only pre-releases can be removed
+
+          if release_json="$(gh api -H 'Accept: application/vnd.github+json' \
+                                  "/repos/$OWNER/$REPO/releases/tags/$TAG" 2>/dev/null)"; then
               if [ "$(jq -r '.prerelease' <<<"$release_json")" != "true" ]; then
                   echo "❌ Release $TAG exists but is *not* marked as a pre-release. Aborting."
                   exit 1
