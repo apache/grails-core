@@ -1,0 +1,138 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import org.grails.forge.internal.tasks.WriteGrailsVersionInfoTask
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.grails.forge.rocker'
+}
+
+version = projectVersion
+group = 'org.apache.grails.forge'
+
+sourceSets {
+    main {
+        rocker {
+            srcDir('src/main/java')
+        }
+    }
+}
+
+dependencies {
+    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
+
+    api platform("io.micronaut:micronaut-bom:$micronautVersion") // TODO: Should this be api?
+    api "com.fizzed:rocker-runtime:$rockerVersion"
+    api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
+    api 'io.micronaut:micronaut-http'
+    api 'io.micronaut:micronaut-http-client'
+    api 'io.micronaut:micronaut-inject'
+    api "org.eclipse.jgit:org.eclipse.jgit:$jgitVersion"
+
+    implementation "com.typesafe:config:$typesafeConfigVersion"
+    implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
+    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
+
+    compileOnly 'com.google.code.findbugs:jsr305'
+
+    testImplementation 'org.codehaus.groovy:groovy-yaml'
+
+    if (project.hasProperty('micronautVersion')) {
+        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+    }
+
+    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation "org.spockframework:spock-core:$spockVersion", {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+
+    testImplementation "cglib:cglib-nodep:$cglibVersion"
+    testImplementation "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+}
+
+
+def grailsVersionInfo = tasks.register('grailsVersionInfo', WriteGrailsVersionInfoTask) {
+    version = projectVersion
+    outputDirectory = layout.buildDirectory.dir('version-info')
+}
+
+sourceSets.main.resources.srcDir(grailsVersionInfo)
+
+rocker {
+    postProcessing = ['org.grails.forge.rocker.plugin.WhitespaceProcessor']
+}
+
+// profile base
+TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
+copyGrailsWrapper.configure { Sync it ->
+    it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+
+    def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-incubating-bin')
+    it.inputs.files(wrapperFiles)
+    it.includeEmptyDirs = false
+
+    it.from(wrapperFiles) {
+        include(
+                'grailsw',
+                'grailsw.bat',
+                'grails-wrapper.jar'
+        )
+        eachFile { details -> details.path = details.name } // flatten
+    }
+    it.into(layout.projectDirectory.dir('src/main/resources/grails-wrapper'))
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/style-enforcement-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+}
+
+nohttp {
+    source.exclude('**/pom.rocker.raw')
+}
+
+['processResources', 'sourcesJar', 'spotlessJavaMisc', 'checkstyleNohttp'].each { name ->
+    tasks.named(name).configure {
+        it.dependsOn copyGrailsWrapper
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.codehaus.groovy') {
+                details.useVersion(groovyVersion)
+            }
+            if (details.requested.name == 'spock-core') {
+                details.useVersion(spockVersion)
+            }
+        }
+    }
+}

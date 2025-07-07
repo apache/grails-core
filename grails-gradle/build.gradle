@@ -27,20 +27,14 @@ file('../gradle.properties').withInputStream {
 allprojects {
     repositories {
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        mavenCentral()
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
-                includeVersionByRegex  'org[.]apache[.]((grails)|(groovy)).*', '.*','.*SNAPSHOT'
+                includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
             }
         }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
-            }
-        }
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        mavenCentral()
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }

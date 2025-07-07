@@ -19,6 +19,7 @@
 package org.grails.core.io;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -61,12 +62,7 @@ public class MockStringResourceLoader extends MockResourceLoader {
      * @param contents The contents of the resource
      */
     public void registerMockResource(String location, String contents) {
-        try {
-            mockResources.put(location, new GrailsByteArrayResource(contents.getBytes("UTF-8"), location));
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        mockResources.put(location, new GrailsByteArrayResource(contents.getBytes(StandardCharsets.UTF_8), location));
     }
 
     /**

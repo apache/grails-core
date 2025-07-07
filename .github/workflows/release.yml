@@ -13,26 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Release - Create grails-core"
+name: "Release"
 on:
   release:
-    types: [published]
-permissions: {}
+    types: [ published ]
+permissions: { }
 env:
   # to prevent throttling of the github api, include the github token in an environment variable since the build will check for it
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   publish:
+    name: "Stage Files"
     permissions:
       contents: write  #  to create release & upload wrapper
       issues: write  #  to modify milestones
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
+      commit_hash: ${{ steps.commit_hash.outputs.value }}
       target_branch: ${{ steps.extract_branch.outputs.value }}
+      extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
+      - name: "Extract repository name"
+        id: extract_repository_name
+        run: |
+          echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
@@ -70,11 +77,43 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
-      - name: "🧩 Run Assemble"
-        id: assemble
+      - name: 'Fetch release Commit Hash'
+        id: commit_hash
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ steps.extract_repository_name.outputs.repository_name }}
+          TAG: 'v${{ steps.release_version.outputs.value }}'
+        run: |
+          ref_json=$(gh api "repos/$OWNER/$REPO/git/ref/tags/$TAG")
+
+          type=$(jq -r '.object.type' <<<"$ref_json")
+          sha=$(jq -r '.object.sha'  <<<"$ref_json")
+
+          if [ "$type" = "tag" ]; then
+            sha=$(gh api "repos/$OWNER/$REPO/git/tags/$sha" --jq '.object.sha')
+          fi
+          
+          echo "Found Commit Sha: $sha"
+
+          echo "value=$sha" >>"$GITHUB_OUTPUT"
+      - name: "🧩 Run grails-core Assemble"
         run: ./gradlew assemble
         env:
-          GRAILS_PUBLISH_RELEASE: 'true'
+          GRAILS_PUBLISH_RELEASE: "true"
+      - name: "🧩 Run grails-forge Assemble"
+        working-directory: grails-forge
+        run: ./gradlew assemble
+        env:
+          GRAILS_PUBLISH_RELEASE: "true"
+      - name: "📦 Generate grails-core docs"
+        run: ./gradlew grails-doc:build -PgithubBranch=${{ steps.extract_branch.outputs.value }}
+        env:
+          GRAILS_PUBLISH_RELEASE: "true"
+      - name: "📦 Generate grails-forge docs"
+        working-directory: grails-forge
+        run: ./gradlew docs
+        env:
+          GRAILS_PUBLISH_RELEASE: "true"
       - name: "🔏 Sign wrapper ZIP"
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
@@ -83,7 +122,10 @@ jobs:
       - name: "📦 Create wrapper checksum"
         run: |
           cd grails-wrapper/build/distributions
+          ls
           sha512sum apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip > "apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512"
+          echo "Generated checksum for grails wrapper ZIP:"
+          cat apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512
       - name: "📤 Upload grails wrapper ZIP"
         uses: softprops/action-gh-release@v2
         with:
@@ -93,14 +135,35 @@ jobs:
             grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-incubating-bin.zip.asc
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "🔏 Sign CLI ZIP"
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign grails-forge/grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip
+      - name: "📦 Create CLI checksum"
+        run: |
+          cd grails-forge/grails-cli/build/distributions
+          ls
+          sha512sum apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip > "apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512"
+          echo "Generated checksum for grails cli ZIP:"
+          cat apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512
+      - name: "📤 Upload CLI ZIP"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            grails-forge/grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip
+            grails-forge/grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip.sha512
+            grails-forge/grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-incubating-bin.zip.asc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Create Staging Repository"
         env:
-          GRAILS_PUBLISH_RELEASE: 'true'
+          GRAILS_PUBLISH_RELEASE: "true"
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
-          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          NEXUS_PUBLISH_DESCRIPTION: '${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}'
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         working-directory: 'grails-gradle'
         run: >
@@ -112,7 +175,7 @@ jobs:
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
-          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          NEXUS_PUBLISH_DESCRIPTION: '${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}'
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         working-directory: 'grails-gradle'
         run: >
@@ -122,16 +185,32 @@ jobs:
           publishToSonatype 
           aggregateChecksums
           aggregatePublishedArtifacts
-      - name: "📤 Publish Grails-Core"
-        id: publish
+      - name: "📤 Publish grails-core"
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
-          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          NEXUS_PUBLISH_DESCRIPTION: '${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}'
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
+        run: >
+          ./gradlew
+          -x initializeSonatypeStagingRepository
+          findSonatypeStagingRepository 
+          publishToSonatype 
+          aggregateChecksums
+          aggregatePublishedArtifacts
+      - name: "📤 Publish grails-forge"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: '${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
+        working-directory: "grails-forge"
         run: >
           ./gradlew
           -x initializeSonatypeStagingRepository
@@ -146,7 +225,7 @@ jobs:
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
           NEXUS_PUBLISH_URL: 'https://repository.apache.org/service/local/'
           NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
-          NEXUS_PUBLISH_DESCRIPTION: 'grails-core:${{ steps.release_version.outputs.value }}'
+          NEXUS_PUBLISH_DESCRIPTION: '${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}'
           SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
         run: >
           ./gradlew
@@ -158,6 +237,7 @@ jobs:
           combined_file="build/CHECKSUMS.txt"
           cat build/grails-core-checksums.txt > "$combined_file"
           cat grails-gradle/build/grails-gradle-checksums.txt >> "$combined_file"
+          cat grails-forge/build/grails-forge-checksums.txt >> "$combined_file"
       - name: "Upload combined checksums"
         uses: softprops/action-gh-release@v2
         with:
@@ -169,6 +249,7 @@ jobs:
           combined_file="build/PUBLISHED_ARTIFACTS.txt"
           cat build/grails-core-artifacts.txt > "$combined_file"
           cat grails-gradle/build/grails-gradle-artifacts.txt >> "$combined_file"
+          cat grails-forge/build/grails-forge-artifacts.txt >> "$combined_file"
       - name: "Upload combined published artifacts"
         uses: softprops/action-gh-release@v2
         with:
@@ -183,10 +264,292 @@ jobs:
           files: build/BUILD_DATE.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  release:
-    environment: release
+  source:
+    name: "Create Source Distribution"
     needs: publish
-    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout grails-core repository"
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+          path: "grails"
+      - name: "🗑️ Remove unnecessary files"
+        run: |
+          rm -f grails/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails/gradlew
+          rm -f grails/grails-gradle/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails/grails-gradle/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails/grails-gradle/gradlew
+          rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.jar
+          rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.properties
+          rm -f grails/grails-forge/gradlew
+          rm -f grails/KEYS
+      - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
+        working-directory: "grails"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
+      - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
+        working-directory: "grails"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
+      - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
+        working-directory: "grails"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
+          curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
+      - name: "Ensure source files use common date"
+        run: |
+          SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
+          find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+      - name: "📦 Create source distribution ZIP"
+        run: |
+          zip -r "apache-grails-${{ needs.publish.outputs.release_version }}-incubating-src.zip" grails -x 'grails/.git/*' -x 'grails/.github/*'
+      - name: '🔐 Set up GPG'
+        run: |
+          echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
+          gpg --list-keys
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+      - name: "🔏 Sign source distribution ZIP"
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign apache-grails-${{ needs.publish.outputs.release_version }}-incubating-src.zip
+      - name: "📦 Create source distribution checksum"
+        run: |
+          sha512sum apache-grails-${{ needs.publish.outputs.release_version }}-incubating-src.zip > "apache-grails-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512"
+      - name: "🚀 Upload ZIP and Signature to GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.publish.outputs.release_version }}
+          files: |
+            apache-grails-*-incubating-src.zip
+            apache-grails-*-incubating-src.zip.sha512
+            apache-grails-*-incubating-src.zip.asc
+      - name: "Remove CHECKSUMS.txt asset from release"
+        working-directory: "grails"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} CHECKSUMS.txt --yes
+      - name: "Remove BUILD_DATE.txt asset from release"
+        working-directory: "grails"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} BUILD_DATE.txt --yes
+      - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
+        working-directory: "grails"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} PUBLISHED_ARTIFACTS.txt --yes
+  upload:
+    needs: [ publish, source ]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
+      SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "Setup SVN and Tools"
+        run: sudo apt-get install -y subversion subversion-tools tree gettext-base
+      - name: "Ensure grails dev folder exists"
+        run: |
+          set -e
+
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+            echo "Dev Folder 'grails' already exists — skipping creation"
+          else
+            echo "Dev Folder 'grails' does not exist, creating"
+            svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
+              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails \
+              -m "Create 'grails' dev folder"
+          fi
+      - name: "Ensure grails core folder exists"
+        run: |
+          set -e
+
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails/core --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+            echo "Dev Folder 'grails/core' already exists — skipping creation"
+          else
+            echo "Dev Folder 'grails/core' does not exist, creating"
+            svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
+              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails/core \
+              -m "Create 'grails' dev folder"
+          fi
+      - name: "Checkout dev repo"
+        run: |
+          svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/incubator/grails/core dev-repo
+      - name: "Remove existing dev version"
+        run: |
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          if [ -d "$VERSION" ]; then
+            svn delete "$VERSION"
+            svn commit -m "Remove grails dev version $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
+          else
+            echo "No existing dev version $VERSION to remove"
+          fi
+      - name: "Fetch source distributions"
+        run: |
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          mkdir -p $VERSION/sources          
+          cd $VERSION/sources
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.sha512
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.asc
+          echo "Downloaded the following files:"
+          ls -l
+      - name: "Fetch binary distributions"
+        run: |
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          mkdir -p $VERSION/distribution          
+          cd $VERSION/distribution
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.sha512
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.asc
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.sha512
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.asc
+          echo "Downloaded the following files:"
+          ls -l
+      - name: "Upload distributions"
+        run: |
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          echo "Adding the following files to SVN:"
+          tree
+          svn add $VERSION --force
+          svn commit -m "Upload grails distribution files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
+          pwd
+      - name: "Store Distribution SVN revision"
+        run: |
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          svn info $VERSION > "DIST_SVN_REVISION.txt"
+      - name: "Upload Distribution SVN revision"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dev-repo/DIST_SVN_REVISION.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+          path: "grails-core"
+      - name: 'Vote Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+          
+          echo "*************************************************"
+          echo "Subject: [VOTE] Release Apache Grails (incubating) ${VERSION}"
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat grails-core/.github/vote_templates/staged.txt | envsubst
+          echo "*************************************************"
+  docs:
+    environment: docs
+    name: "Publish Documentation"
+    needs: [ publish, source, upload ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: 'Ensure Common Build Date' # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "📖 Generate Documentation"
+        run: ./gradlew grails-doc:build -PgithubBranch=${{ needs.publish.outputs.target_branch }}
+        env:
+          GRAILS_PUBLISH_RELEASE: 'true'
+      - name: "🚀 Publish to Github Pages"
+        uses: apache/grails-github-actions/deploy-github-pages@asf
+        env:
+          GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }}
+          TARGET_REPOSITORY: 'apache/grails-doc'
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: grails-doc/build/docs
+          VERSION: ${{ needs.publish.outputs.release_version }}
+  sdkman:
+    environment: sdkman
+    name: "Release to SDKMAN!"
+    runs-on: ubuntu-24.04
+    needs: [ publish, source, upload ]
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🚀 Grails SDK Minor Release"
+        if: contains(needs.publish.outputs.release_version, 'M')
+        run: ./gradlew sdkMinorRelease
+        env:
+          GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
+          GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
+      - name: "🚀 Grails SDK Major Release"
+        if: startsWith(needs.publish.outputs.release_version, '7.') && !contains(needs.publish.outputs.release_version, 'M')
+        run: ./gradlew sdkMajorRelease
+        env:
+          GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
+          GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
+  release:
+    name: "Close Release"
+    environment: release
+    needs: [ publish, source, upload, docs, sdkman ]
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing
@@ -212,37 +575,3 @@ jobs:
         uses: apache/grails-github-actions/post-release@asf
         env:
           RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'
-  docs:
-    environment: docs
-    name: "Publish Documentation"
-    needs: publish
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-          ref: v${{ needs.publish.outputs.release_version }}
-      - name: 'Ensure Common Build Date' # to ensure a reproducible build
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: liberica
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "📖 Generate Documentation"
-        run: ./gradlew grails-doc:build -PgithubBranch=${{ needs.publish.outputs.target_branch }}
-        env:
-          GRAILS_PUBLISH_RELEASE: 'true'
-      - name: "🚀 Publish to Github Pages"
-        uses: apache/grails-github-actions/deploy-github-pages@asf
-        env:
-          GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }}
-          TARGET_REPOSITORY: 'apache/grails-doc'
-          GRADLE_PUBLISH_RELEASE: 'true'
-          SOURCE_FOLDER: grails-doc/build/docs
-          VERSION: ${{ needs.publish.outputs.release_version }}

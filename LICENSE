@@ -252,15 +252,22 @@ See licenses/LICENSE-CDDL.txt for the full license terms.
 
 This product includes the following files from Spring Framework 5.3, developed by Pivotal Software, Inc., licensed under the Apache License 2.0:
 
-    grails-common/src/main/groovy/org/apache/grails/common/annotationAbstractRecursiveAnnotationVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/AnnotationAttributesReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/AnnotationMetadataReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/AnnotationReadingVisitorUtils.java
-    grails-common/src/main/groovy/org/apache/grails/common/ClassMetadataReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/MethodMetadataReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/RecursiveAnnotationArrayVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/RecursiveAnnotationAttributesVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/AbstractRecursiveAnnotationVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/AnnotationAttributesReadingVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/AnnotationMetadataReadingVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/AnnotationReadingVisitorUtils.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/ClassMetadataReadingVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/MethodMetadataReadingVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/RecursiveAnnotationArrayVisitor.java
+    grails-common/src/main/groovy/org/apache/grails/common/annotation/RecursiveAnnotationAttributesVisitor.java
 
 See the above Apache License 2.0 for the terms governing these files.
+
+--------------------------------------------------------------------------
+
+This product includes software developed by the OpenSymphony Group (http://www.opensymphony.com/). It uses Sitemesh2,
+licensed under the OpenSymphony Software License, Version 1.1.
+
+See licenses/LICENSE-opensymphony.txt for the full license terms.
 
 --------------------------------------------------------------------------

@@ -168,7 +168,7 @@ To build the code, without tests, simply run:
 
 If you encounter out of memory errors when trying to run the build, try adjusting Gradle build settings. For example:
 
-    export GRADLE_OPTS="-Xmx2G -Xms2G -XX:NewSize=512m -XX:MaxNewSize=512m"
+    export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 Please note that a valid container runtime is required to run Grails Tests. The example above omits the tests so the
 build will pass.

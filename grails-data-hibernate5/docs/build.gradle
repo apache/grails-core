@@ -142,5 +142,5 @@ tasks.register('assembleDocsDist', Zip).configure { Zip it ->
 // the groovy plugin is applied to this project, but we do not build a jar file since
 // the dependencies are only used for resolving versions from the bom
 tasks.withType(Jar).configureEach {
-    it.enabled = false
+    enabled = false
 }

@@ -42,7 +42,7 @@ class HomeSpec extends GebSpec {
 
     void "Test the home page renders correctly"() {
         when:"The home page is visited"
-            go '/'
+            go('/')
 
         then:"The title is correct"
             $('title').text() == "Welcome to Grails"

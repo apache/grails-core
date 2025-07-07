@@ -1,0 +1,208 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+plugins {
+    id 'groovy'
+    id 'distribution'
+    id 'com.gradleup.shadow'
+    id 'io.sdkman.vendors'
+}
+
+ext {
+    pomTitle = 'Apache Grails® CLI'
+    pomDescription = 'Facilitates running the grails-shell-cli or grails-forge-cli to interact with a Grails project.'
+    pomDevelopers = [
+            'jdaugherty': 'James Daugherty'
+    ]
+    cliProject = true
+    startMainClass = 'org.apache.grails.cli.DelegatingShellApplication'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+
+    // shell-cli dependencies
+    implementation 'org.apache.grails:grails-shell-cli'
+    implementation 'org.springframework.boot:spring-boot-cli'
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-ant'
+    implementation 'org.apache.groovy:groovy-templates'
+
+    // The commands are pulled from the shellCliDependencies in the shell project, but they are not in the shell jar file,
+    // so they must be added here. To keep the jar file smaller, only a subset is included here
+    implementation 'org.apache.grails:grails-core' // for ApplicationContextCommandFactory to lookup commands
+    implementation 'org.apache.grails:grails-url-mappings' // for UrlMappingsReportCommand
+    // profiles will add additional libraries as needed to surface commands
+
+    // forge dependencies
+    implementation project(':grails-forge-cli'), {
+        exclude group: 'org.slf4j', module: 'slf4j-nop'
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+}
+
+// It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
+// rather than defining the application and then having to add tasks to rework it, just define a distribution and
+// create the scripts in the right location from the start
+TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
+jarTask.configure { Jar it ->
+    it.manifest {
+        attributes 'Main-Class': project.property('startMainClass')
+    }
+}
+
+TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
+shadowJarTask.configure { ShadowJar it ->
+    it.archiveClassifier.set('')
+
+    // services & custom grails.factories have to be merged since commands can be created from both sources
+    it.mergeServiceFiles()
+    it.mergeServiceFiles('META-INF/grails.factories')
+}
+
+TaskProvider<CreateStartScripts> cliStartScripts = tasks.register('createCliStartScripts', CreateStartScripts)
+cliStartScripts.configure { CreateStartScripts t ->
+    t.dependsOn jarTask, shadowJarTask
+    t.outputDir = layout.buildDirectory.dir('generated-cli-scripts').get().asFile
+    t.applicationName = 'grails'
+    t.mainClass = project.findProperty('startMainClass') as String
+    t.classpath = files(shadowJarTask)
+
+    // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
+    doLast {
+        t.unixScript.text = t.unixScript.text
+                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/$projectVersion/")
+                .replace('"${APP_HOME:-./}.."', '"${APP_HOME:-./}"')
+
+        t.windowsScript.text = t.windowsScript.text
+                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\$projectVersion\\")
+                .replace('%DIRNAME%..', '%DIRNAME%')
+    }
+}
+
+TaskProvider<CreateStartScripts> shellCliStartScripts = tasks.register('createShellCliStartScripts', CreateStartScripts)
+shellCliStartScripts.configure { CreateStartScripts t ->
+    t.dependsOn jarTask, shadowJarTask
+    t.outputDir = layout.buildDirectory.dir('generated-shell-cli-scripts').get().asFile
+    t.applicationName = 'grails-shell-cli'
+    t.mainClass = 'org.grails.cli.GrailsCli'
+    t.classpath = files(shadowJarTask)
+
+    // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
+    doLast {
+        t.unixScript.text = t.unixScript.text
+                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/${projectVersion}/")
+                .replace('"${APP_HOME:-./}.."', '"${APP_HOME:-./}"')
+
+        t.windowsScript.text = t.windowsScript.text
+                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\${projectVersion}\\")
+                .replace('%DIRNAME%..', '%DIRNAME%')
+    }
+}
+
+TaskProvider<CreateStartScripts> forgeCliStartScripts = tasks.register('createForgeCliStartScripts', CreateStartScripts)
+forgeCliStartScripts.configure { CreateStartScripts t ->
+    t.dependsOn jarTask, shadowJarTask
+    t.outputDir = layout.buildDirectory.dir('generated-forge-cli-scripts').get().asFile
+    t.applicationName = 'grails-forge-cli'
+    t.mainClass = 'org.grails.forge.cli.Application'
+    t.classpath = files(shadowJarTask)
+
+    // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
+    doLast {
+        t.unixScript.text = t.unixScript.text
+                .replace('$APP_HOME/lib/', "\$APP_HOME/.grails/$projectVersion/")
+
+        t.windowsScript.text = t.windowsScript.text
+                .replace('%APP_HOME%\\lib\\', "%APP_HOME%\\.grails\\$projectVersion\\")
+    }
+}
+
+project.extensions.getByType(DistributionContainer).configureEach {
+    it.distributionBaseName.set('apache-grails')
+    it.distributionClassifier.set('incubating-bin')
+    it.contents {
+        from(shadowJarTask) {
+            into "bin/.grails/$projectVersion"
+        }
+
+        from(cliStartScripts) {
+            into 'bin'
+            fileMode = 0755
+        }
+
+        from(shellCliStartScripts) {
+            into 'bin'
+            fileMode = 0755
+        }
+
+        from(forgeCliStartScripts) {
+            into 'bin'
+            fileMode = 0755
+        }
+
+        from(rootProject.project(':grails-forge-cli').layout.buildDirectory.file('exploded/bin/grails_forge_cli_completion')) {
+            into 'bin'
+            fileMode = 0755
+        }
+
+        from(rootProject.layout.projectDirectory.file('../LICENSE')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('../NOTICE')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('../INSTALL')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('../DISCLAIMER')) { it.into '' }
+    }
+}
+
+def distZipTask = tasks.named('distZip')
+distZipTask.configure {
+    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('exploded')
+}
+tasks.named('build').configure {
+    it.dependsOn(distZipTask)
+}
+tasks.named('assemble').configure {
+    it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, rootProject.project(':grails-forge-cli').tasks.named('exploded')
+}
+tasks.named('installDist').configure {
+    it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts
+}
+tasks.named('distTar').configure {
+    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('exploded')
+}
+
+sdkman {
+    api = 'https://vendors.sdkman.io'
+    consumerKey = System.getenv('GVM_SDKVENDOR_KEY') ?: project.findProperty('gvmSdkvendorKey')
+    consumerToken = System.getenv('GVM_SDKVENDOR_TOKEN') ?: project.findProperty('gvmSdkvendorToken')
+    candidate = 'grails'
+    version = project.version
+    hashtag = '#grailsfw'
+    platforms = [
+            'MAC_ARM64' : "https://github.com/apache/grails-forge/releases/download/v${project.version}/apache-grails-${project.version}-incubating-bin.zip",
+            'MAC_OSX'   : "https://github.com/apache/grails-forge/releases/download/v${project.version}/apache-grails-${project.version}-incubating-bin.zip",
+            'WINDOWS_64': "https://github.com/apache/grails-forge/releases/download/v${project.version}/apache-grails-${project.version}-incubating-bin.zip",
+            'LINUX_64'  : "https://github.com/apache/grails-forge/releases/download/v${project.version}/apache-grails-${project.version}-incubating-bin.zip"
+    ] as Map<? extends String, ? extends String>
+}

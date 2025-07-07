@@ -73,7 +73,7 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         p.otherAddresses = [new Address(postCode: '6789'), new Address(postCode: '54321')]
         p.nickNames = ['Rob', 'Bob']
 
-        when: 'A an instance with embedded assocations is rendered'
+        when: 'A an instance with embedded associations is rendered'
         def result = render('''
             import grails.plugin.json.view.*
             

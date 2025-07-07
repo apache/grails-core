@@ -32,42 +32,42 @@ class RestfulReverseUrlRenderingTests extends Specification implements UrlMappin
 
     def testLinkTagRendering() {
         when:
-        def template = '<g:link controller="restfulBook">create</g:link>'
+        def template = '<g:link controller="restfulCar">create</g:link>'
         String output = applyTemplate(template)
 
         then:
-        output == '<a href="/book">create</a>'
+        output == '<a href="/car">create</a>'
     }
 
     def testFormTagRendering() {
         when:
-        def template = '<g:form controller="restfulBook" name="myForm" method="POST">save</g:form>'
+        def template = '<g:form controller="restfulCar" name="myForm" method="POST">save</g:form>'
         String output = applyTemplate(template)
 
         then:
-        output == '<form action="/book" method="post" name="myForm" id="myForm" >save</form>'
+        output == '<form action="/car" method="post" name="myForm" id="myForm" >save</form>'
     }
 
 
     def testFormTagRenderGETRequest() {
         when:
-        def template = '<g:form controller="restfulBook" name="myForm" method="GET">create</g:form>'
+        def template = '<g:form controller="restfulCar" name="myForm" method="GET">create</g:form>'
         String output = applyTemplate(template)
 
         then:
-        output == '<form action="/book" method="get" name="myForm" id="myForm" >create</form>'
+        output == '<form action="/car" method="get" name="myForm" id="myForm" >create</form>'
     }
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 class RestfulReverseUrlMappings {
     static mappings = {
-        "/book" (controller: "restfulBook", action: [GET: "create", POST: "save"])
+        '/car' (controller: 'restfulCar', action: [GET: 'create', POST: 'save'])
     }
 }
 
-@Artefact("Controller")
-class RestfulBookController {
+@Artefact('Controller')
+class RestfulCarController {
     def create = {}
     def save = {}
 }

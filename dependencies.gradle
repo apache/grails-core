@@ -25,7 +25,7 @@ ext {
             'ant.version'                        : '1.10.15',
             'asciidoctor-gradle-jvm.version'     : '4.0.4',
             'asciidoctorj.version'               : '3.0.0',
-            'asset-pipeline-gradle.version'      : '5.0.10-SNAPSHOT',
+            'asset-pipeline-gradle.version'      : '5.0.12',
             'byte-buddy.version'                 : '1.15.5',
             'commons-text.version'               : '1.12.0',
             'directory-watcher.version'          : '0.18.0',
@@ -77,7 +77,7 @@ ext {
     ]
 
     bomDependencyVersions = [
-            'asset-pipeline-grails.version': '5.0.10-SNAPSHOT',
+            'asset-pipeline-grails.version': '5.0.12',
             'bootstrap-icons.version'      : '1.11.3',
             'bootstrap.version'            : '5.3.3',
             'commons-codec.version'        : '1.17.1',
@@ -93,6 +93,7 @@ ext {
             'rxjava3.version'              : '3.1.10',
             'selenium.version'             : '4.25.0',
             'spock.version'                : '2.3-groovy-4.0',
+            'sitemesh.version'             : '2.6.0',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -123,6 +124,7 @@ ext {
             'rxjava'                   : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
             'rxjava2'                  : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
             'rxjava3'                  : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
+            'sitemesh'                 : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom

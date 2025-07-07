@@ -211,57 +211,7 @@ After all artifacts are uploaded, verified, and tested, we can vote on the relea
 
 ### Apache Grails Incubating PPMC
 
-The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).  The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to express their support. The vote template follows: 
-
-Subject: [VOTE] Release Apache Grails (incubating) <version>
-
-Body:
-```
-Hi Everyone,
-
-I am happy to start the VOTE thread for an Apache Grails (incubating) release of version 7.0.0-M4!
-
-This release is our first release under the ASF. Further details of the release can be found on the GitHub pre-release & in the discussion thread at:
-https://lists.apache.org/thread/3tqw39b1v542rc026gopj0kbqs5zbr5q
-
-Releases for the Grails project consist of 2 repositories, so there are two tags:
-grails-core Tag:
-https://github.com/apache/grails-core/releases/tag/v7.0.0-M4
-Tag commit id: <commit hash>
-
-grails-forge Tag:
-https://github.com/apache/grails-forge/releases/tag/v7.0.0-M4
-Tag commit id: <commit hash>
-
-The artifacts to be voted on are located as follows (<svn version revision>):
-Source release: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/sources
-Binary distributions: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/distribution
-
-Release artifacts are signed with a key from the following file: 
-https://dist.apache.org/repos/dist/release/grails/KEYS
-
-Please vote on releasing this package as Apache Grails (incubating) 7.0.0-M4.
-
-Reminder on ASF release approval requirements for PPMC members:
-https://www.apache.org/legal/release-policy.html#release-approval
-
-Hints on validating checksums/signatures (but replace md5sum with
-sha512sum):
-https://www.apache.org/info/verification.html
-
-Details of our release process is documented at: https://github.com/apache/grails-core/blob/HEAD/RELEASE.md
-
-The vote is open for the next 72 hours and passes if a majority of at least
-three +1 PPMC votes are cast.
-
-[ ] +1 Release Apache Grails (incubating) 7.0.0-M4
-[ ]  0 I don't have a strong opinion about this, but I assume it's ok
-[ ] -1 Do not release Apache Grails (incubating) 7.0.0-M4 because...
-
-Here is my vote:
-
-+1 (binding)
-```
+The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).  The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to express their support. The vote template is generated as part of the release process.  See the source upload job for the generated email.
 
 ### Apache Groovy PMC
 

@@ -97,6 +97,8 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
             String urlConverterType = config.getProperty(Settings.WEB_URL_CONVERTER)
             "${grails.web.UrlConverter.BEAN_NAME}"('hyphenated' == urlConverterType ? HyphenatedUrlConverter : CamelCaseUrlConverter)
 
+            grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean)
+
             grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: "http://localhost:8080")
 
             if (ClassUtils.isPresent("UrlMappings", classLoader)) {
@@ -115,9 +117,6 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
 
             localeResolver(SessionLocaleResolver)
             multipartResolver(StandardServletMultipartResolver)
-            grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
-                grailsApplication = grailsApplication
-            }
 
             "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
 

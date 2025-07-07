@@ -85,6 +85,15 @@ tasks.named('jar', Jar).configure { Jar it ->
 jar.dependsOn docFilesJar
 
 publishing {
+    // used for e2e testing
+    // publishAllPublicationsToTestCaseMavenRepoRepository
+    repositories {
+        maven {
+            name = 'TestCaseMavenRepo'
+            url = rootProject.layout.projectDirectory.dir('../build/local-maven')
+        }
+    }
+
     if (!isReleaseVersion) {
         repositories {
             maven {

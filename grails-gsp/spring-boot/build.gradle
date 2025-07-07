@@ -34,7 +34,12 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
-    api project(':grails-sitemesh3')
+    api project(':grails-layout')
+    api project(':grails-taglib')
+    api project(':grails-gsp-core')
+    api project(':grails-web-gsp')
+    api project(':grails-web-gsp-taglib')
+    api project(':grails-web-jsp')
 }
 
 apply {

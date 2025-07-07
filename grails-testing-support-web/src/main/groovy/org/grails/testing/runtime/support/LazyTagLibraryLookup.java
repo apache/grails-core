@@ -21,6 +21,8 @@ package org.grails.testing.runtime.support;
 
 import grails.core.gsp.GrailsTagLibClass;
 import groovy.lang.GroovyObject;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClassRegistry;
 import org.grails.plugins.web.GroovyPagesGrailsPlugin;
 import org.grails.taglib.TagLibraryLookup;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
@@ -45,6 +47,13 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
         super.registerTagLibraries();
         for (Class providedArtefact : tagLibClasses) {
             registerLazyLoadableTagLibClass(providedArtefact);
+        }
+    }
+
+    public void cleanTagLibsMetaClass() {
+        MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
+        for (Class clazz : tagLibClasses) {
+            registry.removeMetaClass(clazz);
         }
     }
 

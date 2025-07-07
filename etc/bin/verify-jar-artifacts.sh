@@ -129,6 +129,22 @@ while IFS= read -r line; do
     exit 1
   fi
 
+  echo "... Verifying required files exist in jar..."
+  required_jar_contents=(META-INF/LICENSE META-INF/DISCLAIMER META-INF/NOTICE)
+  missing_jar_contents=()
+  for entry in "${required_jar_contents[@]}"; do
+      if ! jar tf "${JAR_FILE}" | grep -qF -- "${entry}"; then
+          missing_jar_contents+=("${entry}")
+      fi
+  done
+
+  if ((${#missing_jar_contents[@]})); then
+    printf '❌ %s missing from %s\n' "${missing_jar_contents[*]}" "${JAR_FILE}"
+    exit 1
+  else
+    printf '✅ Required files %s are present in %s\n' "${required_jar_contents[*]}" "${JAR_FILE}"
+  fi
+
   echo "✅ Verified: ${JAR_FILE}"
 done < "${ARTIFACTS_FILE}"
 

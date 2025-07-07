@@ -30,7 +30,7 @@ class FooFunctionalSpec extends ContainerGebSpec {
 
     void "Test that a scaffolded view is resolved correctly"() {
         when:
-        go '/foo/index'
+        go('/foo/index')
 
         then:
         title == "Foo List"

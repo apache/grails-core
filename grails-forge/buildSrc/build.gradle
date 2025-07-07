@@ -1,0 +1,92 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy-gradle-plugin'
+}
+
+Properties forgeProperties = new Properties()
+file('../gradle.properties').withInputStream { input ->
+    forgeProperties.load(input)
+}
+
+Properties rootProperties = new Properties()
+file('../../gradle.properties').withInputStream { input ->
+    rootProperties.load(input)
+}
+
+for (String key : forgeProperties.stringPropertyNames()) {
+    ext.set(key, forgeProperties.getProperty(key))
+}
+
+for (String key : rootProperties.stringPropertyNames()) {
+    if(!ext.has(key)) {
+        ext.set(key, rootProperties.getProperty(key))
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
+        }
+    }
+    maven {
+        url = 'https://repository.apache.org/content/groups/staging'
+        content {
+            includeGroupByRegex('org[.]apache[.]grails.*')
+        }
+    }
+}
+
+configurations.configureEach {
+    exclude group: 'io.github.groovylang.groovydoc', module: 'io.github.groovylang.groovydoc.gradle.plugin'
+}
+
+dependencies {
+    implementation "io.micronaut.build.internal:micronaut-gradle-plugins:$micronautGradlePlugins"
+    implementation "com.fizzed:rocker-compiler:$rockerVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+    implementation "io.sdkman:gradle-sdkvendor-plugin:$gradleSdkvendorPluginVersion"
+    implementation "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleJvmVersion"
+    implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
+    implementation "io.spring.nohttp:nohttp-gradle:$nohttpGradleVersion"
+    implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
+    implementation "org.gradle.test-retry:org.gradle.test-retry.gradle.plugin:$testRetryVersion"
+    implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"
+    implementation "org.apache.grails:grails-gradle-plugins:$projectVersion", {
+        exclude group: 'org.yaml'
+        exclude group: 'org.asciidoctor'
+    }
+    implementation "org.antlr:antlr4-runtime:$antlr4Version"
+    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
+}
+
+gradlePlugin {
+    plugins {
+        rockerPlugin {
+            id = 'org.grails.forge.rocker'
+            implementationClass = 'org.grails.forge.rocker.plugin.RockerPlugin'
+        }
+    }
+}

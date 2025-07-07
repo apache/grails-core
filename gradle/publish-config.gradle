@@ -30,83 +30,83 @@ extensions.configure(GrailsPublishExtension) {
     it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher']
     it.pomCustomization = findProperty('pomCustomization') as Closure
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
+    it.testRepositoryPath = rootProject.layout.buildDirectory.dir('local-maven')
 }
 
 apply plugin: 'org.gradle.crypto.checksum'
 
 afterEvaluate {
-    if (project.plugins.hasPlugin('signing')) {
+    if (plugins.hasPlugin('signing')) {
         if(System.getenv('TEST_BUILD_REPRODUCIBLE')) {
-            project.logger.lifecycle("Signing is disabled for this build to test build reproducibility.")
-            project.tasks.withType(Sign).configureEach {
-                it.enabled = false
+            logger.lifecycle('Signing is disabled for this build to test build reproducibility.')
+            tasks.withType(Sign).configureEach {
+                enabled = false
             }
         }
     }
-    if (project.plugins.hasPlugin("maven-publish")) {
-        def checksumTask = tasks.register("publishedChecksums", Checksum)
+    if (plugins.hasPlugin('maven-publish')) {
+        def checksumTask = tasks.register('publishedChecksums', Checksum)
         checksumTask.configure { Checksum check ->
             check.checksumAlgorithm = Checksum.Algorithm.SHA512
-            check.outputDirectory.set(project.layout.buildDirectory.dir("checksums"))
+            check.outputDirectory = layout.buildDirectory.dir('checksums')
             check.dependsOn(tasks.withType(Jar))
         }
 
-        def artifactsDir = project.layout.buildDirectory.dir("artifacts")
-        def artifactsTask = tasks.register("savePublishedArtifacts") {
+        def artifactsDir = layout.buildDirectory.dir('artifacts')
+        def artifactsTask = tasks.register('savePublishedArtifacts')
+        artifactsTask.configure {
             it.outputs.dir(artifactsDir)
             it.dependsOn(tasks.withType(Jar))
         }
 
         gradle.taskGraph.whenReady {
             List filesToChecksum = []
-            publishing.publications.withType(MavenPublication).all { MavenPublication publication ->
-                publication.artifacts.each { MavenArtifact artifact ->
-                    if(artifact.file.name == 'grails-plugin.xml' || artifact.file.name == 'profile.yml') {
-                        return
+            extensions.configure(PublishingExtension) {
+                it.publications.withType(MavenPublication).configureEach {
+                    artifacts.each {
+                        if (it.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                            return
+                        }
+                        filesToChecksum << it.file
                     }
-                    filesToChecksum << artifact.file
                 }
             }
 
             checksumTask.configure { Checksum check ->
                 check.inputFiles.setFrom(filesToChecksum.unique())
                 check.finalizedBy(artifactsTask)
-
             }
 
             artifactsTask.configure {
+                // Explicit `project` is required for `extensions` as `Task it` is the delegate
+                def publicationContainer = project.extensions.findByType(PublishingExtension).publications
                 doLast {
                     Map<String, String> artifacts = [:]
-                    project.publishing.publications.withType(MavenPublication).all { MavenPublication publication ->
+                    publicationContainer.withType(MavenPublication).each { MavenPublication publication ->
                         publication.artifacts.each { MavenArtifact artifact ->
-                            if(!artifact.file.exists() || artifact.file.name == 'grails-plugin.xml' || artifact.file.name == 'profile.yml') {
+                            if (!artifact.file.exists() || artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
                                 return
                             }
-
-                            if(artifact.classifier) {
-                                artifacts[artifact.file.name] = "${publication.groupId}:${publication.artifactId}:${publication.version}:${artifact.classifier}" as String
-                            }
-                            else {
-                                artifacts[artifact.file.name] = "${publication.groupId}:${publication.artifactId}:${publication.version}" as String
+                            if (artifact.classifier) {
+                                artifacts[artifact.file.name] = "$publication.groupId:$publication.artifactId:$publication.version:$artifact.classifier" as String
+                            } else {
+                                artifacts[artifact.file.name] = "$publication.groupId:$publication.artifactId:$publication.version" as String
                             }
                         }
                     }
-
                     File artifactsFile = artifactsDir.get().asFile
                     artifactsFile.mkdirs()
-
-                    artifacts.entrySet().each { Map.Entry<String, String> entry ->
-                        File published = new File(artifactsFile, "${entry.key}.txt" as String)
-                        published.text = entry.value
+                    artifacts.each { key, value ->
+                        new File(artifactsFile, "${key}.txt").text = value
                     }
                 }
             }
         }
 
-        Set<String> publishTasks = tasks.names.findAll { it.startsWith('publishMavenPublication') }
+        def publishTasks = tasks.names.findAll { it.startsWith('publishMavenPublication') }
         publishTasks.each { taskName ->
             tasks.named(taskName).configure { publishTask ->
-                publishTask.finalizedBy checksumTask
+                publishTask.finalizedBy(checksumTask)
             }
         }
     }

@@ -1,0 +1,96 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.forge'
+
+dependencies {
+    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
+
+    annotationProcessor 'com.google.code.findbugs:jsr305'
+    annotationProcessor "io.micronaut.docs:micronaut-docs-asciidoc-config-props:$micronautDocsVersion"
+    annotationProcessor 'io.micronaut.openapi:micronaut-openapi'
+
+    api platform("io.micronaut:micronaut-bom:$micronautVersion")
+
+    api project(':grails-forge-core'), {
+        exclude group:'org.slf4j', module:'slf4j-nop'
+    }
+    api 'io.micronaut:micronaut-http'
+    api 'io.micronaut:micronaut-http-client'
+    api 'io.micronaut:micronaut-inject'
+    api 'io.micronaut:micronaut-runtime'
+    api 'io.micronaut:micronaut-validation'
+    api group: 'javax.inject', name: 'javax.inject', version: '1'
+
+    implementation 'io.swagger.core.v3:swagger-annotations'
+    implementation 'io.projectreactor:reactor-core'
+
+    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'io.micronaut:micronaut-http-server-netty'
+    testImplementation 'io.micronaut.test:micronaut-test-spock'
+
+    testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+
+    if (project.hasProperty('micronautVersion')) {
+        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+    }
+
+    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation "org.spockframework:spock-core:$spockVersion", {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+
+    testImplementation "cglib:cglib-nodep:$cglibVersion"
+    testImplementation "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/micronaut-openapi-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/style-enforcement-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.codehaus.groovy') {
+                details.useVersion(groovyVersion)
+            }
+            if (details.requested.name == 'spock-core') {
+                details.useVersion(spockVersion)
+            }
+        }
+    }
+}

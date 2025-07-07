@@ -30,7 +30,7 @@ class NameSpacedControllerSpec extends ContainerGebSpec {
 
     void "test returns null"() {
         when: "The home page is visited"
-        go '/abc-xyz/name-spaced/returns-null'
+        go('/abc-xyz/name-spaced/returns-null')
 
         then: "The title is correct"
         $().text() == 'returns null'
@@ -38,7 +38,7 @@ class NameSpacedControllerSpec extends ContainerGebSpec {
 
     void "test returns map"() {
         when: "The home page is visited"
-        go '/abc-xyz/name-spaced/returns-map'
+        go('/abc-xyz/name-spaced/returns-map')
 
         then: "The title is correct"
         $().text() == 'returns Map Sally'
@@ -46,7 +46,7 @@ class NameSpacedControllerSpec extends ContainerGebSpec {
 
     void "test default action"() {
         when: "The home page is visited"
-        go '/abc-xyz/name-spaced'
+        go('/abc-xyz/name-spaced')
 
         then: "The title is correct"
         $().text() == 'default action'
