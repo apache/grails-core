@@ -43,6 +43,7 @@ jobs:
           echo "Extracted version: $version"
           echo "value=${version}" >> $GITHUB_OUTPUT
       - name: "Drop staging repository from Nexus"
+        continue-on-error: true
         env:
           NEXUS_STAGE_DEPLOYER_USER: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_STAGE_DEPLOYER_PW: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
@@ -68,16 +69,17 @@ jobs:
               echo "Successfully dropped repository $STAGING_REPOSITORY_ID."
           fi
       - name: "Remove Staged Artifacts"
+        continue-on-error: true
         env:
           SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
         run: |
           export VERSION="${{ needs.publish.outputs.release_version }}"
-          svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/incubator/grails/core dev-repo
-          cd dev-repo
-          svn delete "$VERSION"
-          svn commit -m "Remove grails dev version $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
+          svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
+                      -m "Remove grails dev version $VERSION" \
+                      rm "https://dist.apache.org/repos/dist/dev/incubator/grails/core/$VERSION"
       - name: "Remove GitHub Release & Tag"
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.release_tag }}
