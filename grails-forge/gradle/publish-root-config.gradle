@@ -17,6 +17,12 @@
  *  under the License.
  */
 
+// Workaround needed for nexus publishing bug
+// version and group must be specified in the root project
+// https://github.com/gradle-nexus/publish-plugin/issues/310
+version = projectVersion
+group = 'this.will.be.overridden'
+
 def publishedProjects = [
         'grails-cli',
         'grails-forge-cli',

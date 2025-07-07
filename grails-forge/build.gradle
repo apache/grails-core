@@ -26,9 +26,6 @@ file('../gradle.properties').withInputStream {
     props.load(it)
 }
 
-version = projectVersion
-group = 'org.apache.grails.forge'
-
 ext {
     buildInstant = java.util.Optional.ofNullable(System.getenv('SOURCE_DATE_EPOCH'))
             .map(Long::parseLong)
