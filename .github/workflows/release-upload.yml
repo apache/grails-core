@@ -47,13 +47,13 @@ jobs:
         run: |
           set -e
 
-          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails --username "$SVN_USERNAME" --password '$SVN_PASSWORD' --non-interactive; then
             echo "Dev Folder 'grails' already exists — skipping creation"
           else
             echo "Dev Folder 'grails' does not exist, creating"
             svnmucc --non-interactive \
               --username "$SVN_USERNAME" \
-              --password "$SVN_PASSWORD" \
+              --password '$SVN_PASSWORD' \
               mkdir https://dist.apache.org/repos/dist/dev/incubator/grails \
               -m "Create 'grails' dev folder"
           fi
@@ -61,26 +61,26 @@ jobs:
         run: |
           set -e
 
-          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails/core --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails/core --username "$SVN_USERNAME" --password '$SVN_PASSWORD' --non-interactive; then
             echo "Dev Folder 'grails/core' already exists — skipping creation"
           else
             echo "Dev Folder 'grails/core' does not exist, creating"
             svnmucc --non-interactive \
               --username "$SVN_USERNAME" \
-              --password "$SVN_PASSWORD" \
+              --password '$SVN_PASSWORD' \
               mkdir https://dist.apache.org/repos/dist/dev/incubator/grails/core \
               -m "Create 'grails' dev folder"
           fi
       - name: "Checkout dev repo"
         run: |
-          svn checkout --non-interactive --username "$SVN_USERNAME" --password "$SVN_PASSWORD" https://dist.apache.org/repos/dist/dev/incubator/grails/core dev-repo
+          svn checkout --non-interactive --username "$SVN_USERNAME" --password '$SVN_PASSWORD' https://dist.apache.org/repos/dist/dev/incubator/grails/core dev-repo
       - name: "Remove existing dev version"
         run: |
           VERSION="${{ steps.release_version.outputs.version }}"
           cd dev-repo
           if [ -d "$VERSION" ]; then
             svn delete "$VERSION"
-            svn commit -m "Remove grails dev version $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
+            svn commit -m "Remove grails dev version $VERSION" --username "$SVN_USERNAME" --password '$SVN_PASSWORD'
           else
             echo "No existing dev version $VERSION to remove"
           fi
@@ -104,4 +104,4 @@ jobs:
           ls -l
           cd ../..
           svn add $VERSION --force
-          svn commit -m "Upload grails source files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD"
+          svn commit -m "Upload grails source files for $VERSION" --username "$SVN_USERNAME" --password '$SVN_PASSWORD'
