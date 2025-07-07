@@ -43,13 +43,13 @@ jobs:
       IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:next
     steps:
       - name: "🔑 Login to Google Cloud"
-        uses: google-github-actions/setup-gcloud@20c93dacc1d70ddbce76c63ab32c35595345bdd1
+        uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_email: ${{ secrets.GCP_EMAIL }}
           service_account_key: ${{ secrets.GCP_CREDENTIALS }}
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v2.1.4
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
       - name: "🐋 Configure Docker for Artifact Registry"
@@ -99,13 +99,13 @@ jobs:
       IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}-analytics:next
     steps:
       - name: "🔑 Login to Google Cloud"
-        uses: google-github-actions/setup-gcloud@20c93dacc1d70ddbce76c63ab32c35595345bdd1
+        uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_email: ${{ secrets.GCP_EMAIL }}
           service_account_key: ${{ secrets.GCP_CREDENTIALS }}
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v2.1.4
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
       - name: "🐋 Configure Docker for Artifact Registry"
