@@ -27,8 +27,8 @@ on:
         default: 'grails-core'
         type: string
 jobs:
-  dropStaging:
-    name: "Drop Staging Repository"
+  abort:
+    name: "Abort Release"
     runs-on: ubuntu-latest
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -48,9 +48,9 @@ jobs:
           NEXUS_STAGE_DEPLOYER_PW: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
         run: |
           export REPO_DESCRIPTION="${{ github.event.inputs.repository_name }}:${{ steps.release_version.outputs.value }}"
-          export STAGING_REPOSITORY_ID=$(curl -s -u "$NEXUS_STAGE_DEPLOYER_USER:$NEXUS_STAGE_DEPLOYER_PW" \
+          export STAGING_REPOSITORY_ID=$(curl -s -u "$NEXUS_STAGE_DEPLOYER_USER:$NEXUS_STAGE_DEPLOYER_PW" -H "Accept: application/json" \
             "https://repository.apache.org/service/local/staging/profile_repositories/${{ secrets.STAGING_PROFILE_ID }}" |
-            jq -r '.data[] | select(.description=="'"$DESC"'") | .repositoryId')
+            jq -r '.data[] | select(.description=="'"$REPO_DESCRIPTION"'") | .repositoryId')
           
           test -n "$STAGING_REPOSITORY_ID" || { echo "No repo with that description"; exit 1; }
           
