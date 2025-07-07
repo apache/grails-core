@@ -20,6 +20,8 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "Setup SVN and Tools"
         run: sudo apt-get install -y subversion subversion-tools
       - name: "Ensure test folder exists"

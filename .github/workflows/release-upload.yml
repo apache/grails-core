@@ -28,6 +28,8 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "Extract release version"
         id: release_version
         run: |
