@@ -377,7 +377,7 @@ jobs:
           svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/incubator/grails/core dev-repo
       - name: "Remove existing dev version"
         run: |
-          VERSION="${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
           cd dev-repo
           if [ -d "$VERSION" ]; then
             svn delete "$VERSION"
@@ -387,8 +387,8 @@ jobs:
           fi
       - name: "Fetch source distributions"
         run: |
-          TAG="v${{ needs.publish.outputs.release_version }}"
-          VERSION="${{ needs.publish.outputs.release_version }}"
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
           cd dev-repo
           mkdir -p $VERSION/sources          
           cd $VERSION/sources
@@ -399,8 +399,8 @@ jobs:
           ls -l
       - name: "Fetch binary distributions"
         run: |
-          TAG="v${{ needs.publish.outputs.release_version }}"
-          VERSION="${{ needs.publish.outputs.release_version }}"
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
           cd dev-repo
           mkdir -p $VERSION/distribution          
           cd $VERSION/distribution
@@ -414,14 +414,25 @@ jobs:
           ls -l
       - name: "Upload distributions"
         run: |
-          TAG="v${{ needs.publish.outputs.release_version }}"
-          VERSION="${{ needs.publish.outputs.release_version }}"
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
           cd dev-repo
           echo "Adding the following files to SVN:"
           tree
           svn add $VERSION --force
           svn commit -m "Upload grails distribution files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
           pwd
+      - name: "Store Distribution SVN revision"
+        run: |
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          svn info $VERSION > "DIST_SVN_REVISION.txt"
+      - name: "Upload Distribution SVN revision"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DIST_SVN_REVISION.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   docs:
     environment: docs
     name: "Publish Documentation"
