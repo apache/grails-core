@@ -363,6 +363,8 @@ jobs:
   upload:
     needs: [ publish, source ]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
       SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
       SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
