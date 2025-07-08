@@ -26,7 +26,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class CommonTypesPersistenceSpec extends GrailsDataTckSpec {
     void setupSpec() {
-        manager.domainClasses.add(CommonTypes)
+        manager.addAllDomainClasses([CommonTypes])
     }
 
     def testPersistBasicTypes() {

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CircularOneToManySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.add(Task)
+        manager.addAllDomainClasses([Task])
     }
 
     void "Test circular one-to-many"() {

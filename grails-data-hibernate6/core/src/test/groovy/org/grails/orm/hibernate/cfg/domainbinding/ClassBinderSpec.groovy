@@ -14,7 +14,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
 
         def simpleName = "Book"
         def persistentName = "foo.Book"
-        def persistentEntity = createPersistentEntity(simpleName, [:], [:])
+        def persistentEntity = createPersistentEntity(grailsDomainBinder,simpleName, [:], [:])
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder()
 
@@ -39,7 +39,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
 
         def simpleName = "Book"
         def persistentName = "foo.Book"
-        def persistentEntity = createPersistentEntity(simpleName, [:], [autoImport: "true"])
+        def persistentEntity = createPersistentEntity(grailsDomainBinder,simpleName, [:], [autoImport: "true"])
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder()
 
@@ -64,7 +64,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
 
         def simpleName = "Book"
         def persistentName = "foo.Book"
-        def persistentEntity = createPersistentEntity(simpleName, [:], [autoImport: "false"])
+        def persistentEntity = createPersistentEntity(grailsDomainBinder, simpleName, [:], [autoImport: "false"])
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder()
 

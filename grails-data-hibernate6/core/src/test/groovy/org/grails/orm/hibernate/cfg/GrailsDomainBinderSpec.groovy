@@ -12,7 +12,8 @@ class GrailsDomainBinderSpec extends HibernateGormDatastoreSpec {
         def grailsDomainBinder = getGrailsDomainBinder()
         def simpleName = "Book"
         def fieldProperties = [title: String]
-        def persistentEntity = createPersistentEntity(simpleName, fieldProperties, [:])
+        def persistentEntity = createPersistentEntity(grailsDomainBinder,simpleName, fieldProperties, [:])
+
         grailsDomainBinder.bindRoot(persistentEntity, collector,"sessionFactoryName")
         println("when")
         then:

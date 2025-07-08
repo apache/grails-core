@@ -40,7 +40,8 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
         ]
     }
 
-    HibernatePersistentEntity createPersistentEntity(String className
+    HibernatePersistentEntity createPersistentEntity(GrailsDomainBinder binder
+                                                    , String className
                                                      , Map<String, Class> fieldProperties
                                                      , Map<String, String> staticMapping
 
@@ -62,7 +63,9 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
     """
 
         def clazz = classLoader.parseClass(classText)
-        getMappingContext().addPersistentEntity(clazz) as HibernatePersistentEntity
+        def entity = getMappingContext().addPersistentEntity(clazz) as HibernatePersistentEntity
+        binder.evaluateMapping(entity)
+        entity
     }
 
     protected InFlightMetadataCollectorImpl getCollector() {

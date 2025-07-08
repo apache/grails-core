@@ -26,7 +26,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class AttachMethodSpec extends GrailsDataTckSpec {
     void setupSpec() {
-        manager.domainClasses.add(Person)
+        manager.addAllDomainClasses([Person])
     }
 
     void "Test attach method"() {

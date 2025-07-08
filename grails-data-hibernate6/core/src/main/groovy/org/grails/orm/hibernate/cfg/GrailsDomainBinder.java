@@ -35,6 +35,8 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
+import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
@@ -105,11 +107,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.StringTokenizer;
 
+import static java.util.Optional.ofNullable;
 import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
 
 ;
@@ -307,7 +311,9 @@ public class GrailsDomainBinder implements MetadataContributor {
             SimpleValue elt = new BasicValue(metadataBuildingContext, map.getCollectionTable());
             map.setElement(elt);
 
-            String typeName = getTypeName(property,getPropertyConfig(property), getMapping(property.getOwner()));
+            PropertyConfig config = getPropertyConfig(property);
+            Mapping mapping = getMapping(property.getOwner());
+            String typeName = new TypeNameProvider().getTypeName(property, mapping);
             if (typeName == null ) {
 
                 if(property instanceof Basic) {
@@ -763,7 +769,8 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
             else {
 
-                String typeName = getTypeName(property, config, getMapping(property.getOwner()));
+                Mapping mapping = getMapping(property.getOwner());
+                String typeName = new TypeNameProvider().getTypeName(property, mapping);
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
                     if (type != null) {
@@ -817,22 +824,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private Column getColumnForSimpleValue(SimpleValue element) {
         return element.getColumns().iterator().next();
-    }
-
-    private String getTypeName(PersistentProperty property, PropertyConfig config, Mapping mapping) {
-        if (config != null && config.getType() != null) {
-            final Object typeObj = config.getType();
-            if (typeObj instanceof Class<?>) {
-                return ((Class<?>)typeObj).getName();
-            }
-            return typeObj.toString();
-        }
-
-        if (mapping != null) {
-            return mapping.getTypeName(property.getType());
-        }
-
-        return null;
     }
 
     private void bindColumnConfigToColumn(PersistentProperty property, Column column, ColumnConfig columnConfig) {
@@ -1324,7 +1315,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
     }
 
-    private void evaluateMapping(PersistentEntity domainClass) {
+    public void evaluateMapping(PersistentEntity domainClass) {
         try {
             final Mapping m = (Mapping) domainClass.getMapping().getMappedForm();
             trackCustomCascadingSaves(m, domainClass.getPersistentProperties());
@@ -1376,7 +1367,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @return A Mapping object or null
      */
     private static Mapping getMapping(Class<?> theClass) {
-        return AbstractGrailsDomainBinder.getMapping(theClass);
+        return Optional.ofNullable(AbstractGrailsDomainBinder.getMapping(theClass)).orElseThrow();
     }
 
     /**
@@ -1534,10 +1525,8 @@ public class GrailsDomainBinder implements MetadataContributor {
             DiscriminatorConfig discriminatorConfig = subMapping != null ? subMapping.getDiscriminator() : null;
 
             subClass.setDiscriminatorValue(discriminatorConfig != null && discriminatorConfig.getValue() != null ? discriminatorConfig.getValue() : fullName);
+            configureDerivedProperties(sub, subMapping);
 
-            if (subMapping != null) {
-                configureDerivedProperties(sub, subMapping);
-            }
         }
         Integer bs = (m == null) ? null : m.getBatchSize();
         if (bs != null) {
@@ -1743,12 +1732,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private void configureDerivedProperties(PersistentEntity domainClass, Mapping m) {
-        for (PersistentProperty prop : domainClass.getPersistentProperties()) {
-            PropertyConfig propertyConfig = m.getPropertyConfig(prop.getName());
-            if (propertyConfig != null && propertyConfig.getFormula() != null) {
-                propertyConfig.setDerived(true);
-            }
-        }
+        domainClass.getPersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer( m));
     }
 
     /*
@@ -1758,71 +1742,48 @@ public class GrailsDomainBinder implements MetadataContributor {
                                                        RootClass root, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         // get the schema and catalog names from the configuration
-        Mapping m = getMapping(domainClass.getJavaClass());
+        Mapping m = ofNullable(getMapping(domainClass.getJavaClass())).orElseThrow();
 
-        String schema = getSchemaName(mappings);
-        String catalog = getCatalogName(mappings);
-
-        if (m != null) {
-            configureDerivedProperties(domainClass, m);
-            CacheConfig cc = m.getCache();
-            if (cc != null && cc.getEnabled()) {
-                root.setCacheConcurrencyStrategy(cc.getUsage());
-                root.setCached(true);
-                if ("read-only".equals(cc.getUsage())) {
-                    root.setMutable(false);
-                }
-                root.setLazyPropertiesCacheable(!"non-lazy".equals(cc.getInclude()));
+        configureDerivedProperties(domainClass, m);
+        CacheConfig cc = m.getCache();
+        if (cc != null && cc.getEnabled()) {
+            root.setCacheConcurrencyStrategy(cc.getUsage());
+            root.setCached(true);
+            if ("read-only".equals(cc.getUsage())) {
+                root.setMutable(false);
             }
-
-            Integer bs = m.getBatchSize();
-            if (bs != null) {
-                root.setBatchSize(bs);
-            }
-
-            if (m.getDynamicUpdate()) {
-                root.setDynamicUpdate(true);
-            }
-            if (m.getDynamicInsert()) {
-                root.setDynamicInsert(true);
-            }
+            root.setLazyPropertiesCacheable(!"non-lazy".equals(cc.getInclude()));
         }
+        root.setBatchSize(ofNullable(m.getBatchSize()).orElse(0));
+        root.setDynamicUpdate(m.getDynamicUpdate());
+        root.setDynamicInsert(m.getDynamicInsert());
 
-        final boolean hasTableDefinition = m != null && m.getTable() != null;
-        if (hasTableDefinition && m.getTable().getSchema() != null) {
-            schema =  m.getTable().getSchema();
-        }
-        if (hasTableDefinition && m.getTable().getCatalog() != null) {
-            catalog = m.getTable().getCatalog();
-        }
 
-        final boolean isAbstract = m != null && !m.getTablePerHierarchy() && m.isTablePerConcreteClass() && root.isAbstract();
+        var schema = ofNullable(m.getTable())
+                .map(org.grails.orm.hibernate.cfg.Table::getSchema)
+                .orElse(getSchemaName(mappings));
+
+        var catalog = ofNullable(m.getTable())
+                .map(org.grails.orm.hibernate.cfg.Table::getCatalog)
+                .orElse( getCatalogName(mappings));
+
+
+        var isAbstract = !m.getTablePerHierarchy() && m.isTablePerConcreteClass() && root.isAbstract();
         // create the table
-        Table table = mappings.addTable(schema, catalog,
-                getTableName(domainClass, sessionFactoryBeanName),
-                null, isAbstract, metadataBuildingContext);
+        Table table = mappings.addTable(schema
+                , catalog
+                , getTableName(domainClass, sessionFactoryBeanName)
+                , null
+                , isAbstract
+                , metadataBuildingContext
+        );
         root.setTable(table);
-
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " + domainClass.getName() + " -> " + root.getTable().getName());
         }
-
         bindIdentity(domainClass, root, mappings, m, sessionFactoryBeanName);
-
-        if (m == null) {
-            bindVersion(domainClass.getVersion(), root, mappings, sessionFactoryBeanName);
-        }
-        else {
-            if (m.getVersioned()) {
-                bindVersion(domainClass.getVersion(), root, mappings, sessionFactoryBeanName);
-            }
-            else {
-                root.setOptimisticLockStyle(OptimisticLockStyle.NONE);
-            }
-        }
-
+        bindVersion(domainClass.getVersion(), root, mappings, sessionFactoryBeanName);
         root.createPrimaryKey();
-
         createClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
     }
 
@@ -1941,7 +1902,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                 bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH, mappings, sessionFactoryBeanName);
             }
             else if (collectionType != null) {
-                String typeName = getTypeName(currentGrailsProp, getPropertyConfig(currentGrailsProp),gormMapping);
+                PropertyConfig config = getPropertyConfig(currentGrailsProp);
+                String typeName = new TypeNameProvider().getTypeName(currentGrailsProp, gormMapping);
                 if ("serializable".equals(typeName)) {
                     value = new BasicValue(metadataBuildingContext, table);
                     bindSimpleValue(typeName, (SimpleValue) value, currentGrailsProp.isNullable(),
@@ -2126,7 +2088,9 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         PropertyConfig pc = getPropertyConfig(property);
         final PersistentEntity owner = property.getOwner();
-        String typeName = getTypeName(property, getPropertyConfig(property), getMapping(owner));
+        PropertyConfig config = getPropertyConfig(property);
+        Mapping mapping1 = getMapping(owner);
+        String typeName = new TypeNameProvider().getTypeName(property, mapping1);
         if (typeName == null) {
             Properties enumProperties = new Properties();
             enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
@@ -2952,7 +2916,8 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private void setTypeForPropertyConfig(PersistentProperty grailsProp, SimpleValue simpleValue, PropertyConfig config) {
-        final String typeName = getTypeName(grailsProp, getPropertyConfig(grailsProp), getMapping(grailsProp.getOwner()));
+        Mapping mapping = getMapping(grailsProp.getOwner());
+        final String typeName = new TypeNameProvider().getTypeName(grailsProp, mapping);
         if (typeName == null) {
             simpleValue.setTypeName(grailsProp.getType().getName());
         }
@@ -3238,7 +3203,9 @@ public class GrailsDomainBinder implements MetadataContributor {
     private String getIndexColumnType(PersistentProperty property, String defaultType) {
         PropertyConfig pc = getPropertyConfig(property);
         if (pc != null && pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
-            return getTypeName(property, pc.getIndexColumn(), getMapping(property.getOwner()));
+            PropertyConfig config = pc.getIndexColumn();
+            Mapping mapping = getMapping(property.getOwner());
+            return new TypeNameProvider().getTypeName(property, mapping);
         }
         return defaultType;
     }
@@ -3603,7 +3570,9 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         public String getTypeName(ToMany property) {
-            return binder.getTypeName(property, binder.getPropertyConfig(property), getMapping(property.getOwner()));
+            PropertyConfig config = binder.getPropertyConfig(property);
+            Mapping mapping = getMapping(property.getOwner());
+            return new TypeNameProvider().getTypeName(property, mapping);
         }
 
     }
