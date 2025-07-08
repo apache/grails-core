@@ -77,7 +77,7 @@ jobs:
           SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
         run: |
-          export VERSION="${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ steps.release_version.outputs.value }}"
           svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
                       -m "Remove grails dev version $VERSION" \
                       rm "https://dist.apache.org/repos/dist/dev/incubator/grails/core/$VERSION"
