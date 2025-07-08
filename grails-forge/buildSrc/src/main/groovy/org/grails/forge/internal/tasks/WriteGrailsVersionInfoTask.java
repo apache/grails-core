@@ -36,11 +36,13 @@ import org.gradle.maven.MavenPomArtifact;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 @CacheableTask
@@ -58,8 +60,13 @@ public abstract class WriteGrailsVersionInfoTask extends DefaultTask {
     @TaskAction
     public void writeVersionInfo() throws IOException {
         Map<String, String> props = generateProperties();
-        try (OutputStream out = Files.newOutputStream(getOutputDirectory().file("grails-versions.properties").get().getAsFile().toPath())) {
+        File outputFile = getOutputDirectory().file("grails-versions.properties").get().getAsFile();
+        if(outputFile.exists()) {
+            outputFile.delete();
+        }
+        try (OutputStream out = Files.newOutputStream(outputFile.toPath())) {
             for (Map.Entry<String, String> entry : props.entrySet()) {
+                getLogger().info("Writing version property: {} => {}", entry.getKey(), entry.getValue());
                 String line = entry.getKey() + "=" + entry.getValue() + "\n";
                 out.write(line.getBytes(StandardCharsets.ISO_8859_1));
             }
@@ -73,7 +80,9 @@ public abstract class WriteGrailsVersionInfoTask extends DefaultTask {
                 .execute();
         Map<String, String> props = new TreeMap<>();
         props.put("grails.version", getVersion().get());
-        for (ComponentArtifactsResult component : result.getResolvedComponents()) {
+        Set<ComponentArtifactsResult> resolvedComponents = result.getResolvedComponents();
+        getLogger().info("Resolved {} components", resolvedComponents.size());
+        for (ComponentArtifactsResult component : resolvedComponents) {
             component.getArtifacts(MavenPomArtifact.class).forEach(artifact -> {
                 if (artifact instanceof ResolvedArtifactResult) {
                     ResolvedArtifactResult resolved = (ResolvedArtifactResult) artifact;
@@ -81,12 +90,15 @@ public abstract class WriteGrailsVersionInfoTask extends DefaultTask {
                     try {
                         pom = new XmlSlurper().parse(resolved.getFile());
                     } catch (IOException | SAXException | ParserConfigurationException e) {
-                        // ignore
+                        getLogger().warn("Failed to parse POM file: {} due to {}", resolved.getFile(), e.getMessage());
                     }
                     ((GPathResult) pom.getProperty("properties")).children().forEach(child -> {
                         NodeChild node = (NodeChild) child;
                         props.put(node.name(), node.text());
                     });
+                }
+                else {
+                    getLogger().warn("Expected ResolvedArtifactResult but got: {}", artifact.getClass().getName());
                 }
             });
         }
