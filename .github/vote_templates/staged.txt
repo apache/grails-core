@@ -9,7 +9,7 @@ The tag for this release is:
 https://github.com/apache/grails-core/releases/tag/v${VERSION}
 Tag commit id: ${VERSION_COMMIT_ID}
 
-The artifacts to be voted on are located as follows (${DIST_SVN_REVISION}):
+The artifacts to be voted on are located as follows (r${DIST_SVN_REVISION}):
 Source release: https://dist.apache.org/repos/dist/dev/incubator/grails/core/${VERSION}/sources
 Binary distributions: https://dist.apache.org/repos/dist/dev/incubator/grails/core/${VERSION}/distribution
 
