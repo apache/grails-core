@@ -99,6 +99,7 @@ set -e
 echo "✅ Reproducible Build Verified"
 
 echo "Be sure to do the following:"
+echo "☑️   Set the override repo: 'export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging' "
 echo "☑️   Run the wrapper ShellApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
 echo "☑️   Run the wrapper ForgeApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
 echo "☑️   Run the cli ShellApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
