@@ -33,6 +33,31 @@ extensions.configure(GrailsPublishExtension) {
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
 }
 
+tasks.withType(Jar).configureEach {
+    if(it.archiveClassifier.getOrNull() != 'javadoc') {
+        from(rootProject.layout.projectDirectory.file('../DISCLAIMER')) {
+            into('META-INF')
+        }
+
+        def projectLicense = layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
+        if (!projectLicense.asFile.exists()) {
+            def basicLicense = rootProject.layout.projectDirectory.file('../licenses/LICENSE-Apache-2.0.txt')
+            from(basicLicense) {
+                into('META-INF')
+                rename { 'LICENSE' }
+            }
+        }
+
+        def projectNotice = layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
+        if (!projectNotice.asFile.exists()) {
+            def basicNotice = rootProject.layout.projectDirectory.file('../grails-core/src/main/resources/META-INF/NOTICE')
+            from(basicNotice) {
+                into('META-INF')
+            }
+        }
+    }
+}
+
 apply plugin: 'org.gradle.crypto.checksum'
 
 afterEvaluate {

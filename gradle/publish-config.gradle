@@ -34,11 +34,11 @@ extensions.configure(GrailsPublishExtension) {
 }
 
 tasks.withType(Jar).configureEach {
-    from(rootProject.layout.projectDirectory.file('DISCLAIMER')) {
-        into('META-INF')
-    }
-
     if(it.archiveClassifier.getOrNull() != 'javadoc') {
+        from(rootProject.layout.projectDirectory.file('DISCLAIMER')) {
+            into('META-INF')
+        }
+
         def projectLicense = layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
         if (!projectLicense.asFile.exists()) {
             def basicLicense = rootProject.layout.projectDirectory.file('licenses/LICENSE-Apache-2.0.txt')
