@@ -27,7 +27,6 @@ def publishedProjects = [
         'grails-cli',
         'grails-forge-cli',
         'grails-forge-core',
-        'grails-forge-api',
 ]
 
 subprojects {
