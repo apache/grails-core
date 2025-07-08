@@ -15,6 +15,8 @@
  *  limitations under the License.
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheLicenseResourceTransformer
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheNoticeResourceTransformer
 
 plugins {
     id 'groovy'
@@ -76,6 +78,11 @@ jarTask.configure { Jar it ->
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier.set('')
+
+    // TODO: This needs reworked so we have one consistent license view, for now the disclaimer is shipped so this should suffice until this is fixed.
+    it.transform(ApacheLicenseResourceTransformer)
+    it.transform(ApacheNoticeResourceTransformer)
+    it.exclude('DISCLAIMER', 'license.header', 'licenses/**', 'META-INF/NOTICE.md', 'META-INF/NOTICE', 'META-INF/NOTICE.md', 'META-INF/licenses/**', 'META-INF/LICENSE.md')
 
     // services & custom grails.factories have to be merged since commands can be created from both sources
     it.mergeServiceFiles()

@@ -17,8 +17,9 @@
  *  under the License.
  */
 
-
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheLicenseResourceTransformer
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheNoticeResourceTransformer
 import org.grails.forge.internal.tasks.GenerateManpageAsciidoc
 import org.grails.forge.internal.tasks.PicocliBuildCompletionTask
 
@@ -165,6 +166,12 @@ distributions {
 }
 
 tasks.named('shadowJar', ShadowJar) {
+
+    // TODO: This needs reworked so we have one consistent license view, for now the disclaimer is shipped so this should suffice until this is fixed.
+    it.transform(ApacheLicenseResourceTransformer)
+    it.transform(ApacheNoticeResourceTransformer)
+    it.exclude('DISCLAIMER', 'license.header', 'licenses/**', 'META-INF/NOTICE.md', 'META-INF/NOTICE', 'META-INF/NOTICE.md', 'META-INF/licenses/**', 'META-INF/LICENSE.md')
+
     mergeServiceFiles()
 }
 
@@ -172,6 +179,10 @@ tasks.named('shadowDistZip') {
     enabled = false
 }
 tasks.named('shadowDistTar') {
+    enabled = false
+}
+
+tasks.named('distTar') {
     enabled = false
 }
 
