@@ -42,6 +42,11 @@ jobs:
           echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          fetch-tags: true
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "Ensure source files use common date"
@@ -487,7 +492,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
-          fetch-tags: true
+          fetch-depth: 0 # need the full history to find all tags
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
