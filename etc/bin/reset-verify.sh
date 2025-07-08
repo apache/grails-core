@@ -44,3 +44,4 @@ cd "${CWD}"
 rm -rf "apache-grails-${VERSION}-incubating-bin"
 rm -rf "apache-grails-wrapper-${VERSION}-incubating-bin"
 rm -rf "profile-wrapper-check"
+rm -f ./custom-repos.gradle
