@@ -102,12 +102,12 @@ jobs:
 
           echo "value=$sha" >>"$GITHUB_OUTPUT"
       - name: "🧩 Run grails-core Assemble"
-        run: ./gradlew assemble
+        run: ./gradlew assemble -PgithubBranch=${{ steps.extract_branch.outputs.value }}
         env:
           GRAILS_PUBLISH_RELEASE: "true"
       - name: "🧩 Run grails-forge Assemble"
         working-directory: grails-forge
-        run: ./gradlew assemble build -PskipTests --info
+        run: ./gradlew assemble build -PskipTests --info -PgithubBranch=${{ steps.extract_branch.outputs.value }}
         env:
           GRAILS_PUBLISH_RELEASE: "true"
       - name: "📦 Generate grails-core docs"
@@ -116,7 +116,7 @@ jobs:
           GRAILS_PUBLISH_RELEASE: "true"
       - name: "📦 Generate grails-forge docs"
         working-directory: grails-forge
-        run: ./gradlew docs
+        run: ./gradlew docs -PgithubBranch=${{ steps.extract_branch.outputs.value }}
         env:
           GRAILS_PUBLISH_RELEASE: "true"
       - name: "🔏 Sign wrapper ZIP"
