@@ -89,7 +89,8 @@ rocker {
 // profile base
 TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
-    it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+    def grailsIncludedBuildName = rootProject.layout.projectDirectory.dir('..').asFile.name
+    it.dependsOn(gradle.includedBuild(grailsIncludedBuildName).task(':grails-wrapper:installDist'))
 
     def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-incubating-bin')
     it.inputs.files(wrapperFiles)

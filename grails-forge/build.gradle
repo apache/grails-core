@@ -62,8 +62,9 @@ allprojects {
     }
 
     tasks.withType(Test).configureEach { Task testTask ->
+        def grailsIncludedBuildName = rootProject.layout.projectDirectory.dir('..').asFile.name
         testTask.dependsOn(
-                gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
+                gradle.includedBuild(grailsIncludedBuildName).task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
                 gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
         )
     }
