@@ -158,7 +158,7 @@ jarTask.configure { Jar it ->
 
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
-    it.archiveClassifier.set('')
+    it.archiveClassifier.set('all')
 
     // TODO: This needs reworked so we have one consistent license view, for now the disclaimer is shipped so this should suffice until this is fixed.
     it.transform(ApacheLicenseResourceTransformer)
@@ -167,6 +167,8 @@ shadowJarTask.configure { ShadowJar it ->
 
     it.mergeServiceFiles()
 }
+// publish shadow jar separately from the regular library
+artifacts           { archives shadowJarTask }
 
 TaskProvider<CreateStartScripts> forgeCliStartScripts = tasks.register('createForgeCliStartScripts', CreateStartScripts)
 forgeCliStartScripts.configure { CreateStartScripts t ->
@@ -212,9 +214,6 @@ distZipTask.configure {
 }
 tasks.named('distTar').configure {
     dependsOn(forgeCliStartScripts, jarTask, shadowJarTask, buildCompletion)
-}
-tasks.named('build').configure {
-    it.dependsOn(distZipTask)
 }
 tasks.named('assemble').configure {
     dependsOn(distZipTask)
