@@ -41,6 +41,7 @@ tasks.named('rat') {
             'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
             'src/*', // exclude build artifacts
             '**/.sdkmanrc', // tool selection files aren't code
+            '.github/**', // github configuration isn't shipped in the source distro
             '**/.gitignore', // git configuration isn't code
             '**/.gitkeep', // git configuration isn't code
             'etc/bin/results/**', // exclude build directories
