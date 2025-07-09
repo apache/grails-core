@@ -140,12 +140,14 @@ subprojects {
     }
 }
 
-tasks.register('publishAllPublicationsToTestCaseMavenRepoRepository').configure {
-    dependsOn(
-            subprojects
-                    .findAll { it.name in publishedProjects }
-                    .collect { it.tasks.named('publishAllPublicationsToTestCaseMavenRepoRepository') }
-    )
+project.afterEvaluate {
+    tasks.register('publishAllPublicationsToTestCaseMavenRepoRepository').configure {
+        dependsOn(
+                subprojects
+                        .findAll { it.name in publishedProjects }
+                        .collect { it.tasks.named('publishAllPublicationsToTestCaseMavenRepoRepository') }
+        )
+    }
 }
 
 def aggregatePublishedArtifacts = tasks.register('aggregatePublishedArtifacts')
