@@ -469,7 +469,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
           path: "grails-core"
-      - name: 'Vote Email'
+      - name: 'Initial Vote Email'
         env:
           VERSION: ${{ needs.publish.outputs.release_version }}
           VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
@@ -482,6 +482,35 @@ jobs:
           echo "Body:"
           echo "*************************************************"
           cat grails-core/.github/vote_templates/staged.txt | envsubst
+          echo "*************************************************"
+      - name: 'Groovy Vote Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+          
+          echo "*************************************************"
+          echo "Subject: [VOTE] Approval of Apache Grails (incubating) ${VERSION} release by Groovy PMC"
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat grails-core/.github/vote_templates/groovy_pmc.txt | envsubst
+          echo "*************************************************"
+      - name: 'Announcement Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+          PREVIOUS_VERSION: 'TODO_PREVIOUS_VERSION'
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+          
+          echo "*************************************************"
+          echo "Subject: [ANNOUNCE] Apache Grails (incubating) ${VERSION}
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat grails-core/.github/vote_templates/announce.txt | envsubst
           echo "*************************************************"
   docs:
     environment: docs

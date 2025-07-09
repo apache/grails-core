@@ -2,6 +2,9 @@ Hi Everyone,
 
 I am happy to start the VOTE thread for an Apache Grails (incubating) release of version ${VERSION}!
 
+Pre-release discussion thread is here:
+<Thread Link>
+
 Release notes for the release are here:
 https://github.com/apache/grails-core/releases/tag/v${VERSION}
 
@@ -25,6 +28,8 @@ Hints on validating checksums/signatures (but replace md5sum with sha512sum):
 https://www.apache.org/info/verification.html
 
 Details of our release process is documented at: https://github.com/apache/grails-core/blob/HEAD/RELEASE.md
+
+As a reminder, most of our tools support an env `GRAILS_REPO_URL` so that the tools can be used from the staging location.  Set it to the staging repo like this: `export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging`
 
 The vote is open for the next 72 hours and passes if a majority of at least
 three +1 PPMC votes are cast.

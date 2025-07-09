@@ -215,41 +215,7 @@ The first vote is conducted on the [Grails dev mailing list](https://lists.apach
 
 ### Apache Groovy PMC
 
-As an incubating project under Apache Groovy, after 72 hours & a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). The vote template follows:
-
-Subject: [VOTE] Approval of Apache Grails 7.0.0-M4 release by Groovy PMC
-
-Body:
-```
-Hi Everyone,
-The Apache Grails community has voted to approve the release of Apache Grails 7.0.0-M4. 
- 
-As the incubation host, we now kindly request the Groovy PMC to review & approve our initial ASF release. 
-
-Grails vote thread:
-* https://lists.apache.org/thread/wdsyo1wzxt06bqcpnlyw6q56n2yj6xpj
-
-Vote result thread:
-* https://<TODO>
-
-The Grails framework consists of 2 repositories, so there are 2 tags for this release:
-* (grails-core) https://github.com/apache/grails-core/releases/tag/v7.0.0-M4
-* (grails-forge) https://github.com/apache/grails-forge/releases/tag/v7.0.0-M4
-
-The artifacts to be voted on are located as follows (r77366):
-Source release: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/sources
-Binary distributions: https://dist.apache.org/repos/dist/dev/grails/core/7.0.0-M4/distribution
-
-Release artifacts are signed with a key from the following file:
-https://dist.apache.org/repos/dist/release/grails/KEYS
-
-Our release process, including verification steps, are documented here: https://github.com/apache/grails-core/blob/HEAD/RELEASE.md The last section of this document `Appendix: Verification from a Container` is likely relevant.  For the differing artifacts, we have compared the decompiled classes to ensure they are as we expect to meet the ASF security team's requirements.
-
-The vote for this release is open for the next 72 hours.
-[ ] +1 Release Apache Grails (incubating) 7.0.0-M4
-[ ]  0 I don't have a strong opinion about this, but I assume it's ok
-[ ] -1 Do not release Apache Grails (incubating) 7.0.0-M4 because...
-```
+As an incubating project under Apache Groovy, after 72 hours & a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the source upload job for the generated email.
 
 ## 5. Releasing
 
@@ -317,33 +283,7 @@ Update the release in `grails-forge` to be flagged as 'latest'
 
 ### Announce the release
 
-Announcements should come from your apache email address (see https://infra.apache.org/committer-email.html) and have an expected format.  The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, & `announce@apache.org`.  Here's an example email: 
-
-        Subject: [ANNOUNCE] Apache Grails (incubating) 7.0.0-M4
-
-        The Apache Grails (incubating) community is pleased to announce the release of Apache Grails (incubating) 7.0.0-M4.
-    
-        Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.
-    
-        This release is a major milestone in our journey towards 7.0 and our first release under the ASF. Users are encouraged to try the milestone to provide early feedback. Detailed upgrade instructions are available here: https://docs.grails.org/7.0.0-M4/guide/upgrading.html.
-    
-        The release notes are available here:
-        https://grails.apache.org/blog/2025-06-10-grails-7-m4.html
-    
-        For the complete list of changes:
-        https://github.com/apache/grails-core/compare/v7.0.0-M3...v7.0.0-M4
-    
-        Apache Grails website: https://grails.apache.org/
-    
-        Download Links: https://grails.apache.org/download.html
-    
-        Grails Resources:
-        - Grails GitHub repo: https://github.com/apache/grails-core
-        - Issues: https://github.com/apache/grails-core/issues
-        - Mailing lists: https://grails.apache.org/community.html
-    
-        Happy Coding,
-        The Apache Grails (incubating) Team
+Announcements should come from your apache email address (see https://infra.apache.org/committer-email.html) and have an expected format.  The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, & `announce@apache.org`.  See the source upload job for the generated email.
 
 # Rollback
 
