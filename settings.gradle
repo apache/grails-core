@@ -137,6 +137,7 @@ include(
         // gsp
         'grails-gsp-core',
         'grails-gsp',
+        'grails-sitemesh3',
         'grails-layout',
         'grails-taglib',
         'grails-web-gsp',
@@ -193,6 +194,7 @@ project(':grails-async').projectDir = file('grails-async/plugin')
 
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')
+//project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
 project(':grails-layout').projectDir = file('grails-gsp/grails-layout')
 project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
 project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
