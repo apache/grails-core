@@ -35,7 +35,7 @@ dependencies {
     astImplementation platform(project(':grails-bom'))
     //astImplementation project(':grails-web-core') // TODO: What ast transforms are needed on the tag lib?
 
-    api 'opensymphony:sitemesh:2.6.0' // hard coded here since we support multiple versions
+    api 'opensymphony:sitemesh'
     api project(':grails-web-taglib')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
