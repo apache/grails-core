@@ -320,8 +320,8 @@ Package Changes:
 * org.grails.web.sitemesh -> org.apache.grails.views.gsp.layout
 
 Notable Class Moves:
-* org.grails.web.servlet.view.GrailsLayoutViewResolver -> org.grails.web.servlet.view.EmbeddedGrailsLayoutViewResolver
-* org.grails.web.servlet.view.SitemeshLayoutViewResolver -> org.grails.web.servlet.view.GrailsLayoutViewResolver
+* org.grails.web.servlet.view.GrailsLayoutViewResolver -> org.apache.grails.web.layout.EmbeddedGrailsLayoutViewResolver
+* org.grails.web.servlet.view.SitemeshLayoutViewResolver -> org.apache.grails.web.layout.GrailsLayoutViewResolver
 * org.grails.web.sitemesh.GrailsLayoutView -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 * org.grails.web.sitemesh.SitemeshLayoutView -> org.apache.grails.web.layout.GrailsLayoutView
 

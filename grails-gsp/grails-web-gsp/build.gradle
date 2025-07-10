@@ -39,7 +39,6 @@ dependencies {
     api project(':grails-gsp-core')
     api project(':grails-web-common')
     api project(':grails-web-taglib')
-    implementation project(":grails-web-layout")
 
 //    api 'org.apache.grails:grails-core', { // GrailsDomainClass, CacheEntry, Environment, GrailsStringUtils, GrailsApplication, GrailsControllerClass, GrailsApplicationAware, ControllerArtefactHandler, GrailsPluginManager, GrailsFactoriesLoader
 //        // API dependencies in grails-core

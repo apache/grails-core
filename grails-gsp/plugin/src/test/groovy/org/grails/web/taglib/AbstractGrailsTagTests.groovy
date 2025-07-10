@@ -55,9 +55,6 @@ import org.grails.web.pages.DefaultGroovyPagesUriService
 import org.grails.web.pages.GSPResponseWriter
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.apache.grails.web.layout.GSPGrailsLayoutPage
-import org.apache.grails.web.layout.GrailsHTMLPageParser
-import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 import org.grails.web.util.GrailsApplicationAttributes
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -523,29 +520,6 @@ abstract class AbstractGrailsTagTests {
         preprocessor.addGspGrailsLayoutCapturing(template)
     }
 
-    String applyLayout(String layout, String template, Map params = [:]) {
-        def gspGrailsLayoutPage = new GSPGrailsLayoutPage()
-        request.setAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE, gspGrailsLayoutPage)
-        def content = applyTemplate(template, params)
-        request.removeAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE)
-
-        def page = null
-        if (!params.parse && gspGrailsLayoutPage != null && gspGrailsLayoutPage.used) {
-            page = gspGrailsLayoutPage
-        } else {
-            def parser = new GrailsHTMLPageParser()
-            page = parser.parse(content.toCharArray())
-        }
-        try {
-            request.setAttribute(RequestConstants.PAGE, page)
-            request.setAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE, new GSPGrailsLayoutPage())
-            return applyTemplate(layout, params, null, '/layouts/test_' + System.currentTimeMillis())
-        }
-        finally {
-            request.removeAttribute(RequestConstants.PAGE)
-            request.removeAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE)
-        }
-    }
     /**
      * Parses the given XML text and creates a DOM document from it.
      */

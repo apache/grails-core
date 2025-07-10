@@ -35,7 +35,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
     implementation 'org.apache.groovy:groovy'
 
-    api 'opensymphony:sitemesh'
+    api 'opensymphony:sitemesh:2.6.0' // hard coded here since we support multiple versions
 
     compileOnly project(':grails-web-common')
     compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided

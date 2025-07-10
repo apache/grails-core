@@ -302,9 +302,9 @@ public class GroovyPageLayoutFinder implements ApplicationListener<ContextRefres
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        if (!(viewResolver instanceof GrailsViewResolver)) {
-            setViewResolver(event.getApplicationContext().getBean(GrailsViewResolver.class));
-        }
-
+        //TODO: With this being a singleton is this even needed?
+//        if (!(viewResolver instanceof GrailsViewResolver)) {
+//            setViewResolver(event.getApplicationContext().getBean(GrailsViewResolver.class));
+//        }
     }
 }

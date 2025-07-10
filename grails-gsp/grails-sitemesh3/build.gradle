@@ -36,7 +36,7 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
-    api "org.sitemesh:spring-boot-starter-sitemesh:$sitemeshVersion"
+    api "org.sitemesh:spring-boot-starter-sitemesh:3.2.2"
     api project(':grails-web-gsp-taglib')
 
 //    api project(':grails-web-gsp'), { // GrailsConventionGroovyPageLocator

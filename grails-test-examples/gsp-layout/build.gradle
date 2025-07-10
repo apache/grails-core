@@ -55,7 +55,12 @@ dependencies {
     runtimeOnly 'org.glassfish.web:jakarta.servlet.jsp.jstl'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
-    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
 }
 
 apply {

@@ -34,6 +34,7 @@ class GrailsLayoutGrailsPlugin extends Plugin {
     def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
     def observe = ['controllers']
     def loadBefore = ['groovyPages']
+    def loadAfter = ['webLayout']
 
     def providedArtefacts = [
             RenderGrailsLayoutTagLib,

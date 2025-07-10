@@ -24,6 +24,7 @@ import grails.web.mvc.GrailsResponseMutator;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletResponseWrapper;
 
+import org.grails.buffer.StreamCharBuffer;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.WebUtils;
 
@@ -33,7 +34,7 @@ import com.opensymphony.sitemesh.Content;
 import com.opensymphony.sitemesh.ContentProcessor;
 import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
 
-public class GrailsContentBufferingResponse extends HttpServletResponseWrapper implements GrailsResponseMutator {
+public class GrailsContentBufferingResponse extends HttpServletResponseWrapper implements GrailsResponseMutator, StreamCharBuffer.LazyInitializingWriter {
 
     private final GrailsPageResponseWrapper pageResponseWrapper;
     private final ContentProcessor contentProcessor;

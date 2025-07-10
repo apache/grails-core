@@ -32,23 +32,28 @@ import org.grails.encoder.CodecLookup;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib;
+import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.taglib.TagLibraryLookup;
 import org.grails.web.gsp.GroovyPagesTemplateRenderer;
 import org.grails.web.pages.StandaloneTagLibraryLookup;
 import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.gsp.jsp.TagLibraryResolverImpl;
-import org.grails.web.servlet.view.EmbeddedGrailsLayoutViewResolver;
 import org.grails.web.servlet.view.GroovyPageViewResolver;
-import org.apache.grails.web.layout.GroovyPageLayoutFinder;
+import org.sitemesh.autoconfigure.SiteMeshAutoConfiguration;
+import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
+import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
@@ -63,7 +68,7 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.ViewResolver;
 
-import org.grails.plugins.web.taglib.GrailsLayoutTagLib;
+import org.grails.plugins.web.taglib.SitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
 
 import jakarta.servlet.ServletContext;
@@ -74,12 +79,20 @@ public class GspAutoConfiguration {
     protected static abstract class AbstractGspConfig {
         @Value("${spring.gsp.reloadingEnabled:true}")
         boolean gspReloadingEnabled;
-        
+
         @Value("${spring.gsp.view.cacheTimeout:1000}")
         long viewCacheTimeout;
 
         @Value("${spring.gsp.jspEnabled:true}")
         boolean jspEnabled;
+
+        @Value("${spring.gsp.sitmesh3:true}")
+        boolean sitemesh3;
+    }
+
+    @Bean
+    GrailsLayoutHandlerMapping grailsLayoutHandlerMapping() {
+        return new GrailsLayoutHandlerMapping();
     }
 
     @Configuration
@@ -87,21 +100,21 @@ public class GspAutoConfiguration {
     protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig {
         private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT="./src/main/resources/templates";
         private static final String CLASSPATH_TEMPLATE_ROOT="classpath:/templates";
-        
+
         @Value("${spring.gsp.templateRoots:}")
         String[] templateRoots;
-        
+
         @Value("${spring.gsp.locator.cacheTimeout:5000}")
         long locatorCacheTimeout;
-        
+
         @Value("${spring.gsp.layout.caching:true}")
         boolean gspLayoutCaching;
 
-        @Value("${spring.gsp.layout.default:main}")
+        @Value("${sitemesh.decorator.default:}")
         String defaultLayoutName;
 
         @Bean
-        @ConditionalOnMissingBean(name="groovyPagesTemplateEngine") 
+        @ConditionalOnMissingBean(name="groovyPagesTemplateEngine")
         GroovyPagesTemplateEngine groovyPagesTemplateEngine(TagLibraryResolver tagLibraryResolver, TagLibraryLookup tagLibraryLookup, GroovyPagesTemplateRenderer groovyPagesTemplateRenderer) {
             GroovyPagesTemplateEngine templateEngine = new GroovyPagesTemplateEngine();
             templateEngine.setReloadEnabled(gspReloadingEnabled);
@@ -110,7 +123,7 @@ public class GspAutoConfiguration {
             groovyPagesTemplateRenderer.setGroovyPagesTemplateEngine(templateEngine);
             return templateEngine;
         }
-        
+
         @Bean
         @ConditionalOnMissingBean(name="groovyPageLocator")
         GrailsConventionGroovyPageLocator groovyPageLocator() {
@@ -165,17 +178,6 @@ public class GspAutoConfiguration {
                 return Collections.singletonList(CLASSPATH_TEMPLATE_ROOT);
             }
         }
-        
-        @Bean
-        @ConditionalOnMissingBean(name = "groovyPageLayoutFinder")
-        public GroovyPageLayoutFinder groovyPageLayoutFinder() {
-            GroovyPageLayoutFinder groovyPageLayoutFinder = new GroovyPageLayoutFinder();
-            groovyPageLayoutFinder.setGspReloadEnabled(gspReloadingEnabled);
-            groovyPageLayoutFinder.setCacheEnabled(gspLayoutCaching);
-            groovyPageLayoutFinder.setEnableNonGspViews(false);
-            groovyPageLayoutFinder.setDefaultDecoratorName(defaultLayoutName);
-            return groovyPageLayoutFinder;
-        }
 
         @Bean
         @ConditionalOnMissingBean(name = "groovyPagesTemplateRenderer")
@@ -188,19 +190,38 @@ public class GspAutoConfiguration {
     }
 
     @Configuration
+    @AutoConfigureBefore(SiteMeshAutoConfiguration.class)
+    @ConditionalOnMissingBean(name = "sitemesh3")
+    protected static class Sitemesh3Configuration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
+        @Override
+        public void setEnvironment(Environment environment) {
+            if (environment instanceof ConfigurableEnvironment) {
+                ConfigurableEnvironment configEnv = (ConfigurableEnvironment) environment;
+                configEnv.getPropertySources().addFirst(Sitemesh3GrailsPlugin.getDefaultPropertySource(configEnv, null));
+            }
+        }
+
+        @Override
+        public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {}
+
+        @Override
+        public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {}
+    }
+
+    @Configuration
     protected static class GspViewResolverConfiguration extends AbstractGspConfig {
         @Bean
         @ConditionalOnMissingBean(name = "gspViewResolver")
-        public ViewResolver gspViewResolver(GroovyPagesTemplateEngine groovyPagesTemplateEngine, GrailsConventionGroovyPageLocator groovyPageLocator, GroovyPageLayoutFinder groovyPageLayoutFinder) {
+        public ViewResolver gspViewResolver(GroovyPagesTemplateEngine groovyPagesTemplateEngine, GrailsConventionGroovyPageLocator groovyPageLocator) {
             GroovyPageViewResolver groovyPageViewResolver = new GroovyPageViewResolver(groovyPagesTemplateEngine, groovyPageLocator);
             groovyPageViewResolver.setResolveJspView(jspEnabled);
             groovyPageViewResolver.setAllowGrailsViewCaching(!gspReloadingEnabled || viewCacheTimeout != 0);
             groovyPageViewResolver.setCacheTimeout(gspReloadingEnabled ? viewCacheTimeout : -1);
-            return new EmbeddedGrailsLayoutViewResolver(groovyPageViewResolver, groovyPageLayoutFinder);
+            return groovyPageViewResolver;
         }
     }
-    
-    @Configuration 
+
+    @Configuration
     protected static class CodecLookupConfiguration {
         @Bean
         @ConditionalOnMissingBean(name = "codecLookup")
@@ -212,7 +233,7 @@ public class GspAutoConfiguration {
     @Configuration
     protected static class StandaloneGrailsApplicationConfiguration {
         @Bean
-        @ConditionalOnMissingBean(name = "grailsApplication") 
+        @ConditionalOnMissingBean(name = "grailsApplication")
         public GrailsApplication grailsApplication() {
             return new StandaloneGrailsApplication();
         }
@@ -220,13 +241,13 @@ public class GspAutoConfiguration {
 
     protected static class TagLibraryLookupRegistrar implements ImportBeanDefinitionRegistrar {
 
-        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES=new Class<?>[] { GrailsLayoutTagLib.class, RenderTagLib.class, RenderGrailsLayoutTagLib.class };
+        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES=new Class<?>[] { SitemeshTagLib.class, RenderTagLib.class, RenderSitemeshTagLib.class };
 
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (!registry.containsBeanDefinition("gspTagLibraryLookup")) {
                 GenericBeanDefinition beanDefinition = createBeanDefinition(StandaloneTagLibraryLookup.class);
-                
+
                 ManagedList<BeanDefinition> list = new ManagedList<BeanDefinition>();
                 registerTagLibs(list);
 
@@ -253,10 +274,10 @@ public class GspAutoConfiguration {
 
     /**
      * {@link WebMvcAutoConfiguration} adds defaultViewResolver and viewResolver beans.
-     * 
+     *
      *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces 
      *  the viewResolver bean with GSP view resolver by default.
-     *  
+     *
      *  The behavior of this class can be controlled with spring.gsp.removeDefaultViewResolver and
      *  spring.gsp.replaceViewResolverBean configuration properties.
      *
@@ -264,7 +285,7 @@ public class GspAutoConfiguration {
     protected static class RemoveDefaultViewResolverRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
         boolean removeDefaultViewResolverBean;
         boolean replaceViewResolverBean;
-        
+
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (removeDefaultViewResolverBean) {
@@ -286,7 +307,7 @@ public class GspAutoConfiguration {
             replaceViewResolverBean = environment.getProperty("spring.gsp.replaceViewResolverBean", Boolean.class, true);
         }
     }
-    
+
     @ConditionalOnClass({TagLibraryResolverImpl.class})
     @Configuration
     protected static class GspJspIntegrationConfiguration implements EnvironmentAware {

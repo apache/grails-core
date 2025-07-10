@@ -19,7 +19,6 @@
 
 package org.grails.web.pages;
 
-import com.opensymphony.module.sitemesh.RequestConstants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.grails.buffer.StreamCharBuffer;
@@ -30,9 +29,9 @@ import org.grails.encoder.EncodedAppenderFactory;
 import org.grails.encoder.Encoder;
 import org.grails.encoder.EncoderAware;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.apache.grails.web.layout.GrailsContentBufferingResponse;
-import org.apache.grails.web.layout.GrailsRoutablePrintWriter;
+import org.grails.buffer.GrailsRoutablePrintWriter;
 import org.grails.web.util.BoundedCharsAsEncodedBytesCounter;
+import org.grails.web.util.WebUtils;
 import org.springframework.objenesis.ObjenesisStd;
 import org.springframework.objenesis.instantiator.ObjectInstantiator;
 
@@ -93,7 +92,7 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
 
         final StreamCharBuffer.LazyInitializingWriter lazyResponseWriter = response::getWriter;
 
-        if (!(response instanceof GrailsContentBufferingResponse)) {
+        if (!(response instanceof StreamCharBuffer.LazyInitializingWriter)) {
             streamBuffer.connectTo(new StreamCharBuffer.LazyInitializingMultipleWriter() {
                 public Writer getWriter() {
                     return null;
@@ -215,7 +214,7 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
             flushResponse();
         } else if (!isTrouble()) {
             GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-            if (webRequest != null && webRequest.getCurrentRequest().getAttribute(RequestConstants.PAGE) != null) {
+            if (webRequest != null && webRequest.getCurrentRequest().getAttribute(WebUtils.SITEMESH2_PAGE_ATTRIBUTE) != null) {
                 // flush the response if its a layout
                 flushResponse();
             }

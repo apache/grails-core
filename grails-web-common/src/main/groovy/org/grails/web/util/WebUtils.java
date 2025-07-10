@@ -70,6 +70,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static final String GRAILS_SERVLET_PATH = "/grails";
     public static final String EXCEPTION_ATTRIBUTE = "exception";
     public static final String ASYNC_REQUEST_URI_ATTRIBUTE = "jakarta.servlet.async.request_uri";
+    public static final String SITEMESH2_PAGE_ATTRIBUTE = "__sitemesh__page";
 
     public static final int SC_METHOD_NOT_ALLOWED = HttpServletResponse.SC_METHOD_NOT_ALLOWED;
 

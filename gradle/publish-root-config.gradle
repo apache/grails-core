@@ -67,6 +67,7 @@ def publishedProjects = [
         'grails-scaffolding',
         'grails-services',
         'grails-shell-cli',
+        'grails-sitemesh3',
         'grails-layout',
         'grails-spring',
         'grails-taglib',
