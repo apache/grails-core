@@ -26,6 +26,7 @@ import org.grails.forge.feature.Category;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
+import org.grails.forge.feature.sitemesh3.Sitemesh3;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.URLTemplate;
@@ -103,6 +104,12 @@ public class GrailsGsp implements DefaultFeature {
                 .groupId("org.apache.grails")
                 .artifactId("grails-gsp")
                 .implementation());
+        if(!generatorContext.isFeaturePresent(Sitemesh3.class)) {
+            generatorContext.addDependency(Dependency.builder()
+                    .groupId("org.apache.grails")
+                    .artifactId("grails-layout")
+                    .implementation());
+        }
 
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         generatorContext.addTemplate("mainLayout", new URLTemplate(getViewFolderPath() + "layouts/main.gsp", classLoader.getResource("gsp/main.gsp")));

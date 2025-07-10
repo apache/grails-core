@@ -311,9 +311,13 @@ As part of any major release, APIs can change.  For Grails 7.0, the list of rena
 
 * GrailsClassUtils#isMatchBetweenPrimativeAndWrapperTypes -> GrailsClassUtils#isMatchBetweenPrimitiveAndWrapperTypes
 
-====== 12.13 Layout Configuration
+====== 12.13 Layout Plugins
 
-There are several changes related to layout related configuration:
+Grails 7 has two different layout engines: Sitemesh 2.6.x & Sitemesh 3.x. The Sitemesh2 plugin is named `grails-layout` and the Sitemesh 3 plugin is `grails-sitemesh3`. The `grails-layout` plugin is what has traditionally shipped with Grails. The `grails-sitemesh3` plugin is functional, but has some known issues. Please see the thread https://lists.apache.org/thread/8lynrl0yd6ykn749md1g2wjb8jph3s5l[Grails 7 & Reverting Sitemesh 3] for the history of why we did not exclusively use `grails-sitemesh3` for Grails 7.
+
+====== 12.14 grails-layout Configuration
+
+If you decide to use the `grails-layout` plugin, several changes have occurred:
 
 Package Changes:
 * grails.web.sitemesh -> org.apache.grails.web.layout

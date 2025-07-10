@@ -48,6 +48,12 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation project(':grails-data-hibernate5-core')
     testImplementation project(':grails-gsp')
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation project(':grails-sitemesh3')
+    }
+    else {
+        implementation project(':grails-layout')
+    }
     testImplementation project(':grails-testing-support-datamapping'), {
         // This is a local project dependency
         exclude module: 'grails-testing-support-core'

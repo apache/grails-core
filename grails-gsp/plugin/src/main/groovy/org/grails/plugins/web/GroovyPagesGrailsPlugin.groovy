@@ -19,7 +19,6 @@
 package org.grails.plugins.web
 
 import grails.config.Config
-import grails.config.Settings
 import grails.core.gsp.GrailsTagLibClass
 import grails.gsp.PageRenderer
 import grails.plugins.Plugin
@@ -79,7 +78,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
     def observe = ['controllers']
-    def loadAfter = ['filters', 'grailsLayout']
+    def loadAfter = ['filters']
 
     def providedArtefacts = [
             ApplicationTagLib,

@@ -41,6 +41,7 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-layout'
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
