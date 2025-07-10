@@ -47,7 +47,7 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
     public LazyTagLibraryLookup() {
         List<Class> mockedClasses = new ArrayList<>((List<Class>) new GroovyPagesGrailsPlugin().getProvidedArtefacts());
         ClassLoader classLoader = LazyTagLibraryLookup.class.getClassLoader();
-        if(ClassUtils.isPresent("org.apache.grails.web.layout.GrailsLayoutGrailsPlugin", classLoader)) {
+        if(ClassUtils.isPresent("org.apache.grails.web.layout.LayoutGrailsPlugin", classLoader)) {
             // sitemesh2 support
             try {
                 mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.GrailsLayoutTagLib"));

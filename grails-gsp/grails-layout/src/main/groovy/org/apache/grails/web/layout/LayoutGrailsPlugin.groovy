@@ -32,7 +32,7 @@ import grails.util.GrailsUtil
 /**
  * Plugin responsible for Grails Layout specific configuration.
  */
-class GrailsLayoutGrailsPlugin extends Plugin {
+class LayoutGrailsPlugin extends Plugin {
 
     public static final String GSP_VIEW_LAYOUT_RESOLVER_ENABLED = 'grails.gsp.view.layoutViewResolver'
     public static final String DEFAULT_LAYOUT = 'grails.views.layout.default'

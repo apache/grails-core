@@ -312,7 +312,7 @@ abstract class AbstractGrailsTagTests {
         dependantPluginClasses << gcl.loadClass('org.grails.plugins.i18n.I18nGrailsPlugin')
         dependantPluginClasses << gcl.loadClass('org.grails.plugins.web.mapping.UrlMappingsGrailsPlugin')
         dependantPluginClasses << gcl.loadClass('org.grails.plugins.web.controllers.ControllersGrailsPlugin')
-        dependantPluginClasses << gcl.loadClass('org.apache.grails.web.layout.GrailsLayoutGrailsPlugin')
+        dependantPluginClasses << gcl.loadClass('org.apache.grails.web.layout.LayoutGrailsPlugin')
         dependantPluginClasses << gcl.loadClass('org.grails.plugins.web.GroovyPagesGrailsPlugin')
 
         def dependentPlugins = dependantPluginClasses.collect { new DefaultGrailsPlugin(it as Class<?>, grailsApplication) }
