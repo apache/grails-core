@@ -16,6 +16,7 @@
  */
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
@@ -49,6 +50,7 @@ ext {
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
     formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    formattedBuildDateForCache = LocalDate.now(ZoneOffset.UTC).toString()
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
 
     isReleaseVersion = Boolean.parseBoolean(System.getenv('GRAILS_PUBLISH_RELEASE'))
