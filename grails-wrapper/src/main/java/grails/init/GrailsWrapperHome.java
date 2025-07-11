@@ -20,8 +20,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -33,12 +35,12 @@ public class GrailsWrapperHome {
     public final File home;
     public final File wrapperDirectory;
     public final List<GrailsVersion> versions;
-    public final List<GrailsReleaseType> allowedReleaseTypes;
+    public final Set<GrailsReleaseType> allowedReleaseTypes;
     public final GrailsVersion latestVersion;
 
-    public GrailsWrapperHome(List<GrailsReleaseType> allowedReleaseTypes, String forcedGrailsHome) throws IOException {
+    public GrailsWrapperHome(LinkedHashSet<GrailsReleaseType> allowedReleaseTypes, String forcedGrailsHome) throws IOException {
         home = findGrailsHome(forcedGrailsHome).getCanonicalFile();
-        this.allowedReleaseTypes = allowedReleaseTypes == null ? new ArrayList<>() : allowedReleaseTypes;
+        this.allowedReleaseTypes = allowedReleaseTypes == null ? new LinkedHashSet<>() : allowedReleaseTypes;
 
         wrapperDirectory = new File(home, "wrapper");
         if(!wrapperDirectory.exists()) {
