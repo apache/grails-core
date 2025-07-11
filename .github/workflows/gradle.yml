@@ -313,7 +313,7 @@ jobs:
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         with: 
-          timeout_seconds: 900 # normal range 360-720s
+          timeout_seconds: 1200 # normal range 14min if build is not cached (no tests running)
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
