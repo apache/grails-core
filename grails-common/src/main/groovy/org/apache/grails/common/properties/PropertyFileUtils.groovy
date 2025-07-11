@@ -17,23 +17,35 @@
 package org.apache.grails.common.properties
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
+import java.util.regex.Pattern
 
 final class PropertyFileUtils {
+
     private PropertyFileUtils() {
         // prevent  instantiation
     }
 
+    // TODO: this is copied from grails-common, but we should consider moving grails-common up to grails-gradle once
+    // the publish plugin is moved out of grails-core
     static void makePropertiesFileReproducible(File factoriesFile) {
         String sourceDateEpoch = System.getenv('SOURCE_DATE_EPOCH')
         if (!sourceDateEpoch) {
             return
         }
 
+        Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\\\s).*$')
+
         List<String> lines = factoriesFile.readLines(StandardCharsets.ISO_8859_1.name())
-        lines[1] = "# SOURCE_DATE_EPOCH = ${sourceDateEpoch}" as String
+
+        boolean dateReplaced = false
         factoriesFile.withWriter { BufferedWriter writer ->
             lines.each { String line ->
+                if (!dateReplaced && timeRegex.matcher(line).matches()) {
+                    dateReplaced = true
+                    writer.writeLine("# SOURCE_DATE_EPOCH = ${sourceDateEpoch}" as String)
+                    return
+                }
+
                 writer.writeLine(line)
             }
         }
