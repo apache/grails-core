@@ -58,7 +58,7 @@ dependencies {
 }
 
 tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    it.inputs.dir layout.projectDirectory.dir('src/docs/asciidoc')
+    it.inputs.dir(layout.projectDirectory.dir('src/docs/asciidoc')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
     it.outputs.dir layout.buildDirectory.dir('asciidoc/manual')
 
     it.jvm {

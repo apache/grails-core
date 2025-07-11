@@ -26,6 +26,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileTree
 import org.gradle.api.file.FileVisitDetails
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -103,6 +104,12 @@ class ProfileCompilerTask extends AbstractCompile {
 
     @Input
     final ListProperty<String> profileExtendsDefault
+
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @Override
+    FileTree getSource() {
+        return super.getSource();
+    }
 
     // commands map to source property
 
