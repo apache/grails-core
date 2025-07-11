@@ -51,7 +51,7 @@ NOTE: All the above configs can be used for multiple datasources
 If secondary dataSource named "second" is configured in application.yml
 [source,yaml]
 ----
-include::{migrationPluginExamplesDir}/application-multiple-datasource.yml[lines=11..29]
+include::{migrationPluginExamplesDir}/src/integration-test/resources/application-multiple-datasource.yml[lines=11..29]
 ----
 
 The configuration for this data source would be:
