@@ -32,7 +32,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.withType(Javadoc).configureEach { Javadoc it ->
     it.options.noTimestamp true // prevent the file header with the date
-    it.options.bottom "Generated ${formattedBuildDate} (UTC)"
+    it.options.bottom "Generated ${formattedBuildDateForCache} (UTC)"
 }
 
 tasks.withType(GroovyCompile).configureEach {

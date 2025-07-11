@@ -27,7 +27,7 @@ extensions.configure(JavaPluginExtension) {
 
 tasks.withType(Javadoc).configureEach { Javadoc it ->
     it.options.noTimestamp true // prevent the file header with the date
-    it.options.bottom "Generated ${formattedBuildDate} (UTC)"
+    it.options.bottom "Generated ${formattedBuildDateForCache} (UTC)"
 }
 
 // JavaCompile is not configured because we put java files inside of the groovy source sets
