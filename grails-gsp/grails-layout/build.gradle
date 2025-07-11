@@ -51,7 +51,6 @@ dependencies {
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test', {
         // impl: MockHttpServletRequest
     }
