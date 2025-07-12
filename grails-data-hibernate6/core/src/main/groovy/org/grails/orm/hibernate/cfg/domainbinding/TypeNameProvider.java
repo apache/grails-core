@@ -9,9 +9,10 @@ import static java.util.Optional.ofNullable;
 
 public class TypeNameProvider {
 
-    public String getTypeName(@NotNull PersistentProperty property
-                                ,@NotNull Mapping mapping) {
-       return ofNullable(getPropertyConfig(property))
+    public String getTypeName( PersistentProperty property
+                                , PropertyConfig propertyConfig
+                                , @NotNull Mapping mapping) {
+       return ofNullable(propertyConfig)
                 .map(PropertyConfig::getType)
                 .map(typeObj -> typeObj instanceof Class<?> clazz ?
                         clazz.getName() : typeObj.toString()
@@ -19,9 +20,7 @@ public class TypeNameProvider {
                .orElse(mapping.getTypeName(property.getType()));
     }
 
-    private PropertyConfig getPropertyConfig(PersistentProperty property) {
-        return (PropertyConfig) property.getMapping().getMappedForm();
-    }
+
 }
 
 

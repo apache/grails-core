@@ -22,7 +22,8 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
         mapping.setUserTypes(["foo.Bar": persistentEntity.getJavaClass()])
-        def name = new TypeNameProvider().getTypeName(property, mapping)
+        def config = grailsDomainBinder.getPropertyConfig(property)
+        def name = new TypeNameProvider().getTypeName(property,config , mapping)
 
         then:
         name == "text"
@@ -38,7 +39,8 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def persistentEntity = createPersistentEntity(grailsDomainBinder, simpleName, fieldProperties, mappingProperties)
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
-        def name = new TypeNameProvider().getTypeName(property, mapping)
+        def config = grailsDomainBinder.getPropertyConfig(property)
+        def name = new TypeNameProvider().getTypeName(property,config , mapping)
 
         then:
         name == "java.lang.String"
@@ -53,7 +55,8 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
         mapping.setUserTypes([(Salary): SalaryType])
-        def name = new TypeNameProvider().getTypeName(property, mapping)
+        def config = grailsDomainBinder.getPropertyConfig(property)
+        def name = new TypeNameProvider().getTypeName(property,config , mapping)
 
         then:
         name == SalaryType.name
