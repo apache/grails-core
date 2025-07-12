@@ -814,7 +814,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private void bindColumnConfigToColumn(PersistentProperty property, Column column, ColumnConfig columnConfig) {
-        final PropertyConfig mappedForm = property != null ? (PropertyConfig) property.getMapping().getMappedForm() : null;
+        final PropertyConfig mappedForm = getPropertyConfig(property);
         boolean allowUnique = mappedForm != null && !mappedForm.isUniqueWithinGroup();
 
         if (columnConfig == null) {
@@ -891,7 +891,10 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private PropertyConfig getPropertyConfig(PersistentProperty property) {
-        return (PropertyConfig) property.getMapping().getMappedForm();
+        return  Optional.ofNullable(property)
+                .map(PersistentProperty::getMappedForm)
+                .map(PropertyConfig.class::cast)
+                .orElse(null);
     }
 
     /**
@@ -2639,7 +2642,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         AccessType accessType = AccessType.getAccessStrategy(
-                grailsProperty.getMapping().getMappedForm().getAccessType()
+               getPropertyConfig(grailsProperty).getAccessType()
         );
 
         if(accessType == AccessType.FIELD) {
@@ -3120,7 +3123,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (property instanceof Association) {
             Association association = (Association) property;
             boolean isBasic = property instanceof Basic;
-            if(isBasic && ((PropertyConfig)property.getMapping().getMappedForm()).getType() != null ) {
+            if(isBasic && (getPropertyConfig(property)).getType() != null ) {
                 return columnName;
             }
 
@@ -3199,7 +3202,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @param constrainedProperty the property's constraints
      */
     private void bindStringColumnConstraints(Column column, PersistentProperty constrainedProperty) {
-        final org.grails.datastore.mapping.config.Property mappedForm = constrainedProperty.getMapping().getMappedForm();
+        final org.grails.datastore.mapping.config.Property mappedForm = getPropertyConfig(constrainedProperty);
         Number columnLength = mappedForm.getMaxSize();
         List<?> inListValues = mappedForm.getInList();
         if (columnLength != null) {
@@ -3226,7 +3229,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         int precision =  org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION;
 
 
-        PropertyConfig constrainedProperty = (PropertyConfig) property.getMapping().getMappedForm();
+        PropertyConfig constrainedProperty = getPropertyConfig(property);
         if(  cc != null && cc.getScale() > - 1) {
             column.setScale(cc.getScale());
         } else if (constrainedProperty.getScale() > -1) {
@@ -3299,7 +3302,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private void handleUniqueConstraint(PersistentProperty property, Column column, String path, Table table, String columnName, String sessionFactoryBeanName) {
-        final PropertyConfig mappedForm = (PropertyConfig) property.getMapping().getMappedForm();
+        final PropertyConfig mappedForm = getPropertyConfig(property);
         if (mappedForm.isUnique()) {
             if (!mappedForm.isUniqueWithinGroup()) {
                 column.setUnique(true);

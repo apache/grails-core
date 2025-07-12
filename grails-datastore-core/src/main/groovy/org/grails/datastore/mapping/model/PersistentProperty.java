@@ -22,6 +22,8 @@ package org.grails.datastore.mapping.model;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 
+import java.util.Optional;
+
 /**
  * @author Graeme Rocher
  * @since 1.0
@@ -53,6 +55,12 @@ public interface PersistentProperty<T extends Property> {
     * @return The PropertyMapping instance
     */
     PropertyMapping<T> getMapping();
+
+    default T getMappedForm() {
+        return Optional.of(getMapping())
+                .map(PropertyMapping::getMappedForm)
+                .orElse(null);
+    }
 
     /**
      * Obtains the owner of this persistent property
