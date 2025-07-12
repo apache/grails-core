@@ -1,9 +1,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.SimpleValue;
 
-import static java.util.Optional.ofNullable;
+import java.util.Optional;
 
 public class SimpleValueBinder {
 
@@ -16,15 +17,15 @@ public class SimpleValueBinder {
      * @param nullable    Whether it is nullable
      */
     public void bindSimpleValue(SimpleValue simpleValue, String type, String columnName, boolean nullable) {
-        Column column = new Column();
-        column.setNullable(nullable);
-        column.setValue(simpleValue);
-        column.setName(columnName);
-        ofNullable(simpleValue.getTable())
-                .ifPresent(
-                        table -> table.addColumn(column)
-                );
-        simpleValue.getSelectables().add(column);
-        simpleValue.setTypeName(type);
+        Optional.ofNullable(simpleValue.getTable())
+                .ifPresentOrElse( table -> {
+                    var column = new Column();
+                    column.setNullable(nullable);
+                    column.setValue(simpleValue);
+                    column.setName(columnName);
+                    table.addColumn(column);
+                    simpleValue.addColumn(column);
+                    simpleValue.setTypeName(type);
+                }, () -> { throw new MappingException("SimpleValue must have a table");});
     }
 }

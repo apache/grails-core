@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.hibernate.MappingException
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
@@ -41,13 +42,8 @@ class SimpleValueBinderSpec extends HibernateGormDatastoreSpec {
         BasicValue simpleValue = new BasicValue(grailsDomainBinder.metadataBuildingContext, null);
         simpleValueBinder.bindSimpleValue(simpleValue, type, columnName, nullable)
 
-        def column = (Column) simpleValue.column
         then:
-        column
-        column.value == simpleValue
-        column.name == columnName
-        column.nullable
-        simpleValue.column == column
-        !simpleValue.table
+        MappingException e = thrown()
+
     }
 }
