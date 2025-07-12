@@ -26,7 +26,6 @@ import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.util.BuildSettings
 import grails.util.Environment
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
@@ -101,12 +100,12 @@ class GrailsApp extends SpringApplication {
         ConfigurableApplicationContext applicationContext = super.run(args)
         Environment environment = Environment.getCurrent()
 
-        log.info("Application starting in environment: {}", environment.getName())
-        log.debug("Application directory discovered as: {}", IOUtils.findApplicationDirectory())
-        log.debug("Current base directory is [{}]. Reloading base directory is [{}]", new File("."), BuildSettings.BASE_DIR)
+        log.info('Application starting in environment: {}', environment.getName())
+        log.debug('Application directory discovered as: {}', IOUtils.findApplicationDirectory())
+        log.debug('Current base directory is [{}]. Reloading base directory is [{}]', new File('.'), BuildSettings.BASE_DIR)
 
         if (environment.isReloadEnabled()) {
-            log.debug("Reloading status: {}", environment.isReloadEnabled())
+            log.debug('Reloading status: {}', environment.isReloadEnabled())
             enableDevelopmentModeWatch(environment, applicationContext)
             environment.isDevtoolsRestart()
         }
@@ -143,7 +142,6 @@ class GrailsApp extends SpringApplication {
         configuredEnvironment = environment
     }
 
-    @CompileDynamic // TODO: Report Groovy VerifierError
     protected void enableDevelopmentModeWatch(Environment environment, ConfigurableApplicationContext applicationContext, String... args) {
         def location = environment.getReloadLocation()
 
@@ -154,6 +152,7 @@ class GrailsApp extends SpringApplication {
             Queue<File> newFiles = new ConcurrentLinkedQueue<>()
 
             directoryWatcher.addListener(new FileExtensionFileChangeListener(['groovy', 'java']) {
+
                 @Override
                 void onChange(File file, List<String> extensions) {
                     changedFiles << file.canonicalFile
@@ -164,7 +163,7 @@ class GrailsApp extends SpringApplication {
                     changedFiles << file.canonicalFile
                     // For some bizarre reason Windows fires onNew events even for files that have
                     // just been modified and not created
-                    if (System.getProperty("os.name").toLowerCase().indexOf("windows") != -1) {
+                    if (System.getProperty('os.name').toLowerCase().indexOf('windows') != -1) {
                         return
                     }
                     newFiles << file.canonicalFile
@@ -227,7 +226,6 @@ class GrailsApp extends SpringApplication {
                 }
             }
 
-
             developmentModeActive = true
             Thread.start {
                 CompilerConfiguration compilerConfig = new CompilerConfiguration()
@@ -235,8 +233,7 @@ class GrailsApp extends SpringApplication {
 
                 while (isDevelopmentModeActive()) {
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
-                    def uniqueChangedFiles = changedFiles as Set
-
+                    def uniqueChangedFiles = changedFiles as Set<File>
 
                     def i = uniqueChangedFiles.size()
                     try {
@@ -305,12 +302,12 @@ class GrailsApp extends SpringApplication {
         }
         def baseFileLocation = appDir?.absolutePath ?: location
         compilerConfig.setTargetDirectory(new File(baseFileLocation, BuildSettings.BUILD_CLASSES_PATH))
-        println "File $changedFile changed, recompiling..."
+        printf('File %s changed, recompiling...%n', changedFile)
         if (changedFile.name.endsWith('.java')) {
             if (JavaCompiler.isAvailable()) {
                 JavaCompiler.recompile(compilerConfig, changedFile)
             } else {
-                log.error("Cannot recompile [$changedFile.name], the current JVM is not a JDK (recompilation will not work on a JRE missing the compiler APIs).")
+                log.error('Cannot recompile [{}], the current JVM is not a JDK (recompilation will not work on a JRE missing the compiler APIs).', changedFile.name)
             }
         } else {
             compileGroovyFile(compilerConfig, changedFile)
@@ -338,6 +335,7 @@ class GrailsApp extends SpringApplication {
     protected static DirectoryWatcher.FileChangeListener createPluginManagerListener(ConfigurableApplicationContext applicationContext) {
         def pluginManager = applicationContext.getBean(GrailsPluginManager)
         return new DirectoryWatcher.FileChangeListener() {
+
             @Override
             void onChange(File file) {
                 if (!file.name.endsWith('.groovy') && !file.name.endsWith('.java')) {
@@ -355,9 +353,9 @@ class GrailsApp extends SpringApplication {
     }
 
     protected void configureDirectoryWatcher(DirectoryWatcher directoryWatcher, String location) {
-        directoryWatcher.addWatchDirectory(new File(location, "grails-app"), ['groovy', 'java'])
-        directoryWatcher.addWatchDirectory(new File(location, "src/main/groovy"), ['groovy', 'java'])
-        directoryWatcher.addWatchDirectory(new File(location, "src/main/java"), ['groovy', 'java'])
+        directoryWatcher.addWatchDirectory(new File(location, 'grails-app'), ['groovy', 'java'])
+        directoryWatcher.addWatchDirectory(new File(location, 'src/main/groovy'), ['groovy', 'java'])
+        directoryWatcher.addWatchDirectory(new File(location, 'src/main/java'), ['groovy', 'java'])
     }
 
     protected printRunStatus(ConfigurableApplicationContext applicationContext) {
@@ -366,11 +364,11 @@ class GrailsApp extends SpringApplication {
             String protocol = app.config.getProperty('server.ssl.key-store') ? 'https' : 'http'
             String contextPath = app.config.getProperty('server.servlet.context-path', '')
             String hostName = app.config.getProperty('server.address', 'localhost')
-            int port
+            int port = 0
             if (applicationContext instanceof WebServerApplicationContext) {
                 port = applicationContext.webServer.port
             }
-            println("Grails application running at ${protocol}://${hostName}:${port}${contextPath} in environment: ${Environment.current.name}")
+            printf('Grails application running at %s://%s:%s%s in environment: %s%n', protocol, hostName, port, contextPath, Environment.current.name)
 
         } catch (ignore) {
         }
