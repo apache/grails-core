@@ -166,14 +166,6 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     }
 
 
-    /**
-     * @deprecated Use {@link #getMetaProperties()} instead
-     */
-    @Deprecated
-    public PropertyDescriptor[] getPropertyDescriptors() {
-        return resolvePropertyFetcher().getPropertyDescriptors();
-    }
-
     private ClassPropertyFetcher resolvePropertyFetcher() {
         if(classPropertyFetcher == null) {
             classPropertyFetcher = ClassPropertyFetcher.forClass(clazz);
