@@ -154,7 +154,7 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
         softwareVersions
                 .forEach { softwareVersion ->
                     final String versionName = softwareVersion?.versionText
-                    final String href = GRAILS_DOC_BASE_URL + "/" + versionName + "/" + pageRelativePath
+                    final String href = GRAILS_DOC_BASE_URL + "/" + (versionName?.endsWith("-SNAPSHOT") ? 'snapshot' : versionName) + "/" + pageRelativePath
                     options << option(href, versionName, version == versionName)
                 }
 
