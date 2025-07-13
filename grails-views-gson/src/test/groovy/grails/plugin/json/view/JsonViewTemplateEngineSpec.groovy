@@ -25,6 +25,8 @@ import grails.web.mapping.LinkGenerator
 import groovy.json.JsonSlurper
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 /**
  * Created by graemerocher on 21/08/15.
  */
@@ -118,7 +120,7 @@ json {
 
         def output = writer.toString()
         then:"The output is correct"
-        new JsonSlurper().parse(output.getBytes("UTF-8"))
+        new JsonSlurper().parse(output.getBytes(StandardCharsets.UTF_8))
         output == '''{
     "_links": {
         "self": {

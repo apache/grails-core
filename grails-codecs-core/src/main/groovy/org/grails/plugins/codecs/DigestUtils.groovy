@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.codecs
 
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 abstract class DigestUtils {
@@ -38,7 +39,7 @@ abstract class DigestUtils {
             data.eachWithIndex { v, i -> src[i] = v }
         }
         else {
-            src = data.toString().getBytes("UTF-8")
+            src = data.toString().getBytes(StandardCharsets.UTF_8)
         }
         md.update(src) // This probably needs to use the thread's Locale encoding
         return md.digest()

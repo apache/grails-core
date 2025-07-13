@@ -19,10 +19,9 @@
 package org.grails.gradle.plugin.views.gsp
 
 import groovy.transform.CompileStatic
-import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
@@ -32,7 +31,6 @@ import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.War
-import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.util.SourceSets
 
 /**
@@ -55,7 +53,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
-        output?.dir("gsp-classes")
+        output?.dir('gsp-classes')
 
         FileCollection allClasspath = project.getObjects().fileCollection().from(
                 [
@@ -66,42 +64,20 @@ class GroovyPagePlugin implements Plugin<Project> {
                 ].findAll { it }
         )
 
-        def compileGroovyPages = tasks.register("compileGroovyPages", GroovyPageForkCompileTask) {
+        def compileGroovyPages = tasks.register('compileGroovyPages', GroovyPageForkCompileTask) {
             it.destinationDirectory.set(destDir)
             it.tmpDirPath = getTmpDirPath(project)
             it.source = project.layout.projectDirectory.dir('grails-app/views')
-            it.serverpath.set("/WEB-INF/grails-app/views/")
+            it.serverpath.set('/WEB-INF/grails-app/views/')
             it.classpath = allClasspath
         }
 
-        def compileWebappGroovyPages = tasks.register("compileWebappGroovyPages", GroovyPageForkCompileTask) {
+        def compileWebappGroovyPages = tasks.register('compileWebappGroovyPages', GroovyPageForkCompileTask) {
             it.destinationDirectory.set(destDir)
             it.source = project.layout.projectDirectory.dir('src/main/webapp')
             it.tmpDirPath = getTmpDirPath(project)
-            it.serverpath.set("/")
+            it.serverpath.set('/')
             it.classpath = allClasspath
-        }
-
-        registerGrailsExtension(project)
-        project.afterEvaluate {
-            GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
-            if (grailsExt.pathingJar && Os.isFamily(Os.FAMILY_WINDOWS)) {
-                Jar pathingJar = tasks.named('pathingJar', Jar).get()
-                ConfigurableFileCollection withPathingJarClasspath = project.files(
-                        project.layout.buildDirectory.dir('classes/groovy/main'),
-                        project.layout.buildDirectory.dir('resources/main'),
-                        destDir,
-                        pathingJar.archiveFile
-                )
-                compileGroovyPages.configure {
-                    it.dependsOn(pathingJar)
-                    it.classpath = withPathingJarClasspath.asFileTree
-                }
-                compileWebappGroovyPages.configure {
-                    it.dependsOn(pathingJar)
-                    it.classpath = withPathingJarClasspath.asFileTree
-                }
-            }
         }
 
         compileGroovyPages.configure {
@@ -115,8 +91,9 @@ class GroovyPagePlugin implements Plugin<Project> {
             war.dependsOn compileGroovyPages
             war.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (war.name == 'bootWar') {
-                war.from(destDir)
-                war.into("WEB-INF/classes")
+                war.from(destDir) { CopySpec it ->
+                    it.into('WEB-INF/classes')
+                }
             } else if (war.name == 'war') {
                 war.from destDir
             }
@@ -133,18 +110,13 @@ class GroovyPagePlugin implements Plugin<Project> {
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (!(jar instanceof War)) {
                 if (jar.name == 'bootJar') {
-                    jar.from(destDir)
-                    jar.into("BOOT-INF/classes")
+                    jar.from(destDir) { CopySpec it ->
+                        it.into('BOOT-INF/classes')
+                    }
                 } else if (jar.name == 'jar') {
                     jar.from destDir
                 }
             }
-        }
-    }
-
-    protected GrailsExtension registerGrailsExtension(Project project) {
-        if (project.extensions.findByName("grails") == null) {
-            project.extensions.add("grails", new GrailsExtension(project))
         }
     }
 

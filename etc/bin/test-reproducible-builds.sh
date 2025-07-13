@@ -28,17 +28,20 @@ cd "${SCRIPT_DIR}/../.."
 rm -rf "${SCRIPT_DIR}/results" || true
 mkdir -p "${SCRIPT_DIR}/results"
 
-git clean -xdf --exclude='etc/bin'
+git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
 killall -e java || true
 cd grails-gradle
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache
 cd ..
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache
+cd grails-forge
+./gradlew build --rerun-tasks -PskipTests --no-build-cache
+cd ..
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/first.txt"
 mkdir -p "${SCRIPT_DIR}/results/first"
 find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/first/"
 
-git clean -xdf --exclude='etc/bin'
+git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
 killall -e java || true
 cd grails-gradle
 ./gradlew build --rerun-tasks -PskipTests --no-build-cache
@@ -51,7 +54,7 @@ find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs 
 cd "${SCRIPT_DIR}/results"
 
 # diff -u first.txt second.txt
-DIFF_RESULTS=$(comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort)
+DIFF_RESULTS=$(comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort)
 echo "Differing artifacts:"
 echo "$DIFF_RESULTS" > diff.txt
 cat diff.txt

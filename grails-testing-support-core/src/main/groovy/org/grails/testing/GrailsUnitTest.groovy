@@ -139,17 +139,16 @@ trait GrailsUnitTest {
     }
 
     void cleanupGrailsApplication() {
-        if (_grailsApplication != null) {        
+        if (_grailsApplication != null) {
             if (_grailsApplication instanceof DefaultGrailsApplication) {
                 ((DefaultGrailsApplication)_grailsApplication).clear()
             }
 
-            ApplicationContext applicationContext = grailsApplication.getParentContext()
-
+            ApplicationContext applicationContext = _grailsApplication.getParentContext()
             if (applicationContext instanceof ConfigurableApplicationContext) {
                 if (((ConfigurableApplicationContext) applicationContext).isActive()) {
-                    if(grailsApplication.mainContext instanceof Closeable) {
-                        ((Closeable)grailsApplication.mainContext).close()
+                    if(_grailsApplication.mainContext instanceof Closeable) {
+                        ((Closeable)_grailsApplication.mainContext).close()
                     }
                     if (applicationContext instanceof Closeable) {
                         ((Closeable)applicationContext).close()
@@ -161,6 +160,8 @@ trait GrailsUnitTest {
             DeferredBindingActions.clear()
 
             this._grailsApplication = null
+            this._servletContext = null
+
             cleanupPromiseFactory()
             Holders.clear()
         }

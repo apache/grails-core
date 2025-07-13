@@ -30,11 +30,11 @@ build:
 dependencies:
     - scope: build
       coords: "org.apache.grails:grails-gradle-plugins"
-    - scope: developmentOnly
+    - scope: testAndDevelopmentOnly
       coords: "org.webjars.npm:bootstrap"
-    - scope: developmentOnly
+    - scope: testAndDevelopmentOnly
       coords: "org.webjars.npm:bootstrap-icons"
-    - scope: developmentOnly
+    - scope: testAndDevelopmentOnly
       coords: "org.webjars.npm:jquery"
     - scope: implementation
       coords: "org.springframework.boot:spring-boot-starter-logging"

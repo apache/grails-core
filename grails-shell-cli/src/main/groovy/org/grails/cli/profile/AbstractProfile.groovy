@@ -19,6 +19,7 @@ package org.grails.cli.profile
 import grails.io.IOUtils
 import grails.util.BuildSettings
 import grails.util.CosineSimilarity
+import grails.util.Environment
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import jline.console.completer.ArgumentCompleter
@@ -74,7 +75,7 @@ abstract class AbstractProfile implements Profile {
     protected ExclusionDependencySelector exclusionDependencySelector = new ExclusionDependencySelector()
     protected String description = "";
     protected String instructions = "";
-    protected String version = BuildSettings.package.implementationVersion
+    protected String version = Environment.grailsVersion
 
     AbstractProfile(Resource profileDir) {
         this(profileDir, AbstractProfile.getClassLoader())

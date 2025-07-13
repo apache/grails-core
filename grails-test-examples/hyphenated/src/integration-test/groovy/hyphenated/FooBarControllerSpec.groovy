@@ -30,7 +30,7 @@ class FooBarControllerSpec extends ContainerGebSpec {
 
     void "test returns null"() {
         when:"The home page is visited"
-        go '/foo-bar/returns-null'
+        go('/foo-bar/returns-null')
 
         then:"The title is correct"
         $().text() == 'returns null'
@@ -38,7 +38,7 @@ class FooBarControllerSpec extends ContainerGebSpec {
 
     void "test returns map"() {
         when:"The home page is visited"
-        go '/foo-bar/returns-map'
+        go('/foo-bar/returns-map')
 
         then:"The title is correct"
         $().text() == 'returns Map Sally'
@@ -46,7 +46,7 @@ class FooBarControllerSpec extends ContainerGebSpec {
 
     void "test default action"() {
         when:"The home page is visited"
-        go '/foo-bar'
+        go('/foo-bar')
 
         then:"The title is correct"
         $().text() == 'default action'

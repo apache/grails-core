@@ -28,10 +28,16 @@ import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.api.*
+import org.gradle.api.Action
+import org.gradle.api.GradleException
+import org.gradle.api.NamedDomainObjectProvider
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
@@ -39,7 +45,12 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.AbstractCopyTask
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetOutput
+import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -54,9 +65,14 @@ import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
 import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
 
 import javax.inject.Inject
+import java.nio.charset.StandardCharsets
+import java.util.regex.Pattern
 
 /**
  * The main Grails gradle plugin implementation
@@ -66,8 +82,8 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsGradlePlugin extends GroovyPlugin {
-    public static final String APPLICATION_CONTEXT_COMMAND_CLASS = "grails.dev.commands.ApplicationCommand"
-    public static final String PROFILE_CONFIGURATION = "profile"
+
+    public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
 
     protected static final List<String> CORE_GORM_LIBRARIES = ['async', 'core', 'simple', 'web', 'rest-client', 'gorm', 'gorm-validation', 'gorm-plugin-support', 'gorm-support', 'test-support', 'hibernate-core', 'gorm-test', 'rx', 'rx-plugin-support']
     // NOTE: mongodb, neo4j etc. should NOT be included here so they can be independently versioned
@@ -95,9 +111,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         configureProfile(project)
 
-        applyDefaultPlugins(project)
-
         registerGrailsExtension(project)
+
+        applyDefaultPlugins(project)
 
         configureGroovy(project)
 
@@ -149,6 +165,44 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     }
                 }
             """.stripIndent(16)
+        }
+    }
+
+    // TODO: this is copied from grails-common, but we should consider moving grails-common up to grails-gradle once
+    // the publish plugin is moved out of grails-core
+    static void makePropertiesFileReproducible(File factoriesFile) {
+        String sourceDateEpoch = System.getenv('SOURCE_DATE_EPOCH')
+        if (!sourceDateEpoch) {
+            return
+        }
+
+        Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\\\s).*$')
+
+        List<String> lines = factoriesFile.readLines(StandardCharsets.ISO_8859_1.name())
+
+        boolean dateReplaced = false
+        factoriesFile.withWriter { BufferedWriter writer ->
+            lines.each { String line ->
+                if (!dateReplaced && timeRegex.matcher(line).matches()) {
+                    dateReplaced = true
+                    writer.writeLine("# SOURCE_DATE_EPOCH = ${sourceDateEpoch}" as String)
+                    return
+                }
+
+                writer.writeLine(line)
+            }
+        }
+    }
+
+    private static Provider<String> getMainClassProvider(Project project) {
+        Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
+        project.provider {
+            File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+            if (!cacheFile?.exists()) {
+                return null
+            }
+
+            cacheFile?.text
         }
     }
 
@@ -250,18 +304,35 @@ class GrailsGradlePlugin extends GroovyPlugin {
         // It would be nice to have documented in a comment why this global exclude is in here
         String slf4jPreventExclusion = project.properties['slf4jPreventExclusion']
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
-            project.configurations.configureEach {Configuration configuration ->
-                configuration.exclude group: "org.slf4j", module: "slf4j-simple"
+            project.configurations.configureEach { Configuration configuration ->
+                configuration.exclude group: 'org.slf4j', module: 'slf4j-simple'
             }
         }
     }
 
     protected void configureProfile(Project project) {
-        if(!project.configurations.names.contains(PROFILE_CONFIGURATION)) {
-            project.configurations.register(PROFILE_CONFIGURATION).configure { Configuration profileConfiguration ->
-                profileConfiguration.incoming.beforeResolve() {
-                    if (!profileConfiguration.allDependencies) {
-                        addDefaultProfile(project, profileConfiguration)
+        if (!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
+            project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
+                profileConfiguration.description = "Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell"
+                profileConfiguration.canBeConsumed = false
+                profileConfiguration.canBeResolved = true
+                profileConfiguration.transitive = true
+
+                profileConfiguration.defaultDependencies { DependencySet deps ->
+                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
+                    project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
+                    deps.add(
+                            project.dependencies.create(defaultProfileCoordinates)
+                    )
+                }
+
+                profileConfiguration.resolutionStrategy.eachDependency { details ->
+                    if (details.requested.group == 'org.apache.grails.profiles' && !details.requested.version) {
+                        String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+                        project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
+
+                        details.useVersion(grailsVersion)
+                        details.because("Grails Profile defined without a version, defaulting to configured Grails Version")
                     }
                 }
             }
@@ -271,14 +342,19 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void applyDefaultPlugins(Project project) {
         applySpringBootPlugin(project)
 
-        Plugin dependencyManagementPlugin = project.plugins.findPlugin(DependencyManagementPlugin)
-        if (dependencyManagementPlugin == null) {
-            project.plugins.apply(DependencyManagementPlugin)
+        project.afterEvaluate {
+            GrailsExtension ge = project.extensions.getByType(GrailsExtension)
+            if (ge.springDependencyManagement) {
+                Plugin dependencyManagementPlugin = project.plugins.findPlugin(DependencyManagementPlugin)
+                if (dependencyManagementPlugin == null) {
+                    project.plugins.apply(DependencyManagementPlugin)
+                }
+
+                DependencyManagementExtension dme = project.extensions.findByType(DependencyManagementExtension)
+
+                applyBomImport(dme, project)
+            }
         }
-
-        DependencyManagementExtension dme = project.extensions.findByType(DependencyManagementExtension)
-
-        applyBomImport(dme, project)
     }
 
     protected void applySpringBootPlugin(Project project) {
@@ -300,22 +376,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
         'web'
     }
 
-    protected String getDefaultMicronautVersion() {
-        '4.6.5'
-    }
-
-    void addDefaultProfile(Project project, Configuration profileConfig) {
-        project.dependencies.add('profile', "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: defaultProfile}:")
-    }
-
     @CompileDynamic
     protected Task createBuildPropertiesTask(Project project) {
-        if (project.tasks.findByName("buildProperties") == null) {
+        if (project.tasks.findByName('buildProperties') == null) {
             File resourcesDir = SourceSets.findMainSourceSet(project).output.resourcesDir
-            File buildInfoFile = new File(resourcesDir, "META-INF/grails.build.info")
+            File buildInfoFile = new File(resourcesDir, 'META-INF/grails.build.info')
 
 
-            Task buildPropertiesTask = project.tasks.create("buildProperties")
+            Task buildPropertiesTask = project.tasks.create('buildProperties')
             Map<String, Object> buildPropertiesContents = ['grails.env'            : Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
                                                            'info.app.name'         : project.name,
                                                            'info.app.version'      : project.version instanceof Serializable ? project.version : project.version.toString(),
@@ -331,10 +399,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         entry key: me.key, value: me.value
                     }
                 }
+                makePropertiesFileReproducible(buildInfoFile)
             }
 
             TaskContainer tasks = project.tasks
-            tasks.findByName("processResources")?.dependsOn(buildPropertiesTask)
+            tasks.findByName('processResources')?.dependsOn(buildPropertiesTask)
         }
     }
 
@@ -342,13 +411,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureMicronaut(Project project) {
         final String micronautVersion = project.properties['micronautVersion']
         if (micronautVersion) {
-            project.configurations.all({ Configuration configuration ->
+            project.configurations.configureEach({ Configuration configuration ->
                 configuration.resolutionStrategy.eachDependency({ DependencyResolveDetails details ->
                     String dependencyName = details.requested.name
                     String group = details.requested.group
                     if (group == 'io.micronaut' && dependencyName.startsWith('micronaut')) {
                         details.useVersion(micronautVersion)
-                        return
                     }
                 } as Action<DependencyResolveDetails>)
             } as Action<Configuration>)
@@ -359,7 +427,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureGroovy(Project project) {
         final String groovyVersion = project.properties['groovy.version']
         if (groovyVersion) {
-            project.logger.lifecycle("Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version ${groovyVersion}.")
+            project.logger.lifecycle('Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version {}.', groovyVersion)
             project.configurations.configureEach { Configuration configuration ->
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String group = details.requested.group
@@ -384,8 +452,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     protected GrailsExtension registerGrailsExtension(Project project) {
-        if (project.extensions.findByName("grails") == null) {
-            project.extensions.add("grails", new GrailsExtension(project))
+        if (project.extensions.findByName('grails') == null) {
+            project.extensions.add('grails', new GrailsExtension(project))
         }
     }
 
@@ -406,15 +474,24 @@ class GrailsGradlePlugin extends GroovyPlugin {
         project.afterEvaluate {
             FileCollection fileCollection = buildClasspath(project, project.configurations.runtimeClasspath, project.configurations.console)
             for (ctxCommand in applicationContextCommands) {
-                String taskName = GrailsNameUtils.getLogicalPropertyName(ctxCommand, "Command")
-                String commandName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(ctxCommand, "Command"))
-                if (project.tasks.findByName(taskName) == null) {
-                    project.tasks.create(taskName, ApplicationContextCommandTask) {
-                        classpath = fileCollection
-                        command = commandName
-                        systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
-                        if (project.hasProperty('args')) {
-                            args(CommandLineParser.translateCommandline(project.args))
+                String taskName = GrailsNameUtils.getLogicalPropertyName(ctxCommand, 'Command')
+                String commandName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(ctxCommand, 'Command'))
+                if (!project.tasks.names.contains(taskName)) {
+                    project.tasks.register(taskName, ApplicationContextCommandTask).configure {
+                        it.classpath = fileCollection
+                        it.command = commandName
+                        it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+                        List<Object> args = []
+                        def otherArgs = project.findProperty('args')
+                        if (otherArgs) {
+                            args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
+                        }
+
+                        def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+
+                        it.doFirst {
+                            args << appClassProvider.get()
+                            it.args(args)
                         }
                     }
                 }
@@ -438,7 +515,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileStatic
     protected List<File> resolveGrailsResourceDirs(Project project) {
-        List<File> grailsResourceDirs = [project.file("src/main/resources")]
+        List<File> grailsResourceDirs = [project.file('src/main/resources')]
         for (String f in grailsAppResourceDirs) {
             grailsResourceDirs.add(project.file("grails-app/${f}"))
         }
@@ -448,7 +525,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileStatic
     protected List<File> resolveGrailsSourceDirs(Project project) {
         List<File> grailsSourceDirs = []
-        File grailsApp = project.file("grails-app")
+        File grailsApp = project.file('grails-app')
         if (grailsApp.exists()) {
             grailsApp.eachDir { File subdir ->
                 if (isGrailsSourceDirectory(subdir)) {
@@ -456,14 +533,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 }
             }
         }
-        grailsSourceDirs.add(project.file("src/main/groovy"))
+        grailsSourceDirs.add(project.file('src/main/groovy'))
         grailsSourceDirs
     }
 
     @CompileStatic
     protected boolean isGrailsSourceDirectory(File subdir) {
         def dirName = subdir.name
-        !subdir.hidden && !dirName.startsWith(".") && !excludedGrailsAppSourceDirs.contains(dirName) && !grailsAppResourceDirs.contains(dirName)
+        !subdir.hidden && !dirName.startsWith('.') && !excludedGrailsAppSourceDirs.contains(dirName) && !grailsAppResourceDirs.contains(dirName)
     }
 
     protected String resolveGrailsVersion(Project project) {
@@ -480,8 +557,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureAssetCompilation(Project project) {
         if (project.extensions.findByName('assets')) {
             project.assets {
-                assetsPath = 'grails-app/assets'
-                compileDir = 'build/assetCompile/assets'
+                assetsPath = project.layout.projectDirectory.dir('grails-app/assets')
+            }
+            project.tasks.named('assetCompile').configure {
+                it.destinationDirectory = project.layout.buildDirectory.dir('assetCompile/assets')
             }
         }
     }
@@ -490,7 +569,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         def systemPropertyConfigurer = { String defaultGrailsEnv, JavaForkOptions task ->
             def map = System.properties.findAll { entry ->
-                entry.key?.toString()?.startsWith("grails.")
+                entry.key?.toString()?.startsWith('grails.')
             }
             for (key in map.keySet()) {
                 def value = map.get(key)
@@ -504,14 +583,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
             task.systemProperty Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString())
             task.systemProperty Metadata.APPLICATION_GRAILS_VERSION, grailsVersion
             task.systemProperty Environment.KEY, defaultGrailsEnv
-            task.systemProperty Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: ""
+            task.systemProperty Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: ''
             if (task.minHeapSize == null) {
-                task.minHeapSize = "768m"
+                task.minHeapSize = '768m'
             }
             if (task.maxHeapSize == null) {
-                task.maxHeapSize = "768m"
+                task.maxHeapSize = '768m'
             }
-            task.jvmArgs "-XX:+TieredCompilation", "-XX:TieredStopAtLevel=1", "-XX:CICompilerCount=3"
+            task.jvmArgs '-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3'
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
@@ -533,54 +612,52 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureConsoleTask(Project project) {
         TaskContainer tasks = project.tasks
         if (!project.configurations.names.contains('console')) {
+            if (!tasks.names.contains('findMainClass')) {
+                project.logger.info('Project {} does not contain the findMainClass task so the console & shell tasks will not be created.', project.name)
+                return
+            }
+
             NamedDomainObjectProvider<Configuration> consoleConfiguration = project.configurations.register('console')
-            def consoleTask = createConsoleTask(project, tasks, consoleConfiguration)
-            def shellTask = createShellTask(project, tasks, consoleConfiguration)
-
-            tasks.named('findMainClass').configure {
-                it.doLast {
-                    ExtraPropertiesExtension extraProperties = (ExtraPropertiesExtension) project.getExtensions().getByName("ext")
-                    def mainClassName = extraProperties.get('mainClassName')
-                    if (mainClassName) {
-                        consoleTask.get().args mainClassName
-                        shellTask.get().args mainClassName
-                        project.tasks.withType(ApplicationContextCommandTask) { ApplicationContextCommandTask task ->
-                            task.args mainClassName
-                        }
-                    }
-                    project.tasks.withType(ApplicationContextScriptTask) { ApplicationContextScriptTask task ->
-                        task.args mainClassName
-                    }
-                }
-            }
-
-            consoleTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
-            }
-
-            shellTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
-            }
+            createConsoleTask(project, tasks, consoleConfiguration)
+            createShellTask(project, tasks, consoleConfiguration)
         }
     }
 
     @CompileDynamic
     protected TaskProvider<JavaExec> createConsoleTask(Project project, TaskContainer tasks, NamedDomainObjectProvider<Configuration> configuration) {
-        def consoleTask = tasks.register("console", JavaExec)
-        consoleTask.configure {
-            it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
-            it.mainClass.set("grails.ui.console.GrailsSwingConsole")
+        def consoleTask = tasks.register('console', JavaExec)
+        project.afterEvaluate {
+            consoleTask.configure {
+                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
+                it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
+                it.mainClass.set('grails.ui.console.GrailsSwingConsole')
+
+                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
+
+                it.doFirst {
+                    it.args(appClass.get())
+                }
+            }
         }
         consoleTask
     }
 
     @CompileDynamic
     protected TaskProvider<JavaExec> createShellTask(Project project, TaskContainer tasks, NamedDomainObjectProvider<Configuration> configuration) {
-        def shellTask = tasks.register("shell", JavaExec)
-        shellTask.configure {
-            it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
-            it.mainClass.set("grails.ui.shell.GrailsShell")
-            it.standardInput = System.in
+        def shellTask = tasks.register('shell', JavaExec)
+        project.afterEvaluate {
+            shellTask.configure {
+                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
+                it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
+                it.mainClass.set('grails.ui.shell.GrailsShell')
+                it.standardInput = System.in
+
+                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
+
+                it.doFirst {
+                    it.args(appClass.get())
+                }
+            }
         }
         shellTask
     }
@@ -595,16 +672,91 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
+    @CompileDynamic
     protected void registerFindMainClassTask(Project project) {
         TaskContainer taskContainer = project.tasks
-        def findMainClassTask = taskContainer.findByName("findMainClass")
-        if (findMainClassTask == null) {
-            findMainClassTask = project.tasks.register("findMainClass", FindMainClassTask).get()
-            findMainClassTask.mustRunAfter(project.tasks.withType(GroovyCompile))
-        } else if (!FindMainClassTask.class.isAssignableFrom(findMainClassTask.class)) {
-            def grailsFindMainClass = project.tasks.register("grailsFindMainClass", FindMainClassTask).get()
-            grailsFindMainClass.dependsOn(findMainClassTask)
-            findMainClassTask.finalizedBy(grailsFindMainClass)
+
+        def existingTask = taskContainer.findByName('findMainClass')
+        if (existingTask == null) {
+            def mainClassFileContainer = project.layout.buildDirectory.file('resolvedMainClassName')
+            TaskProvider<FindMainClassTask> findMainClassTask = project.tasks.register('findMainClass', FindMainClassTask)
+            findMainClassTask.configure {
+                it.dependsOn(project.tasks.named('compileGroovy', GroovyCompile), project.tasks.named('classes'))
+                it.mustRunAfter(project.tasks.named('classes'))
+                it.mainClassCacheFile.set(mainClassFileContainer)
+                it.outputs.upToDateWhen {
+                    mainClassFileContainer.orNull?.asFile?.exists()
+                }
+            }
+
+            project.afterEvaluate {
+                // Support overrides - via mainClass property
+                def propertyMainClassName = project.findProperty('mainClass')
+                if (propertyMainClassName) {
+                    findMainClassTask.configure {
+                        it.mainClassName.set(propertyMainClassName)
+                    }
+                }
+
+                // Support overrides - via mainClass springboot extension
+                def springBootExtension = project.extensions.getByType(SpringBootExtension)
+                String springBootMainClassName = springBootExtension.mainClass.getOrNull()
+                if (springBootMainClassName) {
+                    findMainClassTask.configure {
+                        it.mainClassName.set(springBootMainClassName)
+                    }
+                }
+
+                if (springBootMainClassName && propertyMainClassName) {
+                    if (springBootMainClassName != propertyMainClassName) {
+                        throw new GradleException("If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value")
+                    }
+                }
+
+                def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
+                def overriddenMainClass = propertyMainClassName ?: springBootMainClassName
+                if (!overriddenMainClass) {
+                    // the findMainClass task needs to set these values
+                    extraProperties.set('mainClassName', project.provider {
+                        File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                        if (!cacheFile?.exists()) {
+                            return null
+                        }
+
+                        cacheFile?.text
+                    })
+
+                    springBootExtension.mainClass.set(project.provider {
+                        File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
+                        if (!cacheFile?.exists()) {
+                            return null
+                        }
+
+                        cacheFile?.text
+                    })
+                } else {
+                    // we need to set the overridden value on both
+                    extraProperties.set('mainClass', overriddenMainClass)
+                    springBootExtension.mainClass.set(overriddenMainClass)
+                }
+            }
+
+            project.tasks.withType(BootArchive).configureEach { BootArchive bootTask ->
+                bootTask.dependsOn(findMainClassTask)
+                bootTask.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+            }
+
+            project.tasks.withType(BootRun).configureEach { BootRun it ->
+                it.dependsOn(findMainClassTask)
+                it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+            }
+
+            project.tasks.withType(ResolveMainClassName).configureEach {
+                it.dependsOn(findMainClassTask)
+                it.configuredMainClassName.convention(GrailsGradlePlugin.getMainClassProvider(project))
+            }
+        } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
+            project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
         }
     }
 
@@ -634,8 +786,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     'info.app.grailsVersion': grailsVersion
             ]
 
-            task.from(project.relativePath("src/main/templates")) { spec ->
-                spec.into("META-INF/templates")
+            task.from(project.relativePath('src/main/templates')) { spec ->
+                spec.into('META-INF/templates')
             }
 
             if (!native2ascii) {
@@ -672,7 +824,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         TaskProvider<Task> native2asciiTask = tasks.register('native2ascii').configure {
             it.doLast {
                 it.ant.native2ascii(src: src, dest: dest,
-                        includes: "**/*.properties", encoding: "UTF-8")
+                        includes: '**/*.properties', encoding: 'UTF-8')
             }
             it.inputs.dir(src)
             it.outputs.dir(dest)
@@ -683,14 +835,25 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileDynamic
     protected void configureRunScript(Project project) {
-        if(!project.tasks.names.contains('runScript')) {
-            project.tasks.register("runScript", ApplicationContextScriptTask).configure {
-                SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-                it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
-                def argsProperty = project.findProperty('args')
-                if (argsProperty) {
-                    it.args(CommandLineParser.translateCommandline(argsProperty))
+        if (!project.tasks.names.contains('runScript')) {
+            def runTask = project.tasks.register('runScript', ApplicationContextScriptTask)
+            project.afterEvaluate {
+                runTask.configure {
+                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
+                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+                    List<Object> args = []
+                    def otherArgs = project.findProperty('args')
+                    if (otherArgs) {
+                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
+                    }
+
+                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+
+                    it.doFirst {
+                        args << appClassProvider.get()
+                        it.args(args)
+                    }
                 }
             }
         }
@@ -698,30 +861,43 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileDynamic
     protected void configureRunCommand(Project project) {
-        if(!project.tasks.names.contains('runCommand')) {
-            project.tasks.register("runCommand", ApplicationContextCommandTask).configure {
-                SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-                it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                it.systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
-                def argsProperty = project.findProperty('args')
-                if (argsProperty) {
-                    it.args(CommandLineParser.translateCommandline(argsProperty))
+        if (!project.tasks.names.contains('runCommand')) {
+            def runTask = project.tasks.register('runCommand', ApplicationContextCommandTask)
+            project.afterEvaluate {
+                runTask.configure {
+                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
+                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+
+                    List<Object> args = []
+                    def otherArgs = project.findProperty('args')
+                    if (otherArgs) {
+                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
+                    }
+
+                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+
+                    it.doFirst {
+                        args << appClassProvider.get()
+                        it.args(args)
+                    }
+
                 }
             }
         }
     }
 
     protected FileCollection resolveClassesDirs(SourceSetOutput output, Project project) {
-        output?.classesDirs ?: project.files(new File(project.buildDir, "classes/main"))
+        output?.classesDirs ?: project.files(project.layout.buildDirectory.dir('classes/main'))
     }
 
     protected FileCollection buildClasspath(Project project, Configuration... configurations) {
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         SourceSetOutput output = mainSourceSet?.output
         FileCollection mainFiles = resolveClassesDirs(output, project)
-        FileCollection fileCollection = project.files("${project.buildDir}/resources/main", "${project.projectDir}/gsp-classes") + mainFiles
+        FileCollection fileCollection = project.files(project.layout.buildDirectory.dir('resources/main'), project.layout.buildDirectory.dir('gsp-classes')) + mainFiles
         configurations.each {
-            fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith("spring-boot-devtools") })
+            fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
         }
         fileCollection
     }

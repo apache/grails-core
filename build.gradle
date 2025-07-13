@@ -19,10 +19,10 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-
-
 ext {
+    isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
@@ -46,9 +46,14 @@ ext {
 
 allprojects {
     repositories {
-        maven { url = 'https://repo.grails.org/grails/restricted' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+            }
+        }
     }
 }
 
@@ -74,7 +79,7 @@ subprojects {
 
     configurations.configureEach {
         resolutionStrategy {
-            def cacheHours = isCiBuild ? 0 : 24
+            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
         }

@@ -17,20 +17,15 @@
  *  under the License.
  */
 
-import grails.doc.AddReleaseDropDown
-import grails.doc.gradle.PublishGuide
+import grails.doc.git.FetchTagsTask
+import grails.doc.dropdown.CreateReleaseDropDownTask
+import grails.doc.gradle.PublishGuideTask
 
 plugins {
     id 'base'
     id 'org.asciidoctor.jvm.convert'
     id 'groovy'
 }
-
-// Make sure doc projects are evaluated last so they pick up all projects with documentation since they are dynamically
-// found by the aggregateGroovydoc task
-rootProject.subprojects
-        .findAll { !(it.name in testProjects) && it.name != project.name && !(it.name in cliProjects) && !(it.name in profileProjects) }
-        .each { project.evaluationDependsOn(it.path) }
 
 compileJava.options.release = javaVersion.toInteger()
 
@@ -62,110 +57,50 @@ dependencies {
 }
 
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
+def combinedGroovydoc = tasks.register('aggregateGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
-tasks.register('aggregateGroovydoc', Groovydoc).configure { Groovydoc gdoc ->
-    gdoc.group = 'documentation'
-    def sources = rootProject.subprojects
+combinedGroovydoc.configure { Groovydoc gdoc ->
+    gdoc.windowTitle = "Grails $projectVersion"
+    gdoc.docTitle = "Grails $projectVersion"
+
+    def docProjects = rootProject.subprojects
             .findAll { it.findProperty('includeInApiDocs') }
-            .collectMany {Project it ->
+
+    def sources = docProjects
+            .collectMany { Project it ->
                 List possibleSources = [it.sourceSets.main]
 
                 def testFixturesSource = it.sourceSets.findByName('testFixtures')
-                if(testFixturesSource) {
+                if (testFixturesSource) {
                     possibleSources.add(testFixturesSource)
                 }
 
                 def astSource = it.sourceSets.findByName('ast')
-                if(astSource) {
+                if (astSource) {
                     possibleSources.add(astSource)
                 }
                 possibleSources
             }
             .flatten()
-    gdoc.source(sources.collect{ SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
-        if(!(srcDir.name in ['java', 'groovy'])) {
+    gdoc.source(sources.collect { SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
+        if (!(srcDir.name in ['java', 'groovy'])) {
             return false
         }
 
         srcDir.exists()
     }.unique())
-    gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
-    gdoc.classpath = files(sources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
-    gdoc.groovyClasspath = configurations.documentation
+
+    gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
-    gdoc.windowTitle = "Grails $projectVersion"
-    gdoc.docTitle = "Grails $projectVersion"
-    gdoc.access = GroovydocAccess.PROTECTED
-    gdoc.includeAuthor = true
-    gdoc.includeMainForScripts = false
-    gdoc.processScripts = false
+
     gdoc.inputs.files(gdoc.source)
     gdoc.outputs.dir(gdoc.destinationDir)
-
-    def gebVersion = getVersion('geb-spock')
-    def testContainersVersion = getVersion('testcontainers')
-    def springVersion = getVersion('spring-core')
-    def springBootVersion = getVersion('spring-boot')
-
-    gdoc.link("https://www.gebish.org/manual/${gebVersion}/api/", 'geb.')
-    gdoc.link("https://javadoc.io/doc/org.testcontainers/testcontainers/${testContainersVersion}/", 'org.testcontainers.')
-    gdoc.link("https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/", 'org.springframework.core.')
-    gdoc.link("https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/", 'org.springframework.boot.')
-
-    gdoc.doLast {
-        delete(project.layout.buildDirectory.dir('tmp'))
-    }
 }
 
 // use jsoup in PdfBuilder for cleaning input html
 System.setProperty('grails.docs.clean.html', 'true')
 // creates single.html.before.xml and single.html.after.xml files for debugging pdf input when enabled
 //System.setProperty('grails.docs.debug.pdf','true')
-
-asciidoctor {
-    resources {
-        from('resources')
-    }
-
-    options template_dirs: ["${projectDir}/src/docs/templates"]
-    attributes 'experimental': 'true',
-            'compat-mode': 'true',
-            'icons': 'font',
-            'linkcss': 'true',
-            'docinfo1': '',
-            'toc': 'left',
-            'version': project.version,
-            'sourcedir': rootProject.projectDir.absolutePath
-}
-
-asciidoctor.dependsOn('aggregateGroovydoc')
-
-tasks.register('dist', Zip).configure { Zip it ->
-    it.dependsOn 'docs'
-    it.from outputDir
-}
-
-tasks.register('createReleaseDropdown', AddReleaseDropDown).configure { AddReleaseDropDown it ->
-    it.group = 'documentation'
-    it.dependsOn 'publishGuide'
-
-    it.inputFiles = project.layout.buildDirectory.files('original-guide/guide/single.html')
-    it.docsDirectory = project.layout.buildDirectory.dir('original-guide')
-    it.outputDir = project.layout.buildDirectory.dir('modified-guide')
-}
-
-tasks.register('resolveGroovyVersion').configure { Task versionTask ->
-    versionTask.group = 'documentation'
-    versionTask.description = 'Resolve Groovy Version from the BOM'
-    ext.resolved = configurations.compileClasspath
-            .resolvedConfiguration
-            .resolvedArtifacts
-            .find {
-                it.moduleVersion.id.group == 'org.apache.groovy' &&
-                        it.moduleVersion.id.name.contains('groovy')
-            }.moduleVersion.id.version
-    logger.lifecycle('Resolved Groovy version for Guide links: {}', ext.resolved)
-}
 
 String getVersion(String artifact) {
     String version = configurations.runtimeClasspath
@@ -174,14 +109,47 @@ String getVersion(String artifact) {
             .find {
                 it.moduleVersion.id.name == artifact
             }?.moduleVersion?.id?.version
-    if(!version) {
+    if (!version) {
         throw new GradleException("Could not find ${artifact} version.")
     }
     version
 }
 
-tasks.register('publishGuide', PublishGuide).configure { PublishGuide publish ->
-    publish.dependsOn(['generateBomDocumentation', 'aggregateGroovydoc', 'jar', 'resolveGroovyVersion', 'processTestResources', 'compileTestJava', 'compileTestGroovy', 'test'])
+def generateBomDocumentation = tasks.register('generateBomDocumentation')
+generateBomDocumentation.configure { Task it ->
+    it.dependsOn(':grails-bom:extractConstraints')
+
+    it.description = 'Generates an AsciiDoc table listing Group, Artifact, and Version for project dependencies.'
+    it.group = 'documentation'
+
+    it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
+    it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
+
+    def versionsDir = project.layout.projectDirectory.dir('src/en/ref/Versions')
+    it.doFirst {
+        versionsDir.asFile.mkdirs()
+    }
+
+    def bomDocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc')
+    def grailsBomConstraintFile = project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc')
+    it.doLast {
+        def bomDocument = bomDocumentFile.asFile
+        bomDocument.withWriter { writer ->
+            writer.writeLine '== Grails BOM Dependencies'
+            writer.writeLine ''
+            writer.writeLine 'This document provides information about the dependencies defined in the Grails BOM - also known as `org.apache.grails:grails-bom`. It includes the artifact coordinates, where in the hierarchy the coordinate was defined, and the maven property that defines the version.'
+            writer.writeLine ''
+            writer.write(grailsBomConstraintFile.get().asFile.text)
+            writer.writeLine ''
+        }
+
+        it.logger.lifecycle "BOM Dependency Page generated to: ${bomDocument.absolutePath}"
+    }
+}
+
+def publishGuideTask = tasks.register('publishGuide', PublishGuideTask)
+publishGuideTask.configure { PublishGuideTask publish ->
+    publish.dependsOn([generateBomDocumentation])
 
     // No language setting because we want the English guide to be
     // generated with a 'en' in the path, but the source is in 'en'
@@ -196,15 +164,15 @@ tasks.register('publishGuide', PublishGuide).configure { PublishGuide publish ->
     publish.properties = project.provider {
         def springVersion = getVersion('spring-core')
         def springBootVersion = getVersion('spring-boot')
-
+        def groovyVersion = getVersion('groovy') as String
         [
                 'api'                      : '../api',
                 'safe'                     : 'UNSAFE', // Make sure any asciidoc security is disabled
                 'jakartaee'                : 'https://jakarta.ee/specifications/platform/10/apidocs/',
                 'javase'                   : "https://docs.oracle.com/en/java/javase/${javaVersion}/docs/api/",
-                'groovyapi'                : "https://docs.groovy-lang.org/${resolveGroovyVersion.resolved}/html/gapi/",
-                'groovyjdk'                : "https://docs.groovy-lang.org/${resolveGroovyVersion.resolved}/html/groovy-jdk/",
-                'groovyVersion'            : resolveGroovyVersion.resolved,
+                'groovyapi'                : "https://docs.groovy-lang.org/${groovyVersion}/html/gapi/",
+                'groovyjdk'                : "https://docs.groovy-lang.org/${groovyVersion}/html/groovy-jdk/",
+                'groovyVersion'            : groovyVersion,
                 'springapi'                : "https://docs.spring.io/spring/docs/${springVersion}/javadoc-api/",
                 'springdocs'               : "https://docs.spring.io/spring/docs/${springVersion}/",
                 'githubBranch'             : githubBranch,
@@ -237,41 +205,23 @@ tasks.register('publishGuide', PublishGuide).configure { PublishGuide publish ->
     }
 }
 
-tasks.register('generateBomDocumentation').configure { Task it ->
-    it.dependsOn(':grails-bom:extractConstraints')
+def createReleaseDropdownTask = tasks.register('createReleaseDropdown', CreateReleaseDropDownTask)
+createReleaseDropdownTask.configure { CreateReleaseDropDownTask it ->
+    it.dependsOn(publishGuideTask)
 
-    it.description = 'Generates an AsciiDoc table listing Group, Artifact, and Version for project dependencies.'
-    it.group = 'documentation'
-
-    it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
-    it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
-
-    it.doFirst {
-        project.layout.projectDirectory.dir('src/en/ref/Versions').asFile.mkdirs()
-    }
-
-    it.doLast {
-        def bomDocument = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc').asFile
-        bomDocument.withWriter { writer ->
-            writer.writeLine '== Grails BOM Dependencies'
-            writer.writeLine ''
-            writer.writeLine 'This document provides information about the dependencies defined in the Grails BOM - also known as `org.apache.grails:grails-bom`. It includes the artifact coordinates, where in the hierarchy the coordinate was defined, and the maven property that defines the version.'
-            writer.writeLine ''
-            writer.write(project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc').get().asFile.text)
-            writer.writeLine ''
-        }
-
-        project.logger.lifecycle "BOM Dependency Page generated to: ${bomDocument.absolutePath}"
-    }
+    it.filesToAddDropdowns = project.layout.buildDirectory.files('modified-guide/guide/single.html', 'modified-guide/index.html')
+    it.sourceDocsDirectory = project.layout.buildDirectory.dir('original-guide')
+    it.modifiedPagesDirectory = project.layout.buildDirectory.dir('modified-guide')
 }
 
-tasks.register('generateGuide').configure { Task task ->
-    task.dependsOn('createReleaseDropdown')
-    task.group = 'documentation'
+def fetchTagsTask = project.tasks.register('fetchTags', FetchTagsTask)
+createReleaseDropdownTask.configure {
+    dependsOn(fetchTagsTask)
 }
 
-tasks.register('docs', Sync).configure { Sync it ->
-    it.dependsOn 'aggregateGroovydoc', 'generateGuide', ':grails-data-docs-stage:docs'
+def docsTask = tasks.register('docs', Sync)
+docsTask.configure { Sync it ->
+    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs')
     it.group = 'documentation'
 
     def manualDocsDir = project.layout.buildDirectory.dir('modified-guide')
@@ -291,6 +241,11 @@ tasks.register('docs', Sync).configure { Sync it ->
     it.into mergedDocsDir
 }
 
+tasks.register('dist', Zip).configure { Zip it ->
+    it.dependsOn(docsTask)
+    it.from(outputDir)
+}
+
 artifacts {
     archives dist
 }
@@ -298,5 +253,5 @@ artifacts {
 // the groovy plugin is applied to this project, but we do not build a jar file since
 // the dependencies are only used for resolving versions from the bom
 tasks.withType(Jar).configureEach {
-    it.enabled = false
+    enabled = false
 }

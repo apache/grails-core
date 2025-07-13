@@ -456,7 +456,7 @@ include::theWebLayer/gsp/tags/tagsAsMethodCalls.adoc[]
 include::theWebLayer/gsp/viewsAndTemplates.adoc[]
 
 [[layouts]]
-==== Layouts with Sitemesh
+==== Layouts
 
 include::theWebLayer/gsp/layouts.adoc[]
 
@@ -465,10 +465,10 @@ include::theWebLayer/gsp/layouts.adoc[]
 
 include::theWebLayer/gsp/resources.adoc[]
 
-[[sitemeshContentBlocks]]
-==== Sitemesh Content Blocks
+[[contentBlocks]]
+==== Content Blocks
 
-include::theWebLayer/gsp/sitemeshContentBlocks.adoc[]
+include::theWebLayer/gsp/contentBlocks.adoc[]
 
 [[makingChangesToADeployedApplication]]
 ==== Making Changes to a Deployed Application
@@ -684,11 +684,6 @@ include::webServices/REST/restfulControllers/generatingRestControllers.adoc[]
 ==== The REST Profile
 
 include::webServices/REST/restProfile.adoc[]
-
-[[angularProfile]]
-==== The Angular Profile
-
-include::webServices/REST/angularProfile.adoc[]
 
 [[jsonViews]]
 ==== JSON Views

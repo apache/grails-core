@@ -28,7 +28,7 @@ import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
 class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([RecordCustom])
+        manager.domainClasses.addAll([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom])
     }
 
     void "Test when the auto timestamp properties are customized, they are correctly set"() {
@@ -123,6 +123,30 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         previousModified.time < r.modified.time
         previousCreated.time == r.created.time
     }
+
+    void 'AutoTimestamp annotation works when used in non-entity parent classes'() {
+        when: 'An entity extending a non-entity class using AutoTimestamp is persisted'
+        def i = new Image(format: 'jpg')
+        i.save(flush: true, failOnError: true)
+        manager.session.clear()
+        i = Image.get(i.id)
+
+        then: 'the auto timestamp properties are set'
+        i.modified != null
+        i.created != null
+    }
+
+    void 'AutoTimestamp annotation works when used in entity parent classes'() {
+        when: 'An entity extending an entity class using AutoTimestamp is persisted'
+        def e = new AutoTimestampedChildEntity(name: 'John')
+        e.save(flush: true, failOnError: true)
+        manager.session.clear()
+        e = AutoTimestampedChildEntity.get(e.id)
+
+        then: 'the auto timestamp properties are set'
+        e.modified != null
+        e.created != null
+    }
 }
 
 @Entity
@@ -133,4 +157,31 @@ class RecordCustom {
     Date created
     @AutoTimestamp
     Date modified
+}
+
+class Media {
+    @AutoTimestamp(CREATED)
+    Date created
+    @AutoTimestamp
+    Date modified
+}
+
+@Entity
+class Image extends Media {
+    Long id
+    String format
+}
+
+@Entity
+class AutoTimestampedParentEntity {
+    Long id
+    @AutoTimestamp(CREATED)
+    Date created
+    @AutoTimestamp
+    Date modified
+}
+
+@Entity
+class AutoTimestampedChildEntity extends AutoTimestampedParentEntity {
+    String name
 }

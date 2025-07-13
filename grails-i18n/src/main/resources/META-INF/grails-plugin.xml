@@ -1,3 +1,0 @@
-<plugin name='i18n'>
-  <type>org.grails.plugins.i18n.I18nGrailsPlugin</type>
-</plugin>

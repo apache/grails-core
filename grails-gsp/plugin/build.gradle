@@ -43,8 +43,6 @@ dependencies {
     implementation platform(project(':grails-bom'))
     astImplementation platform(project(':grails-bom'))
 
-    api project(':grails-sitemesh3')
-
     api project(':grails-gsp-core'), { // GroovyPageResourceLoader, GroovyPagesTemplateEngine, CachingGroovyPageStaticResourceLocator
         // API dependencies in grails-gsp
         exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
@@ -84,6 +82,7 @@ dependencies {
         exclude group: 'org.apache.grails', module: 'grails-encoder'
         exclude group: 'org.springframework', module: 'spring-core'
     }
+
     implementation project(':grails-web-gsp-taglib'), { // RenderTagLib
         // API dependencies in grails-web-gsp-taglib
         exclude group: 'org.apache.grails.views', module: 'grails-taglib'
@@ -185,4 +184,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

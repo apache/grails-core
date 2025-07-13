@@ -27,8 +27,7 @@ The Grails developers have decided on several rules regarding packaging. These r
    are typically not meant to be included in a Grails app directly.
 3. Testing artifacts for Grails applications / plugins, will have the prefix `grails-testing-support-` to remind
    developers these artifacts should not typically be included in the `implementation` scope of their application.
-4. Gradle plugins will be consolidated under a single [repository](https://github.com/apache/grails-gradle-plugin).
-5. As part of the gradle plugin consolidation, we adopt consistent names and remove `views-` from the views gradle
+4. As part of the gradle plugin consolidation, we adopt consistent names and remove `views-` from the views gradle
    plugins. Instead they will match the existing gradle plugin naming pattern - i.e. `grails-gsp`, `grails-markup`, etc.
 5. There will be one artifact published that can be included in either a `buildSrc/build.gradle` or a `buildScript` to
    import all Grails gradle plugins. That plugin will be `org.apache.grails:grails-gradle-plugins`.
@@ -122,6 +121,7 @@ Below is a reference of all migrated artifacts - both their old and new name.
 | org.grails.plugins                | scaffolding                                     | org.apache.grails                               | grails-scaffolding                                            |                        |                        | grails-views           |
 | org.grails                        | grails-plugin-services                          | org.apache.grails                               | grails-services                                               |                        |                        | grails-core            |
 | org.grails                        | grails-shell                                    | org.apache.grails                               | grails-shell-cli                                              |                        |                        | grails-core            |
+| org.grails.plugins                | sitemesh2                                       | org.apache.grails                               | grails-layout                                                 |                        |                        | grails-gsp             |
 | org.grails                        | grails-plugin-sitemesh3                         | org.apache.grails                               | grails-sitemesh3                                              |                        |                        | grails-views           |
 | org.grails                        | grails-spring                                   | org.apache.grails                               | grails-spring                                                 |                        |                        | grails-core            |
 | org.grails.plugins                | spring-security-acl                             | org.apache.grails                               | grails-spring-security-acl                                    |                        |                        | grails-spring-security |
@@ -171,7 +171,6 @@ Below is a reference of all migrated artifacts - both their old and new name.
 | GRADLE                            |                                                 |                                                 |                                                               |                        |                        |                        |
 | org.grails                        | grails-gradle-plugin                            | org.apache.grails                               | grails-gradle-plugins                                         |                        |                        | grails-gradle-plugin   |
 | org.grails.grails-core            | org.grails.grails-core.gradle.plugin            | org.apache.grails.gradle.grails-app             | org.apache.grails.gradle.grails-app.gradle.plugin             | grails                 | grails-app             | grails-gradle-plugin   |
-| org.grails.grails-doc             | org.grails.grails-doc.gradle.plugin             | org.apache.grails.gradle.grails-docs            | org.apache.grails.gradle.grails-docs.gradle.plugin            | grails-doc             | grails-docs            | grails-gradle-plugin   |
 | org.grails.grails-gsp             | org.grails.grails-gsp.gradle.plugin             | org.apache.grails.gradle.grails-gsp             | org.apache.grails.gradle.grails-gsp.gradle.plugin             | grails-gsp             | grails-gsp             | grails-gradle-plugin   |
 | org.grails.grails-plugin          | org.grails.grails-plugin.gradle.plugin          | org.apache.grails.gradle.grails-plugin          | org.apache.grails.gradle.grails-plugin.gradle.plugin          | grails-plugin          | grails-plugin          | grails-gradle-plugin   |
 | org.grails.grails-profile         | org.grails.grails-profile.gradle.plugin         | org.apache.grails.gradle.grails-profile         | org.apache.grails.gradle.grails-profile.gradle.plugin         | grails-profile         | grails-profile         | grails-gradle-plugin   |

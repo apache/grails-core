@@ -57,7 +57,7 @@ class ResourceUtils extends GrailsResourceUtils {
             }
         }
 
-        return packageNames
+        return packageNames.sort()
     }
 
     protected static populatePackages(File rootDir, File[] files, Collection<String> packageNames, String prefix) {

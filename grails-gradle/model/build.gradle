@@ -68,12 +68,6 @@ dependencies {
     testImplementation 'org.objenesis:objenesis'
 }
 
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-}
-
 publishing {
     if (!isReleaseVersion) {
         repositories {
@@ -84,6 +78,15 @@ publishing {
                 }
                 url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
             }
+        }
+    }
+
+    // used for e2e testing
+    // publishAllPublicationsToTestCaseMavenRepoRepository
+    repositories {
+        maven {
+            name = 'TestCaseMavenRepo'
+            url = rootProject.layout.projectDirectory.dir('../build/local-maven')
         }
     }
 
@@ -123,4 +126,12 @@ publishing {
             }
         }
     }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
 }

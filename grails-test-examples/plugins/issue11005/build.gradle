@@ -33,6 +33,12 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-tomcat'
 
     api 'org.apache.grails:grails-web-boot'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
     api 'org.apache.grails:grails-dependencies'
     api 'jakarta.servlet:jakarta.servlet-api'
 
@@ -45,4 +51,5 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

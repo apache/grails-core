@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import jakarta.servlet.ServletOutputStream;
@@ -165,7 +166,7 @@ public class IncludeResponseWrapper extends HttpServletResponseWrapper {
     }
 
     public Object getContent() throws CharacterCodingException {
-        return getContent("UTF-8");
+        return getContent(StandardCharsets.UTF_8.name());
     }
 
     public Object getContent(String encoding) throws CharacterCodingException {

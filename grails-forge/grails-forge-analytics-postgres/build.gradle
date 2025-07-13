@@ -1,0 +1,71 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'com.gradleup.shadow'
+    id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
+}
+
+version = projectVersion
+group = 'org.apache.grails.forge'
+
+dependencies {
+
+    annotationProcessor 'io.micronaut:micronaut-graal'
+    annotationProcessor 'io.micronaut.data:micronaut-data-processor'
+
+    implementation project(':grails-forge-core')
+    implementation "com.google.cloud.sql:postgres-socket-factory:$postgresSocketFactoryVersion"
+    implementation 'io.micronaut.data:micronaut-data-jdbc'
+    implementation 'io.micronaut.flyway:micronaut-flyway'
+    implementation 'io.micronaut.sql:micronaut-jdbc-hikari'
+    implementation "org.postgresql:postgresql:$postgresqlVersion"
+
+    runtimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+
+    testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+
+    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'org.testcontainers:postgresql'
+}
+application {
+    mainClass = 'org.grails.forge.analytics.postgres.Main'
+}
+graalvmNative.toolchainDetection = false
+micronaut {
+    runtime('netty')
+    testRuntime('junit5')
+    processing {
+        incremental(true)
+        annotations('org.grails.forge.*')
+    }
+}
+tasks.named('dockerfileNative') {
+    // https://www.graalvm.org/latest/docs/getting-started/container-images/
+    baseImage('ghcr.io/graalvm/jdk:ol8-java17-22.3.3')
+}
+
+tasks.named('dockerBuildNative') {
+    images = [findProperty('dockerImageName') ?: 'grailsforge']
+}
+
+tasks.named('dockerBuild') {
+    images = [findProperty('dockerImageName') ?: 'grailsforge']
+}

@@ -31,10 +31,15 @@ compileJava.options.release = gradleProperties.javaVersion.toString().toInteger(
 
 repositories {
     // mavenLocal()
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
+        }
+    }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
     mavenCentral()
     gradlePluginPortal()
-    maven { url = 'https://repo.grails.org/grails/restricted' }
-    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
 }
 
 dependencies {
@@ -43,11 +48,12 @@ dependencies {
         // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
         exclude group: 'org.springframework', module: 'spring-core'
     }
-    implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    implementation 'cloud.wondrify:asset-pipeline-gradle'
     implementation 'io.github.gradle-nexus:publish-plugin'
     implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
     implementation 'org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:0.8.1'
+    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
 }

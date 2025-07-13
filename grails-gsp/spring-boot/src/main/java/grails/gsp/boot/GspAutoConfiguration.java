@@ -79,7 +79,7 @@ public class GspAutoConfiguration {
     protected static abstract class AbstractGspConfig {
         @Value("${spring.gsp.reloadingEnabled:true}")
         boolean gspReloadingEnabled;
-        
+
         @Value("${spring.gsp.view.cacheTimeout:1000}")
         long viewCacheTimeout;
 
@@ -100,13 +100,13 @@ public class GspAutoConfiguration {
     protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig {
         private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT="./src/main/resources/templates";
         private static final String CLASSPATH_TEMPLATE_ROOT="classpath:/templates";
-        
+
         @Value("${spring.gsp.templateRoots:}")
         String[] templateRoots;
-        
+
         @Value("${spring.gsp.locator.cacheTimeout:5000}")
         long locatorCacheTimeout;
-        
+
         @Value("${spring.gsp.layout.caching:true}")
         boolean gspLayoutCaching;
 
@@ -114,7 +114,7 @@ public class GspAutoConfiguration {
         String defaultLayoutName;
 
         @Bean
-        @ConditionalOnMissingBean(name="groovyPagesTemplateEngine") 
+        @ConditionalOnMissingBean(name="groovyPagesTemplateEngine")
         GroovyPagesTemplateEngine groovyPagesTemplateEngine(TagLibraryResolver tagLibraryResolver, TagLibraryLookup tagLibraryLookup, GroovyPagesTemplateRenderer groovyPagesTemplateRenderer) {
             GroovyPagesTemplateEngine templateEngine = new GroovyPagesTemplateEngine();
             templateEngine.setReloadEnabled(gspReloadingEnabled);
@@ -123,7 +123,7 @@ public class GspAutoConfiguration {
             groovyPagesTemplateRenderer.setGroovyPagesTemplateEngine(templateEngine);
             return templateEngine;
         }
-        
+
         @Bean
         @ConditionalOnMissingBean(name="groovyPageLocator")
         GrailsConventionGroovyPageLocator groovyPageLocator() {
@@ -178,7 +178,7 @@ public class GspAutoConfiguration {
                 return Collections.singletonList(CLASSPATH_TEMPLATE_ROOT);
             }
         }
-        
+
         @Bean
         @ConditionalOnMissingBean(name = "groovyPagesTemplateRenderer")
         GroovyPagesTemplateRenderer groovyPagesTemplateRenderer(GrailsConventionGroovyPageLocator groovyPageLocator) {
@@ -220,8 +220,8 @@ public class GspAutoConfiguration {
             return groovyPageViewResolver;
         }
     }
-    
-    @Configuration 
+
+    @Configuration
     protected static class CodecLookupConfiguration {
         @Bean
         @ConditionalOnMissingBean(name = "codecLookup")
@@ -233,7 +233,7 @@ public class GspAutoConfiguration {
     @Configuration
     protected static class StandaloneGrailsApplicationConfiguration {
         @Bean
-        @ConditionalOnMissingBean(name = "grailsApplication") 
+        @ConditionalOnMissingBean(name = "grailsApplication")
         public GrailsApplication grailsApplication() {
             return new StandaloneGrailsApplication();
         }
@@ -247,7 +247,7 @@ public class GspAutoConfiguration {
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (!registry.containsBeanDefinition("gspTagLibraryLookup")) {
                 GenericBeanDefinition beanDefinition = createBeanDefinition(StandaloneTagLibraryLookup.class);
-                
+
                 ManagedList<BeanDefinition> list = new ManagedList<BeanDefinition>();
                 registerTagLibs(list);
 
@@ -274,10 +274,10 @@ public class GspAutoConfiguration {
 
     /**
      * {@link WebMvcAutoConfiguration} adds defaultViewResolver and viewResolver beans.
-     * 
+     *
      *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces 
      *  the viewResolver bean with GSP view resolver by default.
-     *  
+     *
      *  The behavior of this class can be controlled with spring.gsp.removeDefaultViewResolver and
      *  spring.gsp.replaceViewResolverBean configuration properties.
      *
@@ -285,7 +285,7 @@ public class GspAutoConfiguration {
     protected static class RemoveDefaultViewResolverRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
         boolean removeDefaultViewResolverBean;
         boolean replaceViewResolverBean;
-        
+
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (removeDefaultViewResolverBean) {
@@ -307,7 +307,7 @@ public class GspAutoConfiguration {
             replaceViewResolverBean = environment.getProperty("spring.gsp.replaceViewResolverBean", Boolean.class, true);
         }
     }
-    
+
     @ConditionalOnClass({TagLibraryResolverImpl.class})
     @Configuration
     protected static class GspJspIntegrationConfiguration implements EnvironmentAware {

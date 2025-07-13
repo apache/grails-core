@@ -121,7 +121,7 @@ class FormTagLibResourceTests extends Specification implements UrlMappingsUnitTe
 
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 class TestFormTagUrlMappings {
 
     static mappings = {

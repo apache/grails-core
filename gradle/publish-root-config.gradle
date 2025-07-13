@@ -68,6 +68,7 @@ def publishedProjects = [
         'grails-services',
         'grails-shell-cli',
         'grails-sitemesh3',
+        'grails-layout',
         'grails-spring',
         'grails-taglib',
         'grails-test-core',
@@ -136,5 +137,83 @@ subprojects {
         } else {
             apply plugin: 'org.apache.grails.gradle.grails-publish'
         }
+    }
+}
+
+project.afterEvaluate {
+    tasks.register('publishAllPublicationsToTestCaseMavenRepoRepository').configure {
+        dependsOn(
+                subprojects
+                        .findAll { it.name in publishedProjects }
+                        .collect { it.tasks.named('publishAllPublicationsToTestCaseMavenRepoRepository') }
+        )
+    }
+}
+
+def aggregatePublishedArtifacts = tasks.register('aggregatePublishedArtifacts')
+
+tasks.register('aggregateChecksums').configure {
+    group = 'publishing'
+    description = 'Aggregates all SHA-256 checksums from subprojects into a single file.'
+
+    def outputFileProvider = rootProject.layout.buildDirectory.file('grails-core-checksums.txt')
+    outputs.file(outputFileProvider)
+
+    dependsOn(
+            subprojects
+                    .findResults { it.tasks.names.contains('publishedChecksums') ? "${it.path}:publishedChecksums" : null }
+    )
+    finalizedBy(aggregatePublishedArtifacts)
+
+    outputs.upToDateWhen { false } // not worth caching
+
+    doLast {
+        def outputFile = outputFileProvider.get().asFile
+        outputFile.withPrintWriter { writer ->
+            subprojects.each { sub ->
+                def checksumDir = sub.layout.buildDirectory.dir('checksums').get().asFile
+                if (checksumDir.exists()) {
+                    checksumDir.eachFileMatch(~/.*\.sha512/) {
+                        def jarName = it.name - '.sha512'
+                        def checksumLine = it.text.trim()
+                        def checksum = checksumLine.tokenize().first()
+                        writer.println("$jarName $checksum")
+                    }
+                }
+            }
+        }
+
+        println "Checksum manifest written to ${outputFile}"
+    }
+}
+
+aggregatePublishedArtifacts.configure {
+    group = 'publishing'
+    description = 'Aggregates all published artifacts from subprojects into a single file.'
+
+    def outputFileProvider = rootProject.layout.buildDirectory.file('grails-core-artifacts.txt')
+    outputs.file(outputFileProvider)
+
+    outputs.upToDateWhen { false } // not worth caching
+
+    dependsOn(subprojects.findResults { it.tasks.names.contains('savePublishedArtifacts') ? "${it.path}:savePublishedArtifacts" : null })
+
+    doLast {
+        def outputFile = outputFileProvider.get().asFile
+        outputFile.text = '' // clear previous
+        outputFile.withPrintWriter { writer ->
+            subprojects.each { sub ->
+                def artifactsDir = sub.layout.buildDirectory.dir('artifacts').get().asFile
+                if (artifactsDir.exists()) {
+                    artifactsDir.eachFileMatch(~/.*\.txt/) {
+                        def artifactName = it.name - '.txt'
+                        def coordinates = it.text.trim()
+                        writer.println("$artifactName $coordinates")
+                    }
+                }
+            }
+        }
+
+        println "Published artifacts written to ${outputFile}"
     }
 }

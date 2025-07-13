@@ -2,8 +2,8 @@ buildscript {
     repositories {
         gradlePluginPortal()
         mavenCentral()
-        maven { url = 'https://repository.apache.org/content/groups/public' }
         maven { url = 'https://repo.grails.org/grails/restricted' }
+        maven { url = 'https://repository.apache.org/content/groups/public' }
         // mavenLocal()  // for local testing, do not commit uncommented
     }
     dependencies {
@@ -19,12 +19,11 @@ version = '1.0.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repository.apache.org/content/groups/public' }
     maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven { url = 'https://repository.apache.org/content/groups/public' }
     // mavenLocal()  // for local testing, do not commit uncommented
 }  
 
 dependencies {
-    profileRuntimeOnly platform("org.apache.grails:grails-bom:$grailsVersion")
-    profileRuntimeOnly "org.apache.grails.profiles:base"
+    profileRuntimeApi "org.apache.grails.profiles:base"
 }

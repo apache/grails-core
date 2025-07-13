@@ -130,8 +130,8 @@ theWebLayer:
       tagsAsMethodCalls: Tags as Method Calls
     viewsAndTemplates: Views and Templates
     layouts:
-      title: Layouts with Sitemesh
-      sitemeshContentBlocks: Sitemesh Content Blocks
+      title: Layouts
+      contentBlocks: Content Blocks
     resources: Static Resources
     makingChangesToADeployedApplication: Making Changes to a Deployed Application
     taglibs:
@@ -217,8 +217,6 @@ REST:
     generatingRestControllers: Generating a REST controller using scaffolding
   callingRestServices: Calling REST Services with HttpClient
   restProfile: The REST Profile
-  angularJsProfile: The AngularJS Profile
-  angularProfile: The Angular Profile
   jsonViews:
     title: JSON Views
     jsonViewsSetup: Getting Started

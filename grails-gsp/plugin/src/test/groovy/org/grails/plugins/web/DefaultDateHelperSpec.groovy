@@ -96,10 +96,9 @@ class DefaultDateHelperSpec extends Specification {
         null     | '8:00 AM'
     }
 
-    @PendingFeature
-    @Requires({ !Jvm.current.isJava17() })
+    @Requires({ Jvm.current.isJava20Compatible() })
     @Unroll
-    void "Java 21+ - Full getTimeFormat for style #style returns #expected"(String style, String expected) {
+    void "Java 20+ - getTimeFormat for style #style returns #expected"(String style, String expected) {
         given:
         DateTimeFormatter format
 
@@ -111,8 +110,10 @@ class DefaultDateHelperSpec extends Specification {
         format.format(localTime) == expected
 
         where:
-        style  | expected
-        'FULL' | '8:00:00 AM UTC'
+        style    | expected
+        'LONG'   | '8:00:00\u202FAM UTC'
+        'MEDIUM' | '8:00:00\u202FAM'
+        null     | '8:00\u202FAM'
     }
 
     @Requires({ Jvm.current.isJava17() })
@@ -131,6 +132,24 @@ class DefaultDateHelperSpec extends Specification {
         where:
         style  | expected
         'FULL' | '8:00:00 AM Coordinated Universal Time'
+    }
+
+    @Requires({ Jvm.current.isJava20Compatible() })
+    @Unroll
+    void "Java 20+ - Full getTimeFormat for style #style returns #expected"(String style, String expected) {
+        given:
+        DateTimeFormatter format
+
+        when:
+        format = helper.getTimeFormat(style, ZoneId.of('UTC'), Locale.ENGLISH)
+
+        then:
+        format.zone == ZoneId.of('UTC')
+        format.format(localTime) == expected
+
+        where:
+        style  | expected
+        'FULL' | '8:00:00\u202FAM Coordinated Universal Time'
     }
 
     @Requires({ jvm.isJava8() })
@@ -173,6 +192,27 @@ class DefaultDateHelperSpec extends Specification {
         'LONG'    | 'LONG'    | 'January 5, 1941 at 8:00:00 AM UTC'
         'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8:00:00 AM'
         null      | null      | '1/5/41, 8:00 AM'
+    }
+
+    @Requires({ Jvm.current.isJava20Compatible() })
+    @Unroll("for getDateTimeFormat(#dateStyle, #timeStyle) => #expected")
+    void "Java 20+ - test getDateTimeFormat"(String dateStyle, String timeStyle, String expected) {
+        given:
+        DateTimeFormatter format
+
+        when:
+        format = helper.getDateTimeFormat(dateStyle, timeStyle, ZoneId.of('UTC'), Locale.ENGLISH)
+
+        then:
+        format.zone == ZoneId.of('UTC')
+        format.format(LocalDateTime.of(localDate, localTime)) == expected
+
+        where:
+        dateStyle | timeStyle | expected
+        'FULL'    | 'FULL'    | 'Sunday, January 5, 1941, 8:00:00\u202FAM Coordinated Universal Time'
+        'LONG'    | 'LONG'    | 'January 5, 1941, 8:00:00\u202FAM UTC'
+        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8:00:00\u202FAM'
+        null      | null      | '1/5/41, 8:00\u202FAM'
     }
 
     void "test supportsDatePickers"() {

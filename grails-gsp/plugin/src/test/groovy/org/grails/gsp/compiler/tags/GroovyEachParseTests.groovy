@@ -18,12 +18,15 @@
  */
 package org.grails.gsp.compiler.tags
 
-import org.grails.web.pages.ParseTests
 import org.junit.jupiter.api.Test
 
+import static org.grails.web.pages.ParseSpec.parseCode
+import static org.grails.web.pages.ParseSpec.trimAndRemoveCR
+import static org.grails.web.pages.ParseSpec.makeImports
+import static org.grails.web.pages.ParseSpec.GSP_FOOTER
 import static org.junit.jupiter.api.Assertions.assertEquals
 
-class GroovyEachParseTests extends ParseTests {
+class GroovyEachParseTests {
 
     @Test
     void testEachOutput() {
@@ -32,7 +35,7 @@ class GroovyEachParseTests extends ParseTests {
 </g:each>
 """)
 
-        assertEquals(trimAndRemoveCR(makeImports()+"""\n
+        assertEquals(trimAndRemoveCR(makeImports() + """\n
 class myTest extends org.grails.gsp.GroovyPage {
 public String getGroovyPageFileName() { "myTest" }
 public Object run() {
@@ -45,7 +48,7 @@ printHtmlPart(0)
 }
 printHtmlPart(0)
 }""" + GSP_FOOTER
-),trimAndRemoveCR(output.toString()))
+        ), trimAndRemoveCR(output.toString()))
         assertEquals("\n", output.htmlParts[0])
     }
 
@@ -54,7 +57,7 @@ printHtmlPart(0)
         def output = parseCode("myTest", """
 <g:each var="t" in="${'blah'}"></g:each>""")
 
-        assertEquals(trimAndRemoveCR(makeImports()+"""\n
+        assertEquals(trimAndRemoveCR(makeImports() + """\n
 class myTest extends org.grails.gsp.GroovyPage {
 public String getGroovyPageFileName() { "myTest" }
 public Object run() {
@@ -65,7 +68,7 @@ printHtmlPart(0)
 for( t in evaluate('"blah"', 1, it) { return "blah" } ) {
 }
 }""" + GSP_FOOTER
-),trimAndRemoveCR(output.toString()))
+        ), trimAndRemoveCR(output.toString()))
         assertEquals("\n", output.htmlParts[0])
     }
 
@@ -76,7 +79,7 @@ for( t in evaluate('"blah"', 1, it) { return "blah" } ) {
 </g:each>
 """)
 
-        assertEquals(trimAndRemoveCR(makeImports()+"""\n
+        assertEquals(trimAndRemoveCR(makeImports() + """\n
 class myTest2 extends org.grails.gsp.GroovyPage {
 public String getGroovyPageFileName() { "myTest2" }
 public Object run() {
@@ -93,7 +96,7 @@ i++
 }
 printHtmlPart(0)
 }""" + GSP_FOOTER
-),trimAndRemoveCR(output.toString()))
+        ), trimAndRemoveCR(output.toString()))
         assertEquals("\n", output.htmlParts[0])
     }
 

@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Since Grails 3.1, Grails supports a tailored profile for creating REST applications that provides a more focused set of dependencies and commands.
+Grails supports a tailored profile for creating REST applications that provides a more focused set of dependencies and commands.
 
-To get started with the REST profile, create an application specifying `rest-api` as the name of the profile:
+To get started with the REST profile using the Grails Shell CLI, create an application specifying `rest-api` as the name of the profile:
 
 [source,bash]
 ----
@@ -30,7 +30,7 @@ This will create a new REST application that provides the following features:
 
 * Default set of commands for creating and generating REST endpoints
 * Defaults to using JSON views for rendering responses (see the next section)
-* Fewer plugins than the default Grails plugin (no GSP, no Asset Pipeline, nothing HTML related)
+* Fewer plugins than the default Grails web profile (no GSP, no Asset Pipeline, nothing HTML related)
 
 You will notice for example in the `grails-app/views` directory that there are `*.gson` files for rendering the default index page and as well as any 404 and 500 errors.
 
@@ -44,20 +44,14 @@ $ grails generate-all my.api.Book
 
 Instead of CRUD HTML interface a REST endpoint is generated that produces JSON responses. In addition, the generated functional and unit tests by default test the REST endpoint.
 
-
-
-
-
-Using Grails Forge, Grails supports a tailored profile for creating REST applications that provides a more focused set of dependencies and commands.
-
-To get started with a REST API-type application:
+To generate a REST application using the Forge CLI, use the following:
 
 [source,console]
 ----
-$ grails create-restapi my-api
+$ grails -t forge create-restapi my-api
 ----
 
-This will create a new REST application that provides the following features:
+This will create a new REST application with the same focused setup as above:
 
 * Default set of commands for creating and generating REST endpoints
 * Defaults to using JSON views for rendering responses (see the next section)
@@ -75,4 +69,4 @@ $ ./gradlew runCommand -Pargs="generate-all my.api.Book"
 
 NOTE: The generate-* commands are only available after adding the `org.apache.grails:grails-scaffolding` dependency to your project. They are not available by default in a REST application. Also, they will no longer produce *.gson files as that was a feature of the REST API-profile.
 
-Instead of CRUD HTML interface a REST endpoint is generated that produces JSON responses. In addition, the generated functional and unit tests by default test the REST endpoint. 
+Instead of CRUD HTML interface a REST endpoint is generated that produces JSON responses. In addition, the generated functional and unit tests by default test the REST endpoint.

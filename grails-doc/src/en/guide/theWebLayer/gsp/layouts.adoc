@@ -20,8 +20,7 @@ under the License.
 
 ==== Creating Layouts
 
-
-Grails leverages https://github.com/sitemesh[Sitemesh], a decorator engine, to support view layouts. Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
+This product includes software developed by the OpenSymphony Group (http://www.opensymphony.com/). The Sitemesh framework is used to provide a decorator engine, to support view layouts. Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
 
 [source,xml]
 ----
@@ -129,13 +128,13 @@ Alternatively, you can create a layout called `grails-app/views/layouts/book/lis
 If you have both the above-mentioned layouts in place the layout specific to the action will take precedence when the list action is executed.
 
 If a layout is not located using any of those conventions, the convention of last resort is to look for the application default layout which
-is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.sitemesh.default.layout`
+is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.views.layout.default`
 in the application configuration as follows:
 
 [source,yaml]
 .grails-app/conf/application.yml
 ----
-grails.sitemesh.default.layout: myLayoutName
+grails.views.layout.default: myLayoutName
 ----
 
 With that property in place, the application default layout will be `grails-app/views/layouts/myLayoutName.gsp`.
@@ -144,7 +143,7 @@ With that property in place, the application default layout will be `grails-app/
 ==== Inline Layouts
 
 
-Grails' also supports Sitemesh's concept of inline layouts with the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag. This can be used to apply a layout to a template, URL or arbitrary section of content. This lets you even further modularize your view structure by "decorating" your template includes.
+Grails also supports inline layouts with the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag. This can be used to apply a layout to a template, URL or arbitrary section of content. This lets you even further modularize your view structure by "decorating" your template includes.
 
 Some examples of usage can be seen below:
 

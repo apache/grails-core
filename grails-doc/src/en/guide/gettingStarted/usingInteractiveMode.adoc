@@ -17,14 +17,18 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Since 3.0, Grails has an interactive mode which makes command execution faster since the JVM doesn't have to be restarted for each command. To use interactive mode simple type 'grails' from the root of any projects and use TAB completion to get a list of available commands. See the screenshot below for an example:
+Since 3.0, Grails has an interactive mode which makes command execution faster since the JVM doesn't have to be restarted for each command. To use interactive mode simply type 'grails' from the root of any projects and use TAB completion to get a list of available commands. See the screenshot below for an example:
+
+//This image is not showing properly
 
 image::interactive-output.png[]
+
+NOTE: As of **Grails 7**, both the Grails Shell CLI and the Forge CLI are available. Interactive mode is part of the Grails Shell CLI and is accessed by typing `grails` without additional arguments. Grails Forge CLI is accessed as `grails -t forge`.
 
 For more information on the capabilities of interactive mode refer to the section on link:commandLine.html#interactiveMode[Interactive Mode] in the user guide.
 
 
-The Grails Forge Command-line Interface (CLI) offers an interactive mode, which you can access by entering "grails" in your Terminal application or Linux Command Line.
+The Grails Shell Command-line Interface (CLI) offers an interactive mode, which you can access by entering "grails" in your Terminal application or Linux Command Line.
 
 Once you're in the command-line interface, you can enhance your efficiency by utilizing the TAB key for auto-completion. For instance:
 
