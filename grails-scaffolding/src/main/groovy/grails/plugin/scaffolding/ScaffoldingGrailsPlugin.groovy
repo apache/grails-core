@@ -26,7 +26,7 @@ import grails.util.Metadata
 class ScaffoldingGrailsPlugin extends Plugin {
 
    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "4.0.0.BUILD-SNAPSHOT > *"
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
     // resources that are excluded from plugin packaging
     def pluginExcludes = [
         "grails-app/views/error.gsp"

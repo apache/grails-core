@@ -34,7 +34,7 @@ import reactor.bus.EventBus
  */
 class EventBusGrailsPlugin extends Plugin {
 
-    def grailsVersion = "7.0.0 > *"
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
 
     /**
      * Whether to translate GORM events into reactor events
