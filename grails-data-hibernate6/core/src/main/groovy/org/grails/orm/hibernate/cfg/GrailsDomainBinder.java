@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
@@ -285,7 +286,10 @@ public class GrailsDomainBinder implements MetadataContributor {
         new SimpleValueBinder().bindSimpleValue(value, type, columnName1, true);
         PropertyConfig pc = getPropertyConfig(property);
         if (pc != null && pc.getIndexColumn() != null) {
-            bindColumnConfigToColumn(property, getColumnForSimpleValue(value), getSingleColumnConfig(pc.getIndexColumn()));
+            Column column = getColumnForSimpleValue(value);
+            ColumnConfig columnConfig = getSingleColumnConfig(pc.getIndexColumn());
+            final PropertyConfig mappedForm = getPropertyConfig(property);
+            new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
 
         if (!value.isTypeSpecified()) {
@@ -771,7 +775,10 @@ public class GrailsDomainBinder implements MetadataContributor {
 
                 new SimpleValueBinder().bindSimpleValue(element, typeName, columnName, true);
                 if (hasJoinColumnMapping) {
-                    bindColumnConfigToColumn(property, getColumnForSimpleValue(element), config.getJoinTable().getColumn());
+                    Column column = getColumnForSimpleValue(element);
+                    ColumnConfig columnConfig = config.getJoinTable().getColumn();
+                    final PropertyConfig mappedForm = getPropertyConfig(property);
+                    new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
                 }
             }
         } else {
@@ -811,31 +818,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private Column getColumnForSimpleValue(SimpleValue element) {
         return element.getColumns().iterator().next();
-    }
-
-    private void bindColumnConfigToColumn(PersistentProperty property, Column column, ColumnConfig columnConfig) {
-        final PropertyConfig mappedForm = getPropertyConfig(property);
-        boolean allowUnique = mappedForm != null && !mappedForm.isUniqueWithinGroup();
-
-        if (columnConfig == null) {
-            return;
-        }
-
-        if (columnConfig.getLength() != -1) {
-            column.setLength(columnConfig.getLength());
-        }
-        if (columnConfig.getPrecision() != -1) {
-            column.setPrecision(columnConfig.getPrecision());
-        }
-        if (columnConfig.getScale() != -1) {
-            column.setScale(columnConfig.getScale());
-        }
-        if (columnConfig.getSqlType() != null && !columnConfig.getSqlType().isEmpty()) {
-            column.setSqlType(columnConfig.getSqlType());
-        }
-        if(allowUnique) {
-            column.setUnique(columnConfig.getUnique());
-        }
     }
 
     private boolean hasJoinColumnMapping(PropertyConfig config) {
@@ -1712,7 +1694,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (cc.getName() != null) {
                     c.setName(cc.getName());
                 }
-                bindColumnConfigToColumn(null, c, cc);
+                new ColumnConfigToColumnBinder().bindColumnConfigToColumn(c, cc, null);
             }
         }
 
@@ -2128,8 +2110,10 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         PropertyConfig propertyConfig = getPropertyConfig(property);
         if (propertyConfig != null && !propertyConfig.getColumns().isEmpty()) {
-            bindIndex(columnName, column, propertyConfig.getColumns().get(0), t);
-            bindColumnConfigToColumn(property, column, propertyConfig.getColumns().get(0));
+            ColumnConfig columnConfig = propertyConfig.getColumns().get(0);
+            bindIndex(columnName, column, columnConfig, t);
+            final PropertyConfig mappedForm = getPropertyConfig(property);
+            new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
     }
 
