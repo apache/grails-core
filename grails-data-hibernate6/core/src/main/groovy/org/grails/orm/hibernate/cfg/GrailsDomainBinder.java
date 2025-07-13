@@ -37,6 +37,7 @@ import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
+import org.grails.orm.hibernate.cfg.domainbinding.IndexBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
@@ -284,11 +285,10 @@ public class GrailsDomainBinder implements MetadataContributor {
         String type = getIndexColumnType(property, STRING_TYPE);
         String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
         new SimpleValueBinder().bindSimpleValue(value, type, columnName1, true);
-        PropertyConfig pc = getPropertyConfig(property);
-        if (pc != null && pc.getIndexColumn() != null) {
+        PropertyConfig mappedForm = getPropertyConfig(property);
+        if (mappedForm != null && mappedForm.getIndexColumn() != null) {
             Column column = getColumnForSimpleValue(value);
-            ColumnConfig columnConfig = getSingleColumnConfig(pc.getIndexColumn());
-            final PropertyConfig mappedForm = getPropertyConfig(property);
+            ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
             new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
 
@@ -1269,6 +1269,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
 
 
+
     /**
      * Binds a Grails domain class to the Hibernate runtime meta model
      *
@@ -2111,7 +2112,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig propertyConfig = getPropertyConfig(property);
         if (propertyConfig != null && !propertyConfig.getColumns().isEmpty()) {
             ColumnConfig columnConfig = propertyConfig.getColumns().get(0);
-            bindIndex(columnName, column, columnConfig, t);
+            new IndexBinder().bindIndex(columnName, column, columnConfig, t);
             final PropertyConfig mappedForm = getPropertyConfig(property);
             new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
@@ -2813,7 +2814,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                                    String path, PropertyConfig propertyConfig, String sessionFactoryBeanName) {
         setTypeForPropertyConfig(grailsProp, simpleValue, propertyConfig);
         final PropertyConfig mappedForm = (PropertyConfig) grailsProp.getMapping().getMappedForm();
-        if (mappedForm.isDerived() && !(grailsProp instanceof TenantId)) {
+        if (mappedForm != null && mappedForm.isDerived() && !(grailsProp instanceof TenantId)) {
             Formula formula = new Formula();
             formula.setFormula(propertyConfig.getFormula());
             simpleValue.addFormula(formula);
@@ -2840,52 +2841,20 @@ public class GrailsDomainBinder implements MetadataContributor {
             // not all custom mapped properties will have column definitions,
             // in which case we still need to create a Hibernate column for
             // this value.
-            List<?> columnDefinitions = hasConfig ? propertyConfig.getColumns()
-                    : Arrays.asList(new Object[] { null });
-            if (columnDefinitions.isEmpty()) {
-                columnDefinitions = Arrays.asList(new Object[] { null });
-            }
-
-            for (Object columnDefinition : columnDefinitions) {
-                ColumnConfig cc = (ColumnConfig) columnDefinition;
-                Column column = new Column();
-
-                // Check for explicitly mapped column name and SQL type.
-                if (cc != null) {
-                    if (cc.getName() != null) {
-                        column.setName(cc.getName());
-                    }
-                    if (cc.getSqlType() != null) {
-                        column.setSqlType(cc.getSqlType());
-                    }
-                }
-
-                column.setValue(simpleValue);
-
-
-                if (cc != null) {
-                    if (cc.getLength() != -1) {
-                        column.setLength(cc.getLength());
-                    }
-                    if (cc.getPrecision() != -1) {
-                        column.setPrecision(cc.getPrecision());
-                    }
-                    if (cc.getScale() != -1) {
-                        column.setScale(cc.getScale());
-                    }
-                    if(!mappedForm.isUniqueWithinGroup()) {
-                        column.setUnique(cc.isUnique());
-                    }
-                }
-
-                bindColumn(grailsProp, parentProperty, column, cc, path, table, sessionFactoryBeanName);
-
-                if (table != null) {
-                    table.addColumn(column);
-                }
-
-                simpleValue.addColumn(column);
-            }
+            var columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
+            ofNullable(propertyConfig)
+                    .map(PropertyConfig::getColumns)
+                    .filter(columns -> !columns.isEmpty())
+                    .orElse(Arrays.asList(new ColumnConfig[] { null }))
+                    .forEach( cc -> {
+                        Column column = new Column();
+                        columnConfigToColumnBinder.bindColumnConfigToColumn(column,cc,mappedForm);
+                        bindColumn(grailsProp, parentProperty, column, cc, path, table, sessionFactoryBeanName);
+                        if (table != null) {
+                            table.addColumn(column);
+                        }
+                        simpleValue.addColumn(column);
+                    });
         }
     }
 
@@ -2966,7 +2935,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         handleUniqueConstraint(property, column, path, table, columnName, sessionFactoryBeanName);
 
-        bindIndex(columnName, column, cc, table);
+        new IndexBinder().bindIndex(columnName, column, cc, table);
 
         final PersistentEntity owner = property.getOwner();
         if (!owner.isRoot()) {
@@ -3015,32 +2984,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
         setGeneratedUniqueName(uk);
         table.addUniqueKey(uk);
-    }
-
-    private void bindIndex(String columnName, Column column, ColumnConfig cc, Table table) {
-        if (cc == null) {
-            return;
-        }
-
-        Object indexObj = cc.getIndex();
-        String indexDefinition = null;
-        if (indexObj instanceof Boolean) {
-            Boolean b = (Boolean) indexObj;
-            if (b) {
-                indexDefinition = table.getName() + '_' + columnName + "_idx";
-            }
-        }
-        else if (indexObj != null) {
-            indexDefinition = indexObj.toString();
-        }
-        if (indexDefinition == null) {
-            return;
-        }
-
-        String[] tokens = indexDefinition.split(",");
-        for (String index : tokens) {
-            table.getOrCreateIndex(index).addColumn(column);
-        }
     }
 
     private String getColumnNameForPropertyAndPath(PersistentProperty grailsProp,
