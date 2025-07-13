@@ -97,10 +97,10 @@
     <module name="SuppressWarningsFilter"/>
 
     <!-- See http://checkstyle.sourceforge.net/config_filters.html#SuppressionFilter -->
-    <module name="SuppressionFilter">
-        <property name="file" value="${config_loc}/suppressions.xml"/>
-        <property name="optional" value="false"/>
-    </module>
+<!--    <module name="SuppressionFilter">-->
+<!--        <property name="file" value="${config_loc}/suppressions.xml"/>-->
+<!--        <property name="optional" value="false"/>-->
+<!--    </module>-->
 
     <module name="TreeWalker">
 
@@ -114,6 +114,8 @@
             <property name="allowMissingReturnTag" value="true"/>
         </module>
         <module name="JavadocType">
+            <!-- https://github.com/checkstyle/checkstyle/issues/14581 -->
+            <property name="allowMissingParamTags" value="true"/>
         </module>
 
         <module name="JavadocStyle">

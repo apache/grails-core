@@ -23,16 +23,16 @@ apply plugin: 'io.spring.nohttp' // enforce https everywhere
 
 spotless {
     java {
-        licenseHeaderFile(rootProject.file("../etc/config/spotless/license.java"))
+        licenseHeaderFile(rootProject.file("etc/config/spotless/license.java"))
         target('src/main/java/**/*.java')
     }
     groovy {
-        licenseHeaderFile(rootProject.file("../etc/config/spotless/license.java"))
-        target('src/main/groovy/**')
+        licenseHeaderFile(rootProject.file("etc/config/spotless/license.java"))
+        target('src/main/groovy/**.groovy', 'src/main/groovy/**.java')
     }
     format 'javaMisc', {
         target('src/main/**/package-info.java', 'src/main/**/module-info.java')
-        licenseHeaderFile(rootProject.file('../etc/config/spotless/license.java'), '\\/\\*\\*')
+        licenseHeaderFile(rootProject.file('etc/config/spotless/license.java'), '\\/\\*\\*')
     }
 }
 
@@ -47,13 +47,19 @@ checkstyle {
 }
 
 nohttp {
-    source.exclude('src/test/**', 'build/**', 'src/main/resources/assets/**', 'src/resources/main/pom.xml')
+    source.exclude('src/test/**', 'build/**')
 }
 
-tasks.named('checkstyleTest').configure {
-    it.enabled = false
+if (tasks.names.contains('checkstyleTest')) {
+    tasks.named('checkstyleTest').configure {
+        it.group = 'verification'
+        it.enabled = false
+    }
 }
 
-tasks.named('checkstyleMain').configure {
-    it.dependsOn('spotlessCheck')
+if (tasks.names.contains('checkstyleMain')) {
+    tasks.named('checkstyleMain').configure {
+        it.group = 'verification'
+        it.dependsOn('spotlessCheck')
+    }
 }
