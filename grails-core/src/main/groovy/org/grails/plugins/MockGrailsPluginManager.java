@@ -25,20 +25,15 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Map;
 
-
 import grails.core.DefaultGrailsApplication;
 import grails.core.GrailsApplication;
 import grails.plugins.exceptions.PluginException;
-import org.springframework.util.Assert;
 
 /**
  * @author Graeme Rocher
  * @since 0.4
  */
 public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
-    private boolean checkForChangesExpected = false;
-
-
     public MockGrailsPluginManager(GrailsApplication application) {
         super(application);
         loadPlugins();
@@ -75,11 +70,6 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
         initialised = true;
     }
 
-    public void checkForChanges() {
-        Assert.isTrue(checkForChangesExpected, "checkForChanges() called in an unexpected state");
-        checkForChangesExpected = false;
-    }
-
     @Override
     public boolean isInitialised() {
         return true;
@@ -100,15 +90,6 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
     @SuppressWarnings("rawtypes")
     public void informObservers(String pluginName, Map event) {
         // do nothing
-    }
-
-    public void expectCheckForChanges() {
-        Assert.state(!checkForChangesExpected, "expectCheckForChanges() called in an unexpected state");
-        checkForChangesExpected = true;
-    }
-
-    public void verify() {
-        Assert.state(!checkForChangesExpected, "verify() in an unexpected state");
     }
 
 }

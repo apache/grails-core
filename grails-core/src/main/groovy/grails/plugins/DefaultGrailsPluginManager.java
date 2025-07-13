@@ -734,14 +734,6 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         parentCtx = parent;
     }
 
-    /**
-     * @deprecated Replaced by agent-based reloading, will be removed in a future version of Grails
-     */
-    @Deprecated
-    public void checkForChanges() {
-        // do nothing
-    }
-
     public void reloadPlugin(GrailsPlugin plugin) {
         plugin.doArtefactConfiguration();
 

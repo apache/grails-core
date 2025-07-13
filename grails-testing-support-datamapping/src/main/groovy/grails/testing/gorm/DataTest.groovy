@@ -104,17 +104,6 @@ trait DataTest extends GrailsUnitTest {
         }
     }
 
-    /**
-     * @deprecated as of v2.1.0 because of of consistency in the method name with
-     * other GORM projects. It is recommended to use {@link #getDatastore()} instead.
-     *
-     * @return The{@link AbstractDatastore}
-     */
-    @Deprecated
-    AbstractDatastore getDataStore() {
-        getDatastore()
-    }
-
     AbstractDatastore getDatastore() {
         applicationContext.getBean(AbstractDatastore)
     }

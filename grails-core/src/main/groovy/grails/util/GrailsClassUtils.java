@@ -874,39 +874,12 @@ public class GrailsClassUtils {
      * The name is assumed to be a valid Java method name, that is not verified.
      *
      * @param name The name of the method
-     * @param args The arguments
-     * @return true if it is a javabean property getter
-     * @deprecated use {@link #isGetter(String, Class, Class[])} instead because this method has a defect for "is.." method with Boolean return types.
-     */
-    @Deprecated
-    public static boolean isGetter(String name, Class<?>[] args) {
-        return GrailsNameUtils.isGetter(name, boolean.class, args);
-    }
-
-    /**
-     * Returns true if the name of the method specified and the number of arguments make it a javabean property getter.
-     * The name is assumed to be a valid Java method name, that is not verified.
-     *
-     * @param name The name of the method
      * @param returnType The return type of the method
      * @param args The arguments
      * @return true if it is a javabean property getter
      */
     public static boolean isGetter(String name, Class returnType, Class<?>[] args) {
         return GrailsNameUtils.isGetter(name, returnType, args);
-    }
-
-    /**
-     * Returns a property name equivalent for the given getter name or null if it is not a valid getter. If not null
-     * or empty the getter name is assumed to be a valid identifier.
-     *
-     * @param getterName The getter name
-     * @return The property name equivalent
-     * @deprecated Use {@link #getPropertyForGetter(String, Class)} instead because this method has a defect for "is.." method with Boolean return types.
-     */
-    @Deprecated
-    public static String getPropertyForGetter(String getterName) {
-        return GrailsNameUtils.getPropertyForGetter(getterName);
     }
 
     /**
