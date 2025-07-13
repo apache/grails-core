@@ -40,6 +40,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesCons
 import org.grails.orm.hibernate.cfg.domainbinding.IndexBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.StringColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
@@ -2809,11 +2810,16 @@ public class GrailsDomainBinder implements MetadataContributor {
         bindSimpleValue(grailsProp, null, simpleValue, path, propertyConfig, sessionFactoryBeanName);
     }
 
-    private void bindSimpleValue(PersistentProperty grailsProp,
-                                   PersistentProperty parentProperty, SimpleValue simpleValue,
-                                   String path, PropertyConfig propertyConfig, String sessionFactoryBeanName) {
+    private void bindSimpleValue(
+            PersistentProperty grailsProp
+            , PersistentProperty parentProperty
+            , SimpleValue simpleValue
+            , String path
+            , PropertyConfig propertyConfig
+            , String sessionFactoryBeanName
+    ) {
         setTypeForPropertyConfig(grailsProp, simpleValue, propertyConfig);
-        final PropertyConfig mappedForm = (PropertyConfig) grailsProp.getMapping().getMappedForm();
+        final PropertyConfig mappedForm = (PropertyConfig) grailsProp.getMappedForm();
         if (mappedForm != null && mappedForm.isDerived() && !(grailsProp instanceof TenantId)) {
             Formula formula = new Formula();
             formula.setFormula(propertyConfig.getFormula());
@@ -2925,7 +2931,8 @@ public class GrailsDomainBinder implements MetadataContributor {
             // Use the constraints for this property to more accurately define
             // the column's length, precision, and scale
             if (String.class.isAssignableFrom(property.getType()) || byte[].class.isAssignableFrom(property.getType())) {
-                bindStringColumnConstraints(column, property);
+                final org.grails.datastore.mapping.config.Property mappedForm = getPropertyConfig(property);
+                new StringColumnConstraintsBinder().bindStringColumnConstraints(column, mappedForm);
             }
 
             if (Number.class.isAssignableFrom(property.getType())) {
@@ -3120,29 +3127,6 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
 
-
-    /**
-     * Interrogates the specified constraints looking for any constraints that would limit the
-     * length of the property's value.  If such constraints exist, this method adjusts the length
-     * of the column accordingly.
-     *  @param column              the column that corresponds to the property
-     * @param constrainedProperty the property's constraints
-     */
-    private void bindStringColumnConstraints(Column column, PersistentProperty constrainedProperty) {
-        final org.grails.datastore.mapping.config.Property mappedForm = getPropertyConfig(constrainedProperty);
-        Number columnLength = mappedForm.getMaxSize();
-        List<?> inListValues = mappedForm.getInList();
-        if (columnLength != null) {
-            column.setLength(columnLength.intValue());
-        } else if (inListValues != null) {
-            column.setLength(getMaxSize(inListValues));
-        }
-    }
-
-    private void bindNumericColumnConstraints(Column column, PersistentProperty constrainedProperty) {
-        bindNumericColumnConstraints(column, constrainedProperty, null);
-    }
-
     /**
      * Interrogates the specified constraints looking for any constraints that would limit the
      * precision and/or scale of the property's value.  If such constraints exist, this method adjusts
@@ -3212,20 +3196,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         return numDigits;
-    }
-
-    /**
-     * @return the maximum length of the strings in the specified list
-     */
-    private int getMaxSize(List<?> inListValues) {
-        int maxSize = 0;
-
-        for (Object inListValue : inListValues) {
-            String value = (String) inListValue;
-            maxSize = Math.max(value.length(), maxSize);
-        }
-
-        return maxSize;
     }
 
     private void handleUniqueConstraint(PersistentProperty property, Column column, String path, Table table, String columnName, String sessionFactoryBeanName) {
