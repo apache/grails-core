@@ -38,6 +38,9 @@ abstract class FetchTagsTask extends Exec {
     @Input
     final Property<LocalDateTime> cacheDate // allows for forcing refreshing the tags, defaults to once a day
 
+    @Input
+    final Property<String> defaultTag // if no git repo present
+
     @OutputFile
     final RegularFileProperty tagsFile
 
@@ -46,9 +49,10 @@ abstract class FetchTagsTask extends Exec {
         group = 'documentation'
         cacheDate = objectFactory.property(LocalDateTime).convention(LocalDate.now().atStartOfDay())
         tagsFile = objectFactory.fileProperty().convention(project.layout.buildDirectory.file('git-tags.txt'))
+        defaultTag = objectFactory.property(String).convention(project.provider { "v${project.version as String}" as String })
 
         commandLine("git", "tag", "-l", "--sort=-creatordate")
-        ignoreExitValue = false
+        ignoreExitValue = !project.rootProject.layout.projectDirectory.dir('.git').asFile.exists()
 
         def output = new ByteArrayOutputStream()
         standardOutput = output
@@ -59,7 +63,11 @@ abstract class FetchTagsTask extends Exec {
                 file.mkdirs()
             }
 
-            file.text = new String(output.toByteArray(), StandardCharsets.UTF_8).trim()
+            if(ignoreExitValue) {
+                logger.lifecycle("not a git repo, so assuming a default tag of {}", defaultTag.get())
+            }
+
+            file.text = ignoreExitValue ? defaultTag.get() : new String(output.toByteArray(), StandardCharsets.UTF_8).trim()
         }
     }
 }
