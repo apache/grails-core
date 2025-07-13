@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+version = '0.1'
 group = 'issue11767.app'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
@@ -24,31 +25,17 @@ apply plugin: 'org.apache.grails.gradle.grails-web'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation project(':issue-11767-plugin')
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'org.apache.grails:grails-micronaut'
+    implementation project(':grails-test-examples-plugins-issue-11767')
 
-    implementation 'org.apache.grails:grails-core'
-    implementation 'org.apache.grails:grails-logging'
-    implementation 'org.apache.grails:grails-url-mappings'
-    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
-        implementation 'org.apache.grails:grails-layout'
-    }
-
-    compileOnly 'io.micronaut:micronaut-inject-groovy'
-
-    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+    testImplementation platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    testImplementation "io.micronaut:micronaut-http-client"
+    testImplementation "io.micronaut.serde:micronaut-serde-jackson"
     testImplementation 'io.micronaut:micronaut-inject-groovy'
+
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'
-
-}
-
-application {
-    mainClass = 'issue11767.Application'
 }
 
 apply {

@@ -20,7 +20,6 @@
 package issue11767.app
 
 import grails.testing.mixin.integration.Integration
-import grails.testing.spock.OnceBefore
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
 import spock.lang.AutoCleanup
@@ -35,8 +34,7 @@ class ConfigLoadingSpec extends Specification {
     @AutoCleanup
     HttpClient httpClient
 
-    @OnceBefore
-    void init() {
+    void setup() {
         def baseUrl = "http://localhost:$serverPort"
         httpClient = HttpClient.create(baseUrl.toURL())
     }

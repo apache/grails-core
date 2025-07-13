@@ -1,0 +1,84 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+// force a local build version for debugging
+//project.configurations.configureEach({ Configuration configuration ->
+//    configuration.resolutionStrategy.eachDependency({ DependencyResolveDetails details ->
+//        String dependencyName = details.requested.name
+//        String group = details.requested.group
+//        if (group == 'io.micronaut' && dependencyName.startsWith('micronaut-core-processor')) {
+//            logger.lifecycle("Forcing Micronaut Core Processor version to 4.9.99 for Grails Micronaut plugin")
+//            details.useVersion('4.9.99')
+//        }
+//    } as Action<DependencyResolveDetails>)
+//} as Action<Configuration>)
+
+dependencies {
+    annotationProcessor platform(project(':grails-bom'))
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+
+    compileOnlyApi platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    compileOnlyApi 'io.micronaut:micronaut-inject-groovy'
+    compileOnlyApi 'io.micronaut:micronaut-inject-java'
+
+    api platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    api 'io.micronaut.spring:micronaut-spring-boot-starter'
+    api "io.micronaut.spring:micronaut-spring-context", {
+        // required to load the micronaut environment with plugin configuration
+        exclude group: "org.slf4j", module: "slf4j-simple"
+    }
+    api "io.micronaut.cache:micronaut-cache-core", {
+        exclude group:"org.slf4j", module: "slf4j-simple"
+    }
+
+    implementation platform(project(':grails-bom'))
+    compileOnly project(':grails-core')
+
+    // Logging
+    compileOnly 'org.slf4j:slf4j-api'
+    compileOnly 'org.slf4j:jcl-over-slf4j'
+
+    // Testing
+    testImplementation platform(project(':grails-bom'))
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+
+    // Required by Spock's Mocking
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

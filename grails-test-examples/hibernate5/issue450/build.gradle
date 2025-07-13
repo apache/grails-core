@@ -56,7 +56,7 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
     integrationTestImplementation 'org.spockframework:spock-core'
 

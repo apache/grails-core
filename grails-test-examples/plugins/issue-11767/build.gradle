@@ -17,18 +17,19 @@
  *  under the License.
  */
 
-package issue11767.plugin
+version = '0.1-SNAPSHOT'
+group = 'issue11767.plugin'
 
-import grails.plugins.*
+apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
-class Issue11767GrailsPlugin extends Plugin {
+dependencies {
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.grails:grails-micronaut'
+    implementation 'org.apache.grails:grails-core'
+}
 
-    def title = 'Issue 11767'
-    def author = 'Mattias Reichel'
-    def authorEmail = ''
-    def description = ''
-
-    Closure doWithSpring() {{ ->
-        pluginGroovySpringBean(PluginGroovySpringBean)
-    }}
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

@@ -20,83 +20,30 @@
 version = '0.1'
 group = 'micronaut'
 
-apply plugin:'org.apache.grails.gradle.grails-web'
-apply plugin:'cloud.wondrify.asset-pipeline'
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gsp
 // for production does not fail during build task.
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
-configurations {
-    developmentOnly
-    runtimeClasspath {
-        extendsFrom developmentOnly
-    }
-}
-
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    developmentOnly('org.springframework.boot:spring-boot-devtools')
-    implementation 'org.springframework.boot:spring-boot-starter-logging'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
-    implementation 'org.apache.grails:grails-core'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
-    implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
-        implementation 'org.apache.grails:grails-layout'
-    }
-    implementation 'org.apache.grails:grails-logging'
-    implementation 'org.apache.grails:grails-rest-transforms'
-    implementation 'org.apache.grails:grails-databinding'
-    implementation 'org.apache.grails:grails-i18n'
-    implementation 'org.apache.grails:grails-services'
-    implementation 'org.apache.grails:grails-url-mappings'
-    implementation 'org.apache.grails:grails-interceptors'
-    implementation 'org.apache.grails:grails-cache'
-    implementation 'org.apache.grails:grails-async'
-    implementation 'org.apache.grails:grails-scaffolding'
-    implementation 'org.apache.grails:grails-events'
-    implementation 'org.apache.grails:grails-data-hibernate5'
-    implementation 'org.apache.grails:grails-gsp'
-    compileOnly 'io.micronaut:micronaut-inject-groovy'
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'org.apache.grails:grails-micronaut'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
-    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
-    testAndDevelopmentOnly 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
-    console 'org.apache.grails:grails-console'
-    profile 'org.apache.grails.profiles:web'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'jakarta.xml.bind:jakarta.xml.bind-api'
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
-    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
-    testImplementation 'org.mockito:mockito-core'
-    testImplementation 'org.apache.grails:grails-testing-support-web'
+
+    testImplementation 'org.apache.grails:grails-dependencies-test'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
-}
-
-bootRun {
-    jvmArgs(
-        '-Dspring.output.ansi.enabled=always', 
-        '-noverify', 
-        '-XX:TieredStopAtLevel=1',
-        '-Xmx1024m')
-    sourceResources sourceSets.main
-    String springProfilesActive = 'spring.profiles.active'
-    systemProperty springProfilesActive, System.getProperty(springProfilesActive)
-}
-
-tasks.named('assetCompile').configure {
-    // No need to compile assets in functional tests
-    enabled = false
 }
 
 apply {

@@ -145,6 +145,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                     void execute(JavaExecSpec javaExecSpec) {
                         javaExecSpec.mainClass.set(getCompilerName())
                         javaExecSpec.setClasspath(getClasspath())
+                        //javaExecSpec.setJvmArgs(['-Xmx2g', '-Xdebug', '-Xnoagent','-Djava.compiler=NONE', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'])
 
                         def jvmArgs = compileOptions.forkOptions.jvmArgs
                         if (jvmArgs) {

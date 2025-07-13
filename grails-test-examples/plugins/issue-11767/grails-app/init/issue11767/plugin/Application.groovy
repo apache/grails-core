@@ -21,8 +21,8 @@ package issue11767.plugin
 
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
+import grails.plugins.metadata.PluginSource
 import groovy.transform.CompileStatic
-import grails.plugins.metadata.*
 import org.springframework.context.annotation.ComponentScan
 
 @CompileStatic

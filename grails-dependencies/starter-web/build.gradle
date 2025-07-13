@@ -47,7 +47,7 @@ def configurations = [
                 ':grails-gsp',
                 ':grails-i18n',
                 ':grails-interceptors',
-                ':grails-layout', // layout will be the default because it's fully functional while sitemesh3 still has issues
+                System.getenv('SITEMESH3_TESTING_ENABLED') == 'true' ? ':grails-sitemesh3' : ':grails-layout',
                 ':grails-logging',
                 ':grails-rest-transforms',
                 ':grails-services',
