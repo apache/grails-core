@@ -58,4 +58,4 @@ echo "$SECOND_BUILD" > second.txt
 
 # diff -u first.txt second.txt
 echo "Differing artifacts:"
-comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | uniq | sort
+comm -3 first.txt second.txt | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort

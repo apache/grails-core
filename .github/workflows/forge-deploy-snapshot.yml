@@ -1,0 +1,135 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Forge - Snapshot GCP Deploy"
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    name: "Build project"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔨 Build"
+        working-directory: grails-forge
+        run: ./gradlew build
+  deploy:
+    name: "Deploy to Google Cloud Run"
+    runs-on: ubuntu-24.04
+    needs: build
+    env:
+      IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:snapshot
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔑 Login to Google Cloud"
+        uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          create_credentials_file: 'true'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - name: "🐋 Configure Docker for Artifact Registry"
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+      - name: "🏃 Run tests"
+        working-directory: grails-forge
+        run: >
+          ./gradlew
+          grails-forge-api:test
+          grails-forge-web-netty:test
+      - name: "🔨 Build Docker native image"
+        working-directory: grails-forge
+        run: >
+          ./gradlew
+          grails-forge-web-netty:dockerBuildNative
+          -PdockerImageName=${{ env.IMAGE_NAME }}
+      - name: "📤 Push Container to Google Cloud Artifact Registry"
+        run: |
+          docker push ${{ env.IMAGE_NAME }}
+      - name: "🚀 Deploy Docker image"
+        run: >
+          gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-snapshot
+          --image $IMAGE_NAME
+          --region us-central1
+          --update-env-vars=HOSTNAME="snapshot.grails.org",CORS_ALLOWED_ORIGIN="https://start.grails.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_SNAPSHOT_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_SNAPSHOT_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }}
+          --platform managed
+          --allow-unauthenticated
+          --service-account=${{ secrets.GCLOUD_EMAIL }}
+  deployAnalytics:
+    name: "Deploy analytics to Google Cloud Run"
+    runs-on: ubuntu-24.04
+    needs: build
+    env:
+      IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}-analytics:snapshot
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: '17'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔑 Login to Google Cloud"
+        uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          create_credentials_file: 'true'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - name: "🐋 Configure Docker for Artifact Registry"
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+      - name: "🏃 Run tests"
+        working-directory: grails-forge
+        run: ./gradlew grails-forge-analytics-postgres:test
+      - name: "🔨 Build Docker native image"
+        working-directory: grails-forge
+        run: >
+          ./gradlew
+          grails-forge-analytics-postgres:dockerBuildNative
+          -PdockerImageName=${{ env.IMAGE_NAME }}
+      - name: "📤 Push Container to Google Cloud Artifact Registry"
+        run: |
+          docker push ${{ env.IMAGE_NAME }}
+      - name: "🚀 Deploy Docker image"
+        run: |
+          gcloud components install beta --quiet
+          gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-analytics-snapshot --image $IMAGE_NAME --region us-central1 --platform managed --allow-unauthenticated --service-account=${{ secrets.GCLOUD_EMAIL }}

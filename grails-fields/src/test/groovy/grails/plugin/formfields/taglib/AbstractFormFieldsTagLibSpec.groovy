@@ -75,7 +75,7 @@ abstract class AbstractFormFieldsTagLibSpec extends Specification implements Gra
 		}
 	}
 
-	protected void mockEmbeddedSitemeshLayout(taglib) {
+	protected void mockEmbeddedGrailsLayout(taglib) {
 	 	taglib.metaClass.applyLayout = { Map attrs, Closure body ->
 	 		if (attrs.name == '_fields/embedded') {
 	 			out << '<fieldset class="embedded ' << attrs.params.type << '">'

@@ -17,7 +17,29 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Creating a project is the primary usage of the CLI. The primary command for creating a new project is create-app, which creates a standard Grails web application that communicates over HTTP. For other types of application, see the documentation below.
+[NOTE]
+====
+The `create-app` and related commands are available in both the Grails Shell CLI and the Grails Forge CLI.
+
+- To create a project using the default Grails Shell CLI:
+`$ grails create-app myapp`
+- To use Forge-specific options (such as `--java-version`, `--features`, etc.):  
+`$ grails -t forge create-app myapp`
+
+====
+
+The primary command for creating a new project is `create-app`, which creates a standard Grails web application that communicates over HTTP. For other types of applications, see the documentation below.
+
+Creating a project is the primary usage of the Grails Forge CLI.  You can also generate an application with grails-shell, which uses profiles for generation.
+
+The `create-app` and other commands support extended options in Forge, which must be run using the following format:
+
+[source,console]
+----
+$ ./grails -t forge create-app myapp
+----
+
+After generating a project with Forge, switch to the created directory and use the default Grails shell CLI (`./grails`) to manage, run, test, and deploy your application.
 
 [cols="1,3,4a,8a"]
 |===
@@ -26,7 +48,6 @@ Creating a project is the primary usage of the CLI. The primary command for crea
 | create-app / create-webapp
 | Creates a Grails web application
 |
-
 [none]
 * -jdk, --java-version
 * -s, --servlet
@@ -35,21 +56,20 @@ Creating a project is the primary usage of the CLI. The primary command for crea
 * -f, --features
 * -i, --inplace
 |
-[source,shell]
+[source,console]
 ----
-grails create-app \
+./grails -t forge create-app \
     --servlet=tomcat \
     --jdk=11 \
     --gorm=hibernate \
     --test=spock \
     --features=github-workflow-java-ci \
-    com.example.demo`
+    com.example.demo
 ----
 
 | create-restapi
 | Creates a Grails REST API application
 |
-
 [none]
 * -jdk, --java-version
 * -s, --servlet
@@ -58,21 +78,20 @@ grails create-app \
 * -f, --features
 * -i, --inplace
 |
-[source,shell]
+[source,console]
 ----
-grails create-restapi \
+./grails -t forge create-restapi \
     --servlet=tomcat \
     --jdk=11 \
     --gorm=hibernate \
     --test=spock \
     --features=github-workflow-java-ci \
-    com.example.demo`
+    com.example.demo
 ----
 
 | create-plugin
 | Creates a Grails Plugin application
 |
-
 [none]
 * -jdk, --java-version
 * -s, --servlet
@@ -81,21 +100,20 @@ grails create-restapi \
 * -f, --features
 * -i, --inplace
 |
-[source,shell]
+[source,console]
 ----
-grails create-plugin \
+./grails -t forge create-plugin \
     --servlet=tomcat \
     --jdk=11 \
     --gorm=hibernate \
     --test=spock \
     --features=github-workflow-java-ci \
-    com.example.demo`
+    com.example.demo
 ----
 
 | create-web-plugin
 | Creates a Grails Web Plugin application
 |
-
 [none]
 * -jdk, --java-version
 * -s, --servlet
@@ -104,19 +122,17 @@ grails create-plugin \
 * -f, --features
 * -i, --inplace
 |
-[source,shell]
+[source,console]
 ----
-grails create-web-plugin \
+./grails -t forge create-web-plugin \
     --servlet=tomcat \
     --jdk=11 \
     --gorm=hibernate \
     --test=spock \
     --features=github-workflow-java-ci \
-    com.example.demo`
+    com.example.demo
 ----
-
 |===
-| Flag  | Description | Example
 
 === The `create-` command flags
 
@@ -131,12 +147,11 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 |
 [source,shell]
 ----
---java-version 11
+--java-version 21
 ----
 
 | -s, --servlet
-| Which Servlet Implementation to configure. Possible values: none, tomcat,
-jetty, undertow.
+| Which Servlet Implementation to configure. Possible values: none, tomcat, jetty, undertow.
 |
 [source,shell]
 ----
@@ -144,8 +159,7 @@ jetty, undertow.
 ----
 
 | -g, --gorm
-| Which GORM Implementation to configure. Possible values: hibernate,
-mongodb, neo4j.
+| Which GORM Implementation to configure. Possible values: hibernate, mongodb, neo4j.
 |
 [source,shell]
 ----

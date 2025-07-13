@@ -18,7 +18,6 @@
  */
 package org.grails.cli.profile.repository
 
-import spock.lang.Ignore
 import spock.lang.Specification
 
 
@@ -28,7 +27,6 @@ import spock.lang.Specification
  */
 class MavenRepositorySpec extends Specification {
 
-    @Ignore("Could not find artifact org.grails:grails-bom:pom: in grailsCentral (https://repo.grails.org/grails/restricted)")
     void "Test resolve profile"() {
         given:"A maven profile repository"
         def repo = new MavenProfileRepository()
@@ -41,7 +39,6 @@ class MavenRepositorySpec extends Specification {
         profile.name == 'web'
     }
 
-    @Ignore("Could not find artifact org.grails:grails-bom:pom: in grailsCentral (https://repo.grails.org/grails/restricted)")
     void "Test list all profiles"() {
         given:"A maven profile repository"
         def repo = new MavenProfileRepository()

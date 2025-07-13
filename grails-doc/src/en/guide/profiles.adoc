@@ -19,35 +19,35 @@ under the License.
 
 When you create a Grails application with the link:../ref/Command%20Line/create-app.html[create-app] command by default the "web" profile is used:
 
-[source,bash]
+[source,console]
 ----
-grails create-app myapp
-----
-
-You can specify a different profile with the profile argument:
-
-[source,bash]
-----
-grails create-app myapp --profile=rest-api
+$ grails create-app myapp
 ----
 
-Profiles encapsulate the project commands, templates and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/grails-profiles[on Github], whilst the profiles themselves are published as JAR files to the Grails central repository.
+You can specify a different profile with the `--profile` argument:
 
-To find out what profiles are available use the link:../ref/Command%20Line/list-profiles.html[list-profiles] command:
+[source,console]
+----
+$ grails create-app myapp --profile=rest-api
+----
 
-[source,bash]
+Profiles encapsulate the project commands, templates, and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/grails-profiles[on GitHub], and the profiles themselves are published as JAR files to the Grails central repository.
+
+To find out what profiles are available, use the link:../ref/Command%20Line/list-profiles.html[list-profiles] command:
+
+[source,console]
 ----
 $ grails list-profiles
 ----
 
-For more information on a particular profile use the link:../ref/Command%20Line/profile-info.html[profile-info] command:
+For more information on a particular profile, use the link:../ref/Command%20Line/profile-info.html[profile-info] command:
 
-[source,bash]
+[source,console]
 ----
 $ grails profile-info rest-api
 ----
 
-NOTE: Commands such as `profile-info` or `list-profiles` are not available when you invoke the Grails CLI inside a grails project. 
+NOTE: Commands such as `profile-info` or `list-profiles` are not available when you invoke the Grails CLI inside a grails project.
 
 ==== Profile Repositories
 
@@ -98,12 +98,12 @@ grails {
 
 To create an application that uses a custom profile, you must specify the full artifact.
 
-[source,bash]
+[source,console]
 ----
 $ grails create-app myapp --profile=com.mycompany.grails.profiles:myprofile:1.0.0
 ----
 
-To make this process easier, you can define defaults for a given profile in the `USER_HOME/.grails/settings.groovy` file.
+To simplify this process, you can define defaults for that profile in your `USER_HOME/.grails/settings.groovy` file:
 
 [source,groovy]
 ----
@@ -120,9 +120,9 @@ grails {
 }
 ----
 
-With the default values specified, the command to create an application using that profile becomes:
+With the defaults set, the following command will use the defined group ID and version:
 
-[source,bash]
+[source,console]
 ----
 $ grails create-app myapp --profile=myprofile
 ----

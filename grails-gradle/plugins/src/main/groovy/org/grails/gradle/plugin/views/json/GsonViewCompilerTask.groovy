@@ -38,9 +38,6 @@ class GsonViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Inject
     GsonViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {
-        super(execOperations, objectFactory)
-        fileExtension.convention('gson')
-        scriptBaseName.convention('grails.plugin.json.view.JsonViewTemplate')
-        compilerName.convention('grails.plugin.json.view.JsonViewCompiler')
+        super(execOperations, objectFactory, 'gson', 'grails.plugin.json.view.JsonViewTemplate', 'grails.plugin.json.view.JsonViewCompiler')
     }
 }

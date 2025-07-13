@@ -58,7 +58,7 @@ This command will display more detailed info about a given plugin such as the au
 Plugin that adds Geb functional testing code generation features.
 
 * License: APACHE
-* Documentation: http://grails.org/plugin/geb
-* Issue Tracker: https://github.com/apache/grails-geb/issues
-* Source: https://github.com/apache/grails-geb/
+* Documentation: https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme
+* Issue Tracker: https://github.com/apache/grails-core/issues
+* Source: https://github.com/apache/grails-core
 ----

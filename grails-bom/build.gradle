@@ -74,6 +74,18 @@ dependencies {
         api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
         api "org.apache.grails:grails-docs-core:${projectVersion}"
+
+        // because we are not yet publishing hibernate6, just force the hibernate5 version for now
+        api("org.liquibase:liquibase-core") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
+        api("org.liquibase.ext:liquibase-hibernate5") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
     }
 }
 
@@ -89,12 +101,29 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
+    it.projectName = project.name
     it.versions = combinedVersions
+    rootProject.subprojects.each { p ->
+        evaluationDependsOn(p.path)
+    }
+    it.projectArtifactIds.set(project.provider{
+        Map<String, String> artifactIdMappings = [:]
+
+        rootProject.subprojects.each { p ->
+            artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
+        }
+
+        artifactIdMappings
+    })
 
     it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
 }
 
-tasks.register('validateNoSnapshotDependencies').configure { Task it ->
+def validateNoSnapshotDependencies = tasks.register('validateNoSnapshotDependencies')
+validateNoSnapshotDependencies.configure { Task it ->
+    it.group = 'publishing'
+    it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
+
     it.doLast {
         configurations.each { config ->
             config.allDependencies.each { dep ->
@@ -107,11 +136,13 @@ tasks.register('validateNoSnapshotDependencies').configure { Task it ->
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
-    tasks.named('generateMetadataFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
-    }
-    tasks.named('generatePomFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+    project.afterEvaluate {
+        tasks.named('generateMetadataFileForMavenPublication').configure {
+            dependsOn(validateNoSnapshotDependencies)
+        }
+        tasks.named('generatePomFileForMavenPublication').configure {
+            dependsOn(validateNoSnapshotDependencies)
+        }
     }
 }
 
@@ -136,8 +167,9 @@ ext {
                     inlineVersion = null
                 }
 
-                PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
                 if (inlineVersion) {
+                    PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
+                    propertyNameCalculator.addProjects(rootProject.subprojects)
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
@@ -146,6 +178,13 @@ ext {
 
                         // Add an entry in the <properties> node with the actual version number
                         pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
+                    }
+
+                    if (gradle.includedBuilds*.any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
+                        String baseVersionName = artifactId.replaceAll('-', '.')
+                        String versionName = "${baseVersionName}.version" as String
+                        dep.version[0].value = "\${${versionName}}" as String
+                        pomProperties.put(versionName, inlineVersion)
                     }
                 } else if (!inlineVersion) {
                     throw new GradleException("Dependency $groupId:$artifactId does not have a version.")

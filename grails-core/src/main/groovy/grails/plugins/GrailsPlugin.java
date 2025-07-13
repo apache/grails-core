@@ -18,21 +18,20 @@
  */
 package grails.plugins;
 
+import grails.core.GrailsApplication;
 import grails.util.Environment;
 import groovy.lang.GroovyObject;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
-import grails.core.GrailsApplication;
-import org.grails.spring.RuntimeSpringConfiguration;
 import org.grails.plugins.support.WatchPattern;
+import org.grails.spring.RuntimeSpringConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.filter.TypeFilter;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>Plugin interface that adds Spring {@link org.springframework.beans.factory.config.BeanDefinition}s
@@ -213,14 +212,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * @return true if the current plugin supports the current BuildScope and Environment
      */
     boolean supportsCurrentScopeAndEnvironment();
-
-    /**
-     * Write some documentation to the DocumentationContext
-     * @deprecated Dynamic document generation no longer supported
-     * @param text
-     */
-    @Deprecated
-    void doc(String text);
 
     /**
      * Returns the path of the plug-in

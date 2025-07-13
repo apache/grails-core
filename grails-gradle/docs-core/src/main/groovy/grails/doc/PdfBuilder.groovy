@@ -28,6 +28,8 @@ import org.jsoup.Jsoup
 import org.w3c.dom.Document
 import org.xhtmlrenderer.pdf.ITextRenderer
 
+import java.nio.charset.StandardCharsets
+
 @CompileStatic
 class PdfBuilder {
 
@@ -61,7 +63,7 @@ class PdfBuilder {
     }
 
     static String createXml(File htmlFile, String base) {
-        String xml = htmlFile.getText("UTF-8")
+        String xml = htmlFile.getText(StandardCharsets.UTF_8.name())
 
         // fix inner anchors
         xml = xml.replaceAll('<a href="\\.\\./guide/single\\.html', '<a href="')
@@ -137,7 +139,7 @@ class PdfBuilder {
         dbf.setFeature "http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false
 
         DocumentBuilder builder = dbf.newDocumentBuilder()
-        builder.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")))
+        builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))
     }
 
     static void createPdfWithDocument(Document doc, File outputFile, File urlBase) {

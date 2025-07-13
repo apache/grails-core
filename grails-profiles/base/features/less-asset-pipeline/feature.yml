@@ -4,8 +4,8 @@ build:
         - asset-pipeline
 dependencies:
     - scope: build
-      coords: "com.bertramlabs.plugins:asset-pipeline-gradle"
+      coords: "cloud.wondrify:asset-pipeline-gradle"
     - scope: runtimeOnly
-      coords: "com.bertramlabs.plugins:asset-pipeline-grails"
+      coords: "cloud.wondrify:asset-pipeline-grails"
     - scope: assets
-      coords: "com.bertramlabs.plugins:less-asset-pipeline"
+      coords: "cloud.wondrify:less-asset-pipeline"

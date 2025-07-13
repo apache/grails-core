@@ -53,7 +53,7 @@ dependencies:
     - scope: implementation
       coords: "org.apache.grails:grails-async"
     - scope: testImplementation
-      coords: "io.micronaut:micronaut-http-client"
+      coords: "io.micronaut:micronaut-http-client:4.6.5"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-web"
     - scope: testImplementation

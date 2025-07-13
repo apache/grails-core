@@ -29,7 +29,9 @@ $ cd your_project_directory
 Create a new Grails project with the following command:
 
 [source,console]
-$ grails create-app myapp
+$ grails -t forge create-app myapp
+
+NOTE: You can omit `-t forge`, to generate the application with Grails Shell CLI and profiles
 
 === Step 2: Access the Project Directory
 
@@ -40,10 +42,10 @@ $ cd myapp
 
 === Step 3: Start Grails Interactive Console
 
-Start the Grails interactive console by running the "grails" command:
+Start the Grails Forge CLI interactive console by running the "grails" command:
 
 [source,console]
-$ grails
+$ grails -t forge
 
 === Step 4: Create a Controller
 
@@ -183,8 +185,6 @@ $ ./gradlew bootRun -Dgrails.server.port=9090
 Replace "9090" with your preferred port.
 
 === Note for Windows Users
-
-If you encounter an error related to the Java process or filename length, you can use the `--stacktrace` flag or add `grails { pathingJar = true }` to your "build.gradle" file.
 
 It may also be necessary to enclose the system properties in quotes on Windows:
 ----

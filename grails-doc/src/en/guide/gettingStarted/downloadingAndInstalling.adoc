@@ -38,7 +38,11 @@ Long term, we intend to fold the legacy shell functions into it - including the 
 This CLI has only interactive completion.
 Historically, this shell has not had autocompletion.
 3. `grails` - a new, delegating shell application that will call either `grails-shell-cli` or `grails-forge-cli`.
-A specific version can be forced by passing the `-t` or `--type` argument with a value of `shell` or `forge`.
+By default, `./grails` uses `grails-shell-cli` for backwards compatibility.
+To use `grails-forge-cli`, pass the `-t` or `--type` argument:
+[source,console]
+$ ./grails -t forge
+
 
 === Install with SDKMAN
 
@@ -53,13 +57,13 @@ You can also specify a version
 $ sdk install grails {version}
 
 You can find more information about SDKMAN usage on the https://sdkman.io/usage[SDKMAN Docs].
-After installing, all three CLI commands should be available.
+After installing, all three CLI commands: `grails`, `grails-shell-cli`, and `grails-forge-cli` will be available.
 
 === Manual installation
 
 For manual installation follow these steps:
 
-* https://github.com/apache/grails-forge/releases[Download] a binary distribution of Grails and extract the resulting zip file to a location of your choice.
+* https://github.com/apache/grails-core/releases[Download] a binary distribution of Grails and extract the resulting zip file to a location of your choice.
 Then add the bin directory to your system path.
 
 ==== Unix/Linux

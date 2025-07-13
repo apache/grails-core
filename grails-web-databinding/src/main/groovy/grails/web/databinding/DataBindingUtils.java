@@ -168,7 +168,7 @@ public class DataBindingUtils {
         PersistentEntity entity = null;
         if (application != null) {
             try {
-                entity = application.getMappingContext().getPersistentEntity(targetType.getClass().getName());
+                entity = application.getMappingContext().getPersistentEntity(targetType.getName());
             } catch (GrailsConfigurationException e) {
                 //no-op
             }

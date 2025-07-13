@@ -44,11 +44,6 @@ class TaskControllerSpec extends Specification {
         client = HttpClient.create("http://localhost:$serverPort".toURL())
     }
 
-    @PendingFeature(reason = '''
-        For some reason the response body is blank with bootTestRun.
-        However, when starting the application with bootRun,
-        the response body is as expected.
-    ''')
     void 'test async error handling'() {
 
         when: 'we invoke an endpoint that throws an exception'

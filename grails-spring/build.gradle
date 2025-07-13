@@ -35,7 +35,7 @@ dependencies {
     api 'org.springframework:spring-context'
     api project(':grails-bootstrap')
     api 'org.apache.groovy:groovy'
-    api ( 'org.apache.groovy:groovy-xml' )
+    api 'org.apache.groovy:groovy-xml'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

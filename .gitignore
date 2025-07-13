@@ -8,6 +8,7 @@
 *.swp
 .DS_Store
 .classpath
+.assetcache
 .gradle
 .gradle/
 .idea
@@ -54,3 +55,4 @@ tmp/
 !grails-fields/src/main/groovy/org/grails/scaffolding/registry/output
 !etc/bin
 etc/bin/results
+.vscode/

@@ -1,0 +1,11 @@
+{
+  "bundles":[
+    {"name":"org.eclipse.jgit.internal.JGitText"}
+  ],
+  "resources": {
+    "includes": [
+      {"pattern":"\\Qapplication.yml\\E"},
+      {"pattern":"\\Qlogback.xml\\E"}
+    ]
+  }
+}

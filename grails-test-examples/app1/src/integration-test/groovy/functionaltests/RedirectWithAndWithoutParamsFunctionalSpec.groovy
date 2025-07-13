@@ -38,8 +38,8 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
 
         then: 'the params are not added to the url'
         !currentUrl.contains('?name=foo')
-        driver.pageSource.contains('"id":')
-        driver.pageSource.contains('"name":"foo"')
+        pageSource.contains('"id":')
+        pageSource.contains('"name":"foo"')
     }
 
     @Issue('grails-core-#10622')
@@ -51,7 +51,7 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
         !currentUrl.contains('/new-url?name=foo')
 
         and: 'the params are not on the output'
-        !driver.pageSource.contains('"name":"foo"')
+        !pageSource.contains('"name":"foo"')
 
         when: 'redirecting from url mappings without enabling params redirect'
         go "/old-with-controller-action?name=foo"
@@ -60,7 +60,7 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
         !currentUrl.contains('/new-url?name=foo')
 
         and: 'the params are not on the output'
-        !driver.pageSource.contains('"name":"foo"')
+        !pageSource.contains('"name":"foo"')
     }
 
     @Issue('grails-core-#10622')
@@ -72,7 +72,7 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
         !currentUrl.contains('/new-url?name=foo')
 
         and: 'the params are not on the output'
-        !driver.pageSource.contains('"name":"foo"')
+        !pageSource.contains('"name":"foo"')
 
         when: 'redirecting from url mappings without enabling params redirect'
         go "/old-with-controller-action-2?name=foo"
@@ -81,7 +81,7 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
         !currentUrl.contains('/new-url?name=foo')
 
         and: 'the params are not on the output'
-        !driver.pageSource.contains('"name":"foo"')
+        !pageSource.contains('"name":"foo"')
     }
 
     @Issue('grails-core-#10622')
@@ -93,6 +93,6 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
         currentUrl.contains('/new-url?name=foo')
 
         and: 'the params are on the output'
-        driver.pageSource.contains('"name":"foo"')
+        pageSource.contains('"name":"foo"')
     }
 }

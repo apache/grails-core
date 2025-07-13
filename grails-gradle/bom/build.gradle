@@ -60,7 +60,11 @@ dependencies {
     }
 }
 
-tasks.register('validateNoSnapshotDependencies').configure {
+def noSnapshotDependenciesTask = tasks.register('validateNoSnapshotDependencies')
+noSnapshotDependenciesTask.configure {
+    it.group = 'publishing'
+    it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
+
     doLast {
         configurations.each { config ->
             config.allDependencies.each { dep ->
@@ -73,15 +77,27 @@ tasks.register('validateNoSnapshotDependencies').configure {
 }
 
 if (ext.isReleaseBuild && ext.isPublishedExternal) {
-    tasks.named('generateMetadataFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
-    }
-    tasks.named('generatePomFileForMavenPublication').configure {
-        dependsOn(tasks.named('validateNoSnapshotDependencies'))
+    project.afterEvaluate {
+        // after eval is required since publications aren't added until after evaluation
+        tasks.named('generateMetadataFileForMavenPublication').configure {
+            dependsOn(noSnapshotDependenciesTask)
+        }
+        tasks.named('generatePomFileForMavenPublication').configure {
+            dependsOn(noSnapshotDependenciesTask)
+        }
     }
 }
 
 Closure determinePropertyName = { String groupId, String artifactId, String version, boolean isBom ->
+    Project foundProject = rootProject.subprojects.find {
+        it.name == artifactId &&
+                it.group == groupId
+        it.version == version
+    }
+    if (foundProject) {
+        return "${artifactId.replaceAll('-', '.')}.version" as String
+    }
+
     Map<String, String> toSearch = isBom ? gradleBomPlatformDependencies : gradleBomDependencies
 
     Map.Entry<String, String> found = toSearch.entrySet().find { "$groupId:$artifactId:$version" as String == it.value as String }
@@ -122,7 +138,7 @@ publishing {
     repositories {
         maven {
             name = 'TestCaseMavenRepo'
-            url = rootProject.layout.buildDirectory.dir('local-maven')
+            url = rootProject.layout.projectDirectory.dir('../build/local-maven')
         }
     }
 
@@ -171,4 +187,9 @@ publishing {
             }
         }
     }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
 }

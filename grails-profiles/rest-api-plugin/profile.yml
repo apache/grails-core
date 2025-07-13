@@ -25,14 +25,14 @@ features:
         - json-views
 build:
     plugins:
-        - org.grails.grails-plugin
-        - org.grails.grails-plugin-publish
+        - org.apache.grails.gradle.grails-plugin
+        - org.apache.grails.gradle.grails-publish
     excludes:
         - org.apache.grails.gradle.grails-app
         - org.apache.grails.gradle.grails-web
         - war
 dependencies:
-    - scope: provided
+    - scope: implementation
       coords: "org.springframework.boot:spring-boot-starter-tomcat"
     - scope: implementation
       coords: "org.apache.grails:grails-url-mappings"

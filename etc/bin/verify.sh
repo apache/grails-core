@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#
+set -euo pipefail
+
+RELEASE_TAG=$1
+DOWNLOAD_LOCATION="${2:-downloads}"
+DOWNLOAD_LOCATION=$(realpath "${DOWNLOAD_LOCATION}")
+
+if [ -z "${RELEASE_TAG}" ]; then
+  echo "Usage: $0 [release-tag] <optional download location>"
+  exit 1
+fi
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+CWD=$(pwd)
+VERSION=${RELEASE_TAG#v}
+
+cleanup() {
+  echo "❌ Verification failed. ❌"
+}
+trap cleanup ERR
+
+echo "Downloading Artifacts ..."
+"${SCRIPT_DIR}/download-release-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+echo "✅ Artifacts Downloaded"
+
+echo "Verifying Source Distribution ..."
+"${SCRIPT_DIR}/verify-source-distribution.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+echo "✅ Source Distribution Verified"
+
+echo "Verifying Wrapper Distribution ..."
+"${SCRIPT_DIR}/verify-wrapper-distribution.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+echo "✅ Wrapper Distribution Verified"
+
+echo "Verifying CLI Distribution ..."
+"${SCRIPT_DIR}/verify-cli-distribution.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+echo "✅ CLI Distribution Verified"
+
+echo "Verifying JAR Artifacts ..."
+"${SCRIPT_DIR}/verify-jar-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+echo "✅ JAR Artifacts Verified"
+
+echo "Using Java at ..."
+which java
+java -version
+
+echo "Writing out custom repo script"
+echo """
+  allprojects {
+      buildscript {
+          repositories {
+              mavenCentral()
+              maven { url = 'https://repo.grails.org/grails/restricted' }
+              maven { url = 'https://repository.apache.org/content/groups/staging' }
+          }
+      }
+
+      repositories {
+          mavenCentral()
+          maven { url = 'https://repo.grails.org/grails/restricted' }
+          maven { url = 'https://repository.apache.org/content/groups/staging' }
+      }
+  }
+
+""" > "${DOWNLOAD_LOCATION}/custom-repos.gradle"
+echo "✅ Custom repo script written"
+
+echo "Bootstrap Gradle ..."
+cd "${DOWNLOAD_LOCATION}/grails/gradle-bootstrap"
+gradlew
+echo "✅ Gradle Bootstrapped"
+
+echo "Applying License Audit ..."
+cd "${DOWNLOAD_LOCATION}/grails"
+./gradlew rat
+echo "✅ RAT passed"
+
+echo "Verifying Reproducible Build ..."
+set +e # because we have known issues here
+verify-reproducible.sh "${DOWNLOAD_LOCATION}"
+set -e
+echo "✅ Reproducible Build Verified"
+
+echo "Be sure to do the following:"
+echo "☑️   Set the override repo: 'export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging' "
+echo "☑️   Run the wrapper ShellApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
+echo "☑️   Run the wrapper ForgeApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
+echo "☑️   Run the cli ShellApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
+echo "☑️   Run the cli ForgeApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
+echo "☑️   Add the local repos to the application and then run the shell cli from one of the applications and ensure all commands show as expected - pay attention to the scaffolding ones since they are dynamically loaded"
+
+echo "✅✅✅ Verification finished, see above instructions for remaining manual testing."

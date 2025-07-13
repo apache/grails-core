@@ -24,19 +24,18 @@ import java.util.regex.Pattern;
  * Assists in parsing grails versions and sorting them by priority
  */
 public class GrailsVersion implements Comparable<GrailsVersion> {
-    private static final Pattern VERSION_PATTERN = Pattern.compile("^(\\d+)[.](\\d+)[.](.*)$");
+    private static final Pattern VERSION_PATTERN = Pattern.compile("^(\\d+)[.](\\d+)[.](\\d+)-?(.*)$");
 
-    private static final Pattern RELEASE = Pattern.compile("^(\\d+)$");
     private static final Pattern RC = Pattern.compile("^RC(\\d+)$");
     private static final Pattern MILESTONE = Pattern.compile("^M(\\d+)$");
-    private static final Pattern SNAPSHOT = Pattern.compile("^(\\d+)-SNAPSHOT$");
+    private static final Pattern SNAPSHOT = Pattern.compile("^SNAPSHOT$");
 
     public final String version;
-    public final String major;
-    public final String minor;
-    public final String patch;
+    public final int major;
+    public final int minor;
+    public final int patch;
     public final GrailsReleaseType releaseType;
-    public final int patchNumber;
+    public final Integer candidate;
 
     /**
      * @param version the grails version number
@@ -46,32 +45,38 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
 
         Matcher matcher = VERSION_PATTERN.matcher(version);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("Invalid version format: " + version);
+            throw new IllegalArgumentException("Invalid Grails Version format: " + version);
         }
 
-        if (matcher.groupCount() != 3) {
-            throw new IllegalArgumentException("Invalid version format: " + version);
+        if (matcher.groupCount() != 4) {
+            throw new IllegalArgumentException("Invalid Grails Version format: " + version);
         }
 
-        major = matcher.group(1);
-        minor = matcher.group(2);
-        patch = matcher.group(3);
+        major = Integer.parseInt(matcher.group(1));
+        minor = Integer.parseInt(matcher.group(2));
+        patch = Integer.parseInt(matcher.group(3));
+
+        String candidateString = matcher.group(4);
 
         Matcher m;
-        if ((m = RELEASE.matcher(patch)).matches()) {
+        if(candidateString.isEmpty()) {
             releaseType = GrailsReleaseType.RELEASE;
-            patchNumber = Integer.parseInt(m.group(1));
-        } else if ((m = RC.matcher(patch)).matches()) {
+            candidate = null;
+        }
+        else if((m = RC.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.RC;
-            patchNumber = Integer.parseInt(m.group(1));
-        } else if ((m = MILESTONE.matcher(patch)).matches()) {
+            candidate = Integer.parseInt(m.group(1));
+        }
+        else if((m = MILESTONE.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.MILESTONE;
-            patchNumber = Integer.parseInt(m.group(1));
-        } else if ((m = SNAPSHOT.matcher(patch)).matches()) {
+            candidate = Integer.parseInt(m.group(1));
+        }
+        else if((m = SNAPSHOT.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.SNAPSHOT;
-            patchNumber = Integer.parseInt(m.group(1));
-        } else {
-            throw new IllegalArgumentException("Unrecognized patch version: " + patch);
+            candidate = null;
+        }
+        else {
+            throw new IllegalArgumentException("Invalid Candidate Version: " + candidateString);
         }
     }
 
@@ -79,7 +84,12 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         GrailsVersion that = (GrailsVersion) o;
-        return Objects.equals(major, that.major) && Objects.equals(minor, that.minor) && Objects.equals(patch, that.patch);
+        return Objects.equals(releaseType, that.releaseType) &&
+                Objects.equals(major, that.major) &&
+                Objects.equals(minor, that.minor) &&
+                Objects.equals(patch, that.patch) &&
+                Objects.equals(candidate, that.candidate)
+                ;
     }
 
     @Override
@@ -97,21 +107,30 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
             return 0;
         }
 
-        int majorCompare = this.major.compareTo(o.major);
+        if (releaseType != o.releaseType) {
+            return o.releaseType.ordinal() - releaseType.ordinal();
+        }
+
+        int majorCompare = Integer.compare(this.major, o.major);
         if (majorCompare != 0) {
             return majorCompare;
         }
 
-        int minorCompare = this.minor.compareTo(o.minor);
+        int minorCompare = Integer.compare(this.minor, o.minor);
         if (minorCompare != 0) {
             return minorCompare;
         }
 
-        if(releaseType != o.releaseType) {
-            return releaseType.ordinal() - o.releaseType.ordinal();
+        int patchCompare = Integer.compare(this.patch, o.patch);
+        if (patchCompare != 0) {
+            return patchCompare;
         }
 
-        return Integer.compare(patchNumber, o.patchNumber);
+        if (candidate == null) {
+            return 0;
+        }
+
+        return Integer.compare(this.candidate, o.candidate);
     }
 
     @Override

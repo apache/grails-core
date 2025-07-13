@@ -52,7 +52,7 @@ class GrailsDependencyVersions implements DependencyManagement {
     }
 
     GrailsDependencyVersions(GrapeEngine grape) {
-        this(grape, [group: "org.apache.grails", module: "grails-bom", version: GrailsDependencyVersions.package.implementationVersion, type: "pom"])
+        this(grape, [group: "org.apache.grails", module: "grails-bom", version: Environment.grailsVersion, type: "pom"])
     }
 
     GrailsDependencyVersions(GrapeEngine grape, Map<String, String> bomCoords) {
@@ -71,9 +71,6 @@ class GrailsDependencyVersions implements DependencyManagement {
         // otherwise use only mavenCentral
         if (!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) {
             grape.addResolver([name:"apacheRepository", root:"https://repository.apache.org/content/groups/public"] as Map<String, Object>)
-        }
-        else {
-            grape.addResolver([name:"mavenCentral", root:"https://repo1.maven.org/maven2"] as Map<String, Object>)
         }
 
         grape.addResolver([name:"grailsCentral", root:"https://repo.grails.org/grails/restricted"] as Map<String, Object>)

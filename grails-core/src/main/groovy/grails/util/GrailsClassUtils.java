@@ -456,7 +456,7 @@ public class GrailsClassUtils {
      * of the same native type
      */
     @SuppressWarnings("rawtypes")
-    public static boolean isMatchBetweenPrimativeAndWrapperTypes(Class leftType, Class rightType) {
+    public static boolean isMatchBetweenPrimitiveAndWrapperTypes(Class leftType, Class rightType) {
         if (leftType == null) {
             throw new NullPointerException("Left type is null!");
         }

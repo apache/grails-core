@@ -318,11 +318,11 @@ function addJsClass(el) {
                             
                             <div class="toc-item" style="margin-left:20px"><a href="#viewsAndTemplates"><strong>8.2.3</strong><span>Views and Templates</span></a></div>
                             
-                            <div class="toc-item" style="margin-left:20px"><a href="#layouts"><strong>8.2.4</strong><span>Layouts with Sitemesh</span></a></div>
+                            <div class="toc-item" style="margin-left:20px"><a href="#layouts"><strong>8.2.4</strong><span>Layouts</span></a></div>
                             
                             <div class="toc-item" style="margin-left:20px"><a href="#resources"><strong>8.2.5</strong><span>Static Resources</span></a></div>
                             
-                            <div class="toc-item" style="margin-left:20px"><a href="#sitemeshContentBlocks"><strong>8.2.6</strong><span>Sitemesh Content Blocks</span></a></div>
+                            <div class="toc-item" style="margin-left:20px"><a href="#contentBlocks"><strong>8.2.6</strong><span>Content Blocks</span></a></div>
                             
                             <div class="toc-item" style="margin-left:20px"><a href="#makingChangesToADeployedApplication"><strong>8.2.7</strong><span>Making Changes to a Deployed Application</span></a></div>
                             
@@ -3679,7 +3679,7 @@ In Groovy code you must use single quotes around the string for the value of the
 <p><code>grails.serverURL</code> - A string specifying the server URL portion of absolute links, including server name e.g. grails.serverURL="http://my.yourportal.com". See <a href="../ref/Tags/createLink.html">createLink</a>. Also used by redirects.</p>
 </li>
 <li>
-<p><code>grails.views.gsp.sitemesh.preprocess</code> - Determines whether SiteMesh preprocessing happens. Disabling this slows down page rendering, but if you need SiteMesh to parse the generated HTML from a GSP view then disabling it is the right option. Don&#8217;t worry if you don&#8217;t understand this advanced property: leave it set to true.</p>
+<p><code>grails.views.gsp.layout.preprocess</code> - Determines whether Layout preprocessing happens. Disabling this slows down page rendering, but if you need layouts to parse the generated HTML from a GSP view then disabling it is the right option. Don&#8217;t worry if you don&#8217;t understand this advanced property: leave it set to true.</p>
 </li>
 <li>
 <p><code>grails.reload.excludes</code> and <code>grails.reload.includes</code> - Configuring these directives determines the reload behavior for project specific source files. Each directive takes a list of strings that are the class names for project source files that should be excluded from reloading behavior or included accordingly when running the application in development with the <code>run-app</code> command. If the <code>grails.reload.includes</code> directive is configured, then only the classes in that list will be reloaded.</p>
@@ -10230,8 +10230,8 @@ The section on <a href="#taglibs">Tag Libraries</a> covers how to add your own c
 </div>
 </div>
 
-<a name="7.2.4 Layouts with Sitemesh"><!-- Legacy link --></a>
-<h2 id="layouts">8.2.4 Layouts with Sitemesh</h2>
+<a name="7.2.4 Layouts"><!-- Legacy link --></a>
+<h2 id="layouts">8.2.4 Layouts</h2>
 
 <div class='contribute-btn'>
     <button type='button' class='btn btn-default' onclick='window.location.href="https://github.com/grails/grails-doc/edit/3.2.x/src/en/guide/theWebLayer/gsp/layouts.adoc"'>
@@ -10374,7 +10374,7 @@ in <code>grails-app/conf/application.groovy</code> as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="groovy">grails.sitemesh.default.layout = <span class="string"><span class="delimiter">'</span><span class="content">myLayoutName</span><span class="delimiter">'</span></span></code></pre>
+<pre class="CodeRay highlight"><code data-lang="groovy">grails.views.layout.default = <span class="string"><span class="delimiter">'</span><span class="content">myLayoutName</span><span class="delimiter">'</span></span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -10507,10 +10507,10 @@ Static resources located in <code>src/main/resources/public</code> or <code>src/
 </div>
 
 <a name="7.2.6 Sitemesh Content Blocks"><!-- Legacy link --></a>
-<h2 id="sitemeshContentBlocks">8.2.6 Sitemesh Content Blocks</h2>
+<h2 id="contentBlocks">8.2.6 Content Blocks</h2>
 
 <div class='contribute-btn'>
-    <button type='button' class='btn btn-default' onclick='window.location.href="https://github.com/grails/grails-doc/edit/3.2.x/src/en/guide/theWebLayer/gsp/sitemeshContentBlocks.adoc"'>
+    <button type='button' class='btn btn-default'>
         <i class='fa fa-pencil-square-o'></i> Improve this doc
     </button>
 </div>

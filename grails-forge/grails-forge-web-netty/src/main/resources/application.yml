@@ -1,0 +1,47 @@
+micronaut:
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
+      rapidoc:
+        paths: classpath:META-INF/swagger/views/rapidoc
+        mapping: /rapidoc/**
+  server:
+    cors:
+      enabled: true
+      configurations:
+        web:
+          allowed-origins:
+            - https://grails.github.io
+            - ${CORS_ALLOWED_ORIGIN:'https://start.grails.org'}
+          allowedMethods:
+            - GET
+  http:
+    services:
+      github-oauth:
+        url: https://github.com
+      github-api-v3:
+        url: https://api.github.com
+grails:
+  forge:
+      redirect-url: ${GITHUB_REDIRECT_URL:'https://grails.github.io/grails-forge-ui/'}
+      github:
+        client-id: ${GITHUB_OAUTH_APP_CLIENT_ID}
+        client-secret: ${GITHUB_OAUTH_APP_CLIENT_SECRET}
+        token-permissions: public_repo,read:user,workflow
+        user-agent: ${GITHUB_USER_AGENT:'https://grails.github.io/grails-forge-ui/'}
+gcp:
+  http:
+    client:
+      auth:
+        patterns:
+          - /analytics/**
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  deserialization:
+    READ_UNKNOWN_ENUM_VALUES_AS_NULL: true

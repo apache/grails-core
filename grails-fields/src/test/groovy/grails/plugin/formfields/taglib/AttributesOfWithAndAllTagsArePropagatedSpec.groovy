@@ -53,7 +53,7 @@ class AttributesOfWithAndAllTagsArePropagatedSpec extends AbstractFormFieldsTagL
 
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
-		mockEmbeddedSitemeshLayout(tagLib)
+		mockEmbeddedGrailsLayout(tagLib)
 
 		views["/_fields/default/_wrapper.gsp"] = '<wrapper attr="${attribute}">${widget}</wrapper>'
 		views["/_fields/default/_displayWrapper.gsp"] = '<displayWrapper attr="${attribute}">${widget}</displayWrapper>'

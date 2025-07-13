@@ -22,7 +22,7 @@ One profile can extend one or many different parent profiles. To define profile 
 [source,groovy]
 ----
 dependencies {
-    profileRuntimeOnly "org.apache.grails.profiles:base:{version}"
+    profileRuntimeApi "org.apache.grails.profiles:base:{version}"
 }
 ----
 

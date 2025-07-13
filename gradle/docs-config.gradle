@@ -22,14 +22,3 @@ apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.g
 ext {
     includeInApiDocs = true
 }
-
-tasks.named('groovydoc', Groovydoc).configure { Groovydoc it ->
-    // TODO: Fix this for testFixtures
-    it.classpath = configurations.documentation
-    it.groovyClasspath = configurations.documentation
-    it.access = GroovydocAccess.PROTECTED
-    it.includeAuthor = false
-    it.includeMainForScripts = false
-    it.processScripts = false
-    it.noTimestamp = true
-}

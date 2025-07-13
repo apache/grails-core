@@ -15,7 +15,6 @@
  *  limitations under the License.
  */
 plugins {
-    id 'groovy'
     id 'org.apache.grails.gradle.grails-profile'
 }
 
@@ -30,19 +29,24 @@ ext {
 }
 
 dependencies {
-    profileRuntimeApi platform(project(':grails-bom'))
-    profileRuntimeApi 'org.apache.groovy:groovy-jmx' // stop script uses GroovyMBean
+    implementation platform(project(':grails-bom'))
+    api project(':grails-shell-cli')
+    api 'org.apache.groovy:groovy-jmx' // stop script uses GroovyMBean
 }
 
 TaskProvider<Copy> copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy)
 copyWrapper.configure { Copy copy ->
     Project wrapperProject = rootProject.project(':grails-wrapper')
     copy.dependsOn(wrapperProject.tasks.named('installDist'))
-    copy.from(wrapperProject.layout.buildDirectory.dir('install/grails-wrapper'))
+    copy.from(wrapperProject.layout.buildDirectory.dir('install/apache-grails-wrapper-incubating-bin')) {
+        include '**/grails-wrapper.jar'
+        include '**/grailsw.bat'
+        include '**/grailsw'
+    }
     copy.into(project.layout.projectDirectory.dir('skeleton'))
 }
 
-tasks.named('sourcesProfileJar').configure {
+tasks.named('sourcesJar').configure {
     it.dependsOn(copyWrapper)
 }
 

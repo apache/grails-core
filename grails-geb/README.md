@@ -17,7 +17,6 @@ limitations under the License.
 # Grails Geb Plugin
 
 [![Maven Central](https://img.shields.io/maven-central/v/org.grails.plugins/geb.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails.plugins/geb)
-[![Java CI](https://github.com/grails/geb/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/grails/geb/actions/workflows/gradle.yml)
 
 ## Geb Functional Testing for the Grails® framework
 

@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+import org.gradle.crypto.checksum.Checksum
 import org.grails.gradle.plugin.publishing.GrailsPublishExtension
 
 extensions.configure(GrailsPublishExtension) {
@@ -29,4 +30,111 @@ extensions.configure(GrailsPublishExtension) {
     it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher']
     it.pomCustomization = findProperty('pomCustomization') as Closure
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
+    it.testRepositoryPath = rootProject.layout.buildDirectory.dir('local-maven')
+}
+
+tasks.withType(Jar).configureEach {
+    if(it.archiveClassifier.getOrNull() != 'javadoc') {
+        from(rootProject.layout.projectDirectory.file('DISCLAIMER')) {
+            into('META-INF')
+        }
+
+        def projectLicense = layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
+        if (!projectLicense.asFile.exists()) {
+            def basicLicense = rootProject.layout.projectDirectory.file('licenses/LICENSE-Apache-2.0.txt')
+            from(basicLicense) {
+                into('META-INF')
+                rename { 'LICENSE' }
+            }
+        }
+
+        def projectNotice = layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
+        if (!projectNotice.asFile.exists()) {
+            def basicNotice = rootProject.layout.projectDirectory.file('grails-core/src/main/resources/META-INF/NOTICE')
+            from(basicNotice) {
+                into('META-INF')
+            }
+        }
+    }
+}
+
+apply plugin: 'org.gradle.crypto.checksum'
+
+afterEvaluate {
+    if (plugins.hasPlugin('signing')) {
+        if(System.getenv('TEST_BUILD_REPRODUCIBLE')) {
+            logger.lifecycle('Signing is disabled for this build to test build reproducibility.')
+            tasks.withType(Sign).configureEach {
+                enabled = false
+            }
+        }
+    }
+    if (plugins.hasPlugin('maven-publish')) {
+        def checksumTask = tasks.register('publishedChecksums', Checksum)
+        checksumTask.configure { Checksum check ->
+            check.group = 'publishing'
+            check.checksumAlgorithm = Checksum.Algorithm.SHA512
+            check.outputDirectory = layout.buildDirectory.dir('checksums')
+            check.dependsOn(tasks.withType(Jar))
+        }
+
+        def artifactsDir = layout.buildDirectory.dir('artifacts')
+        def artifactsTask = tasks.register('savePublishedArtifacts')
+        artifactsTask.configure {
+            it.group = 'publishing'
+            it.outputs.dir(artifactsDir)
+            it.dependsOn(tasks.withType(Jar))
+        }
+
+        gradle.taskGraph.whenReady {
+            List filesToChecksum = []
+            extensions.configure(PublishingExtension) {
+                it.publications.withType(MavenPublication).configureEach {
+                    artifacts.each {
+                        if (it.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                            return
+                        }
+                        filesToChecksum << it.file
+                    }
+                }
+            }
+
+            checksumTask.configure { Checksum check ->
+                check.inputFiles.setFrom(filesToChecksum.unique())
+                check.finalizedBy(artifactsTask)
+            }
+
+            artifactsTask.configure {
+                // Explicit `project` is required for `extensions` as `Task it` is the delegate
+                def publicationContainer = project.extensions.findByType(PublishingExtension).publications
+                doLast {
+                    Map<String, String> artifacts = [:]
+                    publicationContainer.withType(MavenPublication).each { MavenPublication publication ->
+                        publication.artifacts.each { MavenArtifact artifact ->
+                            if (!artifact.file.exists() || artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                                return
+                            }
+                            if (artifact.classifier) {
+                                artifacts[artifact.file.name] = "$publication.groupId:$publication.artifactId:$publication.version:$artifact.classifier" as String
+                            } else {
+                                artifacts[artifact.file.name] = "$publication.groupId:$publication.artifactId:$publication.version" as String
+                            }
+                        }
+                    }
+                    File artifactsFile = artifactsDir.get().asFile
+                    artifactsFile.mkdirs()
+                    artifacts.each { key, value ->
+                        new File(artifactsFile, "${key}.txt").text = value
+                    }
+                }
+            }
+        }
+
+        def publishTasks = tasks.names.findAll { it.startsWith('publishMavenPublication') }
+        publishTasks.each { taskName ->
+            tasks.named(taskName).configure { publishTask ->
+                publishTask.finalizedBy(checksumTask)
+            }
+        }
+    }
 }

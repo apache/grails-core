@@ -78,7 +78,7 @@ interface DomainProperty extends PersistentProperty, Comparable<DomainProperty> 
     Class getAssociatedType()
 
     /**
-     * @return The associated entity if the property is an assocation
+     * @return The associated entity if the property is an association
      */
     PersistentEntity getAssociatedEntity()
 

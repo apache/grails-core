@@ -57,6 +57,8 @@ Formats `java.util.Date`, `java.time.LocalDate`, and `java.time.LocalDateTime` i
 
 Attributes
 
+WARNING: In Java 20+, https://cldr.unicode.org/downloads/cldr-42[Unicode CLDR42] was implemented which changed the space character preceding the period (AM or PM) in formatted date/time text from a standard space (" ") to a narrow non-breaking space (NNBSP: "\u202F").  Additionally, when using the LONG or FULL timeStyle with dateStyle, the date and time separator has changed from ' at ' to ', '.  IE. January 5, 1941, 8:00:00 AM UTC vs. January 5, 1941 at 8:00:00 AM UTC
+
 * `date` (required) - The date object to format. It could be the instance of `java.util.Date`, `java.time.LocalDate`, `java.time.LocalDateTime`.
 * `format` (optional) - The formatting pattern to use for the date, see {javase}java.base/java/text/SimpleDateFormat.html[SimpleDateFormat]
 * `formatName` (optional) - Look up `format` from the default MessageSource / ResourceBundle (i18n/*.properties file) with this key. If `format` and `formatName` are empty, `format` is looked up with '`default.date.format`' key. Defaults to 'yyyy-MM-dd HH:mm:ss z' if the key not specified

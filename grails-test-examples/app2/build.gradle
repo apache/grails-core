@@ -21,7 +21,7 @@
 version = '0.1'
 group = 'app2'
 
-apply plugin: 'asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
@@ -38,12 +38,20 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.apache.grails:grails-dependencies'
     implementation 'org.apache.grails:grails-web-boot'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
 
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-cache'
-    implementation 'org.webjars.npm:jquery'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
+
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.apache.grails:grails-fields'
 
@@ -59,4 +67,9 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
+
+//bootRun {
+//    jvmArgs("-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005")
+//}

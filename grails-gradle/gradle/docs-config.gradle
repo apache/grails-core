@@ -31,19 +31,11 @@ dependencies {
     add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-/*
-    Temporarily use 4.0.27-SNAPSHOT for documentation generation until 4.0.27 is released.
     add('documentation', "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-groovydoc:${bomDependencyVersions['groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-docgenerator:${bomDependencyVersions['groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-templates:${bomDependencyVersions['groovy.version']}")
-*/
-    add('documentation', 'org.apache.groovy:groovy:4.0.27-SNAPSHOT')
-    add('documentation', 'org.apache.groovy:groovy-groovydoc:4.0.27-SNAPSHOT')
-    add('documentation', 'org.apache.groovy:groovy-ant:4.0.27-SNAPSHOT')
-    add('documentation', 'org.apache.groovy:groovy-docgenerator:4.0.27-SNAPSHOT')
-    add('documentation', 'org.apache.groovy:groovy-templates:4.0.27-SNAPSHOT')
 }
 
 ext {
@@ -59,6 +51,7 @@ groovydocTask.configure { Groovydoc it ->
     it.includeMainForScripts = false
     it.processScripts = false
     it.noTimestamp = true
+    it.noVersionStamp = false
     it.destinationDir = project.file('build/docs/api')
 }
 
@@ -69,8 +62,13 @@ tasks.named('javadoc').configure {
 tasks.named('javadocJar', Jar).configure { Jar jar ->
     jar.reproducibleFileOrder = true
     jar.preserveFileTimestamps = false
-    jar.dirMode = 0755 // To avoid platform specific defaults
-    jar.fileMode = 0644 // to avoid platform specific defaults
+    // to avoid platform specific defaults, set the permissions consistently
+    jar.filePermissions { permissions ->
+        permissions.unix(0644)
+    }
+    jar.dirPermissions { permissions ->
+        permissions.unix(0755)
+    }
 
     jar.dependsOn(groovydocTask)
 

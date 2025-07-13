@@ -19,8 +19,6 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-
-
 Properties props = new Properties()
 file('../gradle.properties').withInputStream {
     props.load(it)
@@ -28,9 +26,15 @@ file('../gradle.properties').withInputStream {
 
 allprojects {
     repositories {
-        maven { url = 'https://repo.grails.org/grails/restricted' }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        mavenCentral()
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
+            }
+        }
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }
@@ -40,6 +44,7 @@ allprojects {
 
 ext {
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
@@ -50,39 +55,10 @@ ext {
     ext.'signing.keyId' = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
     ext.'signing.password' = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
     ext.'signing.secretKeyRingFile' = project.findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
-    isCiBuild = System.getenv().get('CI') as Boolean
+    isCiBuild = System.getenv().containsKey('CI')
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
 }
-if (isReleaseVersion) {
-    apply plugin: 'io.github.gradle-nexus.publish-plugin'
-    apply plugin: 'signing'
 
-    nexusPublishing {
-        repositories {
-            sonatype {
-                nexusUrl = uri('https://s01.oss.sonatype.org/service/local/')
-                username = System.getenv('SONATYPE_USERNAME') ?: project.findProperty('sonatypeOssUsername')
-                password = System.getenv('SONATYPE_PASSWORD') ?: project.findProperty('sonatypeOssPassword')
-                stagingProfileId = System.getenv('SONATYPE_STAGING_PROFILE_ID') ?: project.findProperty('sonatypeOssStagingProfileId')
-            }
-        }
-    }
-
-    afterEvaluate {
-        signing {
-            required { isReleaseVersion && gradle.taskGraph.hasTask('publish') }
-            Publication[] publications = new Publication[publishing.publications.size()]
-            publishing.publications.findAll().toArray(publications)
-            sign(publications)
-        }
-    }
-
-    tasks.withType(Sign) {
-        onlyIf { isReleaseVersion }
-    }
-
-    tasks.withType(io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository).configureEach {
-        shouldRunAfter(tasks.withType(Sign))
-    }
+apply {
+    from layout.projectDirectory.file('gradle/publish-root-config.gradle')
 }
-

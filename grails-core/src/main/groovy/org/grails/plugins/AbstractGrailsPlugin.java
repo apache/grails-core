@@ -40,7 +40,11 @@ import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract implementation that provides some default behaviours
@@ -130,7 +134,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
         if(ymlResource != null && ymlResource.exists()) {
             if (groovyResourceExists) {
-                throw new RuntimeException("A plugin may define a plugin.yml or a plugin.groovy, but not both");
+                throw new RuntimeException("A plugin [" + pluginClass.getName() + "] may define a plugin.yml or a plugin.groovy, but not both");
             }
             return ymlResource;
         }

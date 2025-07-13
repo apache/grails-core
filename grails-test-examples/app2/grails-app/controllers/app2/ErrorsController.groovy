@@ -22,6 +22,6 @@ package app2
 class ErrorsController {
 
     def index() {
-        render "error occured"
+        render 'my error occurred'
     }
 }

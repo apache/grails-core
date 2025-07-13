@@ -1,0 +1,131 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Release - Abort Release"
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., v7.0.0-M5)'
+        required: true
+        type: string
+      repository_name:
+        description: 'Repository Name'
+        required: true
+        default: 'grails-core'
+        type: string
+permissions:
+  contents: write
+  actions: write
+jobs:
+  abort:
+    name: "Abort Release"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "Setup SVN and Tools"
+        run: sudo apt-get install -y subversion subversion-tools tree
+      - name: "Extract release version"
+        id: release_version
+        run: |
+          version="${{ github.event.inputs.release_tag }}"
+          version="${version#v}"
+          echo "Extracted version: $version"
+          echo "value=${version}" >> $GITHUB_OUTPUT
+      - name: "Drop staging repository from Nexus"
+        continue-on-error: true
+        env:
+          NEXUS_STAGE_DEPLOYER_USER: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_STAGE_DEPLOYER_PW: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+        run: |
+          export REPO_DESCRIPTION="${{ github.event.inputs.repository_name }}:${{ steps.release_version.outputs.value }}"
+          export STAGING_REPOSITORY_ID=$(curl -s -u "$NEXUS_STAGE_DEPLOYER_USER:$NEXUS_STAGE_DEPLOYER_PW" -H "Accept: application/json" \
+            "https://repository.apache.org/service/local/staging/profile_repositories/${{ secrets.STAGING_PROFILE_ID }}" |
+            jq -r '.data[] | select(.description=="'"$REPO_DESCRIPTION"'") | .repositoryId')
+          
+          test -n "$STAGING_REPOSITORY_ID" || { echo "No repo with that description"; exit 1; }
+          
+          response=$(curl -s --request POST -u "$NEXUS_STAGE_DEPLOYER_USER:$NEXUS_STAGE_DEPLOYER_PW" \
+            --url https://repository.apache.org/service/local/staging/bulk/drop \
+            --header 'Content-Type: application/json' \
+            --header 'Accept: application/json' \
+            --header 'User-Agent: Grails Github Actions' \
+            --data '{ "data" : {"stagedRepositoryIds":["'"$STAGING_REPOSITORY_ID"'"], "description":"Drop '"$STAGING_REPOSITORY_ID"'." } }')
+
+          if [ ! -z "$response" ]; then
+              echo "Error while dropping staged repository $STAGING_REPOSITORY_ID : $response."
+              exit 1
+          else
+              echo "Successfully dropped repository $STAGING_REPOSITORY_ID."
+          fi
+      - name: "Remove Staged Artifacts"
+        continue-on-error: true
+        env:
+          SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
+        run: |
+          export VERSION="${{ steps.release_version.outputs.value }}"
+          svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
+                      -m "Remove grails dev version $VERSION" \
+                      rm "https://dist.apache.org/repos/dist/dev/incubator/grails/core/$VERSION"
+      - name: "Cancel GitHub Actions"
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.inputs.repository_name }}
+        run: |
+          for status in queued in_progress; do
+            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github+json" \
+                 "https://api.github.com/repos/$OWNER/$REPO/actions/runs?event=release&status=$status&per_page=100" |
+            jq -r '.workflow_runs[].id'
+          done > run-ids.txt
+          
+          while read run_id; do
+            echo "cancelling $run_id"
+            curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$OWNER/$REPO/actions/runs/$run_id/cancel"
+          done < run-ids.txt
+          rm -f run-ids.txt || true
+      - name: "Remove GitHub Release & Tag"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.release_tag }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.inputs.repository_name }}
+        run: |
+          set -euo pipefail
+
+          if release_json="$(gh api -H 'Accept: application/vnd.github+json' \
+                                  "/repos/$OWNER/$REPO/releases/tags/$TAG" 2>/dev/null)"; then
+              if [ "$(jq -r '.prerelease' <<<"$release_json")" != "true" ]; then
+                  echo "❌ Release $TAG exists but is *not* marked as a pre-release. Aborting."
+                  exit 1
+              fi
+
+              release_id="$(jq -r '.id' <<<"$release_json")"
+              echo "Deleting pre-release $release_id linked to tag $TAG"
+              gh api -X DELETE "/repos/$OWNER/$REPO/releases/$release_id"
+          else
+              echo "No GitHub release found for tag $TAG – skipping release deletion"
+          fi
+          
+          ref="tags/$TAG"
+          echo "Deleting git ref $ref"
+          gh api -X DELETE "/repos/$OWNER/$REPO/git/refs/$ref" || echo "Tag $TAG already absent"

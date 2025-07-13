@@ -20,12 +20,6 @@
 apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
-repositories {
-    maven { url = 'https://repo.grails.org/grails/restricted' }
-    maven { url = 'https://repository.apache.org/content/groups/snapshots' }
-    mavenCentral()
-}
-
 version = '0.1'
 group = 'test.app'
 
@@ -41,6 +35,12 @@ dependencies {
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-web-boot'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-scaffolding'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -62,6 +62,7 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
 
 tasks.withType(Test).configureEach {

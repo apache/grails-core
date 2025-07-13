@@ -1,3 +1,0 @@
-<plugin name='controllers'>
-  <type>org.grails.plugins.web.controllers.ControllersGrailsPlugin</type>
-</plugin>
