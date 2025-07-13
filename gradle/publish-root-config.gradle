@@ -65,6 +65,7 @@ def publishedProjects = [
         'grails-interceptors',
         'grails-logging',
         'grails-mimetypes',
+        'grails-micronaut',
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',

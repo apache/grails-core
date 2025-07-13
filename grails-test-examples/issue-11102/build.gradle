@@ -69,7 +69,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")

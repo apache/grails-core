@@ -29,7 +29,6 @@ import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
@@ -72,10 +71,6 @@ import org.springframework.boot.gradle.tasks.bundling.BootArchive
 import org.springframework.boot.gradle.tasks.run.BootRun
 
 import javax.inject.Inject
-import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.util.regex.Pattern
 
 /**
  * The main Grails gradle plugin implementation
@@ -386,17 +381,21 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileStatic
     protected void configureMicronaut(Project project) {
-        final String micronautVersion = project.properties['micronautVersion']
-        if (micronautVersion) {
-            project.configurations.configureEach({ Configuration configuration ->
-                configuration.resolutionStrategy.eachDependency({ DependencyResolveDetails details ->
-                    String dependencyName = details.requested.name
-                    String group = details.requested.group
-                    if (group == 'io.micronaut' && dependencyName.startsWith('micronaut')) {
-                        details.useVersion(micronautVersion)
-                    }
-                } as Action<DependencyResolveDetails>)
-            } as Action<Configuration>)
+        project.afterEvaluate {
+            boolean micronautEnabled = project.getConfigurations().getByName("implementation").getDependencies().findAll { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' } as boolean
+            if (!micronautEnabled) {
+                return
+            }
+            project.logger.lifecycle('Micronaut Support Detected for {} - adding annotation processor dependencies for Micronaut', project.path)
+
+            final String micronautPlatformVersion = project.properties['micronautPlatformVersion']
+            if (!micronautPlatformVersion) {
+                throw new GradleException("`micronautPlatformVersion` property must be set to use the Grails Micronaut plugin.")
+            }
+
+            project.getDependencies().add('annotationProcessor', project.dependencies.platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion"))
+            project.getDependencies().add('annotationProcessor', 'io.micronaut:micronaut-inject-java')
+            project.getDependencies().add('annotationProcessor', 'jakarta.annotation:jakarta.annotation-api')
         }
     }
 

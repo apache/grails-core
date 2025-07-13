@@ -19,6 +19,8 @@
 
 package micronaut
 
+import jakarta.servlet.ServletContext
+
 class BootStrap {
 
     ServletContext servletContext

@@ -171,7 +171,10 @@ include(
         'grails-data-test-report',
 
         // wrapper
-        'grails-wrapper'
+        'grails-wrapper',
+
+        // micronaut plugin for integration with Grails
+        'grails-micronaut',
 )
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
@@ -351,20 +354,20 @@ include(
         'grails-test-examples-geb',
         'grails-test-examples-gorm',
         'grails-test-examples-gsp-layout',
-        //TODO: 'grails-test-examples-gsp-sitemesh3',
+        'grails-test-examples-gsp-sitemesh3',
         'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-views-182',
         'grails-test-examples-issue-11102',
         'grails-test-examples-demo33',
-        // 'grails-test-examples-micronaut', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        'grails-test-examples-micronaut',
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-plugins-loadafter',
         'grails-test-examples-plugins-issue11005',
-        // 'grails-test-examples-issue-11767', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
-        // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        'grails-test-examples-issue-11767',
+        'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-cache',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin'
@@ -386,13 +389,13 @@ project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examp
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
-// project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
+project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
-// project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
-// project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')
+project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')

@@ -61,7 +61,7 @@ dependencies {
     runtimeOnly 'com.zaxxer:HikariCP'
 
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
-    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation 'org.apache.grails:grails-testing-support-web'
 }
 

@@ -103,8 +103,18 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
     }
 
     private GrailsApplication getGrailsApplication() {
-        if (grailsApplication == null && containsBean(GrailsApplication.APPLICATION_ID)) {
-            grailsApplication = getBean(GrailsApplication.APPLICATION_ID, GrailsApplication.class);
+        if(grailsApplication==null) {
+            ApplicationContext parent = getParent();
+            if (parent != null) {
+                if(parent instanceof GrailsWebApplicationContext) {
+                    grailsApplication = ((GrailsWebApplicationContext)parent).getGrailsApplication();
+                } else if (parent.containsBean(GrailsApplication.APPLICATION_ID)) {
+                    grailsApplication = parent.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication.class);
+                }
+            }
+            if (grailsApplication == null && containsBean(GrailsApplication.APPLICATION_ID)) {
+                grailsApplication = getBean(GrailsApplication.APPLICATION_ID, GrailsApplication.class);
+            }
         }
         return grailsApplication;
     }

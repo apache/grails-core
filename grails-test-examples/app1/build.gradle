@@ -55,7 +55,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     console 'org.apache.grails:grails-console'
-    testImplementation "io.micronaut:micronaut-http-client:$micronautVersion"
+    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     implementation project(':grails-test-examples-plugins-loadfirst')
