@@ -16,7 +16,6 @@ package org.grails.orm.hibernate.cfg;
 
 import groovy.lang.Closure;
 import jakarta.persistence.Entity;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.transform.trait.Traits;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
@@ -39,6 +38,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
 import org.grails.orm.hibernate.cfg.domainbinding.IndexBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
+import org.grails.orm.hibernate.cfg.domainbinding.NumericColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.StringColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
@@ -2927,16 +2927,16 @@ public class GrailsDomainBinder implements MetadataContributor {
         else {
             column.setName(columnName);
             column.setNullable(property.isNullable() || (parentProperty != null && parentProperty.isNullable()));
-
+            PropertyConfig propertyConfig = getPropertyConfig(property);
             // Use the constraints for this property to more accurately define
             // the column's length, precision, and scale
             if (String.class.isAssignableFrom(property.getType()) || byte[].class.isAssignableFrom(property.getType())) {
-                final org.grails.datastore.mapping.config.Property mappedForm = getPropertyConfig(property);
-                new StringColumnConstraintsBinder().bindStringColumnConstraints(column, mappedForm);
+                new StringColumnConstraintsBinder().bindStringColumnConstraints(column, propertyConfig);
             }
 
             if (Number.class.isAssignableFrom(property.getType())) {
-                bindNumericColumnConstraints(column, property, cc);
+
+                new NumericColumnConstraintsBinder().bindNumericColumnConstraints(column, cc, propertyConfig);
             }
         }
 
@@ -3126,77 +3126,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         return pc != null && pc.getJoinTable() != null && pc.getJoinTable().getColumn() != null && pc.getJoinTable().getColumn().getName() != null;
     }
 
-
-    /**
-     * Interrogates the specified constraints looking for any constraints that would limit the
-     * precision and/or scale of the property's value.  If such constraints exist, this method adjusts
-     * the precision and/or scale of the column accordingly.
-     *  @param column              the column that corresponds to the property
-     * @param property the property's constraints
-     * @param cc the column configuration
-     */
-    private void bindNumericColumnConstraints(Column column, PersistentProperty property, ColumnConfig cc) {
-        int scale =  org.hibernate.engine.jdbc.Size.DEFAULT_SCALE;
-        int precision =  org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION;
-
-
-        PropertyConfig constrainedProperty = getPropertyConfig(property);
-        if(  cc != null && cc.getScale() > - 1) {
-            column.setScale(cc.getScale());
-        } else if (constrainedProperty.getScale() > -1) {
-            scale = constrainedProperty.getScale();
-            column.setScale(scale);
-        }
-
-
-        if( cc != null && cc.getPrecision() > -1) {
-            column.setPrecision(cc.getPrecision());
-        }
-        else {
-
-            Comparable<?> minConstraintValue = constrainedProperty.getMin();
-            Comparable<?> maxConstraintValue = constrainedProperty.getMax();
-
-            int minConstraintValueLength = 0;
-            if ((minConstraintValue != null) && (minConstraintValue instanceof Number)) {
-                minConstraintValueLength = Math.max(
-                        countDigits((Number) minConstraintValue),
-                        countDigits(((Number) minConstraintValue).longValue()) + scale);
-            }
-            int maxConstraintValueLength = 0;
-            if ((maxConstraintValue != null) && (maxConstraintValue instanceof Number)) {
-                maxConstraintValueLength = Math.max(
-                        countDigits((Number) maxConstraintValue),
-                        countDigits(((Number) maxConstraintValue).longValue()) + scale);
-            }
-
-            if (minConstraintValueLength > 0 && maxConstraintValueLength > 0) {
-                // If both of min and max constraints are setted we could use
-                // maximum digits number in it as precision
-                precision = Math.max(minConstraintValueLength, maxConstraintValueLength);
-            } else {
-                // Overwise we should also use default precision
-                precision = DefaultGroovyMethods.max(new Integer[]{precision, minConstraintValueLength, maxConstraintValueLength});
-            }
-
-            column.setPrecision(precision);
-        }
-    }
-
-    /**
-     * @return a count of the digits in the specified number
-     */
-    private int countDigits(Number number) {
-        int numDigits = 0;
-
-        if (number != null) {
-            // Remove everything that's not a digit (e.g., decimal points or signs)
-            String digitsOnly = number.toString().replaceAll("\\D", EMPTY_PATH);
-            numDigits = digitsOnly.length();
-        }
-
-        return numDigits;
-    }
 
     private void handleUniqueConstraint(PersistentProperty property, Column column, String path, Table table, String columnName, String sessionFactoryBeanName) {
         final PropertyConfig mappedForm = getPropertyConfig(property);
