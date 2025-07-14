@@ -42,6 +42,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.StringColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
+import org.grails.orm.hibernate.cfg.domainbinding.UniqueNameGenerator;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
@@ -97,11 +98,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1988,38 +1985,9 @@ public class GrailsDomainBinder implements MetadataContributor {
             uk.addColumns(property.getValue());
         }
 
-        setGeneratedUniqueName(uk);
+        new UniqueNameGenerator().setGeneratedUniqueName(uk);
 
         table.addUniqueKey(uk);
-    }
-
-    private void setGeneratedUniqueName(UniqueKey uk) {
-        StringBuilder sb = new StringBuilder(uk.getTable().getName()).append('_');
-        for (Object col : uk.getColumns()) {
-            sb.append(((Column) col).getName()).append('_');
-        }
-
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("MD5");
-        }
-        catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            md.update(sb.toString().getBytes("UTF-8"));
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-
-        String name = "UK" + new BigInteger(1, md.digest()).toString(16);
-        if (name.length() > 30) {
-            // Oracle has a 30-char limit
-            name = name.substring(0, 30);
-        }
-
-        uk.setName(name);
     }
 
     private boolean canBindOneToOneWithSingleColumnAndForeignKey(Association currentGrailsProp) {
@@ -2989,7 +2957,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if(LOG.isDebugEnabled()) {
             LOG.debug("create unique key for " + table.getName() + " columns = " + columns);
         }
-        setGeneratedUniqueName(uk);
+        new UniqueNameGenerator().setGeneratedUniqueName(uk);
         table.addUniqueKey(uk);
     }
 
