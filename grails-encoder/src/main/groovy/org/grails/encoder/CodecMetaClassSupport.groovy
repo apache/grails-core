@@ -19,9 +19,8 @@
 package org.grails.encoder
 
 import grails.util.Environment
-import groovy.transform.CompileStatic
-
 import grails.util.GrailsMetaClassUtils
+import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.NullObject
 import org.springframework.util.Assert
@@ -33,10 +32,11 @@ import org.springframework.util.Assert
  * @since 2.3
  */
 class CodecMetaClassSupport {
+
     static final Object[] EMPTY_ARGS = []
-    static final String ENCODE_AS_PREFIX="encodeAs"
-    static final String DECODE_PREFIX="decode"
-    
+    static final String ENCODE_AS_PREFIX = "encodeAs"
+    static final String DECODE_PREFIX = "decode"
+
     /**
      * Adds "encodeAs*" and "decode*" metamethods for given codecClass
      *
@@ -49,7 +49,7 @@ class CodecMetaClassSupport {
 
         String codecName = resolveCodecName(codecFactory)
         Assert.hasText(codecName, "No resolvable codec name")
-        
+
         String encodeMethodName = encodeMethodNameClosure(codecName)
         String decodeMethodName = decodeMethodNameClosure(codecName)
 
@@ -82,42 +82,45 @@ class CodecMetaClassSupport {
                 // do what we want here...
                 throw new MissingMethodException(decodeMethodName, delegate.getClass(), EMPTY_ARGS)
             }
-        }
-        else {
+        } else {
             // Resolve codec methods once only at startup
             def encoder = codecFactory.getEncoder()
             if (encoder) {
                 encoderClosure = { -> encoder.encode(CodecMetaClassSupport.filterNullObject(delegate)) }
             } else {
-                encoderClosure = { -> throw new MissingMethodException(encodeMethodName, delegate.getClass(), EMPTY_ARGS) }
+                encoderClosure = { ->
+                    throw new MissingMethodException(encodeMethodName, delegate.getClass(), EMPTY_ARGS)
+                }
             }
             def decoder = codecFactory.getDecoder()
             if (decoder) {
                 decoderClosure = { -> decoder.decode(CodecMetaClassSupport.filterNullObject(delegate)) }
             } else {
-                decoderClosure = { -> throw new MissingMethodException(decodeMethodName, delegate.getClass(), EMPTY_ARGS) }
+                decoderClosure = { ->
+                    throw new MissingMethodException(decodeMethodName, delegate.getClass(), EMPTY_ARGS)
+                }
             }
         }
 
         addMetaMethod(targetMetaClasses, encodeMethodName, encoderClosure)
-        if(codecFactory.encoder) {
+        if (codecFactory.encoder) {
             addAliasMetaMethods(targetMetaClasses, codecFactory.encoder.codecIdentifier.codecAliases, encodeMethodNameClosure, encoderClosure)
         }
 
         addMetaMethod(targetMetaClasses, decodeMethodName, decoderClosure)
-        if(codecFactory.decoder) {
+        if (codecFactory.decoder) {
             addAliasMetaMethods(targetMetaClasses, codecFactory.decoder.codecIdentifier.codecAliases, decodeMethodNameClosure, decoderClosure)
         }
     }
 
     /**
      * returns given parameter if it's not a Groovy NullObject (and is not null)
-     * 
+     *
      * The check is made by looking at the Object's class, since NullObject.is & equals give wrong results (Groovy bug?).
-     * 
+     *
      * A NullObject get's passed to the closure in delegate perhaps because of a Groovy bug or feature
      * This happens when a NullObject's MetaMethod is called.
-     * 
+     *
      * @param delegate
      * @return
      */
@@ -132,26 +135,26 @@ class CodecMetaClassSupport {
             addMetaMethod(targetMetaClasses, methodNameClosure(aliasName), methodClosure)
         }
     }
-    
+
     private String resolveCodecName(CodecFactory codecFactory) {
         codecFactory.encoder?.codecIdentifier?.codecName ?: codecFactory.decoder?.codecIdentifier?.codecName
     }
 
     private static List<ExpandoMetaClass> resolveDefaultMetaClasses() {
         [
-            String,
-            GStringImpl,
-            StringBuffer,
-            StringBuilder,
-            Object
+                String,
+                GStringImpl,
+                StringBuffer,
+                StringBuilder,
+                Object
         ].collect { Class clazz ->
             GrailsMetaClassUtils.getExpandoMetaClass(clazz)
         }
     }
-    
+
     protected void addMetaMethod(List<ExpandoMetaClass> targetMetaClasses, String methodName, Closure closure) {
-        targetMetaClasses.each { ExpandoMetaClass emc -> 
-            emc."${methodName}" << closure 
+        targetMetaClasses.each { ExpandoMetaClass emc ->
+            emc."${methodName}" << closure
         }
     }
 }

@@ -26,7 +26,12 @@ import org.grails.core.AbstractInjectableGrailsClass;
 import org.grails.core.artefact.gsp.TagLibArtefactHandler;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Default implementation of a tag lib class.
@@ -47,7 +52,7 @@ public class DefaultGrailsTagLibClass extends AbstractInjectableGrailsClass impl
     /**
      * Default constructor.
      *
-     * @param clazz        the tag library class
+     * @param clazz the tag library class
      */
     @SuppressWarnings("rawtypes")
     public DefaultGrailsTagLibClass(Class<?> clazz) {
@@ -81,7 +86,7 @@ public class DefaultGrailsTagLibClass extends AbstractInjectableGrailsClass impl
         Map encodeAsForTagsMap = getStaticPropertyValue(ENCODE_AS_FOR_TAGS_FIELD_NAME, Map.class);
         if (encodeAsForTagsMap != null) {
             for (@SuppressWarnings("unchecked")
-                 Iterator<Map.Entry> it = encodeAsForTagsMap.entrySet().iterator(); it.hasNext();) {
+                 Iterator<Map.Entry> it = encodeAsForTagsMap.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry entry = it.next();
                 encodeAsForTags.put(entry.getKey().toString(), entry.getValue());
             }

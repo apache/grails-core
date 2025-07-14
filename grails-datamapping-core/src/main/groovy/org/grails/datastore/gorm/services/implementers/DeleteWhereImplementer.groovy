@@ -49,7 +49,7 @@ class DeleteWhereImplementer extends AbstractWhereImplementer {
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         String prefix = handledPrefixes.find() { String it -> methodNode.name.startsWith(it) }
-        if(prefix != null) {
+        if (prefix != null) {
             return super.doesImplement(domainClass, methodNode)
         }
         return false
@@ -68,11 +68,10 @@ class DeleteWhereImplementer extends AbstractWhereImplementer {
     @Override
     protected Statement buildReturnStatement(ClassNode domainClass, MethodNode abstractMethodNode, MethodNode methodNode, Expression queryExpression) {
         boolean isVoid = abstractMethodNode.returnType == ClassHelper.VOID_TYPE
-        if(isVoid) {
+        if (isVoid) {
             return GeneralUtils.stmt(queryExpression)
-        }
-        else {
-            return GeneralUtils.returnS( GeneralUtils.castX( abstractMethodNode.returnType, queryExpression) )
+        } else {
+            return GeneralUtils.returnS(GeneralUtils.castX(abstractMethodNode.returnType, queryExpression))
         }
     }
 

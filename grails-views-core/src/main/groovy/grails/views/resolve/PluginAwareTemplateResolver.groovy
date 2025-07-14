@@ -35,6 +35,7 @@ import org.grails.plugins.BinaryGrailsPlugin
  */
 @CompileStatic
 class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implements PluginManagerAware {
+
     GrailsPluginManager pluginManager
 
     PluginAwareTemplateResolver(ViewConfiguration viewConfiguration) {
@@ -50,15 +51,15 @@ class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implemen
     @Override
     Class<? extends Template> resolveTemplateClass(String path) {
         Class<? extends Template> applicationTemplate = super.resolveTemplateClass(path)
-        if(applicationTemplate == null) {
+        if (applicationTemplate == null) {
             // try global template
             applicationTemplate = resolveTemplateClass(null, path)
         }
-        if(applicationTemplate == null && pluginManager != null) {
+        if (applicationTemplate == null && pluginManager != null) {
             // search plugins for template
-            for( plugin in pluginManager.allPlugins ) {
+            for (plugin in pluginManager.allPlugins) {
                 Class<? extends Template> pluginTemplate = resolveTemplateClass(plugin.fileSystemShortName, path)
-                if(pluginTemplate != null) {
+                if (pluginTemplate != null) {
                     return pluginTemplate
                 }
             }
@@ -69,9 +70,9 @@ class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implemen
     @Override
     URL resolveTemplate(String path) {
         URL applicationTemplate = super.resolveTemplate(path)
-        if(applicationTemplate == null && pluginManager != null) {
-            for( plugin in pluginManager.allPlugins ) {
-                if(plugin instanceof BinaryGrailsPlugin) {
+        if (applicationTemplate == null && pluginManager != null) {
+            for (plugin in pluginManager.allPlugins) {
+                if (plugin instanceof BinaryGrailsPlugin) {
                     BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) plugin
                     File projectDirectory = binaryGrailsPlugin.getProjectDirectory()
                     if (projectDirectory != null) {

@@ -20,7 +20,14 @@
 package grails.plugin.json.view
 
 import grails.plugin.json.builder.JsonGenerator
-import grails.plugin.json.converters.*
+import grails.plugin.json.converters.InstantJsonConverter
+import grails.plugin.json.converters.LocalDateJsonConverter
+import grails.plugin.json.converters.LocalDateTimeJsonConverter
+import grails.plugin.json.converters.LocalTimeJsonConverter
+import grails.plugin.json.converters.OffsetDateTimeJsonConverter
+import grails.plugin.json.converters.OffsetTimeJsonConverter
+import grails.plugin.json.converters.PeriodJsonConverter
+import grails.plugin.json.converters.ZonedDateTimeJsonConverter
 import grails.plugin.json.view.api.jsonapi.JsonApiIdRenderStrategy
 import grails.plugin.json.view.internal.JsonTemplateTypeCheckingExtension
 import grails.plugin.json.view.internal.JsonViewsTransform
@@ -45,7 +52,6 @@ import org.springframework.core.OrderComparator
  */
 @CompileStatic
 class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
-
 
     private final boolean compileStatic
 
@@ -78,7 +84,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         this.compileStatic = configuration.compileStatic
 
         JsonGenerator.Options options = new JsonGenerator.Options()
-        JsonViewGeneratorConfiguration config = ((JsonViewConfiguration)configuration).generator
+        JsonViewGeneratorConfiguration config = ((JsonViewConfiguration) configuration).generator
 
         if (!config.escapeUnicode) {
             options.disableUnicodeEscaping()
@@ -118,7 +124,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
     @Override
     protected void prepareCustomizers(CompilerConfiguration compilerConfiguration) {
         super.prepareCustomizers(compilerConfiguration)
-        if(compileStatic) {
+        if (compileStatic) {
             compilerConfiguration.addCompilationCustomizers(
                     new ASTTransformationCustomizer(Collections.singletonMap("extensions", JsonTemplateTypeCheckingExtension.name), CompileStatic.class));
         }

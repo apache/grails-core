@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -31,18 +30,18 @@ import java.math.BigDecimal;
 /**
  * Manages the scale for floating point numbers (i.e., the
  * number of digits to the right of the decimal point).
- *
+ * <p>
  * Supports properties of the following types:
  * <ul>
  * <li>java.lang.Float</li>
  * <li>java.lang.Double</li>
  * <li>java.math.BigDecimal (and its subclasses)</li>
  * </ul>
- *
+ * <p>
  * When applied, determines if the number includes more
  * nonzero decimal places than the scale permits. If so, it rounds the number
  * to the maximum number of decimal places allowed by the scale.
- *
+ * <p>
  * The rounding behavior described above occurs automatically when the
  * constraint is applied. This constraint does <i>not</i> generate
  * validation errors.
@@ -104,11 +103,11 @@ public class ScaleConstraint extends AbstractConstraint {
         return constraintParameter;
     }
 
-
     /**
      * {@inheritDoc}
+     *
      * @see AbstractConstraint#processValidate(
-     *     java.lang.Object, java.lang.Object, org.springframework.validation.Errors)
+     *java.lang.Object, java.lang.Object, org.springframework.validation.Errors)
      */
     @Override
     protected void processValidate(Object target, Object propertyValue, Errors errors) {
@@ -120,26 +119,23 @@ public class ScaleConstraint extends AbstractConstraint {
             bigDecimal = new BigDecimal(propertyValue.toString());
             bigDecimal = getScaledValue(bigDecimal);
             bean.setPropertyValue(getPropertyName(), bigDecimal.floatValue());
-        }
-        else if (propertyValue instanceof Double) {
+        } else if (propertyValue instanceof Double) {
             bigDecimal = new BigDecimal(propertyValue.toString());
             bigDecimal = getScaledValue(bigDecimal);
             bean.setPropertyValue(getPropertyName(), bigDecimal.doubleValue());
-        }
-        else if (propertyValue instanceof BigDecimal) {
+        } else if (propertyValue instanceof BigDecimal) {
             bigDecimal = (BigDecimal) propertyValue;
             bigDecimal = getScaledValue(bigDecimal);
             bean.setPropertyValue(getPropertyName(), bigDecimal);
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Unsupported type detected in constraint [" + getName() +
                     "] of property [" + constraintPropertyName + "] of class [" + constraintOwningClass + "]");
         }
     }
 
     /**
-     * @return the <code>BigDecimal</code> object that results from applying the contraint's scale to the underlying number
      * @param originalValue The original value
+     * @return the <code>BigDecimal</code> object that results from applying the contraint's scale to the underlying number
      */
     private BigDecimal getScaledValue(BigDecimal originalValue) {
         if (originalValue.scale() > scale) {

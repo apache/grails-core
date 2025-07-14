@@ -29,7 +29,7 @@ import org.springframework.context.ApplicationContextAware
  * Helper class for creating a {@link UrlMapping}. Useful for testing
  *
  * @author Graeme Rocher
-     * @since 3.1
+ * @since 3.1
  */
 @CompileStatic
 class UrlMappingsFactory implements ApplicationContextAware {

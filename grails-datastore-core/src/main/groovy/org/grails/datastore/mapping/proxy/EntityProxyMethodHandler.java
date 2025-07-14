@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 /**
  * Base class for entity proxy handlers that are aware of Groovy
  *
- *
  * @author Graeme Rocher
  * @author Lari Hotari
  *
@@ -61,23 +60,23 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
             return super.getPropertyBeforeResolving(self, property);
         }
     }
-    
+
     @Override
     public Object invokeMethodBeforeResolving(Object self, String methodName, Object[] args) {
         Object result = invokeEntityProxyMethods(self, methodName, args);
-        if(!wasHandled(result)) {
+        if (!wasHandled(result)) {
             return super.invokeMethodBeforeResolving(self, methodName, args);
-        } else { 
+        } else {
             return result;
         }
     }
-    
+
     @Override
     public Object handleInvocation(Object self, Method thisMethod, Object[] args) {
         Object result = invokeEntityProxyMethods(self, thisMethod.getName(), args);
-        if(!wasHandled(result)) {
+        if (!wasHandled(result)) {
             result = super.handleInvocation(self, thisMethod, args);
-            if(!wasHandled(result)) {
+            if (!wasHandled(result)) {
                 return handleInvocationFallback(self, thisMethod, args);
             }
         }
@@ -85,9 +84,9 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
     }
 
     protected Object handleInvocationFallback(Object self, Method thisMethod, Object[] args) {
-       return INVOKE_IMPLEMENTATION;
-    }    
-    
+        return INVOKE_IMPLEMENTATION;
+    }
+
     protected Object invokeEntityProxyMethods(Object self, String methodName, Object[] args) {
         if (methodName.equals(IS_PROXY_METHOD)) {
             return true;
@@ -104,7 +103,6 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
             return INVOKE_IMPLEMENTATION;
         }
     }
-
 
     protected void initializeProxyTarget(Object self) {
         getProxyTarget(self);

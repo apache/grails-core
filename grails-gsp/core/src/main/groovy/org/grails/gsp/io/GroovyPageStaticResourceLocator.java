@@ -29,7 +29,7 @@ import org.springframework.core.io.Resource;
 
 /**
  * <p>
- *   Extends the {@link DefaultResourceLocator} class with extra methods to evaluate static resources relative to the currently executing GSP page.
+ * Extends the {@link DefaultResourceLocator} class with extra methods to evaluate static resources relative to the currently executing GSP page.
  * </p>
  *
  * <p>This class is used to resolve references to static resources like CSS, Javascript and images files</p>
@@ -45,16 +45,17 @@ public class GroovyPageStaticResourceLocator extends DefaultResourceLocator {
         if (resource == null || !resource.exists()) {
             AbstractTemplateVariableBinding binding = findBindingInOutputContext();
             if (binding instanceof GroovyPageBinding) {
-                GrailsPlugin pagePlugin = ((GroovyPageBinding)binding).getPagePlugin();
+                GrailsPlugin pagePlugin = ((GroovyPageBinding) binding).getPagePlugin();
                 if (pagePlugin != null && pluginManager != null) {
                     resource = findResourceForPlugin(pagePlugin, uri);
                 }
-            }
-            else if (pluginManager != null) {
+            } else if (pluginManager != null) {
                 // attempt brute force search of all plugins
                 for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
                     resource = findResourceForPlugin(plugin, uri);
-                    if (resource != null) break;
+                    if (resource != null) {
+                        break;
+                    }
                 }
             }
         }

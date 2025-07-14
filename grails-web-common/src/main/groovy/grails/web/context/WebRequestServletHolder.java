@@ -19,9 +19,8 @@
 package grails.web.context;
 
 import grails.util.Holder;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-
 import jakarta.servlet.ServletContext;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * @author Burt Beckwith

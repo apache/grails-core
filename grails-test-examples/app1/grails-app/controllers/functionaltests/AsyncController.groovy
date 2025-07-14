@@ -19,7 +19,7 @@
 
 package functionaltests
 
-import static grails.async.web.WebPromises.*
+import static grails.async.web.WebPromises.task
 
 class AsyncController {
 

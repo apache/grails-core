@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugin.hibernate.support;
 
 import grails.persistence.support.PersistenceContextInterceptor;
@@ -47,20 +46,16 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 public class HibernatePersistenceContextInterceptor implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
 
     private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor.class);
+    private static final ThreadLocal<Map<String, Boolean>> PARTICIPATE = ThreadLocal.withInitial(HashMap::new);
+    private static final ThreadLocal<Map<String, Integer>> NESTING_COUNT = ThreadLocal.withInitial(HashMap::new);
+
     private AbstractHibernateDatastore hibernateDatastore;
-
-
-    private static ThreadLocal<Map<String, Boolean>> participate = ThreadLocal.withInitial(HashMap::new);
-
-    private static ThreadLocal<Map<String, Integer>> nestingCount = ThreadLocal.withInitial(HashMap::new);
-
-
     private String dataSourceName;
 
     static {
         ShutdownOperations.addOperation(() -> {
-            participate.remove();
-            nestingCount.remove();
+            PARTICIPATE.remove();
+            NESTING_COUNT.remove();
         });
     }
 
@@ -84,7 +79,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
      */
     public void destroy() {
         DeferredBindingActions.clear();
-        if(!disconnected.isEmpty()) {
+        if (!disconnected.isEmpty()) {
             disconnected.pop();
         }
         if (getSessionFactory() == null || decNestingCount() > 0 || getParticipate()) {
@@ -97,72 +92,82 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         try {
             disconnected.clear();
             SessionFactoryUtils.closeSession(holder.getSession());
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             LOG.error("Unexpected exception on closing Hibernate Session", ex);
         }
     }
 
     public void disconnect() {
-        if (getSessionFactory() == null) return;
+        if (getSessionFactory() == null) {
+            return;
+        }
         try {
             disconnected.add(
                     getSession(false).disconnect()
             );
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // no session ignore
         }
     }
 
     public void reconnect() {
-        if (getSessionFactory() == null) return;
+        if (getSessionFactory() == null) {
+            return;
+        }
         Session session = getSession();
-        if(!session.isConnected() && !disconnected.isEmpty()) {
+        if (!session.isConnected() && !disconnected.isEmpty()) {
             try {
                 Connection connection = disconnected.peekLast();
                 getSession().reconnect(connection);
             } catch (IllegalStateException e) {
                 // cannot reconnect on different exception. ignore
-                LOG.debug(e.getMessage(),e);
+                LOG.debug(e.getMessage(), e);
             }
         }
     }
 
     public void flush() {
-        if (getSessionFactory() == null) return;
-        if(!getParticipate()) {
-            if(!transactionRequired) {
+        if (getSessionFactory() == null) {
+            return;
+        }
+        if (!getParticipate()) {
+            if (!transactionRequired) {
                 getSession().flush();
-            }
-            else if(TransactionSynchronizationManager.isSynchronizationActive()) {
+            } else if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 getSession().flush();
             }
         }
     }
 
     public void clear() {
-        if (getSessionFactory() == null) return;
+        if (getSessionFactory() == null) {
+            return;
+        }
         getSession().clear();
     }
 
     public void setReadOnly() {
-        if (getSessionFactory() == null) return;
+        if (getSessionFactory() == null) {
+            return;
+        }
         getSession().setHibernateFlushMode(FlushMode.MANUAL);
     }
 
     public void setReadWrite() {
-        if (getSessionFactory() == null) return;
+        if (getSessionFactory() == null) {
+            return;
+        }
         getSession().setHibernateFlushMode(FlushMode.AUTO);
     }
 
     public boolean isOpen() {
-        if (getSessionFactory() == null) return false;
+        if (getSessionFactory() == null) {
+            return false;
+        }
         try {
             return getSession(false).isOpen();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -181,8 +186,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         if (TransactionSynchronizationManager.hasResource(sf)) {
             // Do not modify the Session: just set the participate flag.
             setParticipate(true);
-        }
-        else {
+        } else {
             setParticipate(false);
             LOG.debug("Opening single Hibernate session in HibernatePersistenceContextInterceptor");
             Session session = getSession();
@@ -231,7 +235,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
     }
 
     private int incNestingCount() {
-        Map<String, Integer> map = nestingCount.get();
+        Map<String, Integer> map = NESTING_COUNT.get();
         Integer current = map.get(dataSourceName);
         int value = (current != null) ? current + 1 : 1;
         map.put(dataSourceName, value);
@@ -239,7 +243,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
     }
 
     private int decNestingCount() {
-        Map<String, Integer> map = nestingCount.get();
+        Map<String, Integer> map = NESTING_COUNT.get();
         Integer current = map.get(dataSourceName);
         int value = (current != null) ? current - 1 : 0;
         if (value < 0) {
@@ -250,12 +254,12 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
     }
 
     private void setParticipate(boolean flag) {
-        Map<String, Boolean> map = participate.get();
+        Map<String, Boolean> map = PARTICIPATE.get();
         map.put(dataSourceName, flag);
     }
 
     private boolean getParticipate() {
-        Map<String, Boolean> map = participate.get();
+        Map<String, Boolean> map = PARTICIPATE.get();
         Boolean ret = map.get(dataSourceName);
         return (ret != null) ? ret : false;
     }

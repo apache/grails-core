@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm.services;
 
 import java.lang.annotation.ElementType;
@@ -33,5 +32,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 public @interface Where {
+
     Class value();
 }

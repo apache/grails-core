@@ -1,19 +1,28 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.apache.grails.common.annotation;
+
+import org.springframework.core.annotation.AnnotationAttributes;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.lang.Nullable;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.ObjectUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
@@ -21,12 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.springframework.core.annotation.AnnotationAttributes;
-import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.lang.Nullable;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.ObjectUtils;
 
 /**
  * ASM visitor which looks for annotations defined on a class or method,
@@ -54,7 +57,6 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
 
     private final Map<String, Set<String>> metaAnnotationMap;
 
-
     public AnnotationAttributesReadingVisitor(String annotationType,
                                               MultiValueMap<String, AnnotationAttributes> attributesMap, Map<String, Set<String>> metaAnnotationMap,
                                               @Nullable ClassLoader classLoader) {
@@ -63,7 +65,6 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
         this.attributesMap = attributesMap;
         this.metaAnnotationMap = metaAnnotationMap;
     }
-
 
     @Override
     public void visitEnd() {
@@ -74,8 +75,7 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
             List<AnnotationAttributes> attributeList = this.attributesMap.get(this.annotationType);
             if (attributeList == null) {
                 this.attributesMap.add(this.annotationType, this.attributes);
-            }
-            else {
+            } else {
                 attributeList.add(0, this.attributes);
             }
             if (!AnnotationUtils.isInJavaLangAnnotationPackage(annotationClass.getName())) {
@@ -94,8 +94,7 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
                             this.metaAnnotationMap.put(annotationClass.getName(), metaAnnotationTypeNames);
                         }
                     }
-                }
-                catch (Throwable ex) {
+                } catch (Throwable ex) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("Failed to introspect meta-annotations on " + annotationClass + ": " + ex);
                     }
@@ -119,8 +118,7 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
                 for (Annotation metaMetaAnnotation : annotationType.getAnnotations()) {
                     recursivelyCollectMetaAnnotations(visited, metaMetaAnnotation);
                 }
-            }
-            catch (Throwable ex) {
+            } catch (Throwable ex) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Failed to introspect meta-annotations on " + annotation + ": " + ex);
                 }

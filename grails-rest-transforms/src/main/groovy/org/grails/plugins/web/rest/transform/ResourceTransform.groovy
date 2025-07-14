@@ -18,16 +18,9 @@
  */
 package org.grails.plugins.web.rest.transform
 
-import grails.io.IOUtils
-import org.apache.groovy.ast.tools.AnnotatedNodeUtils
-import org.codehaus.groovy.transform.TransformWithPriority
-import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
-
-import static java.lang.reflect.Modifier.*
-import static org.grails.compiler.injection.GrailsASTUtils.*
 import grails.artefact.Artefact
 import grails.compiler.ast.ClassInjector
+import grails.io.IOUtils
 import grails.rest.Resource
 import grails.rest.RestfulController
 import grails.util.GrailsNameUtils
@@ -35,11 +28,9 @@ import grails.web.controllers.ControllerMethod
 import grails.web.mapping.UrlMappings
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-
-import java.lang.reflect.Modifier
-
 import jakarta.annotation.PostConstruct
-
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -72,13 +63,28 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 import org.grails.compiler.injection.ArtefactTypeAstTransformation
 import org.grails.compiler.injection.GrailsAwareInjectionOperation
 import org.grails.compiler.injection.TraitInjectionUtils
 import org.grails.compiler.web.ControllerActionTransformer
 import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
+
+import java.lang.reflect.Modifier
+
+import static java.lang.reflect.Modifier.FINAL
+import static java.lang.reflect.Modifier.PRIVATE
+import static java.lang.reflect.Modifier.PUBLIC
+import static java.lang.reflect.Modifier.STATIC
+import static org.grails.compiler.injection.GrailsASTUtils.VOID_CLASS_NODE
+import static org.grails.compiler.injection.GrailsASTUtils.ZERO_PARAMETERS
+import static org.grails.compiler.injection.GrailsASTUtils.applyDefaultMethodTarget
+import static org.grails.compiler.injection.GrailsASTUtils.buildThisExpression
+import static org.grails.compiler.injection.GrailsASTUtils.nonGeneric
+import static org.grails.compiler.injection.GrailsASTUtils.processVariableScopes
 
 /**
  * The Resource transform automatically exposes a domain class as a RESTful resource. In effect the transform adds a controller to a Grails application
@@ -90,7 +96,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class ResourceTransform implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
-    private static final ClassNode MY_TYPE = new ClassNode(Resource)
+
     public static final String ATTR_READY_ONLY = "readOnly"
     public static final String ATTR_SUPER_CLASS = "superClass"
     public static final String RESPOND_METHOD = "respond"
@@ -98,14 +104,15 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
     public static final String ATTR_URI = "uri"
     public static final String PARAMS_VARIABLE = "params"
     public static final ConstantExpression CONSTANT_STATUS = new ConstantExpression(ARGUMENT_STATUS)
-    public static final String ATTR_NAMESPACE ="namespace"
+    public static final String ATTR_NAMESPACE = "namespace"
     public static final String RENDER_METHOD = "render"
     public static final String ARGUMENT_STATUS = "status"
     public static final String REDIRECT_METHOD = "redirect"
     public static final ClassNode AUTOWIRED_CLASS_NODE = new ClassNode(Autowired).getPlainNodeReference()
+    private static final ClassNode MY_TYPE = new ClassNode(Resource)
 
     private CompilationUnit unit
-    
+
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit source) {
@@ -126,31 +133,31 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
         if (resource == null) {
             ClassNode superClassNode
             Expression superClassAttribute = annotationNode.getMember(ATTR_SUPER_CLASS)
-            if(superClassAttribute instanceof ClassExpression) {
-                superClassNode = ((ClassExpression)superClassAttribute).getType()
+            if (superClassAttribute instanceof ClassExpression) {
+                superClassNode = ((ClassExpression) superClassAttribute).getType()
             } else {
                 superClassNode = ClassHelper.make(RestfulController)
             }
-            
+
             final ast = source.getAST()
             final newControllerClassNode = new ClassNode(className, PUBLIC, nonGeneric(superClassNode, parent))
-            
+
             final transactionalAnn = new AnnotationNode(TransactionalTransform.MY_TYPE)
-            transactionalAnn.addMember(ATTR_READY_ONLY,ConstantExpression.PRIM_TRUE)
+            transactionalAnn.addMember(ATTR_READY_ONLY, ConstantExpression.PRIM_TRUE)
             newControllerClassNode.addAnnotation(transactionalAnn)
-            
+
             final readOnlyAttr = annotationNode.getMember(ATTR_READY_ONLY)
-            boolean isReadOnly = readOnlyAttr != null && ((ConstantExpression)readOnlyAttr).trueExpression
+            boolean isReadOnly = readOnlyAttr != null && ((ConstantExpression) readOnlyAttr).trueExpression
             addConstructor(newControllerClassNode, parent, isReadOnly)
-            
+
             List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(ControllerArtefactHandler.TYPE, GrailsAwareInjectionOperation.getClassInjectors());
-                        
+
             ArtefactTypeAstTransformation.performInjection(source, newControllerClassNode, injectors.findAll { !(it instanceof ControllerActionTransformer) })
-            
-            if(unit) {
+
+            if (unit) {
                 TraitInjectionUtils.processTraitsForNode(source, newControllerClassNode, 'Controller', unit)
             }
-            
+
             final responseFormatsAttr = annotationNode.getMember(ATTR_RESPONSE_FORMATS)
             final uriAttr = annotationNode.getMember(ATTR_URI)
             final namespaceAttr = annotationNode.getMember(ATTR_NAMESPACE)
@@ -164,10 +171,9 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                         hasHtml = true
                     }
                     responseFormatsExpression.addExpression(responseFormatsAttr)
-                }
-                else if (responseFormatsAttr instanceof ListExpression) {
-                    responseFormatsExpression = (ListExpression)responseFormatsAttr
-                    for(Expression expr in responseFormatsExpression.expressions) {
+                } else if (responseFormatsAttr instanceof ListExpression) {
+                    responseFormatsExpression = (ListExpression) responseFormatsAttr
+                    for (Expression expr in responseFormatsExpression.expressions) {
                         if (expr.text.equalsIgnoreCase('html')) hasHtml = true; break
                     }
                 }
@@ -179,18 +185,18 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             if (uriAttr != null || namespaceAttr != null) {
 
                 String uri = uriAttr?.getText()
-                final namespace=namespaceAttr?.getText()
-                if(uri || namespace) {
+                final namespace = namespaceAttr?.getText()
+                if (uri || namespace) {
                     final urlMappingsClassNode = new ClassNode(UrlMappings).getPlainNodeReference()
 
-                    final lazyInitField = new FieldNode('lazyInit', PUBLIC | STATIC | FINAL, ClassHelper.Boolean_TYPE,newControllerClassNode, new ConstantExpression(Boolean.FALSE))
+                    final lazyInitField = new FieldNode('lazyInit', PUBLIC | STATIC | FINAL, ClassHelper.Boolean_TYPE, newControllerClassNode, new ConstantExpression(Boolean.FALSE))
                     newControllerClassNode.addField(lazyInitField)
 
-                    final urlMappingsField = new FieldNode('$urlMappings', PRIVATE, urlMappingsClassNode,newControllerClassNode, null)
+                    final urlMappingsField = new FieldNode('$urlMappings', PRIVATE, urlMappingsClassNode, newControllerClassNode, null)
                     newControllerClassNode.addField(urlMappingsField)
                     final urlMappingsSetterParam = new Parameter(urlMappingsClassNode, "um")
                     final controllerMethodAnnotation = new AnnotationNode(new ClassNode(ControllerMethod).getPlainNodeReference())
-                    MethodNode urlMappingsSetter = new MethodNode("setUrlMappings", PUBLIC, VOID_CLASS_NODE, [urlMappingsSetterParam] as Parameter[], null, new ExpressionStatement(new BinaryExpression(new VariableExpression(urlMappingsField.name),Token.newSymbol(Types.EQUAL, 0, 0), new VariableExpression(urlMappingsSetterParam))))
+                    MethodNode urlMappingsSetter = new MethodNode("setUrlMappings", PUBLIC, VOID_CLASS_NODE, [urlMappingsSetterParam] as Parameter[], null, new ExpressionStatement(new BinaryExpression(new VariableExpression(urlMappingsField.name), Token.newSymbol(Types.EQUAL, 0, 0), new VariableExpression(urlMappingsSetterParam))))
                     final autowiredAnnotation = new AnnotationNode(AUTOWIRED_CLASS_NODE)
                     autowiredAnnotation.addMember("required", ConstantExpression.FALSE)
 
@@ -203,31 +209,30 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                     AnnotatedNodeUtils.markAsGenerated(newControllerClassNode, urlMappingsSetter)
                     processVariableScopes(source, newControllerClassNode, urlMappingsSetter)
 
-
                     final methodBody = new BlockStatement()
 
                     final urlMappingsVar = new VariableExpression(urlMappingsField.name)
 
-                    MapExpression map=new MapExpression()
-                    if(uri){
+                    MapExpression map = new MapExpression()
+                    if (uri) {
                         map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression("resources"), new ConstantExpression(domainPropertyName)))
                     }
-                    if(namespace){
-                        final namespaceField = new FieldNode('namespace', STATIC, ClassHelper.STRING_TYPE,newControllerClassNode, new ConstantExpression(namespace))
+                    if (namespace) {
+                        final namespaceField = new FieldNode('namespace', STATIC, ClassHelper.STRING_TYPE, newControllerClassNode, new ConstantExpression(namespace))
                         newControllerClassNode.addField(namespaceField)
-                        if(map.getMapEntryExpressions().size()==0){
-                            uri="/${namespace}/${domainPropertyName}"
+                        if (map.getMapEntryExpressions().size() == 0) {
+                            uri = "/${namespace}/${domainPropertyName}"
                             map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression("resources"), new ConstantExpression(domainPropertyName)))
                         }
                         map.addMapEntryExpression(new MapEntryExpression(new ConstantExpression("namespace"), new ConstantExpression(namespace)))
                     }
 
-                    final resourcesUrlMapping = new MethodCallExpression(buildThisExpression(), uri, new MapExpression([ new MapEntryExpression(new ConstantExpression("resources"), new ConstantExpression(domainPropertyName))]))
+                    final resourcesUrlMapping = new MethodCallExpression(buildThisExpression(), uri, new MapExpression([new MapEntryExpression(new ConstantExpression("resources"), new ConstantExpression(domainPropertyName))]))
                     final urlMappingsClosure = new ClosureExpression(null, new ExpressionStatement(resourcesUrlMapping))
 
                     def addMappingsMethodCall = applyDefaultMethodTarget(new MethodCallExpression(urlMappingsVar, "addMappings", urlMappingsClosure), urlMappingsClassNode)
-                    methodBody.addStatement(new IfStatement(new BooleanExpression(urlMappingsVar), new ExpressionStatement(addMappingsMethodCall),new EmptyStatement()))
-                    
+                    methodBody.addStatement(new IfStatement(new BooleanExpression(urlMappingsVar), new ExpressionStatement(addMappingsMethodCall), new EmptyStatement()))
+
                     def initialiseUrlMappingsMethod = new MethodNode("initializeUrlMappings", PUBLIC, VOID_CLASS_NODE, ZERO_PARAMETERS, null, methodBody)
                     initialiseUrlMappingsMethod.addAnnotation(new AnnotationNode(new ClassNode(PostConstruct).getPlainNodeReference()))
                     initialiseUrlMappingsMethod.addAnnotation(controllerMethodAnnotation)
@@ -253,15 +258,15 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             ast.classes.add(newControllerClassNode)
         }
     }
-    
+
     ConstructorNode addConstructor(ClassNode controllerClassNode, ClassNode domainClassNode, boolean readOnly) {
         BlockStatement constructorBody = new BlockStatement()
-        constructorBody.addStatement(new ExpressionStatement(new ConstructorCallExpression(ClassNode.SUPER, new TupleExpression(new ClassExpression(domainClassNode),new ConstantExpression(readOnly, true)))))
+        constructorBody.addStatement(new ExpressionStatement(new ConstructorCallExpression(ClassNode.SUPER, new TupleExpression(new ClassExpression(domainClassNode), new ConstantExpression(readOnly, true)))))
         ConstructorNode constructorNode = controllerClassNode.addConstructor(Modifier.PUBLIC, ZERO_PARAMETERS, ClassNode.EMPTY_ARRAY, constructorBody)
         AnnotatedNodeUtils.markAsGenerated(controllerClassNode, constructorNode)
         return constructorNode
     }
-    
+
     void setCompilationUnit(CompilationUnit unit) {
         this.unit = unit
     }

@@ -23,7 +23,7 @@ import grails.web.pages.GrailsLayoutSelector
 import org.grails.web.util.WebUtils
 
 class LayoutSelector implements GrailsLayoutSelector {
-    
+
     @Override
     String selectLayout(String explicitLayoutArg, boolean renderView) {
         explicitLayoutArg != null ? explicitLayoutArg : (renderView ? null : WebUtils.NONE_LAYOUT)

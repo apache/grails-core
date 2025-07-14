@@ -35,12 +35,9 @@ public interface StreamEncodeable {
      * implementation checks if Encoder is a {@link StreamingEncoder} instance
      * and takes use of that interface.
      *
-     * @param appender
-     *            the EncodedAppender instance
-     * @param encoder
-     *            the encoder
-     * @throws IOException
-     *             Signals that an I/O exception has occurred.
+     * @param appender the EncodedAppender instance
+     * @param encoder  the encoder
+     * @throws IOException Signals that an I/O exception has occurred.
      */
     void encodeTo(EncodedAppender appender, Encoder encoder) throws IOException;
 }

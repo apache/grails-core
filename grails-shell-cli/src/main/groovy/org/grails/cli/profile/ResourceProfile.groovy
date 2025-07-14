@@ -19,9 +19,8 @@
 package org.grails.cli.profile
 
 import groovy.transform.CompileStatic
-import org.grails.config.NavigableMap
 import org.grails.io.support.Resource
-import org.yaml.snakeyaml.Yaml
+
 /**
  * A profile that operates against abstract {@link Resource} references
  *
@@ -32,7 +31,6 @@ import org.yaml.snakeyaml.Yaml
  */
 @CompileStatic
 class ResourceProfile extends AbstractProfile implements Profile {
-
 
     ResourceProfile(ProfileRepository repository, String name, Resource profileDir) {
         super(profileDir)
@@ -50,7 +48,6 @@ class ResourceProfile extends AbstractProfile implements Profile {
         Profile profile = new ResourceProfile(repository, name, profileDir)
         return profile
     }
-
 
     boolean equals(o) {
         if (this.is(o)) return true

@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import org.grails.datastore.mapping.reflect.ClassUtils
 
-
 /**
  * A class to represent a version of Grails for comparison
  *
@@ -159,10 +158,9 @@ class GrailsVersion implements Comparable<GrailsVersion> {
      * @return Obtains the current Grails version
      */
     static GrailsVersion getCurrent() {
-        if(currentVersion != null) {
+        if (currentVersion != null) {
             return currentVersion
-        }
-        else if (ClassUtils.isPresent("grails.util.BuildSettings")) {
+        } else if (ClassUtils.isPresent("grails.util.BuildSettings")) {
             currentVersion = new GrailsVersion(Class.forName("grails.util.BuildSettings").package.implementationVersion)
             return currentVersion
         } else {

@@ -18,8 +18,8 @@
  */
 package org.grails.web.databinding
 
-import grails.databinding.errors.BindingError;
-import grails.databinding.events.DataBindingListener;
+import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListener
 import groovy.transform.CompileStatic
 import groovy.util.logging.Commons
 
@@ -73,8 +73,8 @@ class DataBindingEventMulticastListener implements DataBindingListener {
 
     @Override
     void afterBinding(obj, String propertyName, errors) {
-        if(listeners) {
-            for(DataBindingListener listener : listeners) {
+        if (listeners) {
+            for (DataBindingListener listener : listeners) {
                 try {
                     listener.afterBinding obj, propertyName, errors
                 } catch (Exception e) {
@@ -86,8 +86,8 @@ class DataBindingEventMulticastListener implements DataBindingListener {
 
     @Override
     void afterBinding(target, errors) {
-        if(listeners) {
-            for(DataBindingListener listener : listeners) {
+        if (listeners) {
+            for (DataBindingListener listener : listeners) {
                 try {
                     listener.afterBinding target, errors
                 } catch (Exception e) {
@@ -99,8 +99,8 @@ class DataBindingEventMulticastListener implements DataBindingListener {
 
     @Override
     void bindingError(BindingError error, errors) {
-        if(listeners) {
-            for(DataBindingListener listener : listeners) {
+        if (listeners) {
+            for (DataBindingListener listener : listeners) {
                 try {
                     listener.bindingError error, errors
                 } catch (Exception e) {

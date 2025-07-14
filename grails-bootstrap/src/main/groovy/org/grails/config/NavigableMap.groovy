@@ -70,7 +70,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         this.rootConfig = rootConfig
         this.path = path
         dottedPath = path.join('.')
-        this.delegateMap= delegateMap
+        this.delegateMap = delegateMap
     }
 
     @Override
@@ -148,7 +148,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         delegateMap.entrySet()
     }
 
-    void merge(Map sourceMap, boolean parseFlatKeys=false) {
+    void merge(Map sourceMap, boolean parseFlatKeys = false) {
         mergeMaps(this, "", this, sourceMap, parseFlatKeys)
     }
 
@@ -158,7 +158,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                            Map sourceMap,
                            boolean parseFlatKeys) {
 
-        if(springProfileExclude(sourceMap, path)) {
+        if (springProfileExclude(sourceMap, path)) {
             return
         }
 
@@ -189,7 +189,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         def activeSpringProfile = System.getProperty(SPRING_PROFILES)
 
         // Is there a 'spring.config.activate.on-profile' property defined in the source map?
-        def sourceMapProfile1 = ((Map)((Map)((Map)sourceMap?.get(SPRING))?.get(CONFIG))?.get(ACTIVATE))?.get(ON_PROFILE)
+        def sourceMapProfile1 = ((Map) ((Map) ((Map) sourceMap?.get(SPRING))?.get(CONFIG))?.get(ACTIVATE))?.get(ON_PROFILE)
         if (!sourceMapProfile1 && path == "$SPRING.$CONFIG.$ACTIVATE") {
             sourceMapProfile1 = sourceMap?.get(ON_PROFILE)
         }
@@ -206,7 +206,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
 
         // Is there a 'spring.profiles' property defined in the source map? (Old way of Spring profiles activation)
-        def sourceMapProfile2 = ((Map)sourceMap?.get(SPRING))?.get(PROFILES)
+        def sourceMapProfile2 = ((Map) sourceMap?.get(SPRING))?.get(PROFILES)
         if (!sourceMapProfile2 && path == SPRING) {
             sourceMapProfile2 = sourceMap?.get(PROFILES)
         }
@@ -235,106 +235,105 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         int subscriptStart = sourceKey.indexOf('[')
         int subscriptEnd = sourceKey.indexOf(']')
         if (subscriptEnd > subscriptStart) {
-           if(subscriptStart > -1) {
-               String k = sourceKey[0..<subscriptStart]
-               String index = sourceKey[subscriptStart+1..<subscriptEnd]
-               String remainder = subscriptEnd != sourceKey.length() -1 ? sourceKey[subscriptEnd+2..-1] : null
-               if (remainder) {
+            if (subscriptStart > -1) {
+                String k = sourceKey[0..<subscriptStart]
+                String index = sourceKey[subscriptStart + 1..<subscriptEnd]
+                String remainder = subscriptEnd != sourceKey.length() - 1 ? sourceKey[subscriptEnd + 2..-1] : null
+                if (remainder) {
 
-                   boolean isNumber = index.isNumber()
-                   if (isNumber) {
-                       int i = index.toInteger()
-                       def currentValue = targetMap.get(k)
-                       List list = currentValue instanceof List ? currentValue : []
-                       if (list.size() > i) {
-                           def v = list.get(i)
-                           if (v instanceof Map) {
-                               ((Map)v).put(remainder, sourceValue)
-                           } else {
-                               Map newMap = [:]
-                               newMap.put(remainder, sourceValue)
-                               fill(list, i, null)
-                               list.set(i, newMap)
-                           }
-                       } else {
-                           Map newMap = [:]
-                           newMap.put(remainder, sourceValue)
-                           fill(list, i, null)
-                           list.set(i, newMap)
-                       }
-                       targetMap.put(k, list)
-                   } else {
-                       def currentValue = targetMap.get(k)
-                       Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                       targetMap.put(k, nestedMap)
+                    boolean isNumber = index.isNumber()
+                    if (isNumber) {
+                        int i = index.toInteger()
+                        def currentValue = targetMap.get(k)
+                        List list = currentValue instanceof List ? currentValue : []
+                        if (list.size() > i) {
+                            def v = list.get(i)
+                            if (v instanceof Map) {
+                                ((Map) v).put(remainder, sourceValue)
+                            } else {
+                                Map newMap = [:]
+                                newMap.put(remainder, sourceValue)
+                                fill(list, i, null)
+                                list.set(i, newMap)
+                            }
+                        } else {
+                            Map newMap = [:]
+                            newMap.put(remainder, sourceValue)
+                            fill(list, i, null)
+                            list.set(i, newMap)
+                        }
+                        targetMap.put(k, list)
+                    } else {
+                        def currentValue = targetMap.get(k)
+                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
+                        targetMap.put(k, nestedMap)
 
-                       def v = nestedMap.get(index)
-                       if (v instanceof Map) {
-                           ((Map)v).put(remainder, sourceValue)
-                       } else {
-                           Map newMap = [:]
-                           newMap.put(remainder, sourceValue)
-                           nestedMap.put(index, newMap)
-                       }
-                   }
-               } else {
-                   def currentValue = targetMap.get(k)
-                   if (index.isNumber()) {
-                       List list = currentValue instanceof List ? currentValue : []
-                       int i = index.toInteger()
-                       fill(list, i, null)
-                       list.set(i, sourceValue)
-                       targetMap.put(k, list)
-                   } else {
-                       Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                       targetMap.put(k, nestedMap)
-                       nestedMap.put(index, sourceValue)
-                   }
-                   targetMap.put(sourceKey, sourceValue)
-               }
+                        def v = nestedMap.get(index)
+                        if (v instanceof Map) {
+                            ((Map) v).put(remainder, sourceValue)
+                        } else {
+                            Map newMap = [:]
+                            newMap.put(remainder, sourceValue)
+                            nestedMap.put(index, newMap)
+                        }
+                    }
+                } else {
+                    def currentValue = targetMap.get(k)
+                    if (index.isNumber()) {
+                        List list = currentValue instanceof List ? currentValue : []
+                        int i = index.toInteger()
+                        fill(list, i, null)
+                        list.set(i, sourceValue)
+                        targetMap.put(k, list)
+                    } else {
+                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
+                        targetMap.put(k, nestedMap)
+                        nestedMap.put(index, sourceValue)
+                    }
+                    targetMap.put(sourceKey, sourceValue)
+                }
 
-           }
+            }
         } else {
             Object currentValue = targetMap.containsKey(sourceKey) ? targetMap.get(sourceKey) : null
             Object newValue
-            if(sourceValue instanceof Map) {
+            if (sourceValue instanceof Map) {
                 List<String> newPathList = []
-                newPathList.addAll( targetMap.getPath() )
+                newPathList.addAll(targetMap.getPath())
                 newPathList.add(sourceKey)
                 NavigableMap subMap
-                if(currentValue instanceof NavigableMap) {
-                    subMap = (NavigableMap)currentValue
-                }
-                else {
+                if (currentValue instanceof NavigableMap) {
+                    subMap = (NavigableMap) currentValue
+                } else {
                     subMap = new NavigableMap(targetMap.getRootConfig(), newPathList.asImmutable())
-                    if(currentValue instanceof Map) {
-                        subMap.putAll((Map)currentValue)
+                    if (currentValue instanceof Map) {
+                        subMap.putAll((Map) currentValue)
                     }
                 }
                 String newPath = path ? "${path}.${sourceKey}" : sourceKey
-                mergeMaps(rootMap, newPath , subMap, (Map)sourceValue, parseFlatKeys)
+                mergeMaps(rootMap, newPath, subMap, (Map) sourceValue, parseFlatKeys)
                 newValue = subMap
             } else {
                 newValue = sourceValue
             }
             if (isNestedSet && newValue == null) {
-                if(path) {
+                if (path) {
 
                     def subMap = rootMap.get(path)
-                    if(subMap instanceof Map) {
+                    if (subMap instanceof Map) {
                         subMap.remove(sourceKey)
                     }
                     def keysToRemove = rootMap.keySet().findAll() { String key ->
                         key.startsWith("${path}.")
                     }
-                    for(key in keysToRemove) {
+                    for (key in keysToRemove) {
                         rootMap.remove(key)
                     }
                 }
                 targetMap.remove(sourceKey)
             } else {
-                if(path) {
-                    rootMap.put( "${path}.${sourceKey}".toString(), newValue )
+                if (path) {
+                    rootMap.put("${path}.${sourceKey}".toString(), newValue)
                 }
                 mergeMapEntry(targetMap, sourceKey, newValue)
             }
@@ -373,16 +372,16 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     Object navigate(String... path) {
         return navigateMap(this, path)
     }
-    
+
     private Object navigateMap(Map<String, Object> map, String... path) {
-        if(map==null || path == null) return null
-        if(path.length == 0) {
+        if (map == null || path == null) return null
+        if (path.length == 0) {
             return map
         } else if (path.length == 1) {
             return map.get(path[0])
         } else {
             def submap = map.get(path[0])
-            if(submap instanceof Map) {
+            if (submap instanceof Map) {
                 return navigateMap((Map<String, Object>) submap, path.tail())
             }
             return submap
@@ -402,28 +401,27 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         NavigableMap currentMap = this
         StringBuilder accumulatedPath = new StringBuilder()
         boolean isFirst = true
-        for(String pathElement : path) {
-            if(!isFirst) {
+        for (String pathElement : path) {
+            if (!isFirst) {
                 accumulatedPath.append(".").append(pathElement)
-            }
-            else {
+            } else {
                 isFirst = false
                 accumulatedPath.append(pathElement)
             }
 
-            Object currentItem = currentMap.get(pathElement) 
-            if(currentItem instanceof NavigableMap) {
-                currentMap = (NavigableMap)currentItem
+            Object currentItem = currentMap.get(pathElement)
+            if (currentItem instanceof NavigableMap) {
+                currentMap = (NavigableMap) currentItem
             } else if (createMissing) {
                 List<String> newPathList = []
-                newPathList.addAll( currentMap.getPath() )
+                newPathList.addAll(currentMap.getPath())
                 newPathList.add(pathElement)
 
                 Map<String, Object> newMap = new NavigableMap(currentMap.getRootConfig(), newPathList.asImmutable())
                 currentMap.put(pathElement, newMap)
 
                 def fullPath = accumulatedPath.toString()
-                if(!rootMap.containsKey(fullPath)) {
+                if (!rootMap.containsKey(fullPath)) {
                     rootMap.put(fullPath, newMap)
                 }
                 currentMap = newMap
@@ -433,44 +431,44 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         currentMap
     }
-    
+
     Map<String, Object> toFlatConfig() {
         Map<String, Object> flatConfig = [:]
         flattenKeys(flatConfig, this, [], false)
         flatConfig
     }
-    
+
     Properties toProperties() {
         Properties properties = new Properties()
         flattenKeys((Map<Object, Object>) properties, this, [], true)
         properties
     }
-    
+
     private void flattenKeys(Map<? extends Object, Object> flatConfig, Map currentMap, List<String> path, boolean forceStrings) {
         currentMap.each { key, value ->
             String stringKey = String.valueOf(key)
-            if(value != null) {
-                if(value instanceof Map) {
+            if (value != null) {
+                if (value instanceof Map) {
                     List<String> newPathList = []
-                    newPathList.addAll( path )
-                    newPathList.add( stringKey )
+                    newPathList.addAll(path)
+                    newPathList.add(stringKey)
 
-                    flattenKeys(flatConfig, (Map)value, newPathList.asImmutable(), forceStrings)
+                    flattenKeys(flatConfig, (Map) value, newPathList.asImmutable(), forceStrings)
                 } else {
                     String fullKey
-                    if(path) {
+                    if (path) {
                         fullKey = path.join('.') + '.' + stringKey
                     } else {
                         fullKey = stringKey
                     }
-                    if(value instanceof Collection) {
-                        if(forceStrings) {
-                            flatConfig.put(fullKey, ((Collection)value).join(","))
+                    if (value instanceof Collection) {
+                        if (forceStrings) {
+                            flatConfig.put(fullKey, ((Collection) value).join(","))
                         } else {
                             flatConfig.put(fullKey, value)
                         }
                         int index = 0
-                        for(Object item: (Collection)value) {
+                        for (Object item : (Collection) value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
                             flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++
@@ -480,7 +478,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                 }
             }
-        }        
+        }
     }
 
     @Override
@@ -498,7 +496,8 @@ class NavigableMap implements Map<String, Object>, Cloneable {
      */
     @Deprecated
     @CompileStatic
-    static class NullSafeNavigator implements Map<String, Object>{
+    static class NullSafeNavigator implements Map<String, Object> {
+
         final NavigableMap parent
         final List<String> path
 
@@ -521,7 +520,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         @Override
         int size() {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap != null) {
+            if (parentMap != null) {
                 return parentMap.size()
             }
             return 0
@@ -530,7 +529,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         @Override
         boolean isEmpty() {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap != null) {
+            if (parentMap != null) {
                 return parentMap.isEmpty()
             }
             return true
@@ -538,7 +537,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
         boolean containsKey(Object key) {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap == null) return false
+            if (parentMap == null) return false
             else {
                 return parentMap.containsKey(key)
             }
@@ -547,7 +546,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         @Override
         boolean containsValue(Object value) {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap != null) {
+            if (parentMap != null) {
                 return parentMap.containsValue(value)
             }
             return false
@@ -581,7 +580,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         @Override
         Set<String> keySet() {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap != null) {
+            if (parentMap != null) {
                 return parentMap.keySet()
             }
             return Collections.emptySet()
@@ -590,7 +589,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         @Override
         Collection<Object> values() {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap != null) {
+            if (parentMap != null) {
                 return parentMap.values()
             }
             return Collections.emptySet()
@@ -599,7 +598,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         @Override
         Set<Entry<String, Object>> entrySet() {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap != null) {
+            if (parentMap != null) {
                 return parentMap.entrySet()
             }
             return Collections.emptySet()
@@ -607,7 +606,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
         Object getProperty(String name) {
             NavigableMap parentMap = parent.navigateSubMap(path, false)
-            if(parentMap == null) {
+            if (parentMap == null) {
                 return new NullSafeNavigator(parent, ((path + [name]) as List<String>).asImmutable())
             } else {
                 return parentMap.get(name)
@@ -648,7 +647,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
 
         Object asType(Class c) {
-            if(c==Boolean || c==boolean) return false
+            if (c == Boolean || c == boolean) return false
             return null
         }
 

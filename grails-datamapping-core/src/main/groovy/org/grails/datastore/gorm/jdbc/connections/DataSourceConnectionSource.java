@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc.connections;
 
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
@@ -36,6 +35,7 @@ import java.lang.reflect.Method;
  * @since 6.0
  */
 public class DataSourceConnectionSource extends DefaultConnectionSource<DataSource, DataSourceSettings> {
+
     private static final Logger LOG = LoggerFactory.getLogger(DataSourceConnectionSource.class);
 
     public DataSourceConnectionSource(String name, DataSource source, DataSourceSettings settings) {
@@ -45,7 +45,7 @@ public class DataSourceConnectionSource extends DefaultConnectionSource<DataSour
     @Override
     public void close() throws IOException {
         super.close();
-        if(!closed) {
+        if (!closed) {
 
             DataSource source = getSource();
             Method closeMethod = ReflectionUtils.findMethod(source.getClass(), "close");
@@ -55,7 +55,7 @@ public class DataSourceConnectionSource extends DefaultConnectionSource<DataSour
                 closeMethod = ReflectionUtils.findMethod(source.getClass(), "close");
             }
 
-            if(closeMethod != null) {
+            if (closeMethod != null) {
                 try {
                     ReflectionUtils.invokeMethod(closeMethod, source);
                     this.closed = true;

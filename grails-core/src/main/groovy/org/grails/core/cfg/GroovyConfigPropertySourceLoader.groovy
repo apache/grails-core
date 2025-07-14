@@ -16,7 +16,6 @@
  */
 package org.grails.core.cfg
 
-import grails.util.BuildSettings
 import grails.util.Environment
 import grails.util.Metadata
 import groovy.transform.CompileStatic
@@ -43,37 +42,37 @@ class GroovyConfigPropertySourceLoader implements PropertySourceLoader {
 
     @Override
     List<PropertySource<?>> load(String name, Resource resource) throws IOException {
-        return load(name, resource, Collections.<String>emptyList())
+        return load(name, resource, Collections.<String> emptyList())
     }
 
     List<PropertySource<?>> load(String name, Resource resource, List<String> filteredKeys) throws IOException {
         if (!loadedFiles.contains(name)) {
             def env = Environment.current.name
 
-            if(resource.exists()) {
+            if (resource.exists()) {
                 ConfigSlurper configSlurper = env ? new ConfigSlurper(env) : new ConfigSlurper()
 
                 configSlurper.setBinding(userHome: System.getProperty('user.home'),
                         appName: Metadata.getCurrent().getApplicationName(),
-                        appVersion: Metadata.getCurrent().getApplicationVersion() )
+                        appVersion: Metadata.getCurrent().getApplicationVersion())
                 try {
                     def configObject = configSlurper.parse(resource.URL)
 
-                    for(key in filteredKeys) {
+                    for (key in filteredKeys) {
                         configObject.remove(key)
                     }
 
                     def propertySource = new NavigableMap()
                     propertySource.merge(configObject, false)
 
-                    Resource runtimeResource = resource.createRelative( resource.filename.replace('application', 'runtime') )
-                    if(runtimeResource.exists()) {
-                        def runtimeConfig = configSlurper.parse( runtimeResource.getURL() )
+                    Resource runtimeResource = resource.createRelative(resource.filename.replace('application', 'runtime'))
+                    if (runtimeResource.exists()) {
+                        def runtimeConfig = configSlurper.parse(runtimeResource.getURL())
                         propertySource.merge(runtimeConfig, false)
                     }
                     final NavigableMapPropertySource navigableMapPropertySource = new NavigableMapPropertySource(name, propertySource)
                     loadedFiles.add(name)
-                    return Collections.<PropertySource<?>>singletonList(navigableMapPropertySource)
+                    return Collections.<PropertySource<?>> singletonList(navigableMapPropertySource)
                 } catch (Throwable e) {
                     log.error("Unable to load $resource.filename: $e.message", e)
                     throw new GrailsConfigurationException("Error loading $resource.filename due to [${e.getClass().name}]: $e.message", e)

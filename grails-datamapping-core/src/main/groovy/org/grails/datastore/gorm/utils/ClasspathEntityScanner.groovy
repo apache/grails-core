@@ -54,9 +54,9 @@ class ClasspathEntityScanner {
     List<String> ignoredPackages = ['com', 'net', '', 'org', 'java', 'javax', 'jakarta', 'groovy']
 
     ClasspathEntityScanner() {
-        if(ClassUtils.isPresent("grails.persistence.Entity")) {
+        if (ClassUtils.isPresent("grails.persistence.Entity")) {
             try {
-                annotations.add((Class<? extends Annotation>)Class.forName("grails.persistence.Entity") )
+                annotations.add((Class<? extends Annotation>) Class.forName("grails.persistence.Entity"))
             } catch (Throwable e) {
                 log.error("Annotation [grails.persistence.Entity] found on classpath, but could not be loaded: ${e.message}", e)
             }
@@ -71,18 +71,17 @@ class ClasspathEntityScanner {
     Class[] scan(Package... packages) {
         ClassPathScanningCandidateComponentProvider componentProvider = new ClassPathScanningCandidateComponentProvider(false)
         componentProvider.setMetadataReaderFactory(new AnnotationMetadataReaderFactory(classLoader))
-        for(ann in annotations) {
+        for (ann in annotations) {
             componentProvider.addIncludeFilter(new AnnotationTypeFilter(ann))
         }
         Collection<Class> classes = new HashSet<>()
-        for(Package p in packages) {
+        for (Package p in packages) {
             def packageName = p.name
-            if(ignoredPackages.contains(packageName)) {
+            if (ignoredPackages.contains(packageName)) {
                 log.error("Package [$packageName] will not be scanned as it is too generic and will slow down startup time. Use a more specific package")
-            }
-            else {
+            } else {
                 for (BeanDefinition candidate in componentProvider.findCandidateComponents(packageName)) {
-                    Class persistentEntity = Class.forName(candidate.beanClassName, false, classLoader )
+                    Class persistentEntity = Class.forName(candidate.beanClassName, false, classLoader)
                     classes.add persistentEntity
                 }
             }

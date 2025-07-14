@@ -18,8 +18,8 @@
  */
 package org.grails.web.xml;
 
-import java.io.Writer;
 import java.io.IOException;
+import java.io.Writer;
 
 /**
  * Specialized StreamingMarkupWriter that handles the escaping of double quotes in XML attributes
@@ -41,8 +41,7 @@ public class StreamingMarkupWriter extends groovy.xml.streamingmarkupsupport.Str
     public void write(int i) throws IOException {
         if (writingAttribute && i == '"') {
             writer.write("&quot;");
-        }
-        else {
+        } else {
             super.write(i);
         }
     }

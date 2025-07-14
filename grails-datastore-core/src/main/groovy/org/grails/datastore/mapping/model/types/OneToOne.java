@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.mapping.model.types;
 
-import java.beans.PropertyDescriptor;
-
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+
+import java.beans.PropertyDescriptor;
 
 /**
  * Models a one-to-one association
@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * @since 1.0
  */
 public abstract class OneToOne<T extends Property> extends ToOne<T> {
+
     public OneToOne(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor) {
         super(owner, context, descriptor);
     }

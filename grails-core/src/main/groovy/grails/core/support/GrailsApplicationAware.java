@@ -26,10 +26,11 @@ import org.springframework.beans.factory.Aware;
  * registered by plugins.</p>
  *
  * @author Steven Devijver
- * @since 0.2
  * @see GrailsApplication
+ * @since 0.2
  */
 public interface GrailsApplicationAware extends Aware {
+
     /**
      * <p>This method is called by the {@link org.springframework.context.ApplicationContext} that
      * loads the Grails application. The {@link GrailsApplication} instance that represents

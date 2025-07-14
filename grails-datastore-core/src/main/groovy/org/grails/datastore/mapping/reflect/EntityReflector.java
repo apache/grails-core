@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.reflect;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -44,16 +43,19 @@ public interface EntityReflector {
      * @return Obtains the dirty checking state for the given entity
      */
     Map<String, Object> getDirtyCheckingState(Object entity);
+
     /**
      * @return The fast class
      * @deprecated Do not use
      */
     @Deprecated
     FastClass fastClass();
+
     /**
      * @return The identity type
      */
     Class identifierType();
+
     /**
      * @return The name of the identifier
      */
@@ -80,7 +82,7 @@ public interface EntityReflector {
      * Get a property for the specified index
      *
      * @param object The object
-     * @param index The index
+     * @param index  The index
      * @return The value
      */
     Object getProperty(Object object, int index);
@@ -89,7 +91,7 @@ public interface EntityReflector {
      * Set a property for the specified index
      *
      * @param object The object
-     * @param index The index
+     * @param index  The index
      * @param value  The value
      */
     void setProperty(Object object, int index, Object value);
@@ -98,7 +100,7 @@ public interface EntityReflector {
      * Get a property for the specified index
      *
      * @param object The object
-     * @param name The index
+     * @param name   The index
      * @return The value
      */
     Object getProperty(Object object, String name);
@@ -107,14 +109,13 @@ public interface EntityReflector {
      * Set a property for the specified index
      *
      * @param object The object
-     * @param name The index
+     * @param name   The index
      * @param value  The value
      */
     void setProperty(Object object, String name, Object value);
 
     /**
      * @param name Obtains the property reader for the given property
-     *
      * @return The name of the property
      */
     PropertyReader getPropertyReader(String name);
@@ -152,6 +153,7 @@ public interface EntityReflector {
     }
 
     interface PropertyWriter {
+
         /**
          * @return The field or null if the field cannot be resolved
          */
@@ -161,15 +163,17 @@ public interface EntityReflector {
          * @return The getter
          */
         Method setter();
+
         /**
          * @return The property type
          */
         Class propertyType();
+
         /**
          * Writes the property
          *
          * @param object the object
-         * @param value The value
+         * @param value  The value
          */
         void write(Object object, Object value);
     }

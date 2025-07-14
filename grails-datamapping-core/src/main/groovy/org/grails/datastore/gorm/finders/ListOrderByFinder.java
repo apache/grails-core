@@ -19,21 +19,20 @@
 package org.grails.datastore.gorm.finders;
 
 import groovy.lang.Closure;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.reflect.NameUtils;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * The "listOrderBy*" static persistent method. Allows ordered listing of instances based on their properties.
- *
+ * <p>
  * eg.
  * Account.listOrderByHolder();
  * Account.listOrderByHolder(max); // max results
@@ -41,6 +40,7 @@ import org.grails.datastore.mapping.reflect.NameUtils;
  * @author Graeme Rocher
  */
 public class ListOrderByFinder extends AbstractFinder {
+
     private static final Pattern METHOD_PATTERN = Pattern.compile("(listOrderBy)(\\w+)");
     private Pattern pattern = METHOD_PATTERN;
 
@@ -73,15 +73,15 @@ public class ListOrderByFinder extends AbstractFinder {
 
                 boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    final Map args = new LinkedHashMap( (Map) arguments[0] );
+                    final Map args = new LinkedHashMap((Map) arguments[0]);
                     final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
-                    if(order != null && "desc".equalsIgnoreCase(order.toString())) {
+                    if (order != null && "desc".equalsIgnoreCase(order.toString())) {
                         ascending = false;
                     }
                     DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
                 }
 
-                q.order( ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
+                q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
                 q.projections().distinct();
                 return invokeQuery(q);
             }

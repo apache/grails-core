@@ -18,15 +18,23 @@
  */
 package org.grails.datastore.mapping.engine.internal;
 
+import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.PropertyMapping;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.*;
-
-import org.grails.datastore.mapping.config.Property;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.PropertyMapping;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Utility methods for mapping logic.
@@ -36,21 +44,24 @@ import org.grails.datastore.mapping.model.PropertyMapping;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class MappingUtils {
+
     private static final String PROPERTY_SET_PREFIX = "set";
     private static final String PROPERTY_GET_PREFIX = "get";
 
     /**
      * Retrieves the name of a setter for the specified property name
+     *
      * @param propertyName The property name
      * @return The setter equivalent
      */
     public static String getSetterName(String propertyName) {
         final String suffix = getSuffixForGetterOrSetter(propertyName);
-        return PROPERTY_SET_PREFIX+suffix;
+        return PROPERTY_SET_PREFIX + suffix;
     }
 
     /**
      * Calculate the name for a getter method to retrieve the specified property
+     *
      * @param propertyName
      * @return The name for the getter method for this property, if it were to exist, i.e. getConstraints
      */
@@ -78,8 +89,7 @@ public class MappingUtils {
         if (mapping != null && mapping.getMappedForm() != null) {
             String tmp = mapping.getMappedForm().getTargetName();
             targetName = tmp != null ? tmp : property.getName();
-        }
-        else {
+        } else {
             targetName = property.getName();
         }
         return targetName;
@@ -87,6 +97,7 @@ public class MappingUtils {
 
     /**
      * Creates a concrete collection for the supplied interface
+     *
      * @param interfaceType The interface
      * @return ArrayList for List, TreeSet for SortedSet, LinkedHashSet for Set etc.
      */
@@ -94,14 +105,11 @@ public class MappingUtils {
         Collection elements;
         if (interfaceType.equals(List.class)) {
             elements = new ArrayList();
-        }
-        else if (interfaceType.equals(SortedSet.class)) {
+        } else if (interfaceType.equals(SortedSet.class)) {
             elements = new TreeSet();
-        }
-        else if (interfaceType.equals(Queue.class)) {
+        } else if (interfaceType.equals(Queue.class)) {
             elements = new ArrayDeque();
-        }
-        else {
+        } else {
             elements = new LinkedHashSet();
         }
         return elements;
@@ -109,7 +117,8 @@ public class MappingUtils {
 
     /**
      * Get a declared field, searching super classes for the field if it is not found in the class.
-     * @param javaClass The class to search.
+     *
+     * @param javaClass    The class to search.
      * @param propertyName The name of the field.
      * @return The field, or null if it couldn't be found.
      */
@@ -130,19 +139,19 @@ public class MappingUtils {
         Class genericClass = null;
 
         Field declaredField = getDeclaredField(javaClass, propertyName);
-        if(declaredField != null) {
+        if (declaredField != null) {
             Class<?> type = declaredField.getType();
             Type genericType = declaredField.getGenericType();
             if (genericType instanceof ParameterizedType) {
                 Type[] typeArguments = ((ParameterizedType) genericType).getActualTypeArguments();
                 int len = typeArguments.length;
-                if (len >0) {
+                if (len > 0) {
                     int i = 0;
-                    if(Map.class.isAssignableFrom(type) && len == 2) {
+                    if (Map.class.isAssignableFrom(type) && len == 2) {
                         i++;
                     }
                     Type typeArg = typeArguments[i];
-                    if(typeArg instanceof Class) {
+                    if (typeArg instanceof Class) {
                         genericClass = (Class) typeArg;
                     }
                 }
@@ -158,9 +167,9 @@ public class MappingUtils {
         Type genericType = declaredField != null ? declaredField.getGenericType() : null;
         if (genericType instanceof ParameterizedType) {
             Type[] typeArguments = ((ParameterizedType) genericType).getActualTypeArguments();
-            if (typeArguments.length>0) {
+            if (typeArguments.length > 0) {
                 Type typeArg = typeArguments[isKeyType ? 0 : 1];
-                if(typeArg instanceof Class) {
+                if (typeArg instanceof Class) {
                     genericClass = (Class) typeArg;
                 }
             }
@@ -171,9 +180,9 @@ public class MappingUtils {
     public static Class getGenericType(Class propertyType) {
         Class genericType = null;
         TypeVariable[] typeParameters = propertyType.getTypeParameters();
-        if (typeParameters != null && typeParameters.length>0) {
+        if (typeParameters != null && typeParameters.length > 0) {
             Type[] bounds = typeParameters[0].getBounds();
-            if (bounds != null && bounds.length>0 && (bounds[0] instanceof Class)) {
+            if (bounds != null && bounds.length > 0 && (bounds[0] instanceof Class)) {
                 genericType = (Class) bounds[0];
             }
         }

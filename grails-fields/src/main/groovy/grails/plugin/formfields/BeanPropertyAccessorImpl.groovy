@@ -85,11 +85,11 @@ class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     List<String> getLabelKeys() {
         List<String> labelKeys = []
-        
-        labelKeys << "${GrailsNameUtils.getPropertyName(rootBeanType.simpleName)}.${pathFromRoot}.label".replaceAll(/\[(.+)\]/, '') 
-        if(addPathFromRoot) {
+
+        labelKeys << "${GrailsNameUtils.getPropertyName(rootBeanType.simpleName)}.${pathFromRoot}.label".replaceAll(/\[(.+)\]/, '')
+        if (addPathFromRoot) {
             labelKeys << "${pathFromRoot}.label".replaceAll(/\[(.+)\]/, '')
-        }                
+        }
         labelKeys << "${GrailsNameUtils.getPropertyName(beanType.simpleName)}.${propertyName}.label".toString()
 
         return labelKeys.unique() as List<String>

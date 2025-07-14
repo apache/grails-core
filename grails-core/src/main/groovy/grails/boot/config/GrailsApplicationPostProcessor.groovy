@@ -70,6 +70,7 @@ import org.springframework.core.io.Resource
 @CompileStatic
 @Slf4j
 class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, ApplicationListener<ApplicationContextEvent> {
+
     static final boolean RELOADING_ENABLED = Environment.isReloadingAgentEnabled()
 
     final GrailsApplication grailsApplication
@@ -81,24 +82,23 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     boolean loadExternalBeans = true
     boolean reloadingEnabled = RELOADING_ENABLED
 
-    GrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class...classes) {
+    GrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
         this.lifeCycle = lifeCycle
-        if(lifeCycle instanceof GrailsApplicationClass) {
-            this.applicationClass = (GrailsApplicationClass)lifeCycle
-        }
-        else {
+        if (lifeCycle instanceof GrailsApplicationClass) {
+            this.applicationClass = (GrailsApplicationClass) lifeCycle
+        } else {
             this.applicationClass = null
         }
         this.classes = classes != null ? classes : [] as Class[]
         grailsApplication = applicationClass != null ? new DefaultGrailsApplication(applicationClass) : new DefaultGrailsApplication()
         pluginManager = applicationContext?.getBeanNamesForType(GrailsPluginManager) ? applicationContext.getBean(GrailsPluginManager) : new DefaultGrailsPluginManager(grailsApplication)
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             setApplicationContext(applicationContext)
         }
     }
 
     protected final void initializeGrailsApplication(ApplicationContext applicationContext) {
-        if(applicationContext == null) {
+        if (applicationContext == null) {
             throw new IllegalStateException("ApplicationContext should not be null")
         }
         Environment.setInitializing(true)
@@ -126,7 +126,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         // register plugin provided classes first, this gives the oppurtunity
         // for application classes to override those provided by a plugin
         pluginManager.registerProvidedArtefacts(grailsApplication)
-        for(cls in classes) {
+        for (cls in classes) {
             grailsApplication.addArtefact(cls)
         }
     }
@@ -134,22 +134,25 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     protected void loadApplicationConfig() {
         org.springframework.core.env.Environment environment = applicationContext.getEnvironment()
         ConfigurableConversionService conversionService = null
-        if(environment instanceof ConfigurableEnvironment) {
-            if(environment instanceof AbstractEnvironment) {
+        if (environment instanceof ConfigurableEnvironment) {
+            if (environment instanceof AbstractEnvironment) {
                 conversionService = environment.getConversionService()
                 conversionService.addConverter(new Converter<String, Resource>() {
+
                     @Override
                     public Resource convert(String source) {
                         return applicationContext.getResource(source);
                     }
                 });
                 conversionService.addConverter(new Converter<NavigableMap.NullSafeNavigator, String>() {
+
                     @Override
                     public String convert(NavigableMap.NullSafeNavigator source) {
                         return null;
                     }
                 });
                 conversionService.addConverter(new Converter<NavigableMap.NullSafeNavigator, Object>() {
+
                     @Override
                     public Object convert(NavigableMap.NullSafeNavigator source) {
                         return null;
@@ -158,22 +161,22 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             }
             def propertySources = environment.getPropertySources()
             def plugins = pluginManager.allPlugins
-            if(plugins) {
-                for(GrailsPlugin plugin in plugins.reverse()) {
+            if (plugins) {
+                for (GrailsPlugin plugin in plugins.reverse()) {
                     def pluginPropertySource = plugin.propertySource
-                    if(pluginPropertySource) {
-                        if(pluginPropertySource instanceof EnumerablePropertySource) {
-                            propertySources.addLast( new PrefixedMapPropertySource( "grails.plugins.$plugin.name", (EnumerablePropertySource)pluginPropertySource ) )
+                    if (pluginPropertySource) {
+                        if (pluginPropertySource instanceof EnumerablePropertySource) {
+                            propertySources.addLast(new PrefixedMapPropertySource("grails.plugins.$plugin.name", (EnumerablePropertySource) pluginPropertySource))
                         }
                         propertySources.addLast pluginPropertySource
                     }
                 }
             }
             def config = new PropertySourcesConfig(propertySources)
-            if(conversionService != null) {
-                config.setConversionService( conversionService )
+            if (conversionService != null) {
+                config.setConversionService(conversionService)
             }
-            ((DefaultGrailsApplication)grailsApplication).config = config
+            ((DefaultGrailsApplication) grailsApplication).config = config
         }
     }
 
@@ -186,7 +189,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         // first register plugin beans
         pluginManager.doRuntimeConfiguration(springConfig)
 
-        if(loadExternalBeans) {
+        if (loadExternalBeans) {
             // now allow overriding via application
 
             def context = application.mainContext
@@ -213,9 +216,9 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             }
         }
 
-        if(lifeCycle) {
+        if (lifeCycle) {
             def withSpring = lifeCycle.doWithSpring()
-            if(withSpring) {
+            if (withSpring) {
                 def bb = new BeanBuilder(null, springConfig, application.classLoader)
                 bb.beans withSpring
             }
@@ -239,13 +242,13 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(this.applicationContext != applicationContext && applicationContext != null) {
+        if (this.applicationContext != applicationContext && applicationContext != null) {
             this.applicationContext = applicationContext
             initializeGrailsApplication(applicationContext)
-            if(applicationContext instanceof ConfigurableApplicationContext) {
+            if (applicationContext instanceof ConfigurableApplicationContext) {
                 def configurable = (ConfigurableApplicationContext) applicationContext
                 configurable.addApplicationListener(this)
-                configurable.environment.addActiveProfile( grailsApplication.getConfig().getProperty(Settings.PROFILE, String, "web"))
+                configurable.environment.addActiveProfile(grailsApplication.getConfig().getProperty(Settings.PROFILE, String, "web"))
             }
         }
     }
@@ -260,7 +263,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             if (event instanceof ContextRefreshedEvent) {
                 if (context.containsBean("grailsDomainClassMappingContext")) {
                     grailsApplication.setMappingContext(
-                        context.getBean("grailsDomainClassMappingContext", MappingContext)
+                            context.getBean("grailsDomainClassMappingContext", MappingContext)
                     )
                 }
                 Environment.setInitializing(false)
@@ -281,8 +284,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                 for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans) {
                     lifeCycle.onStartup(eventMap)
                 }
-            }
-            else if(event instanceof ContextClosedEvent) {
+            } else if (event instanceof ContextClosedEvent) {
                 Map<String, Object> eventMap = [:]
                 eventMap.put('source', pluginManager)
                 for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans.asList().reverse()) {

@@ -18,10 +18,7 @@
  */
 package org.apache.grails.web.layout;
 
-import java.util.Locale;
-
 import jakarta.servlet.ServletContext;
-
 import org.grails.web.servlet.view.LayoutViewResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,14 +31,16 @@ import org.springframework.web.servlet.SmartView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
+import java.util.Locale;
+
 public class EmbeddedGrailsLayoutViewResolver implements LayoutViewResolver, Ordered, ServletContextAware, ApplicationContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddedGrailsLayoutViewResolver.class);
 
     protected ViewResolver innerViewResolver;
     protected GroovyPageLayoutFinder groovyPageLayoutFinder;
-    private int order = Ordered.LOWEST_PRECEDENCE - 30;
     protected ServletContext servletContext;
+    private int order = Ordered.LOWEST_PRECEDENCE - 30;
 
     public EmbeddedGrailsLayoutViewResolver(ViewResolver innerViewResolver, GroovyPageLayoutFinder groovyPageLayoutFinder) {
         this.innerViewResolver = innerViewResolver;

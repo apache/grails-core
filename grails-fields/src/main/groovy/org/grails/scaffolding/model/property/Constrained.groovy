@@ -83,7 +83,7 @@ class Constrained {
             true
         }
     }
-    
+
     List getInList() {
         if (this.constrained1 != null) {
             this.constrained1.inList
@@ -229,6 +229,6 @@ class Constrained {
     }
 
     boolean isNull() {
-        this.constrained1 == null 
+        this.constrained1 == null
     }
 }

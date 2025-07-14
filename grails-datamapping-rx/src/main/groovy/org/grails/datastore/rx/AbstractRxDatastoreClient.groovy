@@ -21,6 +21,9 @@ package org.grails.datastore.rx
 
 import grails.gorm.rx.proxy.ObservableProxy
 import groovy.transform.CompileStatic
+import jakarta.persistence.CascadeType
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries
 import org.grails.datastore.mapping.collection.PersistentCollection
 import org.grails.datastore.mapping.config.Property
@@ -33,7 +36,6 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.engine.event.*
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -56,8 +58,6 @@ import org.grails.gorm.rx.api.RxGormInstanceApi
 import org.grails.gorm.rx.api.RxGormStaticApi
 import org.grails.gorm.rx.api.RxGormValidationApi
 import org.grails.gorm.rx.events.AutoTimestampEventListener
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
-import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.gorm.rx.events.DomainEventListener
 import org.grails.gorm.rx.events.MultiTenantEventListener
 import org.springframework.context.ApplicationEvent
@@ -65,9 +65,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceAware
 import org.springframework.context.support.StaticMessageSource
-import rx.Observable
 
-import jakarta.persistence.CascadeType
 /**
  * Abstract implementation the {@link RxDatastoreClient} interface
  *

@@ -16,10 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.finders;
-
-import java.util.regex.Pattern;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -27,10 +24,13 @@ import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
 
+import java.util.regex.Pattern;
+
 public abstract class AbstractFindByFinder extends DynamicFinder {
+
     public static final String OPERATOR_OR = "Or";
     public static final String OPERATOR_AND = "And";
-    public static final String[] OPERATORS = { OPERATOR_AND, OPERATOR_OR };
+    public static final String[] OPERATORS = {OPERATOR_AND, OPERATOR_OR};
 
     protected AbstractFindByFinder(Pattern pattern, Datastore datastore) {
         super(pattern, OPERATORS, datastore);
@@ -81,8 +81,7 @@ public abstract class AbstractFindByFinder extends DynamicFinder {
             for (MethodExpression expression : invocation.getExpressions()) {
                 query.add(disjunction, expression.createCriterion());
             }
-        }
-        else {
+        } else {
             for (MethodExpression expression : invocation.getExpressions()) {
                 query.add(expression.createCriterion());
             }

@@ -25,22 +25,22 @@ import grails.web.api.ServletAttributes
 import grails.web.api.WebAttributes
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import jakarta.annotation.PostConstruct
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.buffer.GrailsPrintWriter
 import org.grails.encoder.Encoder
+import org.grails.taglib.GrailsTagException
+import org.grails.taglib.TagLibraryLookup
+import org.grails.taglib.TagLibraryMetaUtils
+import org.grails.taglib.TagOutput
+import org.grails.taglib.TemplateVariableBinding
 import org.grails.taglib.encoder.OutputEncodingStack
 import org.grails.taglib.encoder.WithCodecHelper
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.taglib.TagLibraryLookup
-import org.grails.taglib.TagOutput
-import org.grails.taglib.TemplateVariableBinding
 import org.grails.web.taglib.WebRequestTemplateVariableBinding
-import org.grails.taglib.GrailsTagException
-import org.grails.taglib.TagLibraryMetaUtils
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.web.context.request.RequestAttributes
 
-import jakarta.annotation.PostConstruct
 /**
  * A trait that makes a class into a GSP tag library
  *
@@ -55,7 +55,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
 
     @PostConstruct
     void initializeTagLibrary() {
-        if(!Environment.isDevelopmentMode()) {
+        if (!Environment.isDevelopmentMode()) {
             TagLibraryMetaUtils.enhanceTagLibMetaClass(GrailsMetaClassUtils.getExpandoMetaClass(getClass()), getTagLibraryLookup(), getTaglibNamespace())
         }
     }
@@ -64,7 +64,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
     def raw(Object value) {
         if (rawEncoder == null) {
             rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, "Raw")
-            if(rawEncoder == null)
+            if (rawEncoder == null)
                 return InvokerHelper.invokeMethod(value, "encodeAsRaw", null)
         }
         return rawEncoder.encode(value)
@@ -80,8 +80,8 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
     }
 
     String getTaglibNamespace() {
-        if(hasProperty('namespace')) {
-            return ((GroovyObject)this).getProperty('namespace')
+        if (hasProperty('namespace')) {
+            return ((GroovyObject) this).getProperty('namespace')
         }
         return TagOutput.DEFAULT_NAMESPACE
     }
@@ -89,7 +89,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
     /**
      * Obtains the page scope instance
      *
-     * @return  The page scope instance
+     * @return The page scope instance
      */
     TemplateVariableBinding getPageScope() {
         GrailsWebRequest webRequest = getWebRequest()
@@ -116,9 +116,9 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
      * @param newOut The new output writer
      */
     void setOut(Writer newOut) {
-        OutputEncodingStack.currentStack().push(newOut,true)
+        OutputEncodingStack.currentStack().push(newOut, true)
     }
-    
+
 
     /**
      * Property missing implementation that looks up tag library namespaces or tags in the default namespace
@@ -143,7 +143,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                 if (tagLibrary != null) {
                     Object tagProperty = tagLibrary.getProperty(name);
                     if (tagProperty instanceof Closure) {
-                        result = ((Closure<?>)tagProperty).clone();
+                        result = ((Closure<?>) tagProperty).clone();
                     }
                 }
             }

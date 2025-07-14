@@ -19,12 +19,11 @@
 package org.grails.web.converters.marshaller.json;
 
 import grails.converters.JSON;
-
-import java.util.Map;
-
-import org.grails.web.json.JSONWriter;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JSONWriter;
+
+import java.util.Map;
 
 /**
  * @author Siegfried Puchbauer
@@ -40,8 +39,8 @@ public class MapMarshaller implements ObjectMarshaller<JSON> {
     public void marshalObject(Object o, JSON converter) throws ConverterException {
         JSONWriter writer = converter.getWriter();
         writer.object();
-        Map<Object,Object> map = (Map<Object,Object>) o;
-        for (Map.Entry<Object,Object> entry : map.entrySet()) {
+        Map<Object, Object> map = (Map<Object, Object>) o;
+        for (Map.Entry<Object, Object> entry : map.entrySet()) {
             Object key = entry.getKey();
             if (key != null) {
                 writer.key(key.toString());

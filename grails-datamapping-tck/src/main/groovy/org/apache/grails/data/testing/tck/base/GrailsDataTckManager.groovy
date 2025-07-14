@@ -48,6 +48,7 @@ import org.grails.datastore.mapping.core.Session
 import spock.lang.Specification
 
 abstract class GrailsDataTckManager {
+
     static final CURRENT_TEST_NAME = 'current.gorm.test'
 
     Session session

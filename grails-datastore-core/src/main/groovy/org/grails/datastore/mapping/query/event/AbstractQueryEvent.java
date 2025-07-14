@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.query.event;
 
 import org.grails.datastore.mapping.query.Query;
@@ -26,6 +25,7 @@ import org.springframework.context.ApplicationEvent;
  * Base class for query events.
  */
 public abstract class AbstractQueryEvent extends ApplicationEvent {
+
     /**
      * The query.
      */
@@ -48,6 +48,7 @@ public abstract class AbstractQueryEvent extends ApplicationEvent {
 
     /**
      * Get the query from the event.
+     *
      * @return The query.
      */
     public Query getQuery() {

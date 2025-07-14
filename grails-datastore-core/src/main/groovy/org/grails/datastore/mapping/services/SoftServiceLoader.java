@@ -27,7 +27,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.*;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.ServiceConfigurationError;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -40,12 +47,12 @@ import java.util.stream.Collectors;
  * @since 1.0
  */
 public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>> {
+
     public static final String PROPERTY_GRAILS_CLASSLOADER_LOGGING = "grails.classloader.logging";
     public static final String META_INF_SERVICES = "META-INF/services";
     public static final Logger REFLECTION_LOGGER;
 
     private static final boolean ENABLE_CLASS_LOADER_LOGGING = Boolean.getBoolean(PROPERTY_GRAILS_CLASSLOADER_LOGGING);
-
 
     private final Class<S> serviceType;
     private final ClassLoader classLoader;
@@ -56,7 +63,6 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
     static {
         REFLECTION_LOGGER = getLogger(ClassUtils.class);
     }
-
 
     private SoftServiceLoader(Class<S> serviceType, ClassLoader classLoader) {
         this(serviceType, classLoader, (String name) -> true);
@@ -211,6 +217,7 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
      * A service loader iterator implementation.
      */
     private final class ServiceLoaderIterator implements Iterator<ServiceDefinition<S>> {
+
         private Enumeration<URL> serviceConfigs = null;
         private Iterator<String> unprocessed = null;
 

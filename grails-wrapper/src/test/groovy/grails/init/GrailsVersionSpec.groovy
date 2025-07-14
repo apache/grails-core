@@ -66,10 +66,10 @@ class GrailsVersionSpec extends Specification {
     def "sorted"() {
         expect:
         [new GrailsVersion('7.0.0'), new GrailsVersion('7.0.0-RC1'), new GrailsVersion('7.0.0-M1'), new GrailsVersion('7.0.0-SNAPSHOT')].sort() == [
-            new GrailsVersion('7.0.0-SNAPSHOT'),
-            new GrailsVersion('7.0.0-M1'),
-            new GrailsVersion('7.0.0-RC1'),
-            new GrailsVersion('7.0.0')
+                new GrailsVersion('7.0.0-SNAPSHOT'),
+                new GrailsVersion('7.0.0-M1'),
+                new GrailsVersion('7.0.0-RC1'),
+                new GrailsVersion('7.0.0')
         ]
     }
 }

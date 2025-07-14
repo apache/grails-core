@@ -16,25 +16,42 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.model.config;
 
 import groovy.lang.MetaProperty;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Transient;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.IdentityMapping;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.MappingFactory;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.ValueGenerator;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.datastore.mapping.model.types.Simple;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+
 import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
-import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 @SuppressWarnings({"rawtypes", "unchecked", "Duplicates"})
 public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStrategy {
@@ -83,59 +100,53 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
                 continue;
             }
 
-            if (isExcludedProperty(propertyName, classMapping, new ArrayList<>(), includeIdentifiers)) continue;
+            if (isExcludedProperty(propertyName, classMapping, new ArrayList<>(), includeIdentifiers)) {
+                continue;
+            }
 
             Class<?> propertyType = descriptor.getPropertyType();
 
-            if(hasAnnotation(readMethod, field, Id.class)) {
-                persistentProperties.add( propertyFactory.createIdentity(entity, context, descriptor));
-            }
-            else if(hasAnnotation(readMethod, field, EmbeddedId.class)) {
-                persistentProperties.add( propertyFactory.createIdentity(entity, context, descriptor));
-            }
-            else if (hasAnnotation(readMethod, field, Embedded.class)) {
+            if (hasAnnotation(readMethod, field, Id.class)) {
+                persistentProperties.add(propertyFactory.createIdentity(entity, context, descriptor));
+            } else if (hasAnnotation(readMethod, field, EmbeddedId.class)) {
+                persistentProperties.add(propertyFactory.createIdentity(entity, context, descriptor));
+            } else if (hasAnnotation(readMethod, field, Embedded.class)) {
                 if (isCollectionType(propertyType)) {
                     final Association association = establishRelationshipForCollection(descriptor, field, entity, context, true);
                     if (association != null) {
                         persistentProperties.add(association);
                     }
-                }
-                else {
+                } else {
                     final ToOne association = establishDomainClassRelationship(entity, descriptor, field, context, true);
                     if (association != null) {
                         persistentProperties.add(association);
                     }
                 }
-            }
-            else if (isCollectionType(propertyType)) {
+            } else if (isCollectionType(propertyType)) {
                 final Association association = establishRelationshipForCollection(descriptor, field, entity, context, false);
                 if (association != null) {
                     configureOwningSide(association);
                     persistentProperties.add(association);
                 }
-            }
-            // otherwise if the type is a domain class establish relationship
-            else if (isPersistentEntity(propertyType)) {
+            } else if (isPersistentEntity(propertyType)) {
+                // otherwise if the type is a domain class establish relationship
                 final ToOne association = establishDomainClassRelationship(entity, descriptor, field, context, false);
                 if (association != null) {
                     configureOwningSide(association);
                     persistentProperties.add(association);
                 }
-            }
-            else if (propertyFactory.isSimpleType(propertyType)) {
+            } else if (propertyFactory.isSimpleType(propertyType)) {
                 Simple simpleProperty = propertyFactory.createSimple(entity, context, descriptor);
-                if(hasAnnotation(readMethod, field, GeneratedValue.class)) {
+                if (hasAnnotation(readMethod, field, GeneratedValue.class)) {
                     simpleProperty.getMapping().getMappedForm().setDerived(true);
                 }
                 persistentProperties.add(simpleProperty);
-            }
-            else if (supportsCustomType(propertyType)) {
+            } else if (supportsCustomType(propertyType)) {
                 persistentProperties.add(propertyFactory.createCustom(entity, context, descriptor));
             }
         }
         return persistentProperties;
     }
-
 
     protected Association establishRelationshipForCollection(PropertyDescriptor property, Field field, PersistentEntity entity, MappingContext context, boolean embedded) {
         Class javaClass = entity.getJavaClass();
@@ -152,16 +163,14 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
         if (embedded) {
             if (propertyFactory.isSimpleType(relatedClassType)) {
                 return propertyFactory.createBasicCollection(entity, context, property, relatedClassType);
-            }
-            else {
+            } else {
                 // no point in setting up bidirectional link here, since target isn't an entity.
                 EmbeddedCollection association = propertyFactory.createEmbeddedCollection(entity, context, property);
                 PersistentEntity associatedEntity = getOrCreateEmbeddedEntity(entity, context, relatedClassType);
                 association.setAssociatedEntity(associatedEntity);
                 return association;
             }
-        }
-        else if (!isPersistentEntity(relatedClassType) && !relatedClassType.equals(entity.getJavaClass())) {
+        } else if (!isPersistentEntity(relatedClassType) && !relatedClassType.equals(entity.getJavaClass())) {
             // otherwise set it to not persistent as you can't persist
             // relationships to non-domain classes
             return propertyFactory.createBasicCollection(entity, context, property, relatedClassType);
@@ -178,7 +187,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             association = propertyFactory.createManyToMany(entity, context, property);
             ManyToMany manyToMany = getAnnotation(readMethod, field, ManyToMany.class);
             if (!manyToMany.mappedBy().equals("")) {
-                ((org.grails.datastore.mapping.model.types.ManyToMany)association).setInversePropertyName(manyToMany.mappedBy());
+                ((org.grails.datastore.mapping.model.types.ManyToMany) association).setInversePropertyName(manyToMany.mappedBy());
                 referencedPropertyName = manyToMany.mappedBy();
             } else {
                 List<PropertyDescriptor> descriptors = referencedCpf.getPropertiesAssignableToType(Collection.class);
@@ -200,8 +209,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
                     }
                 }
             }
-        }
-        else if (hasAnnotation(readMethod, field, OneToMany.class)) {
+        } else if (hasAnnotation(readMethod, field, OneToMany.class)) {
             association = propertyFactory.createOneToMany(entity, context, property);
             OneToMany oneToMany = getAnnotation(readMethod, field, OneToMany.class);
             if (!oneToMany.mappedBy().equals("")) {
@@ -240,7 +248,6 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
 
         Method readMethod = property.getReadMethod();
 
-
         if (getAnnotation(readMethod, field, ManyToOne.class) != null) {
             association = propertyFactory.createManyToOne(entity, context, property);
 
@@ -263,8 +270,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
                     }
                 }
             }
-        }
-        else {
+        } else {
             OneToOne oneToOne = getAnnotation(readMethod, field, OneToOne.class);
             if (oneToOne != null) {
                 if (!oneToOne.mappedBy().equals("")) {
@@ -291,7 +297,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
         if (association != null) {
             PersistentEntity associatedEntity = getOrCreateAssociatedEntity(entity, context, propType);
             association.setAssociatedEntity(associatedEntity);
-            if (relatedClassPropertyName != null ) {
+            if (relatedClassPropertyName != null) {
                 association.setReferencedPropertyName(relatedClassPropertyName);
             }
         }
@@ -312,7 +318,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             String[] idPropertiesArray;
 
             public String[] getIdentifierName() {
-                if(idPropertiesArray != null) {
+                if (idPropertiesArray != null) {
                     return idPropertiesArray;
                 }
 
@@ -322,22 +328,21 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
 
                 for (MetaProperty metaProperty : cpf.getMetaProperties()) {
                     int modifiers = metaProperty.getModifiers();
-                    if(Modifier.isStatic(modifiers) || Modifier.isAbstract(modifiers)) {
+                    if (Modifier.isStatic(modifiers) || Modifier.isAbstract(modifiers)) {
                         continue;
                     }
                     PropertyDescriptor pd = propertyFactory.createPropertyDescriptor(entity.getJavaClass(), metaProperty);
-                    if(pd != null) {
+                    if (pd != null) {
 
                         if (hasAnnotation(cpf, pd, Id.class)) {
                             idProperties.add(metaProperty.getName());
-                        }
-                        else if (hasAnnotation(cpf, pd, EmbeddedId.class)) {
+                        } else if (hasAnnotation(cpf, pd, EmbeddedId.class)) {
                             idProperties.add(metaProperty.getName());
                         }
                     }
                 }
 
-                if(idProperties.isEmpty()) {
+                if (idProperties.isEmpty()) {
                     // default to just use 'id'
                     idProperties.add(GormProperties.IDENTITY);
                 }

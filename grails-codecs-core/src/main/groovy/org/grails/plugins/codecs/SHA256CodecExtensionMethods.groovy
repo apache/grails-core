@@ -23,7 +23,7 @@ import org.codehaus.groovy.runtime.NullObject
 class SHA256CodecExtensionMethods extends DigestUtils {
     // Returns the byte[] of the digest
     static encodeAsSHA256(theTarget) {
-        if(theTarget == null || theTarget instanceof NullObject) {
+        if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
         theTarget.encodeAsSHA256Bytes()?.encodeAsHex()

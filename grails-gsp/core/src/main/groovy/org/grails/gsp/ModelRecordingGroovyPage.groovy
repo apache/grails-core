@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @CompileStatic
 abstract class ModelRecordingGroovyPage extends GroovyPage {
+
     public static final String CONFIG_SYSTEM_PROPERTY_NAME
     public static final boolean ENABLED
     static {
@@ -100,6 +101,7 @@ abstract class ModelRecordingGroovyPage extends GroovyPage {
 
 @CompileStatic
 class ModelRecordingCache {
+
     private Map<String, ModelEntry> models = new ConcurrentHashMap<>()
     private boolean initialized
 
@@ -183,7 +185,7 @@ class ModelEntry {
                 model.each { String fieldName, String fieldType ->
                     String cleanedFieldType = fieldType - ~/^java\.(util|lang)\./
                     String defaultType = DEFAULT_TYPES.get(fieldName)
-                    if(defaultType) {
+                    if (defaultType) {
                         try {
                             // use default field type for if field type is instance of the class
                             // for example instance of 'org.apache.catalina.core.ApplicationHttpRequest', use 'jakarta.servlet.http.HttpServletRequest'

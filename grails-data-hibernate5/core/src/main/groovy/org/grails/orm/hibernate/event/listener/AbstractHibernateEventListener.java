@@ -53,8 +53,9 @@ public abstract class AbstractHibernateEventListener extends AbstractPersistence
 
     /**
      * {@inheritDoc}
+     *
      * @see org.springframework.context.event.SmartApplicationListener#supportsEventType(
-     *     java.lang.Class)
+     *java.lang.Class)
      */
     public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
         return AbstractPersistenceEvent.class.isAssignableFrom(eventType);

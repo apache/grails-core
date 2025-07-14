@@ -18,14 +18,14 @@
  */
 package org.grails.plugins;
 
+import grails.core.GrailsApplication;
 import grails.plugins.DefaultGrailsPluginManager;
 import grails.plugins.GrailsPlugin;
+import grails.plugins.exceptions.PluginException;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
-import grails.core.GrailsApplication;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.spring.RuntimeSpringConfiguration;
-import grails.plugins.exceptions.PluginException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
 
@@ -72,8 +72,8 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
         checkInitialised();
         // remove common meta classes just to be sure
         MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
-        for (Class<?> COMMON_CLASS : COMMON_CLASSES) {
-            registry.removeMetaClass(COMMON_CLASS);
+        for (Class<?> commonClass : COMMON_CLASSES) {
+            registry.removeMetaClass(commonClass);
         }
         for (GrailsPlugin plugin : pluginList) {
             if (plugin.supportsCurrentScopeAndEnvironment()) {
@@ -84,8 +84,7 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
                     plugin.doWithDynamicMethods(applicationContext);
 
                     System.out.println("doWithDynamicMethods for plugin [" + plugin.getName() + "] took " + (System.currentTimeMillis() - pluginTime));
-                }
-                catch (Throwable t) {
+                } catch (Throwable t) {
                     throw new GrailsConfigurationException("Error configuring dynamic methods for plugin " + plugin + ": " + t.getMessage(), t);
                 }
             }

@@ -30,7 +30,6 @@ public class GrailsQueryException extends DatastoreException {
 
     private static final long serialVersionUID = 775603608315415077L;
 
-
     public GrailsQueryException(String message, Throwable cause) {
         super(message, cause);
     }

@@ -57,6 +57,7 @@ import java.util.concurrent.ConcurrentMap;
  * @since 1.1
  */
 public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBundleMessageSource implements GrailsApplicationAware, PluginManagerAware, InitializingBean {
+
     private static final String GRAILS_APP_I18N_PATH_COMPONENT = "/grails-app/i18n/";
     protected GrailsApplication application;
     protected GrailsPluginManager pluginManager;
@@ -93,47 +94,42 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         if (pluginCacheMillis == Long.MIN_VALUE) {
             pluginCacheMillis = cacheMillis;
         }
-        
+
         if (localResourceLoader == null) {
             return;
         }
 
         Resource[] resources;
-        if(Environment.isDevelopmentEnvironmentAvailable()) {
+        if (Environment.isDevelopmentEnvironmentAvailable()) {
             File[] propertiesFiles = new File(BuildSettings.BASE_DIR, GRAILS_APP_I18N_PATH_COMPONENT).listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
                     return name.endsWith(".properties");
                 }
             });
-            if(propertiesFiles != null && propertiesFiles.length > 0) {
+            if (propertiesFiles != null && propertiesFiles.length > 0) {
                 List<Resource> resourceList = new ArrayList<Resource>(propertiesFiles.length);
                 for (File propertiesFile : propertiesFiles) {
                     resourceList.add(new FileSystemResource(propertiesFile));
                 }
                 resources = resourceList.toArray(new Resource[resourceList.size()]);
-            }
-            else {
+            } else {
                 resources = new Resource[0];
             }
-        }
-        else {
-            if(searchClasspath) {
+        } else {
+            if (searchClasspath) {
                 resources = resourceResolver.getResources(messageBundleLocationPattern);
-            }
-            else {
+            } else {
                 DefaultGrailsApplication defaultGrailsApplication = (DefaultGrailsApplication) application;
-                if(defaultGrailsApplication != null) {
+                if (defaultGrailsApplication != null) {
                     GrailsApplicationClass applicationClass = defaultGrailsApplication.getApplicationClass();
-                    if(applicationClass != null) {
+                    if (applicationClass != null) {
                         ResourcePatternResolver resourcePatternResolver = new ClassRelativeResourcePatternResolver(applicationClass.getClass());
                         resources = resourcePatternResolver.getResources(messageBundleLocationPattern);
-                    }
-                    else {
+                    } else {
                         resources = resourceResolver.getResources(messageBundleLocationPattern);
                     }
-                }
-                else {
+                } else {
                     resources = resourceResolver.getResources(messageBundleLocationPattern);
                 }
             }
@@ -144,17 +140,17 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             String filename = resource.getFilename();
             String baseName = GrailsStringUtils.getFileBasename(filename);
             int i = baseName.indexOf('_');
-            if(i > -1) {
+            if (i > -1) {
                 baseName = baseName.substring(0, i);
             }
-            if(!basenames.contains(baseName) && !baseName.equals(""))
+            if (!basenames.contains(baseName) && !baseName.equals("")) {
                 basenames.add(baseName);
+            }
         }
 
-        setBasenames(basenames.toArray( new String[basenames.size()]));
+        setBasenames(basenames.toArray(new String[basenames.size()]));
 
     }
-
 
     @Override
     protected String resolveCodeWithoutArguments(String code, Locale locale) {
@@ -191,7 +187,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
     /**
      * Attempts to resolve a String for the code from the list of plugin base names
      *
-     * @param code The code
+     * @param code   The code
      * @param locale The locale
      * @return a MessageFormat
      */
@@ -202,15 +198,16 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             if (result != null) {
                 return result;
             }
-        }
-        else {
+        } else {
             String result = findCodeInBinaryPlugins(code, locale);
-            if (result != null) return result;
+            if (result != null) {
+                return result;
+            }
 
         }
         return null;
     }
-    
+
     protected PropertiesHolder getMergedBinaryPluginProperties(final Locale locale) {
         return CacheEntry.getValue(cachedMergedBinaryPluginProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
             @Override
@@ -248,7 +245,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
     /**
      * Attempts to resolve a MessageFormat for the code from the list of plugin base names
      *
-     * @param code The code
+     * @param code   The code
      * @param locale The locale
      * @return a MessageFormat
      */
@@ -259,10 +256,11 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             if (result != null) {
                 return result;
             }
-        }
-        else {
+        } else {
             MessageFormat result = findMessageFormatInBinaryPlugins(code, locale);
-            if (result != null) return result;
+            if (result != null) {
+                return result;
+            }
         }
         return null;
     }
@@ -277,7 +275,6 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         }
     }
 
-    
     /**
      * Set the number of seconds to cache the list of matching properties files loaded from plugin.
      * <ul>

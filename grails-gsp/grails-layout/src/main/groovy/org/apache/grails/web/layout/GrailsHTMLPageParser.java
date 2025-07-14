@@ -18,8 +18,6 @@
  */
 package org.apache.grails.web.layout;
 
-import java.io.IOException;
-
 import com.opensymphony.module.sitemesh.Page;
 import com.opensymphony.module.sitemesh.html.HTMLProcessor;
 import com.opensymphony.module.sitemesh.html.State;
@@ -38,6 +36,8 @@ import com.opensymphony.module.sitemesh.html.util.CharArray;
 import com.opensymphony.module.sitemesh.parser.HTMLPageParser;
 import com.opensymphony.module.sitemesh.parser.TokenizedHTMLPage;
 import com.opensymphony.sitemesh.Content;
+
+import java.io.IOException;
 
 public class GrailsHTMLPageParser extends HTMLPageParser {
 

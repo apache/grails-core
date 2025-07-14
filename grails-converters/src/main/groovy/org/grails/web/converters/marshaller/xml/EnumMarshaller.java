@@ -19,12 +19,11 @@
 package org.grails.web.converters.marshaller.xml;
 
 import grails.converters.XML;
-
-import java.lang.reflect.Method;
-
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.springframework.beans.BeanUtils;
+
+import java.lang.reflect.Method;
 
 /**
  * @author Siegfried Puchbauer
@@ -43,15 +42,12 @@ public class EnumMarshaller implements ObjectMarshaller<XML> {
             Method nameMethod = BeanUtils.findDeclaredMethod(enumClass, "name");
             try {
                 xml.chars(nameMethod.invoke(en).toString());
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 // ignored
             }
-        }
-        catch (ConverterException ce) {
+        } catch (ConverterException ce) {
             throw ce;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Error converting Enum with class " + en.getClass().getName(), e);
         }
     }

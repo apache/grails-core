@@ -24,10 +24,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.grails.cli.compiler.autoconfigure.GroovyTemplatesCompilerAutoConfiguration;
-
 /**
- * Pseudo annotation used to trigger {@link GroovyTemplatesCompilerAutoConfiguration}.
+ * Pseudo annotation used to trigger {@link org.grails.cli.compiler.autoconfigure.GroovyTemplatesCompilerAutoConfiguration}.
  *
  * @author Dave Syer
  * @since 1.1.0

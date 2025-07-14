@@ -31,7 +31,7 @@ class BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec extends Grail
         manager.domainClasses.addAll([ContactDetails, Patient])
     }
 
-    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite')})
+    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
     void "test unique constraint on root instance"() {
 
         setup:
@@ -52,7 +52,7 @@ class BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec extends Grail
         ContactDetails.deleteAll(contactDetails1)
     }
 
-    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite')})
+    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
     void "test unique constraint for the associated child object"() {
 
         setup:

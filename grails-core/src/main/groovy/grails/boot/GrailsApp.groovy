@@ -73,10 +73,10 @@ class GrailsApp extends SpringApplication {
      * Create a new {@link GrailsApp} instance. The application context will load
      * beans from the specified sources (see {@link SpringApplication class-level}
      * documentation for details. The instance can be customized before calling
-     * {@link #run(String...)}.
+     * {@link #run(String ...)}.
      * @param sources the bean sources
-     * @see #run(Object, String[])
-     * @see #GrailsApp(org.springframework.core.io.ResourceLoader, Class<?>...)
+     * @see #run(Object, String [ ])
+     * @see #GrailsApp(org.springframework.core.io.ResourceLoader, Class <?> ...)
      */
     GrailsApp(Class<?>... sources) {
         super(sources)
@@ -86,11 +86,11 @@ class GrailsApp extends SpringApplication {
      * Create a new {@link GrailsApp} instance. The application context will load
      * beans from the specified sources (see {@link SpringApplication class-level}
      * documentation for details. The instance can be customized before calling
-     * {@link #run(String...)}.
+     * {@link #run(String ...)}.
      * @param resourceLoader the resource loader to use
      * @param sources the bean sources
-     * @see #run(Object, String[])
-     * @see #GrailsApp(org.springframework.core.io.ResourceLoader, Class<?>...)
+     * @see #run(Object, String [ ])
+     * @see #GrailsApp(org.springframework.core.io.ResourceLoader, Class <?> ...)
      */
     GrailsApp(ResourceLoader resourceLoader, Class<?>... sources) {
         super(resourceLoader, sources)
@@ -143,7 +143,8 @@ class GrailsApp extends SpringApplication {
         configuredEnvironment = environment
     }
 
-    @CompileDynamic // TODO: Report Groovy VerifierError
+    @CompileDynamic
+    // TODO: Report Groovy VerifierError
     protected void enableDevelopmentModeWatch(Environment environment, ConfigurableApplicationContext applicationContext, String... args) {
         def location = environment.getReloadLocation()
 
@@ -154,6 +155,7 @@ class GrailsApp extends SpringApplication {
             Queue<File> newFiles = new ConcurrentLinkedQueue<>()
 
             directoryWatcher.addListener(new FileExtensionFileChangeListener(['groovy', 'java']) {
+
                 @Override
                 void onChange(File file, List<String> extensions) {
                     changedFiles << file.canonicalFile
@@ -227,7 +229,6 @@ class GrailsApp extends SpringApplication {
                 }
             }
 
-
             developmentModeActive = true
             Thread.start {
                 CompilerConfiguration compilerConfig = new CompilerConfiguration()
@@ -236,7 +237,6 @@ class GrailsApp extends SpringApplication {
                 while (isDevelopmentModeActive()) {
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
                     def uniqueChangedFiles = changedFiles as Set
-
 
                     def i = uniqueChangedFiles.size()
                     try {
@@ -338,6 +338,7 @@ class GrailsApp extends SpringApplication {
     protected static DirectoryWatcher.FileChangeListener createPluginManagerListener(ConfigurableApplicationContext applicationContext) {
         def pluginManager = applicationContext.getBean(GrailsPluginManager)
         return new DirectoryWatcher.FileChangeListener() {
+
             @Override
             void onChange(File file) {
                 if (!file.name.endsWith('.groovy') && !file.name.endsWith('.java')) {

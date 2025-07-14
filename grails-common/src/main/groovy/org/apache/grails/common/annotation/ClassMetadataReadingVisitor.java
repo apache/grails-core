@@ -1,22 +1,22 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.apache.grails.common.annotation;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.Attribute;
@@ -29,6 +29,9 @@ import org.springframework.core.type.ClassMetadata;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * ASM class visitor which looks only for the class name and implemented types,
@@ -73,11 +76,9 @@ class ClassMetadataReadingVisitor extends ClassVisitor implements ClassMetadata 
 
     private Set<String> memberClassNames = new LinkedHashSet<>(4);
 
-
     public ClassMetadataReadingVisitor() {
         super(SpringAsmInfo.ASM_VERSION);
     }
-
 
     @Override
     public void visit(
@@ -110,8 +111,7 @@ class ClassMetadataReadingVisitor extends ClassVisitor implements ClassMetadata 
             if (this.className.equals(fqName)) {
                 this.enclosingClassName = fqOuterName;
                 this.independentInnerClass = ((access & Opcodes.ACC_STATIC) != 0);
-            }
-            else if (this.className.equals(fqOuterName)) {
+            } else if (this.className.equals(fqOuterName)) {
                 this.memberClassNames.add(fqName);
             }
         }
@@ -150,7 +150,6 @@ class ClassMetadataReadingVisitor extends ClassVisitor implements ClassMetadata 
     public void visitEnd() {
         // no-op
     }
-
 
     @Override
     public String getClassName() {
@@ -209,7 +208,6 @@ class ClassMetadataReadingVisitor extends ClassVisitor implements ClassMetadata 
         return StringUtils.toStringArray(this.memberClassNames);
     }
 
-
     private static class EmptyAnnotationVisitor extends AnnotationVisitor {
 
         public EmptyAnnotationVisitor() {
@@ -227,14 +225,12 @@ class ClassMetadataReadingVisitor extends ClassVisitor implements ClassMetadata 
         }
     }
 
-
     private static class EmptyMethodVisitor extends MethodVisitor {
 
         public EmptyMethodVisitor() {
             super(SpringAsmInfo.ASM_VERSION);
         }
     }
-
 
     private static class EmptyFieldVisitor extends FieldVisitor {
 

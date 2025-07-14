@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import java.util.regex.Pattern;
-
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
+
+import java.util.regex.Pattern;
 
 /**
  * Finder used to return multiple results. Eg. Book.findAllBy..(..)
@@ -34,7 +34,7 @@ public class FindAllByFinder extends DynamicFinder {
     private static final String OPERATOR_OR = "Or";
     private static final String OPERATOR_AND = "And";
     private static final String METHOD_PATTERN = "(findAllBy)([A-Z]\\w*)";
-    private static final String[] OPERATORS = { OPERATOR_AND, OPERATOR_OR };
+    private static final String[] OPERATORS = {OPERATOR_AND, OPERATOR_OR};
 
     public FindAllByFinder(final Datastore datastore) {
         super(Pattern.compile(METHOD_PATTERN), OPERATORS, datastore);
@@ -84,10 +84,9 @@ public class FindAllByFinder extends DynamicFinder {
             for (MethodExpression expression : invocation.getExpressions()) {
                 query.add(disjunction, expression.createCriterion());
             }
-        }
-        else {
+        } else {
             for (MethodExpression expression : invocation.getExpressions()) {
-                query.add( expression.createCriterion() );
+                query.add(expression.createCriterion());
             }
         }
         query.projections().distinct();

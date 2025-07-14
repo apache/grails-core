@@ -19,16 +19,15 @@
 package org.grails.web.converters.marshaller.json;
 
 import grails.converters.JSON;
+import org.apache.commons.lang3.time.FastDateFormat;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JSONException;
 
 import java.text.Format;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-
-import org.apache.commons.lang3.time.FastDateFormat;
-import org.grails.web.json.JSONException;
-import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 /**
  * JSON ObjectMarshaller which converts a Date Object, conforming to the ECMA-Script-Specification
@@ -43,6 +42,7 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
 
     /**
      * Constructor with a custom formatter.
+     *
      * @param formatter the formatter
      */
     public DateMarshaller(Format formatter) {
@@ -63,8 +63,7 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
             converter.getWriter().value(formatter.format(object));
-        }
-        catch (JSONException e) {
+        } catch (JSONException e) {
             throw new ConverterException(e);
         }
     }

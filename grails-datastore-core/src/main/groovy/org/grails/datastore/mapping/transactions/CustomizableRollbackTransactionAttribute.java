@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.transactions;
 
 import org.slf4j.Logger;
@@ -36,7 +35,7 @@ import java.util.List;
  */
 public class CustomizableRollbackTransactionAttribute extends RuleBasedTransactionAttribute {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomizableRollbackTransactionAttribute.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CustomizableRollbackTransactionAttribute.class);
 
     private static final long serialVersionUID = 1L;
     private boolean inheritRollbackOnly = true;
@@ -69,19 +68,19 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
     }
 
     public CustomizableRollbackTransactionAttribute(CustomizableRollbackTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute)other);
+        this((RuleBasedTransactionAttribute) other);
     }
 
     public CustomizableRollbackTransactionAttribute(RuleBasedTransactionAttribute other) {
-        if(other instanceof CustomizableRollbackTransactionAttribute) {
-            this.inheritRollbackOnly = ((CustomizableRollbackTransactionAttribute)other).inheritRollbackOnly;
+        if (other instanceof CustomizableRollbackTransactionAttribute) {
+            this.inheritRollbackOnly = ((CustomizableRollbackTransactionAttribute) other).inheritRollbackOnly;
         }
     }
 
     @Override
     public boolean rollbackOn(Throwable ex) {
-        if (log.isTraceEnabled()) {
-            log.trace("Applying rules to determine whether transaction should rollback on $ex");
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Applying rules to determine whether transaction should rollback on $ex");
         }
 
         RollbackRuleAttribute winner = null;
@@ -98,13 +97,13 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
             }
         }
 
-        if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner" );
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Winning rollback rule is: $winner");
         }
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
         if (winner == null) {
-            log.trace("No relevant rollback rule found: applying default rules");
+            LOG.trace("No relevant rollback rule found: applying default rules");
 
             // always rollback regardless if it is a checked or unchecked exception since Groovy doesn't differentiate those
             return true;
@@ -112,6 +111,7 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
 
         return !(winner instanceof NoRollbackRuleAttribute);
     }
+
     public boolean isInheritRollbackOnly() {
         return inheritRollbackOnly;
     }

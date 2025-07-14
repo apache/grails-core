@@ -16,6 +16,7 @@ package org.grails.datastore.gorm.mongo.simple
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import jakarta.persistence.EnumType as JEnumType
 import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.mapping.config.Property
@@ -34,12 +35,12 @@ import org.grails.datastore.mapping.query.Query.Equals
 import org.grails.datastore.mapping.query.Query.In
 import org.grails.datastore.mapping.query.Query.NotEquals
 
-import jakarta.persistence.EnumType as JEnumType
 import java.lang.reflect.Array
+
 /**
  * A custom type for persisting Enum which have an id field in domain classes.
  * For example: To save identity instead of string in database for field <b>type</b>.
- * 
+ *
  * <pre>
  *      class User {
  *          UserType type
@@ -48,17 +49,17 @@ import java.lang.reflect.Array
  *
  *      enum UserType {
  *          A(1), B(2)
- *          
+ *
  *          final int id
  *          UserType(int id) {
  *              this.id = id
  *          }
  *      }
  * </pre>
- * 
+ *
  * @author Shashank Agrawal
  * @author Causecode Technologies
- * 
+ *
  * @since 3.1.3
  *
  */
@@ -81,11 +82,10 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      * @Example: Will return String class for list of String mapped by hasMany.
      */
     private static Class getCollectionType(PersistentProperty property) {
-        if(property instanceof Basic) {
-            return ((Basic)property).componentType;
-        }
-        else if(property instanceof Association) {
-            return ((Association)property).associatedEntity.javaClass
+        if (property instanceof Basic) {
+            return ((Basic) property).componentType;
+        } else if (property instanceof Association) {
+            return ((Association) property).associatedEntity.javaClass
         }
         return null
     }
@@ -103,9 +103,8 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
     private static boolean isEnumTypeCollection(PersistentProperty property) {
         if (!(property instanceof Basic)) {
             return false
-        }
-        else {
-            Basic basic = (Basic)property;
+        } else {
+            Basic basic = (Basic) property;
             return basic.componentType.isEnum()
         }
     }
@@ -122,6 +121,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      * if enum has id, returns the id,
      * otherwise return the name of enum itself.
      */
+
     private static Object enumValue(PersistentProperty property, Object value, Class enumType = null) {
         if (value == null) {
             return null
@@ -141,9 +141,9 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
             if (isOrdinalTypeEnum(property)) {
                 value = ((Enum) value).ordinal()
             } else if (value.hasProperty(GormProperties.IDENTITY)) {
-                value = getId((Enum)value)
+                value = getId((Enum) value)
             } else {
-                value = ((Enum)value).name()
+                value = ((Enum) value).name()
             }
         }
 
@@ -213,7 +213,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
         }
 
         // Iterate each field in the query deeply to get the blank field
-        for(String key in nativeQuery.keySet()) {
+        for (String key in nativeQuery.keySet()) {
             def value = nativeQuery.get(key)
             if (value instanceof Collection) {
                 ((Collection<Document>) value).each { Document queryObject ->
@@ -242,7 +242,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
         Class propertyType = property.getType()
 
         if (isOrdinalTypeEnum(property)) {
-            return getEnumValueForOrdinal((Number)value, propertyType)
+            return getEnumValueForOrdinal((Number) value, propertyType)
         }
 
         def finalValue

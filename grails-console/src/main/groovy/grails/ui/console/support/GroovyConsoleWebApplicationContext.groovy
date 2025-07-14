@@ -16,18 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.ui.console.support
 
 import grails.core.GrailsApplication
 import grails.persistence.support.PersistenceContextInterceptor
 import grails.ui.support.DevelopmentWebApplicationContext
-import grails.util.BuildSettings
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.springframework.mock.web.MockServletConfig
-import org.springframework.mock.web.MockServletContext
-import org.springframework.web.context.support.GenericWebApplicationContext
 
 /**
  * A {@org.springframework.web.context.WebApplicationContext} for use in the embedded Grails console

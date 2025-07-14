@@ -52,7 +52,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
 
     /**
      * Mocks a tag library, making it available to subsequent calls to controllers mocked via
-     * {@link #mockArtefact(Class) } and GSPs rendered via {@link #applyTemplate(String, Map) }
+     * {@link #mockArtefact(Class)} and GSPs rendered via {@link #applyTemplate(String, Map)}
      *
      * @param tagLibClass The tag library class
      * @return The tag library instance
@@ -66,9 +66,9 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
     }
 
     private Class<T> getTagLibTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
-                    TagLibUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
+                    TagLibUnitTest.isAssignableFrom((Class) ((ParameterizedType) genericInterface).rawType)
         }
 
         parameterizedType?.actualTypeArguments[0]
@@ -81,7 +81,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
 
 
     private void ensureTaglibHasBeenMocked() {
-        if(!hasBeenMocked) {
+        if (!hasBeenMocked) {
             mockTagLib getTagLibTypeUnderTest()
             hasBeenMocked = true
         }

@@ -32,7 +32,7 @@ public class ClassLoaderAwareBeanPostProcessor extends BeanPostProcessorAdapter 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         if (bean instanceof ClassLoaderAware) {
-            ((ClassLoaderAware)bean).setClassLoader(classLoader);
+            ((ClassLoaderAware) bean).setClassLoader(classLoader);
         }
         return bean;
     }

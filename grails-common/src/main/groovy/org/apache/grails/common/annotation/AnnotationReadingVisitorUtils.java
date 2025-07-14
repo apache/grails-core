@@ -1,26 +1,22 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.apache.grails.common.annotation;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.springframework.asm.Type;
 import org.springframework.core.annotation.AnnotationAttributes;
@@ -30,6 +26,13 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.ObjectUtils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Internal utility class used when reading annotations via ASM.
@@ -62,19 +65,16 @@ abstract class AnnotationReadingVisitorUtils {
                 if (value instanceof AnnotationAttributes) {
                     value = convertClassValues(
                             annotatedElement, classLoader, (AnnotationAttributes) value, classValuesAsString);
-                }
-                else if (value instanceof AnnotationAttributes[]) {
+                } else if (value instanceof AnnotationAttributes[]) {
                     AnnotationAttributes[] values = (AnnotationAttributes[]) value;
                     for (int i = 0; i < values.length; i++) {
                         values[i] = convertClassValues(annotatedElement, classLoader, values[i], classValuesAsString);
                     }
                     value = values;
-                }
-                else if (value instanceof Type) {
+                } else if (value instanceof Type) {
                     value = (classValuesAsString ? ((Type) value).getClassName() :
                             ClassUtils.forName(((Type) value).getClassName(), classLoader));
-                }
-                else if (value instanceof Type[]) {
+                } else if (value instanceof Type[]) {
                     Type[] array = (Type[]) value;
                     Object[] convArray =
                             (classValuesAsString ? new String[array.length] : new Class<?>[array.length]);
@@ -83,12 +83,10 @@ abstract class AnnotationReadingVisitorUtils {
                                 ClassUtils.forName(array[i].getClassName(), classLoader));
                     }
                     value = convArray;
-                }
-                else if (classValuesAsString) {
+                } else if (classValuesAsString) {
                     if (value instanceof Class) {
                         value = ((Class<?>) value).getName();
-                    }
-                    else if (value instanceof Class[]) {
+                    } else if (value instanceof Class[]) {
                         Class<?>[] clazzArray = (Class<?>[]) value;
                         String[] newValue = new String[clazzArray.length];
                         for (int i = 0; i < clazzArray.length; i++) {
@@ -98,8 +96,7 @@ abstract class AnnotationReadingVisitorUtils {
                     }
                 }
                 entry.setValue(value);
-            }
-            catch (Throwable ex) {
+            } catch (Throwable ex) {
                 // Class not found - can't resolve class reference in annotation attribute.
                 result.put(entry.getKey(), ex);
             }
@@ -114,12 +111,13 @@ abstract class AnnotationReadingVisitorUtils {
      * <p>Annotation attribute values appearing <em>lower</em> in the annotation
      * hierarchy (i.e., closer to the declaring class) will override those
      * defined <em>higher</em> in the annotation hierarchy.
-     * @param attributesMap the map of annotation attribute lists, keyed by
-     * annotation type name
+     *
+     * @param attributesMap     the map of annotation attribute lists, keyed by
+     *                          annotation type name
      * @param metaAnnotationMap the map of meta annotation relationships,
-     * keyed by annotation type name
-     * @param annotationName the fully qualified class name of the annotation
-     * type to look for
+     *                          keyed by annotation type name
+     * @param annotationName    the fully qualified class name of the annotation
+     *                          type to look for
      * @return the merged annotation attributes, or {@code null} if no
      * matching annotation is present in the {@code attributesMap}
      * @since 4.0.3

@@ -49,7 +49,7 @@ trait DomainClass {
         if (persistentEntity) {
             return new DefaultConstrainedDiscovery().findConstrainedProperties(persistentEntity)
         } else {
-            return Collections.<String,Constrained>emptyMap()
+            return Collections.<String, Constrained> emptyMap()
         }
     }
 }

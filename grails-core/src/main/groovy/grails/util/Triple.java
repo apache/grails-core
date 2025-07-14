@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.util;
 
 public class Triple<A, B, C> {
+
     final A aValue;
     final B bValue;
     final C cValue;
@@ -54,31 +54,37 @@ public class Triple<A, B, C> {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
-        Triple other = (Triple)obj;
+        }
+        Triple other = (Triple) obj;
         if (aValue == null) {
-            if (other.aValue != null)
+            if (other.aValue != null) {
                 return false;
-        }
-        else if (!aValue.equals(other.aValue))
+            }
+        } else if (!aValue.equals(other.aValue)) {
             return false;
+        }
         if (bValue == null) {
-            if (other.bValue != null)
+            if (other.bValue != null) {
                 return false;
-        }
-        else if (!bValue.equals(other.bValue))
+            }
+        } else if (!bValue.equals(other.bValue)) {
             return false;
+        }
         if (cValue == null) {
-            if (other.cValue != null)
+            if (other.cValue != null) {
                 return false;
-        }
-        else if (!cValue.equals(other.cValue))
+            }
+        } else if (!cValue.equals(other.cValue)) {
             return false;
+        }
         return true;
     }
 

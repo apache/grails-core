@@ -19,9 +19,9 @@
 package org.grails.web.servlet.boostrap;
 
 import grails.util.Environment;
+import grails.web.servlet.bootstrap.GrailsBootstrapClass;
 import groovy.lang.Closure;
 import org.grails.core.AbstractGrailsClass;
-import grails.web.servlet.bootstrap.GrailsBootstrapClass;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 @SuppressWarnings("serial")
@@ -34,7 +34,9 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
     @SuppressWarnings("rawtypes")
     private static final Closure BLANK_CLOSURE = new Closure(DefaultGrailsBootstrapClass.class) {
         @Override
-        public Object call(Object... args) { return null; }
+        public Object call(Object... args) {
+            return null;
+        }
     };
     private final Object instance;
 
@@ -51,7 +53,7 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
     public Closure<?> getInitClosure() {
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, INIT_CLOSURE);
         if (obj instanceof Closure) {
-            return (Closure<?>)obj;
+            return (Closure<?>) obj;
         }
         return BLANK_CLOSURE;
     }
@@ -59,7 +61,7 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
     public Closure<?> getDestroyClosure() {
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, DESTROY_CLOSURE);
         if (obj instanceof Closure) {
-            return (Closure<?>)obj;
+            return (Closure<?>) obj;
         }
         return BLANK_CLOSURE;
     }

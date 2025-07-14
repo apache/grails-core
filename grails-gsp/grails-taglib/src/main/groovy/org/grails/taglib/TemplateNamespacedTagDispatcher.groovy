@@ -17,6 +17,7 @@
  *  under the License.
  */
 package org.grails.taglib
+
 import grails.core.GrailsApplication
 import grails.util.Environment
 import groovy.transform.CompileStatic
@@ -24,36 +25,35 @@ import org.grails.taglib.encoder.OutputContextLookupHelper
 
 @CompileStatic
 class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
-    public static final String TEMPLATE_NAMESPACE = "tmpl"
 
-    private boolean developmentMode = Environment.current.isDevelopmentMode()
+    public static final String TEMPLATE_NAMESPACE = "tmpl"
 
     TemplateNamespacedTagDispatcher(Class callingType, GrailsApplication application, TagLibraryLookup lookup) {
         super(TEMPLATE_NAMESPACE, callingType, application, lookup)
     }
 
     def methodMissing(String name, Object args) {
-        ((GroovyObject)getMetaClass()).setProperty(name, { Object[] varArgs ->
+        ((GroovyObject) getMetaClass()).setProperty(name, { Object[] varArgs ->
             callRender(argsToAttrs(name, varArgs), filterBodyAttr(varArgs))
         })
         callRender(argsToAttrs(name, args), filterBodyAttr(args))
     }
-    
+
     protected void registerTagMetaMethods(ExpandoMetaClass emc) {
-        
+
     }
 
     protected callRender(Map attrs, Object body) {
-        TagOutput.captureTagOutput(lookup, TagOutput.DEFAULT_NAMESPACE, 'render', attrs, body, OutputContextLookupHelper.lookupOutputContext() )
+        TagOutput.captureTagOutput(lookup, TagOutput.DEFAULT_NAMESPACE, 'render', attrs, body, OutputContextLookupHelper.lookupOutputContext())
     }
 
     protected Map argsToAttrs(String name, Object args) {
         Map<String, Object> attr = [:]
         attr.template = name
         if (args instanceof Object[]) {
-            Object[] tagArgs = ((Object[])args)
+            Object[] tagArgs = ((Object[]) args)
             if (tagArgs.length > 0 && tagArgs[0] instanceof Map) {
-                Map<String, Object> modelMap = (Map<String, Object>)tagArgs[0]
+                Map<String, Object> modelMap = (Map<String, Object>) tagArgs[0]
                 Object encodeAs = modelMap.remove(TagOutput.ENCODE_AS_ATTRIBUTE_NAME)
                 if (encodeAs != null) {
                     attr.put(TagOutput.ENCODE_AS_ATTRIBUTE_NAME, encodeAs)
@@ -63,13 +63,13 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
         }
         attr
     }
-    
+
     protected Object filterBodyAttr(Object args) {
         if (args instanceof Object[]) {
-            Object[] tagArgs = ((Object[])args)
+            Object[] tagArgs = ((Object[]) args)
             if (tagArgs.length > 0) {
-                for(Object arg : tagArgs) {
-                    if(!(arg instanceof Map)) {
+                for (Object arg : tagArgs) {
+                    if (!(arg instanceof Map)) {
                         return arg
                     }
                 }

@@ -22,8 +22,6 @@ import grails.config.ConfigMap;
 import grails.io.IOUtils;
 import grails.util.Environment;
 import grails.util.GrailsStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.buffer.FastStringWriter;
 import org.grails.buffer.StreamByteBuffer;
@@ -36,9 +34,30 @@ import org.grails.gsp.compiler.tags.GroovySyntaxTag;
 import org.grails.io.support.SpringIOUtils;
 import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.encoder.OutputEncodingSettings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,6 +71,39 @@ import java.util.regex.Pattern;
  * @author Lari Hotari
  */
 public class GroovyPageParser implements Tokens {
+
+    public static final String CONSTANT_NAME_JSP_TAGS = "JSP_TAGS";
+    public static final String CONSTANT_NAME_CONTENT_TYPE = "CONTENT_TYPE";
+    public static final String CONSTANT_NAME_LAST_MODIFIED = "LAST_MODIFIED";
+    public static final String CONSTANT_NAME_EXPRESSION_CODEC = "EXPRESSION_CODEC";
+    public static final String CONSTANT_NAME_STATIC_CODEC = "STATIC_CODEC";
+    public static final String CONSTANT_NAME_OUT_CODEC = "OUT_CODEC";
+    public static final String CONSTANT_NAME_TAGLIB_CODEC = "TAGLIB_CODEC";
+    public static final String CONSTANT_NAME_COMPILE_STATIC_MODE = "COMPILE_STATIC_MODE";
+    public static final String CONSTANT_NAME_MODEL_FIELDS_MODE = "MODEL_FIELDS_MODE";
+    public static final String DEFAULT_ENCODING = "UTF-8";
+    public static final String MODEL_DIRECTIVE = "model";
+    public static final String COMPILE_STATIC_DIRECTIVE = "compileStatic";
+    public static final String TAGLIBS_DIRECTIVE = "taglibs";
+    public static final List<String> DEFAULT_TAGLIB_NAMESPACES = Collections.unmodifiableList(Arrays.asList(new String[]{"g", "tmpl", "f", "asset", "plugin"}));
+    public static final String[] DEFAULT_IMPORTS = {
+            "grails.plugins.metadata.GrailsPlugin",
+            "org.grails.gsp.compiler.transform.LineNumber",
+            "org.grails.gsp.GroovyPage",
+            "org.grails.web.taglib.*",
+            "org.grails.taglib.GrailsTagException",
+            "org.springframework.web.util.*",
+            "grails.util.GrailsUtil"
+    };
+    public static final String CONFIG_PROPERTY_DEFAULT_CODEC = "grails.views.default.codec";
+    public static final String CONFIG_PROPERTY_GSP_ENCODING = "grails.views.gsp.encoding";
+    public static final String CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR = "grails.views.gsp.keepgenerateddir";
+    public static final String CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS = "grails.views.gsp.layout.preprocess";
+    public static final String CONFIG_PROPERTY_GSP_COMPILESTATIC = "grails.views.gsp.compileStatic";
+    public static final String CONFIG_PROPERTY_GSP_ALLOWED_TAGLIB_NAMESPACES = "grails.views.gsp.compileStaticConfig.taglibs";
+    public static final String CONFIG_PROPERTY_GSP_CODECS = "grails.views.gsp.codecs";
+    public static final String CODEC_DIRECTIVE_POSTFIX = "Codec";
+    public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
 
     private static final Logger LOG = LoggerFactory.getLogger(GroovyPageParser.class);
 
@@ -72,23 +124,22 @@ public class GroovyPageParser implements Tokens {
     private static final Pattern NON_WHITESPACE_PATTERN = Pattern.compile("\\S");
     private static final Pattern IMPORT_SEMICOLON_PATTERN = Pattern.compile(";");
 
-    public static final String CONSTANT_NAME_JSP_TAGS = "JSP_TAGS";
-    public static final String CONSTANT_NAME_CONTENT_TYPE = "CONTENT_TYPE";
-    public static final String CONSTANT_NAME_LAST_MODIFIED = "LAST_MODIFIED";
-    public static final String CONSTANT_NAME_EXPRESSION_CODEC = "EXPRESSION_CODEC";
-    public static final String CONSTANT_NAME_STATIC_CODEC = "STATIC_CODEC";
-    public static final String CONSTANT_NAME_OUT_CODEC = "OUT_CODEC";
-    public static final String CONSTANT_NAME_TAGLIB_CODEC = "TAGLIB_CODEC";
-    public static final String CONSTANT_NAME_COMPILE_STATIC_MODE = "COMPILE_STATIC_MODE";
-    public static final String CONSTANT_NAME_MODEL_FIELDS_MODE = "MODEL_FIELDS_MODE";
-    public static final String DEFAULT_ENCODING = "UTF-8";
-
     private static final String MULTILINE_GROOVY_STRING_DOUBLEQUOTES = "\"\"\"";
     private static final String MULTILINE_GROOVY_STRING_SINGLEQUOTES = "'''";
-    public static final String MODEL_DIRECTIVE = "model";
-    public static final String COMPILE_STATIC_DIRECTIVE = "compileStatic";
-    public static final String TAGLIBS_DIRECTIVE = "taglibs";
-    public static final List<String> DEFAULT_TAGLIB_NAMESPACES = Collections.unmodifiableList(Arrays.asList(new String[]{"g", "tmpl", "f", "asset", "plugin"}));
+    private static final String DEFAULT_CONTENT_TYPE = "text/html;charset=UTF-8";
+    private static final String IMPORT_DIRECTIVE = "import";
+    private static final String CONTENT_TYPE_DIRECTIVE = "contentType";
+    private static final String EXPRESSION_CODEC_DIRECTIVE = OutputEncodingSettings.EXPRESSION_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
+    private static final String EXPRESSION_CODEC_DIRECTIVE_ALIAS = "default" + CODEC_DIRECTIVE_POSTFIX;
+    private static final String STATIC_CODEC_DIRECTIVE = OutputEncodingSettings.STATIC_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
+    private static final String OUT_CODEC_DIRECTIVE = OutputEncodingSettings.OUT_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
+    private static final String TAGLIB_CODEC_DIRECTIVE = OutputEncodingSettings.TAGLIB_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
+    private static final String GRAILS_LAYOUT_PREPROCESS_DIRECTIVE = "grailsLayoutPreprocess";
+    private static GrailsLayoutPreprocessor grailsLayoutPreprocessor = new GrailsLayoutPreprocessor();
+
+    Set<Integer> bodyVarsDefined = new HashSet<Integer>();
+    Map<Integer, String> attrsVarsMapDefinition = new HashMap<Integer, String>();
+    int closureLevel = 0;
 
     private GroovyPageScanner scan;
     private GSPWriter out;
@@ -102,12 +153,6 @@ public class GroovyPageParser implements Tokens {
     private GrailsTagRegistry tagRegistry = GrailsTagRegistry.getInstance();
     private Environment environment;
     private List<String> htmlParts = new ArrayList<String>();
-    private static GrailsLayoutPreprocessor grailsLayoutPreprocessor = new GrailsLayoutPreprocessor();
-
-    Set<Integer> bodyVarsDefined = new HashSet<Integer>();
-    Map<Integer, String> attrsVarsMapDefinition = new HashMap<Integer, String>();
-
-    int closureLevel = 0;
 
     /*
      * Set to true when whitespace is currently being saved for later output if
@@ -122,44 +167,14 @@ public class GroovyPageParser implements Tokens {
     private boolean previousContentWasNonWhitespace;
 
     private StringBuffer whitespaceBuffer = new StringBuffer();
-
     private String contentType = DEFAULT_CONTENT_TYPE;
     private boolean doNextScan = true;
     private int state;
-    private static final String DEFAULT_CONTENT_TYPE = "text/html;charset=UTF-8";
     private int constantCount = 0;
     private Map<String, Integer> constantsToNumbers = new HashMap<String, Integer>();
-
     private final String pageName;
-    public static final String[] DEFAULT_IMPORTS = {
-            "grails.plugins.metadata.GrailsPlugin",
-            "org.grails.gsp.compiler.transform.LineNumber",
-            "org.grails.gsp.GroovyPage",
-            "org.grails.web.taglib.*",
-            "org.grails.taglib.GrailsTagException",
-            "org.springframework.web.util.*",
-            "grails.util.GrailsUtil"
-    };
-    public static final String CONFIG_PROPERTY_DEFAULT_CODEC = "grails.views.default.codec";
-    public static final String CONFIG_PROPERTY_GSP_ENCODING = "grails.views.gsp.encoding";
-    public static final String CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR = "grails.views.gsp.keepgenerateddir";
-    public static final String CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS = "grails.views.gsp.layout.preprocess";
-    public static final String CONFIG_PROPERTY_GSP_COMPILESTATIC = "grails.views.gsp.compileStatic";
-    public static final String CONFIG_PROPERTY_GSP_ALLOWED_TAGLIB_NAMESPACES = "grails.views.gsp.compileStaticConfig.taglibs";
-    public static final String CONFIG_PROPERTY_GSP_CODECS = "grails.views.gsp.codecs";
-
-    private static final String IMPORT_DIRECTIVE = "import";
-    private static final String CONTENT_TYPE_DIRECTIVE = "contentType";
-    public static final String CODEC_DIRECTIVE_POSTFIX = "Codec";
-    private static final String EXPRESSION_CODEC_DIRECTIVE = OutputEncodingSettings.EXPRESSION_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
-    private static final String EXPRESSION_CODEC_DIRECTIVE_ALIAS = "default" + CODEC_DIRECTIVE_POSTFIX;
-    private static final String STATIC_CODEC_DIRECTIVE = OutputEncodingSettings.STATIC_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
-    private static final String OUT_CODEC_DIRECTIVE = OutputEncodingSettings.OUT_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
-    private static final String TAGLIB_CODEC_DIRECTIVE = OutputEncodingSettings.TAGLIB_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
-    private static final String GRAILS_LAYOUT_PREPROCESS_DIRECTIVE = "grailsLayoutPreprocess";
 
     private String pluginAnnotation;
-    public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
     private Map<String, String> jspTags = new HashMap<String, String>();
     private long lastModified;
     private boolean precompileMode;
@@ -175,44 +190,6 @@ public class GroovyPageParser implements Tokens {
     private boolean enableGrailsLayoutProcessing = true;
     private File keepGeneratedDirectory;
     private Set<String> allowedTaglibNamespaces = new LinkedHashSet<>(DEFAULT_TAGLIB_NAMESPACES);
-
-    public String getContentType() {
-        return contentType;
-    }
-
-    public int getCurrentOutputLineNumber() {
-        return scan.getLineNumberForToken();
-    }
-
-    public Map<String, String> getJspTags() {
-        return jspTags;
-    }
-
-    public void setKeepGeneratedDirectory(File keepGeneratedDirectory) {
-        this.keepGeneratedDirectory = keepGeneratedDirectory;
-    }
-
-    public void setEnableGrailsLayoutProcessing(boolean enableGrailsLayoutProcessing) {
-        this.enableGrailsLayoutProcessing = enableGrailsLayoutProcessing;
-    }
-
-    class TagMeta {
-        String name;
-        String namespace;
-        Object instance;
-        boolean isDynamic;
-        boolean hasAttributes;
-        int lineNumber;
-        boolean emptyTag;
-        int tagIndex;
-        boolean bufferMode = false;
-        int bufferPartNumber = -1;
-
-        @Override
-        public String toString() {
-            return "<" + namespace + ":" + name + ">";
-        }
-    }
 
     public GroovyPageParser(String name, String uri, String filename, InputStream in, String encoding, String expressionCodecName, ConfigMap configMap) throws IOException {
         this(name, uri, filename, readStream(in, encoding), expressionCodecName, configMap);
@@ -247,6 +224,26 @@ public class GroovyPageParser implements Tokens {
         environment = Environment.getCurrent();
         makeName(name);
         makeSourceName(filename);
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public int getCurrentOutputLineNumber() {
+        return scan.getLineNumberForToken();
+    }
+
+    public Map<String, String> getJspTags() {
+        return jspTags;
+    }
+
+    public void setKeepGeneratedDirectory(File keepGeneratedDirectory) {
+        this.keepGeneratedDirectory = keepGeneratedDirectory;
+    }
+
+    public void setEnableGrailsLayoutProcessing(boolean enableGrailsLayoutProcessing) {
+        this.enableGrailsLayoutProcessing = enableGrailsLayoutProcessing;
     }
 
     /**
@@ -547,7 +544,9 @@ public class GroovyPageParser implements Tokens {
     }
 
     private void expr() {
-        if (!finalPass) return;
+        if (!finalPass) {
+            return;
+        }
 
         String text = scan.getToken().trim();
         text = getExpressionText(text);
@@ -568,23 +567,23 @@ public class GroovyPageParser implements Tokens {
         return getExpressionText(text, true);
     }
 
-    public String getExpressionText(String text, boolean _safeDereference) {
-        boolean safeDereference = false;
+    public String getExpressionText(String text, boolean safeDereference) {
+        boolean determinedSafeDereference = false;
         if (text.endsWith("?")) {
             text = text.substring(0, text.length() - 1);
-            safeDereference = _safeDereference;
+            determinedSafeDereference = safeDereference;
         }
         if (!precompileMode && !isCompileStaticMode() &&
                 (environment == Environment.DEVELOPMENT || environment == Environment.TEST)) {
             String escaped = escapeGroovy(text);
             text = "evaluate('" + escaped + "', " +
                     getCurrentOutputLineNumber() + ", it) { return " + text +
-                    " }" + (safeDereference ? "?" : "");
+                    " }" + (determinedSafeDereference ? "?" : "");
         } else {
             // add extra parenthesis, see http://jira.codehaus.org/browse/GRAILS-4351
             // or GroovyPagesTemplateEngineTests.testForEachInProductionMode
 
-            text = "(" + text + ")" + (safeDereference ? "?" : "");
+            text = "(" + text + ")" + (determinedSafeDereference ? "?" : "");
         }
         return text;
     }
@@ -641,9 +640,10 @@ public class GroovyPageParser implements Tokens {
         }
     }
 
-
     private void html() {
-        if (!finalPass) return;
+        if (!finalPass) {
+            return;
+        }
 
         String text = scan.getToken();
         if (text.length() == 0) {
@@ -849,6 +849,9 @@ public class GroovyPageParser implements Tokens {
                 case GEND_TAG:
                     endTag();
                     break;
+                default:
+                    // do nothing
+                    break;
             }
         }
 
@@ -985,15 +988,18 @@ public class GroovyPageParser implements Tokens {
     }
 
     private void endTag() {
-        if (!finalPass) return;
+        if (!finalPass) {
+            return;
+        }
 
         String tagName = scan.getToken().trim();
         String ns = scan.getNamespace();
 
-        if (tagMetaStack.isEmpty())
+        if (tagMetaStack.isEmpty()) {
             throw new GrailsTagException(
                     "Found closing Grails tag with no opening [" + tagName + "]", pageName,
                     getCurrentOutputLineNumber());
+        }
 
         TagMeta tm = tagMetaStack.pop();
         String lastInStack = tm.name;
@@ -1067,7 +1073,9 @@ public class GroovyPageParser implements Tokens {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void startTag() {
-        if (!finalPass) return;
+        if (!finalPass) {
+            return;
+        }
 
         tagIndex++;
 
@@ -1288,7 +1296,9 @@ public class GroovyPageParser implements Tokens {
 
     private void script(boolean gsp) {
         flushTagBuffering();
-        if (!finalPass) return;
+        if (!finalPass) {
+            return;
+        }
 
         out.println();
         write(scan.getToken().trim(), gsp);
@@ -1335,8 +1345,9 @@ public class GroovyPageParser implements Tokens {
                     ix += 3;
                 } else {
                     int end = match(PARA_BREAK, text, ix);
-                    if (end <= 0)
+                    if (end <= 0) {
                         end = match(ROW_BREAK, text, ix);
+                    }
                     if (end > 0) {
                         rep = "\n";
                         //incrementLineNumber();
@@ -1414,5 +1425,24 @@ public class GroovyPageParser implements Tokens {
 
     public boolean isModelFieldsMode() {
         return modelFieldsMode;
+    }
+
+    static class TagMeta {
+
+        String name;
+        String namespace;
+        Object instance;
+        boolean isDynamic;
+        boolean hasAttributes;
+        int lineNumber;
+        boolean emptyTag;
+        int tagIndex;
+        boolean bufferMode = false;
+        int bufferPartNumber = -1;
+
+        @Override
+        public String toString() {
+            return "<" + namespace + ":" + name + ">";
+        }
     }
 }

@@ -19,9 +19,7 @@
 
 package functional.tests
 
-
-import grails.rest.*
-import grails.converters.*
+import grails.rest.RestfulController
 
 class CircularController extends RestfulController {
 

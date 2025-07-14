@@ -23,13 +23,14 @@ import java.util.regex.Pattern;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
- *
+ * <p>
  * Utility class to strip HTML from around tags that specify it.
  *
  * @author Troy Heninger
  * Date: Jan 10, 2004
  */
 class Strip {
+
     private static Pattern stripTag = Pattern.compile("\\^([a-zA-Z]+)%\\{([^}]|\\}[^%])*\\}%");
     private static Pattern anyTag = Pattern.compile("((\\^[a-zA-Z])?%\\{([^}]|\\}[^%])*\\}%|[$@]\\{[^}]*\\})");
 
@@ -52,10 +53,14 @@ class Strip {
             if (matchAfter.find(end)) {
                 int end2 = matchAfter.end();
                 Matcher matchAny = anyTag.matcher(text.subSequence(0, end2));
-                if (matchAny.find(end)) end2 = matchAny.start();
+                if (matchAny.find(end)) {
+                    end2 = matchAny.start();
+                }
                 Pattern nextTagPat = Pattern.compile("<" + tag + "(\\s|>)", Pattern.CASE_INSENSITIVE);
                 Matcher matchNext = nextTagPat.matcher(text.subSequence(0, end2));
-                if (matchNext.find(end)) end2 = matchNext.start();
+                if (matchNext.find(end)) {
+                    end2 = matchNext.start();
+                }
                 // System.out.println("Stripping " + text.subSequence(end, end2));
                 text.delete(end, end2);
             }
@@ -65,7 +70,9 @@ class Strip {
             if (matchBefore.find()) {
                 int start2 = start - matchBefore.end();
                 Matcher matchAny = anyTag.matcher(text.subSequence(0, start));
-                if (matchAny.find(start2)) start2 = matchAny.end();
+                if (matchAny.find(start2)) {
+                    start2 = matchAny.end();
+                }
                 // System.out.println("Stripping " + text.subSequence(start2, start));
                 text.delete(start2, start);
             }

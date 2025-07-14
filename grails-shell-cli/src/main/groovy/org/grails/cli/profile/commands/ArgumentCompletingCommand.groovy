@@ -19,7 +19,6 @@
 
 package org.grails.cli.profile.commands
 
-import jline.console.completer.ArgumentCompleter
 import jline.console.completer.Completer
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
@@ -46,7 +45,6 @@ abstract class ArgumentCompletingCommand implements Command, Completer {
         }
 
         def lastOption = commandLine.lastOption()
-
 
         for (arg in desc.flags) {
             def argName = arg.name

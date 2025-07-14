@@ -19,25 +19,25 @@
 package org.grails.buffer;
 
 import groovy.lang.Writable;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.Writer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.objenesis.ObjenesisStd;
 import org.springframework.objenesis.instantiator.ObjectInstantiator;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Writer;
 
 /**
  * @author Lari Hotari
  * @since 2.0
  */
 public class GrailsPrintWriterAdapter extends PrintWriter implements GrailsWrappedWriter {
+
     private static final Logger LOG = LoggerFactory.getLogger(GrailsPrintWriterAdapter.class);
+    private static ObjectInstantiator instantiator;
     protected GrailsPrintWriter target;
 
-    private static ObjectInstantiator instantiator;
     static {
         try {
             instantiator = new ObjenesisStd(false).getInstantiatorOf(GrailsPrintWriterAdapter.class);
@@ -68,7 +68,7 @@ public class GrailsPrintWriterAdapter extends PrintWriter implements GrailsWrapp
 
     public static GrailsPrintWriterAdapter newInstance(Writer wrapped) {
         if (instantiator != null) {
-            GrailsPrintWriterAdapter instance = (GrailsPrintWriterAdapter)instantiator.newInstance();
+            GrailsPrintWriterAdapter instance = (GrailsPrintWriterAdapter) instantiator.newInstance();
             instance.setTarget(wrapped);
             return instance;
         }
@@ -77,9 +77,8 @@ public class GrailsPrintWriterAdapter extends PrintWriter implements GrailsWrapp
 
     public void setTarget(Writer wrapped) {
         if (wrapped instanceof GrailsPrintWriter) {
-            this.target = ((GrailsPrintWriter)wrapped);
-        }
-        else {
+            this.target = ((GrailsPrintWriter) wrapped);
+        } else {
             this.target = new GrailsPrintWriter(wrapped);
         }
         this.out = this.target;

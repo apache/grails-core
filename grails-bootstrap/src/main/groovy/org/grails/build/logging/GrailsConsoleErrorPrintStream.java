@@ -35,7 +35,7 @@ public class GrailsConsoleErrorPrintStream extends PrintStream {
     }
 
     public PrintStream getTargetOut() {
-        return (PrintStream)out;
+        return (PrintStream) out;
     }
 
     @Override

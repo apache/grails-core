@@ -32,7 +32,7 @@ import java.lang.annotation.Target
  *
  * <pre>
  *     <code>
- *          @Linkable class Book {
+ * @Linkable class Book {
  *              String title
  *          }
  *
@@ -51,6 +51,6 @@ import java.lang.annotation.Target
 @Retention(RetentionPolicy.SOURCE)
 @Target([ElementType.TYPE])
 @GroovyASTTransformationClass("org.grails.plugins.web.rest.transform.LinkableTransform")
-public @interface Linkable {
+@interface Linkable {
 
 }

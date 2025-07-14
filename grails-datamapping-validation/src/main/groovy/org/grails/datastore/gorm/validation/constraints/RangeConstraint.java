@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -30,7 +29,7 @@ import org.springframework.validation.Errors;
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class RangeConstraint extends AbstractConstraint {
 
     private final Range range;
@@ -76,7 +75,7 @@ public class RangeConstraint extends AbstractConstraint {
             return;
         }
 
-        Object[] args = new Object[] { constraintPropertyName, constraintOwningClass,
+        Object[] args = new Object[]{constraintPropertyName, constraintOwningClass,
                 propertyValue, range.getFrom(), range.getTo()};
 
         Comparable from = range.getFrom();
@@ -87,10 +86,9 @@ public class RangeConstraint extends AbstractConstraint {
             // Upgrade the numbers to Long, so all integer types can be compared.
             from = ((Number) from).longValue();
             to = ((Number) to).longValue();
-            if(propertyValue instanceof Number) {
+            if (propertyValue instanceof Number) {
                 propertyValue = ((Number) propertyValue).longValue();
-            }
-            else if(propertyValue instanceof CharSequence) {
+            } else if (propertyValue instanceof CharSequence) {
                 try {
                     propertyValue = Long.valueOf(propertyValue.toString());
                 } catch (NumberFormatException e) {
@@ -103,8 +101,7 @@ public class RangeConstraint extends AbstractConstraint {
         if (from.compareTo(propertyValue) > 0) {
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_RANGE_MESSAGE_CODE,
                     ConstrainedProperty.RANGE_CONSTRAINT + ConstrainedProperty.TOOSMALL_SUFFIX, args);
-        }
-        else if (to.compareTo(propertyValue) < 0) {
+        } else if (to.compareTo(propertyValue) < 0) {
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_RANGE_MESSAGE_CODE,
                     ConstrainedProperty.RANGE_CONSTRAINT + ConstrainedProperty.TOOBIG_SUFFIX, args);
         }

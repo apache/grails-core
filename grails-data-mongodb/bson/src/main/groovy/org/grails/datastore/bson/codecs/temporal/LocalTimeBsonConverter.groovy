@@ -19,11 +19,11 @@
 
 package org.grails.datastore.bson.codecs.temporal
 
+import grails.gorm.time.LocalTimeConverter
 import groovy.transform.CompileStatic
 import org.bson.BsonReader
 import org.bson.BsonType
 import org.bson.BsonWriter
-import grails.gorm.time.LocalTimeConverter
 
 import java.time.LocalTime
 

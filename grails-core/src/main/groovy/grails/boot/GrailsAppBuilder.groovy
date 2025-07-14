@@ -36,7 +36,7 @@ import org.springframework.core.io.ResourceLoader
 class GrailsAppBuilder extends SpringApplicationBuilder {
 
     @Override
-    protected SpringApplication createSpringApplication(ResourceLoader resourceLoader, Class < ? > ... sources) {
+    protected SpringApplication createSpringApplication(ResourceLoader resourceLoader, Class<?>... sources) {
         return new GrailsApp(resourceLoader, sources)
     }
 }

@@ -18,9 +18,9 @@
  */
 package org.grails.async.transform.internal
 
-import groovy.transform.CompileStatic
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorProvider
+import groovy.transform.CompileStatic
 
 /**
  * Helps looking up the decorators
@@ -37,10 +37,10 @@ class DelegateAsyncUtils {
      * @param additional The additional
      * @return The additional promise decorators
      */
-    static Collection<PromiseDecorator> getPromiseDecorators(Object target, Collection<PromiseDecorator> additional ) {
+    static Collection<PromiseDecorator> getPromiseDecorators(Object target, Collection<PromiseDecorator> additional) {
         Collection<PromiseDecorator> decorators = []
         if (target instanceof PromiseDecoratorProvider) {
-            decorators.addAll(((PromiseDecoratorProvider)target).getDecorators())
+            decorators.addAll(((PromiseDecoratorProvider) target).getDecorators())
         }
         if (additional) {
             decorators.addAll(additional)

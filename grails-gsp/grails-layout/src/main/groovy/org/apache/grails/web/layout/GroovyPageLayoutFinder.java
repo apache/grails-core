@@ -18,25 +18,23 @@
  */
 package org.apache.grails.web.layout;
 
+import com.opensymphony.module.sitemesh.Decorator;
+import com.opensymphony.module.sitemesh.Page;
+import com.opensymphony.sitemesh.Content;
 import grails.util.Environment;
+import grails.util.GrailsClassUtils;
 import grails.util.GrailsNameUtils;
+import grails.util.GrailsStringUtils;
 import grails.web.pages.GroovyPagesUriService;
 import groovy.lang.GroovyObject;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import jakarta.servlet.http.HttpServletRequest;
-
-import grails.util.GrailsClassUtils;
-import grails.util.GrailsStringUtils;
 import org.grails.core.artefact.ControllerArtefactHandler;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.servlet.view.GrailsViewResolver;
-import org.grails.web.util.GrailsApplicationAttributes;
 import org.grails.web.servlet.view.AbstractGrailsView;
+import org.grails.web.servlet.view.GrailsViewResolver;
 import org.grails.web.servlet.view.LayoutViewResolver;
+import org.grails.web.util.GrailsApplicationAttributes;
 import org.grails.web.util.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,9 +44,8 @@ import org.springframework.core.Ordered;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
-import com.opensymphony.module.sitemesh.Decorator;
-import com.opensymphony.module.sitemesh.Page;
-import com.opensymphony.sitemesh.Content;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Provides the logic for GrailsLayoutDecoratorMapper without so many ties to
@@ -253,7 +250,15 @@ public class GroovyPageLayoutFinder implements ApplicationListener<ContextRefres
         return new SpringMVCViewDecorator(decoratorName, view);
     }
 
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+        if (!(viewResolver instanceof GrailsViewResolver)) {
+            setViewResolver(event.getApplicationContext().getBean(GrailsViewResolver.class));
+        }
+    }
+
     private static class LayoutCacheKey {
+
         private String controllerName;
         private String actionUri;
 
@@ -264,13 +269,21 @@ public class GroovyPageLayoutFinder implements ApplicationListener<ContextRefres
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             LayoutCacheKey that = (LayoutCacheKey) o;
 
-            if (!actionUri.equals(that.actionUri)) return false;
-            if (!controllerName.equals(that.controllerName)) return false;
+            if (!actionUri.equals(that.actionUri)) {
+                return false;
+            }
+            if (!controllerName.equals(that.controllerName)) {
+                return false;
+            }
 
             return true;
         }
@@ -284,6 +297,7 @@ public class GroovyPageLayoutFinder implements ApplicationListener<ContextRefres
     }
 
     private static class DecoratorCacheValue {
+
         Decorator decorator;
         long createTimestamp = System.currentTimeMillis();
 
@@ -297,13 +311,6 @@ public class GroovyPageLayoutFinder implements ApplicationListener<ContextRefres
 
         public boolean isExpired() {
             return System.currentTimeMillis() - createTimestamp > LAYOUT_CACHE_EXPIRATION_MILLIS;
-        }
-    }
-
-    @Override
-    public void onApplicationEvent(ContextRefreshedEvent event) {
-        if (!(viewResolver instanceof GrailsViewResolver)) {
-            setViewResolver(event.getApplicationContext().getBean(GrailsViewResolver.class));
         }
     }
 }

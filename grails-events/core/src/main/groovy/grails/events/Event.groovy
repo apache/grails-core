@@ -35,6 +35,7 @@ import groovy.transform.ToString
 @EqualsAndHashCode
 @ToString
 class Event<T> extends EventObject {
+
     /**
      * The id of the event
      */
@@ -49,7 +50,7 @@ class Event<T> extends EventObject {
     final Map<String, Object> parameters
 
     Event(String id, T data) {
-        this(id, Collections.emptyMap() as Map<String,Object>, data)
+        this(id, Collections.emptyMap() as Map<String, Object>, data)
     }
 
     Event(String id, Map<String, Object> parameters, T data) {

@@ -19,8 +19,8 @@
 
 package org.grails.scaffolding.registry
 
-import org.grails.scaffolding.model.property.DomainProperty
 import groovy.transform.CompileStatic
+import org.grails.scaffolding.model.property.DomainProperty
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -54,6 +54,7 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
     }
 
     private class Entry implements Comparable<Entry> {
+
         protected final T renderer
         private final int priority;
         private final int seq;

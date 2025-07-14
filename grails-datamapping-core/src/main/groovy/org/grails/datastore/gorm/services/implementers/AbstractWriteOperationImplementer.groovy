@@ -47,9 +47,9 @@ abstract class AbstractWriteOperationImplementer extends AbstractServiceImplemen
     final void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         // copy any annotations from the abstract method
         copyClassAnnotations(abstractMethodNode, newMethodNode)
-        if(!TransactionalTransform.hasTransactionalAnnotation(newMethodNode)) {
+        if (!TransactionalTransform.hasTransactionalAnnotation(newMethodNode)) {
             // read-only transaction by default
-            newMethodNode.addAnnotation( new AnnotationNode(TransactionalTransform.MY_TYPE) )
+            newMethodNode.addAnnotation(new AnnotationNode(TransactionalTransform.MY_TYPE))
         }
 
         doImplement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
@@ -63,9 +63,9 @@ abstract class AbstractWriteOperationImplementer extends AbstractServiceImplemen
 
     @Override
     void enhance(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
-        if(!TransactionalTransform.hasTransactionalAnnotation(newMethodNode)) {
+        if (!TransactionalTransform.hasTransactionalAnnotation(newMethodNode)) {
             // read-only transaction by default
-            newMethodNode.addAnnotation( new AnnotationNode(TransactionalTransform.MY_TYPE) )
+            newMethodNode.addAnnotation(new AnnotationNode(TransactionalTransform.MY_TYPE))
         }
     }
 }

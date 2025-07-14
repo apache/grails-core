@@ -20,28 +20,30 @@ package org.grails.charsequences;
 
 /**
  * Wraps a part of a String and implements the CharSequence interface
- * 
- * 
+ *
  * @author Lari Hotari
  * @since 2.3.10
  *
  */
 class SubCharSequence implements CharSequence, CharArrayAccessible {
+
     private final CharSequence str;
     private final int count;
     private final int start;
 
     SubCharSequence(CharSequence str, int start, int count) {
-        if (start + count > str.length())
+        if (start + count > str.length()) {
             throw new StringIndexOutOfBoundsException(start);
+        }
         this.str = str;
         this.start = start;
         this.count = count;
     }
 
     public char charAt(int index) {
-        if ((index < 0) || (index + start >= str.length()))
+        if ((index < 0) || (index + start >= str.length())) {
             throw new StringIndexOutOfBoundsException(index);
+        }
         return str.charAt(index + start);
     }
 
@@ -50,12 +52,15 @@ class SubCharSequence implements CharSequence, CharArrayAccessible {
     }
 
     public CharSequence subSequence(int start, int end) {
-        if (start < 0)
+        if (start < 0) {
             throw new StringIndexOutOfBoundsException(start);
-        if (end > count)
+        }
+        if (end > count) {
             throw new StringIndexOutOfBoundsException(end);
-        if (start > end)
+        }
+        if (start > end) {
             throw new StringIndexOutOfBoundsException(end - start);
+        }
         if (start == 0 && end == count) {
             return this;
         }
@@ -68,12 +73,15 @@ class SubCharSequence implements CharSequence, CharArrayAccessible {
     }
 
     public void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin) {
-        if (srcBegin < 0)
+        if (srcBegin < 0) {
             throw new StringIndexOutOfBoundsException(srcBegin);
-        if ((srcEnd < 0) || (srcEnd > start+count))
+        }
+        if ((srcEnd < 0) || (srcEnd > start + count)) {
             throw new StringIndexOutOfBoundsException(srcEnd);
-        if (srcBegin > srcEnd)
+        }
+        if (srcBegin > srcEnd) {
             throw new StringIndexOutOfBoundsException("srcBegin > srcEnd");
+        }
         CharSequences.getChars(str, start + srcBegin, start + srcEnd, dst, dstBegin);
     }
 }

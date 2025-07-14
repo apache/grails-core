@@ -25,8 +25,8 @@ import java.util.Map;
  * A PropertyEditor that is able to edit structured properties (properties made up of multiple field values).
  * The #assemble method takes the required type and a map of field values and create an instance of the required type.
  *
- * @since 1.0.4
  * @author Graeme Rocher
+ * @since 1.0.4
  */
 @SuppressWarnings("rawtypes")
 public interface StructuredPropertyEditor {
@@ -43,7 +43,8 @@ public interface StructuredPropertyEditor {
 
     /**
      * Assemble and bind a property value from the specified fieldValues and the given type
-     * @param type The type
+     *
+     * @param type        The type
      * @param fieldValues The field values
      * @return A bound property
      * @throws IllegalArgumentException Thrown in one of the field values is illegal

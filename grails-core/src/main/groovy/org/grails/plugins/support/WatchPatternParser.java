@@ -30,15 +30,15 @@ import java.util.List;
 /**
  * Parses a Grails plugin's watchedResources property value into a list of
  *
- * @since 2.0
  * @author Graeme Rocher
+ * @since 2.0
  */
 public class WatchPatternParser {
 
     public static final String WILD_CARD = "*";
 
     public List<WatchPattern> getWatchPatterns(List<String> patterns) {
-       List<WatchPattern> watchPatterns = new ArrayList<WatchPattern>();
+        List<WatchPattern> watchPatterns = new ArrayList<WatchPattern>();
 
         for (String pattern : patterns) {
             WatchPattern watchPattern = new WatchPattern();
@@ -46,32 +46,29 @@ public class WatchPatternParser {
             boolean isClasspath = false;
             if (pattern.startsWith(ResourceUtils.FILE_URL_PREFIX)) {
                 pattern = pattern.substring(ResourceUtils.FILE_URL_PREFIX.length());
-            }
-            else if (pattern.startsWith(ResourceUtils.CLASSPATH_URL_PREFIX)) {
+            } else if (pattern.startsWith(ResourceUtils.CLASSPATH_URL_PREFIX)) {
                 pattern = pattern.substring(ResourceUtils.CLASSPATH_URL_PREFIX.length());
                 isClasspath = true;
             }
 
             if (pattern.contains(WILD_CARD)) {
                 String dirPath = pattern.substring(0, pattern.indexOf(WILD_CARD));
-                if(!GrailsStringUtils.isBlank(dirPath)) {
+                if (!GrailsStringUtils.isBlank(dirPath)) {
                     watchPattern.setDirectory(new File(dirPath));
-                }
-                else if(isClasspath && BuildSettings.BASE_DIR != null) {
+                } else if (isClasspath && BuildSettings.BASE_DIR != null) {
                     watchPattern.setDirectory(new File(BuildSettings.BASE_DIR, "src/main/resources"));
                 }
 
                 setExtension(pattern, watchPattern);
                 watchPatterns.add(watchPattern);
-            }
-            else {
+            } else {
                 setExtension(pattern, watchPattern);
                 watchPattern.setFile(new File(pattern));
                 watchPatterns.add(watchPattern);
             }
         }
 
-       return watchPatterns;
+        return watchPatterns;
     }
 
     private void setExtension(String pattern, WatchPattern watchPattern) {
@@ -82,8 +79,7 @@ public class WatchPatternParser {
                 extension = extension.substring(1);
             }
             watchPattern.setExtension(extension);
-        }
-        else {
+        } else {
             String ext = StringUtils.getFilenameExtension(pattern);
             if (ext != null) {
                 watchPattern.setExtension(ext);

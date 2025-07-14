@@ -46,7 +46,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        configureDataTest((DataTest)invocation.instance)
+        configureDataTest((DataTest) invocation.instance)
         invocation.proceed()
     }
 
@@ -56,17 +56,18 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
         testInstance.defineBeans {
             ConfigurableConversionService conversionService = application.mainContext.getEnvironment().getConversionService()
             conversionService.addConverter(new Converter<String, Class>() {
+
                 @Override
                 Class convert(String source) {
                     Class.forName(source)
                 }
             })
-            grailsDatastore SimpleMapDatastore, DatastoreUtils.createPropertyResolver(application.config), application.config?.dataSources?.keySet() ?: ([] as Set<String>), testInstance.domainClassesToMock?: [] as Class<?>[]
+            grailsDatastore SimpleMapDatastore, DatastoreUtils.createPropertyResolver(application.config), application.config?.dataSources?.keySet() ?: ([] as Set<String>), testInstance.domainClassesToMock ?: [] as Class<?>[]
 
-                constraintRegistry(DefaultConstraintRegistry, ref("messageSource"))
-                grailsDomainClassMappingContext(grailsDatastore: "getMappingContext")
+            constraintRegistry(DefaultConstraintRegistry, ref("messageSource"))
+            grailsDomainClassMappingContext(grailsDatastore: "getMappingContext")
 
-                "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext, ConstraintEvalUtils.getDefaultConstraints(application.config))
+            "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext, ConstraintEvalUtils.getDefaultConstraints(application.config))
 
             transactionManager(DatastoreTransactionManager) {
                 datastore = ref('grailsDatastore')
@@ -82,7 +83,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
     void configureDataTest(DataTest testInstance) {
         setupDataTestBeans testInstance
-        ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext)testInstance.applicationContext
+        ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext) testInstance.applicationContext
         applicationContext.getBean('constraintRegistry', ConstraintRegistry).addConstraint(UniqueConstraint)
 
         if (!testInstance.domainsHaveBeenMocked) {

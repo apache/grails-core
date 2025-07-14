@@ -27,8 +27,8 @@ import org.springframework.context.ApplicationContextAware;
 /**
  * The API for converting objects to target types such as XML.
  *
- * @since 2.0
  * @author Graeme Rocher
+ * @since 2.0
  */
 public class ConvertersApi implements ApplicationContextAware {
 
@@ -38,7 +38,7 @@ public class ConvertersApi implements ApplicationContextAware {
      * Converter an instance from one format to another
      *
      * @param instance The instance
-     * @param clazz The type to convert to
+     * @param clazz    The type to convert to
      * @return the converted object
      */
     public Object asType(Object instance, Class<?> clazz) {
@@ -59,6 +59,6 @@ public class ConvertersApi implements ApplicationContextAware {
     }
 
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext =applicationContext;
+        this.applicationContext = applicationContext;
     }
 }

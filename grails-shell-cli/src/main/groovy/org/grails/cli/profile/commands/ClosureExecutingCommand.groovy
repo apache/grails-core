@@ -19,7 +19,6 @@
 
 package org.grails.cli.profile.commands
 
-import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile
@@ -32,6 +31,7 @@ import org.grails.cli.profile.ProfileCommand
  * @since 3.0
  */
 class ClosureExecutingCommand implements ProfileCommand {
+
     String name
     Closure callable
     Profile profile

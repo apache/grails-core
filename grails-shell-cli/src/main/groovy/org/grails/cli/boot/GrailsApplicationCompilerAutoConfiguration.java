@@ -47,7 +47,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 /**
  * A {@link CompilerAutoConfiguration} for Grails Micro Service applications
  *
@@ -57,12 +56,12 @@ import java.util.Map;
 public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     public static final String[] DEFAULT_IMPORTS = new String[]{
-                                                        "grails.persistence",
-                                                        "grails.gorm",
-                                                        "grails.rest",
-                                                        "grails.artefact",
-                                                        "grails.web",
-                                                        "grails.boot.config" };
+            "grails.persistence",
+            "grails.gorm",
+            "grails.rest",
+            "grails.artefact",
+            "grails.web",
+            "grails.boot.config"};
     public static final String ENABLE_AUTO_CONFIGURATION = "org.springframework.boot.autoconfigure.EnableAutoConfiguration";
     public static final ClassNode ENABLE_AUTO_CONFIGURATION_CLASS_NODE = ClassHelper.make(ENABLE_AUTO_CONFIGURATION);
     ClassNode lastMatch = null;
@@ -70,15 +69,16 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
     @Override
     public boolean matches(ClassNode classNode) {
         boolean matches = AstUtils.hasAtLeastOneAnnotation(classNode, "grails.persistence.Entity", "grails.rest.Resource", "Resource", "grails.artefact.Artefact", "grails.web.Controller");
-        if(matches) lastMatch = classNode;
+        if (matches) {
+            lastMatch = classNode;
+        }
         return matches;
     }
-
 
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         addManagedDependencies(dependencies);
-        if(lastMatch != null) {
+        if (lastMatch != null) {
             lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-dependencies", Environment.class.getPackage().getImplementationVersion(), null, "pom", true));
             lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-web-boot", Environment.class.getPackage().getImplementationVersion(), null, null, true));
         }
@@ -97,9 +97,8 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         return new GrailsDependencyVersions();
     }
 
-
     public static AnnotationNode createGrabAnnotation(String group, String module,
-                                                String version, String classifier, String type, boolean transitive) {
+                                                      String version, String classifier, String type, boolean transitive) {
         AnnotationNode annotationNode = new AnnotationNode(new ClassNode(Grab.class));
         annotationNode.addMember("group", new ConstantExpression(group));
         annotationNode.addMember("module", new ConstantExpression(module));
@@ -115,7 +114,6 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         return annotationNode;
     }
 
-
     @Override
     public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
         imports.addStarImports(DEFAULT_IMPORTS);
@@ -129,7 +127,7 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         ClassNode applicationClassNode = new ClassNode("Application", Modifier.PUBLIC, ClassHelper.make("grails.boot.config.GrailsAutoConfiguration"));
         AnnotationNode enableAutoAnnotation = new AnnotationNode(ENABLE_AUTO_CONFIGURATION_CLASS_NODE);
         try {
-            enableAutoAnnotation.addMember("exclude", new ClassExpression( ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")) );
+            enableAutoAnnotation.addMember("exclude", new ClassExpression(ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")));
         } catch (Throwable e) {
             // ignore
         }
@@ -166,7 +164,6 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
 //            return groupAndArtifactToDependency.get(groupId + ":" + artifactId);
 //        }
 
-
         @Override
         public List<Dependency> getDependencies() {
             return dependencies;
@@ -180,7 +177,7 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         @Override
         public Dependency find(String artifactId) {
             String groupAndArtifact = artifactToGroupAndArtifact.get(artifactId);
-            if (groupAndArtifact==null) {
+            if (groupAndArtifact == null) {
                 return null;
             }
             return groupAndArtifactToDependency.get(groupAndArtifact);

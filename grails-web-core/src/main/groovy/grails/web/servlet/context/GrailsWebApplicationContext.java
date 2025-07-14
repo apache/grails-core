@@ -18,13 +18,11 @@
  */
 package grails.web.servlet.context;
 
+import grails.core.GrailsApplication;
 import grails.spring.BeanBuilder;
-
+import grails.web.servlet.context.support.GrailsEnvironment;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
-
-import grails.core.GrailsApplication;
-import grails.web.servlet.context.support.GrailsEnvironment;
 import org.grails.spring.GrailsApplicationContext;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -133,7 +131,7 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
 
     public void setConfigLocation(String configLocation) {
         Assert.notNull(configLocation, "Argument [configLocation] cannot be null");
-        configLocations = new String[] { configLocation };
+        configLocations = new String[]{configLocation};
     }
 
     public void setConfigLocations(String[] configLocations) {
@@ -147,6 +145,7 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
 
     /**
      * Register ServletContextAwareProcessor.
+     *
      * @see ServletContextAwareProcessor
      */
     @Override
@@ -160,6 +159,7 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
 
     /**
      * This implementation supports file paths beneath the root of the ServletContext.
+     *
      * @see ServletContextResource
      */
     @Override
@@ -169,6 +169,7 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
 
     /**
      * This implementation supports pattern matching in unexpanded WARs too.
+     *
      * @see ServletContextResourcePatternResolver
      */
     @Override
@@ -180,7 +181,7 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
     protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
         if (configLocations.length > 0) {
             for (String configLocation : configLocations) {
-                BeanBuilder beanBuilder = new BeanBuilder(getParent(),getClassLoader());
+                BeanBuilder beanBuilder = new BeanBuilder(getParent(), getClassLoader());
                 final ServletContextResource resource = new ServletContextResource(getServletContext(), configLocation);
                 beanBuilder.loadBeans(resource);
                 beanBuilder.registerBeans(this);

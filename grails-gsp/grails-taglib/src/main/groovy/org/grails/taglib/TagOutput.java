@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.taglib;
 
 import groovy.lang.Closure;
@@ -34,7 +33,8 @@ import java.util.Map;
 /**
  * Created by lari on 16/07/14.
  */
-public class TagOutput {
+public final class TagOutput {
+
     public static final String APPLY_CODEC_TAG_NAME = "applyCodec";
     public static final String ENCODE_AS_ATTRIBUTE_NAME = "encodeAs";
     public static final Closure<?> EMPTY_BODY_CLOSURE = new ConstantClosure("");
@@ -44,8 +44,8 @@ public class TagOutput {
     }
 
     @SuppressWarnings("rawtypes")
-    public final static Object captureTagOutput(TagLibraryLookup gspTagLibraryLookup, String namespace,
-                                                String tagName, Map attrs, Object body, OutputContext outputContext) {
+    public static Object captureTagOutput(TagLibraryLookup gspTagLibraryLookup, String namespace,
+                                          String tagName, Map attrs, Object body, OutputContext outputContext) {
 
         GroovyObject tagLib = lookupCachedTagLib(gspTagLibraryLookup, namespace, tagName);
 
@@ -56,7 +56,7 @@ public class TagOutput {
         if (!(attrs instanceof GroovyPageAttributes)) {
             attrs = new GroovyPageAttributes(attrs, false);
         }
-        ((GroovyPageAttributes)attrs).setGspTagSyntaxCall(false);
+        ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(false);
         Closure actualBody = createOutputCapturingClosure(tagLib, body, outputContext);
 
         final GroovyPageTagWriter tagOutput = new GroovyPageTagWriter();
@@ -109,7 +109,7 @@ public class TagOutput {
 
                 if (returnsObject && bodyResult != null && !(bodyResult instanceof Writer)) {
                     if (taglibEncoder != null) {
-                        bodyResult=taglibEncoder.encode(bodyResult);
+                        bodyResult = taglibEncoder.encode(bodyResult);
                     }
                     return bodyResult;
                 }
@@ -125,18 +125,20 @@ public class TagOutput {
             throw new GrailsTagException("Tag [" + tagName + "] does not exist in tag library [" +
                     tagLib.getClass().getName() + "]");
         } finally {
-            if (outputStack != null) outputStack.pop();
+            if (outputStack != null) {
+                outputStack.pop();
+            }
         }
     }
 
-    public final static GroovyObject lookupCachedTagLib(TagLibraryLookup gspTagLibraryLookup,
-                                                        String namespace, String tagName) {
+    public static GroovyObject lookupCachedTagLib(TagLibraryLookup gspTagLibraryLookup,
+                                                  String namespace, String tagName) {
 
         return gspTagLibraryLookup != null ? gspTagLibraryLookup.lookupTagLibrary(namespace, tagName) : null;
     }
 
-    public final static Closure<?> createOutputCapturingClosure(Object wrappedInstance, final Object body1,
-                                                                final OutputContext outputContext) {
+    public static Closure<?> createOutputCapturingClosure(Object wrappedInstance, final Object body1,
+                                                          final OutputContext outputContext) {
         if (body1 == null) {
             return EMPTY_BODY_CLOSURE;
         }
@@ -166,8 +168,9 @@ public class TagOutput {
 
     @SuppressWarnings("rawtypes")
     public static final class ConstantClosure extends Closure {
+
         private static final long serialVersionUID = 1L;
-        private static final Class[] EMPTY_CLASS_ARR=new Class[0];
+        private static final Class[] EMPTY_CLASS_ARR = new Class[0];
         final Object retval;
 
         public ConstantClosure(Object retval) {

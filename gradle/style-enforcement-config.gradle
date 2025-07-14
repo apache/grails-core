@@ -24,11 +24,11 @@ apply plugin: 'io.spring.nohttp' // enforce https everywhere
 spotless {
     java {
         licenseHeaderFile(rootProject.file("etc/config/spotless/license.java"))
-        target('src/main/java/**/*.java')
+        target('src/main/java/**/*.java', 'src/main/groovy/**.java', 'grails-app/**.java')
     }
     groovy {
         licenseHeaderFile(rootProject.file("etc/config/spotless/license.java"))
-        target('src/main/groovy/**.groovy', 'src/main/groovy/**.java')
+        target('src/main/groovy/**.groovy', 'grails-app/**.groovy')
     }
     format 'javaMisc', {
         target('src/main/**/package-info.java', 'src/main/**/module-info.java')
@@ -37,7 +37,8 @@ spotless {
 }
 
 checkstyle {
-    configFile = project.rootProject.file('etc/config/checkstyle/checkstyle.xml')
+    configFile = project.rootProject.layout.projectDirectory.file('etc/config/checkstyle/checkstyle.xml').asFile
+    configDirectory = project.rootProject.layout.projectDirectory.dir('etc/config/checkstyle').asFile
 
     // Per submodule
     maxErrors = 1

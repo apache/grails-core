@@ -102,7 +102,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
 
     @Override
     void setGrailsApplication(GrailsApplication grailsApplication) {
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             def domainArtefacts = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
             setPackageImports(
                     findUniquePackages(domainArtefacts)
@@ -111,7 +111,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     }
 
     void readConfiguration(File configFile) {
-        if(configFile?.exists()) {
+        if (configFile?.exists()) {
             def config = new CodeGenConfig()
             config.loadYml(configFile)
             readConfiguration(config)
@@ -120,9 +120,9 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
 
     void readConfiguration(ConfigMap config) {
         String moduleName = viewModuleName
-        GroovyObject configObject = (GroovyObject)this
+        GroovyObject configObject = (GroovyObject) this
         if (config != null) {
-            PropertyDescriptor[] descriptors =  BeanUtils.getPropertyDescriptors(GenericViewConfiguration)
+            PropertyDescriptor[] descriptors = BeanUtils.getPropertyDescriptors(GenericViewConfiguration)
             for (PropertyDescriptor desc in descriptors) {
                 if (desc.writeMethod != null) {
                     String propertyName = desc.name
@@ -135,7 +135,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
                     } else {
                         value = config.getProperty("grails.views.${moduleName}.$propertyName", (Class) desc.propertyType)
                     }
-                    if(value != null) {
+                    if (value != null) {
                         configObject.setProperty(propertyName, value)
                     }
                 }

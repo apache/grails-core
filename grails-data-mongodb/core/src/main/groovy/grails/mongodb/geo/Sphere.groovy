@@ -26,7 +26,7 @@ import groovy.transform.EqualsAndHashCode
  */
 @EqualsAndHashCode
 @CompileStatic
-class Sphere extends Shape{
+class Sphere extends Shape {
 
     /**
      * The center of there sphere
@@ -55,7 +55,7 @@ class Sphere extends Shape{
      */
     @Override
     List<? extends Object> asList() {
-        [ center.asList(), distance.inRadians() ]
+        [center.asList(), distance.inRadians()]
     }
 
     /**
@@ -66,19 +66,18 @@ class Sphere extends Shape{
      *
      * @return A Sphere
      */
-    static Sphere valueOf( List coords, Metric metric = Metric.NEUTRAL) {
-        if(coords.size() < 2) throw new IllegalArgumentException("Coordinates should contain at least 2 entries for a Sphere: The center point and the distance")
+    static Sphere valueOf(List coords, Metric metric = Metric.NEUTRAL) {
+        if (coords.size() < 2) throw new IllegalArgumentException("Coordinates should contain at least 2 entries for a Sphere: The center point and the distance")
 
         Point center = Point.getPointAtIndex(coords, 0)
         def ro = coords.get(1)
         Double distance = null
-        if(ro instanceof Number)
+        if (ro instanceof Number)
             distance = ((Number) ro).doubleValue()
 
-        if(center && distance != null) {
-            return new Sphere(center, Distance.valueOf(distance, metric) )
-        }
-        else {
+        if (center && distance != null) {
+            return new Sphere(center, Distance.valueOf(distance, metric))
+        } else {
             throw new IllegalArgumentException("Invalid Sphere coordinates: $coords")
         }
     }

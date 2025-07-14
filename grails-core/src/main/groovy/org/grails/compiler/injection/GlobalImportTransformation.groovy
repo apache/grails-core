@@ -33,9 +33,10 @@ import org.codehaus.groovy.transform.TransformWithPriority
  * @author Graeme Rocher
  * @since 3.0
  */
-@GroovyASTTransformation( phase= CompilePhase.CONVERSION)
+@GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 @CompileStatic
 class GlobalImportTransformation implements ASTTransformation, TransformWithPriority {
+
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
         ModuleNode ast = source.getAST();

@@ -39,7 +39,8 @@ trait ServiceUnitTest<T> extends ParameterizedGrailsUnitTest<T> {
         if (!dataTestLoaded) {
             try {
                 dataTest = ClassUtils.forName(DATATEST_CLASS)
-            } catch (ClassNotFoundException e) {}
+            } catch (ClassNotFoundException e) {
+            }
         }
         dataTestLoaded = true
     }
@@ -66,12 +67,10 @@ trait ServiceUnitTest<T> extends ParameterizedGrailsUnitTest<T> {
                 loadDataTestClass()
                 if (dataTest != null && dataTest.isAssignableFrom(this.class)) {
                     dataTest.getMethod('mockDataService', Class).invoke(this, serviceClass)
-                }
-                else {
+                } else {
                     throw new GrailsConfigurationException("Error attempting to test ${serviceClass.name}. Data services require gorm-testing-support to be on the classpath and the test to implement ${DATATEST_CLASS}")
                 }
-            }
-            else {
+            } else {
                 throw e
             }
         }

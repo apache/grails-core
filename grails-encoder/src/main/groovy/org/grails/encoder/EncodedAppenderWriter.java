@@ -24,31 +24,29 @@ import java.io.Writer;
 /**
  * A java.io.Writer implementation that writes to a {@link EncodedAppender} with
  * a certain encoder
- * 
+ * <p>
  * This class isn't thread-safe.
  *
  * @author Lari Hotari
  * @since 2.3
  */
 public class EncodedAppenderWriter extends Writer implements EncodedAppenderWriterFactory, EncodedAppenderFactory, EncoderAware {
+
     protected EncodedAppender encodedAppender;
     protected Encoder encoder;
     protected EncodingStateRegistry encodingStateRegistry;
-    private char[] singleCharBuffer=new char[1];
+    private char[] singleCharBuffer = new char[1];
 
     /**
      * Default constructor
      *
-     * @param encodedAppender
-     *            the EncodedAppender destination
-     * @param encoder
-     *            the encoder to use
-     * @param encodingStateRegistry
-     *            the {@link EncodingStateRegistry} to use to lookup encoding
-     *            state of CharSequence instances
+     * @param encodedAppender       the EncodedAppender destination
+     * @param encoder               the encoder to use
+     * @param encodingStateRegistry the {@link EncodingStateRegistry} to use to lookup encoding
+     *                              state of CharSequence instances
      */
     public EncodedAppenderWriter(EncodedAppender encodedAppender, Encoder encoder,
-            EncodingStateRegistry encodingStateRegistry) {
+                                 EncodingStateRegistry encodingStateRegistry) {
         this.encodedAppender = encodedAppender;
         this.encoder = encoder;
         this.encodingStateRegistry = encodingStateRegistry;
@@ -87,7 +85,7 @@ public class EncodedAppenderWriter extends Writer implements EncodedAppenderWrit
      */
     @Override
     public void write(int c) throws IOException {
-        append((char)c);
+        append((char) c);
     }
 
     /*
@@ -130,7 +128,7 @@ public class EncodedAppenderWriter extends Writer implements EncodedAppenderWrit
      */
     @Override
     public Writer append(char c) throws IOException {
-        singleCharBuffer[0]=(char)c;
+        singleCharBuffer[0] = (char) c;
         encodedAppender.append(encoder, null, singleCharBuffer, 0, 1);
         return this;
     }

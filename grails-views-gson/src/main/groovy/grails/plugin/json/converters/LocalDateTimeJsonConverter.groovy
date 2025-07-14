@@ -40,6 +40,6 @@ class LocalDateTimeJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        DateTimeFormatter.ISO_LOCAL_DATE_TIME.format((LocalDateTime)value)
+        DateTimeFormatter.ISO_LOCAL_DATE_TIME.format((LocalDateTime) value)
     }
 }

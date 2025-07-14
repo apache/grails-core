@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.query;
 
 /**
  * Constants used for query arguments etc.
  *
- * @since 3.0.7
  * @author Graeme Rocher
+ * @since 3.0.7
  */
 public interface HibernateQueryConstants {
 

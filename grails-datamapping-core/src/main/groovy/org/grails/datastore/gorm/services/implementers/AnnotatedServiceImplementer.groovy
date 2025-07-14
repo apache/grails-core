@@ -25,7 +25,7 @@ import org.codehaus.groovy.ast.MethodNode
 /**
  * An annotated implementer
  *
- * @param <A> The annotation type
+ * @param <A>   The annotation type
  */
 interface AnnotatedServiceImplementer<A> extends PrefixedServiceImplementer {
     /**

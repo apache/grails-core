@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -48,7 +47,7 @@ public class CreditCardConstraint extends AbstractConstraint {
         CreditCardValidator validator = new CreditCardValidator();
 
         if (!validator.isValid(propertyValue.toString())) {
-            Object[] args = new Object[] { constraintPropertyName, constraintOwningClass, propertyValue };
+            Object[] args = new Object[]{constraintPropertyName, constraintOwningClass, propertyValue};
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_CREDIT_CARD_MESSAGE_CODE,
                     ConstrainedProperty.CREDIT_CARD_CONSTRAINT + ConstrainedProperty.INVALID_SUFFIX, args);
         }
@@ -64,7 +63,6 @@ public class CreditCardConstraint extends AbstractConstraint {
         }
         return constraintParameter;
     }
-
 
     public String getName() {
         return ConstrainedProperty.CREDIT_CARD_CONSTRAINT;

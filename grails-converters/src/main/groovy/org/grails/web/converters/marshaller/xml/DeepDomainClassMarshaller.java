@@ -24,7 +24,6 @@ import grails.core.support.proxy.ProxyHandler;
 /**
  * @author Siegfried Puchbauer
  * @author Graeme Rocher
- *
  * @since 1.1
  */
 public class DeepDomainClassMarshaller extends DomainClassMarshaller {

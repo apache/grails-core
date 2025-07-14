@@ -18,6 +18,10 @@
  */
 package org.grails.web.binding;
 
+import grails.util.GrailsStringUtils;
+import org.springframework.beans.propertyeditors.CustomDateEditor;
+import org.springframework.util.Assert;
+
 import java.text.DateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -25,10 +29,6 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
-
-import grails.util.GrailsStringUtils;
-import org.springframework.beans.propertyeditors.CustomDateEditor;
-import org.springframework.util.Assert;
 
 /**
  * Structured editor for editing dates that takes 5 fields that represent the year, month, day, hour
@@ -82,7 +82,7 @@ public class StructuredDateEditor extends CustomDateEditor implements Structured
             int hour = getIntegerValue(fieldValues, "hour", 0);
             int minute = getIntegerValue(fieldValues, "minute", 0);
 
-            Calendar c = new GregorianCalendar(year,month - 1,day,hour,minute);
+            Calendar c = new GregorianCalendar(year, month - 1, day, hour, minute);
             if (type == Date.class) {
                 return c.getTime();
             }
@@ -90,8 +90,7 @@ public class StructuredDateEditor extends CustomDateEditor implements Structured
                 return new java.sql.Date(c.getTime().getTime());
             }
             return c;
-        }
-        catch (NumberFormatException nfe) {
+        } catch (NumberFormatException nfe) {
             throw new IllegalArgumentException("Unable to parse structured date from request for date [\"+propertyName+\"]\"");
         }
     }

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.future
 
 import grails.async.Promise
@@ -30,7 +29,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.locks.ReentrantLock
 
 /**
  * A child promise of a {@link FutureTaskPromise}
@@ -54,7 +52,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
 
     FutureTaskChildPromise(PromiseFactory promiseFactory, Promise<T> parent, Closure<T> callable) {
         this.parent = parent
-        this.callable = promiseFactory.applyDecorators(callable,null)
+        this.callable = promiseFactory.applyDecorators(callable, null)
         this.promiseFactory = promiseFactory
     }
 
@@ -113,8 +111,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
     T get() throws InterruptedException, ExecutionException {
         if (bound != null) {
             return bound.get()
-        }
-        else {
+        } else {
             if (parent instanceof FutureTaskPromise) {
                 def value = parent.get()
                 if (bound == null) {
@@ -122,8 +119,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
                     bound = new BoundPromise<>(v)
                 }
                 return bound.get()
-            }
-            else {
+            } else {
                 def v = callable.call(parent.get())
                 bound = new BoundPromise<>(v)
                 return v
@@ -135,8 +131,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
     T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (bound != null) {
             return bound.get()
-        }
-        else {
+        } else {
             if (parent instanceof FutureTaskPromise) {
                 def value = parent.get(timeout, unit)
                 if (bound == null) {
@@ -144,8 +139,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
                     bound = new BoundPromise<>(v)
                 }
                 return bound.get()
-            }
-            else {
+            } else {
                 def v = callable.call(parent.get(timeout, unit))
                 bound = new BoundPromise<>(v)
                 return v

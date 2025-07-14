@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
-
 
 import grails.gorm.validation.ConstrainedProperty;
 import groovy.lang.IntRange;
@@ -73,39 +71,35 @@ public class SizeConstraint extends AbstractConstraint {
         return constraintParameter;
     }
 
-
     public String getName() {
         return ConstrainedProperty.SIZE_CONSTRAINT;
     }
 
     @Override
     protected void processValidate(Object target, Object propertyValue, Errors errors) {
-        Object[] args = { constraintPropertyName, constraintOwningClass, propertyValue,
-                range.getFrom(), range.getTo() };
+        Object[] args = {constraintPropertyName, constraintOwningClass, propertyValue,
+                range.getFrom(), range.getTo()};
 
         int size;
         if (propertyValue.getClass().isArray()) {
             size = Array.getLength(propertyValue);
-        }
-        else if (propertyValue instanceof Collection<?>) {
-            size = ((Collection<?>)propertyValue).size();
-        }
-        else { // String
-            size = ((String)propertyValue).length();
+        } else if (propertyValue instanceof Collection<?>) {
+            size = ((Collection<?>) propertyValue).size();
+        } else { // String
+            size = ((String) propertyValue).length();
         }
 
         if (!range.contains(size)) {
             if (range.getFrom().compareTo(size) == 1) {
                 rejectValue(args, errors, target, ConstrainedProperty.TOOSMALL_SUFFIX);
-            }
-            else if (range.getTo().compareTo(size) == -1) {
+            } else if (range.getTo().compareTo(size) == -1) {
                 rejectValue(args, errors, target, ConstrainedProperty.TOOBIG_SUFFIX);
             }
         }
     }
 
     private void rejectValue(Object[] args, Errors errors, Object target, String suffix) {
-        rejectValue(target,errors, ConstrainedProperty.DEFAULT_INVALID_SIZE_MESSAGE_CODE,
+        rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_SIZE_MESSAGE_CODE,
                 ConstrainedProperty.SIZE_CONSTRAINT + suffix, args);
     }
 }

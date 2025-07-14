@@ -25,6 +25,7 @@ import spock.lang.Specification
 
 @Slf4j
 class GrailsDataTckSpec<T extends GrailsDataTckManager> extends Specification {
+
     @Shared
     T manager
 

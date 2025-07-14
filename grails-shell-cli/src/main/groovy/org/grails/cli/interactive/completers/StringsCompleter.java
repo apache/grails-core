@@ -20,7 +20,11 @@ package org.grails.cli.interactive.completers;
 
 import jline.console.completer.Completer;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import static jline.internal.Preconditions.checkNotNull;
 
@@ -30,9 +34,8 @@ import static jline.internal.Preconditions.checkNotNull;
  * @author Graeme Rocher
  * @since 3.0
  */
-public class StringsCompleter
-    implements Completer
-{
+public class StringsCompleter implements Completer {
+
     private SortedSet<String> strings = new TreeSet<String>();
 
     public StringsCompleter() {
@@ -52,7 +55,6 @@ public class StringsCompleter
         return strings;
     }
 
-
     public void setStrings(SortedSet<String> strings) {
         this.strings = strings;
     }
@@ -63,8 +65,7 @@ public class StringsCompleter
 
         if (buffer == null) {
             candidates.addAll(getStrings());
-        }
-        else {
+        } else {
             for (String match : getStrings().tailSet(buffer)) {
                 if (!match.startsWith(buffer)) {
                     break;

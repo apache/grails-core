@@ -16,12 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.query.criteria;
 
 import grails.gorm.CriteriaBuilder;
 import grails.gorm.DetachedCriteria;
-import groovy.lang.*;
+import groovy.lang.Closure;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaMethod;
+import groovy.lang.MetaObjectProtocol;
+import groovy.lang.MissingMethodException;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -35,7 +39,11 @@ import org.grails.datastore.mapping.query.api.ProjectionList;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.springframework.util.Assert;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract criteria builder implementation
@@ -44,6 +52,7 @@ import java.util.*;
  * @since 6.0
  */
 public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implements Criteria, ProjectionList {
+
     public static final String ORDER_DESCENDING = "desc";
     public static final String ORDER_ASCENDING = "asc";
 
@@ -56,13 +65,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     protected Query query;
     protected boolean uniqueResult = false;
     protected boolean paginationEnabledList;
-    protected  List<Query.Order> orderEntries = new ArrayList<Query.Order>();
-    protected  MetaObjectProtocol queryMetaClass;
-    protected  Query.ProjectionList projectionList;
+    protected List<Query.Order> orderEntries = new ArrayList<Query.Order>();
+    protected MetaObjectProtocol queryMetaClass;
+    protected Query.ProjectionList projectionList;
     protected PersistentEntity persistentEntity;
     protected boolean readOnly;
     private List<Query.Junction> logicalExpressionStack = new ArrayList<Query.Junction>();
-
 
     public AbstractCriteriaBuilder(final Class targetClass, QueryCreator queryCreator, final MappingContext mappingContext) {
         Assert.notNull(targetClass, "Argument [targetClass] cannot be null");
@@ -79,47 +87,46 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         this.queryCreator = queryCreator;
     }
 
-
-
     public Class getTargetClass() {
         return this.targetClass;
     }
 
     public void setUniqueResult(boolean uniqueResult) {
         this.uniqueResult = uniqueResult;
-   }
+    }
 
     @Override
-   public Criteria cache(boolean cache) {
-       query.cache(cache);
-       return this;
-   }
+    public Criteria cache(boolean cache) {
+        query.cache(cache);
+        return this;
+    }
 
     @Override
-   public Criteria readOnly(boolean readOnly) {
-       this.readOnly = readOnly;
-       return this;
-   }
+    public Criteria readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+        return this;
+    }
 
     public Criteria join(String property) {
-      query.join(property);
-      return this;
-  }
+        query.join(property);
+        return this;
+    }
 
     public Criteria select(String property) {
-      query.select(property);
-      return this;
-  }
+        query.select(property);
+        return this;
+    }
 
     public Query.ProjectionList id() {
-       if (projectionList != null) {
-           projectionList.id();
-       }
-       return projectionList;
+        if (projectionList != null) {
+            projectionList.id();
+        }
+        return projectionList;
     }
 
     /**
      * Count the number of records returned
+     *
      * @return The project list
      */
 
@@ -147,7 +154,6 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Defines a group by projection for datastores that support it
      *
      * @param property The property name
-     *
      * @return The projection list
      */
     @Override
@@ -185,6 +191,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Count the number of records returned
+     *
      * @return The project list
      */
     public ProjectionList rowCount() {
@@ -193,6 +200,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * A projection that obtains the value of a property of an entity
+     *
      * @param name The name of the property
      * @return The projection list
      */
@@ -249,19 +257,18 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @return The PropertyProjection instance
      */
     public ProjectionList avg(String name) {
-       if (projectionList != null) {
-           projectionList.avg(name);
-       }
-       return projectionList;
+        if (projectionList != null) {
+            projectionList.avg(name);
+        }
+        return projectionList;
     }
 
     @Override
     public Object invokeMethod(String name, Object obj) {
-        Object[] args = obj.getClass().isArray() ? (Object[])obj : new Object[]{obj};
+        Object[] args = obj.getClass().isArray() ? (Object[]) obj : new Object[]{obj};
 
         ensureQueryIsInitialized();
         if (isCriteriaConstructionMethod(name, args)) {
-
 
             uniqueResult = false;
 
@@ -270,8 +277,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
             Object result;
             if (!uniqueResult) {
                 result = invokeList();
-            }
-            else {
+            } else {
                 result = query.singleResult();
             }
             query = null;
@@ -308,8 +314,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
                     logicalExpressionStack = new ArrayList<Query.Junction>();
                     invokeClosureNode(args[0]);
                     return query;
-                }
-                finally {
+                } finally {
 
                     logicalExpressionStack = previousLogicalExpressionStack;
                     persistentEntity = previousEntity;
@@ -398,9 +403,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates an "equals" Criterion based on the specified property name and value.
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria eq(String propertyName, Object propertyValue) {
@@ -413,16 +417,14 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Apply an "equals" constraint to each property in the key set of a <code>Map</code>
      *
      * @param propertyValues a map from property names to values
-     *
      * @return Criterion
-     *
      * @see Query.Conjunction
      */
     @Override
     public Criteria allEq(Map<String, Object> propertyValues) {
         Query.Conjunction conjunction = new Query.Conjunction();
         for (String property : propertyValues.keySet()) {
-            conjunction.add( Restrictions.eq(property, propertyValues.get(property)));
+            conjunction.add(Restrictions.eq(property, propertyValues.get(property)));
         }
         addToCriteria(conjunction);
         return this;
@@ -431,9 +433,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is equal to all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria eqAll(String propertyName, Closure propertyValue) {
@@ -448,9 +449,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is greater than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria gtAll(String propertyName, Closure propertyValue) {
@@ -460,9 +460,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is less than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria ltAll(String propertyName, Closure propertyValue) {
@@ -472,9 +471,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is greater than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria geAll(String propertyName, Closure propertyValue) {
@@ -484,9 +482,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is less than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria leAll(String propertyName, Closure propertyValue) {
@@ -496,9 +493,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is equal to all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria eqAll(String propertyName, QueryableCriteria propertyValue) {
@@ -510,9 +506,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is greater than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria gtAll(String propertyName, QueryableCriteria propertyValue) {
@@ -606,9 +601,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is less than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria ltAll(String propertyName, QueryableCriteria propertyValue) {
@@ -620,9 +614,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is greater than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria geAll(String propertyName, QueryableCriteria propertyValue) {
@@ -634,9 +627,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a subquery criterion that ensures the given property is less than all the given returned values
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria leAll(String propertyName, QueryableCriteria propertyValue) {
@@ -649,7 +641,6 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Creates an "equals" Criterion based on the specified property name and value.
      *
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria idEq(Object propertyValue) {
@@ -660,9 +651,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates a "not equals" Criterion based on the specified property name and value.
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria ne(String propertyName, Object propertyValue) {
@@ -675,9 +665,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Restricts the results by the given property value range (inclusive)
      *
      * @param propertyName The property name
-     *
-     * @param start The start of the range
-     * @param finish The end of the range
+     * @param start        The start of the range
+     * @param finish       The end of the range
      * @return A Criterion instance
      */
     public Criteria between(String propertyName, Object start, Object finish) {
@@ -688,8 +677,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Used to restrict a value to be greater than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The Criterion instance
      */
     public Criteria gte(String property, Object value) {
@@ -700,8 +690,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Used to restrict a value to be greater than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The Criterion instance
      */
     public Criteria ge(String property, Object value) {
@@ -711,8 +702,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Used to restrict a value to be greater than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The Criterion instance
      */
     public Criteria gt(String property, Object value) {
@@ -723,8 +715,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Used to restrict a value to be less than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The Criterion instance
      */
     public Criteria lte(String property, Object value) {
@@ -735,8 +728,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Used to restrict a value to be less than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The Criterion instance
      */
     public Criteria le(String property, Object value) {
@@ -746,8 +740,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     /**
      * Used to restrict a value to be less than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The Criterion instance
      */
     public Criteria lt(String property, Object value) {
@@ -759,9 +754,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates an like Criterion based on the specified property name and value.
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria like(String propertyName, Object propertyValue) {
@@ -774,9 +768,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates an ilike Criterion based on the specified property name and value. Unlike a like condition, ilike is case insensitive
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria ilike(String propertyName, Object propertyValue) {
@@ -789,9 +782,8 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     /**
      * Creates an rlike Criterion based on the specified property name and value.
      *
-     * @param propertyName The property name
+     * @param propertyName  The property name
      * @param propertyValue The property value
-     *
      * @return A Criterion instance
      */
     public Criteria rlike(String propertyName, Object propertyValue) {
@@ -805,8 +797,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
-     * @param values The values
-     *
+     * @param values       The values
      * @return A Criterion instance
      */
     public Criteria in(String propertyName, Collection values) {
@@ -820,8 +811,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
-     * @param values The values
-     *
+     * @param values       The values
      * @return A Criterion instance
      */
     public Criteria inList(String propertyName, Collection values) {
@@ -833,8 +823,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
-     * @param values The values
-     *
+     * @param values       The values
      * @return A Criterion instance
      */
     public Criteria inList(String propertyName, Object[] values) {
@@ -845,8 +834,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
-     * @param values The values
-     *
+     * @param values       The values
      * @return A Criterion instance
      */
     public Criteria in(String propertyName, Object[] values) {
@@ -986,8 +974,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         Query.Order o = Query.Order.asc(propertyName);
         if (paginationEnabledList) {
             orderEntries.add(o);
-        }
-        else {
+        } else {
             query.order(o);
         }
         return this;
@@ -1003,8 +990,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     public Criteria order(Query.Order o) {
         if (paginationEnabledList) {
             orderEntries.add(o);
-        }
-        else {
+        } else {
             query.order(o);
         }
         return this;
@@ -1014,29 +1000,28 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Orders by the specified property name and direction
      *
      * @param propertyName The property name to order by
-     * @param direction Either "asc" for ascending or "desc" for descending
-     *
+     * @param direction    Either "asc" for ascending or "desc" for descending
      * @return A Order instance
      */
     public Criteria order(String propertyName, String direction) {
         Query.Order o;
         if (direction.equals(CriteriaBuilder.ORDER_DESCENDING)) {
             o = Query.Order.desc(propertyName);
-        }
-        else {
+        } else {
             o = Query.Order.asc(propertyName);
         }
         if (paginationEnabledList) {
             orderEntries.add(o);
-        }
-        else {
+        } else {
             query.order(o);
         }
         return this;
     }
 
     protected void validatePropertyName(String propertyName, String methodName) {
-        if (persistentEntity == null) return;
+        if (persistentEntity == null) {
+            return;
+        }
         if (propertyName == null) {
             throw new IllegalArgumentException("Cannot use [" + methodName +
                     "] restriction with null property name");
@@ -1053,12 +1038,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     protected void ensureQueryIsInitialized() {
-    	if(query == null) {
-    		query = queryCreator.createQuery(targetClass);
-    	}
-    	if(queryMetaClass == null) {
-    		queryMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(query.getClass());
-    	}
+        if (query == null) {
+            query = queryCreator.createQuery(targetClass);
+        }
+        if (queryMetaClass == null) {
+            queryMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(query.getClass());
+        }
     }
 
     private boolean isCriteriaConstructionMethod(String name, Object[] args) {
@@ -1069,7 +1054,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     protected void invokeClosureNode(Object args) {
         if (args instanceof Closure) {
-            Closure callable = (Closure)args;
+            Closure callable = (Closure) args;
             callable.setDelegate(this);
             callable.setResolveStrategy(Closure.DELEGATE_FIRST);
             callable.call();
@@ -1083,16 +1068,16 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
                 invokeClosureNode(callable);
             }
         } finally {
-            Query.Junction logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size()-1);
+            Query.Junction logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
             addToCriteria(logicalExpression);
         }
     }
 
     /*
-        * adds and returns the given criterion to the currently active criteria set.
-        * this might be either the root criteria or a currently open
-        * LogicalExpression.
-        */
+     * adds and returns the given criterion to the currently active criteria set.
+     * this might be either the root criteria or a currently open
+     * LogicalExpression.
+     */
     protected Query.Criterion addToCriteria(Query.Criterion c) {
         if (c instanceof Query.PropertyCriterion) {
             Query.PropertyCriterion pc = (Query.PropertyCriterion) c;
@@ -1104,8 +1089,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         }
         if (!logicalExpressionStack.isEmpty()) {
             logicalExpressionStack.get(logicalExpressionStack.size() - 1).add(c);
-        }
-        else {
+        } else {
             if (query == null) {
                 ensureQueryIsInitialized();
             }

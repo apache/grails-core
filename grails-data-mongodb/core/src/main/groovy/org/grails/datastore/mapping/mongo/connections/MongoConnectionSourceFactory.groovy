@@ -71,13 +71,13 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, prefix, fallbackSettings)
         MongoClientSettings.Builder builder = clientOptionsBuilder ?: settingsBuilder.clientOptionsBuilder
         MongoConnectionSourceSettings settings = settingsBuilder.build()
-        if(builder != null) {
+        if (builder != null) {
             settings.options = builder
         }
 
-        if(isDefaultDataSource) {
+        if (isDefaultDataSource) {
             CodecRegistry codecRegistry = CodecRegistries.fromCodecs(codecs as List<? extends Codec<?>>)
-            if(this.codecRegistry != null) {
+            if (this.codecRegistry != null) {
                 codecRegistry = CodecRegistries.fromRegistries(codecRegistry, this.codecRegistry)
             }
             settings.codecRegistry = codecRegistry
@@ -104,7 +104,7 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, "", fallbackSettings)
         MongoClientSettings.Builder builder = clientOptionsBuilder ?: settingsBuilder.clientOptionsBuilder
         MongoConnectionSourceSettings settings = settingsBuilder.build()
-        if(builder != null) {
+        if (builder != null) {
             settings.options = builder
         }
         return settings

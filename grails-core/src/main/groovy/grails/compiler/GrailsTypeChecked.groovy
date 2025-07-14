@@ -27,13 +27,13 @@ import groovy.transform.TypeChecked
  *
  */
 @AnnotationCollector
-@TypeChecked(extensions=['org.grails.compiler.ValidateableTypeCheckingExtension',
-                         'org.grails.compiler.NamedQueryTypeCheckingExtension',
-                         'org.grails.compiler.WhereQueryTypeCheckingExtension',
-                         'org.grails.compiler.HttpServletRequestTypeCheckingExtension',
-                         'org.grails.compiler.DynamicFinderTypeCheckingExtension',
-                         'org.grails.compiler.DomainMappingTypeCheckingExtension',
-                         'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension'])
+@TypeChecked(extensions = ['org.grails.compiler.ValidateableTypeCheckingExtension',
+        'org.grails.compiler.NamedQueryTypeCheckingExtension',
+        'org.grails.compiler.WhereQueryTypeCheckingExtension',
+        'org.grails.compiler.HttpServletRequestTypeCheckingExtension',
+        'org.grails.compiler.DynamicFinderTypeCheckingExtension',
+        'org.grails.compiler.DomainMappingTypeCheckingExtension',
+        'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension'])
 @interface GrailsTypeChecked {
 
 }

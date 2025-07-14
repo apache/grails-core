@@ -27,19 +27,19 @@ import org.grails.datastore.gorm.query.GormOperations
  */
 class AsyncQuery<E> implements PromiseDecoratorProvider {
 
-    @DelegateAsync GormOperations<E> gormOperations
+    @DelegateAsync
+    GormOperations<E> gormOperations
 
     /**
      * Wraps each promise in a new persistence session
      */
-    private List<PromiseDecorator> decorators = [ { Closure callable ->
+    private List<PromiseDecorator> decorators = [{ Closure callable ->
         return { args ->
             gormOperations.persistentClass.withNewSession {
                 callable.call(*args)
             }
         }
-    } as PromiseDecorator ]
-
+                                                 } as PromiseDecorator]
 
     AsyncQuery(GormOperations<E> gormOperations) {
         this.gormOperations = gormOperations

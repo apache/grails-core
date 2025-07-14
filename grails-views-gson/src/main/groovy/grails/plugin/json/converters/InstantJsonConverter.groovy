@@ -39,6 +39,6 @@ class InstantJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        ((Instant)value).toEpochMilli()
+        ((Instant) value).toEpochMilli()
     }
 }

@@ -18,23 +18,18 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
 import grails.databinding.SimpleMapDataBindingSource
-import groovy.json.JsonException
-import groovy.json.JsonParserType
-import groovy.json.JsonSlurper;
-import groovy.transform.CompileStatic
-
-import java.util.regex.Pattern
-
-import org.grails.web.json.JSONObject
-
 import grails.web.mime.MimeType
-
+import groovy.json.JsonException
+import groovy.json.JsonSlurper
+import groovy.transform.CompileStatic
 import org.grails.databinding.bindingsource.DataBindingSourceCreationException
+import org.grails.web.json.JSONObject
 import org.springframework.beans.factory.annotation.Autowired
 
+import java.util.regex.Pattern
 
 /**
  * Creates DataBindingSource objects from JSON in the request body
@@ -43,8 +38,8 @@ import org.springframework.beans.factory.annotation.Autowired
  * @author Jeff Brown
  * @author Graeme Rocher
  *
- * @see DataBindingSource
  * @see org.grails.databinding.bindingsource.DataBindingSourceCreator
+ * @see grails.databinding.DataBindingSource
  */
 @CompileStatic
 class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceCreator {
@@ -61,13 +56,11 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
 
     @Override
     DataBindingSource createDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) {
-        if(bindingSource instanceof Map) {
+        if (bindingSource instanceof Map) {
             return new SimpleMapDataBindingSource(createJsonMap(bindingSource))
-        }
-        else if(bindingSource instanceof JSONObject) {
-            return new SimpleMapDataBindingSource((JSONObject)bindingSource)
-        }
-        else {
+        } else if (bindingSource instanceof JSONObject) {
+            return new SimpleMapDataBindingSource((JSONObject) bindingSource)
+        } else {
             return super.createDataBindingSource(mimeType, bindingTargetType, bindingSource)
         }
     }
@@ -77,16 +70,16 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
 
         Object jsonElement = jsonSlurper.parse(reader)
         def dataBindingSources = jsonElement.collect { element ->
-            if(element instanceof Map) {
+            if (element instanceof Map) {
                 new SimpleMapDataBindingSource(createJsonMap(element))
-            }
-            else {
+            } else {
                 new SimpleMapDataBindingSource(Collections.emptyMap())
             }
         }
         return new CollectionDataBindingSource() {
+
             List<DataBindingSource> getDataBindingSources() {
-                (List<DataBindingSource>)dataBindingSources
+                (List<DataBindingSource>) dataBindingSources
             }
         }
     }
@@ -95,13 +88,11 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
     protected DataBindingSource createBindingSource(Reader reader) {
         final jsonElement = jsonSlurper.parse(reader)
 
-        if(jsonElement instanceof Map) {
+        if (jsonElement instanceof Map) {
             return new SimpleMapDataBindingSource(createJsonMap(jsonElement))
-        }
-        else {
+        } else {
             return new SimpleMapDataBindingSource(Collections.emptyMap())
         }
-
 
     }
 
@@ -109,10 +100,9 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
         (Map) jsonElement
     }
 
-
     @Override
     protected DataBindingSourceCreationException createBindingSourceCreationException(Exception e) {
-        if(e instanceof JsonException) {
+        if (e instanceof JsonException) {
             return new InvalidRequestBodyException(e)
         }
         return super.createBindingSourceCreationException(e)

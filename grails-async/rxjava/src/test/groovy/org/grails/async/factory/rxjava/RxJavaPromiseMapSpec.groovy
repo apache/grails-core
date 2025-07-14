@@ -82,7 +82,6 @@ class RxJavaPromiseMapSpec extends Specification{
             }
     }
 
-
     void 'Test that a PromiseMap triggers onError for an exception and ignores onComplete'() {
         
         when: 'a promise map is used with an onComplete handler'

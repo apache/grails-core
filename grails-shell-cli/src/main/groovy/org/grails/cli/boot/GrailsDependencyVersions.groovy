@@ -28,7 +28,6 @@ import groovy.xml.slurpersupport.GPathResult
 import org.grails.cli.compiler.dependencies.Dependency
 import org.grails.cli.compiler.dependencies.DependencyManagement
 
-
 /**
  * Introduces dependency management based on a published BOM file
  *
@@ -58,7 +57,7 @@ class GrailsDependencyVersions implements DependencyManagement {
     GrailsDependencyVersions(GrapeEngine grape, Map<String, String> bomCoords) {
         def results = grape.resolve(null, bomCoords)
 
-        for(URI u in results) {
+        for (URI u in results) {
             def pom = new XmlSlurper().parseText(u.toURL().text)
             addDependencyManagement(pom)
         }
@@ -70,10 +69,10 @@ class GrailsDependencyVersions implements DependencyManagement {
         // Use apache repository with SNAPSHOTS when grailsVersion is not set or it ends in SNAPSHOT
         // otherwise use only mavenCentral
         if (!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) {
-            grape.addResolver([name:"apacheRepository", root:"https://repository.apache.org/content/groups/public"] as Map<String, Object>)
+            grape.addResolver([name: "apacheRepository", root: "https://repository.apache.org/content/groups/public"] as Map<String, Object>)
         }
 
-        grape.addResolver([name:"grailsCentral", root:"https://repo.grails.org/grails/restricted"] as Map<String, Object>)
+        grape.addResolver([name: "grailsCentral", root: "https://repo.grails.org/grails/restricted"] as Map<String, Object>)
 
         grape
     }
@@ -143,7 +142,7 @@ class GrailsDependencyVersions implements DependencyManagement {
     @Override
     Dependency find(String artifactId) {
         def groupAndArtifact = artifactToGroupAndArtifact[artifactId]
-        if(groupAndArtifact)
+        if (groupAndArtifact)
             return groupAndArtifactToDependency[groupAndArtifact]
     }
 

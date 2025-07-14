@@ -45,18 +45,17 @@ class GrailsViewTemplate extends WritableScriptTemplate {
     /**
      * Handlers for proxies
      */
-    @Lazy ProxyHandler proxyHandler =  {
-        if(mappingContext != null ) {
+    @Lazy
+    ProxyHandler proxyHandler = {
+        if (mappingContext != null) {
             def proxyHandler = mappingContext.getProxyHandler()
-            if(proxyHandler != null) {
-                return (ProxyHandler)new ProxyHandlerAdapter(proxyHandler)
+            if (proxyHandler != null) {
+                return (ProxyHandler) new ProxyHandlerAdapter(proxyHandler)
+            } else {
+                return (ProxyHandler) new DefaultProxyHandler()
             }
-            else {
-                return (ProxyHandler)new DefaultProxyHandler()
-            }
-        }
-        else {
-            return (ProxyHandler)new DefaultProxyHandler()
+        } else {
+            return (ProxyHandler) new DefaultProxyHandler()
         }
     }()
 

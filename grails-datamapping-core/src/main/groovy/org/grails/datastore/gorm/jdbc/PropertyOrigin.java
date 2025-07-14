@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc;
 
 import org.springframework.core.env.PropertySource;
@@ -46,5 +45,4 @@ class PropertyOrigin {
     public String getName() {
         return this.name;
     }
-
 }

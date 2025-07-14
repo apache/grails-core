@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import org.grails.io.support.GrailsResourceUtils
 
-
 /**
  * Utility methods for interacting with resources
  *
@@ -52,7 +51,7 @@ class ResourceUtils extends GrailsResourceUtils {
                 def dirName = dir.name
                 if (!dir.hidden && !dirName.startsWith('.') && !['conf', 'i18n', 'assets', 'views', 'migrations'].contains(dirName)) {
                     File[] files = dir.listFiles()
-                    populatePackages(dir,files, packageNames, "")
+                    populatePackages(dir, files, packageNames, "")
                 }
             }
         }
@@ -62,28 +61,26 @@ class ResourceUtils extends GrailsResourceUtils {
 
     protected static populatePackages(File rootDir, File[] files, Collection<String> packageNames, String prefix) {
 
-        if(files != null) {
-            for(dir in files ) {
-                if(dir.isDirectory()) {
+        if (files != null) {
+            for (dir in files) {
+                if (dir.isDirectory()) {
                     String dirName = dir.name
                     if (!dir.hidden && !dirName.startsWith('.')) {
                         def dirFiles = dir.listFiles()
-                        if(dirFiles != null) {
+                        if (dirFiles != null) {
                             boolean hasGroovySources = dirFiles?.find() { File f -> f.name.endsWith('.groovy') }
-                            if(hasGroovySources) {
+                            if (hasGroovySources) {
                                 // if there are Groovy sources stop here, no need to add child packages
                                 packageNames.add "${prefix}${dirName}".toString()
-                            }
-                            else {
+                            } else {
                                 // otherwise recurse into a child package
                                 populatePackages(dir, dirFiles, packageNames, "${prefix}${dirName}.")
                             }
                         }
 
                     }
-                }
-                else {
-                    if(dir.name.endsWith('.groovy') && prefix == "") {
+                } else {
+                    if (dir.name.endsWith('.groovy') && prefix == "") {
                         packageNames.add("")
                     }
                 }

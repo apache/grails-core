@@ -34,17 +34,17 @@ import java.util.Map;
 /**
  * A link generator that uses a LRU cache to cache generated links.
  *
- * @since 2.0
  * @author Graeme Rocher
+ * @since 2.0
  */
 @SuppressWarnings("rawtypes")
 public class CachingLinkGenerator extends DefaultLinkGenerator {
 
-    private static final int MAX_SIZE = 5000;
     public static final String LINK_PREFIX = "link";
     public static final String RESOURCE_PREFIX = "resource";
     public static final String USED_ATTRIBUTES_SUFFIX = "-used-attributes";
     public static final String EMPTY_MAP_STRING = "[:]";
+    private static final int MAX_SIZE = 5000;
     private static final String OPENING_BRACKET = "[";
     private static final String CLOSING_BRACKET = "]";
     private static final String COMMA_SEPARATOR = ", ";
@@ -79,7 +79,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     protected boolean isCacheable(Map attrs) {
-        if(attrs.get(LinkGenerator.ATTRIBUTE_PARAMS) instanceof GrailsParameterMap) {
+        if (attrs.get(LinkGenerator.ATTRIBUTE_PARAMS) instanceof GrailsParameterMap) {
             return false;
         }
         Object urlAttr = attrs.get(ATTRIBUTE_URL);
@@ -95,7 +95,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     // Based on DGM toMapString, but with StringBuilder instead of StringBuffer
     protected void appendMapKey(StringBuilder buffer, Map<String, Object> params) {
-        if (params==null || params.isEmpty()) {
+        if (params == null || params.isEmpty()) {
             buffer.append(EMPTY_MAP_STRING);
             buffer.append(OPENING_BRACKET);
         } else {
@@ -117,7 +117,9 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
             for (Object o : map.entrySet()) {
                 Map.Entry entry = (Map.Entry) o;
                 Object value = entry.getValue();
-                if (value == null) continue;
+                if (value == null) {
+                    continue;
+                }
                 first = appendCommaIfNotFirst(buffer, first);
                 Object key = entry.getKey();
                 if (RESOURCE_PREFIX.equals(key)) {
@@ -128,12 +130,12 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
         }
         buffer.append(CLOSING_BRACKET);
     }
-    
+
     protected String getCacheKeyValueForResource(Object o) {
         StringBuilder builder = new StringBuilder(o.getClass().getName());
         builder.append("->");
         Object idValue = GrailsMetaClassUtils.invokeMethodIfExists(o, "ident", new Object[0]);
-        if(idValue != null) {
+        if (idValue != null) {
             builder.append(idValue.toString());
         } else {
             builder.append(o);
@@ -152,7 +154,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     protected void appendKeyValue(StringBuilder buffer, Map map, Object key, Object value) {
         buffer.append(key)
-              .append(KEY_VALUE_SEPARATOR);
+                .append(KEY_VALUE_SEPARATOR);
         if (value == map) {
             buffer.append(THIS_MAP);
         } else {
@@ -172,14 +174,14 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     protected String makeKey(String prefix, Map attrs) {
-        StringBuilder sb=new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append(prefix);
-        if (getConfiguredServerBaseURL()==null && isAbsolute(attrs)) {
+        if (getConfiguredServerBaseURL() == null && isAbsolute(attrs)) {
             if (attrs.get(ATTRIBUTE_BASE) != null) {
                 sb.append(attrs.get(ATTRIBUTE_BASE));
             } else {
                 GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-            if(webRequest != null) {
+                if (webRequest != null) {
                     sb.append(webRequest.getBaseUrl());
                 }
             }
@@ -190,8 +192,8 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     private Cache<String, Object> createDefaultCache() {
         return Caffeine.newBuilder()
-                                .maximumSize(MAX_SIZE)
-                                .build();
+                .maximumSize(MAX_SIZE)
+                .build();
     }
 
     public void clearCache() {

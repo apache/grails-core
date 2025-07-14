@@ -29,6 +29,8 @@ import grails.web.databinding.DataBinder
 import grails.web.mapping.UrlMappingInfo
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod
 import org.grails.plugins.web.interceptors.GrailsInterceptorHandlerInterceptorAdapter
 import org.grails.plugins.web.interceptors.InterceptorArtefactHandler
@@ -40,8 +42,6 @@ import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.core.Ordered
 import org.springframework.web.servlet.ModelAndView
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.regex.Pattern
 

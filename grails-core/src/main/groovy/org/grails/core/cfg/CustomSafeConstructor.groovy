@@ -20,12 +20,12 @@ package org.grails.core.cfg
 
 import groovy.transform.Internal
 import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.constructor.Construct
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.nodes.MappingNode
+import org.yaml.snakeyaml.nodes.Node
 import org.yaml.snakeyaml.nodes.SequenceNode
 import org.yaml.snakeyaml.nodes.Tag
-import org.yaml.snakeyaml.constructor.Construct
-import org.yaml.snakeyaml.nodes.Node
 
 /**
  * Yaml constructor to create containers with sensible

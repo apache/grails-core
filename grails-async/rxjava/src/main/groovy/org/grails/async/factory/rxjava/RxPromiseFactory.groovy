@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.rxjava
 
 import grails.async.Promise
@@ -53,10 +52,9 @@ class RxPromiseFactory extends AbstractPromiseFactory {
 
     @Override
     <T> Promise<T> createPromise(Closure<T>[] closures) {
-        if(closures.length == 1) {
-            return new RxPromise<T>(this,closures[0], Schedulers.io())
-        }
-        else {
+        if (closures.length == 1) {
+            return new RxPromise<T>(this, closures[0], Schedulers.io())
+        } else {
             def promiseList = new PromiseList()
             for (Closure closure : closures) {
                 promiseList.add(closure)
@@ -79,22 +77,21 @@ class RxPromiseFactory extends AbstractPromiseFactory {
     <T> Promise<T> onComplete(List<Promise<T>> promises, Closure<T> callable) {
         new RxPromise<T>(this, Observable.concat(
                 promises.collect() { Promise p ->
-                    if(p instanceof BoundPromise) {
-                        return Observable.just(((BoundPromise)p).value)
-                    }
-                    else {
-                        return ((RxPromise)p).subject as Observable<T>
+                    if (p instanceof BoundPromise) {
+                        return Observable.just(((BoundPromise) p).value)
+                    } else {
+                        return ((RxPromise) p).subject as Observable<T>
                     }
                 }
         ).toList())
-        .onComplete(callable)
+                .onComplete(callable)
     }
 
     @Override
     <T> Promise<T> onError(List<Promise<T>> promises, Closure<?> callable) {
         new RxPromise<T>(this, Observable.concat(
-                promises.collect() { Promise p -> ((RxPromise)p).subject as Observable<T> }
+                promises.collect() { Promise p -> ((RxPromise) p).subject as Observable<T> }
         ).toList())
-        .onError(callable)
+                .onError(callable)
     }
 }

@@ -41,7 +41,9 @@ class BodyContentImpl extends BodyContent {
 
     BodyContentImpl(JspWriter out, boolean buffer) {
         super(out);
-        if (buffer) initBuffer();
+        if (buffer) {
+            initBuffer();
+        }
     }
 
     void initBuffer() {
@@ -65,8 +67,7 @@ class BodyContentImpl extends BodyContent {
     public void clearBuffer() throws IOException {
         if (streamBuffer != null) {
             initBuffer();
-        }
-        else {
+        } else {
             throw new IOException("Can't clear");
         }
     }
@@ -194,8 +195,7 @@ class BodyContentImpl extends BodyContent {
     public void write(int c) throws IOException {
         if (streamBufferWriter != null) {
             streamBufferWriter.write(c);
-        }
-        else {
+        } else {
             getEnclosingWriter().write(c);
         }
     }
@@ -204,8 +204,7 @@ class BodyContentImpl extends BodyContent {
     public void write(char[] cbuf, int off, int len) throws IOException {
         if (streamBufferWriter != null) {
             streamBufferWriter.write(cbuf, off, len);
-        }
-        else {
+        } else {
             getEnclosingWriter().write(cbuf, off, len);
         }
     }

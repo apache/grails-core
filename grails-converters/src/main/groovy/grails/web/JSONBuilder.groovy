@@ -89,17 +89,14 @@ class JSONBuilder {
                 def n = [:]
                 if (current instanceof List) {
                     current << n
-                }
-                else {
+                } else {
                     current[methodName] = n
                 }
                 n.putAll(args[0])
-            }
-            else if (args[-1] instanceof Closure) {
+            } else if (args[-1] instanceof Closure) {
                 final Object callable = args[-1]
                 handleClosureNode(methodName, callable)
-            }
-            else if (args.size() == 1) {
+            } else if (args.size() == 1) {
                 if (methodName != NODE_ELEMENT) {
                     throw new IllegalArgumentException('Array elements must be defined with the "element" method call eg: element(value)')
                 }
@@ -116,16 +113,13 @@ class JSONBuilder {
                 }
                 if (current instanceof List) {
                     current << args[0]
-                }
-                else {
+                } else {
                     throw new IllegalArgumentException('Array elements can only be defined under "array" nodes')
                 }
-            }
-            else {
+            } else {
                 throw new IllegalArgumentException("This builder does not support invocation of [$methodName] with arg list ${args.dump()}")
             }
-        }
-        else {
+        } else {
             current[methodName] = []
         }
     }
@@ -136,8 +130,7 @@ class JSONBuilder {
 
         if (current instanceof List) {
             current << n
-        }
-        else {
+        } else {
             current[methodName] = n
         }
         current = n
@@ -148,8 +141,7 @@ class JSONBuilder {
     void setProperty(String propName, Object value) {
         if (value instanceof Closure) {
             handleClosureNode(propName, value)
-        }
-        else if (value instanceof List) {
+        } else if (value instanceof List) {
             value = value.collect {
                 if (it instanceof Closure) {
                     def callable = it
@@ -163,8 +155,7 @@ class JSONBuilder {
                 return it
             }
             current[propName] = value
-        }
-        else {
+        } else {
             current[propName] = value
         }
     }

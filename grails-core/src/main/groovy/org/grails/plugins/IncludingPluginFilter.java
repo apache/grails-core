@@ -30,7 +30,7 @@ import java.util.Set;
  *
  * @author Phil Zoio
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class IncludingPluginFilter extends BasePluginFilter {
 
     public IncludingPluginFilter(Set included) {

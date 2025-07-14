@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.query.event;
 
 import org.grails.datastore.mapping.query.Query;
@@ -25,6 +24,7 @@ import org.grails.datastore.mapping.query.Query;
  * Event fired immediately before a query is executed.
  */
 public class PreQueryEvent extends AbstractQueryEvent {
+
     public PreQueryEvent(Query query) {
         super(query);
     }

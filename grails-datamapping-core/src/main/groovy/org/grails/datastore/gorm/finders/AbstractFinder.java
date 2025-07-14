@@ -20,7 +20,6 @@ package org.grails.datastore.gorm.finders;
 
 import grails.gorm.CriteriaBuilder;
 import groovy.lang.Closure;
-
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.SessionCallback;
@@ -42,19 +41,17 @@ public abstract class AbstractFinder implements FinderMethod {
     }
 
     protected <T> T execute(final SessionCallback<T> callback) {
-        if(datastore != null) {
+        if (datastore != null) {
             return DatastoreUtils.execute(datastore, callback);
-        }
-        else {
+        } else {
             throw new IllegalStateException("Cannot execute session query in stateless mode");
         }
     }
 
     protected void execute(final VoidSessionCallback callback) {
-        if(datastore != null) {
+        if (datastore != null) {
             DatastoreUtils.execute(datastore, callback);
-        }
-        else {
+        } else {
             throw new IllegalStateException("Cannot execute session query in stateless mode");
         }
 

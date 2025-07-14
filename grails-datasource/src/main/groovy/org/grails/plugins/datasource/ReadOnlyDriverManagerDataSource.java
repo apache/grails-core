@@ -18,11 +18,11 @@
  */
 package org.grails.plugins.datasource;
 
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
-
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /**
  * Used for secondary datasources that are read-only and not pooled.

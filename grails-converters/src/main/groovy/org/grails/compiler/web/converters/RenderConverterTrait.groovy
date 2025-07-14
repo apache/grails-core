@@ -16,16 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.compiler.web.converters
 
 import grails.artefact.Enhances
 import groovy.transform.Generated
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.web.converters.Converter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.web.context.request.RequestContextHolder
-
-import jakarta.servlet.http.HttpServletResponse
 
 @Enhances(["Controller", "Interceptor"])
 trait RenderConverterTrait {
@@ -37,7 +35,7 @@ trait RenderConverterTrait {
      */
     @Generated
     void render(Converter<?> converter) {
-        GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
+        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false
         converter.render response

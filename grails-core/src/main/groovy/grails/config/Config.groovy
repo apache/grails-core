@@ -46,7 +46,7 @@ interface Config extends PropertyResolver, ConfigMap {
      * @param toMerge The map to merge
      * @return This config
      */
-    Config merge(Map<String,Object> toMerge)
+    Config merge(Map<String, Object> toMerge)
 
     /**
      * Return the property value associated with the given key, or

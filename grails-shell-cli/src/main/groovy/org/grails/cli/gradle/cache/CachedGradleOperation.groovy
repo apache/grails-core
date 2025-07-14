@@ -20,7 +20,6 @@ package org.grails.cli.gradle.cache
 
 import grails.util.BuildSettings
 import groovy.transform.CompileStatic
-import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import org.gradle.tooling.internal.consumer.ConnectorServices
 import org.gradle.tooling.internal.consumer.DefaultGradleConnector
@@ -56,9 +55,9 @@ abstract class CachedGradleOperation<T> implements Callable<T> {
     T call() throws Exception {
         def depsFile = new File(BuildSettings.TARGET_DIR, fileName)
         try {
-            if(depsFile.exists() && depsFile.lastModified() > new File(projectContext.baseDir, "build.gradle").lastModified()) {
+            if (depsFile.exists() && depsFile.lastModified() > new File(projectContext.baseDir, "build.gradle").lastModified()) {
                 T cached = readFromCached(depsFile)
-                if(cached) {
+                if (cached) {
                     return cached
                 }
 

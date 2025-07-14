@@ -27,7 +27,7 @@ import groovy.transform.CompileStatic
  * @since 2.3
  */
 @CompileStatic
-abstract class AbstractRenderContext implements RenderContext{
+abstract class AbstractRenderContext implements RenderContext {
 
     List<String> includes
     List<String> excludes

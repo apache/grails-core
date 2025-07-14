@@ -37,10 +37,10 @@ import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.EmbeddedCollection
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
+import org.springframework.http.HttpMethod
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
-import org.springframework.http.HttpMethod
 
 /**
  * @Author Colin Harrington
@@ -66,6 +66,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     String PAGINATION = "pagination"
 
     public static final JsonOutput.JsonWritable NOOP_OUTPUT = new JsonOutput.JsonWritable() {
+
         @Override
         Writer writeTo(Writer out) throws IOException {
             return out
@@ -88,6 +89,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
             return NULL_OUTPUT
         }
         JsonOutput.JsonWritable jsonWritable = new JsonOutput.JsonWritable() {
+
             @Override
             @CompileStatic
             Writer writeTo(Writer out) throws IOException {
@@ -184,7 +186,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         PersistentProperty identity = entity.identity
         String idName = identity?.name
 
-        if(idName != null) {
+        if (idName != null) {
             out.write(JsonOutput.COMMA)
             writeKeyValue(out, 'id', idGenerator.render(object, identity))
         }
@@ -212,13 +214,13 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
                     Object prop = ((GroovyObject) object).getProperty(persistentProperty.name)
                     if (persistentProperty instanceof Embedded) {
-                        renderEmbeddedEntity(prop, (Association)persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
+                        renderEmbeddedEntity(prop, (Association) persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
                     } else if (persistentProperty instanceof EmbeddedCollection && prop instanceof Iterable) {
                         out.write(JsonOutput.OPEN_BRACKET)
                         Iterator iterator = ((Iterable) prop).iterator()
                         while (iterator.hasNext()) {
                             def o = iterator.next()
-                            renderEmbeddedEntity(o, (Association)persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
+                            renderEmbeddedEntity(o, (Association) persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
                             if (iterator.hasNext()) {
                                 out.write(JsonOutput.COMMA)
                             }
@@ -316,7 +318,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         PersistentEntity persistentEntity = property.getAssociatedEntity()
         out.write(JsonOutput.OPEN_BRACE)
         boolean firstAttribute = true
-        for (PersistentProperty prop: persistentEntity.getPersistentProperties()) {
+        for (PersistentProperty prop : persistentEntity.getPersistentProperties()) {
             String qualified = "${basePath}${prop.name}".toString()
 
             if (!includeExcludeSupport.shouldInclude(includes, excludes, qualified)) {
@@ -331,7 +333,6 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
             out.write(JsonOutput.COLON)
             out.write(generator.toJson(((GroovyObject) object).getProperty(prop.name)))
 
-
             firstAttribute = false
         }
         out.write(JsonOutput.CLOSE_BRACE)
@@ -340,6 +341,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     private JsonOutput.JsonWritable renderData(Object object, Map arguments) {
         JsonGenerator generator = getGenerator()
         new JsonOutput.JsonWritable() {
+
             @Override
             Writer writeTo(Writer out) throws IOException {
                 out.write(generator.toJson("data"))
@@ -439,6 +441,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     JsonOutput.JsonWritable renderRelationshipLinks(Object object) {
         JsonGenerator generator = getGenerator()
         new JsonOutput.JsonWritable() {
+
             @Override
             Writer writeTo(Writer out) throws IOException {
                 out.write(generator.toJson("links"))
@@ -471,15 +474,15 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                     out.write(generator.toJson(view.request.uri))
 
                     if (arguments.get(PAGINATION) instanceof Map) {
-                        Map paginationArgs = (Map)arguments.get(PAGINATION)
+                        Map paginationArgs = (Map) arguments.get(PAGINATION)
                         if (!paginationArgs.containsKey(PAGINATION_TOTAL) || !paginationArgs.containsKey(PAGINATION_RESROUCE)) {
                             throw new IllegalArgumentException("JSON API pagination arguments must contain resource and total")
                         }
-                        Integer total = (Integer)paginationArgs.get(PAGINATION_TOTAL)
+                        Integer total = (Integer) paginationArgs.get(PAGINATION_TOTAL)
                         Object resource = paginationArgs.get(PAGINATION_RESROUCE)
                         Parameters params = defaultPaginateParams(paginationArgs)
                         List<Link> links = getPaginationLinks(resource, total, params)
-                        for(link in links) {
+                        for (link in links) {
                             out.write(JsonOutput.COMMA)
                             writeKeyValue(out, link.rel, link.href)
                         }
@@ -497,7 +500,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
     JsonOutput.JsonWritable renderIncluded(Object object, Map arguments) {
 
-        List<String> expandProperties = getExpandProperties((JsonView)view, arguments)
+        List<String> expandProperties = getExpandProperties((JsonView) view, arguments)
         if (!expandProperties.empty && includeAssociations(arguments)) {
 
             new JsonOutput.JsonWritable() {
@@ -536,7 +539,6 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         } else {
             return NOOP_OUTPUT
         }
-
 
     }
 
@@ -580,6 +582,6 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     JsonApiIdRenderStrategy getIdGenerator() {
-        ((JsonView)view).jsonApiIdRenderStrategy
+        ((JsonView) view).jsonApiIdRenderStrategy
     }
 }

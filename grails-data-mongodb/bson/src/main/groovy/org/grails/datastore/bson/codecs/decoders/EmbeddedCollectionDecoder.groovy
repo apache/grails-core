@@ -51,13 +51,13 @@ class EmbeddedCollectionDecoder implements PropertyDecoder<EmbeddedCollection> {
         EntityReflector associationReflector = property.getAssociatedEntity().getReflector()
 
         def owningEntity = entityAccess.entity
-        if(Collection.isAssignableFrom(property.type)) {
+        if (Collection.isAssignableFrom(property.type)) {
             reader.readStartArray()
             def bsonType = reader.readBsonType()
             def collection = MappingUtils.createConcreteCollection(property.type)
-            while(bsonType != BsonType.END_OF_DOCUMENT) {
+            while (bsonType != BsonType.END_OF_DOCUMENT) {
                 def decoded = associationCodec.decode(reader, decoderContext)
-                if(isBidirectional) {
+                if (isBidirectional) {
                     associationReflector.setProperty(
                             decoded,
                             inverseSide.name,
@@ -72,15 +72,14 @@ class EmbeddedCollectionDecoder implements PropertyDecoder<EmbeddedCollection> {
                     property.name,
                     DirtyCheckingSupport.wrap(collection, (DirtyCheckable) owningEntity, property.name)
             )
-        }
-        else if(Map.isAssignableFrom(property.type)) {
+        } else if (Map.isAssignableFrom(property.type)) {
             reader.readStartDocument()
             def bsonType = reader.readBsonType()
             def map = [:]
-            while(bsonType != BsonType.END_OF_DOCUMENT) {
+            while (bsonType != BsonType.END_OF_DOCUMENT) {
                 def key = reader.readName()
                 def decoded = associationCodec.decode(reader, decoderContext)
-                if(isBidirectional) {
+                if (isBidirectional) {
                     associationReflector.setProperty(
                             decoded,
                             inverseSide.name,
@@ -95,8 +94,7 @@ class EmbeddedCollectionDecoder implements PropertyDecoder<EmbeddedCollection> {
                     property.name,
                     new DirtyCheckingMap(map, (DirtyCheckable) owningEntity, property.name)
             )
-        }
-        else {
+        } else {
             reader.skipValue()
         }
     }

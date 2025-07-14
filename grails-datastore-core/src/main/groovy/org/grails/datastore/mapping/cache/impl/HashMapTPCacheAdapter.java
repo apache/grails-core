@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.cache.impl;
 
 import org.grails.datastore.mapping.cache.TPCacheAdapter;
@@ -31,6 +30,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Roman Stepanenko
  */
 public class HashMapTPCacheAdapter<T> implements TPCacheAdapter<T> {
+
+    private ConcurrentHashMap<Object, T> cache = new ConcurrentHashMap<Object, T>();
+
     public void cacheEntry(Serializable key, T entry) throws CacheException {
         cache.put(key, entry);
     }
@@ -38,6 +40,4 @@ public class HashMapTPCacheAdapter<T> implements TPCacheAdapter<T> {
     public T getCachedEntry(Serializable key) throws CacheException {
         return cache.get(key);
     }
-
-    private ConcurrentHashMap<Object, T> cache = new ConcurrentHashMap<Object, T>();
 }

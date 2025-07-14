@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.mapping.model.types;
 
-import java.beans.PropertyDescriptor;
-
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+
+import java.beans.PropertyDescriptor;
 
 /**
  * Models a one-to-many association
@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  */
 @SuppressWarnings("rawtypes")
 public abstract class OneToMany<T extends Property> extends ToMany<T> {
+
     public OneToMany(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor) {
         super(owner, context, descriptor);
     }
@@ -42,10 +43,9 @@ public abstract class OneToMany<T extends Property> extends ToMany<T> {
 
     @Override
     public boolean isNullable() {
-        if(isCircular() && !isBidirectional()) {
+        if (isCircular() && !isBidirectional()) {
             return true;
-        }
-        else {
+        } else {
             return super.isNullable();
         }
     }

@@ -467,8 +467,8 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
 
         // register the method invocation for next time
         mc.static."$methodName" = { Object[] varArgs ->
-            // FYI... This is relevant to http://jira.grails.org/browse/GRAILS-3463 and may
-            // become problematic if http://jira.codehaus.org/browse/GROOVY-5876 is addressed...
+            // FYI... This is relevant to GRAILS-3463 and may
+            // become problematic if GROOVY-5876 is addressed...
             final argumentsForMethod
             if(varArgs == null) {
                 argumentsForMethod = [null] as Object[]

@@ -27,17 +27,6 @@ import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
 import groovy.lang.MetaMethod;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.net.URL;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.groovy.reflection.CachedClass;
@@ -51,9 +40,7 @@ import org.grails.core.io.support.GrailsFactoriesLoader;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -62,6 +49,24 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Default implementation of the GrailsApplication interface that manages application loading,
@@ -76,7 +81,6 @@ import org.springframework.util.StringUtils;
  * @author Marc Palmer
  * @author Steven Devijver
  * @author Graeme Rocher
- *
  * @see grails.plugins.GrailsPluginManager
  * @see grails.plugins.DefaultGrailsPluginManager
  * @see grails.core.ArtefactHandler
@@ -89,9 +93,11 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
     protected static final Pattern GETCLASSESMETH_PATTERN = Pattern.compile("(get)(\\w+)(Classes)");
     protected static final Pattern ISCLASS_PATTERN = Pattern.compile("(is)(\\w+)(Class)");
     protected static final Pattern GETCLASS_PATTERN = Pattern.compile("(get)(\\w+)Class");
+    protected static final Log LOG = LogFactory.getLog(DefaultGrailsApplication.class);
+
+    private static boolean extensionMethodsInitialized = false;
 
     protected Class<?>[] allClasses = new Class[0];
-    protected static Log log = LogFactory.getLog(DefaultGrailsApplication.class);
 
     protected Set<Class<?>> loadedClasses = new LinkedHashSet<Class<?>>();
     protected ArtefactHandler[] artefactHandlers;
@@ -105,20 +111,6 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
 
     protected MappingContext proxyMappingContext = buildMappingContextProxy(this);
     protected MappingContext mappingContext;
-
-    private static MappingContext buildMappingContextProxy(final DefaultGrailsApplication application) {
-        InvocationHandler proxyHandler = new InvocationHandler() {
-            @Override
-            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                MappingContext realContext = application.mappingContext;
-                if(realContext == null) {
-                    throw new GrailsConfigurationException("The method ["+method+"] cannot be accessed before GORM has initialized");
-                }
-                return ReflectionUtils.invokeMethod(method, realContext, args);
-            }
-        };
-        return (MappingContext) Proxy.newProxyInstance(application.getClass().getClassLoader(), new Class[]{MappingContext.class}, proxyHandler);
-    }
 
     /**
      * Creates a new empty Grails application.
@@ -134,7 +126,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         this(new GroovyClassLoader());
         this.applicationClass = applicationClass;
     }
-    
+
     public DefaultGrailsApplication(ClassLoader classLoader) {
         super();
         this.classLoader = classLoader;
@@ -145,7 +137,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
      *
      * @param classes The classes
      */
-    public DefaultGrailsApplication(final Class<?>...classes) {
+    public DefaultGrailsApplication(final Class<?>... classes) {
         this(classes, new GroovyClassLoader(Thread.currentThread().getContextClassLoader()));
     }
 
@@ -204,6 +196,20 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         }
     }
 
+    private static MappingContext buildMappingContextProxy(final DefaultGrailsApplication application) {
+        InvocationHandler proxyHandler = new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                MappingContext realContext = application.mappingContext;
+                if (realContext == null) {
+                    throw new GrailsConfigurationException("The method [" + method + "] cannot be accessed before GORM has initialized");
+                }
+                return ReflectionUtils.invokeMethod(method, realContext, args);
+            }
+        };
+        return (MappingContext) Proxy.newProxyInstance(application.getClass().getClassLoader(), new Class[]{MappingContext.class}, proxyHandler);
+    }
+
     /**
      * @return The application class
      */
@@ -216,7 +222,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
      *
      * @see grails.core.ArtefactHandler
      */
-    @SuppressWarnings( "deprecation" )
+    @SuppressWarnings("deprecation")
     protected void initArtefactHandlers() {
 
         List<ArtefactHandler> additionalArtefactHandlers = GrailsFactoriesLoader.loadFactories(ArtefactHandler.class, getClassLoader());
@@ -231,7 +237,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
     private void updateArtefactHandlers() {
         // Cache the list as an array
         artefactHandlers = artefactHandlersByName.values().toArray(
-            new ArtefactHandler[artefactHandlersByName.size()]);
+                new ArtefactHandler[artefactHandlersByName.size()]);
     }
 
     /**
@@ -264,11 +270,11 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         allClasses = classes;
 
         // first load the domain classes
-        log.debug("Going to inspect artefact classes.");
+        LOG.debug("Going to inspect artefact classes.");
         MetaClassRegistry metaClassRegistry = GroovySystem.getMetaClassRegistry();
 
         for (final Class<?> theClass : classes) {
-            log.debug("Inspecting [" + theClass.getName() + "]");
+            LOG.debug("Inspecting [" + theClass.getName() + "]");
             // start fresh
             metaClassRegistry.removeMetaClass(theClass);
             if (allArtefactClasses.contains(theClass)) {
@@ -278,7 +284,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
             // check what kind of artefact it is and add to corrent data structure
             for (ArtefactHandler artefactHandler : artefactHandlers) {
                 if (artefactHandler.isArtefact(theClass)) {
-                    log.debug("Adding artefact " + theClass + " of kind " + artefactHandler.getType());
+                    LOG.debug("Adding artefact " + theClass + " of kind " + artefactHandler.getType());
                     GrailsClass gclass = addArtefact(artefactHandler.getType(), theClass);
                     // Also maintain set of all artefacts (!= all classes loaded)
                     allArtefactClasses.add(theClass);
@@ -306,7 +312,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
      */
     protected void refreshArtefactGrailsClassCaches() {
         for (Object o : artefactInfo.values()) {
-            ((DefaultArtefactInfo)o).updateComplete();
+            ((DefaultArtefactInfo) o).updateComplete();
         }
     }
 
@@ -317,17 +323,15 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
 
     public Config getConfig() {
         if (config == null) {
-            if(parentContext != null) {
+            if (parentContext != null) {
                 org.springframework.core.env.Environment environment = parentContext.getEnvironment();
-                if(environment instanceof ConfigurableEnvironment) {
+                if (environment instanceof ConfigurableEnvironment) {
                     MutablePropertySources propertySources = ((ConfigurableEnvironment) environment).getPropertySources();
                     this.config = new PropertySourcesConfig(propertySources);
-                }
-                else {
+                } else {
                     this.config = new PropertySourcesConfig();
                 }
-            }
-            else {
+            } else {
                 this.config = new PropertySourcesConfig();
             }
 
@@ -381,7 +385,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
      */
     public void refresh() {
         if (classLoader instanceof GroovyClassLoader) {
-            configureLoadedClasses(((GroovyClassLoader)classLoader).getLoadedClasses());
+            configureLoadedClasses(((GroovyClassLoader) classLoader).getLoadedClasses());
         }
     }
 
@@ -392,8 +396,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
 
         if (GrailsUtil.isDevelopmentEnv()) {
             initialise();
-        }
-        else {
+        } else {
             throw new IllegalStateException("Cannot rebuild GrailsApplication when not in development mode!");
         }
     }
@@ -545,8 +548,6 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         updateArtefactHandlers();
     }
 
-
-
     public boolean hasArtefactHandler(String type) {
         return artefactHandlersByName.containsKey(type);
     }
@@ -642,7 +643,9 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         match.find();
         if (match.matches()) {
             if (argsv.length > 0) {
-                if (argsv[0] instanceof CharSequence) argsv[0] = argsv[0].toString();
+                if (argsv[0] instanceof CharSequence) {
+                    argsv[0] = argsv[0].toString();
+                }
                 if ((argsv.length != 1) || !(argsv[0] instanceof String)) {
                     throw new IllegalArgumentException(
                             "Dynamic method get<Artefact>Class(artefactName) requires a single String parameter");
@@ -707,8 +710,8 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
 
     public void initialise() {
         // get all the classes that were loaded
-        if (log.isDebugEnabled()) {
-            log.debug("loaded classes: [" + loadedClasses + "]");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("loaded classes: [" + loadedClasses + "]");
         }
         Class<?>[] classes = populateAllClasses();
         configureLoadedClasses(classes);
@@ -716,9 +719,10 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         initialised = true;
     }
 
-    private static boolean extensionMethodsInitialized = false;
     protected static void initialiseGroovyExtensionModules() {
-        if(extensionMethodsInitialized) return;
+        if (extensionMethodsInitialized) {
+            return;
+        }
 
         extensionMethodsInitialized = true;
         Map<CachedClass, List<MetaMethod>> map = new HashMap<CachedClass, List<MetaMethod>>();
@@ -738,23 +742,21 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
                 try {
                     inStream = url.openStream();
                     properties.load(inStream);
-                    ((MetaClassRegistryImpl)GroovySystem.getMetaClassRegistry()).registerExtensionModuleFromProperties(properties, classLoader, map);
-                }
-                catch (IOException e) {
+                    ((MetaClassRegistryImpl) GroovySystem.getMetaClassRegistry()).registerExtensionModuleFromProperties(properties, classLoader, map);
+                } catch (IOException e) {
                     throw new GroovyRuntimeException("Unable to load module META-INF descriptor", e);
-                }
-                finally {
-                    if(inStream != null) {
+                } finally {
+                    if (inStream != null) {
                         inStream.close();
                     }
                 }
             }
+        } catch (IOException ignored) {
         }
-        catch (IOException ignored) {}
 
         for (Map.Entry<CachedClass, List<MetaMethod>> moduleMethods : map.entrySet()) {
             CachedClass cls = moduleMethods.getKey();
-            cls.addNewMopMethods( moduleMethods.getValue() );
+            cls.addNewMopMethods(moduleMethods.getValue());
         }
     }
 
@@ -810,7 +812,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         if (handler != null && handler.isArtefact(artefactClass)) {
             GrailsClass artefactGrailsClass;
             if (handler instanceof DomainClassArtefactHandler) {
-                artefactGrailsClass = ((DomainClassArtefactHandler)handler).newArtefactClass(artefactClass, proxyMappingContext);
+                artefactGrailsClass = ((DomainClassArtefactHandler) handler).newArtefactClass(artefactClass, proxyMappingContext);
             } else {
                 artefactGrailsClass = handler.newArtefactClass(artefactClass);
             }
@@ -820,8 +822,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
             DefaultArtefactInfo info = getArtefactInfo(artefactType, true);
             if (overrideable) {
                 info.addOverridableGrailsClass(artefactGrailsClass);
-            }
-            else {
+            } else {
                 info.addGrailsClass(artefactGrailsClass);
             }
             info.updateComplete();
@@ -831,7 +832,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
             if (isInitialised()) {
                 initializeArtefacts(artefactType);
                 ApplicationContext context = getMainContext();
-                if(context instanceof ConfigurableApplicationContext && contextInitialized && ((ConfigurableApplicationContext) context).isActive()) {
+                if (context instanceof ConfigurableApplicationContext && contextInitialized && ((ConfigurableApplicationContext) context).isActive()) {
 
                     context.publishEvent(new ArtefactAdditionEvent(artefactGrailsClass));
                 }
@@ -840,15 +841,13 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
             return artefactGrailsClass;
         }
 
-
-
         throw new GrailsConfigurationException("Cannot add " + artefactType + " class [" +
                 artefactClass + "]. It is not a " + artefactType + "!");
     }
 
     @Override
     public MappingContext getMappingContext() {
-        if(mappingContext != null) {
+        if (mappingContext != null) {
             return mappingContext;
         }
         return proxyMappingContext;

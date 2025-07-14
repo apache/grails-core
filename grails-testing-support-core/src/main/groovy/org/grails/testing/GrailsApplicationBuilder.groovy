@@ -89,13 +89,15 @@ class GrailsApplicationBuilder {
                 def segads = Class.forName('org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy')
                 Holders.addApplicationDiscoveryStrategy(segads.newInstance(servletContext))
             }
-            catch (Throwable ignored) {}
+            catch (Throwable ignored) {
+            }
 
             try {
                 def gcu = Class.forName('org.grails.web.servlet.context.GrailsConfigUtils')
                 gcu.configureServletContextAttributes(servletContext, grailsApplication, mainContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager), mainContext)
             }
-            catch (Throwable ignored) {}
+            catch (Throwable ignored) {
+            }
         }
 
         grailsApplication = mainContext.getBean('grailsApplication') as GrailsApplication
@@ -131,7 +133,7 @@ class GrailsApplicationBuilder {
         def classLoader = this.class.classLoader
         ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
             it.startsWith("org.grails")
-            && !it.contains("UrlMappingsAutoConfiguration") // this currently is causing an issue with tests
+                    && !it.contains("UrlMappingsAutoConfiguration") // this currently is causing an issue with tests
         }.each {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
@@ -252,7 +254,7 @@ class GrailsApplicationBuilder {
         @Override
         void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
             super.postProcessBeanDefinitionRegistry(registry)
-            PropertySourcesPlaceholderConfigurer propertySourcePlaceholderConfigurer  = (PropertySourcesPlaceholderConfigurer) grailsApplication.mainContext.getBean('grailsPlaceholderConfigurer')
+            PropertySourcesPlaceholderConfigurer propertySourcePlaceholderConfigurer = (PropertySourcesPlaceholderConfigurer) grailsApplication.mainContext.getBean('grailsPlaceholderConfigurer')
             propertySourcePlaceholderConfigurer.order = Ordered.HIGHEST_PRECEDENCE
             propertySourcePlaceholderConfigurer.setLocalOverride(localOverride)
         }

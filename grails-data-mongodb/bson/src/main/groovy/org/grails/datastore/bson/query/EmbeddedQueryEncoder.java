@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.bson.query;
 
 import org.grails.datastore.mapping.model.types.Embedded;

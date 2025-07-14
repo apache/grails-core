@@ -20,7 +20,6 @@ package org.grails.cli.profile.commands.templates
 
 import groovy.transform.InheritConstructors
 
-
 /**
  * Exception thrown when an error in template rendering occurs
  *

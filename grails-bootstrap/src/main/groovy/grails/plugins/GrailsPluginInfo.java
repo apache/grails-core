@@ -18,12 +18,13 @@
  */
 package grails.plugins;
 
-import java.util.Map;
-
 import org.grails.io.support.Resource;
+
+import java.util.Map;
 
 /**
  * Base interface that just contains information about a particular plugin.
+ *
  * @author Graeme Rocher
  * @since 1.3
  */
@@ -61,6 +62,7 @@ public interface GrailsPluginInfo {
 
     /**
      * Returns the location of the Resource that represents the plugin descriptor (the *GrailsPlugin.groovy file)
+     *
      * @return The resource
      */
     Resource getDescriptor();
@@ -72,6 +74,7 @@ public interface GrailsPluginInfo {
 
     /**
      * Gets the properties of the plugin as a map
+     *
      * @return A map of the properties
      */
     @SuppressWarnings("rawtypes")

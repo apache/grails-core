@@ -21,11 +21,6 @@ package org.grails.plugins.datasource
 
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
-
-import java.sql.Connection
-
-import javax.sql.DataSource
-
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.grails.core.lifecycle.ShutdownOperations
@@ -34,9 +29,13 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.SmartLifecycle
 
+import javax.sql.DataSource
+import java.sql.Connection
+
 @CompileStatic
 class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContextAware {
-    private static final Log log=LogFactory.getLog(this)
+
+    private static final Log log = LogFactory.getLog(this)
     private boolean running
     private ApplicationContext applicationContext
     private List<String> embeddedDatabaseBeanNames
@@ -45,7 +44,7 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
     public void start() {
         embeddedDatabaseBeanNames = []
         applicationContext.getBeansOfType(DataSource).each { String beanName, DataSource dataSource ->
-            if(isEmbeddedH2orHsqldb(dataSource)) {
+            if (isEmbeddedH2orHsqldb(dataSource)) {
                 embeddedDatabaseBeanNames.add(beanName)
             }
         }
@@ -81,19 +80,19 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
         stop()
         callback.run()
     }
-    
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext
     }
-    
+
     protected boolean isEmbeddedH2orHsqldb(DataSource dataSource) {
-        MetaProperty urlProperty = dataSource.hasProperty("url") 
+        MetaProperty urlProperty = dataSource.hasProperty("url")
         if (urlProperty) {
             String url = urlProperty.getProperty(dataSource)
-            if(url && (url.startsWith('jdbc:h2:') || url.startsWith('jdbc:hsqldb:'))) {
+            if (url && (url.startsWith('jdbc:h2:') || url.startsWith('jdbc:hsqldb:'))) {
                 // don't shutdown remote servers
-                if(!(url.startsWith('jdbc:hsqldb:h') || url.startsWith('jdbc:h2:tcp:') || url.startsWith('jdbc:h2:ssl:'))) {
+                if (!(url.startsWith('jdbc:hsqldb:h') || url.startsWith('jdbc:h2:tcp:') || url.startsWith('jdbc:h2:ssl:'))) {
                     return true
                 }
             }
@@ -118,7 +117,10 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
             } catch (e) {
                 // already closed, ignore
             } finally {
-                try { connection?.close() } catch (ignored) {}
+                try {
+                    connection?.close()
+                } catch (ignored) {
+                }
             }
         } as Runnable
     }

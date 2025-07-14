@@ -19,11 +19,14 @@
 package org.grails.web.xml;
 
 import groovy.xml.streamingmarkupsupport.StreamingMarkupWriter;
-import static org.grails.web.xml.XMLStreamWriter.Mode.*;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Stack;
+
+import static org.grails.web.xml.XMLStreamWriter.Mode.CONTENT;
+import static org.grails.web.xml.XMLStreamWriter.Mode.INIT;
+import static org.grails.web.xml.XMLStreamWriter.Mode.TAG;
 
 /**
  * A simple XML Stream Writer that leverages the StreamingMarkupWriter of Groovy
@@ -58,8 +61,9 @@ public class XMLStreamWriter {
     }
 
     public XMLStreamWriter startNode(String tag) throws IOException {
-        if (mode == TAG)
+        if (mode == TAG) {
             endStartTag();
+        }
 
         startTag();
         writer.unescaped().write(tag);

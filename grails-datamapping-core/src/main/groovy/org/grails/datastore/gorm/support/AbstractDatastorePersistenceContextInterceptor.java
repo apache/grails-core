@@ -19,7 +19,6 @@
 package org.grails.datastore.gorm.support;
 
 import jakarta.persistence.FlushModeType;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.grails.datastore.mapping.core.Datastore;
@@ -31,10 +30,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * Abstract implementation of the persistence context interceptor
  *
- * @since 1.0
  * @author Graeme Rocher
+ * @since 1.0
  */
-public abstract class AbstractDatastorePersistenceContextInterceptor  {
+public abstract class AbstractDatastorePersistenceContextInterceptor {
 
     private static final Log LOG = LogFactory.getLog(AbstractDatastorePersistenceContextInterceptor.class);
     protected Datastore datastore;
@@ -66,13 +65,12 @@ public abstract class AbstractDatastorePersistenceContextInterceptor  {
         // single session mode
         final SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
         if (sessionHolder != null && this == sessionHolder.getCreator()) {
-            SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.unbindResource(datastore);
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.unbindResource(datastore);
             LOG.debug("Closing single Datastore session in DatastorePersistenceContextInterceptor");
             try {
                 Session session = holder.getSession();
                 DatastoreUtils.closeSession(session);
-            }
-            catch (RuntimeException ex) {
+            } catch (RuntimeException ex) {
                 LOG.error("Unexpected exception on closing Datastore Session", ex);
             }
         }
@@ -88,7 +86,7 @@ public abstract class AbstractDatastorePersistenceContextInterceptor  {
 
     public void flush() {
         Session session = getSession();
-        if(session.hasTransaction()) {
+        if (session.hasTransaction()) {
             session.flush();
         }
     }
@@ -108,8 +106,7 @@ public abstract class AbstractDatastorePersistenceContextInterceptor  {
     public boolean isOpen() {
         try {
             return DatastoreUtils.doGetSession(datastore, false).isConnected();
-        }
-        catch (IllegalStateException e) {
+        } catch (IllegalStateException e) {
             return false;
         }
     }

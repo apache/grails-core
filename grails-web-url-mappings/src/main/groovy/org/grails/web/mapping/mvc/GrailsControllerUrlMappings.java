@@ -32,9 +32,11 @@ import org.springframework.http.HttpMethod;
  * @since 3.0
  */
 public class GrailsControllerUrlMappings extends AbstractGrailsControllerUrlMappings {
+
     public GrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate, UrlConverter urlConverter) {
         super(grailsApplication, urlMappingsHolderDelegate, urlConverter);
     }
+
     public GrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate) {
         super(grailsApplication, urlMappingsHolderDelegate);
     }
@@ -46,26 +48,26 @@ public class GrailsControllerUrlMappings extends AbstractGrailsControllerUrlMapp
 
     @Override
     public UrlMappingInfo[] matchAll(String uri) {
-        return collectControllerMappings( getUrlMappingsHolderDelegate().matchAll(uri) );
+        return collectControllerMappings(getUrlMappingsHolderDelegate().matchAll(uri));
     }
 
     @Override
     public UrlMappingInfo[] matchAll(String uri, String httpMethod) {
-        return collectControllerMappings( getUrlMappingsHolderDelegate().matchAll(uri, httpMethod) );
+        return collectControllerMappings(getUrlMappingsHolderDelegate().matchAll(uri, httpMethod));
     }
 
     @Override
     public UrlMappingInfo[] matchAll(String uri, String httpMethod, String version) {
-        return collectControllerMappings( getUrlMappingsHolderDelegate().matchAll(uri, httpMethod, version) );
+        return collectControllerMappings(getUrlMappingsHolderDelegate().matchAll(uri, httpMethod, version));
     }
 
     @Override
     public UrlMappingInfo[] matchAll(String uri, HttpMethod httpMethod) {
-        return collectControllerMappings(  getUrlMappingsHolderDelegate().matchAll(uri, httpMethod) );
+        return collectControllerMappings(getUrlMappingsHolderDelegate().matchAll(uri, httpMethod));
     }
 
     @Override
     public UrlMappingInfo[] matchAll(String uri, HttpMethod httpMethod, String version) {
-        return collectControllerMappings(  getUrlMappingsHolderDelegate().matchAll(uri, httpMethod, version) );
+        return collectControllerMappings(getUrlMappingsHolderDelegate().matchAll(uri, httpMethod, version));
     }
 }

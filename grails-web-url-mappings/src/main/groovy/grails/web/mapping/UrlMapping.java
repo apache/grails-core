@@ -18,10 +18,11 @@
  */
 package grails.web.mapping;
 
-
 import grails.gorm.validation.Constrained;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>Defines a URL mapping. A URL mapping is a mapping between a URI such as /book/list and
@@ -92,7 +93,6 @@ public interface UrlMapping extends Comparable, UrlCreator {
      * The namespace of the URL mapping
      */
     String NAMESPACE = "namespace";
-
 
     String VIEW = "view";
 
@@ -183,12 +183,14 @@ public interface UrlMapping extends Comparable, UrlCreator {
 
     /**
      * Returns the name of the view to map to
+     *
      * @return The view name
      */
     Object getViewName();
 
     /**
      * The HTTP method this URL mapping applies to. Will be null for all HTTP methods
+     *
      * @return The HTTP method
      */
     String getHttpMethod();
@@ -200,9 +202,10 @@ public interface UrlMapping extends Comparable, UrlCreator {
 
     /**
      * Sets any parameter values that should be populated into the request
+     *
      * @param parameterValues The parameter values to set
      */
-    void setParameterValues(Map<String,Object> parameterValues);
+    void setParameterValues(Map<String, Object> parameterValues);
 
     /**
      * Sets whether this UrlMapping should parse the request
@@ -220,12 +223,14 @@ public interface UrlMapping extends Comparable, UrlCreator {
 
     /**
      * Sets the name of the URL mapping
+     *
      * @param name The name of the URL mapping
      */
     void setMappingName(String name);
 
     /**
      * Whether the mapping has a runtime variable with the given name such as "/$foo"
+     *
      * @param name The name of the variable
      * @return true if the mapping has the variable
      */

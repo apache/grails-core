@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Book implements Serializable {
+
     Long id
     Long version
     String author

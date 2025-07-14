@@ -16,15 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.util;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.servlet.support.RequestDataValueProcessor;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
-
-import org.springframework.web.servlet.support.RequestDataValueProcessor;
 
 public class MockRequestDataValueProcessor implements RequestDataValueProcessor {
 

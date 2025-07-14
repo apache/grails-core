@@ -31,7 +31,7 @@ import org.codehaus.groovy.transform.TransformWithPriority;
 /**
  * Transforms regular Groovy-style finders into detached criteria
  */
-@GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
+@GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class DetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
 
     /**

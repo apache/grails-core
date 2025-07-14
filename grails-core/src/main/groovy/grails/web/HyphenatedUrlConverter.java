@@ -18,7 +18,6 @@
  */
 package grails.web;
 
-
 import org.springframework.util.StringUtils;
 
 /**

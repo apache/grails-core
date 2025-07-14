@@ -18,18 +18,21 @@
  */
 package org.grails.web.mapping.reporting
 
-import grails.gorm.validation.ConstrainedProperty
-import grails.web.mapping.reporting.UrlMappingsRenderer
-
-import static org.fusesource.jansi.Ansi.ansi
-import static org.fusesource.jansi.Ansi.Color.*
 import grails.build.logging.GrailsConsole
+import grails.gorm.validation.ConstrainedProperty
+import grails.web.mapping.UrlMapping
+import grails.web.mapping.reporting.UrlMappingsRenderer
 import groovy.transform.CompileStatic
-
+import org.fusesource.jansi.Ansi
 import org.grails.web.mapping.ResponseCodeMappingData
 import org.grails.web.mapping.ResponseCodeUrlMapping
-import grails.web.mapping.UrlMapping
-import org.fusesource.jansi.Ansi
+
+import static org.fusesource.jansi.Ansi.Color.CYAN
+import static org.fusesource.jansi.Ansi.Color.DEFAULT
+import static org.fusesource.jansi.Ansi.Color.GREEN
+import static org.fusesource.jansi.Ansi.Color.RED
+import static org.fusesource.jansi.Ansi.Color.YELLOW
+import static org.fusesource.jansi.Ansi.ansi
 
 /**
  * Renders URL mappings to the console
@@ -39,6 +42,7 @@ import org.fusesource.jansi.Ansi
  */
 @CompileStatic
 class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
+
     public static final String DEFAULT_ACTION = '(default action)'
     PrintStream targetStream = System.out
     boolean isAnsiEnabled = GrailsConsole.getInstance().isAnsiEnabled()
@@ -67,8 +71,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
         for (controller in controllerNames) {
             if (controller == null) {
                 targetStream.println(header("Dynamic Mappings"))
-            }
-            else {
+            } else {
                 targetStream.println(header("Controller", controller.toString()))
             }
             final controllerUrlMappings = mappingsByController.get(controller)
@@ -78,8 +81,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
                 String actionName = urlMapping.actionName?.toString() ?: DEFAULT_ACTION
                 if (actionName && !urlMapping.viewName) {
                     targetStream.println("${yellowBar()}${urlMapping.httpMethod.center(8)}${yellowBar()}${urlPattern}${yellowBar()}${bold('Action: ')}${actionName.padRight(longestAction)}${endBar()}")
-                }
-                else if (urlMapping.viewName) {
+                } else if (urlMapping.viewName) {
                     targetStream.println("${yellowBar()}${urlMapping.httpMethod.center(8)}${yellowBar()}${urlPattern}${yellowBar()}${bold('View:   ')}${urlMapping.viewName.toString().padRight(longestAction)}${endBar()}")
                 }
             }
@@ -96,7 +98,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
 
     protected String establishUrlPattern(UrlMapping urlMapping, boolean withAnsi = isAnsiEnabled, int padding = -1) {
         if (urlMapping instanceof ResponseCodeUrlMapping) {
-            def errorCode = "ERROR: "+ ((ResponseCodeMappingData)urlMapping.urlData).responseCode
+            def errorCode = "ERROR: " + ((ResponseCodeMappingData) urlMapping.urlData).responseCode
             if (withAnsi) {
                 return padAnsi(error(errorCode), errorCode, padding)
             }
@@ -110,32 +112,30 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
             boolean hasTokens = token.contains(UrlMapping.CAPTURED_WILDCARD) || token.contains(UrlMapping.CAPTURED_DOUBLE_WILDCARD)
             if (hasTokens) {
                 String finalToken = token
-                while(hasTokens) {
+                while (hasTokens) {
                     if (finalToken.contains(UrlMapping.CAPTURED_WILDCARD)) {
-                        ConstrainedProperty constraint = (ConstrainedProperty)constraints[constraintIndex++]
+                        ConstrainedProperty constraint = (ConstrainedProperty) constraints[constraintIndex++]
                         def prop = '\\${' + constraint.propertyName + '}'
                         finalToken = finalToken.replaceFirst(/\(\*\)/, withAnsi ? variable(prop) : prop)
-                    }
-                    else if (finalToken.contains(UrlMapping.CAPTURED_DOUBLE_WILDCARD)) {
-                        ConstrainedProperty constraint = (ConstrainedProperty)constraints[constraintIndex++]
+                    } else if (finalToken.contains(UrlMapping.CAPTURED_DOUBLE_WILDCARD)) {
+                        ConstrainedProperty constraint = (ConstrainedProperty) constraints[constraintIndex++]
                         def prop = '\\\${' + constraint.propertyName + '}**'
-                        finalToken =  finalToken.replaceFirst(/\(\*\*\)/, prop)
+                        finalToken = finalToken.replaceFirst(/\(\*\*\)/, prop)
                     }
                     hasTokens = finalToken.contains(UrlMapping.CAPTURED_WILDCARD) || finalToken.contains(UrlMapping.CAPTURED_DOUBLE_WILDCARD)
                 }
                 urlPattern << finalToken
-            }
-            else {
+            } else {
                 urlPattern << token
             }
 
-            if (i < (tokens.length-1)) {
+            if (i < (tokens.length - 1)) {
                 urlPattern << UrlMapping.SLASH
             }
         }
         if (urlMapping.urlData.hasOptionalExtension()) {
             final allConstraints = urlMapping.constraints
-            ConstrainedProperty lastConstraint = (ConstrainedProperty)allConstraints[-1]
+            ConstrainedProperty lastConstraint = (ConstrainedProperty) allConstraints[-1]
             urlPattern << "(.\${${lastConstraint.propertyName})?"
         }
         if (padding) {
@@ -176,8 +176,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
     String header(String text) {
         if (isAnsiEnabled) {
             ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(GREEN).a(text).a(Ansi.Attribute.INTENSITY_BOLD_OFF).fg(DEFAULT)
-        }
-        else {
+        } else {
             return text
         }
     }
@@ -185,8 +184,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
     String header(String text, String description) {
         if (isAnsiEnabled) {
             ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(GREEN).a("$text: ".toString()).fg(DEFAULT).a(description).a(Ansi.Attribute.INTENSITY_BOLD_OFF)
-        }
-        else {
+        } else {
             return "$text: $description"
         }
     }

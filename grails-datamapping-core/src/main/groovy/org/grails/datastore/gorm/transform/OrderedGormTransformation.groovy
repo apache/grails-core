@@ -61,35 +61,35 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
 
         AnnotatedNode annotatedNode = (AnnotatedNode) astNodes[1];
         Iterable<TransformationInvocation> astTransformations = collectAndOrderGormTransformations(annotatedNode)
-        for(transform in astTransformations) {
+        for (transform in astTransformations) {
             transform.invoke(source, annotatedNode)
         }
     }
 
     Iterable<TransformationInvocation> collectAndOrderGormTransformations(AnnotatedNode annotatedNode) {
         List<AnnotationNode> annotations = new ArrayList<>(annotatedNode.getAnnotations())
-        if(annotatedNode instanceof MethodNode) {
-            MethodNode mn = (MethodNode)annotatedNode
-            for(classAnn in mn.getDeclaringClass().getAnnotations()) {
-                if(!annotations.any() { AnnotationNode ann ->
+        if (annotatedNode instanceof MethodNode) {
+            MethodNode mn = (MethodNode) annotatedNode
+            for (classAnn in mn.getDeclaringClass().getAnnotations()) {
+                if (!annotations.any() { AnnotationNode ann ->
                     ann.classNode.name == classAnn.classNode.name ||
-                        findTransformName(ann) == findTransformName(classAnn)
+                            findTransformName(ann) == findTransformName(classAnn)
                 }) {
                     annotations.add(classAnn)
                 }
             }
         }
         List<TransformationInvocation> transforms = []
-        for(ann in annotations) {
+        for (ann in annotations) {
             String transformName = findTransformName(ann)
-            if(transformName) {
+            if (transformName) {
                 try {
                     def newTransform = ClassUtils.forName(transformName).newInstance()
-                    if(newTransform instanceof ASTTransformation) {
-                        if(newTransform instanceof CompilationUnitAware) {
-                            ((CompilationUnitAware) newTransform).setCompilationUnit( compilationUnit )
+                    if (newTransform instanceof ASTTransformation) {
+                        if (newTransform instanceof CompilationUnitAware) {
+                            ((CompilationUnitAware) newTransform).setCompilationUnit(compilationUnit)
                         }
-                        transforms.add( new TransformationInvocation(ann, newTransform) )
+                        transforms.add(new TransformationInvocation(ann, newTransform))
                     }
                 } catch (Throwable e) {
                     addError("Could not load GORM transform for name [$transformName]: $e.message", annotatedNode)
@@ -113,6 +113,7 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
     }
 
     private static class TransformationInvocation {
+
         private final AnnotationNode annotation
         private final ASTTransformation transform
 
@@ -122,7 +123,7 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
         }
 
         void invoke(SourceUnit sourceUnit, AnnotatedNode annotatedNode) {
-            transform.visit( [annotation, annotatedNode] as ASTNode[], sourceUnit)
+            transform.visit([annotation, annotatedNode] as ASTNode[], sourceUnit)
         }
     }
 }

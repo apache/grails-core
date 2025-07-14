@@ -18,15 +18,14 @@
  */
 package org.grails.cli.command.options;
 
-import java.util.List;
-
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
-
 import org.grails.cli.compiler.GroovyCompilerConfiguration;
 import org.grails.cli.compiler.GroovyCompilerScope;
 import org.grails.cli.compiler.RepositoryConfigurationFactory;
 import org.grails.cli.compiler.grape.RepositoryConfiguration;
+
+import java.util.List;
 
 /**
  * Simple adapter class to present an {@link OptionSet} as a
@@ -37,64 +36,64 @@ import org.grails.cli.compiler.grape.RepositoryConfiguration;
  */
 public class OptionSetGroovyCompilerConfiguration implements GroovyCompilerConfiguration {
 
-	private final OptionSet options;
+    private final OptionSet options;
 
-	private final CompilerOptionHandler optionHandler;
+    private final CompilerOptionHandler optionHandler;
 
-	private final List<RepositoryConfiguration> repositoryConfiguration;
+    private final List<RepositoryConfiguration> repositoryConfiguration;
 
-	protected OptionSetGroovyCompilerConfiguration(OptionSet optionSet, CompilerOptionHandler compilerOptionHandler) {
-		this(optionSet, compilerOptionHandler, RepositoryConfigurationFactory.createDefaultRepositoryConfiguration());
-	}
+    protected OptionSetGroovyCompilerConfiguration(OptionSet optionSet, CompilerOptionHandler compilerOptionHandler) {
+        this(optionSet, compilerOptionHandler, RepositoryConfigurationFactory.createDefaultRepositoryConfiguration());
+    }
 
-	public OptionSetGroovyCompilerConfiguration(OptionSet optionSet, CompilerOptionHandler compilerOptionHandler,
-			List<RepositoryConfiguration> repositoryConfiguration) {
-		this.options = optionSet;
-		this.optionHandler = compilerOptionHandler;
-		this.repositoryConfiguration = repositoryConfiguration;
-	}
+    public OptionSetGroovyCompilerConfiguration(OptionSet optionSet, CompilerOptionHandler compilerOptionHandler,
+                                                List<RepositoryConfiguration> repositoryConfiguration) {
+        this.options = optionSet;
+        this.optionHandler = compilerOptionHandler;
+        this.repositoryConfiguration = repositoryConfiguration;
+    }
 
-	protected OptionSet getOptions() {
-		return this.options;
-	}
+    protected OptionSet getOptions() {
+        return this.options;
+    }
 
-	@Override
-	public GroovyCompilerScope getScope() {
-		return GroovyCompilerScope.DEFAULT;
-	}
+    @Override
+    public GroovyCompilerScope getScope() {
+        return GroovyCompilerScope.DEFAULT;
+    }
 
-	@Override
-	public boolean isGuessImports() {
-		return !this.options.has(this.optionHandler.getNoGuessImportsOption());
-	}
+    @Override
+    public boolean isGuessImports() {
+        return !this.options.has(this.optionHandler.getNoGuessImportsOption());
+    }
 
-	@Override
-	public boolean isGuessDependencies() {
-		return !this.options.has(this.optionHandler.getNoGuessDependenciesOption());
-	}
+    @Override
+    public boolean isGuessDependencies() {
+        return !this.options.has(this.optionHandler.getNoGuessDependenciesOption());
+    }
 
-	@Override
-	public boolean isAutoconfigure() {
-		return this.optionHandler.getAutoconfigureOption().value(this.options);
-	}
+    @Override
+    public boolean isAutoconfigure() {
+        return this.optionHandler.getAutoconfigureOption().value(this.options);
+    }
 
-	@Override
-	public String[] getClasspath() {
-		OptionSpec<String> classpathOption = this.optionHandler.getClasspathOption();
-		if (this.options.has(classpathOption)) {
-			return this.options.valueOf(classpathOption).split(":");
-		}
-		return DEFAULT_CLASSPATH;
-	}
+    @Override
+    public String[] getClasspath() {
+        OptionSpec<String> classpathOption = this.optionHandler.getClasspathOption();
+        if (this.options.has(classpathOption)) {
+            return this.options.valueOf(classpathOption).split(":");
+        }
+        return DEFAULT_CLASSPATH;
+    }
 
-	@Override
-	public List<RepositoryConfiguration> getRepositoryConfiguration() {
-		return this.repositoryConfiguration;
-	}
+    @Override
+    public List<RepositoryConfiguration> getRepositoryConfiguration() {
+        return this.repositoryConfiguration;
+    }
 
-	@Override
-	public boolean isQuiet() {
-		return false;
-	}
+    @Override
+    public boolean isQuiet() {
+        return false;
+    }
 
 }

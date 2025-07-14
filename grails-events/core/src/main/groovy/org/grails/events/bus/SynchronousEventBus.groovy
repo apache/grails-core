@@ -39,7 +39,7 @@ class SynchronousEventBus extends AbstractEventBus {
     @Override
     protected Callable buildNotificationCallable(Event event, Collection<Subscription> eventSubscriptions, Closure reply) {
         return {
-            for(Subscription subscription : eventSubscriptions) {
+            for (Subscription subscription : eventSubscriptions) {
                 subscription.buildTrigger(event, reply)
                         .proceed()
             }

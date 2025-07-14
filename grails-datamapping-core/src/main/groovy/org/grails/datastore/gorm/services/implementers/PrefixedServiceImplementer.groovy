@@ -26,6 +26,7 @@ import org.grails.datastore.gorm.services.ServiceImplementer
  * An implementer that uses a set of prefixes
  */
 interface PrefixedServiceImplementer extends ServiceImplementer {
+
     /**
      * @return The handled prefixes
      */

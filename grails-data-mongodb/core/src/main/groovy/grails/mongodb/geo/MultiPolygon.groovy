@@ -18,7 +18,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
- * Represents a GeoJSON MultiPolygon. See http://geojson.org/geojson-spec.html#multipolygon
+ * Represents a GeoJSON MultiPolygon. See https://geojson.org/geojson-spec.html#multipolygon
  *
  * Note: Requires MongoDB 2.6 or above
  *
@@ -28,11 +28,13 @@ import groovy.transform.EqualsAndHashCode
 @CompileStatic
 @EqualsAndHashCode
 class MultiPolygon extends Shape implements GeoJSON {
+
     final List<Polygon> polygons
 
-    MultiPolygon(Polygon...polygons) {
+    MultiPolygon(Polygon... polygons) {
         this.polygons = Arrays.asList(polygons)
     }
+
     MultiPolygon(List<Polygon> polygons) {
         this.polygons = polygons
     }
@@ -44,11 +46,10 @@ class MultiPolygon extends Shape implements GeoJSON {
 
     static MultiPolygon valueOf(List coords) {
         List<Polygon> polygons = (List<Polygon>) coords.collect() {
-            if(it instanceof Polygon) {
+            if (it instanceof Polygon) {
                 return it
-            }
-            else if(it instanceof List) {
-                return Polygon.valueOf((List)it)
+            } else if (it instanceof List) {
+                return Polygon.valueOf((List) it)
             }
             throw new IllegalArgumentException("Invalid coordinates: $coords")
         }

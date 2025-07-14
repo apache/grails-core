@@ -27,6 +27,7 @@ import java.util.Set;
  * @since 3.0
  */
 public interface DataBindingSource {
+
     /**
      *
      * @return the names of properties represented
@@ -42,6 +43,7 @@ public interface DataBindingSource {
 
     /**
      * Convencience operator overloading
+     *
      * @param propertyName the name of a property
      * @return the value associated with propertyName, or null if propertyName is not represented
      */

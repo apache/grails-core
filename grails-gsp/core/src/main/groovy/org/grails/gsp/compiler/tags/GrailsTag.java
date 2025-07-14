@@ -34,12 +34,14 @@ public interface GrailsTag {
 
     /**
      * Sets the writer that processes the tag
+     *
      * @param w
      */
     void setWriter(Writer w);
 
     /**
      * Sets the attributes of the tag
+     *
      * @param attributes
      */
     @SuppressWarnings("rawtypes")
@@ -47,6 +49,7 @@ public interface GrailsTag {
 
     /**
      * Sets an attribute of the tag
+     *
      * @param name
      * @param value
      */

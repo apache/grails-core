@@ -50,7 +50,19 @@ import org.grails.datastore.gorm.transform.AbstractMethodDecoratingTransformatio
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.springframework.transaction.event.TransactionPhase
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.param
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.throwS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * A transform that transforms a method publishing the result to the given event
@@ -79,7 +91,7 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
 
     @Override
     protected void enhanceClassNode(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        if(!AstUtils.implementsInterface(classNode, EventPublisher.name)) {
+        if (!AstUtils.implementsInterface(classNode, EventPublisher.name)) {
             classNode.addInterface(ClassHelper.make(EventPublisher))
             if (compilationUnit != null) {
                 TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
@@ -98,7 +110,7 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         BlockStatement tryBody = new BlockStatement()
         TryCatchStatement tryCatch = new TryCatchStatement(tryBody, new EmptyStatement())
         newMethodBody.addStatement(declS(result, new EmptyExpression()))
-        if(methodNode.returnType != ClassHelper.VOID_TYPE) {
+        if (methodNode.returnType != ClassHelper.VOID_TYPE) {
             tryBody.addStatement(assignS(result, originalMethodCallExpr))
         }
         // otherwise..
@@ -108,51 +120,49 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
             newMethodBody.addStatement(assignS(result, ConstantExpression.NULL))
         }
         newMethodBody.addStatement(
-            tryCatch
+                tryCatch
         )
 
         AnnotationNode eventsAnn = AstUtils.findAnnotation(classNode, Events)
 
         Expression eventId = annotationNode.getMember("value")
-        if(!eventId?.text) {
+        if (!eventId?.text) {
             eventId = constX(methodNode.name)
         }
 
         Expression namespace = eventsAnn?.getMember("namespace")
         boolean hasNamespace = namespace instanceof ConstantExpression
-        if(hasNamespace) {
-            eventId = new ConstantExpression(namespace.text + ':' + eventId.text )
+        if (hasNamespace) {
+            eventId = new ConstantExpression(namespace.text + ':' + eventId.text)
         }
 
         Expression errorEventId = annotationNode.getMember("error")
-        if(errorEventId == null) {
+        if (errorEventId == null) {
             errorEventId = eventsAnn?.getMember("error")
         }
-        if(!errorEventId?.text) {
+        if (!errorEventId?.text) {
             errorEventId = eventId
-        }
-        else if(hasNamespace) {
-            errorEventId = new ConstantExpression(namespace.text + ':' + errorEventId.text )
+        } else if (hasNamespace) {
+            errorEventId = new ConstantExpression(namespace.text + ':' + errorEventId.text)
         }
 
         Expression phase = annotationNode.getMember("phase")
-        if(phase == null) {
+        if (phase == null) {
             phase = eventsAnn?.getMember("phase")
         }
         MapExpression params = new MapExpression()
-        for(param in methodNode.parameters) {
+        for (param in methodNode.parameters) {
             params.addMapEntryExpression(
-                constX(param.name),
-                varX(param)
+                    constX(param.name),
+                    varX(param)
             )
         }
         Expression newEvent = ctorX(ClassHelper.make(Event), args(eventId, params, result))
         def eventArgs = args(newEvent)
-        if(phase != null) {
+        if (phase != null) {
             eventArgs.addExpression(phase)
-        }
-        else {
-            if( AstUtils.hasAnnotation(methodNode, Transactional) ) {
+        } else {
+            if (AstUtils.hasAnnotation(methodNode, Transactional)) {
                 eventArgs.addExpression(propX(classX(TransactionPhase), "AFTER_COMMIT"))
             }
         }
@@ -160,23 +170,22 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         Parameter exceptionParam = param(ClassHelper.make(Throwable), '$t')
         Expression errorEvent = ctorX(ClassHelper.make(Event), args(errorEventId, params, varX(exceptionParam)))
         def errorArgs = args(errorEvent)
-        if(phase != null) {
+        if (phase != null) {
             errorArgs.addExpression(phase)
-        }
-        else {
-            if( AstUtils.hasAnnotation(methodNode, Transactional) ) {
+        } else {
+            if (AstUtils.hasAnnotation(methodNode, Transactional)) {
                 errorArgs.addExpression(propX(classX(TransactionPhase), "AFTER_ROLLBACK"))
             }
         }
 
         Statement catchBody = block(
-            stmt(callThisX("publish", errorArgs)),
-            throwS(varX(exceptionParam))
+                stmt(callThisX("publish", errorArgs)),
+                throwS(varX(exceptionParam))
         )
         CatchStatement catchStatement = new CatchStatement(exceptionParam, catchBody)
         tryCatch.addCatch(catchStatement)
         tryBody.addStatement(
-            stmt( callThisX("publish", eventArgs) )
+                stmt(callThisX("publish", eventArgs))
         )
         return result
     }

@@ -20,7 +20,6 @@
 package grails.plugin.json.renderer
 
 import grails.plugin.json.view.mvc.JsonViewResolver
-import grails.rest.render.ContainerRenderer
 import grails.rest.render.RenderContext
 import grails.util.GrailsNameUtils
 import grails.views.Views
@@ -38,41 +37,39 @@ import org.springframework.beans.factory.annotation.Autowired
  */
 @CompileStatic
 @InheritConstructors
-abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRenderer<T> {
+abstract class AbstractJsonViewContainerRenderer<C, T> extends DefaultJsonRenderer<T> {
 
     @Autowired
     JsonViewResolver jsonViewResolver
 
     @Override
     void render(T object, RenderContext context) {
-        if(jsonViewResolver != null) {
+        if (jsonViewResolver != null) {
             String viewUri = "/${context.controllerName}/_${GrailsNameUtils.getPropertyName(targetType)}"
             def webRequest = ((ServletRenderContext) context).getWebRequest()
             if (webRequest.controllerNamespace) {
                 viewUri = "/${webRequest.controllerNamespace}" + viewUri
             }
             def view = jsonViewResolver.resolveView(viewUri, context.locale)
-            if(view == null) {
+            if (view == null) {
                 view = jsonViewResolver.resolveView(targetType, context.locale)
             }
 
-            if(view != null) {
+            if (view != null) {
                 Map<String, Object> model = (Map<String, Object>) [(resolveModelName()): object]
                 def contextArguments = context.getArguments()
                 def contextModel = contextArguments?.get(Views.MODEL)
-                if(contextModel instanceof Map) {
-                    model.putAll((Map)contextModel)
+                if (contextModel instanceof Map) {
+                    model.putAll((Map) contextModel)
                 }
 
                 def request = webRequest.currentRequest
                 def response = webRequest.currentResponse
                 view.render(model, request, response)
-            }
-            else {
+            } else {
                 super.render(object, context)
             }
-        }
-        else {
+        } else {
             super.render(object, context)
         }
     }

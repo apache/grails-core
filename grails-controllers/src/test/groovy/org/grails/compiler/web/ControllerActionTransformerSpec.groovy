@@ -197,13 +197,11 @@ class ControllerActionTransformerSpec extends Specification {
             42 == model.paramValue
     }
 
-
     void "test controller with trait action with command params"() {
         given:
         def cls = gcl.parseClass('''
             @grails.artefact.Artefact('Controller')
             class TestTraitActionToController implements ShowMethod {
-
 
             }
             class MyCommandWithArg implements grails.validation.Validateable {
@@ -226,7 +224,6 @@ class ControllerActionTransformerSpec extends Specification {
         then:
         valid
     }
-
 
     void "Test command object gets Validateable injected"() {
 
@@ -329,5 +326,4 @@ class ControllerActionTransformerSpec extends Specification {
         System.properties[BuildSettings.CONVERT_CLOSURES_KEY] = 'false'
     }
 }
-
 

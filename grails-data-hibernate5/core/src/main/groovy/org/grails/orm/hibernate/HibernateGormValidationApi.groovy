@@ -32,8 +32,8 @@ class HibernateGormValidationApi<D> extends AbstractHibernateGormValidationApi<D
 
     @Override
     void restoreFlushMode(Session session, Object previousFlushMode) {
-        if(previousFlushMode != null) {
-            session.setHibernateFlushMode((FlushMode)previousFlushMode)
+        if (previousFlushMode != null) {
+            session.setHibernateFlushMode((FlushMode) previousFlushMode)
         }
     }
 

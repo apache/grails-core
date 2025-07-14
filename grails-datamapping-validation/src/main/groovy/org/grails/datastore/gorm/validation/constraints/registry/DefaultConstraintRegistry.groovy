@@ -44,7 +44,6 @@ import org.springframework.context.MessageSource
 
 import java.util.concurrent.ConcurrentHashMap
 
-
 /**
  * Default implementation of the {@link ConstraintRegistry} interface. Provides lookup and registration of constraints
  *
@@ -65,7 +64,6 @@ class DefaultConstraintRegistry implements ConstraintRegistry {
 
     DefaultConstraintRegistry(MessageSource messageSource) {
         this.messageSource = messageSource
-
 
         def charSequenceType = [CharSequence]
         def comparableNumberType = [Comparable, Number]
@@ -91,15 +89,15 @@ class DefaultConstraintRegistry implements ConstraintRegistry {
 
     @Autowired(required = false)
     void setConstraintFactories(ConstraintFactory... constraintFactories) {
-        for(factory in constraintFactories) {
+        for (factory in constraintFactories) {
             addConstraintFactory(factory)
         }
     }
 
     @Override
     void addConstraintFactory(ConstraintFactory factory) {
-        factoriesByType.get( factory.type ).add(factory)
-        factoriesByName.get( factory.name).add(factory)
+        factoriesByType.get(factory.type).add(factory)
+        factoriesByName.get(factory.name).add(factory)
     }
 
     @Override

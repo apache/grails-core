@@ -19,12 +19,12 @@
 
 package grails.rest
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
  *
@@ -37,7 +37,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Target([ElementType.TYPE])
 @GroovyASTTransformationClass("org.grails.plugins.web.rest.transform.ResourceTransform")
-public @interface Resource {
+@interface Resource {
 
     /**
      * @return Whether this is a read-only resource (one that doesn't allow DELETE, POST, PUT or PATCH requests)
@@ -62,5 +62,5 @@ public @interface Resource {
     /**
      * @return The super class to use for the generated controller class
      */
-    Class<?> superClass() default RestfulController 
+    Class<?> superClass() default RestfulController
 }

@@ -61,11 +61,22 @@ import java.util.concurrent.Callable;
  */
 public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
+    public static final String HTML_DATA_POSTFIX = "_html.data";
+    public static final String LINENUMBERS_DATA_POSTFIX = "_linenumbers.data";
+    public static final long LASTMODIFIED_CHECK_INTERVAL = Long.getLong("grails.gsp.reload.interval", 5000);
+    //CHECKSTYLE:OFF
+    public static String DEFAULT_PLUGIN_PATH = "";
+    //CHECKSTYLE:ON
+
     private static final Log LOG = LogFactory.getLog(GroovyPageMetaInfo.class);
+    private static final long LASTMODIFIED_CHECK_GRANULARITY = Long.getLong("grails.gsp.reload.granularity", 2000);
+
+    volatile boolean metaClassShouldBeRemoved = false;
+
     private TagLibraryLookup tagLibraryLookup;
     private TagLibraryResolver jspTagLibraryResolver;
 
-    private boolean precompiledMode=false;
+    private boolean precompiledMode = false;
     private Class<?> pageClass;
     private long lastModified;
     private InputStream groovySource;
@@ -87,11 +98,6 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     private boolean modelFieldsMode;
     private Set<Field> modelFields;
 
-    public static final String HTML_DATA_POSTFIX = "_html.data";
-    public static final String LINENUMBERS_DATA_POSTFIX = "_linenumbers.data";
-
-    public static final long LASTMODIFIED_CHECK_INTERVAL =  Long.getLong("grails.gsp.reload.interval", 5000).longValue();
-    private static final long LASTMODIFIED_CHECK_GRANULARITY =  Long.getLong("grails.gsp.reload.granularity", 2000).longValue();
     private GrailsApplication grailsApplication;
 
     private String pluginPath;
@@ -99,9 +105,6 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     private boolean initialized = false;
 
     private CacheEntry<Resource> shouldReloadCacheEntry = new CacheEntry<Resource>();
-    public static String DEFAULT_PLUGIN_PATH = "";
-    
-    volatile boolean metaClassShouldBeRemoved=false;
 
     public GroovyPageMetaInfo() {
 
@@ -110,15 +113,15 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     @SuppressWarnings("rawtypes")
     public GroovyPageMetaInfo(Class<?> pageClass) {
         this();
-        precompiledMode=true;
+        precompiledMode = true;
         this.pageClass = pageClass;
-        contentType = (String)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_CONTENT_TYPE), null);
-        jspTags = (Map)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_JSP_TAGS), null);
-        lastModified = (Long)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_LAST_MODIFIED), null);
-        expressionCodecName = (String)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_EXPRESSION_CODEC), null);
-        staticCodecName = (String)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_STATIC_CODEC), null);
-        outCodecName = (String)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_OUT_CODEC), null);
-        taglibCodecName = (String)ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_TAGLIB_CODEC), null);
+        contentType = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_CONTENT_TYPE), null);
+        jspTags = (Map) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_JSP_TAGS), null);
+        lastModified = (Long) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_LAST_MODIFIED), null);
+        expressionCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_EXPRESSION_CODEC), null);
+        staticCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_STATIC_CODEC), null);
+        outCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_OUT_CODEC), null);
+        taglibCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_TAGLIB_CODEC), null);
         Field compileStaticModeField = ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_COMPILE_STATIC_MODE);
         if (compileStaticModeField != null) {
             compileStaticMode = (Boolean) ReflectionUtils.getField(compileStaticModeField, null);
@@ -130,14 +133,9 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
         try {
             readHtmlData();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException("Problem reading html data for page class " + pageClass, e);
         }
-    }
-
-    static interface GroovyPageMetaInfoInitializer {
-        public void initialize(GroovyPageMetaInfo metaInfo);
     }
 
     synchronized void initializeOnDemand(GroovyPageMetaInfoInitializer initializer) {
@@ -159,7 +157,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     }
 
     private synchronized void initializeModelFields() {
-        if(getPageClass() != null) {
+        if (getPageClass() != null) {
             Set<Field> modelFields = new HashSet<>();
             if (modelFieldsMode) {
                 for (Field field : getPageClass().getDeclaredFields()) {
@@ -189,7 +187,9 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
         GrailsPluginManager pluginManager = applicationContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager.class);
         pluginPath = pluginManager.getPluginPathForClass(pageClass);
-        if (pluginPath == null) pluginPath=DEFAULT_PLUGIN_PATH ;
+        if (pluginPath == null) {
+            pluginPath = DEFAULT_PLUGIN_PATH;
+        }
         pagePlugin = pluginManager.getPluginForClass(pageClass);
     }
 
@@ -214,8 +214,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
                     htmlParts[i] = input.readUTF();
                 }
             }
-        }
-        finally {
+        } finally {
             IOUtils.closeQuietly(input);
         }
     }
@@ -236,8 +235,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
             for (int i = 0; i < arrayLen; i++) {
                 lineNumbers[i] = input.readInt();
             }
-        }
-        finally {
+        } finally {
             IOUtils.closeQuietly(input);
         }
     }
@@ -253,7 +251,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         String dataResourceName = pageClass.getName();
         int pos = dataResourceName.lastIndexOf('.');
         if (pos > -1) {
-            dataResourceName = dataResourceName.substring(pos+1);
+            dataResourceName = dataResourceName.substring(pos + 1);
         }
         dataResourceName += postfix;
         return dataResourceName;
@@ -320,8 +318,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         if (lineNumbers == null) {
             try {
                 readLineNumbers();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 LOG.warn("Problem reading precompiled linenumbers", e);
             }
         }
@@ -370,10 +367,12 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
      * @return The last modified date or -1
      */
     private long establishLastModified(Resource resource) {
-        if (resource == null) return -1;
+        if (resource == null) {
+            return -1;
+        }
 
         if (resource instanceof FileSystemResource) {
-            return ((FileSystemResource)resource).getFile().lastModified();
+            return ((FileSystemResource) resource).getFile().lastModified();
         }
 
         long last;
@@ -382,7 +381,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         try {
             URL url = resource.getURL();
             if ("file".equals(url.getProtocol())) {
-                File file=new File(url.getFile());
+                File file = new File(url.getFile());
                 if (file.exists()) {
                     return file.lastModified();
                 }
@@ -391,22 +390,18 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
             urlc.setDoInput(false);
             urlc.setDoOutput(false);
             last = urlc.getLastModified();
-        }
-        catch (FileNotFoundException fnfe) {
+        } catch (FileNotFoundException fnfe) {
             last = -1;
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             last = -1;
-        }
-        finally {
+        } finally {
             if (urlc != null) {
                 try {
                     InputStream is = urlc.getInputStream();
                     if (is != null) {
                         is.close();
                     }
-                }
-                catch (IOException e) {
+                } catch (IOException e) {
                     // ignore
                 }
             }
@@ -418,7 +413,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     /**
      * Checks if this GSP has expired and should be reloaded (there is a newer source gsp available)
      * PrivilegedAction is used so that locating the Resource is lazily evaluated.
-     *
+     * <p>
      * lastModified checking is done only when enough time has expired since the last check. This setting is controlled by the grails.gsp.reload.interval System property,
      * by default it's value is 5000 (ms).
      *
@@ -426,17 +421,19 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
      * @return true if the available gsp source file is newer than the loaded one.
      */
     public boolean shouldReload(final PrivilegedAction<Resource> resourceCallable) {
-        if (resourceCallable == null) return false;
-        Resource resource=checkIfReloadableResourceHasChanged(resourceCallable);
+        if (resourceCallable == null) {
+            return false;
+        }
+        Resource resource = checkIfReloadableResourceHasChanged(resourceCallable);
         return (resource != null);
     }
 
     public Resource checkIfReloadableResourceHasChanged(final PrivilegedAction<Resource> resourceCallable) {
         Callable<Resource> checkerCallable = new Callable<Resource>() {
             public Resource call() {
-                Resource resource=resourceCallable.run();
+                Resource resource = resourceCallable.run();
                 if (resource != null && resource.exists()) {
-                    long currentLastmodified=establishLastModified(resource);
+                    long currentLastmodified = establishLastModified(resource);
                     // granularity is required since lastmodified information is rounded somewhere in copying & war (zip) file information
                     // usually the lastmodified time is 1000L apart in files and in files extracted from the zip (war) file
                     if (currentLastmodified > 0 && Math.abs(currentLastmodified - lastModified) > LASTMODIFIED_CHECK_GRANULARITY) {
@@ -526,14 +523,19 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
     public void removePageMetaClass() {
         metaClassShouldBeRemoved = true;
-        if(pageClass!=null) { 
+        if (pageClass != null) {
             GroovySystem.getMetaClassRegistry().removeMetaClass(pageClass);
         }
     }
 
     public void writeToFinished(Writer out) {
-        if(metaClassShouldBeRemoved) {
+        if (metaClassShouldBeRemoved) {
             removePageMetaClass();
         }
+    }
+
+    interface GroovyPageMetaInfoInitializer {
+
+        void initialize(GroovyPageMetaInfo metaInfo);
     }
 }

@@ -22,13 +22,12 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
-
 import jakarta.persistence.AccessType
 import jakarta.persistence.CascadeType
 import jakarta.persistence.EnumType
 import jakarta.persistence.FetchType
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.validation.DataBinder
 
 /**
  * Base class for classes returned from {@link org.grails.datastore.mapping.model.PropertyMapping#getMappedForm()}
@@ -157,7 +156,7 @@ class Property implements Cloneable {
     Property clone() throws CloneNotSupportedException {
         Property cloned = (Property) super.clone()
         cloned.uniquenessGroup = new ArrayList<>(uniquenessGroup)
-        if(inList != null) {
+        if (inList != null) {
             cloned.inList = new ArrayList<>(inList)
         }
 
@@ -251,7 +250,6 @@ class Property implements Cloneable {
         return !uniquenessGroup.isEmpty()
     }
 
-
     void setUnique(boolean unique) {
         this.unique = unique
     }
@@ -310,7 +308,7 @@ class Property implements Cloneable {
      * @param config The configuration
      * @return The new instance
      */
-    static <T extends Property>  T configureExisting(T property, @DelegatesTo(Property) Closure config) {
+    static <T extends Property> T configureExisting(T property, @DelegatesTo(Property) Closure config) {
         config.setDelegate(property)
         config.setResolveStrategy(Closure.DELEGATE_ONLY)
         config.call()

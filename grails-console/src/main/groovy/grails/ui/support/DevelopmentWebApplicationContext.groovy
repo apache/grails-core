@@ -24,7 +24,6 @@ import org.springframework.mock.web.MockServletConfig
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.support.GenericWebApplicationContext
 
-
 /**
  * A {@link org.springframework.web.context.WebApplicationContext} used during development
  * for things like running scripts and loading the console UI

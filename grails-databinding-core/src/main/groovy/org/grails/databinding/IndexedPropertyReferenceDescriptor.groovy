@@ -23,6 +23,7 @@ package org.grails.databinding
  * @since 2.3
  */
 class IndexedPropertyReferenceDescriptor {
+
     String propertyName
     String index
 

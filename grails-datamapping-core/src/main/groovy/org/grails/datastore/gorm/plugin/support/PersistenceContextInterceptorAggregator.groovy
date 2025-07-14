@@ -30,11 +30,12 @@ import org.springframework.core.Ordered
 import org.springframework.util.ClassUtils
 
 import java.util.regex.Pattern
+
 /**
  * BeanDefinitionRegistryPostProcessor that replaces multiple discovered PersistenceContextInterceptor beans with
  * a single aggregating instance. The previous multiple PersistenceContextInterceptor beans will be removed from
  * the context and re-added as inner beans of the new AggregatePersistenceContextInterceptor bean.
- * 
+ *
  * PersistenceContextInterceptor beans are discovered by the bean name. The default pattern used for matching
  * the beans is ^.*[pP]ersistenceInterceptor$
  *
@@ -43,6 +44,7 @@ import java.util.regex.Pattern
  */
 @CompileStatic
 class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryPostProcessor, Ordered {
+
     Pattern persistenceInterceptorBeanNamePattern = ~/^.*[pP]ersistenceInterceptor$/
     String aggregatorBeanName = 'persistenceInterceptor'
     Class aggregatorBeanClass = ClassUtils.forName("org.grails.datastore.gorm.support.AggregatePersistenceContextInterceptor", Thread.currentThread().contextClassLoader)
@@ -54,12 +56,12 @@ class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryP
 
     protected createAggregatePersistenceContextInterceptorOnDemand(BeanDefinitionRegistry registry) {
         Collection<String> persistenceInterceptorBeanNames = findPersistenceInterceptorBeanNames(registry)
-        if(persistenceInterceptorBeanNames.size() > 1) {
+        if (persistenceInterceptorBeanNames.size() > 1) {
             ManagedList interceptorBeans = moveInterceptorBeansToManagedList(registry, persistenceInterceptorBeanNames)
             registry.registerBeanDefinition(aggregatorBeanName, createAggregateBeanDefinition(interceptorBeans))
         }
     }
-    
+
     protected Collection<String> findPersistenceInterceptorBeanNames(BeanDefinitionRegistry registry) {
         // assume that all persistenceInterceptor beans match the defined pattern
         // checking for type (class) would require instantiating classes
@@ -86,6 +88,6 @@ class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryP
     }
 
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
-        
+
     }
 }

@@ -20,7 +20,11 @@
 package org.grails.datastore.mapping.simple.connections
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.connections.*
+import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettingsBuilder
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.springframework.core.env.PropertyResolver
 
 import java.util.concurrent.ConcurrentHashMap
@@ -32,11 +36,13 @@ import java.util.concurrent.ConcurrentHashMap
  * @since 6.0
  */
 @CompileStatic
-class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<Map<String,Map>, ConnectionSourceSettings> {
+class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<Map<String, Map>, ConnectionSourceSettings> {
+
     @Override
     ConnectionSource<Map<String, Map>, ConnectionSourceSettings> create(String name, ConnectionSourceSettings settings) {
-        return new DefaultConnectionSource<Map<String,Map>, ConnectionSourceSettings>(name, new ConcurrentHashMap<String, Map>(), settings)
+        return new DefaultConnectionSource<Map<String, Map>, ConnectionSourceSettings>(name, new ConcurrentHashMap<String, Map>(), settings)
     }
+
     @Override
     Serializable getConnectionSourcesConfigurationKey() {
         return PREFIX + ".connections"

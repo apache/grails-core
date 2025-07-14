@@ -31,8 +31,9 @@ public interface QueryBuildingFinder {
 
     /**
      * Build a query from an invocation
+     *
      * @param invocation The invocation
-     * @param session an active session
+     * @param session    an active session
      * @return The query
      */
     Query buildQuery(DynamicFinderInvocation invocation, Session session);

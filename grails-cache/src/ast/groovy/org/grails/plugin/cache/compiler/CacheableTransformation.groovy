@@ -35,8 +35,17 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.springframework.cache.Cache
 
-import static org.codehaus.groovy.ast.ClassHelper.*
-import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.*
+import static org.codehaus.groovy.ast.ClassHelper.make
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 
 /**
  * @since 4.0.0
@@ -80,7 +89,6 @@ class CacheableTransformation extends AbstractCacheTransformation {
 
         // def $_cache_cacheKey = customCacheKeyGenerator.generate(className, methodName, hashCode, $_method_parameter_map)
         VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cachingBlock)
-
 
         // ValueWrapper $_cache_valueWrapper = $_cache_cacheVariable.get($_cache_cacheKey);
         VariableExpression cacheValueWrapper = varX(CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME, make(Cache.ValueWrapper))

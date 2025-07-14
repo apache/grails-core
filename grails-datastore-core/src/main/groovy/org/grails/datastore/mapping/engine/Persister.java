@@ -18,10 +18,10 @@
  */
 package org.grails.datastore.mapping.engine;
 
+import org.grails.datastore.mapping.query.Query;
+
 import java.io.Serializable;
 import java.util.List;
-
-import org.grails.datastore.mapping.query.Query;
 
 /**
  * A Persister is responsible for persisting and retrieving an object.
@@ -60,7 +60,6 @@ public interface Persister {
      * Retrieves an object for the given context and Key
      *
      * @param key The key
-     *
      * @return The object in question
      */
     Object retrieve(Serializable key);
@@ -75,6 +74,7 @@ public interface Persister {
 
     /**
      * Deletes one or many objects
+     *
      * @param objects The objects to delete. Must all be of the same type or an exception will be thrown.
      */
     void delete(@SuppressWarnings("rawtypes") Iterable objects);
@@ -89,6 +89,7 @@ public interface Persister {
 
     /**
      * Deletes a single object
+     *
      * @param obj The object
      */
     void delete(Object obj);
@@ -110,6 +111,7 @@ public interface Persister {
 
     /**
      * Refreshes the given objects state
+     *
      * @param o The object to refresh
      * @return The objects id
      */
@@ -117,6 +119,7 @@ public interface Persister {
 
     /**
      * Get the identifier for the given object, if it has one.
+     *
      * @param o The object.
      * @return The object's id.
      */
@@ -124,6 +127,7 @@ public interface Persister {
 
     /**
      * Forces an insert of an object rather than trying to guess if it is an insert or an update
+     *
      * @param o The object
      * @return The id
      */

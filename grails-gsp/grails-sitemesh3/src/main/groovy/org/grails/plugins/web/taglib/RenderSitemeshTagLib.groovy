@@ -19,6 +19,8 @@
 
 package org.grails.plugins.web.taglib
 
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
 import org.grails.web.util.WebUtils
 import org.sitemesh.content.Content
 import org.sitemesh.content.ContentProperty
@@ -28,8 +30,6 @@ import org.sitemesh.webapp.contentfilter.ResponseMetaData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.web.servlet.FilterRegistrationBean
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
 
 import java.nio.CharBuffer
 
@@ -46,7 +46,7 @@ class RenderSitemeshTagLib implements TagLibrary {
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
         WebAppContext context = new WebAppContext("text/html", request, response,
-                servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false);
+                servletContext, siteMeshFilter.contentProcessor, new ResponseMetaData(), false);
         Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context);
         if (attrs.name) {
             request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
@@ -88,7 +88,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
         String propertyName = attrs.name as String
         ContentProperty contentProperty = getContentProperty(propertyName)
-        def propertyValue = contentProperty?.hasValue()? contentProperty.getValue() : attrs.'default' ?: null
+        def propertyValue = contentProperty?.hasValue() ? contentProperty.getValue() : attrs.'default' ?: null
 
         if (propertyValue) {
             if (attrs.writeEntireProperty) {
@@ -119,7 +119,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         if (!attrs.name) {
             return
         }
-        List names = ((attrs.name instanceof List) ? (List)attrs.name : [attrs.name])
+        List names = ((attrs.name instanceof List) ? (List) attrs.name : [attrs.name])
 
         def invokeBody = true
         for (i in 0..<names.size()) {
@@ -127,7 +127,7 @@ class RenderSitemeshTagLib implements TagLibrary {
             if (propertyValue) {
                 if (attrs.containsKey('equals')) {
                     if (attrs.equals instanceof List) {
-                        invokeBody = ((List)attrs.equals)[i] == propertyValue
+                        invokeBody = ((List) attrs.equals)[i] == propertyValue
                     } else {
                         invokeBody = attrs.equals == propertyValue
                     }
@@ -143,7 +143,7 @@ class RenderSitemeshTagLib implements TagLibrary {
     }
 
     Closure layoutTitle = { attrs ->
-        out << """<sitemesh:write property="title">${attrs.default?:''}</sitemesh:write>""".toString()
+        out << """<sitemesh:write property="title">${attrs.default ?: ''}</sitemesh:write>""".toString()
     }
 
     Closure layoutHead = { attrs, body ->

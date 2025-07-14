@@ -19,7 +19,6 @@
 package demo
 
 import grails.testing.web.controllers.ControllerUnitTest
-import org.junit.Test
 import spock.lang.Specification
 
 class DemoControllerTest extends Specification implements ControllerUnitTest<DemoController> {
@@ -32,7 +31,6 @@ class DemoControllerTest extends Specification implements ControllerUnitTest<Dem
         status == 200
         response.text == 'Hello, World!'
     }
-
 
     void 'test invalid request method'() {
         when:

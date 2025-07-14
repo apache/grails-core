@@ -19,7 +19,7 @@
 
 package loadfirst
 
-import grails.plugins.*
+import grails.plugins.Plugin
 
 class LoadfirstGrailsPlugin extends Plugin {
 

@@ -30,7 +30,6 @@ import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
-import org.grails.datastore.gorm.services.ServiceImplementer
 import org.grails.datastore.gorm.services.transform.QueryStringTransformer
 import org.grails.datastore.mapping.reflect.AstUtils
 
@@ -47,6 +46,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
  */
 @CompileStatic
 abstract class AbstractStringQueryImplementer extends AbstractReadOperationImplementer implements AnnotatedServiceImplementer<Query> {
+
     @Override
     int getOrder() {
         return FindAllByImplementer.POSITION - 100
@@ -54,7 +54,7 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( isAnnotated(domainClass, methodNode) ) {
+        if (isAnnotated(domainClass, methodNode)) {
             return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
         }
         return false
@@ -70,18 +70,18 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
         AnnotationNode annotationNode = AstUtils.findAnnotation(abstractMethodNode, getAnnotationType())
         Expression expr = annotationNode.getMember("value")
         VariableScope scope = newMethodNode.variableScope
-        if(expr instanceof GStringExpression) {
-            GStringExpression gstring = (GStringExpression)expr
+        if (expr instanceof GStringExpression) {
+            GStringExpression gstring = (GStringExpression) expr
             SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
             QueryStringTransformer transformer = createQueryStringTransformer(sourceUnit, scope)
             Expression transformed = transformer.transformQuery(gstring)
-            BlockStatement body = (BlockStatement)newMethodNode.code
+            BlockStatement body = (BlockStatement) newMethodNode.code
             Expression argMap = findArgsExpression(newMethodNode)
-            if(argMap != null) {
-                transformed = args( transformed, argMap )
+            if (argMap != null) {
+                transformed = args(transformed, argMap)
             }
             body.addStatement(
-                buildQueryReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, transformed)
+                    buildQueryReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, transformed)
             )
             annotationNode.setMember("value", constX(IMPLEMENTED))
         }

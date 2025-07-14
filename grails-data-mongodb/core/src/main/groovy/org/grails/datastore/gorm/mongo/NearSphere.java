@@ -1,17 +1,17 @@
 /* Copyright (C) 2013 SpringSource
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*      https://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.grails.datastore.gorm.mongo;
 
 import grails.mongodb.geo.Distance;
@@ -24,7 +24,8 @@ import org.grails.datastore.mapping.query.Query;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class NearSphere extends Near{
+public class NearSphere extends Near {
+
     public NearSphere(Class<?> targetClass, String propertyName) {
         super(targetClass, propertyName);
     }
@@ -33,13 +34,12 @@ public class NearSphere extends Near{
     public Query.Criterion createCriterion() {
         MongoQuery.NearSphere near = new MongoQuery.NearSphere(propertyName, arguments[0]);
 
-        if(arguments.length > 1) {
+        if (arguments.length > 1) {
             Object o = arguments[1];
-            if(o instanceof Number) {
+            if (o instanceof Number) {
                 near.setMaxDistance(Distance.valueOf(((Number) o).doubleValue()));
-            }
-            else {
-                near.setMaxDistance((Distance)o);
+            } else {
+                near.setMaxDistance((Distance) o);
             }
         }
         return near;

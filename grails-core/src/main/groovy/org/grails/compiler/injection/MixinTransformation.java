@@ -22,23 +22,29 @@ import grails.util.GrailsNameUtils;
 import grails.util.Mixin;
 import grails.util.MixinTargetAware;
 import groovy.lang.GroovyObjectSupport;
-
-import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.List;
-
 import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * The logic for the {@link grails.util.Mixin} location transform.
@@ -52,9 +58,9 @@ import org.codehaus.groovy.transform.TransformWithPriority;
 public class MixinTransformation implements ASTTransformation, TransformWithPriority {
 
     public static final ClassNode GROOVY_OBJECT_CLASS_NODE = new ClassNode(GroovyObjectSupport.class);
+    public static final String OBJECT_CLASS = "java.lang.Object";
     private static final ClassNode MY_TYPE = new ClassNode(Mixin.class);
     private static final String MY_TYPE_NAME = "@" + MY_TYPE.getNameWithoutPackage();
-    public static final String OBJECT_CLASS = "java.lang.Object";
 
     public void visit(ASTNode[] astNodes, SourceUnit source) {
         if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
@@ -71,7 +77,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
         String cName = classNode.getName();
         if (classNode.isInterface()) {
             throw new RuntimeException("Error processing interface '" + cName + "'. " +
-                MY_TYPE_NAME + " not allowed for interfaces.");
+                    MY_TYPE_NAME + " not allowed for interfaces.");
         }
 
         ListExpression values = getListOfClasses(node);
@@ -79,6 +85,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
         weaveMixinsIntoClass(classNode, values);
 
     }
+
     public void weaveMixinsIntoClass(ClassNode classNode, ListExpression values) {
         if (values != null) {
             for (Expression current : values.getExpressions()) {
@@ -93,14 +100,14 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
                         boolean isTargetAware = GrailsASTUtils.findInterface(mixinClassNode, new ClassNode(MixinTargetAware.class)) != null;
 
                         ConstructorCallExpression initialValue;
-                        if(isTargetAware) {
+                        if (isTargetAware) {
                             initialValue = new ConstructorCallExpression(mixinClassNode, new MapExpression(
                                     Arrays.asList(new MapEntryExpression(new ConstantExpression("target"), new VariableExpression("this")))
                             ));
-                        }  else {
+                        } else {
                             initialValue = new ConstructorCallExpression(mixinClassNode, GrailsASTUtils.ZERO_ARGUMENTS);
                         }
-                        classNode.addField(fieldName, Modifier.PRIVATE, mixinClassNode,initialValue);
+                        classNode.addField(fieldName, Modifier.PRIVATE, mixinClassNode, initialValue);
                     }
 
                     VariableExpression fieldReference = new VariableExpression(fieldName, mixinClassNode);
@@ -112,8 +119,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
                             if (isCandidateMethod(mixinMethod) && !hasDeclaredMethod(classNode, mixinMethod)) {
                                 if (mixinMethod.isStatic()) {
                                     GrailsASTUtils.addCompileStaticAnnotation(GrailsASTUtils.addDelegateStaticMethod(classNode, mixinMethod));
-                                }
-                                else {
+                                } else {
                                     GrailsASTUtils.addCompileStaticAnnotation(GrailsASTUtils.addDelegateInstanceMethod(classNode, fieldReference, mixinMethod, false));
                                 }
                             }
@@ -129,6 +135,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
     protected boolean hasDeclaredMethod(ClassNode classNode, MethodNode mixinMethod) {
         return classNode.hasDeclaredMethod(mixinMethod.getName(), mixinMethod.getParameters());
     }
+
     protected ListExpression getListOfClasses(AnnotationNode node) {
         Expression value = node.getMember("value");
         ListExpression values = null;
@@ -150,10 +157,10 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
         ClassNode groovyMethods = GROOVY_OBJECT_CLASS_NODE;
         String methodName = declaredMethod.getName();
         return !declaredMethod.isSynthetic() &&
-            !methodName.contains("$") &&
-            Modifier.isPublic(declaredMethod.getModifiers()) &&
-            !Modifier.isAbstract(declaredMethod.getModifiers()) &&
-            !groovyMethods.hasMethod(declaredMethod.getName(), declaredMethod.getParameters());
+                !methodName.contains("$") &&
+                Modifier.isPublic(declaredMethod.getModifiers()) &&
+                !Modifier.isAbstract(declaredMethod.getModifiers()) &&
+                !groovyMethods.hasMethod(declaredMethod.getName(), declaredMethod.getParameters());
     }
 
     @Override

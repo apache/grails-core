@@ -19,11 +19,10 @@
 package grails.plugin.cache.util;
 
 import grails.util.GrailsNameUtils;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-
-import org.springframework.util.ReflectionUtils;
 
 /**
  * @author Jeff Brown
@@ -35,7 +34,7 @@ public class ClassUtils {
      * object using a corresponding getter method.  If no getter method is found
      * then this method will look for the corresponding field and return its value.
      *
-     * @param object object to inspect
+     * @param object              object to inspect
      * @param propertyOrFieldName the name of the field or property to retrieve
      * @return the value of the field or property, null if neither is found
      */

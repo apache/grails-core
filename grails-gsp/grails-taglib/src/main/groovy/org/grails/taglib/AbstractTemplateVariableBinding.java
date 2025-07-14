@@ -20,7 +20,13 @@ package org.grails.taglib;
 
 import groovy.lang.Binding;
 
-import java.util.*;
+import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Abstract super class for GroovyPage bindings
@@ -30,6 +36,7 @@ import java.util.*;
  */
 @SuppressWarnings("rawtypes")
 public abstract class AbstractTemplateVariableBinding extends Binding {
+
     public AbstractTemplateVariableBinding() {
         super();
     }
@@ -83,10 +90,11 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
     }
 
     protected static final class TemplateVariableBindingMap implements Map {
+
         AbstractTemplateVariableBinding binding;
 
         public TemplateVariableBindingMap(AbstractTemplateVariableBinding binding) {
-            this.binding=binding;
+            this.binding = binding;
         }
 
         public int size() {
@@ -121,7 +129,7 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
 
         public void putAll(Map m) {
             for (Object entryObj : m.entrySet()) {
-                Map.Entry entry=(Map.Entry)entryObj;
+                Map.Entry entry = (Map.Entry) entryObj;
                 binding.setVariable(String.valueOf(entry.getKey()), entry.getValue());
             }
         }
@@ -164,11 +172,13 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
                 public boolean hasNext() {
                     return iter.hasNext();
                 }
+
                 public Object next() {
                     Object key = iter.next();
                     Object value = get(key);
                     return new BindingMapEntry(binding, key, value);
                 }
+
                 public void remove() {
                     throw new UnsupportedOperationException("remove() not supported");
                 }
@@ -177,10 +187,12 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
     }
 
     protected static class BindingMapEntry implements Map.Entry {
+
         private AbstractTemplateVariableBinding binding;
 
         private Object key;
         private Object value;
+
         protected BindingMapEntry(AbstractTemplateVariableBinding binding, Object key, Object value) {
             this.binding = binding;
             this.key = key;

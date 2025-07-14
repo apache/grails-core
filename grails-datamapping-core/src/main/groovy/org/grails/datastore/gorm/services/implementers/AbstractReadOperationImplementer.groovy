@@ -53,13 +53,13 @@ abstract class AbstractReadOperationImplementer extends AbstractServiceImplement
     final void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         // copy any annotations from the abstract method
         copyClassAnnotations(abstractMethodNode, newMethodNode)
-        if(!TransactionalTransform.hasTransactionalAnnotation(targetClassNode) && !TransactionalTransform.hasTransactionalAnnotation(newMethodNode) && Modifier.isPublic(newMethodNode.modifiers)) {
+        if (!TransactionalTransform.hasTransactionalAnnotation(targetClassNode) && !TransactionalTransform.hasTransactionalAnnotation(newMethodNode) && Modifier.isPublic(newMethodNode.modifiers)) {
             // read-only transaction by default
             applyDefaultTransactionHandling(newMethodNode)
         }
 
         ClassNode domainClassFromSignature = resolveDomainClassFromSignature(domainClassNode, abstractMethodNode)
-        if(domainClassFromSignature != null && AstUtils.isDomainClass(domainClassFromSignature)) {
+        if (domainClassFromSignature != null && AstUtils.isDomainClass(domainClassFromSignature)) {
             domainClassNode = domainClassFromSignature
         }
         doImplement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
@@ -88,7 +88,7 @@ abstract class AbstractReadOperationImplementer extends AbstractServiceImplement
 
     @Override
     void enhance(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
-        if(!TransactionalTransform.hasTransactionalAnnotation(newMethodNode) && Modifier.isPublic(newMethodNode.modifiers)) {
+        if (!TransactionalTransform.hasTransactionalAnnotation(newMethodNode) && Modifier.isPublic(newMethodNode.modifiers)) {
             // read-only transaction by default
             applyDefaultTransactionHandling(newMethodNode)
         }

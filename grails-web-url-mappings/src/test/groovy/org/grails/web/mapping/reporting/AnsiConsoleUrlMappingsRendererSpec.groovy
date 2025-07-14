@@ -21,10 +21,10 @@ package org.grails.web.mapping.reporting
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
+import grails.web.mapping.UrlMappingsHolder
 import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
-import grails.web.mapping.UrlMappingsHolder
 import spock.lang.Specification
 
 /**

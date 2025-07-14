@@ -33,7 +33,6 @@ import java.util.Set;
  *
  * @author Graeme Rocher
  * @author Lari Hotari
- *
  * @since 3.0
  */
 public interface Profile {
@@ -85,6 +84,7 @@ public interface Profile {
 
     /**
      * The other {@link org.grails.cli.profile.Profile} instances that this {@link org.grails.cli.profile.Profile} extends
+     *
      * @return zero or many {@link org.grails.cli.profile.Profile} instance that this profile extends from
      */
     Iterable<Profile> getExtends();
@@ -127,6 +127,7 @@ public interface Profile {
 
     /**
      * The profile completers
+     *
      * @param context The {@link org.grails.cli.profile.ProjectContext} instance
      * @return An {@link java.lang.Iterable} of {@link jline.console.completer.Completer} instances
      */
@@ -142,11 +143,13 @@ public interface Profile {
 
     /**
      * Whether a command executes for the given context and name
+     *
      * @param context The {@link org.grails.cli.profile.ProjectContext}
-     * @param name The command name
+     * @param name    The command name
      * @return True if the command does exist
      */
     boolean hasCommand(ProjectContext context, String name);
+
     /**
      * Obtains a {@link Command}
      *

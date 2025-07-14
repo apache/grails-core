@@ -52,7 +52,7 @@ class DataSourceUtils {
             Driver driver = drivers.nextElement()
             // Only unload the drivers this web app loaded
             if (driver.getClass().classLoader !=
-                DataSourceUtils.classLoader) {
+                    DataSourceUtils.classLoader) {
                 continue
             }
             // Only report drivers that were originally registered. Skip any

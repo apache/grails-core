@@ -20,7 +20,7 @@ package org.grails.web.json.parser;
 
 /**
  * @author Siegfried Puchbauer
- *
+ * <p>
  * Adapted from the Google GSON Parser http://google-gson.googlecode.com/
  */
 final class StringUnmarshaller {
@@ -44,13 +44,11 @@ final class StringUnmarshaller {
                     int codePoint = getCodePoint(str, i);
                     sb.appendCodePoint(codePoint);
                     i += 4;
-                }
-                else {
+                } else {
                     char escapedChar = getEscapedChar(str, c1);
                     sb.append(escapedChar);
                 }
-            }
-            else {
+            } else {
                 sb.append(c);
             }
         }
@@ -64,16 +62,26 @@ final class StringUnmarshaller {
 
     private static char getEscapedChar(String str, char c) {
         switch (c) {
-            case 'n':  return '\n';
-            case 'b':  return '\b';
-            case 'f':  return '\f';
-            case 't':  return '\t';
-            case 'r':  return '\r';
-            case '\"': return '\"';
-            case '\'': return '\'';
-            case '\\': return '\\';
-            case '/':  return '/';
-            default:  throw new IllegalStateException("Unexpected character: " + c + " in " + str);
+            case 'n':
+                return '\n';
+            case 'b':
+                return '\b';
+            case 'f':
+                return '\f';
+            case 't':
+                return '\t';
+            case 'r':
+                return '\r';
+            case '\"':
+                return '\"';
+            case '\'':
+                return '\'';
+            case '\\':
+                return '\\';
+            case '/':
+                return '/';
+            default:
+                throw new IllegalStateException("Unexpected character: " + c + " in " + str);
         }
     }
 }

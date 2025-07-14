@@ -29,8 +29,9 @@ public class Restrictions {
 
     /**
      * Restricts the property to be equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return An instance of Query.Equals
      */
     public static Query.Equals eq(String property, Object value) {
@@ -39,6 +40,7 @@ public class Restrictions {
 
     /**
      * Restricts the property to be equal to the given value
+     *
      * @param value The value
      * @return An instance of Query.Equals
      */
@@ -48,8 +50,9 @@ public class Restrictions {
 
     /**
      * Restricts the property to be not equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return An instance of Query.Equals
      */
 
@@ -59,8 +62,9 @@ public class Restrictions {
 
     /**
      * Restricts the property to be in the list of given values
+     *
      * @param property The property
-     * @param values The values
+     * @param values   The values
      * @return An instance of Query.In
      */
     public static Query.In in(String property, Collection<?> values) {
@@ -69,6 +73,7 @@ public class Restrictions {
 
     /**
      * Restricts the property to be in the list of given values
+     *
      * @param property The property
      * @param subquery The subquery
      * @return An instance of Query.In
@@ -77,9 +82,9 @@ public class Restrictions {
         return new Query.In(property, subquery);
     }
 
-
     /**
      * Restricts the property to be in the list of given values
+     *
      * @param property The property
      * @param subquery The subquery
      * @return An instance of Query.In
@@ -90,7 +95,8 @@ public class Restrictions {
 
     /**
      * Restricts the property match the given String expressions. Expressions use SQL-like % to denote wildcards
-     * @param property The property name
+     *
+     * @param property   The property name
      * @param expression The expression
      * @return An instance of Query.Like
      */
@@ -101,7 +107,7 @@ public class Restrictions {
     /**
      * Case insensitive like
      *
-     * @param property The property
+     * @param property   The property
      * @param expression The expression
      * @return An ILike expression
      */
@@ -112,7 +118,7 @@ public class Restrictions {
     /**
      * Restricts the property match the given regular expressions.
      *
-     * @param property The property name
+     * @param property   The property name
      * @param expression The expression
      * @return An instance of Query.RLike
      */
@@ -132,8 +138,8 @@ public class Restrictions {
      * Restricts the results by the given property value range
      *
      * @param property The name of the property
-     * @param start The start of the range
-     * @param end The end of the range
+     * @param start    The start of the range
+     * @param end      The end of the range
      * @return The Between instance
      */
     public static Query.Between between(String property, Object start, Object end) {
@@ -142,8 +148,9 @@ public class Restrictions {
 
     /**
      * Used to restrict a value to be greater than the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The GreaterThan instance
      */
     public static Query.GreaterThan gt(String property, Object value) {
@@ -152,8 +159,9 @@ public class Restrictions {
 
     /**
      * Used to restrict a value to be less than the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The LessThan instance
      */
     public static Query.LessThan lt(String property, Object value) {
@@ -162,8 +170,9 @@ public class Restrictions {
 
     /**
      * Used to restrict a value to be greater than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The LessThan instance
      */
     public static Query.GreaterThanEquals gte(String property, Object value) {
@@ -172,8 +181,9 @@ public class Restrictions {
 
     /**
      * Used to restrict a value to be less than or equal to the given value
+     *
      * @param property The property
-     * @param value The value
+     * @param value    The value
      * @return The LessThan instance
      */
     public static Query.LessThanEquals lte(String property, Object value) {
@@ -224,7 +234,7 @@ public class Restrictions {
      * Used to restrict the size of a collection property
      *
      * @param property The property
-     * @param size The size to restrict
+     * @param size     The size to restrict
      * @return The result
      */
     public static Query.SizeEquals sizeEq(String property, int size) {
@@ -235,7 +245,7 @@ public class Restrictions {
      * Used to restrict the size of a collection property to be greater than the given value
      *
      * @param property The property
-     * @param size The size to restrict
+     * @param size     The size to restrict
      * @return The result
      */
     public static Query.SizeGreaterThan sizeGt(String property, int size) {
@@ -246,7 +256,7 @@ public class Restrictions {
      * Used to restrict the size of a collection property to be greater than or equal to the given value
      *
      * @param property The property
-     * @param size The size to restrict
+     * @param size     The size to restrict
      * @return The result
      */
     public static Query.SizeGreaterThanEquals sizeGe(String property, int size) {
@@ -257,8 +267,7 @@ public class Restrictions {
      * Creates a Criterion that contrains a collection property to be less than or equal to the given size
      *
      * @param property The property name
-     * @param size The size to constrain by
-     *
+     * @param size     The size to constrain by
      * @return A Criterion instance
      */
     public static Query.SizeLessThanEquals sizeLe(String property, int size) {
@@ -269,8 +278,7 @@ public class Restrictions {
      * Creates a Criterion that contrains a collection property to be less than to the given size
      *
      * @param property The property name
-     * @param size The size to constrain by
-     *
+     * @param size     The size to constrain by
      * @return A Criterion instance
      */
     public static Query.SizeLessThan sizeLt(String property, int size) {
@@ -281,8 +289,7 @@ public class Restrictions {
      * Creates a Criterion that contrains a collection property to be not equal to the given size
      *
      * @param property The property name
-     * @param size The size to constrain by
-     *
+     * @param size     The size to constrain by
      * @return A Criterion instance
      */
     public static Query.SizeNotEquals sizeNe(String property, int size) {

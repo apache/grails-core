@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class ModifyPerson implements Serializable {
+
     Long id
     Long version
 

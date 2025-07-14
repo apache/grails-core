@@ -18,8 +18,6 @@
  */
 package org.grails.cli.profile.commands
 
-
-
 /**
  *  Creates a profile
  *
@@ -27,6 +25,7 @@ package org.grails.cli.profile.commands
  * @since 3.1
  */
 class CreateProfileCommand extends CreateAppCommand {
+
     public static final String NAME = "create-profile"
 
     CreateProfileCommand() {

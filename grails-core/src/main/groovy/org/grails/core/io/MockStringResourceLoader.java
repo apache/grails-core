@@ -18,12 +18,11 @@
  */
 package org.grails.core.io;
 
-import java.io.UnsupportedEncodingException;
+import org.springframework.core.io.Resource;
+
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.springframework.core.io.Resource;
 
 /**
  * Loads Resources from Strings that are registered as Mock resources.
@@ -49,11 +48,12 @@ public class MockStringResourceLoader extends MockResourceLoader {
      * of the resource.
      *
      * @param location The location
-     * @param res The resource itself
+     * @param res      The resource itself
      */
     public void registerMockResource(String location, Resource res) {
         mockResources.put(location, res);
     }
+
     /**
      * Registers a mock resource with the first argument as the location and the second as the contents
      * of the resource.

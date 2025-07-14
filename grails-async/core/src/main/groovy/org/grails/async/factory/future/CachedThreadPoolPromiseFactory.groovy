@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.future
 
 import grails.async.Promise
@@ -24,10 +23,15 @@ import grails.async.PromiseList
 import grails.async.factory.AbstractPromiseFactory
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+import jakarta.annotation.PreDestroy
 import org.grails.async.factory.BoundPromise
 
-import jakarta.annotation.PreDestroy
-import java.util.concurrent.*
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.RunnableFuture
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * A promise factory that uses an ExecutorService by default
@@ -39,15 +43,18 @@ import java.util.concurrent.*
 @CompileStatic
 class CachedThreadPoolPromiseFactory extends AbstractPromiseFactory implements Closeable, ExecutorPromiseFactory {
 
-    final @Delegate ExecutorService executorService
+    @Delegate
+    final ExecutorService executorService
 
     CachedThreadPoolPromiseFactory(int maxPoolSize = Integer.MAX_VALUE, long timeout = 60L, TimeUnit unit = TimeUnit.SECONDS) {
         CachedThreadPoolPromiseFactory pf = this
         this.executorService = new ThreadPoolExecutor(0, maxPoolSize, timeout, unit, new SynchronousQueue<Runnable>()) {
+
             @Override
             protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
                 return new FutureTaskPromise<T>(pf, callable)
             }
+
             @Override
             protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
                 return new FutureTaskPromise<T>(pf, runnable, value)
@@ -71,8 +78,7 @@ class CachedThreadPoolPromiseFactory extends AbstractPromiseFactory implements C
             def callable = closures[0]
             def decoratedCallable = applyDecorators(callable, null)
             return executorService.submit(decoratedCallable as Callable) as Promise<T>
-        }
-        else {
+        } else {
             PromiseList<T> list = new PromiseList<>()
             for (Closure<T> closure : closures) {
                 list.add(closure)
@@ -108,7 +114,11 @@ class CachedThreadPoolPromiseFactory extends AbstractPromiseFactory implements C
             while (promises.every { Promise promise -> !promise.isDone() }) {
                 // wait (is this hogging the cpu?)
             }
-            try { for (Promise<T> promise : promises) { promise.get() } }
+            try {
+                for (Promise<T> promise : promises) {
+                    promise.get()
+                }
+            }
             catch (Throwable e) {
                 callable.call(e)
                 return e

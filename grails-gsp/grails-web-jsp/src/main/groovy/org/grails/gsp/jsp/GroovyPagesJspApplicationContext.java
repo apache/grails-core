@@ -18,7 +18,20 @@
  */
 package org.grails.gsp.jsp;
 
-import jakarta.el.*;
+import jakarta.el.ArrayELResolver;
+import jakarta.el.BeanELResolver;
+import jakarta.el.CompositeELResolver;
+import jakarta.el.ELContext;
+import jakarta.el.ELContextEvent;
+import jakarta.el.ELContextListener;
+import jakarta.el.ELResolver;
+import jakarta.el.ExpressionFactory;
+import jakarta.el.FunctionMapper;
+import jakarta.el.ListELResolver;
+import jakarta.el.MapELResolver;
+import jakarta.el.ResourceBundleELResolver;
+import jakarta.el.ValueExpression;
+import jakarta.el.VariableMapper;
 import jakarta.servlet.jsp.JspApplicationContext;
 import jakarta.servlet.jsp.el.ImplicitObjectELResolver;
 import jakarta.servlet.jsp.el.ScopedAttributeELResolver;
@@ -37,7 +50,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
 
     private static final Log LOG = LogFactory.getLog(GroovyPagesJspApplicationContext.class);
 
-    private static final ExpressionFactory expressionFactoryImpl = findExpressionFactoryImplementation();
+    private static final ExpressionFactory EXPRESSION_FACTORY_IMPL = findExpressionFactoryImplementation();
 
     private final LinkedList<ELContextListener> listeners = new LinkedList<ELContextListener>();
     private final CompositeELResolver elResolver = new CompositeELResolver();
@@ -73,15 +86,13 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
             if (ExpressionFactory.class.isAssignableFrom(cl)) {
                 LOG.info("Using " + className + " as implementation of " +
                         ExpressionFactory.class.getName());
-                return (ExpressionFactory)cl.newInstance();
+                return (ExpressionFactory) cl.newInstance();
             }
             LOG.warn("Class " + className + " does not implement " +
                     ExpressionFactory.class.getName());
-        }
-        catch(ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             // ignored
-        }
-        catch(Exception e) {
+        } catch (Exception e) {
             LOG.error("Failed to instantiate " + className, e);
         }
         return null;
@@ -92,11 +103,11 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     }
 
     public ExpressionFactory getExpressionFactory() {
-        return expressionFactoryImpl;
+        return EXPRESSION_FACTORY_IMPL;
     }
 
     public void addELContextListener(ELContextListener elContextListener) {
-        synchronized(listeners) {
+        synchronized (listeners) {
             listeners.addLast(elContextListener);
         }
     }
@@ -104,8 +115,8 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     ELContext createELContext(GroovyPagesPageContext pageCtx) {
         ELContext ctx = new GroovyPagesELContext(pageCtx);
         ELContextEvent event = new ELContextEvent(ctx);
-        synchronized(listeners) {
-            for (Iterator<ELContextListener> iter = listeners.iterator(); iter.hasNext();) {
+        synchronized (listeners) {
+            for (Iterator<ELContextListener> iter = listeners.iterator(); iter.hasNext(); ) {
                 iter.next().contextCreated(event);
             }
         }
@@ -113,6 +124,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     }
 
     private class GroovyPagesELContext extends ELContext {
+
         private GroovyPagesPageContext pageCtx;
 
         public GroovyPagesELContext(GroovyPagesPageContext pageCtx) {
@@ -136,8 +148,10 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
                 @Override
                 public ValueExpression resolveVariable(String name) {
                     Object o = pageCtx.findAttribute(name);
-                    if (o == null) return null;
-                    return expressionFactoryImpl.createValueExpression(o, o.getClass());
+                    if (o == null) {
+                        return null;
+                    }
+                    return EXPRESSION_FACTORY_IMPL.createValueExpression(o, o.getClass());
                 }
 
                 @Override

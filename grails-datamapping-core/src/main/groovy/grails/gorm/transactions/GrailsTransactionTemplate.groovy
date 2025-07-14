@@ -50,11 +50,11 @@ class GrailsTransactionTemplate {
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, TransactionDefinition transactionDefinition) {
-        this(transactionManager, transactionDefinition instanceof TransactionAttribute ? (TransactionAttribute)transactionDefinition : new GrailsTransactionAttribute(transactionDefinition));
+        this(transactionManager, transactionDefinition instanceof TransactionAttribute ? (TransactionAttribute) transactionDefinition : new GrailsTransactionAttribute(transactionDefinition));
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, TransactionAttribute transactionAttribute) {
-        this(transactionManager, transactionAttribute instanceof CustomizableRollbackTransactionAttribute ? (CustomizableRollbackTransactionAttribute)transactionAttribute : new CustomizableRollbackTransactionAttribute(transactionAttribute));
+        this(transactionManager, transactionAttribute instanceof CustomizableRollbackTransactionAttribute ? (CustomizableRollbackTransactionAttribute) transactionAttribute : new CustomizableRollbackTransactionAttribute(transactionAttribute));
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute) {
@@ -65,6 +65,7 @@ class GrailsTransactionTemplate {
     public <T> T executeAndRollback(@ClosureParams(value = SimpleType.class, options = "org.springframework.transaction.TransactionStatus") Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
+
                 Object doInTransaction(TransactionStatus status) {
                     try {
                         return action.call(status)
@@ -91,6 +92,7 @@ class GrailsTransactionTemplate {
     public <T> T execute(@ClosureParams(value = SimpleType.class, options = "org.springframework.transaction.TransactionStatus") Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
+
                 Object doInTransaction(TransactionStatus status) {
                     try {
                         return action.call(status)
@@ -107,10 +109,10 @@ class GrailsTransactionTemplate {
                         }
                     } finally {
                         boolean inheritRollbackOnly = true
-                        if(transactionAttribute instanceof CustomizableRollbackTransactionAttribute) {
+                        if (transactionAttribute instanceof CustomizableRollbackTransactionAttribute) {
                             inheritRollbackOnly = transactionAttribute.isInheritRollbackOnly()
                         }
-                        if(inheritRollbackOnly && status.isRollbackOnly()) {
+                        if (inheritRollbackOnly && status.isRollbackOnly()) {
                             status.setRollbackOnly()
                         }
                     }
@@ -120,7 +122,7 @@ class GrailsTransactionTemplate {
             if (result instanceof ThrowableHolder) {
                 throw result.getThrowable()
             } else {
-                return (T)result
+                return (T) result
             }
         }
         catch (ThrowableHolderException e) {

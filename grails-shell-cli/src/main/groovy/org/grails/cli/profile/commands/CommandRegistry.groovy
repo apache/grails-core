@@ -44,13 +44,13 @@ class CommandRegistry {
     CommandRegistry() {
         Iterator<Command> commands = ServiceLoader.load(Command, CommandRegistry.classLoader).iterator()
 
-        while(commands.hasNext()) {
+        while (commands.hasNext()) {
             Command command = commands.next()
             registeredCommands[command.name] = command
         }
 
         Iterator<CommandFactory> commandFactories = ServiceLoader.load(CommandFactory, CommandFactory.classLoader).iterator()
-        while(commandFactories.hasNext()) {
+        while (commandFactories.hasNext()) {
             CommandFactory commandFactory = commandFactories.next()
             registeredCommandFactories << commandFactory
         }
@@ -65,7 +65,7 @@ class CommandRegistry {
      */
     Command getCommand(String name, ProfileRepository repository) {
         def command = registeredCommands[name]
-        if(command instanceof ProfileRepositoryAware) {
+        if (command instanceof ProfileRepositoryAware) {
             command.profileRepository = repository
         }
         return command
@@ -73,8 +73,8 @@ class CommandRegistry {
 
     Collection<Command> findCommands(ProfileRepository repository) {
         registeredCommands.values().collect() { Command cmd ->
-            if(cmd instanceof ProfileRepositoryAware) {
-                ((ProfileRepositoryAware)cmd).profileRepository = repository
+            if (cmd instanceof ProfileRepositoryAware) {
+                ((ProfileRepositoryAware) cmd).profileRepository = repository
             }
             return cmd
         }
@@ -83,19 +83,19 @@ class CommandRegistry {
     Collection<Command> findCommands(Profile profile, boolean inherited = false) {
         Collection<Command> commands = []
 
-        for(CommandFactory cf in registeredCommandFactories) {
+        for (CommandFactory cf in registeredCommandFactories) {
             def factoryCommands = cf.findCommands(profile, inherited)
             def condition = { Command c -> c.name == 'events' }
             def eventCommands = factoryCommands.findAll(condition)
-            for(ec in eventCommands) {
+            for (ec in eventCommands) {
                 ec.handle(new GrailsCli.ExecutionContextImpl(new CodeGenConfig(profile.configuration)))
             }
             factoryCommands.removeAll(condition)
             commands.addAll factoryCommands
         }
 
-        commands.addAll( registeredCommands.values()
-                            .findAll { Command c -> (c instanceof ProjectCommand) || (c instanceof ProfileCommand) && ((ProfileCommand)c).profile == profile }
+        commands.addAll(registeredCommands.values()
+                .findAll { Command c -> (c instanceof ProjectCommand) || (c instanceof ProfileCommand) && ((ProfileCommand) c).profile == profile }
         )
         return commands
     }

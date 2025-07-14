@@ -20,7 +20,6 @@
 package org.grails.datastore.mapping.multitenancy.exceptions
 
 import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.datastore.mapping.core.DatastoreException
 
 /**
@@ -31,6 +30,7 @@ import org.grails.datastore.mapping.core.DatastoreException
  */
 @CompileStatic
 class TenantException extends DatastoreException {
+
     TenantException(String s) {
         super(s)
     }

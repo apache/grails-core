@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.sitemesh3;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -26,14 +26,13 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.handler.AbstractHandlerMapping;
 import org.springframework.web.servlet.mvc.ParameterizableViewController;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 public class GrailsLayoutHandlerMapping extends AbstractHandlerMapping {
+
     @Autowired
     GrailsConventionGroovyPageLocator groovyPageLocator;
 
@@ -53,7 +52,7 @@ public class GrailsLayoutHandlerMapping extends AbstractHandlerMapping {
             ParameterizableViewController pvc = layoutCache.get(servletPath);
             if (pvc == null) {
                 if (groovyPageLocator.findViewByPath(servletPath) == null) {
-                    throw new ResponseStatusException(NOT_FOUND, "Unable to find resource "+servletPath);
+                    throw new ResponseStatusException(NOT_FOUND, "Unable to find resource " + servletPath);
                 }
                 pvc = new ParameterizableViewController();
                 pvc.setSupportedMethods(HttpMethod.GET.name(), HttpMethod.HEAD.name(), HttpMethod.POST.name());

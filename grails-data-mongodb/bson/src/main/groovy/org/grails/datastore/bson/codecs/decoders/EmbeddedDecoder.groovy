@@ -44,11 +44,11 @@ class EmbeddedDecoder implements PropertyDecoder<Embedded> {
         BsonPersistentEntityCodec codec = createEmbeddedEntityCodec(codecRegistry, associatedEntity)
 
         def decoded = codec.decode(reader, decoderContext)
-        if(decoded instanceof DirtyCheckable) {
+        if (decoded instanceof DirtyCheckable) {
             decoded.trackChanges()
         }
 
-        if(property.isBidirectional()) {
+        if (property.isBidirectional()) {
             Association inverseSide = property.getInverseSide()
             EntityReflector associationReflector = property.getAssociatedEntity().getReflector()
             associationReflector.setProperty(

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.model;
 
 import org.grails.datastore.mapping.config.Property;
@@ -39,6 +38,7 @@ public interface PropertyMapping<T extends Property> {
 
     /**
      * Returns the mapped form of the property such as a Column, a Key/Value pair, attribute etc.
+     *
      * @return The mapped representation
      */
     T getMappedForm();

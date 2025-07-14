@@ -18,12 +18,16 @@
  */
 package grails.gorm;
 
+import org.grails.datastore.mapping.query.Query;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.*;
-
-import org.grails.datastore.mapping.query.Query;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * A result list implementation that provides an additional property called 'totalCount' to obtain the total number of
@@ -35,12 +39,12 @@ import org.grails.datastore.mapping.query.Query;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class PagedResultList<E> implements Serializable, List<E> {
 
-
     private static final long serialVersionUID = -5820655628956173929L;
 
-    private final Query query;
     protected List<E> resultList;
     protected int totalCount = Integer.MIN_VALUE;
+
+    private final Query query;
 
     public PagedResultList(Query query) {
         this.query = query;
@@ -105,7 +109,7 @@ public class PagedResultList<E> implements Serializable, List<E> {
             if (query == null) {
                 totalCount = 0;
             } else {
-                Query newQuery = (Query)query.clone();
+                Query newQuery = (Query) query.clone();
                 newQuery.projections().count();
                 Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();

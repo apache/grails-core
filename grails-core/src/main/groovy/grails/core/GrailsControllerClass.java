@@ -27,7 +27,6 @@ import java.util.Set;
  *
  * @author Steven Devijver
  * @author Graeme Rocher
- *
  * @since 1.0
  */
 public interface GrailsControllerClass extends InjectableGrailsClass {
@@ -67,7 +66,6 @@ public interface GrailsControllerClass extends InjectableGrailsClass {
      */
     String NAMESPACE_PROPERTY = "namespace";
 
-
     /**
      * @return The action names
      */
@@ -88,7 +86,6 @@ public interface GrailsControllerClass extends InjectableGrailsClass {
      */
     boolean isSingleton();
 
-
     /**
      * Returns the default action for this Controller.
      *
@@ -100,22 +97,23 @@ public interface GrailsControllerClass extends InjectableGrailsClass {
      * Initialize the controller class
      */
     void initialize();
+
     /**
      * Tests if a controller maps to a given URI.
      *
      * @return true if controller maps to URI
      */
     boolean mapsToURI(String uri);
+
     /**
      * Invokes a controller action on the given controller instance
      *
      * @param controller The controller instance
-     * @param action The action
+     * @param action     The action
      * @return The result of the action
      * @throws Throwable Thrown when an error occurs invoking the action
      */
     Object invoke(Object controller, String action) throws Throwable;
-
 
     /**
      * Register a new {@link grails.web.UrlConverter} with the controller

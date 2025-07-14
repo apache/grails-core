@@ -21,7 +21,6 @@ package org.grails.cli.compiler.autoconfigure;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
-
 import org.grails.cli.compiler.AstUtils;
 import org.grails.cli.compiler.CompilerAutoConfiguration;
 import org.grails.cli.compiler.DependencyCustomizer;
@@ -35,22 +34,22 @@ import org.grails.cli.compiler.DependencyCustomizer;
  */
 public class JmsCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-	@Override
-	public boolean matches(ClassNode classNode) {
-		return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJms")
-				|| AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJmsMessaging");
-	}
+    @Override
+    public boolean matches(ClassNode classNode) {
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJms")
+                || AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJmsMessaging");
+    }
 
-	@Override
-	public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
-		dependencies.add("spring-jms", "javax.jms-api");
-	}
+    @Override
+    public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
+        dependencies.add("spring-jms", "javax.jms-api");
+    }
 
-	@Override
-	public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
-		imports.addStarImports("javax.jms", "org.springframework.jms.annotation", "org.springframework.jms.config",
-				"org.springframework.jms.core", "org.springframework.jms.listener",
-				"org.springframework.jms.listener.adapter");
-	}
+    @Override
+    public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
+        imports.addStarImports("javax.jms", "org.springframework.jms.annotation", "org.springframework.jms.config",
+                "org.springframework.jms.core", "org.springframework.jms.listener",
+                "org.springframework.jms.listener.adapter");
+    }
 
 }

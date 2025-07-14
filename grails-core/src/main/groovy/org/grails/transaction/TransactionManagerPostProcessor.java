@@ -37,6 +37,7 @@ import org.springframework.util.Assert;
  * @since 0.4
  */
 public class TransactionManagerPostProcessor implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware, Ordered {
+
     private ConfigurableListableBeanFactory beanFactory;
     private PlatformTransactionManager transactionManager;
     private int order = Ordered.LOWEST_PRECEDENCE;
@@ -45,6 +46,7 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
     /**
      * Gets the platform transaction manager from the bean factory if
      * there is one.
+     *
      * @param beanFactory The bean factory handling this post processor.
      * @throws BeansException
      */
@@ -58,6 +60,7 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
     /**
      * Injects the platform transaction manager into the given bean if
      * that bean implements the {@link grails.transaction.TransactionManagerAware} interface.
+     *
      * @param bean The bean to process.
      * @param name The name of the bean.
      * @return The bean after the transaction manager has been injected.
@@ -67,7 +70,7 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
     public boolean postProcessAfterInstantiation(Object bean, String name) throws BeansException {
         if (bean instanceof TransactionManagerAware) {
             initialize();
-            if(transactionManager != null) {
+            if (transactionManager != null) {
                 TransactionManagerAware tma = (TransactionManagerAware) bean;
                 tma.setTransactionManager(transactionManager);
             }
@@ -76,7 +79,7 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
     }
 
     private void initialize() {
-        if(transactionManager == null && beanFactory != null && !initialized) {
+        if (transactionManager == null && beanFactory != null && !initialized) {
             if (beanFactory.containsBean(GrailsApplication.TRANSACTION_MANAGER_BEAN)) {
                 transactionManager = beanFactory.getBean(GrailsApplication.TRANSACTION_MANAGER_BEAN, PlatformTransactionManager.class);
             } else {
@@ -90,7 +93,7 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
                 // If at least one is found, use the first of them as the
                 // transaction manager for the application.
                 if (beanNames.length > 0) {
-                    transactionManager = (PlatformTransactionManager)beanFactory.getBean(beanNames[0]);
+                    transactionManager = (PlatformTransactionManager) beanFactory.getBean(beanNames[0]);
                 }
             }
             initialized = true;

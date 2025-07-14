@@ -33,16 +33,11 @@ import org.springframework.util.Assert;
  * @since 1.0
  */
 public class KeyValueMappingContext extends AbstractMappingContext {
+
+    public static final String GROOVY_OBJECT_CLASS = "groovy.lang.GroovyObject";
     protected MappingFactory<Family, KeyValue> mappingFactory;
     protected MappingConfigurationStrategy syntaxStrategy;
     private String keyspace;
-    public static final String GROOVY_OBJECT_CLASS = "groovy.lang.GroovyObject";
-
-    @Override
-    public void setCanInitializeEntities(boolean canInitializeEntities) {
-        super.setCanInitializeEntities(canInitializeEntities);
-        syntaxStrategy.setCanExpandMappingContext(false);
-    }
 
     /**
      * Constructs a context using the given keyspace
@@ -68,6 +63,12 @@ public class KeyValueMappingContext extends AbstractMappingContext {
         initializeDefaultMappingFactory(keyspace);
         syntaxStrategy = new JpaMappingConfigurationStrategy(this.mappingFactory);
         super.initialize(settings);
+    }
+
+    @Override
+    public void setCanInitializeEntities(boolean canInitializeEntities) {
+        super.setCanInitializeEntities(canInitializeEntities);
+        syntaxStrategy.setCanExpandMappingContext(false);
     }
 
     public String getKeyspace() {

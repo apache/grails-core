@@ -20,16 +20,6 @@ package org.grails.spring;
 
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.PropertyValue;
@@ -43,10 +33,19 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.Assert;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * A programmable runtime Spring configuration that allows a spring ApplicationContext
  * to be constructed at runtime.
- *
+ * <p>
  * Credit must go to Solomon Duskis and the
  * article: http://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
  *
@@ -57,19 +56,31 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
     private static final Log LOG = LogFactory.getLog(DefaultRuntimeSpringConfiguration.class);
     protected GenericApplicationContext context;
-    private Map<String, BeanConfiguration> beanConfigs = new HashMap<String, BeanConfiguration>();
-    private Map<String, BeanDefinition> beanDefinitions = new HashMap<String, BeanDefinition>();
-    private Set<String> beanNames = new LinkedHashSet<String>();
     protected ApplicationContext parent;
     protected ClassLoader classLoader;
     protected Map<String, List<String>> aliases = new HashMap<String, List<String>>();
     protected ListableBeanFactory beanFactory;
+    private final Map<String, BeanConfiguration> beanConfigs = new HashMap<String, BeanConfiguration>();
+    private final Map<String, BeanDefinition> beanDefinitions = new HashMap<String, BeanDefinition>();
+    private final Set<String> beanNames = new LinkedHashSet<String>();
+
+    public DefaultRuntimeSpringConfiguration() {
+        super();
+    }
+
+    public DefaultRuntimeSpringConfiguration(ApplicationContext parent) {
+        this(parent, null);
+    }
+
+    public DefaultRuntimeSpringConfiguration(ApplicationContext parent, ClassLoader cl) {
+        this.parent = parent;
+        classLoader = cl;
+    }
 
     /**
      * Creates the ApplicationContext instance. Subclasses can override to customise the used ApplicationContext
      *
      * @param parentCtx The parent ApplicationContext instance. Can be null.
-     *
      * @return An instance of GenericApplicationContext
      */
     protected GenericApplicationContext createApplicationContext(ApplicationContext parentCtx) {
@@ -77,7 +88,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
             Assert.isInstanceOf(DefaultListableBeanFactory.class, beanFactory,
                     "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
 
-            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory,parentCtx);
+            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory, parentCtx);
         }
 
         if (beanFactory != null) {
@@ -94,24 +105,11 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
         return new GrailsApplicationContext();
     }
 
-    public DefaultRuntimeSpringConfiguration() {
-        super();
-    }
-
-    public DefaultRuntimeSpringConfiguration(ApplicationContext parent) {
-        this(parent, null);
-    }
-
-    public DefaultRuntimeSpringConfiguration(ApplicationContext parent, ClassLoader cl) {
-        this.parent = parent;
-        classLoader = cl;
-    }
-
     private void trySettingClassLoaderOnContextIfFoundInParent(ApplicationContext parentCtx) {
         if (parentCtx.containsBean("classLoader")) {
             Object cl = parentCtx.getBean("classLoader");
             if (cl instanceof ClassLoader) {
-                setClassLoaderOnContext((ClassLoader)cl);
+                setClassLoaderOnContext((ClassLoader) cl);
             }
         }
     }
@@ -133,8 +131,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
         if (parent != null && classLoader == null) {
             trySettingClassLoaderOnContextIfFoundInParent(parent);
-        }
-        else if (classLoader != null) {
+        } else if (classLoader != null) {
             setClassLoaderOnContext(classLoader);
         }
 
@@ -142,13 +139,13 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public BeanConfiguration addSingletonBean(String name, @SuppressWarnings("rawtypes") Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     public BeanConfiguration addPrototypeBean(String name, @SuppressWarnings("rawtypes") Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz,true);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, true);
         registerBeanConfiguration(name, bc);
         return bc;
     }
@@ -181,19 +178,19 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
     @SuppressWarnings("rawtypes")
     public BeanConfiguration addSingletonBean(String name, Class clazz, Collection args) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz,args);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, args);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     public BeanConfiguration addPrototypeBean(String name) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,true);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, true);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     private void registerBeanConfiguration(String name, BeanConfiguration bc) {
-        beanConfigs.put(name,bc);
+        beanConfigs.put(name, bc);
         beanNames.add(name);
     }
 
@@ -203,7 +200,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public BeanConfiguration createPrototypeBean(String name) {
-        return new DefaultBeanConfiguration(name,true);
+        return new DefaultBeanConfiguration(name, true);
     }
 
     public BeanConfiguration createSingletonBean(String name) {
@@ -216,7 +213,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public void addBeanDefinition(String name, BeanDefinition bd) {
-        beanDefinitions.put(name,bd);
+        beanDefinitions.put(name, bd);
         beanConfigs.remove(name);
         beanNames.add(name);
     }
@@ -232,7 +229,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     public AbstractBeanDefinition createBeanDefinition(String name) {
         if (containsBean(name)) {
             if (beanDefinitions.containsKey(name)) {
-                return (AbstractBeanDefinition)beanDefinitions.get(name);
+                return (AbstractBeanDefinition) beanDefinitions.get(name);
             }
             if (beanConfigs.containsKey(name)) {
                 return beanConfigs.get(name).getBeanDefinition();
@@ -276,8 +273,8 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
                 LOG.debug("[RuntimeConfiguration] Registering bean [" + beanName + "]");
                 if (LOG.isTraceEnabled()) {
                     PropertyValue[] pvs = bc.getBeanDefinition()
-                                            .getPropertyValues()
-                                            .getPropertyValues();
+                            .getPropertyValues()
+                            .getPropertyValues();
                     for (PropertyValue pv : pvs) {
                         LOG.trace("[RuntimeConfiguration] With property [" + pv.getName() + "] set to [" + pv.getValue() + "]");
                     }
@@ -336,7 +333,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     private void removeBeanDefinition(BeanDefinitionRegistry registry, String beanName) {
         MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(registry.getClass());
         if (!mc.respondsTo(registry, "removeBeanDefinition").isEmpty()) {
-            mc.invokeMethod(registry, "removeBeanDefinition", new Object[] { beanName });
+            mc.invokeMethod(registry, "removeBeanDefinition", new Object[]{beanName});
         }
     }
 

@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class PlantCategory implements Serializable {
+
     Long id
     Long version
     Set plants

@@ -167,4 +167,3 @@ class RxPromiseSpec extends Specification {
     }
 }
 
-

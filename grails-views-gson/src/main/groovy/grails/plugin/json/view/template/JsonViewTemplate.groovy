@@ -35,7 +35,7 @@ class JsonViewTemplate extends GrailsViewTemplate {
 
     @Override
     Writable make(Map binding) {
-        JsonViewWritableScript writableTemplate = (JsonViewWritableScript)super.make(binding)
+        JsonViewWritableScript writableTemplate = (JsonViewWritableScript) super.make(binding)
         writableTemplate.setGenerator(generator)
         writableTemplate.setJsonApiIdRenderStrategy(jsonApiIdRenderStrategy)
         writableTemplate

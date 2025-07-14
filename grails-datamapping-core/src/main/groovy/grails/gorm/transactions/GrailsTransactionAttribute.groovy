@@ -26,8 +26,6 @@ import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
 import org.springframework.transaction.interceptor.RollbackRuleAttribute
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
 
-
-
 /**
  * Used to configure a {@link GrailsTransactionTemplate}
  *
@@ -38,10 +36,11 @@ import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
 @InheritConstructors
 @Slf4j
 class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
+
     private static final long serialVersionUID = 1L;
     private boolean inheritRollbackOnly = true;
 
-    public GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
+    GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
         super();
         propagationBehavior = other.propagationBehavior
         isolationLevel = other.isolationLevel
@@ -50,7 +49,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         name = other.name
     }
 
-    public GrailsTransactionAttribute(TransactionDefinition other) {
+    GrailsTransactionAttribute(TransactionDefinition other) {
         super();
         propagationBehavior = other.propagationBehavior
         isolationLevel = other.isolationLevel
@@ -59,18 +58,18 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         name = other.name
     }
 
-    public GrailsTransactionAttribute(GrailsTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute)other);
+    GrailsTransactionAttribute(GrailsTransactionAttribute other) {
+        this((RuleBasedTransactionAttribute) other);
     }
 
-    public GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
+    GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
         super(other)
-        if(other instanceof GrailsTransactionAttribute) {
-            this.inheritRollbackOnly = ((GrailsTransactionAttribute)other).inheritRollbackOnly
+        if (other instanceof GrailsTransactionAttribute) {
+            this.inheritRollbackOnly = ((GrailsTransactionAttribute) other).inheritRollbackOnly
         }
     }
 
-    public boolean isInheritRollbackOnly() {
+    boolean isInheritRollbackOnly() {
         return inheritRollbackOnly;
     }
 
@@ -95,7 +94,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         }
 
         if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner" );
+            log.trace("Winning rollback rule is: $winner");
         }
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
@@ -109,7 +108,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         return !(winner instanceof NoRollbackRuleAttribute)
     }
 
-    public void setInheritRollbackOnly(boolean inheritRollbackOnly) {
+    void setInheritRollbackOnly(boolean inheritRollbackOnly) {
         this.inheritRollbackOnly = inheritRollbackOnly;
     }
 }

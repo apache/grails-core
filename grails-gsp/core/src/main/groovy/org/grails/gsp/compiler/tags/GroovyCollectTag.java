@@ -21,6 +21,7 @@ package org.grails.gsp.compiler.tags;
 import grails.util.GrailsStringUtils;
 import org.grails.taglib.GrailsTagException;
 
+//CHECKSTYLE:OFF
 /**
  * Example:
  * <pre>
@@ -34,6 +35,7 @@ import org.grails.taglib.GrailsTagException;
  * @author Graeme Rocher
  * @since 19-Jan-2006
  */
+//CHECKSTYLE:ON
 public class GroovyCollectTag extends GroovySyntaxTag {
 
     public static final String TAG_NAME = "collect";

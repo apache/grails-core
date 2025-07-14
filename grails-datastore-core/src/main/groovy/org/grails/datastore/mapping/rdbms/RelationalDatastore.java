@@ -23,4 +23,6 @@ import org.grails.datastore.mapping.core.Datastore;
 /**
  * @author Guillaume Laforge
  */
-public interface RelationalDatastore extends Datastore {}
+public interface RelationalDatastore extends Datastore {
+
+}

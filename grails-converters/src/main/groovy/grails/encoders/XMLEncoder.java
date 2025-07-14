@@ -16,19 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.encoders;
 
 import grails.converters.XML;
 import org.grails.encoder.impl.BasicXMLEncoder;
 
 public class XMLEncoder extends BasicXMLEncoder {
+
     @Override
     protected Object encodeAsXmlObject(Object o) {
-        if(o instanceof XML) {
+        if (o instanceof XML) {
             return o;
         } else {
-            return new XML(o); 
+            return new XML(o);
         }
     }
 }

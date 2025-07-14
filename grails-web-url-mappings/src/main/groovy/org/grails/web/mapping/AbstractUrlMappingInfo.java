@@ -57,14 +57,20 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
                 Object rightValue = newParams.get(rightKey);
                 boolean leftIsClosure = leftValue instanceof Closure;
                 boolean rightIsClosure = rightValue instanceof Closure;
-                if (leftIsClosure && rightIsClosure) return 0;
-                if (leftIsClosure && !rightIsClosure) return 1;
-                if (rightIsClosure && !leftIsClosure) return -1;
+                if (leftIsClosure && rightIsClosure) {
+                    return 0;
+                }
+                if (leftIsClosure && !rightIsClosure) {
+                    return 1;
+                }
+                if (rightIsClosure && !leftIsClosure) {
+                    return -1;
+                }
                 return 0;
             }
         });
-        Map<String,Object> sortedParams = new LinkedHashMap<String,Object>();
-        for(Object key : keys) {
+        Map<String, Object> sortedParams = new LinkedHashMap<String, Object>();
+        for (Object key : keys) {
             sortedParams.put(String.valueOf(key), newParams.get(key));
         }
         this.params = Collections.unmodifiableMap(sortedParams);
@@ -83,7 +89,9 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
     protected void populateParamsForMapping(GrailsWebRequest webRequest) {
         Map dispatchParams = webRequest.getParams();
         String encoding = webRequest.getRequest().getCharacterEncoding();
-        if (encoding == null) encoding = "UTF-8";
+        if (encoding == null) {
+            encoding = "UTF-8";
+        }
 
         for (Map.Entry<String, Object> entry : params.entrySet()) {
             String name = entry.getKey();
@@ -115,10 +123,9 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
     }
 
     protected String evaluateNameForValue(Object value) {
-        if(value instanceof CharSequence) {
+        if (value instanceof CharSequence) {
             return value.toString().trim();
-        }
-        else {
+        } else {
             GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
             return evaluateNameForValue(value, webRequest);
         }
@@ -137,12 +144,10 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
             cloned.setResolveStrategy(Closure.DELEGATE_FIRST);
             Object result = cloned.call();
             name = result != null ? result.toString() : null;
-        }
-        else if (value instanceof Map) {
+        } else if (value instanceof Map) {
             Map httpMethods = (Map) value;
             name = (String) httpMethods.get(webRequest.getCurrentRequest().getMethod());
-        }
-        else {
+        } else {
             name = value.toString();
         }
         return name != null ? name.trim() : null;

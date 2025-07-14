@@ -27,12 +27,11 @@ import org.grails.datastore.mapping.query.Query;
  * Interface for defining custom datastore types beyond the simple and association
  * types supported out of the box.
  *
- * @author Graeme Rocher
- * @since 1.0
- *
  * @param <T> The target type to be marshalled
  * @param <N> The native database type
  * @param <Q> The return type of the query
+ * @author Graeme Rocher
+ * @since 1.0
  */
 public interface CustomTypeMarshaller<T, N, Q> {
 
@@ -59,8 +58,8 @@ public interface CustomTypeMarshaller<T, N, Q> {
     /**
      * Converts a value to its native form
      *
-     * @param property The property being converted
-     * @param value The value
+     * @param property     The property being converted
+     * @param value        The value
      * @param nativeTarget The nativeTarget
      * @return The written value
      */
@@ -69,17 +68,18 @@ public interface CustomTypeMarshaller<T, N, Q> {
     /**
      * Populates a query
      *
-     * @param property The property being converted
-     * @param criterion The criterion
+     * @param property    The property being converted
+     * @param criterion   The criterion
      * @param nativeQuery The nativeQuery
      * @return The native query
      */
-    Q query(@SuppressWarnings("rawtypes") PersistentProperty property,  Query.PropertyCriterion criterion, Q nativeQuery);
+    Q query(@SuppressWarnings("rawtypes") PersistentProperty property, Query.PropertyCriterion criterion, Q nativeQuery);
 
     /**
      * Converts a value from its native form
+     *
      * @param property The property being converted
-     * @param source The native form
+     * @param source   The native form
      * @return The converted type
      */
     T read(@SuppressWarnings("rawtypes") PersistentProperty property, N source);

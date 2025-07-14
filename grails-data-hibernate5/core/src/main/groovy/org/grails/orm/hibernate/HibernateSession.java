@@ -18,34 +18,35 @@
  */
 package org.grails.orm.hibernate;
 
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.datastore.mapping.query.event.PostQueryEvent;
-import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.grails.orm.hibernate.query.HibernateHqlQuery;
-import org.grails.orm.hibernate.query.HibernateQuery;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.event.PostQueryEvent;
+import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
 import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.hibernate.*;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
+import org.grails.orm.hibernate.query.HibernateHqlQuery;
+import org.grails.orm.hibernate.query.HibernateQuery;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.context.ApplicationEventPublisher;
+
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.
@@ -71,14 +72,16 @@ public class HibernateSession extends AbstractHibernateSession {
 
     @Override
     public Serializable getObjectIdentifier(Object instance) {
-        if(instance == null) return null;
-        if(proxyHandler.isProxy(instance)) {
-            return ((HibernateProxy)instance).getHibernateLazyInitializer().getIdentifier();
+        if (instance == null) {
+            return null;
+        }
+        if (proxyHandler.isProxy(instance)) {
+            return ((HibernateProxy) instance).getHibernateLazyInitializer().getIdentifier();
         }
         Class<?> type = instance.getClass();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(type);
         final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
-        if(persistentEntity != null) {
+        if (persistentEntity != null) {
             return (Serializable) cpf.getPropertyValue(instance, persistentEntity.getIdentity().getName());
         }
         return null;
@@ -103,7 +106,7 @@ public class HibernateSession extends AbstractHibernateSession {
             List parameters = jpaQueryInfo.getParameters();
             if (parameters != null) {
                 for (int i = 0, count = parameters.size(); i < count; i++) {
-                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i+1), parameters.get(i));
+                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
                 }
             }
 
@@ -119,7 +122,7 @@ public class HibernateSession extends AbstractHibernateSession {
     /**
      * Updates all objects matching the given criteria and property values.
      *
-     * @param criteria The criteria
+     * @param criteria   The criteria
      * @param properties The properties
      * @return The total number of records updated
      */
@@ -130,7 +133,7 @@ public class HibernateSession extends AbstractHibernateSession {
             builder.setHibernateCompatible(true);
             PersistentEntity targetEntity = criteria.getPersistentEntity();
             PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
-            if(lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
+            if (lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
                 if (timestampProvider == null) {
                     timestampProvider = new DefaultTimestampProvider();
                 }
@@ -144,7 +147,7 @@ public class HibernateSession extends AbstractHibernateSession {
             List parameters = jpaQueryInfo.getParameters();
             if (parameters != null) {
                 for (int i = 0, count = parameters.size(); i < count; i++) {
-                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i+1), parameters.get(i));
+                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
                 }
             }
 
@@ -165,9 +168,9 @@ public class HibernateSession extends AbstractHibernateSession {
             final Root root = criteriaQuery.from(type);
             final String id = persistentEntity.getIdentity().getName();
             criteriaQuery = criteriaQuery.where(
-                criteriaBuilder.in(
-                    root.get(id).in(getIterableAsCollection(keys))
-                )
+                    criteriaBuilder.in(
+                            root.get(id).in(getIterableAsCollection(keys))
+                    )
             );
             final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
             getHibernateTemplate().applySettings(jpaQuery);
@@ -191,25 +194,27 @@ public class HibernateSession extends AbstractHibernateSession {
     }
 
     protected GrailsHibernateTemplate getHibernateTemplate() {
-        return (GrailsHibernateTemplate)getNativeInterface();
+        return (GrailsHibernateTemplate) getNativeInterface();
     }
 
     public void setFlushMode(FlushModeType flushMode) {
         if (flushMode == FlushModeType.AUTO) {
             hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
-        }
-        else if (flushMode == FlushModeType.COMMIT) {
+        } else if (flushMode == FlushModeType.COMMIT) {
             hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
         }
     }
 
-
     public FlushModeType getFlushMode() {
         switch (hibernateTemplate.getFlushMode()) {
-            case GrailsHibernateTemplate.FLUSH_AUTO:   return FlushModeType.AUTO;
-            case GrailsHibernateTemplate.FLUSH_COMMIT: return FlushModeType.COMMIT;
-            case GrailsHibernateTemplate.FLUSH_ALWAYS: return FlushModeType.AUTO;
-            default:                                   return FlushModeType.AUTO;
+            case GrailsHibernateTemplate.FLUSH_AUTO:
+                return FlushModeType.AUTO;
+            case GrailsHibernateTemplate.FLUSH_COMMIT:
+                return FlushModeType.COMMIT;
+            case GrailsHibernateTemplate.FLUSH_ALWAYS:
+                return FlushModeType.AUTO;
+            default:
+                return FlushModeType.AUTO;
         }
     }
 }

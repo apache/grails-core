@@ -19,7 +19,6 @@
 package org.grails.datastore.mapping.model.types.conversion
 
 import groovy.transform.CompileStatic
-
 import org.springframework.core.convert.converter.Converter
 
 /**
@@ -27,12 +26,13 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToLocaleConverter implements Converter<String, Locale> {
+
     Locale convert(String source) {
         String[] parts = source.split("_")
         switch (parts.length) {
             case 1: return new Locale(parts[0])
-            case 2: return new Locale(parts[0],parts[1])
-            case 3: return new Locale(parts[0],parts[1],parts[2])
+            case 2: return new Locale(parts[0], parts[1])
+            case 3: return new Locale(parts[0], parts[1], parts[2])
             default: return new Locale(source)
         }
     }

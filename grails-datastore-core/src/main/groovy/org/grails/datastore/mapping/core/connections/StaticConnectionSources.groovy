@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.springframework.core.env.PropertyResolver
 
-
 /**
  * A static non-mutable implementation for existing for a set of existing {@link ConnectionSource} instances
  *
@@ -39,7 +38,7 @@ class StaticConnectionSources<T, S extends ConnectionSourceSettings> extends Abs
         super(defaultConnectionSource, new SingletonConnectionSources.NullConnectionFactory<T, S>(), configuration)
 
         connectionSourceMap.put(ConnectionSource.DEFAULT, defaultConnectionSource)
-        for( ConnectionSource<T, S> source in otherConnectionSources) {
+        for (ConnectionSource<T, S> source in otherConnectionSources) {
             connectionSourceMap.put(source.name, source)
         }
     }

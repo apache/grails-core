@@ -125,26 +125,24 @@ trait JsonViewUnitTest extends GrailsUnitTest {
     JsonRenderResult render(Map arguments, @DelegatesTo(TestRequestConfigurer) Closure configurer) {
 
         String viewUri
-        if( arguments.template ) {
+        if (arguments.template) {
             viewUri = templateEngine
                     .viewUriResolver
                     .resolveTemplateUri(null, arguments.template.toString())
 
-        }
-        else if( arguments.view ) {
+        } else if (arguments.view) {
             viewUri = arguments.view.toString()
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Either a 'view' or 'template' argument is required!")
 
         }
         def template = templateEngine.resolveTemplate(viewUri)
 
-        if(template == null) {
+        if (template == null) {
             throw new IllegalArgumentException("No view or template found for URI $viewUri")
         }
 
-        def model = arguments.model instanceof Map ? (Map)arguments.model : [:]
+        def model = arguments.model instanceof Map ? (Map) arguments.model : [:]
         return produceResult(template, model, configurer)
     }
 
@@ -171,6 +169,7 @@ trait JsonViewUnitTest extends GrailsUnitTest {
     }
 
     static class TestHttpResponse implements Response {
+
         final JsonRenderResult result
 
         TestHttpResponse(JsonRenderResult result) {

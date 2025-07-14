@@ -20,19 +20,24 @@ package org.grails.cli.interactive.completers;
 
 import jline.console.completer.Completer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import static jline.internal.Preconditions.checkNotNull;
 
 /**
  * Copied from jline AggregateCompleter
- *
+ * <p>
  * sorts aggregated completions
  *
  */
-public class SortedAggregateCompleter
-    implements Completer
-{
+public class SortedAggregateCompleter implements Completer {
+
     private final List<Completer> completers = new ArrayList<Completer>();
 
     public SortedAggregateCompleter() {
@@ -72,8 +77,8 @@ public class SortedAggregateCompleter
     /**
      * Perform a completion operation across all aggregated completers.
      *
-     * @see Completer#complete(String, int, java.util.List)
      * @return the highest completion return value from all completers
+     * @see Completer#complete(String, int, java.util.List)
      */
     public int complete(final String buffer, final int cursor, final List<CharSequence> candidates) {
         // buffer could be null
@@ -112,16 +117,16 @@ public class SortedAggregateCompleter
      */
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" +
-            "completers=" + completers +
-            '}';
+        return getClass().getSimpleName() + "{" + "completers=" + completers + '}';
     }
 
-    private class Completion
-    {
+    private class Completion {
+
+        //CHECKSTYLE:OFF
         public final List<CharSequence> candidates;
 
         public int cursor;
+        //CHECKSTYLE:ON
 
         public Completion(final List<CharSequence> candidates) {
             checkNotNull(candidates);

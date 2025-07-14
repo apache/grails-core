@@ -21,17 +21,18 @@ package org.grails.plugins.web.taglib
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
 import groovy.transform.CompileStatic
-import org.grails.plugins.web.GrailsTagDateHelper
-import java.math.RoundingMode
-import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
-import java.text.NumberFormat
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
+import org.grails.plugins.web.GrailsTagDateHelper
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.context.MessageSource
 import org.springframework.context.NoSuchMessageException
 import org.springframework.util.StringUtils
+
+import java.math.RoundingMode
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.text.NumberFormat
 
 /**
  * The base application tag library for Grails many of which take inspiration from Rails helpers (thanks guys! :)
@@ -46,7 +47,7 @@ import org.springframework.util.StringUtils
 @TagLib
 class FormatTagLib implements TagLibrary {
 
-    static returnObjectForTags = ['formatBoolean','formatDate','formatNumber','encodeAs']
+    static returnObjectForTags = ['formatBoolean', 'formatDate', 'formatNumber', 'encodeAs']
 
     MessageSource messageSource
     CodecLookup codecLookup
@@ -65,8 +66,7 @@ class FormatTagLib implements TagLibrary {
             if (defaultMessage != null) {
                 if (defaultMessage instanceof Closure) {
                     message = defaultMessage()
-                }
-                else {
+                } else {
                     message = defaultMessage as String
                 }
             }
@@ -127,8 +127,7 @@ class FormatTagLib implements TagLibrary {
      *
      * e.g., &lt;g:formatDate date="${myDate}" format="yyyy-MM-dd HH:mm" /&gt;<br/>
      *
-     * @see java.text.SimpleDateFormat
-     *
+     * @see java.text.SimpleDateFormat*
      * @emptyTag
      *
      * @attr date the date object to display; defaults to now if not specified
@@ -147,8 +146,7 @@ class FormatTagLib implements TagLibrary {
         if (attrs.containsKey('date')) {
             date = attrs.date
             if (date == null) return
-        }
-        else {
+        } else {
             date = new Date()
         }
 
@@ -175,25 +173,21 @@ class FormatTagLib implements TagLibrary {
         def dateFormat
         if (!type) {
             if (!format && formatName) {
-                format = messageHelper(formatName,null,null,locale)
+                format = messageHelper(formatName, null, null, locale)
                 if (!format) {
                     throwTagError("Attribute [formatName] of Tag [formatDate] specifies a format key [$formatName] that does not exist within a message bundle!")
                 }
-            }
-            else if (!format) {
+            } else if (!format) {
                 format = messageHelper('date.format', { messageHelper('default.date.format', 'yyyy-MM-dd HH:mm:ss z', null, locale) }, null, locale)
             }
 
             dateFormat = grailsTagDateHelper.getFormatFromPattern(format, timeZone, locale)
-        }
-        else {
-            if (type=='DATE') {
+        } else {
+            if (type == 'DATE') {
                 dateFormat = grailsTagDateHelper.getDateFormat(dateStyle, timeZone, locale)
-            }
-            else if (type=='TIME') {
+            } else if (type == 'TIME') {
                 dateFormat = grailsTagDateHelper.getTimeFormat(timeStyle, timeZone, locale)
-            }
-            else { // 'both' or 'datetime'
+            } else { // 'both' or 'datetime'
                 dateFormat = grailsTagDateHelper.getDateTimeFormat(dateStyle, timeStyle, timeZone, locale)
             }
         }
@@ -208,8 +202,7 @@ class FormatTagLib implements TagLibrary {
      *
      * e.g., &lt;g:formatNumber number="${myNumber}" format="###,##0" /&gt;
      *
-     * @see java.text.DecimalFormat
-     *
+     * @see java.text.DecimalFormat*
      * @emptyTag
      *
      * @attr number REQUIRED the number to display
@@ -242,13 +235,12 @@ class FormatTagLib implements TagLibrary {
 
         if (type == null) {
             if (!format && formatName) {
-                format = messageHelper(formatName,null,null,locale)
+                format = messageHelper(formatName, null, null, locale)
                 if (!format) {
                     throwTagError("Attribute [formatName] of Tag [formatNumber] specifies a format key [$formatName] that does not exist within a message bundle!")
                 }
-            }
-            else if (!format) {
-                format = messageHelper("number.format", { messageHelper("default.number.format", "0", null, locale) } ,null ,locale)
+            } else if (!format) {
+                format = messageHelper("number.format", { messageHelper("default.number.format", "0", null, locale) }, null, locale)
             }
         }
 
@@ -257,18 +249,14 @@ class FormatTagLib implements TagLibrary {
         DecimalFormat decimalFormat
         if (!type) {
             decimalFormat = new DecimalFormat(format, dcfs)
-        }
-        else {
+        } else {
             if (type == 'currency') {
                 decimalFormat = NumberFormat.getCurrencyInstance(locale)
-            }
-            else if (type == 'number') {
+            } else if (type == 'number') {
                 decimalFormat = NumberFormat.getNumberInstance(locale)
-            }
-            else if (type == 'percent') {
+            } else if (type == 'percent') {
                 decimalFormat = NumberFormat.getPercentInstance(locale)
-            }
-            else {
+            } else {
                 throwTagError("Attribute [type] of Tag [formatNumber] specifies an unknown type. Known types are currency, number and percent.")
             }
         }
@@ -293,11 +281,10 @@ class FormatTagLib implements TagLibrary {
         if (attrs.groupingUsed != null) {
             if (attrs.groupingUsed instanceof Boolean) {
                 decimalFormat.setGroupingUsed(attrs.groupingUsed)
-            }
-            else {
+            } else {
                 // accept true, y, 1, yes
                 decimalFormat.setGroupingUsed(attrs.groupingUsed.toString().toBoolean() ||
-                    attrs.groupingUsed.toString() == 'yes')
+                        attrs.groupingUsed.toString() == 'yes')
             }
         }
         if (attrs.maxIntegerDigits != null) {
@@ -328,7 +315,7 @@ class FormatTagLib implements TagLibrary {
         try {
             formatted = decimalFormat.format(number)
         }
-        catch(ArithmeticException e) {
+        catch (ArithmeticException e) {
             // if roundingMode is UNNECESSARY and ArithemeticException raises, just return original number formatted with default number formatting
             formatted = NumberFormat.getNumberInstance(locale).format(number)
         }
@@ -339,7 +326,7 @@ class FormatTagLib implements TagLibrary {
     static Locale resolveLocale(Object localeAttr) {
         Locale locale
         if (localeAttr instanceof Locale) {
-            locale = (Locale)localeAttr
+            locale = (Locale) localeAttr
         } else if (localeAttr != null) {
             locale = StringUtils.parseLocaleString(localeAttr.toString())
         }

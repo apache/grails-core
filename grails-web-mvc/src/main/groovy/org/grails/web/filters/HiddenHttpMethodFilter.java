@@ -18,36 +18,37 @@
  */
 package org.grails.web.filters;
 
-import java.io.IOException;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
+
 /**
  * Based off the Spring implementation, but also supports the X-HTTP-Method-Override HTTP header.
  *
- * @see org.springframework.web.filter.HiddenHttpMethodFilter
- *
  * @author Graeme Rocher
+ * @see org.springframework.web.filter.HiddenHttpMethodFilter
  * @since 1.2
  */
 public class HiddenHttpMethodFilter extends OncePerRequestFilter {
 
-    /** Default method parameter: <code>_method</code> */
+    /**
+     * Default method parameter: <code>_method</code>
+     */
     public static final String DEFAULT_METHOD_PARAM = "_method";
 
-    private String methodParam = DEFAULT_METHOD_PARAM;
     public static final String HEADER_X_HTTP_METHOD_OVERRIDE = "X-HTTP-Method-Override";
+    private String methodParam = DEFAULT_METHOD_PARAM;
 
     /**
      * Set the parameter name to look for HTTP methods.
+     *
      * @see #DEFAULT_METHOD_PARAM
      */
     public void setMethodParam(String methodParam) {
@@ -57,7 +58,7 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         if ("POST".equalsIgnoreCase(request.getMethod())) {
             String httpMethod = getHttpMethodOverride(request);

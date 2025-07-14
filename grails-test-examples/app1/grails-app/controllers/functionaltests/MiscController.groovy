@@ -19,8 +19,9 @@
 
 package functionaltests
 
-import org.springframework.beans.factory.annotation.*
 import org.example.MyBean
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 
 class MiscController {
 
@@ -33,7 +34,6 @@ class MiscController {
     def beanPropertyOverrideTest() {
         render myBean.name()
     }
-
 
     def actionWhichReturnsNull() {
         null

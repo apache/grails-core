@@ -26,6 +26,7 @@ import java.lang.ref.SoftReference;
  * @author Lari Hotari
  */
 public class SoftKey<T> extends SoftReference<T> {
+
     final int hash;
 
     public SoftKey(T referent) {
@@ -50,7 +51,7 @@ public class SoftKey<T> extends SoftReference<T> {
             return false;
         }
         @SuppressWarnings("unchecked")
-        SoftKey<T> other = (SoftKey<T>)obj;
+        SoftKey<T> other = (SoftKey<T>) obj;
         if (hash != other.hash) {
             return false;
         }
@@ -60,8 +61,7 @@ public class SoftKey<T> extends SoftReference<T> {
             if (otherReferent != null) {
                 return false;
             }
-        }
-        else if (!referent.equals(otherReferent)) {
+        } else if (!referent.equals(otherReferent)) {
             return false;
         }
         return true;

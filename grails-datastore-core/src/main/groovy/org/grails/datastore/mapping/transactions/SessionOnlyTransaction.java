@@ -29,9 +29,8 @@ import org.grails.datastore.mapping.core.Session;
  * No other resource level transaction management is provided.
  * </p>
  *
- * @author graemerocher
- *
  * @param <T>
+ * @author graemerocher
  */
 public class SessionOnlyTransaction<T> implements Transaction<T> {
 
@@ -48,8 +47,7 @@ public class SessionOnlyTransaction<T> implements Transaction<T> {
         if (active) {
             try {
                 session.flush();
-            }
-            finally {
+            } finally {
                 active = false;
             }
         }
@@ -59,8 +57,7 @@ public class SessionOnlyTransaction<T> implements Transaction<T> {
         if (active) {
             try {
                 session.clear();
-            }
-            finally {
+            } finally {
                 active = false;
             }
         }

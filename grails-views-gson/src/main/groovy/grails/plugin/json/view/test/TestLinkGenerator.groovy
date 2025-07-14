@@ -33,7 +33,8 @@ import org.grails.web.util.WebUtils
  * @since 1.1
  */
 @CompileStatic
-class TestLinkGenerator implements LinkGenerator{
+class TestLinkGenerator implements LinkGenerator {
+
     final MappingContext mappingContext
 
     TestLinkGenerator(MappingContext mappingContext) {
@@ -50,18 +51,17 @@ class TestLinkGenerator implements LinkGenerator{
         final boolean absolute = params.absolute ? true : false
         final String base = absolute ? "${serverBaseURL}${contextPath}" : contextPath
         StringBuilder url = new StringBuilder(base)
-        if(params.uri) {
+        if (params.uri) {
             url.append(params.uri.toString())
-        }
-        else {
+        } else {
             Map urlObject = params
-            if(params.url instanceof Map) {
-                urlObject = (Map)params.url
+            if (params.url instanceof Map) {
+                urlObject = (Map) params.url
             }
 
 
             def resource = urlObject.resource
-            if( resource != null &&  !(resource instanceof CharSequence)) {
+            if (resource != null && !(resource instanceof CharSequence)) {
                 Class clazz
                 if (resource instanceof Class) {
                     clazz = resource
@@ -71,23 +71,22 @@ class TestLinkGenerator implements LinkGenerator{
                 resource = GrailsNameUtils.getPropertyName(clazz)
             }
             String controller = resource ?: urlObject.controller
-            if(controller) {
+            if (controller) {
                 url.append("/$controller")
 
-                if(urlObject.action) {
+                if (urlObject.action) {
                     url.append("/$urlObject.action")
                 }
-                if(urlObject.id) {
+                if (urlObject.id) {
                     url.append("/$urlObject.id")
-                }
-                else if(urlObject.resource?.hasProperty('id')) {
+                } else if (urlObject.resource?.hasProperty('id')) {
                     appendObjectId(url, urlObject)
                 }
 
             }
         }
-        if(params.params instanceof Map) {
-            url.append WebUtils.toQueryString((Map)params.params, encoding)
+        if (params.params instanceof Map) {
+            url.append WebUtils.toQueryString((Map) params.params, encoding)
         }
         return url.toString()
     }
@@ -95,7 +94,7 @@ class TestLinkGenerator implements LinkGenerator{
     @CompileDynamic
     protected StringBuilder appendObjectId(StringBuilder url, Map urlObject) {
         def obj = urlObject.resource
-        if(obj?.id) {
+        if (obj?.id) {
             url.append("/${obj.id}")
         }
     }

@@ -18,15 +18,14 @@
  */
 package org.grails.web.context
 
-import groovy.transform.CompileStatic
 import grails.core.GrailsApplication
+import groovy.transform.CompileStatic
+import jakarta.servlet.ServletContext
 import org.grails.core.support.GrailsApplicationDiscoveryStrategy
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.context.ApplicationContext
 import org.springframework.web.context.ContextLoader
 import org.springframework.web.context.support.WebApplicationContextUtils
-
-import jakarta.servlet.ServletContext
 
 /**
  * Strategy for discovering the GrailsApplication and ApplicationContext instances in the Servlet environment
@@ -35,7 +34,8 @@ import jakarta.servlet.ServletContext
  * @since 2.4
  */
 @CompileStatic
-class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsApplicationDiscoveryStrategy{
+class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsApplicationDiscoveryStrategy {
+
     ServletContext servletContext
     ApplicationContext applicationContext
 
@@ -47,12 +47,11 @@ class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsAppl
     @Override
     public GrailsApplication findGrailsApplication() {
         def context = findApplicationContext()
-        if(context) {
+        if (context) {
             return context.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication)
-        }
-        else {
+        } else {
             def webReq = GrailsWebRequest.lookup()
-            if(webReq) {
+            if (webReq) {
                 webReq.applicationContext?.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication)
             }
         }
@@ -63,11 +62,11 @@ class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsAppl
         if (applicationContext != null) {
             return applicationContext
         }
-        if(servletContext == null) {
+        if (servletContext == null) {
             return ContextLoader.currentWebApplicationContext
         }
         def context = WebApplicationContextUtils.getWebApplicationContext(servletContext)
-        if(context) {
+        if (context) {
             return context
         }
         return GrailsWebRequest.lookup()?.applicationContext

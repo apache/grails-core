@@ -29,35 +29,39 @@ import org.springframework.core.Ordered;
  * <p>Artefacts need to provide info about themselves, and some callbacks are required
  * to verify whether or not a class is that kind of artefact/p>
  *
- * @see GrailsApplication#registerArtefactHandler(ArtefactHandler)
- *
  * @author Graeme Rocher
  * @author Marc Palmer (marc@anyware.co.uk)
+ * @see GrailsApplication#registerArtefactHandler(ArtefactHandler)
  * @since 1.0
  */
 public interface ArtefactHandler extends Ordered {
 
     /**
      * Obtains the plugin name that deals with this artefact.
+     *
      * @return The plugin name or null if there isn't one
      */
     String getPluginName();
 
     /**
      * Implementations must return a name such as "Domain" to indicate the type of artefact they represent.
+     *
      * @return The aretfact type, as a String
      */
     String getType();
+
     /**
      * @param classNode The ClassNode instance
      * @return True if the given ClassNode instance is an instance of the Artefact type
      */
     boolean isArtefact(ClassNode classNode);
+
     /**
      * <p>Called by the GrailsApplication whenever it needs to know if a given class
      * is considered to be the kind of artefact represented by this handler.</p>
      * <p>Typically you will check the name of the class and some other properties to see
      * if it is of the correct artefact type</p>
+     *
      * @param aClass A class to test
      * @return true if the class looks like one of your artefacts
      */
@@ -65,6 +69,7 @@ public interface ArtefactHandler extends Ordered {
 
     /**
      * <p>Called by GrailsApplication when a new class is found and a GrailsClass wrapping it is required</p>
+     *
      * @param artefactClass The new class that has been loaded
      * @return A new custom GrailsClass wrapper containing any extra information your artefact type requires
      */
@@ -73,6 +78,7 @@ public interface ArtefactHandler extends Ordered {
     /**
      * <p>Called whenever the list of artefacts has changed or been reloaded.</p>
      * <p>It must be safe to call this method multiple times and have any internal data structures reset.</p>
+     *
      * @param artefacts The collection of artefact classes for this handler
      */
     void initialize(ArtefactInfo artefacts);
@@ -81,6 +87,7 @@ public interface ArtefactHandler extends Ordered {
      * <p>Called to retrieve an artefact relating to some other key for example a URI or tag name</p>
      * <p>Handlers are responsible for caching the appropriate information using the data passed to them in calls
      * to initialize()</p>
+     *
      * @param feature Any object that acts as a key
      * @return A matching artefact GrailsClass or null if there is no match for this feature ID
      */
@@ -88,6 +95,7 @@ public interface ArtefactHandler extends Ordered {
 
     /**
      * <p>Called to check if the specified GrailsClass is one managed by this artefact handler</p>
+     *
      * @param artefactGrailsClass A GrailsClass instance
      * @return true if this handler manages the specified GrailsClass
      */

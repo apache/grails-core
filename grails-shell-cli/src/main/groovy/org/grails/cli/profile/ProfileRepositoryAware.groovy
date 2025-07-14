@@ -25,5 +25,6 @@ package org.grails.cli.profile
  * @since 3.0
  */
 interface ProfileRepositoryAware {
+
     void setProfileRepository(ProfileRepository profileRepository)
 }

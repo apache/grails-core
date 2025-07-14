@@ -31,6 +31,7 @@ import java.security.PrivilegedAction;
  * @since 2.0
  */
 public class GroovyPageCompiledScriptSource implements GroovyPageScriptSource {
+
     private String uri;
     private Class<?> compiledClass;
     private GroovyPageMetaInfo groovyPageMetaInfo;
@@ -76,7 +77,9 @@ public class GroovyPageCompiledScriptSource implements GroovyPageScriptSource {
     }
 
     public GroovyPageResourceScriptSource getReloadableScriptSource() {
-        if (resourceCallable == null) return null;
+        if (resourceCallable == null) {
+            return null;
+        }
         Resource resource = groovyPageMetaInfo.checkIfReloadableResourceHasChanged(resourceCallable);
         return resource == null ? null : new GroovyPageResourceScriptSource(uri, resource);
     }

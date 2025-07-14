@@ -67,7 +67,7 @@ public abstract class AbstractConverter<W> implements ConfigurableConverter<W>, 
     /**
      * Set to include properties for the given type
      *
-     * @param type The type
+     * @param type       The type
      * @param properties The properties
      */
     @Override
@@ -78,7 +78,7 @@ public abstract class AbstractConverter<W> implements ConfigurableConverter<W>, 
     /**
      * Set to exclude properties for the given type
      *
-     * @param type The type
+     * @param type       The type
      * @param properties The properties
      */
     @Override

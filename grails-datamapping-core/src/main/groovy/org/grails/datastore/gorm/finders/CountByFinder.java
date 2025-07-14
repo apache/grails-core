@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import java.util.regex.Pattern;
-
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
+
+import java.util.regex.Pattern;
 
 /**
  * Supports counting objects. For example Book.countByTitle("The Stand")
@@ -35,7 +35,7 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
     private static final String OPERATOR_AND = "And";
 
     private static final Pattern METHOD_PATTERN = Pattern.compile("(countBy)(\\w+)");
-    private static final String[] OPERATORS = { OPERATOR_AND, OPERATOR_OR };
+    private static final String[] OPERATORS = {OPERATOR_AND, OPERATOR_OR};
 
     public CountByFinder(final Datastore datastore) {
         super(METHOD_PATTERN, OPERATORS, datastore);
@@ -76,10 +76,9 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
             for (MethodExpression expression : invocation.getExpressions()) {
                 q.add(disjunction, expression.createCriterion());
             }
-        }
-        else {
+        } else {
             for (MethodExpression expression : invocation.getExpressions()) {
-                q.add( expression.createCriterion() );
+                q.add(expression.createCriterion());
             }
         }
 

@@ -14,16 +14,16 @@
  */
 package org.grails.datastore.mapping.query.projections;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.order.ManualEntityOrdering;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.reflect.FieldEntityAccess;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Implements common projections in-memory given a set of results. Not all
@@ -44,7 +44,7 @@ public class ManualProjections {
     /**
      * Calculates the minimum value of a property
      *
-     * @param results The results
+     * @param results  The results
      * @param property The property to calculate
      * @return The minimum value or null if there are no results
      */
@@ -64,7 +64,7 @@ public class ManualProjections {
     /**
      * Counts the number of distinct values
      *
-     * @param results The results
+     * @param results  The results
      * @param property The property
      * @return A count of the distinct values
      */
@@ -82,7 +82,7 @@ public class ManualProjections {
     /**
      * Calculates the maximum value of a property
      *
-     * @param results The results
+     * @param results  The results
      * @param property The property to calculate
      * @return The maximum value or null if there are no results
      */
@@ -92,7 +92,7 @@ public class ManualProjections {
         }
 
         final List sorted = order.applyOrder(new ArrayList(results), Query.Order.asc(property));
-        final Object o = sorted.get(results.size()-1);
+        final Object o = sorted.get(results.size() - 1);
         if (entity.isInstance(o)) {
             return FieldEntityAccess.getOrIntializeReflector(entity).getProperty(o, property);
         }
@@ -102,7 +102,7 @@ public class ManualProjections {
     /**
      * Obtains a properties value from the results
      *
-     * @param results The results
+     * @param results  The results
      * @param property The property
      * @return A list of results
      */
@@ -117,8 +117,7 @@ public class ManualProjections {
             EntityReflector ea = FieldEntityAccess.getOrIntializeReflector(entity);
             if (entity.isInstance(o)) {
                 projectedResults.add(ea.getProperty(o, property));
-            }
-            else {
+            } else {
                 projectedResults.add(null);
             }
         }

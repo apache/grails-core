@@ -32,11 +32,9 @@ class VersionComparator implements Comparator<String> {
         int result = 0
         if (o1 == '*') {
             result = 1
-        }
-        else if (o2 == '*') {
+        } else if (o2 == '*') {
             result = -1
-        }
-        else {
+        } else {
             def nums1
             try {
                 def tokens = deSnapshot(o1).split(/\./)
@@ -63,12 +61,11 @@ class VersionComparator implements Comparator<String> {
                     if (result != 0) {
                         break
                     }
-                    if (i == (nums1.size()-1) && bigRight) {
-                        if (nums2[i+1] != 0)
+                    if (i == (nums1.size() - 1) && bigRight) {
+                        if (nums2[i + 1] != 0)
                             result = -1; break
                     }
-                }
-                else if (bigLeft) {
+                } else if (bigLeft) {
                     if (nums1[i] != 0)
                         result = 1; break
                 }

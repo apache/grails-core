@@ -25,18 +25,19 @@ import org.springframework.cache.CacheManager;
  */
 public interface GrailsCacheManager extends CacheManager {
 
-	/**
-	 * Whether the cache for the given name exits
-	 *
-	 * @param name The name of the cache
-	 * @return True if it does
-	 */
-	boolean cacheExists(String name);
+    /**
+     * Whether the cache for the given name exits
+     *
+     * @param name The name of the cache
+     * @return True if it does
+     */
+    boolean cacheExists(String name);
 
-	/**
-	 * Destroys the given named cache
-	 * @param name The name of the cache
-	 * @return True if it was destroyed
-	 */
-	boolean destroyCache(String name);
+    /**
+     * Destroys the given named cache
+     *
+     * @param name The name of the cache
+     * @return True if it was destroyed
+     */
+    boolean destroyCache(String name);
 }

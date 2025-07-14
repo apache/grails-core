@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package reactor.bus;
 
 /**
@@ -24,7 +23,8 @@ package reactor.bus;
  */
 @Deprecated
 public class Event<T> extends grails.events.Event<T> {
-    private volatile        Object              replyTo = null;
+
+    private volatile Object replyTo = null;
 
     public Event(String id, T data, Object replyTo) {
         super(id, data);
@@ -47,9 +47,7 @@ public class Event<T> extends grails.events.Event<T> {
     /**
      * Set the {@code key} that interested parties should send replies to.
      *
-     * @param replyTo
-     *     The key to use to notify sender of replies.
-     *
+     * @param replyTo The key to use to notify sender of replies.
      * @return {@literal this}
      */
     public Event<T> setReplyTo(Object replyTo) {

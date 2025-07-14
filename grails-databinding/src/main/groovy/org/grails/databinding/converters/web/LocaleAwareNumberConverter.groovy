@@ -18,24 +18,21 @@
  */
 package org.grails.databinding.converters.web
 
-import grails.databinding.converters.ValueConverter;
+import grails.databinding.converters.ValueConverter
 import groovy.transform.CompileStatic
-
-import java.text.NumberFormat
-import java.text.ParsePosition
-
 import jakarta.servlet.http.HttpServletRequest
-
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.servlet.LocaleResolver
 
+import java.text.NumberFormat
+import java.text.ParsePosition
 
 /**
  * A ValueConverter that knows how to convert a String to any numeric type and is Locale aware.  The
  * converter will use the Locale of the current request if being invoked as part of a
  * request, otherwise will use Locale.getDefault()
- * 
+ *
  * @author Jeff Brown
  * @since 2.3
  *
@@ -44,21 +41,21 @@ import org.springframework.web.servlet.LocaleResolver
 class LocaleAwareNumberConverter implements ValueConverter {
 
     Class<?> targetType
-    
-    @Autowired(required=false)
+
+    @Autowired(required = false)
     LocaleResolver localeResolver
 
     @Override
-    public boolean canConvert(Object value) {
+    boolean canConvert(Object value) {
         value instanceof String
     }
 
     @Override
-    public Object convert(Object value) {
+    Object convert(Object value) {
         def trimmedValue = value.toString().trim()
         def parsePosition = new ParsePosition(0)
-        def result = numberFormatter.parse((String)value, parsePosition).asType(getTargetType())
-        if(parsePosition.index != trimmedValue.size()) {
+        def result = numberFormatter.parse((String) value, parsePosition).asType(getTargetType())
+        if (parsePosition.index != trimmedValue.size()) {
             throw new NumberFormatException("Unable to parse number [${value}]")
         }
         result
@@ -71,10 +68,10 @@ class LocaleAwareNumberConverter implements ValueConverter {
     protected Locale getLocale() {
         def locale
         def request = GrailsWebRequest.lookup()?.currentRequest
-        if(request instanceof HttpServletRequest) {
+        if (request instanceof HttpServletRequest) {
             locale = localeResolver?.resolveLocale(request)
         }
-        if(locale == null) {
+        if (locale == null) {
             locale = Locale.default
         }
         return locale

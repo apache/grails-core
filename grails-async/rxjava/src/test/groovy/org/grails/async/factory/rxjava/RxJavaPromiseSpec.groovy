@@ -153,4 +153,3 @@ class RxJavaPromiseSpec extends Specification {
     }
 }
 
-

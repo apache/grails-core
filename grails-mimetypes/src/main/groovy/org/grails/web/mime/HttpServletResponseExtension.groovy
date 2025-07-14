@@ -25,17 +25,16 @@ import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
 import grails.web.mime.MimeUtility
 import groovy.transform.CompileDynamic
-import org.grails.web.util.GrailsApplicationAttributes
 import groovy.transform.CompileStatic
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.plugins.web.api.MimeTypesApiSupport
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import java.util.regex.Pattern
-
 
 /**
  *
@@ -94,7 +93,6 @@ class HttpServletResponseExtension {
 
         mimeTypes
     }
-
 
     /**
      * Obtains the format to use for the response using either the file extension or the ACCEPT header

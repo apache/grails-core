@@ -23,14 +23,14 @@ import grails.web.mapping.mvc.RedirectEventListener
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Commons
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.http.HttpStatus
 import org.springframework.util.Assert
 import org.springframework.web.servlet.support.RequestDataValueProcessor
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 /**
  * Encapsulates the logic for issuing a redirect based on a Map of arguments
  *
@@ -70,11 +70,9 @@ class ResponseRedirector {
         def argument = arguments.get(argumentName)
         if (argument instanceof String) {
             return Boolean.valueOf(argument)
-        }
-        else if(argument == null && defaultValue != null) {
+        } else if (argument == null && defaultValue != null) {
             return defaultValue
-        }
-        else {
+        } else {
             return Boolean.TRUE == argument
         }
     }
@@ -116,8 +114,9 @@ class ResponseRedirector {
     /*
      * Redirects the response the the given URI
      */
+
     private void redirectResponse(String serverBaseURL, String actualUri, HttpServletRequest request, HttpServletResponse response, boolean permanent, boolean moved, boolean absolute) {
-        if(log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             log.debug "Method [redirect] forwarding request to [$actualUri]"
             log.debug "Executing redirect with response [$response]"
         }
@@ -134,10 +133,9 @@ class ResponseRedirector {
         String redirectUrl = useJessionId ? response.encodeRedirectURL(redirectURI) : redirectURI
 
         int status
-        if(permanent) {
+        if (permanent) {
             status = moved ? HttpStatus.MOVED_PERMANENTLY.value() : HttpStatus.PERMANENT_REDIRECT.value()
-        }
-        else {
+        } else {
             status = moved ? HttpStatus.MOVED_TEMPORARILY.value() : HttpStatus.TEMPORARY_REDIRECT.value()
         }
 

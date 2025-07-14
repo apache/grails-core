@@ -18,6 +18,10 @@
  */
 package org.grails.datastore.mapping.reflect;
 
+import org.grails.datastore.mapping.model.DatastoreConfigurationException;
+import org.springframework.beans.BeanUtils;
+import org.springframework.util.StringUtils;
+
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -27,10 +31,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.StringUtils;
 
 /**
  * Provides methods to help with reflective operations
@@ -46,6 +46,7 @@ public class ReflectionUtils {
 
     /**
      * Just add two entries to the class compatibility map
+     *
      * @param left
      * @param right
      */
@@ -65,28 +66,28 @@ public class ReflectionUtils {
         registerPrimitiveClassPair(Double.class, double.class);
     }
 
-   /**
-    * Make the given field accessible, explicitly setting it accessible if necessary.
-    * The <code>setAccessible(true)</code> method is only called when actually necessary,
-    * to avoid unnecessary conflicts with a JVM SecurityManager (if active).
-    *
-    * Based on the same method in Spring core.
-    *
-    * @param field the field to make accessible
-    * @see java.lang.reflect.Field#setAccessible
-    */
-   public static void makeAccessible(Field field) {
-       if (!Modifier.isPublic(field.getModifiers()) ||
-               !Modifier.isPublic(field.getDeclaringClass().getModifiers())) {
-           field.setAccessible(true);
-       }
-   }
+    /**
+     * Make the given field accessible, explicitly setting it accessible if necessary.
+     * The <code>setAccessible(true)</code> method is only called when actually necessary,
+     * to avoid unnecessary conflicts with a JVM SecurityManager (if active).
+     * <p>
+     * Based on the same method in Spring core.
+     *
+     * @param field the field to make accessible
+     * @see java.lang.reflect.Field#setAccessible
+     */
+    public static void makeAccessible(Field field) {
+        if (!Modifier.isPublic(field.getModifiers()) ||
+                !Modifier.isPublic(field.getDeclaringClass().getModifiers())) {
+            field.setAccessible(true);
+        }
+    }
 
     /**
      * Make the given method accessible, explicitly setting it accessible if necessary.
      * The <code>setAccessible(true)</code> method is only called when actually necessary,
      * to avoid unnecessary conflicts with a JVM SecurityManager (if active).
-     *
+     * <p>
      * Based on the same method in Spring core.
      *
      * @param method the method to make accessible
@@ -106,7 +107,7 @@ public class ReflectionUtils {
      * with a bit of magic for native types and polymorphism i.e. Number assigned an int.
      * If either parameter is null an exception is thrown</p>
      *
-     * @param leftType The type of the left hand part of a notional assignment
+     * @param leftType  The type of the left hand part of a notional assignment
      * @param rightType The type of the right hand part of a notional assignment
      * @return True if values of the right hand type can be assigned in Groovy to variables of the left hand type.
      */
@@ -136,8 +137,7 @@ public class ReflectionUtils {
                 if (r != null) {
                     result = leftType.isAssignableFrom(r);
                 }
-            }
-            else {
+            } else {
                 // Otherwise it may just be assignable using normal Java polymorphism
                 result = leftType.isAssignableFrom(rightType);
             }
@@ -151,28 +151,29 @@ public class ReflectionUtils {
      * @param clazz The class
      * @return The instantiated object or null if the class parameter was null
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static <T> T instantiate(Class<T> clazz) {
-        if (clazz == null) return null;
+        if (clazz == null) {
+            return null;
+        }
         try {
             return clazz.getConstructor(EMPTY_CLASS_ARRAY).newInstance();
         } catch (IllegalAccessException e) {
-            throw new InstantiationException(e.getClass().getName() + " error creating instance of class ["+e.getMessage()+"]: " + e.getMessage(), e);
+            throw new InstantiationException(e.getClass().getName() + " error creating instance of class [" + e.getMessage() + "]: " + e.getMessage(), e);
         } catch (InvocationTargetException e) {
-            throw new InstantiationException(e.getClass().getName() + " error creating instance of class ["+e.getMessage()+"]: " + e.getMessage(), e);
+            throw new InstantiationException(e.getClass().getName() + " error creating instance of class [" + e.getMessage() + "]: " + e.getMessage(), e);
         } catch (NoSuchMethodException e) {
-            throw new InstantiationException(e.getClass().getName() + " error creating instance of class ["+e.getMessage()+"]: " + e.getMessage(), e);
+            throw new InstantiationException(e.getClass().getName() + " error creating instance of class [" + e.getMessage() + "]: " + e.getMessage(), e);
         } catch (java.lang.InstantiationException e) {
-            throw new InstantiationException(e.getClass().getName() + " error creating instance of class ["+e.getMessage()+"]: " + e.getMessage(), e);
+            throw new InstantiationException(e.getClass().getName() + " error creating instance of class [" + e.getMessage() + "]: " + e.getMessage(), e);
         }
     }
 
     /**
      * Retrieves all the properties of the given class for the given type
      *
-     * @param clazz The class to retrieve the properties from
+     * @param clazz        The class to retrieve the properties from
      * @param propertyType The type of the properties you wish to retrieve
-     *
      * @return An array of PropertyDescriptor instances
      */
     public static PropertyDescriptor[] getPropertiesOfType(Class<?> clazz, Class<?> propertyType) {
@@ -188,8 +189,7 @@ public class ReflectionUtils {
                     properties.add(descriptor);
                 }
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // if there are any errors in instantiating just return null for the moment
             return new PropertyDescriptor[0];
         }
@@ -208,28 +208,41 @@ public class ReflectionUtils {
      * @return true if it is a javabean property method
      */
     public static boolean isGetter(String name, Class<?>[] args) {
-        if (!StringUtils.hasText(name) || args == null)return false;
-        if (args.length != 0)return false;
+        if (!StringUtils.hasText(name) || args == null) {
+            return false;
+        }
+        if (args.length != 0) {
+            return false;
+        }
 
         if (name.startsWith("get")) {
             name = name.substring(3);
-            if (name.length() > 0 && Character.isUpperCase(name.charAt(0))) return true;
-        }
-        else if (name.startsWith("is")) {
+            if (name.length() > 0 && Character.isUpperCase(name.charAt(0))) {
+                return true;
+            }
+        } else if (name.startsWith("is")) {
             name = name.substring(2);
-            if (name.length() > 0 && Character.isUpperCase(name.charAt(0))) return true;
+            if (name.length() > 0 && Character.isUpperCase(name.charAt(0))) {
+                return true;
+            }
         }
         return false;
     }
 
     @SuppressWarnings("rawtypes")
     public static boolean isSetter(String name, Class[] args) {
-        if (!StringUtils.hasText(name) || args == null)return false;
+        if (!StringUtils.hasText(name) || args == null) {
+            return false;
+        }
 
         if (name.startsWith("set")) {
-            if (args.length != 1) return false;
+            if (args.length != 1) {
+                return false;
+            }
             name = name.substring(3);
-            if (name.length() > 0 && Character.isUpperCase(name.charAt(0))) return true;
+            if (name.length() > 0 && Character.isUpperCase(name.charAt(0))) {
+                return true;
+            }
         }
 
         return false;

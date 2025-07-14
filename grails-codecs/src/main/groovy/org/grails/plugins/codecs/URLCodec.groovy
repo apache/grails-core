@@ -28,6 +28,7 @@ import org.springframework.web.context.request.RequestContextHolder
  * @since 0.5
  */
 class URLCodec extends URLCodecFactory {
+
     protected String resolveEncoding() {
         RequestContextHolder.getRequestAttributes()?.request?.characterEncoding ?: 'UTF-8'
     }

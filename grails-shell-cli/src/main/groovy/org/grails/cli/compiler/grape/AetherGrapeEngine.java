@@ -18,16 +18,15 @@
  */
 package org.grails.cli.compiler.grape;
 
-import java.util.List;
-
-import groovy.grape.GrapeEngine;
 import groovy.lang.GroovyClassLoader;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.repository.RemoteRepository;
 
+import java.util.List;
+
 /**
- * A {@link GrapeEngine} implementation that uses
+ * A {@link groovy.grape.GrapeEngine} implementation that uses
  * <a href="https://eclipse.org/aether">Aether</a>, the dependency resolution system used
  * by Maven.
  *
@@ -40,10 +39,10 @@ import org.eclipse.aether.repository.RemoteRepository;
 @Deprecated
 public class AetherGrapeEngine extends MavenResolverGrapeEngine {
 
-	public AetherGrapeEngine(GroovyClassLoader classLoader, RepositorySystem repositorySystem,
-			DefaultRepositorySystemSession repositorySystemSession, List<RemoteRepository> remoteRepositories,
-			DependencyResolutionContext resolutionContext, boolean quiet) {
-		super(classLoader, repositorySystem, repositorySystemSession, remoteRepositories, resolutionContext, quiet);
-	}
+    public AetherGrapeEngine(GroovyClassLoader classLoader, RepositorySystem repositorySystem,
+                             DefaultRepositorySystemSession repositorySystemSession, List<RemoteRepository> remoteRepositories,
+                             DependencyResolutionContext resolutionContext, boolean quiet) {
+        super(classLoader, repositorySystem, repositorySystemSession, remoteRepositories, resolutionContext, quiet);
+    }
 
 }

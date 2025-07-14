@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.plugin.cache
 
 import grails.plugins.Plugin
@@ -52,7 +51,6 @@ class CacheGrailsPlugin extends Plugin {
             }
 
             customCacheKeyGenerator(CustomCacheKeyGenerator)
-
 
             Class<? extends GrailsCacheManager> cacheClazz = GrailsConcurrentMapCacheManager
             // Selects cache manager from config

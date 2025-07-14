@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.query.transform;
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
@@ -32,5 +31,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 @GroovyASTTransformationClass("org.grails.datastore.gorm.query.transform.DetachedCriteriaASTTransformation")
-public @interface  ApplyDetachedCriteriaTransform {
+public @interface ApplyDetachedCriteriaTransform {
+
 }

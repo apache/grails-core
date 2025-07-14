@@ -1,18 +1,20 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.apache.grails.common.compiler.asm;
 
@@ -36,6 +38,7 @@ import java.io.InputStream;
  * @since 3.1.13
  */
 public class AnnotationMetadataReader implements MetadataReader {
+
     private final Resource resource;
 
     private final ClassMetadata classMetadata;
@@ -44,18 +47,20 @@ public class AnnotationMetadataReader implements MetadataReader {
 
     /**
      * Reads only the annotation names from a class resource
-     * @param resource The resource
+     *
+     * @param resource    The resource
      * @param classLoader The classloader
      * @throws IOException
      */
     public AnnotationMetadataReader(Resource resource, ClassLoader classLoader) throws IOException {
         this(resource, classLoader, false);
     }
+
     /**
      * Constructs a new annotation metadata reader
      *
-     * @param resource The resource
-     * @param classLoader The classloader
+     * @param resource            The resource
+     * @param classLoader         The classloader
      * @param readAttributeValues Whether to read the attributes in addition or just the annotation class names
      * @throws IOException
      */
@@ -64,22 +69,18 @@ public class AnnotationMetadataReader implements MetadataReader {
         ClassReader classReader;
         try {
             classReader = new ClassReader(is);
-        }
-        catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException ex) {
             throw new IOException("ASM ClassReader failed to parse class file - " +
                     "probably due to a new Java class file version that isn't supported yet: " + resource, ex);
-        }
-        finally {
+        } finally {
             is.close();
         }
 
-
         AnnotationMetadataReadingVisitor visitor;
 
-        if(readAttributeValues) {
+        if (readAttributeValues) {
             visitor = new AnnotationMetadataReadingVisitor(classLoader);
-        }
-        else {
+        } else {
             visitor = new AnnotationMetadataReadingVisitor(classLoader) {
                 @Override
                 public AnnotationVisitor visitAnnotation(final String desc, boolean visible) {
@@ -96,7 +97,6 @@ public class AnnotationMetadataReader implements MetadataReader {
         this.classMetadata = visitor;
         this.resource = resource;
     }
-
 
     @Override
     public Resource getResource() {

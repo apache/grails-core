@@ -18,29 +18,28 @@
  */
 package org.grails.datastore.mapping.core.impl;
 
+import org.grails.datastore.mapping.model.PersistentEntity;
+
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-
 /**
  * Base implementation of the {@link PendingOperation} interface.
  *
- * @author Graeme Rocher
- *
  * @param <E> The native entity type (examples could be Row, Document etc.)
  * @param <K> The native key
+ * @author Graeme Rocher
  */
 public abstract class PendingOperationAdapter<E, K> implements PendingOperation<E, K> {
 
     protected PersistentEntity entity;
     protected K nativeKey;
     protected E nativeEntry;
+    protected boolean executed;
     private List<PendingOperation<E, K>> pendingOperations = new LinkedList<PendingOperation<E, K>>();
     private List<PendingOperation<E, K>> preOperations = new LinkedList<PendingOperation<E, K>>();
     private boolean vetoed;
-    protected boolean executed;
 
     public PendingOperationAdapter(PersistentEntity entity, K nativeKey, E nativeEntry) {
         this.entity = entity;

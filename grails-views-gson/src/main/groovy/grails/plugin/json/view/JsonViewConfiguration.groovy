@@ -51,7 +51,7 @@ class JsonViewConfiguration implements GenericViewConfiguration {
 
     @Override
     String getViewModuleName() {
-         MODULE_NAME
+        MODULE_NAME
     }
 
     PropertyDescriptor[] findViewConfigPropertyDescriptor() {

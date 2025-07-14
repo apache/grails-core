@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.config;
 
 /**
@@ -26,6 +25,7 @@ package org.grails.datastore.mapping.config;
  * @since 6.0
  */
 public interface Settings {
+
     /**
      * The default prefix
      */
@@ -77,7 +77,6 @@ public interface Settings {
      * The data sources setting
      */
     String SETTING_DATASOURCES = "dataSources";
-
 
     /**
      * The data source setting

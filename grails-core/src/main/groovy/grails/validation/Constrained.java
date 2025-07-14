@@ -44,13 +44,13 @@ public interface Constrained {
     /**
      * @return Returns the maximum possible value.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     Comparable getMax();
 
     /**
      * @return Returns the minimum possible value.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     Comparable getMin();
 
     /**

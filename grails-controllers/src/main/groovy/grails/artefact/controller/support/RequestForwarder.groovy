@@ -23,6 +23,9 @@ import grails.web.api.WebAttributes
 import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+import jakarta.servlet.RequestDispatcher
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.web.mapping.UrlMappingUtils
 import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -32,10 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.filter.OncePerRequestFilter
 
-import jakarta.servlet.RequestDispatcher
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
-
 /**
  * A Trait for classes that forward the request
  *
@@ -44,17 +43,18 @@ import jakarta.servlet.http.HttpServletResponse
  */
 @CompileStatic
 trait RequestForwarder implements WebAttributes {
+
     private UrlConverter urlConverter
     private LinkGenerator linkGenerator
 
     @Generated
-    @Autowired(required=false)
+    @Autowired(required = false)
     void setUrlConverter(UrlConverter urlConverter) {
         this.urlConverter = urlConverter
     }
 
     private LinkGenerator lookupLinkGenerator() {
-        if(this.linkGenerator == null) {
+        if (this.linkGenerator == null) {
             this.linkGenerator = webRequest.getApplicationContext().getBean(LinkGenerator)
         }
         return this.linkGenerator
@@ -73,39 +73,39 @@ trait RequestForwarder implements WebAttributes {
 
         if (webRequest) {
             def controllerName
-            if(params.controller) {
+            if (params.controller) {
                 controllerName = params.controller
             } else {
                 controllerName = webRequest.controllerName
             }
 
-            if(controllerName) {
+            if (controllerName) {
                 def convertedControllerName = convert(controllerName.toString())
                 webRequest.controllerName = convertedControllerName
             }
             params.controller = webRequest.controllerName
 
-            if(params.action) {
+            if (params.action) {
                 params.action = convert(params.action.toString())
             }
 
-            if(params.namespace) {
+            if (params.namespace) {
                 params.namespace = params.namespace
             }
 
-            if(params.plugin) {
+            if (params.plugin) {
                 params.plugin = params.plugin
             }
 
-            if ( !params.params ) {
-                params.params =  UrlMappingUtils.findAllParamsNotInKeys(
+            if (!params.params) {
+                params.params = UrlMappingUtils.findAllParamsNotInKeys(
                         UrlMappingUtils.findAllParamsNotInUrlMappingKeywords(webRequest.params),
                         webRequest.originalParams.keySet()
                 )
             }
         }
 
-        Map model = params.model instanceof Map ? (Map)params.model : Collections.EMPTY_MAP
+        Map model = params.model instanceof Map ? (Map) params.model : Collections.EMPTY_MAP
 
         HttpServletRequest request = webRequest.currentRequest
         HttpServletResponse response = webRequest.currentResponse
@@ -117,7 +117,6 @@ trait RequestForwarder implements WebAttributes {
         request.setAttribute(GrailsApplicationAttributes.FORWARD_IN_PROGRESS, true)
         params.includeContext = false
         String fowardURI = lookupLinkGenerator().link(params)
-
 
         RequestDispatcher dispatcher = request.getRequestDispatcher(fowardURI)
 
@@ -140,7 +139,6 @@ trait RequestForwarder implements WebAttributes {
         }
         return fowardURI
     }
-
 
     private String convert(String value) {
         (urlConverter) ? urlConverter.toUrlElement(value) : value

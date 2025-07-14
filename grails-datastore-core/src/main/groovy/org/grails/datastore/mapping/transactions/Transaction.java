@@ -45,12 +45,14 @@ public interface Transaction<T> {
 
     /**
      * Whether the transaction is active
+     *
      * @return True if it is
      */
     boolean isActive();
 
     /**
      * Sets the transaction timeout period
+     *
      * @param timeout The timeout
      */
     void setTimeout(int timeout);

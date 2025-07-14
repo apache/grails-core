@@ -23,6 +23,7 @@ import grails.persistence.Entity;
 
 @Entity
 class ClassWithNoArgBeforeValidate implements Serializable {
+
     Long id
     Long version
     def noArgCounter = 0

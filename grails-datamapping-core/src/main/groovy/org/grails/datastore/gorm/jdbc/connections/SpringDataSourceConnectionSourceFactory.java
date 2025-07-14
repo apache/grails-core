@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc.connections;
 
 import org.grails.datastore.mapping.config.Settings;
@@ -35,6 +34,7 @@ import javax.sql.DataSource;
  * @since 6.0
  */
 public class SpringDataSourceConnectionSourceFactory extends DataSourceConnectionSourceFactory implements ApplicationContextAware {
+
     private ApplicationContext applicationContext;
 
     @Override

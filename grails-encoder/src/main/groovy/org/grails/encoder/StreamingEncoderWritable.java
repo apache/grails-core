@@ -31,15 +31,12 @@ import java.io.Writer;
 public interface StreamingEncoderWritable {
 
     /**
-     * Asks the instance to use given writer and EncodesToWriter instance to encode 
+     * Asks the instance to use given writer and EncodesToWriter instance to encode
      * it's content
      *
-     * @param writer
-     *            the target writer instance
-     * @param encoder
-     *            the encoder
-     * @throws IOException
-     *             Signals that an I/O exception has occurred.
+     * @param writer  the target writer instance
+     * @param encoder the encoder
+     * @throws IOException Signals that an I/O exception has occurred.
      */
     void encodeTo(Writer writer, EncodesToWriter encoder) throws IOException;
 }

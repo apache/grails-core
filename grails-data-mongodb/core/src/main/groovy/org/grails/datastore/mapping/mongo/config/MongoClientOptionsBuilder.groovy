@@ -29,6 +29,7 @@ import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
 import java.lang.reflect.Modifier
+
 /**
  * Helper class for building {@link MongoClientSettings} from a {@link PropertyResolver}
  *
@@ -38,6 +39,7 @@ import java.lang.reflect.Modifier
 @CompileStatic
 @Slf4j
 class MongoClientOptionsBuilder {
+
     final PropertyResolver propertyResolver
     final String databaseName
 
@@ -51,7 +53,7 @@ class MongoClientOptionsBuilder {
     private MongoCredential mongoCredential
 
     MongoClientOptionsBuilder(PropertyResolver propertyResolver) {
-        this(propertyResolver,  propertyResolver.getProperty(MongoSettings.SETTING_DATABASE_NAME, 'test'))
+        this(propertyResolver, propertyResolver.getProperty(MongoSettings.SETTING_DATABASE_NAME, 'test'))
     }
 
     MongoClientOptionsBuilder(PropertyResolver propertyResolver, String databaseName) {
@@ -62,12 +64,11 @@ class MongoClientOptionsBuilder {
         username = propertyResolver.getProperty(MongoSettings.SETTING_USERNAME, '')
         password = propertyResolver.getProperty(MongoSettings.SETTING_PASSWORD, '')
         uAndP = username && password ? "$username:$password@" : ''
-        if(host) {
+        if (host) {
             def port = propertyResolver.getProperty(MongoSettings.SETTING_PORT, '')
             port = port ? ":$port" : ''
             connectionString = new ConnectionString("mongodb://${uAndP}${host}${port}/$databaseName")
-        }
-        else {
+        } else {
             connectionString = new ConnectionString(propertyResolver.getProperty(MongoSettings.SETTING_CONNECTION_STRING, propertyResolver.getProperty(MongoSettings.SETTING_URL, "mongodb://localhost/$databaseName")))
         }
         mongoCredential = uAndP ? MongoCredential.createCredential(username, databaseName, password.toCharArray()) : null
@@ -82,22 +83,24 @@ class MongoClientOptionsBuilder {
     private Object buildInternal(Object builder, String startingPrefix, boolean root = false) {
         def builderClass = builder.getClass()
         def methods = builderClass.declaredMethods
-\
+
+        \
+
         def applyConnectionStringMethod = ReflectionUtils.findMethod(builderClass, 'applyConnectionString', ConnectionString)
-        if(applyConnectionStringMethod != null) {
+        if (applyConnectionStringMethod != null) {
             applyConnectionStringMethod.invoke(builder, connectionString)
         }
 
-        if(mongoCredential != null) {
+        if (mongoCredential != null) {
             def credentialListMethod = ReflectionUtils.findMethod(builderClass, 'credentialList', List)
-            if(credentialListMethod != null) {
+            if (credentialListMethod != null) {
                 credentialListMethod.invoke(builder, Arrays.asList(mongoCredential))
             }
         }
 
         for (method in methods) {
             def methodName = method.name
-            if(!Modifier.isPublic(method.modifiers) || methodName.equals('applyConnectionString') || methodName.equals('credentialList')) {
+            if (!Modifier.isPublic(method.modifiers) || methodName.equals('applyConnectionString') || methodName.equals('credentialList')) {
                 continue
             }
 
@@ -106,7 +109,7 @@ class MongoClientOptionsBuilder {
                 Class argType = parameterTypes[0]
 
                 def builderMethod = ReflectionUtils.findMethod(argType, 'builder')
-                String propertyPath = "${startingPrefix}.${ methodName}"
+                String propertyPath = "${startingPrefix}.${methodName}"
                 if (builderMethod != null && Modifier.isStatic(builderMethod.modifiers)) {
                     if (propertyResolver.containsProperty(propertyPath)) {
                         def newBuilder = builderMethod.invoke(argType)
@@ -116,11 +119,11 @@ class MongoClientOptionsBuilder {
                         method.invoke(builder, buildInternal(newBuilder, propertyPath))
                     }
                 } else {
-                    if(argType.isEnum()) {
+                    if (argType.isEnum()) {
                         def value = propertyResolver.getProperty(propertyPath, "")
                         if (value) {
                             try {
-                                method.invoke(builder, Enum.valueOf((Class)argType, value))
+                                method.invoke(builder, Enum.valueOf((Class) argType, value))
                             } catch (Throwable e) {
                                 log.warn("Error occurred reading setting [$propertyPath]: ${e.message}", e)
                             }
@@ -131,18 +134,17 @@ class MongoClientOptionsBuilder {
                     if (valueOfMethod != null && Modifier.isStatic(valueOfMethod.modifiers)) {
                         try {
                             def value = propertyResolver.getProperty(propertyPath, "")
-                            if(value) {
+                            if (value) {
                                 def converted = valueOfMethod.invoke(argType, value)
                                 method.invoke(builder, converted)
                             }
                         } catch (e) {
                             log.warn("Error occurred reading setting [$propertyPath]: ${e.message}", e)
                         }
-                    }
-                    else if(!List.isAssignableFrom(argType)){
+                    } else if (!List.isAssignableFrom(argType)) {
                         try {
                             def value = propertyResolver.getProperty(propertyPath, (Class) argType, null)
-                            if(value != null) {
+                            if (value != null) {
                                 method.invoke(builder, value)
                             }
                         } catch (Throwable e) {
@@ -154,10 +156,9 @@ class MongoClientOptionsBuilder {
 
         }
 
-        if(!root) {
+        if (!root) {
             return doBuild(builder)
-        }
-        else {
+        } else {
             return builder
         }
     }

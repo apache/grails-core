@@ -21,10 +21,13 @@ package org.grails.plugins.web.controllers;
 /**
  * Represents meta data which describes an exception handling method
  * in a controller
+ *
  * @since 2.3
  *
  */
 public interface ControllerExceptionHandlerMetaData {
+
     Class<? extends Exception> getExceptionType();
+
     String getMethodName();
 }

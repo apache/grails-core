@@ -29,9 +29,10 @@ import org.grails.cli.profile.ProfileCommand
  */
 @CompileStatic
 class ServiceCommandFactory implements CommandFactory {
+
     @Override
     Collection<Command> findCommands(Profile profile, boolean inherited) {
-        if(inherited) return Collections.emptyList()
+        if (inherited) return Collections.emptyList()
         ServiceLoader.load(Command, getClass().classLoader).findAll() { Command cmd ->
             cmd instanceof ProfileCommand
         }

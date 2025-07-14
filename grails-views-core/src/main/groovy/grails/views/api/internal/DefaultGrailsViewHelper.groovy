@@ -87,9 +87,8 @@ class DefaultGrailsViewHelper implements GrailsViewHelper {
             }
             catch (NoSuchMessageException e) {
                 if (error instanceof MessageSourceResolvable) {
-                    return ((MessageSourceResolvable)error).codes[0]
-                }
-                else {
+                    return ((MessageSourceResolvable) error).codes[0]
+                } else {
                     return error?.toString()
                 }
             }
@@ -97,18 +96,16 @@ class DefaultGrailsViewHelper implements GrailsViewHelper {
         def args = arguments.args
         def code = arguments.code?.toString()
         def defaultMessage = arguments.default?.toString() ?: code
-        if(code != null) {
-            if(args != null) {
-                if(args instanceof List) {
-                    args = ((List)args).toArray()
-                }
-                else if(!args.getClass().isArray()) {
+        if (code != null) {
+            if (args != null) {
+                if (args instanceof List) {
+                    args = ((List) args).toArray()
+                } else if (!args.getClass().isArray()) {
                     args = [args] as Object[]
                 }
-                return view.messageSource.getMessage( code, (Object[])args, defaultMessage, view.locale)
-            }
-            else {
-                return view.messageSource.getMessage( code, null, defaultMessage, view.locale)
+                return view.messageSource.getMessage(code, (Object[]) args, defaultMessage, view.locale)
+            } else {
+                return view.messageSource.getMessage(code, null, defaultMessage, view.locale)
             }
         }
         return defaultMessage

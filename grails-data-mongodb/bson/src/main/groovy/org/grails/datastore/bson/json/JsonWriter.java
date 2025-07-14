@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.grails.datastore.bson.json;
 
-import org.bson.*;
+import org.bson.AbstractBsonWriter;
+import org.bson.BSONException;
+import org.bson.BsonBinary;
+import org.bson.BsonContextType;
+import org.bson.BsonDbPointer;
+import org.bson.BsonRegularExpression;
+import org.bson.BsonTimestamp;
 import org.bson.json.JsonWriterSettings;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
@@ -95,6 +100,7 @@ public class JsonWriter extends AbstractBsonWriter {
         }
 
     }
+
     @Override
     protected void doWriteEndArray() {
         try {
@@ -137,7 +143,7 @@ public class JsonWriter extends AbstractBsonWriter {
             writeNameHelper(getName());
             writer.write(JsonToken.QUOTE);
             Date date = new Date(value);
-            writer.write( df.format(date) );
+            writer.write(df.format(date));
             writer.write(JsonToken.QUOTE);
             setState(getNextState());
         } catch (IOException e) {
@@ -178,8 +184,7 @@ public class JsonWriter extends AbstractBsonWriter {
             writeNameHelper(getName());
             if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
                 writer.write(Long.toString(value));
-            }
-            else {
+            } else {
                 writer.write(JsonToken.QUOTE);
                 writer.write(Long.toString(value));
                 writer.write(JsonToken.QUOTE);
@@ -260,7 +265,7 @@ public class JsonWriter extends AbstractBsonWriter {
                     writer.write(escaped);
                     writer.write(JsonToken.FORWARD_SLASH);
                     writer.write(regularExpression.getOptions());
-                break;
+                    break;
             }
         } catch (IOException e) {
             throwBsonException(e);
@@ -414,6 +419,7 @@ public class JsonWriter extends AbstractBsonWriter {
      */
 
     public class Context extends AbstractBsonWriter.Context {
+
         private final String indentation;
         private boolean hasElements;
 

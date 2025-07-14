@@ -18,6 +18,7 @@
  */
 package org.grails.async.transform.internal
 
+import grails.transaction.TransactionManagerAware
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -36,11 +37,10 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
-import org.grails.compiler.injection.GrailsASTUtils
-import org.grails.compiler.web.async.TransactionalAsyncTransformUtils
-import grails.transaction.TransactionManagerAware
 import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
+import org.grails.compiler.injection.GrailsASTUtils
+import org.grails.compiler.web.async.TransactionalAsyncTransformUtils
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
 
@@ -65,7 +65,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
     private static final ClassNode CLASS_NODE_MAP = new ClassNode(Map.class).getPlainNodeReference()
     private static final String METHOD_NAME_SET_TRANSACTION_MANAGER = "setTransactionManager"
     private static final VariableExpression EXPRESSION_THIS = new VariableExpression("this")
-    private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL,"=", -1,-1)
+    private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL, "=", -1, -1)
     private static final String VARIABLE_TRANSACTION_MANAGER = "txMgr"
     private FieldNode transactionalField
     private boolean isTransactional = false
@@ -73,14 +73,14 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
     private int promiseDecoratorCount = 0
 
     @Override
-    void transformTransactionalMethod(ClassNode classNode,ClassNode delegateClassNode,  MethodNode methodNode, ListExpression promiseDecorators) {
+    void transformTransactionalMethod(ClassNode classNode, ClassNode delegateClassNode, MethodNode methodNode, ListExpression promiseDecorators) {
 
         if (transactionalField == null) {
             transactionalField = delegateClassNode.getField(TRANSACTIONAL_FIELD)
             isTransactional = false
-            if(transactionalField) {
+            if (transactionalField) {
                 def ie = transactionalField.getInitialExpression()
-                if(ie instanceof ConstantExpression) {
+                if (ie instanceof ConstantExpression) {
                     isTransactional = ie.isTrueExpression()
                 }
             }
@@ -92,30 +92,29 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
 
             int currentIndex = promiseDecoratorCount++
 
-
             final methodLookupArguments = new ArgumentListExpression(new ConstantExpression(methodNode.getName()))
-            for(Parameter p in methodNode.getParameters()) {
+            for (Parameter p in methodNode.getParameters()) {
                 methodLookupArguments.addExpression(new ClassExpression(p.getType().getPlainNodeReference()))
             }
             final promiseLookupExpression = new BinaryExpression(new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_PROMISE_DECORATORS), Token.newSymbol(Types.LEFT_SQUARE_BRACKET, -1, -1), new ConstantExpression(currentIndex))
             setTransactionManagerMethodBody.addStatement(
-                new ExpressionStatement(
-                    new BinaryExpression(
-                        promiseLookupExpression,
-                        OPERATOR_ASSIGNMENT,
-                        new MethodCallExpression(
-                             new ClassExpression(new ClassNode(TransactionalAsyncTransformUtils).getPlainNodeReference()),
-                            "createTransactionalPromiseDecorator",
-                             new ArgumentListExpression(new VariableExpression(VARIABLE_TRANSACTION_MANAGER),
-                                                        new MethodCallExpression(
+                    new ExpressionStatement(
+                            new BinaryExpression(
+                                    promiseLookupExpression,
+                                    OPERATOR_ASSIGNMENT,
+                                    new MethodCallExpression(
+                                            new ClassExpression(new ClassNode(TransactionalAsyncTransformUtils).getPlainNodeReference()),
+                                            "createTransactionalPromiseDecorator",
+                                            new ArgumentListExpression(new VariableExpression(VARIABLE_TRANSACTION_MANAGER),
+                                                    new MethodCallExpression(
                                                             new ClassExpression(delegateClassNode),
                                                             "getDeclaredMethod", methodLookupArguments
-                                                        )
-                             )
-                        )
+                                                    )
+                                            )
+                                    )
 
+                            )
                     )
-                )
             )
 
             promiseDecorators.addExpression(promiseLookupExpression)
@@ -137,7 +136,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
                 classNode.addField(new FieldNode(FIELD_NAME_TRANSACTION_MANAGER, Modifier.PRIVATE, INTERFACE_TRANSACTION_MANAGER, classNode, GrailsASTUtils.NULL_EXPRESSION))
             }
             final promiseDecoratorsField = classNode.getField(FIELD_NAME_PROMISE_DECORATORS)
-            if(promiseDecoratorsField == null) {
+            if (promiseDecoratorsField == null) {
                 classNode.addField(new FieldNode(FIELD_NAME_PROMISE_DECORATORS, Modifier.PRIVATE, CLASS_NODE_MAP, classNode, new MapExpression()))
             }
 
@@ -146,28 +145,28 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
             def parameters = [transactionManagerParameter] as Parameter[]
             final txMgrParam = new VariableExpression(transactionManagerParameter)
             methodBody.addStatement(
-                new ExpressionStatement(
-                    new BinaryExpression(
-                        new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_TRANSACTION_MANAGER),
-                        OPERATOR_ASSIGNMENT,
-                        txMgrParam
+                    new ExpressionStatement(
+                            new BinaryExpression(
+                                    new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_TRANSACTION_MANAGER),
+                                    OPERATOR_ASSIGNMENT,
+                                    txMgrParam
+                            )
                     )
-                )
             )
             methodBody.addStatement(
-                new ExpressionStatement(
-                    new DeclarationExpression(
-                        new VariableExpression(VARIABLE_TRANSACTION_MANAGER, INTERFACE_TRANSACTION_MANAGER),
-                        OPERATOR_ASSIGNMENT,
-                        txMgrParam
+                    new ExpressionStatement(
+                            new DeclarationExpression(
+                                    new VariableExpression(VARIABLE_TRANSACTION_MANAGER, INTERFACE_TRANSACTION_MANAGER),
+                                    OPERATOR_ASSIGNMENT,
+                                    txMgrParam
+                            )
                     )
-                )
             )
             method = new MethodNode(METHOD_NAME_SET_TRANSACTION_MANAGER, Modifier.PUBLIC, ClassHelper.VOID_TYPE, parameters, [] as ClassNode[], methodBody)
             classNode.addMethod(method)
 
         }
 
-        return (BlockStatement)method.getCode()
+        return (BlockStatement) method.getCode()
     }
 }

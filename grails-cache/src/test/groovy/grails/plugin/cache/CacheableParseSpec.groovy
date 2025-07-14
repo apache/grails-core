@@ -95,12 +95,10 @@ return TestService
         then:
         1 * keyGenerator.generate("TestService", "multiply", _, [x:1, y:2, tenantId: "test"])
 
-
         cleanup:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
         datastore?.close()
     }
-
 
     void "test include tenant id when used with @CurrentTenant and @Transactional"() {
         given:
@@ -140,7 +138,6 @@ return TestService
 
         then:
         1 * keyGenerator.generate("TestService", "multiply", _, [x:1, y:2, tenantId: "test"])
-
 
         cleanup:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")

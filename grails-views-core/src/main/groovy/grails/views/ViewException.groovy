@@ -29,5 +29,5 @@ import groovy.transform.InheritConstructors
  */
 @CompileStatic
 @InheritConstructors
-class ViewException extends RuntimeException{
+class ViewException extends RuntimeException {
 }

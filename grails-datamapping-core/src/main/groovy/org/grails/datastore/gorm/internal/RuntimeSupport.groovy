@@ -41,15 +41,15 @@ class RuntimeSupport {
      * @return
      */
     static Datastore findDefaultDatastore(Datastore[] datastores) {
-        for(Datastore d in datastores) {
-            if( d instanceof ConnectionSourcesProvider) {
-                ConnectionSourcesProvider provider = (ConnectionSourcesProvider)d
-                if(ConnectionSource.DEFAULT == provider.getConnectionSources().defaultConnectionSource.name) {
+        for (Datastore d in datastores) {
+            if (d instanceof ConnectionSourcesProvider) {
+                ConnectionSourcesProvider provider = (ConnectionSourcesProvider) d
+                if (ConnectionSource.DEFAULT == provider.getConnectionSources().defaultConnectionSource.name) {
                     return d
                 }
             }
         }
-        if(datastores) {
+        if (datastores) {
             return datastores[0]
         }
         throw new DatastoreConfigurationException("No default datastore configured")

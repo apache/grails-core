@@ -27,8 +27,9 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.utility.DockerImageName
 
 class MongoContainerHolder {
-    private ThreadLocal<GenericContainer> containers = new ThreadLocal<GenericContainer>()
+
     final DockerImageName desiredImage
+    private ThreadLocal<GenericContainer> containers = new ThreadLocal<GenericContainer>()
 
     MongoContainerHolder(DockerImageName desiredImage) {
         this.desiredImage = desiredImage
@@ -44,7 +45,7 @@ class MongoContainerHolder {
 
     GenericContainer getContainer() {
         GenericContainer foundContainer = containers.get()
-        if(foundContainer) {
+        if (foundContainer) {
             return foundContainer
         }
 

@@ -24,8 +24,8 @@ import org.hibernate.SessionFactory;
  * Holds a reference to the SessionFactory, used to allow proxying of the
  * session factory in development mode.
  *
- * @since 2.0
  * @author Graeme Rocher
+ * @since 2.0
  */
 public class SessionFactoryHolder {
 

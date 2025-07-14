@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.codecs;
 
-import org.grails.encoder.impl.JSONCodecFactory;
 import grails.encoders.JSONEncoder;
+import org.grails.encoder.impl.JSONCodecFactory;
 
 /**
  * A codec that encodes strings to JSON
@@ -29,6 +28,7 @@ import grails.encoders.JSONEncoder;
  * @since 2.3.4
  */
 public class JSONCodec extends JSONCodecFactory {
+
     public JSONCodec() {
         super();
         setEncoder(new JSONEncoder());

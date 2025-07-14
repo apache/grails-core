@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm.validation;
 
 import org.springframework.validation.Errors;
@@ -36,7 +35,7 @@ public interface Constraint {
      * @return true if the constraint can be applied against the specified type
      */
     @SuppressWarnings("rawtypes")
-    boolean  supports(Class type);
+    boolean supports(Class type);
 
     /**
      * Return whether the constraint is valid for the owning class
@@ -51,10 +50,9 @@ public interface Constraint {
      *
      * @param target
      * @param propertyValue The property value to validate
-     * @param errors The errors instance to record errors against
+     * @param errors        The errors instance to record errors against
      */
     void validate(Object target, Object propertyValue, Errors errors);
-
 
     /**
      * @return The parameter to the constraint

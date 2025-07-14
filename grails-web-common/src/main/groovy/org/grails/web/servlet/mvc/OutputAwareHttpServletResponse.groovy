@@ -20,7 +20,6 @@ package org.grails.web.servlet.mvc
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-
 import jakarta.servlet.ServletOutputStream
 import jakarta.servlet.http.HttpServletResponseWrapper
 

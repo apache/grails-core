@@ -29,6 +29,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.springframework.validation.Validator
+
 import static grails.gorm.validation.ConstrainedProperty.BLANK_CONSTRAINT
 
 /**
@@ -38,7 +39,8 @@ import static grails.gorm.validation.ConstrainedProperty.BLANK_CONSTRAINT
 @CompileStatic
 class DomainPropertyImpl implements DomainProperty {
 
-    @Delegate PersistentProperty<Property> persistentProperty
+    @Delegate
+    PersistentProperty<Property> persistentProperty
     PersistentProperty rootProperty
     PersistentEntity domainClass
     Constrained constrained
@@ -52,7 +54,7 @@ class DomainPropertyImpl implements DomainProperty {
         this.domainClass = persistentProperty.owner
         Validator validator = mappingContext.getEntityValidator(domainClass)
         if (validator instanceof PersistentEntityValidator) {
-            this.constrained = new Constrained(((PersistentEntityValidator)validator).constrainedProperties.get(name))
+            this.constrained = new Constrained(((PersistentEntityValidator) validator).constrainedProperties.get(name))
         }
         if (this.constrained?.isNull()) {
             this.constrained = null
@@ -82,7 +84,7 @@ class DomainPropertyImpl implements DomainProperty {
     Class getAssociatedType() {
         if (persistentProperty instanceof Association) {
             if (persistentProperty instanceof Basic) {
-                ((Basic)persistentProperty).componentType
+                ((Basic) persistentProperty).componentType
             } else {
                 associatedEntity.javaClass
             }
@@ -92,7 +94,7 @@ class DomainPropertyImpl implements DomainProperty {
     }
 
     PersistentEntity getAssociatedEntity() {
-        ((Association)persistentProperty).associatedEntity
+        ((Association) persistentProperty).associatedEntity
     }
 
     boolean isRequired() {
@@ -133,7 +135,7 @@ class DomainPropertyImpl implements DomainProperty {
 
         Constrained cp2 = o2.constrained
 
-        if (constrained == null  && cp2 == null) {
+        if (constrained == null && cp2 == null) {
             return name.compareTo(o2.name)
         }
 

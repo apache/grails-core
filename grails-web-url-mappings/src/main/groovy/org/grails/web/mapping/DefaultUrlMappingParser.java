@@ -25,9 +25,8 @@ import grails.web.mapping.UrlMappingParser;
  * A simple implementation of the UrlMappingParser interface. Most of the logical is encapsulated in the
  * DefaultUrlMappingData class.
  *
- * @see DefaultUrlMappingData
- *
  * @author Graeme Rocher
+ * @see DefaultUrlMappingData
  * @since 0.5
  *
  *
@@ -36,6 +35,7 @@ import grails.web.mapping.UrlMappingParser;
  * Time: 8:35:26 AM
  */
 public class DefaultUrlMappingParser implements UrlMappingParser {
+
     public UrlMappingData parse(String url) {
         return new DefaultUrlMappingData(url);
     }

@@ -22,7 +22,6 @@ package org.grails.web.converters.exceptions;
  * Thrown when an error occurs originating from a Converter instance.
  *
  * @author Siegfried Puchbauer
- *
  * @since 0.6
  */
 public class ConverterException extends RuntimeException {

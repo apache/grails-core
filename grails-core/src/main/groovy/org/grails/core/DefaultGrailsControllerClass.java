@@ -32,7 +32,10 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Evaluates the conventions contained within controllers to perform auto-configuration.
@@ -45,18 +48,20 @@ import java.util.*;
 public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass implements GrailsControllerClass {
 
     public static final String CONTROLLER = "Controller";
-
-    private static final String DEFAULT_CLOSURE_PROPERTY = "defaultAction";
     public static final String ALLOWED_HTTP_METHODS_PROPERTY = "allowedMethods";
     public static final Object[] EMPTY_ARGS = new Object[0];
     public static final String SCOPE = "scope";
     public static final String SCOPE_SINGLETON = "singleton";
+
+    private static final String DEFAULT_CLOSURE_PROPERTY = "defaultAction";
+
+    protected Map<String, String> actionUriToViewName = new HashMap<String, String>();
+
     private String scope;
     private Map<String, ActionInvoker> actions = new HashMap<String, ActionInvoker>();
     private String defaultActionName;
     private String namespace;
-    protected Map<String, String> actionUriToViewName = new HashMap<String, String>();
-    
+
     public DefaultGrailsControllerClass(Class<?> clazz) {
         super(clazz, CONTROLLER);
         namespace = getStaticPropertyValue(NAMESPACE_PROPERTY, String.class);
@@ -112,10 +117,9 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
             for (Method method : superClass.getMethods()) {
                 if (Modifier.isPublic(method.getModifiers()) && method.getAnnotation(Action.class) != null) {
                     String methodName = method.getName();
-                    if(Environment.isDevelopmentMode()) {
+                    if (Environment.isDevelopmentMode()) {
                         methodNames.put(methodName, new ReflectionInvoker(method));
-                    }
-                    else {
+                    } else {
                         MethodHandle mh;
                         try {
                             mh = lookup.findVirtual(superClass, methodName, MethodType.methodType(method.getReturnType()));
@@ -137,18 +141,17 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
 
     @Override
     public boolean mapsToURI(String uri) {
-        if(uri.startsWith("/")) {
+        if (uri.startsWith("/")) {
             String[] tokens = uri.substring(1).split("\\/");
-            if(tokens.length>0) {
+            if (tokens.length > 0) {
                 String controllerName = tokens[0];
-                if(getLogicalPropertyName().equals(controllerName)) {
-                    if(tokens.length>1) {
+                if (getLogicalPropertyName().equals(controllerName)) {
+                    if (tokens.length > 1) {
                         String actionName = tokens[1];
-                        if(actions.containsKey(actionName) || defaultActionName.equals(actionName)) {
+                        if (actions.containsKey(actionName) || defaultActionName.equals(actionName)) {
                             return true;
                         }
-                    }
-                    else {
+                    } else {
                         return true;
                     }
                 }
@@ -166,7 +169,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
     public void registerUrlConverter(UrlConverter urlConverter) {
         for (String actionName : new ArrayList<String>(actions.keySet())) {
             actionUriToViewName.put(urlConverter.toUrlElement(actionName), actionName);
-            actions.put( urlConverter.toUrlElement(actionName), actions.remove(actionName));
+            actions.put(urlConverter.toUrlElement(actionName), actions.remove(actionName));
         }
         defaultActionName = urlConverter.toUrlElement(defaultActionName);
     }
@@ -175,15 +178,19 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
      * Invokes the controller action for the given name on the given controller instance
      *
      * @param controller The controller instance
-     * @param action The action name
+     * @param action     The action name
      * @return The result of the action
      * @throws Throwable
      */
     @Override
     public Object invoke(Object controller, String action) throws Throwable {
-        if(action == null) action = this.defaultActionName;
+        if (action == null) {
+            action = this.defaultActionName;
+        }
         ActionInvoker handle = actions.get(action);
-        if(handle == null) throw new IllegalArgumentException("Invalid action name: " + action);
+        if (handle == null) {
+            throw new IllegalArgumentException("Invalid action name: " + action);
+        }
         return handle.invoke(controller);
     }
 
@@ -194,10 +201,12 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
     }
 
     private interface ActionInvoker {
+
         Object invoke(Object controller) throws Throwable;
     }
 
     private class ReflectionInvoker implements ActionInvoker {
+
         private final Method method;
 
         public ReflectionInvoker(Method method) {
@@ -210,7 +219,9 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
             return method.invoke(controller);
         }
     }
+
     private class MethodHandleInvoker implements ActionInvoker {
+
         private final MethodHandle handle;
 
         public MethodHandleInvoker(MethodHandle handle) {
@@ -218,7 +229,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
         }
 
         @Override
-        public Object invoke(Object controller) throws Throwable{
+        public Object invoke(Object controller) throws Throwable {
             return handle.invoke(controller);
         }
     }

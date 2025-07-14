@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.mapping.model.types;
 
+import jakarta.persistence.FetchType;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 
-import jakarta.persistence.FetchType;
 import java.beans.PropertyDescriptor;
 
 /**
@@ -32,7 +32,6 @@ import java.beans.PropertyDescriptor;
  * @since 5.0
  */
 public abstract class ToMany<T extends Property> extends Association<T> {
-
 
     public ToMany(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor) {
         super(owner, context, descriptor);

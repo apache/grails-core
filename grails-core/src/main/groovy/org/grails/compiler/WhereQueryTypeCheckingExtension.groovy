@@ -23,38 +23,36 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.MethodCall
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.grails.compiler.injection.GrailsASTUtils
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
-
+import org.grails.compiler.injection.GrailsASTUtils
 
 /**
- *
  * @since 2.4.1
  */
 class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
 
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }
-        
+
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
-            if(currentScope.processingWhereQueryClosure) {
-                dynamicCall = makeDynamic (call)
+            if (currentScope.processingWhereQueryClosure) {
+                dynamicCall = makeDynamic(call)
             }
             dynamicCall
         }
-        
+
         afterMethodCall { MethodCall call ->
-            if(isWhereQueryCall(call)) {
+            if (isWhereQueryCall(call)) {
                 scopeExit()
             }
         }
-        
+
         beforeMethodCall { MethodCall call ->
-            if(isWhereQueryCall(call)) {
+            if (isWhereQueryCall(call)) {
                 newScope {
                     processingWhereQueryClosure = true
                 }
@@ -62,11 +60,11 @@ class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
         }
         null
     }
-    
+
     protected boolean isWhereQueryCall(MethodCall call) {
-        call instanceof MethodCallExpression && 
-            call.objectExpression instanceof ClassExpression && 
-            GrailsASTUtils.isDomainClass(call.objectExpression.type, null) && 
-            call.method.value == 'where'
+        call instanceof MethodCallExpression &&
+                call.objectExpression instanceof ClassExpression &&
+                GrailsASTUtils.isDomainClass(call.objectExpression.type, null) &&
+                call.method.value == 'where'
     }
 }

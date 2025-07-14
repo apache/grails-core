@@ -18,7 +18,6 @@
  */
 package org.grails.cli.profile.commands
 
-import grails.build.logging.GrailsConsole
 import groovy.transform.CompileStatic
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription
@@ -47,7 +46,7 @@ class ListProfilesCommand implements Command, ProfileRepositoryAware {
         def console = executionContext.console
         console.addStatus("Available Profiles")
         console.log('--------------------')
-        for(Profile p in allProfiles) {
+        for (Profile p in allProfiles) {
             console.log("* $p.name - ${p.description}")
         }
 

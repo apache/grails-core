@@ -74,14 +74,14 @@ class AtomRenderer<T> extends HalXmlRenderer<T> {
             def title = getResourceTitle(renderContext.resourcePath, locale)
             def writer = xml.getWriter()
             writer
-                .startNode(FEED_TAG)
-                .attribute(XMLNS_ATTRIBUTE, ATOM_NAMESPACE)
-                .startNode(TITLE_ATTRIBUTE)
-                .characters(title)
-                .end()
-                .startNode(ID_TAG)
-                .characters(generateIdForURI(resourceHref))
-                .end()
+                    .startNode(FEED_TAG)
+                    .attribute(XMLNS_ATTRIBUTE, ATOM_NAMESPACE)
+                    .startNode(TITLE_ATTRIBUTE)
+                    .characters(title)
+                    .end()
+                    .startNode(ID_TAG)
+                    .characters(generateIdForURI(resourceHref))
+                    .end()
 
             writeRelationshipLinks(resourceHref, title, locale, xml)
 
@@ -115,7 +115,7 @@ class AtomRenderer<T> extends HalXmlRenderer<T> {
 
     static String generateIdForURI(String url, Date dateCreated = null, Object id = null) {
         if (url.startsWith('http')) {
-            url = url.substring(url.indexOf('//')+2, url.length())
+            url = url.substring(url.indexOf('//') + 2, url.length())
         }
         url = url.replace('#', '/')
         def i = url.indexOf('/')
@@ -124,7 +124,7 @@ class AtomRenderer<T> extends HalXmlRenderer<T> {
             if (dateCreated) {
                 dateCreatedId = ",${ID_DATE_FORMAT.format(dateCreated)}"
             }
-            url = "${url.substring(0, i)}${dateCreatedId}:${ id ?: url.substring(i, url.length())}"
+            url = "${url.substring(0, i)}${dateCreatedId}:${id ?: url.substring(i, url.length())}"
         }
 
         return "tag:$url"
@@ -198,8 +198,7 @@ class AtomRenderer<T> extends HalXmlRenderer<T> {
                             writeDomainWithEmbeddedAndLinks(associatedEntity, value, context, xml, writtenObjects, false)
                         }
                     }
-                }
-                else {
+                } else {
                     def associatedEntity = property.associatedEntity
                     if (associatedEntity) {
                         writer.startNode(property.name)

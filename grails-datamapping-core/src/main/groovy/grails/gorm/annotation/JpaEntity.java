@@ -35,4 +35,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @GroovyASTTransformationClass("org.grails.compiler.gorm.JpaGormEntityTransformation")
 public @interface JpaEntity {
+
 }

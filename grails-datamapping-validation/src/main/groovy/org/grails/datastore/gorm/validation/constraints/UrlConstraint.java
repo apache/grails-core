@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -59,15 +58,12 @@ public class UrlConstraint extends AbstractConstraint {
             // When using "importFrom" the constraintParameter is the UrlValidator even if it was defined as
             // url: true, so we want the same behavior.
             domainValidator = null;
-        }
-        else if (constraintParameter instanceof String) {
+        } else if (constraintParameter instanceof String) {
             domainValidator = new RegexValidator((String) constraintParameter);
-        }
-        else if (constraintParameter instanceof List<?>) {
+        } else if (constraintParameter instanceof List<?>) {
             List<?> regexpList = (List<?>) constraintParameter;
             domainValidator = new RegexValidator(regexpList.toArray(new String[regexpList.size()]));
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Parameter for constraint [" + ConstrainedProperty.URL_CONSTRAINT +
                     "] of property [" + constraintPropertyName + "] of class [" +
                     constraintOwningClass + "] must be a boolean, string, or list value");
@@ -75,7 +71,6 @@ public class UrlConstraint extends AbstractConstraint {
 
         UrlValidator validator = new UrlValidator(domainValidator,
                 UrlValidator.ALLOW_ALL_SCHEMES + UrlValidator.ALLOW_2_SLASHES);
-
 
         return validator;
     }

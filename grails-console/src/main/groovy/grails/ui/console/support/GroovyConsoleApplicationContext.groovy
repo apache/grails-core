@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.ui.console.support
 
 import grails.core.GrailsApplication

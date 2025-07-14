@@ -17,7 +17,6 @@
  *  under the License.
  */
 
-
 import org.bson.types.*
 import groovy.transform.*
 import grails.plugin.json.builder.*

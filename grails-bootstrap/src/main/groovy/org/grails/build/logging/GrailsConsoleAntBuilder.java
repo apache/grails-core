@@ -20,7 +20,12 @@ package org.grails.build.logging;
 
 import grails.build.logging.GrailsConsole;
 import groovy.ant.AntBuilder;
-import org.apache.tools.ant.*;
+import org.apache.tools.ant.BuildEvent;
+import org.apache.tools.ant.BuildLogger;
+import org.apache.tools.ant.DefaultLogger;
+import org.apache.tools.ant.MagicNames;
+import org.apache.tools.ant.Project;
+import org.apache.tools.ant.ProjectHelper;
 import org.apache.tools.ant.types.LogLevel;
 import org.apache.tools.ant.util.StringUtils;
 
@@ -73,13 +78,14 @@ public class GrailsConsoleAntBuilder extends AntBuilder {
         if (!instance.isVerbose()) {
             for (Object buildListener : project.getBuildListeners()) {
                 if (buildListener instanceof BuildLogger) {
-                    ((BuildLogger)buildListener).setMessageOutputLevel(LogLevel.ERR.getLevel());
+                    ((BuildLogger) buildListener).setMessageOutputLevel(LogLevel.ERR.getLevel());
                 }
             }
         }
     }
 
     private static class GrailsConsoleLogger extends DefaultLogger {
+
         /**
          * Name of the current target, if it should
          * be displayed on the next message. This is

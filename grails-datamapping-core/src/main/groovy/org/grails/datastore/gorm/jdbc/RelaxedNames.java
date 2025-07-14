@@ -16,18 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc;
 
 import org.springframework.util.StringUtils;
-
 
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 
 /**
  * Generates relaxed name variations from a given source.
@@ -49,8 +46,9 @@ final class RelaxedNames implements Iterable<String> {
 
     /**
      * Create a new {@link RelaxedNames} instance.
+     *
      * @param name the source name. For the maximum number of variations specify the name
-     * using dashed notation (e.g. {@literal my-property-name}
+     *             using dashed notation (e.g. {@literal my-property-name}
      */
     RelaxedNames(String name) {
         this.name = (name == null ? "" : name);
@@ -192,7 +190,7 @@ final class RelaxedNames implements Iterable<String> {
                 builder.append(
                         builder.length() == 0 ? field : StringUtils.capitalize(field));
             }
-            for (String suffix : new String[] { "_", "-", "." }) {
+            for (String suffix : new String[]{"_", "-", "."}) {
                 if (value.endsWith(suffix)) {
                     builder.append(suffix);
                 }
@@ -201,6 +199,4 @@ final class RelaxedNames implements Iterable<String> {
 
         }
     }
-
-
 }

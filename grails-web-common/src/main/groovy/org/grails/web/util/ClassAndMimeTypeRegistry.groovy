@@ -21,14 +21,13 @@ package org.grails.web.util
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import grails.util.Environment
-import groovy.transform.CompileStatic
 import grails.util.GrailsClassUtils
+import grails.web.mime.MimeType
+import grails.web.mime.MimeTypeProvider
+import groovy.transform.CompileStatic
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
-
-import grails.web.mime.MimeType
-import grails.web.mime.MimeTypeProvider
 
 /**
  * Abstract class for class that maintains a registry of mappings MimeType,Class and a particular object type. Used by RendererRegistry and DataBindingSourceRegistry
@@ -40,15 +39,16 @@ import grails.web.mime.MimeTypeProvider
 abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
 
     private static final MimeTypeProvider NULL_RESOLVE = new MimeTypeProvider() {
+
         MimeType[] getMimeTypes() { null }
     }
 
-    private Map<Class, Collection<R >> registeredObjectsByType = new ConcurrentHashMap<>()
+    private Map<Class, Collection<R>> registeredObjectsByType = new ConcurrentHashMap<>()
     private Map<MimeType, R> defaultObjectsByMimeType = new ConcurrentHashMap<>()
-    private Cache<K, R > resolvedObjectCache = Caffeine.newBuilder()
-        .initialCapacity(500)
-        .maximumSize(1000)
-        .build()
+    private Cache<K, R> resolvedObjectCache = Caffeine.newBuilder()
+            .initialCapacity(500)
+            .maximumSize(1000)
+            .build()
 
     void registerDefault(MimeType mt, R object) {
         defaultObjectsByMimeType.put(mt, object)
@@ -60,7 +60,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
     }
 
     Collection<R> getRegisteredObjects(Class targetType) {
-        if(targetType == null) {
+        if (targetType == null) {
             return null
         }
         def registeredObjects = registeredObjectsByType.get(targetType)
@@ -72,16 +72,16 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
     }
 
     R findMatchingObjectForMimeType(MimeType mimeType, object) {
-        if(object == null) return null
+        if (object == null) return null
 
-        final clazz = object instanceof Class ? (Class)object : object.getClass()
+        final clazz = object instanceof Class ? (Class) object : object.getClass()
 
         final K cacheKey = createCacheKey(clazz, mimeType)
-        R registeredObject = (R)resolvedObjectCache.getIfPresent(cacheKey)
+        R registeredObject = (R) resolvedObjectCache.getIfPresent(cacheKey)
         if (registeredObject == null) {
 
             Class currentClass = clazz
-            while(currentClass != null) {
+            while (currentClass != null) {
 
                 registeredObject = findRegisteredObjectForType(currentClass, mimeType)
                 if (registeredObject) {
@@ -93,23 +93,22 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
             }
 
             final interfaces = GrailsClassUtils.getAllInterfaces(object)
-            for(i in interfaces) {
+            for (i in interfaces) {
                 registeredObject = findRegisteredObjectForType(i, mimeType)
                 if (registeredObject) break
             }
 
             if (registeredObject == null) {
-                registeredObject = (R)defaultObjectsByMimeType.get(mimeType)
+                registeredObject = (R) defaultObjectsByMimeType.get(mimeType)
             }
             if (registeredObject != null) {
                 resolvedObjectCache.put(cacheKey, registeredObject)
             }
         }
 
-        if(registeredObject == null && !Environment.isDevelopmentMode()) {
-            resolvedObjectCache.put(cacheKey, (R)NULL_RESOLVE)
-        }
-        else if(NULL_RESOLVE.is(registeredObject)) {
+        if (registeredObject == null && !Environment.isDevelopmentMode()) {
+            resolvedObjectCache.put(cacheKey, (R) NULL_RESOLVE)
+        } else if (NULL_RESOLVE.is(registeredObject)) {
             return null
         }
         return registeredObject
@@ -119,15 +118,15 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
         R findObject = null
         final objectList = registeredObjectsByType.get(currentClass)
         if (objectList) {
-            findObject = (R)objectList.find { 
-                MimeTypeProvider r = (MimeTypeProvider)it
+            findObject = (R) objectList.find {
+                MimeTypeProvider r = (MimeTypeProvider) it
                 r.mimeTypes.any { MimeType mt ->
-                    mt  == mimeType
+                    mt == mimeType
                 }
             }
-            if(findObject == null) {
-                findObject = (R)objectList.find {
-                    MimeTypeProvider r = (MimeTypeProvider)it
+            if (findObject == null) {
+                findObject = (R) objectList.find {
+                    MimeTypeProvider r = (MimeTypeProvider) it
                     r.mimeTypes.any { MimeType mt ->
                         mt.name == mimeType.name
                     }

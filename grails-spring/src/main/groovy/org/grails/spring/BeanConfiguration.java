@@ -23,7 +23,7 @@ import org.springframework.beans.factory.support.AbstractBeanDefinition;
 
 /**
  * Represents a runtime bean configuration.
- *
+ * <p>
  * Credit must go to Solomon Duskis and the
  * article: http://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
  *
@@ -52,9 +52,9 @@ public interface BeanConfiguration {
 
     /**
      * Adds a property value to this bean.
-     * @param propertyName The name of the property
-     * @param propertyValue The value of the property
      *
+     * @param propertyName  The name of the property
+     * @param propertyValue The value of the property
      * @return Returns this bean configuration
      */
     BeanConfiguration addProperty(String propertyName, Object propertyValue);
@@ -99,12 +99,14 @@ public interface BeanConfiguration {
 
     /**
      * Sets the name of the bean in the app ctx.
+     *
      * @param beanName The bean name
      */
     void setName(String beanName);
 
     /**
      * Returns true if the bean config has the name property set.
+     *
      * @param name The name of the property
      * @return true if it does have a property with the given name
      */
@@ -128,6 +130,7 @@ public interface BeanConfiguration {
 
     /**
      * Sets the BeanConfiguration as an Abstract bean definition
+     *
      * @param isAbstract Whether its abstract or not
      * @return This BeanConfiguration object
      */

@@ -177,6 +177,7 @@ tasks.named('test', Test).configure {
 apply {
     // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/style-enforcement-config.gradle')
 }
 
 tasks.withType(Groovydoc).configureEach {

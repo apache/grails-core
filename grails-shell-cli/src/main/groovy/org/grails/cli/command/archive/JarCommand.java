@@ -18,14 +18,13 @@
  */
 package org.grails.cli.command.archive;
 
-import java.io.File;
-
-import org.springframework.boot.cli.command.Command;
 import org.springframework.boot.loader.tools.Layouts;
 import org.springframework.boot.loader.tools.LibraryScope;
 
+import java.io.File;
+
 /**
- * {@link Command} to create a self-contained executable jar file from a CLI application.
+ * {@link org.springframework.boot.cli.command.Command} to create a self-contained executable jar file from a CLI application.
  *
  * @author Andy Wilkinson
  * @author Phillip Webb
@@ -33,21 +32,21 @@ import org.springframework.boot.loader.tools.LibraryScope;
  */
 public class JarCommand extends ArchiveCommand {
 
-	public JarCommand() {
-		super("jar", "Create a self-contained executable jar file from a Spring Groovy script", new JarOptionHandler());
-	}
+    public JarCommand() {
+        super("jar", "Create a self-contained executable jar file from a Spring Groovy script", new JarOptionHandler());
+    }
 
-	private static final class JarOptionHandler extends ArchiveOptionHandler {
+    private static final class JarOptionHandler extends ArchiveOptionHandler {
 
-		JarOptionHandler() {
-			super("jar", new Layouts.Jar());
-		}
+        JarOptionHandler() {
+            super("jar", new Layouts.Jar());
+        }
 
-		@Override
-		protected LibraryScope getLibraryScope(File file) {
-			return LibraryScope.COMPILE;
-		}
+        @Override
+        protected LibraryScope getLibraryScope(File file) {
+            return LibraryScope.COMPILE;
+        }
 
-	}
+    }
 
 }

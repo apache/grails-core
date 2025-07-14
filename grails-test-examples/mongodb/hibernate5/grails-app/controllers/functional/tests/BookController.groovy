@@ -19,10 +19,13 @@
 
 package functional.tests
 
-import grails.mongodb.*
-
-import static org.springframework.http.HttpStatus.*
 import grails.gorm.transactions.Transactional
+import grails.mongodb.MongoEntity
+
+import static org.springframework.http.HttpStatus.CREATED
+import static org.springframework.http.HttpStatus.NOT_FOUND
+import static org.springframework.http.HttpStatus.NO_CONTENT
+import static org.springframework.http.HttpStatus.OK
 
 @Transactional(readOnly = true)
 class BookController {

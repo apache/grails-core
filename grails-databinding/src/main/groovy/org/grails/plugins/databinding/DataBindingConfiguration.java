@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.databinding;
 
 import grails.core.GrailsApplication;
@@ -28,7 +27,13 @@ import grails.util.GrailsArrayUtils;
 import grails.web.databinding.GrailsWebDataBinder;
 import org.grails.databinding.bindingsource.DataBindingSourceCreator;
 import org.grails.databinding.converters.DefaultConvertersConfiguration;
-import org.grails.web.databinding.bindingsource.*;
+import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry;
+import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry;
+import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator;
+import org.grails.web.databinding.bindingsource.HalXmlDataBindingSourceCreator;
+import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator;
+import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator;
+import org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -84,7 +89,7 @@ public class DataBindingConfiguration {
         dataBinder.setStructuredBindingEditors(GrailsArrayUtils.concat(structuredBindingEditors, mainContextStructuredBindingEditors));
         final DataBindingListener[] mainContextDataBindingListeners = mainContext
                 .getBeansOfType(DataBindingListener.class).values().toArray(new DataBindingListener[0]);
-        dataBinder.setDataBindingListeners(GrailsArrayUtils.concat(dataBindingListeners,mainContextDataBindingListeners));
+        dataBinder.setDataBindingListeners(GrailsArrayUtils.concat(dataBindingListeners, mainContextDataBindingListeners));
         dataBinder.setMessageSource(mainContext.getBean("messageSource", MessageSource.class));
         return dataBinder;
     }

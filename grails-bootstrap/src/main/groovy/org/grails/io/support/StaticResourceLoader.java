@@ -18,7 +18,6 @@
  */
 package org.grails.io.support;
 
-
 /**
  * Loads relative to a static base resource
  *

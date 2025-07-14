@@ -38,6 +38,7 @@ public interface ClassMapping<T extends Entity> {
 
     /**
      * Returns the mapped form of the class such as a Table, a Key Space, Document etc.
+     *
      * @return The mapped representation
      */
     T getMappedForm();

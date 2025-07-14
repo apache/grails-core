@@ -20,12 +20,13 @@ package org.grails.gsp.compiler;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
- *
+ * <p>
  * Utility class to reverse a char sequence.
  *
  * @author Troy Heninger
  */
 class Reverse implements CharSequence {
+
     private CharSequence text;
     private int start, end, anchor;
 

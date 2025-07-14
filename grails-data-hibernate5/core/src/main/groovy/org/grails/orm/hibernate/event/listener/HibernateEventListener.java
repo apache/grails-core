@@ -30,7 +30,16 @@ import org.grails.orm.hibernate.support.SoftKey;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PreDeleteEvent;
+import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreLoadEvent;
+import org.hibernate.event.spi.PreUpdateEvent;
+import org.hibernate.event.spi.SaveOrUpdateEvent;
 import org.springframework.context.ApplicationEvent;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,7 +58,6 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
     protected transient ConcurrentMap<SoftKey<Class<?>>, ClosureEventListener> eventListeners =
             new ConcurrentHashMap<>();
 
-
     public HibernateEventListener(AbstractHibernateDatastore datastore) {
         super(datastore);
     }
@@ -58,40 +66,40 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
     protected void onPersistenceEvent(final AbstractPersistenceEvent event) {
         switch (event.getEventType()) {
             case PreInsert:
-                if (onPreInsert((PreInsertEvent)event.getNativeEvent())) {
+                if (onPreInsert((PreInsertEvent) event.getNativeEvent())) {
                     event.cancel();
                 }
                 break;
             case PostInsert:
-                onPostInsert((PostInsertEvent)event.getNativeEvent());
+                onPostInsert((PostInsertEvent) event.getNativeEvent());
                 break;
             case PreUpdate:
-                if (onPreUpdate((PreUpdateEvent)event.getNativeEvent())) {
+                if (onPreUpdate((PreUpdateEvent) event.getNativeEvent())) {
                     event.cancel();
                 }
                 break;
             case PostUpdate:
-                onPostUpdate((PostUpdateEvent)event.getNativeEvent());
+                onPostUpdate((PostUpdateEvent) event.getNativeEvent());
                 break;
             case PreDelete:
-                if (onPreDelete((PreDeleteEvent)event.getNativeEvent())) {
+                if (onPreDelete((PreDeleteEvent) event.getNativeEvent())) {
                     event.cancel();
                 }
                 break;
             case PostDelete:
-                onPostDelete((PostDeleteEvent)event.getNativeEvent());
+                onPostDelete((PostDeleteEvent) event.getNativeEvent());
                 break;
             case PreLoad:
-                onPreLoad((PreLoadEvent)event.getNativeEvent());
+                onPreLoad((PreLoadEvent) event.getNativeEvent());
                 break;
             case PostLoad:
-                onPostLoad((PostLoadEvent)event.getNativeEvent());
+                onPostLoad((PostLoadEvent) event.getNativeEvent());
                 break;
             case SaveOrUpdate:
-                onSaveOrUpdate((SaveOrUpdateEvent)event.getNativeEvent());
+                onSaveOrUpdate((SaveOrUpdateEvent) event.getNativeEvent());
                 break;
             case Validation:
-                onValidate((ValidationEvent)event);
+                onValidate((ValidationEvent) event);
                 break;
             default:
                 throw new IllegalStateException("Unexpected EventType: " + event.getEventType());
@@ -100,7 +108,7 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
 
     public void onSaveOrUpdate(SaveOrUpdateEvent event) throws HibernateException {
         Object entity = event.getObject();
-        if(entity != null) {
+        if (entity != null) {
             ClosureEventListener eventListener;
             EventSource session = event.getSession();
             eventListener = findEventListener(entity, (SessionFactoryImplementor) session.getSessionFactory());
@@ -181,7 +189,9 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
     }
 
     protected ClosureEventListener findEventListener(Object entity, SessionFactoryImplementor factory) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         Class<?> clazz = Hibernate.getClass(entity);
 
         SoftKey<Class<?>> key = new SoftKey<Class<?>>(clazz);
@@ -192,7 +202,7 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
 
         Boolean shouldTrigger = cachedShouldTrigger.get(key);
         if (shouldTrigger == null || shouldTrigger) {
-            synchronized(cachedShouldTrigger) {
+            synchronized (cachedShouldTrigger) {
                 eventListener = eventListeners.get(key);
                 if (eventListener == null) {
                     AbstractHibernateDatastore datastore = getDatastore();
@@ -215,6 +225,7 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
 
     /**
      * {@inheritDoc}
+     *
      * @see org.springframework.context.event.SmartApplicationListener#supportsEventType(java.lang.Class)
      */
     public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {

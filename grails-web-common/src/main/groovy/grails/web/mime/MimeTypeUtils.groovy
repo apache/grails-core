@@ -19,7 +19,6 @@
 package grails.web.mime
 
 import groovy.transform.CompileStatic
-
 import jakarta.servlet.http.HttpServletRequest
 
 /**
@@ -33,17 +32,15 @@ class MimeTypeUtils {
 
     static MimeType resolveMimeType(Object source, MimeTypeResolver mimeTypeResolver) {
         final MimeType mimeType
-        if(mimeTypeResolver) {
+        if (mimeTypeResolver) {
             def resolvedMimeType = mimeTypeResolver.resolveRequestMimeType()
             mimeType = resolvedMimeType ? resolvedMimeType : MimeType.ALL
-        }
-        else if(source instanceof HttpServletRequest) {
+        } else if (source instanceof HttpServletRequest) {
             HttpServletRequest req = (HttpServletRequest) source
             String contentType = req.contentType
-            if(contentType != null) {
+            if (contentType != null) {
                 mimeType = new MimeType(contentType)
-            }
-            else {
+            } else {
                 mimeType = MimeType.ALL
             }
         } else {

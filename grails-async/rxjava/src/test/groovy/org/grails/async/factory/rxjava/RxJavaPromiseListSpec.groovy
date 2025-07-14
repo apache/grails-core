@@ -27,7 +27,6 @@ import spock.util.concurrent.PollingConditions
  */
 class RxJavaPromiseListSpec extends Specification{
 
-
     void 'Test promise list handling'() {
 
         when: 'a list of promises is created'

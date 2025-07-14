@@ -18,10 +18,9 @@
  */
 package org.grails.web.servlet.context.support;
 
-import jakarta.servlet.ServletContext;
-
-import grails.web.servlet.context.GrailsWebApplicationContext;
 import grails.core.GrailsApplication;
+import grails.web.servlet.context.GrailsWebApplicationContext;
+import jakarta.servlet.ServletContext;
 import org.grails.spring.DefaultRuntimeSpringConfiguration;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
@@ -37,7 +36,6 @@ import org.springframework.web.context.ServletContextAware;
  * @since 1.0
  */
 public class WebRuntimeSpringConfiguration extends DefaultRuntimeSpringConfiguration implements ServletContextAware {
-
 
     private GrailsApplication grailsApplication;
 
@@ -63,7 +61,7 @@ public class WebRuntimeSpringConfiguration extends DefaultRuntimeSpringConfigura
     protected GenericApplicationContext createApplicationContext(ApplicationContext parentCtx) {
         if (parentCtx != null && beanFactory != null) {
             Assert.isInstanceOf(DefaultListableBeanFactory.class, beanFactory,
-                "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
+                    "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
 
             GrailsWebApplicationContext ctx = new GrailsWebApplicationContext((DefaultListableBeanFactory) beanFactory, grailsApplication);
             ctx.setParent(parentCtx);
@@ -72,7 +70,7 @@ public class WebRuntimeSpringConfiguration extends DefaultRuntimeSpringConfigura
 
         if (beanFactory != null) {
             Assert.isInstanceOf(DefaultListableBeanFactory.class, beanFactory,
-                "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
+                    "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
 
             return new GrailsWebApplicationContext((DefaultListableBeanFactory) beanFactory, grailsApplication);
         }
@@ -90,7 +88,7 @@ public class WebRuntimeSpringConfiguration extends DefaultRuntimeSpringConfigura
         initialiseApplicationContext();
 
         if (context instanceof ConfigurableWebApplicationContext) {
-            ((ConfigurableWebApplicationContext)context).setServletContext(servletContext);
+            ((ConfigurableWebApplicationContext) context).setServletContext(servletContext);
         }
     }
 }

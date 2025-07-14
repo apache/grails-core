@@ -28,8 +28,8 @@ import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.web.mime.MimeType
 import groovy.transform.CompileStatic
-import org.springframework.beans.factory.annotation.Autowired
 import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * @author Graeme Rocher
@@ -39,7 +39,6 @@ import jakarta.annotation.PostConstruct
 class MarkupViewResolver extends SmartViewResolver {
 
     public static final String MARKUP_VIEW_SUFFIX = ".${MarkupViewTemplate.EXTENSION}"
-
 
     @Autowired(required = false)
     ProxyHandler proxyHandler
@@ -59,17 +58,17 @@ class MarkupViewResolver extends SmartViewResolver {
 
     MarkupViewResolver(MarkupViewTemplateEngine templateEngine, String suffix, String contentType) {
         super(templateEngine, suffix, contentType)
-        viewConfiguration = (MarkupViewConfiguration)templateEngine.viewConfiguration
+        viewConfiguration = (MarkupViewConfiguration) templateEngine.viewConfiguration
     }
 
     @PostConstruct
     void initialize() {
-        if(rendererRegistry != null) {
+        if (rendererRegistry != null) {
             def defaultXmlRenderer = rendererRegistry.findRenderer(MimeType.XML, Object.class)
             viewConfiguration.mimeTypes.each { String mimeTypeString ->
                 MimeType mimeType = new MimeType(mimeTypeString, "xml")
                 rendererRegistry.addDefaultRenderer(
-                    new MarkupViewXmlRenderer<Object>(Object.class, mimeType, this , proxyHandler, rendererRegistry, defaultXmlRenderer)
+                        new MarkupViewXmlRenderer<Object>(Object.class, mimeType, this, proxyHandler, rendererRegistry, defaultXmlRenderer)
                 )
             }
         }

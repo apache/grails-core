@@ -24,6 +24,11 @@ import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.UrlMappingsHolder;
 import groovy.lang.Binding;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping;
 import org.grails.web.servlet.WrappedResponseHolder;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
@@ -41,11 +46,6 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collections;
@@ -59,7 +59,8 @@ import java.util.Set;
  * @author Graeme Rocher
  * @since 2.4
  */
-public class UrlMappingUtils {
+public final class UrlMappingUtils {
+
     private UrlMappingUtils() {
     }
 
@@ -67,13 +68,13 @@ public class UrlMappingUtils {
      *
      * @return a Map without entries whose key belongs to UrlMapping#KEYWORDS
      */
-    public static  Map findAllParamsNotInUrlMappingKeywords(Map params) {
+    public static Map findAllParamsNotInUrlMappingKeywords(Map params) {
         return findAllParamsNotInKeys(params, UrlMapping.KEYWORDS);
     }
 
-    public static  Map findAllParamsNotInKeys(Map params, Set keys) {
+    public static Map findAllParamsNotInKeys(Map params, Set keys) {
         Map urlParams = new HashMap<>();
-        if ( params != null && keys != null ) {
+        if (params != null && keys != null) {
             for (Object key : params.keySet()) {
                 if (!keys.contains(key)) {
                     urlParams.put(key, params.get(key));
@@ -86,20 +87,20 @@ public class UrlMappingUtils {
     /**
      * Looks up the UrlMappingsHolder instance
      *
-     * @return The UrlMappingsHolder
      * @param servletContext The ServletContext object
+     * @return The UrlMappingsHolder
      */
     public static UrlMappingsHolder lookupUrlMappings(ServletContext servletContext) {
         WebApplicationContext wac = WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext);
-        return (UrlMappingsHolder)wac.getBean(UrlMappingsHolder.BEAN_ID);
+        return (UrlMappingsHolder) wac.getBean(UrlMappingsHolder.BEAN_ID);
     }
 
     /**
      * Resolves a view for the given view and UrlMappingInfo instance
      *
-     * @param request The request
-     * @param info The info
-     * @param viewName The view name
+     * @param request      The request
+     * @param info         The info
+     * @param viewName     The view name
      * @param viewResolver The view resolver
      * @return The view or null
      * @throws Exception
@@ -195,7 +196,7 @@ public class UrlMappingUtils {
      * @see #forwardRequestForUrlMappingInfo(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse, grails.web.mapping.UrlMappingInfo, java.util.Map)
      */
     public static String forwardRequestForUrlMappingInfo(HttpServletRequest request,
-            HttpServletResponse response, UrlMappingInfo info) throws ServletException, IOException {
+                                                         HttpServletResponse response, UrlMappingInfo info) throws ServletException, IOException {
         return forwardRequestForUrlMappingInfo(request, response, info, Collections.emptyMap());
     }
 
@@ -204,26 +205,25 @@ public class UrlMappingUtils {
      */
     @SuppressWarnings("rawtypes")
     public static String forwardRequestForUrlMappingInfo(HttpServletRequest request,
-            HttpServletResponse response, UrlMappingInfo info, Map model) throws ServletException, IOException {
+                                                         HttpServletResponse response, UrlMappingInfo info, Map model) throws ServletException, IOException {
         return forwardRequestForUrlMappingInfo(request, response, info, model, false);
     }
 
     /**
      * Forwards a request for the given UrlMappingInfo object and model
      *
-     * @param request The request
-     * @param response The response
-     * @param info The UrlMappingInfo object
-     * @param model The Model
+     * @param request       The request
+     * @param response      The response
+     * @param info          The UrlMappingInfo object
+     * @param model         The Model
      * @param includeParams Whether to include any request parameters
      * @return The URI forwarded too
-     *
      * @throws jakarta.servlet.ServletException Thrown when an error occurs executing the forward
-     * @throws java.io.IOException Thrown when an error occurs executing the forward
+     * @throws java.io.IOException              Thrown when an error occurs executing the forward
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static String forwardRequestForUrlMappingInfo(HttpServletRequest request,
-            HttpServletResponse response, UrlMappingInfo info, Map<String, Object> model, boolean includeParams) throws ServletException, IOException {
+                                                         HttpServletResponse response, UrlMappingInfo info, Map<String, Object> model, boolean includeParams) throws ServletException, IOException {
 
         String forwardUrl = buildDispatchUrlForMapping(info, includeParams);
 
@@ -250,16 +250,15 @@ public class UrlMappingUtils {
     /**
      * Include whatever the given UrlMappingInfo maps to within the current response
      *
-     * @param request The request
+     * @param request  The request
      * @param response The response
-     * @param info The UrlMappingInfo
-     * @param model The model
-     *
+     * @param info     The UrlMappingInfo
+     * @param model    The model
      * @return The included content
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static IncludedContent includeForUrlMappingInfo(HttpServletRequest request,
-            HttpServletResponse response, UrlMappingInfo info, Map model) {
+                                                           HttpServletResponse response, UrlMappingInfo info, Map model) {
 
         final String includeUrl = buildDispatchUrlForMapping(info, true);
 
@@ -269,17 +268,16 @@ public class UrlMappingUtils {
     /**
      * Include whatever the given UrlMappingInfo maps to within the current response
      *
-     * @param request The request
-     * @param response The response
-     * @param info The UrlMappingInfo
-     * @param model The model
+     * @param request       The request
+     * @param response      The response
+     * @param info          The UrlMappingInfo
+     * @param model         The model
      * @param linkGenerator allows for reverse url mapping
-     *
      * @return The included content
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static IncludedContent includeForUrlMappingInfo(HttpServletRequest request,
-           HttpServletResponse response, UrlMappingInfo info, Map model, LinkGenerator linkGenerator) {
+                                                           HttpServletResponse response, UrlMappingInfo info, Map model, LinkGenerator linkGenerator) {
 
         final String includeUrl = buildDispatchUrlForMapping(info, true, linkGenerator);
 
@@ -287,7 +285,7 @@ public class UrlMappingUtils {
     }
 
     private static IncludedContent includeForUrlMappingInfoHelper(String includeUrl, HttpServletRequest request,
-                                           HttpServletResponse response, UrlMappingInfo info, Map model) {
+                                                                  HttpServletResponse response, UrlMappingInfo info, Map model) {
         final GrailsWebRequest webRequest = GrailsWebRequest.lookup(request);
 
         String currentController = null;
@@ -314,7 +312,7 @@ public class UrlMappingUtils {
             currentId = webRequest.getId();
             currentParams = new HashMap();
             currentParams.putAll(webRequest.getParameterMap());
-            currentMv = (ModelAndView)webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
+            currentMv = (ModelAndView) webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
         }
         try {
             if (webRequest != null) {
@@ -324,12 +322,11 @@ public class UrlMappingUtils {
                 webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
             }
             return includeForUrl(includeUrl, request, response, model);
-        }
-        finally {
-            if (webRequest!=null) {
+        } finally {
+            if (webRequest != null) {
                 if (webRequest.isActive()) {
 
-                    webRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE,currentPageBinding, 0);
+                    webRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, currentPageBinding, 0);
                     if (currentLayoutAttribute != null) {
                         webRequest.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, currentLayoutAttribute, 0);
                     }
@@ -355,14 +352,14 @@ public class UrlMappingUtils {
      * Includes the given URL returning the resulting content as a String
      *
      * @param includeUrl The URL to include
-     * @param request The request
-     * @param response The response
-     * @param model The model
+     * @param request    The request
+     * @param response   The response
+     * @param model      The model
      * @return The content
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static IncludedContent includeForUrl(String includeUrl, HttpServletRequest request,
-            HttpServletResponse response, Map model) {
+                                                HttpServletResponse response, Map model) {
         RequestDispatcher dispatcher = request.getRequestDispatcher(includeUrl);
         HttpServletResponse wrapped = WrappedResponseHolder.getWrappedResponse();
         response = wrapped != null ? wrapped : response;
@@ -387,27 +384,24 @@ public class UrlMappingUtils {
                 WrappedResponseHolder.setWrappedResponse(responseWrapper);
                 WebUtils.clearGrailsWebRequest();
                 dispatcher.include(request, responseWrapper);
-                if (responseWrapper.getRedirectURL()!=null) {
+                if (responseWrapper.getRedirectURL() != null) {
                     return new IncludedContent(responseWrapper.getRedirectURL());
                 }
                 return new IncludedContent(responseWrapper.getContentType(), responseWrapper.getContent());
-            }
-            finally {
+            } finally {
                 if (hasPreviousWebRequest) {
                     WebUtils.storeGrailsWebRequest(webRequest);
                     if (webRequest.isActive()) {
-                        webRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, previousControllerClass,WebRequest.SCOPE_REQUEST);
-                        webRequest.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST,previousMatchedRequest, WebRequest.SCOPE_REQUEST);
+                        webRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, previousControllerClass, WebRequest.SCOPE_REQUEST);
+                        webRequest.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, previousMatchedRequest, WebRequest.SCOPE_REQUEST);
                     }
                 }
 
                 WrappedResponseHolder.setWrappedResponse(wrapped);
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ControllerExecutionException("Unable to execute include: " + e.getMessage(), e);
-        }
-        finally {
+        } finally {
             WebUtils.cleanupIncludeRequestAttributes(request, toRestore);
         }
     }

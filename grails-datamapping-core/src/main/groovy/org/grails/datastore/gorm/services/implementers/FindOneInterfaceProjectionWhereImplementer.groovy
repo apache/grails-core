@@ -48,7 +48,7 @@ class FindOneInterfaceProjectionWhereImplementer extends FindOneWhereImplementer
 
     @Override
     protected Statement buildReturnStatement(ClassNode domainClass, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression queryExpression) {
-        ReturnStatement rs = (ReturnStatement)super.buildReturnStatement(domainClass, abstractMethodNode, newMethodNode, queryExpression)
+        ReturnStatement rs = (ReturnStatement) super.buildReturnStatement(domainClass, abstractMethodNode, newMethodNode, queryExpression)
         return buildInterfaceProjection(domainClass, abstractMethodNode, rs.expression, queryExpression, newMethodNode)
     }
 }

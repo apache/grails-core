@@ -20,6 +20,15 @@
 package org.grails.datastore.gorm.validation.jakarta
 
 import groovy.transform.CompileStatic
+import jakarta.validation.ClockProvider
+import jakarta.validation.Configuration
+import jakarta.validation.ConstraintValidatorFactory
+import jakarta.validation.MessageInterpolator
+import jakarta.validation.ParameterNameProvider
+import jakarta.validation.TraversableResolver
+import jakarta.validation.Validation
+import jakarta.validation.ValidatorContext
+import jakarta.validation.ValidatorFactory
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.model.MappingContext
@@ -33,16 +42,6 @@ import org.springframework.validation.Validator
 import org.springframework.validation.annotation.Validated
 import org.springframework.validation.beanvalidation.MessageSourceResourceBundleLocator
 import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory
-
-import jakarta.validation.ClockProvider
-import jakarta.validation.Configuration
-import jakarta.validation.ConstraintValidatorFactory
-import jakarta.validation.MessageInterpolator
-import jakarta.validation.ParameterNameProvider
-import jakarta.validation.TraversableResolver
-import jakarta.validation.Validation
-import jakarta.validation.ValidatorContext
-import jakarta.validation.ValidatorFactory
 
 /**
  * A validator registry that creates validators
@@ -111,16 +110,14 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
     @Override
     Validator getValidator(PersistentEntity entity) {
         def ann = entity.javaClass.getAnnotation(Validated)
-        if(ann != null && isAvailable()) {
+        if (ann != null && isAvailable()) {
             def validator = validatorFactory.getValidator()
-            if(validator instanceof GormValidatorAdapter) {
-                return (Validator)validator
-            }
-            else {
+            if (validator instanceof GormValidatorAdapter) {
+                return (Validator) validator
+            } else {
                 return new GormValidatorAdapter(validator)
             }
-        }
-        else {
+        } else {
             return super.getValidator(entity)
         }
     }

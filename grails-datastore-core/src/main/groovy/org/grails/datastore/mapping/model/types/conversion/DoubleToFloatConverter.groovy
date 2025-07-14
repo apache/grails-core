@@ -19,7 +19,6 @@
 package org.grails.datastore.mapping.model.types.conversion
 
 import groovy.transform.CompileStatic
-
 import org.springframework.core.convert.converter.Converter
 
 /**
@@ -27,6 +26,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class DoubleToFloatConverter implements Converter<Double, Float> {
+
     @Override
     Float convert(Double source) {
         source as Float

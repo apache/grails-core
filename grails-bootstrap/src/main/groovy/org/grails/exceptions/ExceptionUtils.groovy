@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.exceptions
 
 import groovy.transform.CompileStatic
@@ -34,7 +33,6 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 class ExceptionUtils {
 
     public static final String EXCEPTION_ATTRIBUTE = "exception";
-
 
     static RuntimeException getFirstRuntimeException(Throwable e) {
         if (e instanceof RuntimeException) return (RuntimeException) e
@@ -61,10 +59,10 @@ class ExceptionUtils {
     static int extractLineNumber(CompilationFailedException e) {
         int lineNumber = -1
         if (e instanceof MultipleCompilationErrorsException) {
-            MultipleCompilationErrorsException mcee = (MultipleCompilationErrorsException)e
+            MultipleCompilationErrorsException mcee = (MultipleCompilationErrorsException) e
             Object message = mcee.errorCollector.errors.iterator().next()
             if (message instanceof SyntaxErrorMessage) {
-                SyntaxErrorMessage sem = (SyntaxErrorMessage)message
+                SyntaxErrorMessage sem = (SyntaxErrorMessage) message
                 lineNumber = sem.cause.line
             }
         }

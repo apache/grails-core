@@ -29,6 +29,7 @@ import org.grails.gradle.plugin.model.GrailsClasspath
  * @since 3.0
  */
 class ClasspathBuildAction implements BuildAction<GrailsClasspath>, Serializable {
+
     @Override
     GrailsClasspath execute(BuildController controller) {
         controller.getModel(GrailsClasspath)

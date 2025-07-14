@@ -18,12 +18,12 @@
  */
 package org.grails.test.support;
 
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
-
-public class TestStacktraceSanitizer {
+public final class TestStacktraceSanitizer {
 
     private static final String TEST_RUNNING_CLASS = "_GrailsTest";
 

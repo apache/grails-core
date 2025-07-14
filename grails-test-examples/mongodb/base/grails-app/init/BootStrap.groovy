@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-import functional.tests.*
+import functional.tests.Book
 import jakarta.servlet.ServletContext
 
 class BootStrap {

@@ -35,6 +35,7 @@ import org.springframework.validation.Errors
 @CompileStatic
 @Slf4j
 class ConstrainedDelegate implements Constrained, ConstrainedProperty {
+
     final ConstrainedProperty property
 
     ConstrainedDelegate(ConstrainedProperty property) {

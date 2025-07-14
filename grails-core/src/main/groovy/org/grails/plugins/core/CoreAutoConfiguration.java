@@ -37,7 +37,7 @@ import org.springframework.core.Ordered;
  * @author graemerocher
  * @since 4.0
  */
-@AutoConfiguration(before = { PropertyPlaceholderAutoConfiguration.class })
+@AutoConfiguration(before = {PropertyPlaceholderAutoConfiguration.class})
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 public class CoreAutoConfiguration {
 

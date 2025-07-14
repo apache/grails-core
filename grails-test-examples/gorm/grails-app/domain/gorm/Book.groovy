@@ -19,7 +19,7 @@
 
 package gorm
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+import static grails.gorm.hibernate.mapping.MappingBuilder.orm
 
 class Book {
 

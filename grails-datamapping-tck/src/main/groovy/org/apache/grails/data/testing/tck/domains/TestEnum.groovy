@@ -20,6 +20,7 @@
 package org.apache.grails.data.testing.tck.domains
 
 enum TestEnum {
+
     V1,
     V2,
     V3

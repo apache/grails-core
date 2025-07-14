@@ -31,9 +31,10 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver
  */
 @CompileStatic
 class CachingPathMatchingResourcePatternResolver extends PathMatchingResourcePatternResolver {
+
     public static final CachingPathMatchingResourcePatternResolver INSTANCE = new CachingPathMatchingResourcePatternResolver();
 
-    private CachingPathMatchingResourcePatternResolver(){}
+    private CachingPathMatchingResourcePatternResolver() {}
 
     CachingPathMatchingResourcePatternResolver(ResourceLoader parent) {
         super(parent)

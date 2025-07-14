@@ -18,6 +18,13 @@
  */
 package org.grails.datastore.mapping.query.order;
 
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.query.Query;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.PropertyAccessorFactory;
+import org.springframework.util.ReflectionUtils;
+
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -27,13 +34,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.query.Query;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.PropertyAccessorFactory;
-import org.springframework.util.ReflectionUtils;
 
 /**
  * Manual implementation of query ordering for datastores that don't support native ordering. Not all
@@ -46,8 +46,8 @@ import org.springframework.util.ReflectionUtils;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class ManualEntityOrdering {
 
-    PersistentEntity entity;
     private static Map<String, Method> cachedReadMethods = new ConcurrentHashMap<String, Method>();
+    PersistentEntity entity;
 
     public ManualEntityOrdering(PersistentEntity entity) {
         this.entity = entity;
@@ -58,8 +58,12 @@ public class ManualEntityOrdering {
     }
 
     public List applyOrder(List results, List<Query.Order> orderDefinition) {
-        if (results == null) return null;
-        if (orderDefinition == null) return results;
+        if (results == null) {
+            return null;
+        }
+        if (orderDefinition == null) {
+            return results;
+        }
         for (Query.Order order : orderDefinition) {
             results = applyOrder(results, order);
         }
@@ -84,7 +88,7 @@ public class ManualEntityOrdering {
     }
 
     public List applyOrder(List results, Query.Order order) {
-       final String name = order.getProperty();
+        final String name = order.getProperty();
 
         final PersistentEntity entity = getEntity();
         PersistentProperty property = entity.getPropertyByName(name);
@@ -122,11 +126,17 @@ public class ManualEntityOrdering {
                                 Object left = ReflectionUtils.invokeMethod(readMethod, o1);
                                 Object right = ReflectionUtils.invokeMethod(readMethod, o2);
 
-                                if (left == null && right == null) return 0;
-                                if (left != null && right == null) return 1;
-                                if (left == null) return -1;
+                                if (left == null && right == null) {
+                                    return 0;
+                                }
+                                if (left != null && right == null) {
+                                    return 1;
+                                }
+                                if (left == null) {
+                                    return -1;
+                                }
                                 if ((left instanceof Comparable) && (right instanceof Comparable)) {
-                                    return ((Comparable)left).compareTo(right);
+                                    return ((Comparable) left).compareTo(right);
                                 }
                             }
                         }

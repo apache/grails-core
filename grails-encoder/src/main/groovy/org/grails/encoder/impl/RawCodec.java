@@ -18,8 +18,6 @@
  */
 package org.grails.encoder.impl;
 
-import java.io.IOException;
-
 import org.grails.encoder.CodecFactory;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.Decoder;
@@ -28,6 +26,8 @@ import org.grails.encoder.EncodedAppender;
 import org.grails.encoder.Encoder;
 import org.grails.encoder.EncodingState;
 import org.grails.encoder.StreamingEncoder;
+
+import java.io.IOException;
 
 /**
  * Codec that doesn't do any encoding or decoding. This is for marking some text
@@ -38,9 +38,14 @@ import org.grails.encoder.StreamingEncoder;
  * @since 2.3
  */
 public class RawCodec implements Encoder, Decoder, StreamingEncoder, CodecFactory {
+
     static final CodecIdentifier RAW_CODEC_IDENTIFIER = new DefaultCodecIdentifier("Raw") {
         // using RawCodec will prevent all other codecs from encoding a part encoded with this codec
-        public boolean isEquivalent(CodecIdentifier other) { return true; };
+        public boolean isEquivalent(CodecIdentifier other) {
+            return true;
+        }
+
+        ;
     };
 
     /* (non-Javadoc)
@@ -61,10 +66,10 @@ public class RawCodec implements Encoder, Decoder, StreamingEncoder, CodecFactor
      * @see Encoder#encode(java.lang.Object)
      */
     public Object encode(Object o) {
-        if(o instanceof String) {
+        if (o instanceof String) {
             // create a new copy of the String instance            
-            return new String((String)o);
-        } else if(o instanceof CharSequence) {
+            return new String((String) o);
+        } else if (o instanceof CharSequence) {
             // convert CharSequence to String so that we have a new instance
             return String.valueOf(o);
         } else {
@@ -83,7 +88,7 @@ public class RawCodec implements Encoder, Decoder, StreamingEncoder, CodecFactor
      * @see StreamingEncoder#encodeToStream(Encoder, java.lang.CharSequence, int, int, EncodedAppender, EncodingState)
      */
     public void encodeToStream(Encoder thisInstance, CharSequence source, int offset, int len, EncodedAppender appender,
-            EncodingState encodingState) throws IOException {
+                               EncodingState encodingState) throws IOException {
         appender.appendEncoded(thisInstance, encodingState, source, offset, len);
     }
 

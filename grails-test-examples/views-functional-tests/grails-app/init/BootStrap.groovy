@@ -26,9 +26,9 @@ import functional.tests.Garage
 import functional.tests.MyEnum
 import functional.tests.Player
 import functional.tests.Project
+import functional.tests.Proxy
 import functional.tests.Site
 import functional.tests.Team
-import functional.tests.Proxy
 import grails.gorm.transactions.Transactional
 import groovy.transform.CompileStatic
 

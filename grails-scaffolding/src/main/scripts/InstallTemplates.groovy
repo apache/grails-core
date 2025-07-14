@@ -21,11 +21,11 @@ description "Installs scaffolding templates that use f:all to render properties"
 updateStatus "Copying scaffolding templates"
 mkdir "src/main/templates/scaffolding"
 copy {
-	from templates("scaffolding/*.gsp")
-	into "src/main/templates/scaffolding"
+    from templates("scaffolding/*.gsp")
+    into "src/main/templates/scaffolding"
 }
 copy {
-	from templates("scaffolding/*.groovy")
-	into "src/main/templates/scaffolding"
+    from templates("scaffolding/*.groovy")
+    into "src/main/templates/scaffolding"
 }
 addStatus "Template installation complete"

@@ -25,11 +25,12 @@ import org.spockframework.runtime.extension.IMethodInvocation
 
 @CompileStatic
 class RunOnceInterceptor extends AbstractMethodInterceptor {
+
     boolean hasRun = false
 
     @Override
     void interceptSetupMethod(IMethodInvocation invocation) throws Throwable {
-        if(!hasRun) {
+        if (!hasRun) {
             hasRun = true
             invocation.proceed()
         }

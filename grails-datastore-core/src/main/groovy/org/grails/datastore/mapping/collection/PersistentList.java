@@ -14,15 +14,15 @@
  */
 package org.grails.datastore.mapping.collection;
 
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+import org.grails.datastore.mapping.model.types.Association;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.ListIterator;
-
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.model.types.Association;
 
 /**
  * A lazy loaded list.
@@ -42,17 +42,17 @@ public class PersistentList extends AbstractPersistentCollection implements List
 
     public PersistentList(Collection keys, Class childType, Session session) {
         super(keys, childType, session, new ArrayList());
-        list = (List)collection;
+        list = (List) collection;
     }
 
     public PersistentList(Serializable associationKey, Session session, AssociationQueryExecutor indexer) {
         super(associationKey, session, indexer, new ArrayList());
-        list = (List)collection;
+        list = (List) collection;
     }
 
     public PersistentList(Association association, Serializable associationKey, Session session) {
         super(association, associationKey, session, new ArrayList());
-        list = (List)collection;
+        list = (List) collection;
     }
 
     public int indexOf(Object o) {
@@ -119,7 +119,7 @@ public class PersistentList extends AbstractPersistentCollection implements List
         return list.subList(fromIndex, toIndex); // not modification-aware
     }
 
-    private class PersistentListIterator implements ListIterator {
+    private final class PersistentListIterator implements ListIterator {
 
         private final ListIterator iterator;
 

@@ -62,12 +62,11 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
     }
 
     protected boolean isValidPropertyType(ClassNode returnType, ClassNode propertyType) {
-        if(propertyType == null) return false
+        if (propertyType == null) return false
         else {
             returnType == propertyType || AstUtils.isSubclassOfOrImplementsInterface(returnType, propertyType)
         }
     }
-
 
     @Override
     protected boolean lookupById() {
@@ -79,11 +78,10 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
         // no-op
     }
 
-
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
-        String propertyName = (String)abstractMethodNode.getNodeMetaData(RESOLVED_PROPERTY_NAME)
-        assert propertyName != null : "Bug in ${getClass().name} transform logic. Method implement should never be called before doesImplement(..) check"
+        String propertyName = (String) abstractMethodNode.getNodeMetaData(RESOLVED_PROPERTY_NAME)
+        assert propertyName != null: "Bug in ${getClass().name} transform logic. Method implement should never be called before doesImplement(..) check"
 
         body.addStatements([
                 assignS(detachedCriteriaVar, callX(detachedCriteriaVar, getProjectionName(), constX(propertyName))),

@@ -24,7 +24,8 @@ import org.grails.datastore.mapping.model.PersistentProperty
  * @author Graeme Rocher
  * @since 2.0
  */
-class CircleType extends AbstractShapeCoordsType<Circle>{
+class CircleType extends AbstractShapeCoordsType<Circle> {
+
     CircleType() {
         super(Circle)
     }
@@ -32,7 +33,7 @@ class CircleType extends AbstractShapeCoordsType<Circle>{
     @Override
     protected Circle readInternal(PersistentProperty property, String key, Document nativeSource) {
         def coords = nativeSource.get(key)
-        if(coords instanceof List) {
+        if (coords instanceof List) {
             return Circle.valueOf(coords)
         }
     }

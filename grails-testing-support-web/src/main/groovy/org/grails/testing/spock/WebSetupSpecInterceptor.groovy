@@ -59,7 +59,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        GrailsWebUnitTest test = (GrailsWebUnitTest)invocation.instance
+        GrailsWebUnitTest test = (GrailsWebUnitTest) invocation.instance
         setup(test)
         invocation.proceed()
     }
@@ -113,14 +113,15 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
             try {
                 Class viewResolver = classLoader.loadClass('grails.plugin.json.view.mvc.JsonViewResolver')
                 jsonSmartViewResolver(viewResolver)
-            } catch (ClassNotFoundException e) { }
+            } catch (ClassNotFoundException e) {
+            }
 
             localeResolver(SessionLocaleResolver)
             multipartResolver(StandardServletMultipartResolver)
 
             "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
 
-            if(ClassUtils.isPresent("org.grails.plugins.web.GroovyPagesGrailsPlugin", classLoader)) {
+            if (ClassUtils.isPresent("org.grails.plugins.web.GroovyPagesGrailsPlugin", classLoader)) {
                 def lazyBean = { bean ->
                     bean.lazyInit = true
                 }

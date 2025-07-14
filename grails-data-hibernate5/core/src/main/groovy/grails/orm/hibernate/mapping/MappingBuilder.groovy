@@ -55,6 +55,7 @@ class MappingBuilder {
 
     @CompileStatic
     private static class ClosureMappingDefinition implements MappingDefinition<Mapping, PropertyConfig> {
+
         final Closure definition
         private Mapping mapping
 
@@ -69,7 +70,7 @@ class MappingBuilder {
 
         @Override
         Mapping build() {
-            if(mapping == null) {
+            if (mapping == null) {
                 mapping = Mapping.configureNew(definition)
             }
             return mapping

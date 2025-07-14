@@ -19,7 +19,6 @@
 package org.grails.web.converters.marshaller.xml;
 
 import grails.converters.XML;
-
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.NameAwareMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
@@ -44,8 +43,7 @@ public class ArrayMarshaller implements ObjectMarshaller<XML>, NameAwareMarshall
                 xml.startNode(xml.getElementName(cur));
                 xml.convertAnother(cur);
                 xml.end();
-            }
-            else {
+            } else {
                 xml.startNode("null");
                 xml.end();
             }

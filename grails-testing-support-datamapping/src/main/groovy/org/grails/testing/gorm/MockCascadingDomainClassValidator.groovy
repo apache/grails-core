@@ -28,6 +28,7 @@ import org.springframework.context.MessageSource
 
 @CompileStatic
 class MockCascadingDomainClassValidator extends PersistentEntityValidator implements CascadingValidator {
+
     MockCascadingDomainClassValidator(PersistentEntity entity, MessageSource messageSource, ConstraintsEvaluator constraintsEvaluator) {
         super(entity, messageSource, constraintsEvaluator)
     }

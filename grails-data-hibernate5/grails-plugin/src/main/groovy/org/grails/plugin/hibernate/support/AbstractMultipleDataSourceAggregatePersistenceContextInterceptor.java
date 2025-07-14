@@ -36,8 +36,6 @@ import java.util.List;
  */
 public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor implements PersistenceContextInterceptor {
 
-
-
     protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<PersistenceContextInterceptor>();
     protected final AbstractHibernateDatastore hibernateDatastore;
 

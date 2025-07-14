@@ -33,12 +33,10 @@ abstract class DigestUtils {
         def src
         if (data instanceof Byte[] || data instanceof byte[]) {
             src = data
-        }
-        else if (data instanceof List || data.getClass().isArray()) {
+        } else if (data instanceof List || data.getClass().isArray()) {
             src = new byte[data.size()]
             data.eachWithIndex { v, i -> src[i] = v }
-        }
-        else {
+        } else {
             src = data.toString().getBytes(StandardCharsets.UTF_8)
         }
         md.update(src) // This probably needs to use the thread's Locale encoding

@@ -23,7 +23,11 @@ import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
 import grails.util.GrailsNameUtils
 import grails.web.UrlConverter
-import grails.web.mapping.*
+import grails.web.mapping.UrlCreator
+import grails.web.mapping.UrlMapping
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappings
+import grails.web.mapping.UrlMappingsHolder
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import org.grails.core.artefact.ControllerArtefactHandler
@@ -50,11 +54,11 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
-        for(GrailsClass gc in controllerArtefacts) {
-            registerController((GrailsControllerClass)gc)
+        for (GrailsClass gc in controllerArtefacts) {
+            registerController((GrailsControllerClass) gc)
         }
 
-        for (Map.Entry<ControllerKey, GrailsControllerClass> entry: deferredMappings.entrySet()) {
+        for (Map.Entry<ControllerKey, GrailsControllerClass> entry : deferredMappings.entrySet()) {
             mappingsToGrailsControllerMap.putIfAbsent(entry.key, entry.value)
         }
     }
@@ -120,26 +124,26 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     @Override
     UrlMappingInfo matchStatusCode(int responseCode) {
-        return collectControllerMapping( urlMappingsHolderDelegate.matchStatusCode(responseCode) )
+        return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode))
     }
 
     @Override
     UrlMappingInfo matchStatusCode(int responseCode, Throwable e) {
-        return collectControllerMapping( urlMappingsHolderDelegate.matchStatusCode(responseCode, e) )
+        return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode, e))
     }
 
 
     void registerController(GrailsControllerClass controller) {
         boolean hasUrlConverter = urlConverter != null
-        if(hasUrlConverter) {
+        if (hasUrlConverter) {
             controller.registerUrlConverter(urlConverter)
         }
-        def namespace = hasUrlConverter ? urlConverter.toUrlElement( controller.namespace ) : controller.namespace
-        def plugin = hasUrlConverter ? urlConverter.toUrlElement( controller.pluginName ) : controller.pluginName
+        def namespace = hasUrlConverter ? urlConverter.toUrlElement(controller.namespace) : controller.namespace
+        def plugin = hasUrlConverter ? urlConverter.toUrlElement(controller.pluginName) : controller.pluginName
         final boolean hasNamespace = namespace != null
         final boolean hasPlugin = plugin != null
 
-        def controllerName = hasUrlConverter ? urlConverter.toUrlElement( controller.logicalPropertyName ) : controller.logicalPropertyName
+        def controllerName = hasUrlConverter ? urlConverter.toUrlElement(controller.logicalPropertyName) : controller.logicalPropertyName
         String pluginNameToRegister = hasPlugin ? GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(plugin) : null
 
         def defaultActionKey = new ControllerKey(namespace, controllerName, null, pluginNameToRegister)
@@ -206,7 +210,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {
-        GrailsControllerClass  controllerClass = info ? mappingsToGrailsControllerMap.get(new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)) : null
+        GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)) : null
 
         if (controllerClass && info) {
             return new GrailsControllerUrlMappingInfo(controllerClass, info)
@@ -217,6 +221,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     @Canonical
     static class ControllerKey {
+
         String namespace
         String controller
         String action

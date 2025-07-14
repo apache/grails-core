@@ -18,9 +18,8 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
-
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
 import grails.web.mime.MimeType
 import org.grails.databinding.bindingsource.DataBindingSourceCreator
 
@@ -35,13 +34,14 @@ import org.grails.databinding.bindingsource.DataBindingSourceCreator
  * @see DataBindingSourceCreator
  */
 interface DataBindingSourceRegistry {
+
     String BEAN_NAME = 'dataBindingSourceRegistry'
 
     /**
      * Adds a new {@link DataBindingSourceCreator} to the registry
      * @param creator The {@link DataBindingSourceCreator}
      */
-    void addDataBindingSourceCreator(DataBindingSourceCreator creator )
+    void addDataBindingSourceCreator(DataBindingSourceCreator creator)
 
     /**
      * Locates a {@link DataBindingSource} for the given MimeType and binding target

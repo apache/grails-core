@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.impl;
 
 import org.grails.datastore.mapping.engine.EntityAccess;
@@ -26,11 +25,11 @@ import org.grails.datastore.mapping.engine.EntityAccess;
  *
  * @param <E> The native entry to persist
  * @param <K> The native key
- *
  * @author Graeme Rocher
  * @since 1.0
  */
-public interface PendingUpdate<E, K> extends Runnable, PendingOperation<E, K>{
+public interface PendingUpdate<E, K> extends Runnable, PendingOperation<E, K> {
+
     /**
      * @return The EntityAccess object for the entity to be inserted
      */

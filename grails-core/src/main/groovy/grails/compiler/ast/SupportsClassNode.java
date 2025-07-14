@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.compiler.ast;
 
 import org.codehaus.groovy.ast.ClassNode;
@@ -28,6 +27,6 @@ import org.codehaus.groovy.ast.ClassNode;
  */
 public interface SupportsClassNode {
 
-	boolean supports(ClassNode classNode);
+    boolean supports(ClassNode classNode);
 
 }

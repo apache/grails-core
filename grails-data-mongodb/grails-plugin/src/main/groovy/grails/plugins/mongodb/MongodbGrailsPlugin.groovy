@@ -34,6 +34,7 @@ import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 
 class MongodbGrailsPlugin extends Plugin {
+
     def license = 'Apache 2.0 License'
     def organization = [name: 'Grails', url: 'https://grails.org/']
     def issueManagement = [system: 'Github', url: 'https://github.com/grails/gorm-mongodb']
@@ -53,17 +54,17 @@ class MongodbGrailsPlugin extends Plugin {
         initializer.registerApplicationIfNotPresent = false
 
         def applicationName = Metadata.getCurrent().getApplicationName()
-        if(!applicationName.contains('@')) {
+        if (!applicationName.contains('@')) {
             initializer.databaseName = applicationName
         }
         initializer.setSecondaryDatastore(hasHibernatePlugin())
 
-        return initializer.getBeanDefinitions((BeanDefinitionRegistry)applicationContext)
+        return initializer.getBeanDefinitions((BeanDefinitionRegistry) applicationContext)
     }
 
     @CompileStatic
     protected boolean hasHibernatePlugin() {
-        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/}
+        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/ }
     }
 
     @Override

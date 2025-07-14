@@ -18,15 +18,15 @@
  */
 package org.grails.datastore.mapping.core;
 
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.Map;
-
 import org.grails.datastore.mapping.core.impl.PendingDelete;
 import org.grails.datastore.mapping.core.impl.PendingInsert;
 import org.grails.datastore.mapping.core.impl.PendingUpdate;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.model.PersistentEntity;
+
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Methods for the implementation of the {@link Session} interface to implement.
@@ -56,6 +56,7 @@ public interface SessionImplementor<T> {
 
     /**
      * Adds a pending update operation
+     *
      * @param update The pending update operation
      */
     void addPendingUpdate(PendingUpdate update);
@@ -77,23 +78,27 @@ public interface SessionImplementor<T> {
 
     /**
      * Caches a native entry
+     *
      * @param entity The entity
-     * @param key The key
-     * @param entry The native entry
+     * @param key    The key
+     * @param entry  The native entry
      */
     void cacheEntry(PersistentEntity entity, Serializable key, T entry);
 
     /**
      * Obtains a cached entry
+     *
      * @param entity The entity
-     * @param key The key
+     * @param key    The key
      * @return The cached entry
      */
     T getCachedEntry(PersistentEntity entity, Serializable key);
+
     /**
      * Obtains a cached entry
-     * @param entity The entity
-     * @param key The key
+     *
+     * @param entity        The entity
+     * @param key           The key
      * @param forDirtyCheck Whether to obtain for purposes for dirty checking
      * @return The cached entry
      */
@@ -101,24 +106,27 @@ public interface SessionImplementor<T> {
 
     /**
      * Caches an instance
-     * @param type The type
-     * @param key The key
+     *
+     * @param type     The type
+     * @param key      The key
      * @param instance The instance
      */
     void cacheInstance(Class type, Serializable key, Object instance);
 
     /**
      * Get the cached instance if it exists.
+     *
      * @param type the object type
-     * @param key the object key
+     * @param key  the object key
      * @return the instance or <code>null</code>
      */
     Object getCachedInstance(Class type, Serializable key);
 
     /**
      * Whether an object with the specified key is contained within the first level cache.
+     *
      * @param type the object type
-     * @param key The key to check
+     * @param key  The key to check
      * @return <code>true</code> if it is
      */
     boolean isCached(Class type, Serializable key);
@@ -127,8 +135,8 @@ public interface SessionImplementor<T> {
      * Obtains a cached collection
      *
      * @param entity The entity
-     * @param key The key
-     * @param name The name
+     * @param key    The key
+     * @param name   The name
      * @return The cached collection or null
      */
     Collection getCachedCollection(PersistentEntity entity, Serializable key, String name);
@@ -136,15 +144,16 @@ public interface SessionImplementor<T> {
     /**
      * Caches a collection
      *
-     * @param entity The entity
-     * @param key The key
+     * @param entity     The entity
+     * @param key        The key
      * @param collection The collection
-     * @param name The name of the collection
+     * @param name       The name of the collection
      */
     void cacheCollection(PersistentEntity entity, Serializable key, Collection collection, String name);
 
     /**
      * Adds an operation to be executed after a flush
+     *
      * @param runnable The runnable
      */
     void addPostFlushOperation(Runnable runnable);
@@ -157,6 +166,7 @@ public interface SessionImplementor<T> {
 
     /**
      * Register a pending object
+     *
      * @param obj The object to register
      */
     void registerPending(T obj);

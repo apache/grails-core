@@ -22,11 +22,10 @@ package org.grails.web.databinding.bindingsource
 import grails.databinding.CollectionDataBindingSource
 import grails.databinding.DataBindingSource
 import grails.databinding.SimpleMapDataBindingSource
-import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
+import jakarta.servlet.ServletContext
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
@@ -35,8 +34,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import jakarta.servlet.ServletContext
 
 /**
  * Created by Jim on 8/22/2016.

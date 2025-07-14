@@ -60,8 +60,7 @@ class MongoAttribute extends Attribute {
     void setIndexAttributes(Map indexAttributes) {
         if (this.indexAttributes == null) {
             this.indexAttributes = indexAttributes
-        }
-        else {
+        } else {
             this.indexAttributes.putAll(indexAttributes)
         }
     }
@@ -109,12 +108,11 @@ class MongoAttribute extends Attribute {
      * @param indexType The geo index type
      */
     void setGeoIndex(String indexType) {
-        if(Boolean.valueOf(indexType)) {
+        if (Boolean.valueOf(indexType)) {
             setIndex(true)
             initIndexAttributes()
             indexAttributes.put(INDEX_TYPE, INDEX_TYPE_2D)
-        }
-        else if (INDEX_TYPE_2D.equals(indexType) || INDEX_TYPE_2DSPHERE.equals(indexType)) {
+        } else if (INDEX_TYPE_2D.equals(indexType) || INDEX_TYPE_2DSPHERE.equals(indexType)) {
             setIndex(true)
             initIndexAttributes()
             indexAttributes.put(INDEX_TYPE, indexType)

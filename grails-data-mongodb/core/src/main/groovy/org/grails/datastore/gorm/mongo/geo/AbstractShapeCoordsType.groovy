@@ -30,7 +30,8 @@ import org.grails.datastore.mapping.query.Query
  * Abstract implementation for custom types that persist shapes using their coordinate values
  */
 @CompileStatic
-abstract class AbstractShapeCoordsType<T extends Shape> extends AbstractMappingAwareCustomTypeMarshaller<T, Document, Document>{
+abstract class AbstractShapeCoordsType<T extends Shape> extends AbstractMappingAwareCustomTypeMarshaller<T, Document, Document> {
+
     AbstractShapeCoordsType(Class<T> targetType) {
         super(targetType)
     }
@@ -47,7 +48,7 @@ abstract class AbstractShapeCoordsType<T extends Shape> extends AbstractMappingA
 
     @Override
     protected Object writeInternal(PersistentProperty property, String key, T value, Document nativeTarget) {
-        if(value) {
+        if (value) {
             def coords = value.asList()
             nativeTarget.put(key, coords)
             return coords
@@ -57,13 +58,12 @@ abstract class AbstractShapeCoordsType<T extends Shape> extends AbstractMappingA
 
     @Override
     protected void queryInternal(PersistentProperty property, String key, Query.PropertyCriterion criterion, Document nativeQuery) {
-        if(criterion instanceof Query.Equals) {
+        if (criterion instanceof Query.Equals) {
             def value = criterion.value
-            if(value instanceof Box) {
+            if (value instanceof Box) {
                 nativeQuery.put(key, value.asList())
             }
-        }
-        else {
+        } else {
             super.queryInternal(property, key, criterion, nativeQuery)
         }
     }

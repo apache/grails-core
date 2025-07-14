@@ -34,9 +34,9 @@ public class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapte
 
     private GrailsPluginManager pluginManager;
     private BeanFactory beanFactory;
-    
+
     public PluginManagerAwareBeanPostProcessor() {
-        
+
     }
 
     public PluginManagerAwareBeanPostProcessor(GrailsPluginManager pluginManager) {
@@ -45,15 +45,15 @@ public class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapte
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        if(pluginManager == null) {
-            if(beanFactory.containsBean(GrailsPluginManager.BEAN_NAME)) {
+        if (pluginManager == null) {
+            if (beanFactory.containsBean(GrailsPluginManager.BEAN_NAME)) {
                 pluginManager = beanFactory.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager.class);
             }
         }
-        if(pluginManager != null) {
+        if (pluginManager != null) {
 
             if (bean instanceof PluginManagerAware) {
-                ((PluginManagerAware)bean).setPluginManager(pluginManager);
+                ((PluginManagerAware) bean).setPluginManager(pluginManager);
             }
         }
 
@@ -64,6 +64,5 @@ public class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapte
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         this.beanFactory = beanFactory;
     }
-    
-    
+
 }

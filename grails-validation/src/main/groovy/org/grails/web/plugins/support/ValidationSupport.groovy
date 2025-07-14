@@ -57,7 +57,7 @@ class ValidationSupport {
             for (prop in constraints.values()) {
                 if (fieldsToValidate == null || fieldsToValidate.contains(prop.propertyName)) {
                     def fieldError = originalErrors.getFieldError(prop.propertyName)
-                    if(fieldError == null || !fieldError.bindingFailure) {
+                    if (fieldError == null || !fieldError.bindingFailure) {
                         prop.validate(object, object.getProperty(prop.propertyName), localErrors)
                     }
                 }
@@ -78,20 +78,19 @@ class ValidationSupport {
         BeanFactory ctx = Holders.findApplicationContext()
 
         org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator evaluator
-        if(ctx != null) {
+        if (ctx != null) {
             try {
                 evaluator = ctx.getBean(org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator)
             } catch (NoSuchBeanDefinitionException e) {
                 evaluator = new DefaultConstraintEvaluator()
             }
-        }
-        else {
+        } else {
             evaluator = new DefaultConstraintEvaluator()
         }
 
         Map<String, grails.gorm.validation.ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(clazz, defaultNullable)
         Map<String, Constrained> finalConstraints = [:]
-        for(entry in evaluatedConstraints) {
+        for (entry in evaluatedConstraints) {
             finalConstraints.put(entry.key, new ConstrainedDelegate(entry.value))
         }
         return finalConstraints

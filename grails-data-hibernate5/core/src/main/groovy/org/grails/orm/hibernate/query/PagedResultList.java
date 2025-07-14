@@ -18,15 +18,15 @@
  */
 package org.grails.orm.hibernate.query;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import java.sql.SQLException;
 
 public class PagedResultList extends grails.gorm.PagedResultList {
@@ -64,7 +64,7 @@ public class PagedResultList extends grails.gorm.PagedResultList {
                     final CriteriaQuery finalQuery = criteriaQuery.select(criteriaBuilder.count(queryRoot)).distinct(true).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
-                    return ((Number)query.uniqueResult()).intValue();
+                    return ((Number) query.uniqueResult()).intValue();
                 }
             });
         }

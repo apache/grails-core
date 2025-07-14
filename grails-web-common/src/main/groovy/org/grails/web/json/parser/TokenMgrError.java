@@ -10,8 +10,8 @@ public class TokenMgrError extends Error {
     private static final long serialVersionUID = -1178356779103776805L;
 
     /*
-    * Ordinals for various reasons why an Error of this type can be thrown.
-    */
+     * Ordinals for various reasons why an Error of this type can be thrown.
+     */
 
     /**
      * Lexical error occurred.
@@ -122,8 +122,8 @@ public class TokenMgrError extends Error {
     }
 
     /*
-    * Constructors of various flavors follow.
-    */
+     * Constructors of various flavors follow.
+     */
 
     /**
      * No arg constructor.

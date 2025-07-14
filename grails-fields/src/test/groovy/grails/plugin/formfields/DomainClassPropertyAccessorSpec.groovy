@@ -301,11 +301,11 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         propertyAccessor.invalid
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-7713")
+    @Issue("GRAILS-7713")
     void "resolves errors for an embedded property"() {
         given:
         person.address.country = "Australia"
-        person.errors.rejectValue('address.country', 'not.inList') // http://jira.grails.org/browse/GRAILS-8480
+        person.errors.rejectValue('address.country', 'not.inList') // GRAILS-8480
 
         when:
         BeanPropertyAccessor propertyAccessor = factory.accessorFor(person, "address.country")
@@ -315,11 +315,11 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         propertyAccessor.invalid
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-7713")
+    @Issue("GRAILS-7713")
     void "resolves errors for an indexed property"() {
         given:
         author.books[0].title = ""
-        author.errors.rejectValue('books[0].title', 'blank') // http://jira.grails.org/browse/GRAILS-7713
+        author.errors.rejectValue('books[0].title', 'blank') // GRAILS-7713
 
         and:
         def propertyAccessor = factory.accessorFor(author, "books[0].title")

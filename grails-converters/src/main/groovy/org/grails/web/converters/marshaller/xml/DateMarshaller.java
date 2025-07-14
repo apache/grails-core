@@ -19,14 +19,13 @@
 package org.grails.web.converters.marshaller.xml;
 
 import grails.converters.XML;
-
-import java.text.Format;
-import java.util.Date;
-
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.grails.web.converters.ConverterUtil;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+
+import java.text.Format;
+import java.util.Date;
 
 /**
  * @author Siegfried Puchbauer
@@ -38,7 +37,8 @@ public class DateMarshaller implements ObjectMarshaller<XML> {
 
     /**
      * Constructor with a custom formatter.
-     * @param formatter  the formatter
+     *
+     * @param formatter the formatter
      */
     public DateMarshaller(Format formatter) {
         this.formatter = formatter;
@@ -58,8 +58,7 @@ public class DateMarshaller implements ObjectMarshaller<XML> {
     public void marshalObject(Object object, XML xml) throws ConverterException {
         try {
             xml.chars(formatter.format(object));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
     }

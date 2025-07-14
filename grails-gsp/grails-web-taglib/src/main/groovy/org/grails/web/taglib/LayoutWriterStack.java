@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 
+//CHECKSTYLE:OFF
 /**
  * Class that can be used by "layout" tags, i.e. tags that use the different parts in their body to assemble a bigger part.
  * Example a threeColumn tag that expects a left, center and right part in its body and places them in a table:
@@ -41,9 +42,11 @@ import java.util.Stack;
  *  }
  *  </pre>
  *
- *  @author Ivo Houbrechts
+ * @author Ivo Houbrechts
  */
+//CHECKSTYLE:ON
 public class LayoutWriterStack {
+
     private static final String ATTRIBUTE_NAME_WRITER_STACK = "be.ixor.grails.gsptaglib.WRITER_STACK";
     private Stack<Map<String, Object>> stack = new Stack<Map<String, Object>>();
 

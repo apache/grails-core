@@ -8,77 +8,115 @@ package org.grails.web.json.parser;
  */
 public interface JsonParserConstants {
 
-  /** End of File. */
-  int EOF = 0;
-  /** RegularExpression Id. */
-  int E = 5;
-  /** RegularExpression Id. */
-  int DIGITS = 6;
-  /** RegularExpression Id. */
-  int HEX_CHAR = 7;
-  /** RegularExpression Id. */
-  int UNICODE_CHAR = 8;
-  /** RegularExpression Id. */
-  int ESCAPE_CHAR = 9;
-  /** RegularExpression Id. */
-  int SINGLE_QUOTE_LITERAL = 10;
-  /** RegularExpression Id. */
-  int DOUBLE_QUOTE_LITERAL = 11;
-  /** RegularExpression Id. */
-  int QUOTE = 12;
-  /** RegularExpression Id. */
-  int ENDQUOTE = 14;
-  /** RegularExpression Id. */
-  int CHAR = 15;
-  /** RegularExpression Id. */
-  int CNTRL_ESC = 16;
-  /** RegularExpression Id. */
-  int HEX = 18;
-  /** RegularExpression Id. */
-  int HEX_ESC = 19;
+    /**
+     * End of File.
+     */
+    int EOF = 0;
+    /**
+     * RegularExpression Id.
+     */
+    int E = 5;
+    /**
+     * RegularExpression Id.
+     */
+    int DIGITS = 6;
+    /**
+     * RegularExpression Id.
+     */
+    int HEX_CHAR = 7;
+    /**
+     * RegularExpression Id.
+     */
+    int UNICODE_CHAR = 8;
+    /**
+     * RegularExpression Id.
+     */
+    int ESCAPE_CHAR = 9;
+    /**
+     * RegularExpression Id.
+     */
+    int SINGLE_QUOTE_LITERAL = 10;
+    /**
+     * RegularExpression Id.
+     */
+    int DOUBLE_QUOTE_LITERAL = 11;
+    /**
+     * RegularExpression Id.
+     */
+    int QUOTE = 12;
+    /**
+     * RegularExpression Id.
+     */
+    int ENDQUOTE = 14;
+    /**
+     * RegularExpression Id.
+     */
+    int CHAR = 15;
+    /**
+     * RegularExpression Id.
+     */
+    int CNTRL_ESC = 16;
+    /**
+     * RegularExpression Id.
+     */
+    int HEX = 18;
+    /**
+     * RegularExpression Id.
+     */
+    int HEX_ESC = 19;
 
-  /** Lexical state. */
-  int DEFAULT = 0;
-  /** Lexical state. */
-  int STRING_STATE = 1;
-  /** Lexical state. */
-  int ESC_STATE = 2;
-  /** Lexical state. */
-  int HEX_STATE = 3;
+    /**
+     * Lexical state.
+     */
+    int DEFAULT = 0;
+    /**
+     * Lexical state.
+     */
+    int STRING_STATE = 1;
+    /**
+     * Lexical state.
+     */
+    int ESC_STATE = 2;
+    /**
+     * Lexical state.
+     */
+    int HEX_STATE = 3;
 
-  /** Literal token values. */
-  String[] tokenImage = {
-    "<EOF>",
-    "\" \"",
-    "\"\\t\"",
-    "\"\\n\"",
-    "\"\\r\"",
-    "<E>",
-    "<DIGITS>",
-    "<HEX_CHAR>",
-    "<UNICODE_CHAR>",
-    "<ESCAPE_CHAR>",
-    "<SINGLE_QUOTE_LITERAL>",
-    "<DOUBLE_QUOTE_LITERAL>",
-    "\"\\\"\"",
-    "\"\\\\\"",
-    "<ENDQUOTE>",
-    "<CHAR>",
-    "<CNTRL_ESC>",
-    "\"u\"",
-    "<HEX>",
-    "<HEX_ESC>",
-    "\"{\"",
-    "\"}\"",
-    "\"null\"",
-    "\",\"",
-    "\":\"",
-    "\"[\"",
-    "\"]\"",
-    "\"true\"",
-    "\"false\"",
-    "\"-\"",
-    "\".\"",
-  };
+    /**
+     * Literal token values.
+     */
+    String[] tokenImage = {
+            "<EOF>",
+            "\" \"",
+            "\"\\t\"",
+            "\"\\n\"",
+            "\"\\r\"",
+            "<E>",
+            "<DIGITS>",
+            "<HEX_CHAR>",
+            "<UNICODE_CHAR>",
+            "<ESCAPE_CHAR>",
+            "<SINGLE_QUOTE_LITERAL>",
+            "<DOUBLE_QUOTE_LITERAL>",
+            "\"\\\"\"",
+            "\"\\\\\"",
+            "<ENDQUOTE>",
+            "<CHAR>",
+            "<CNTRL_ESC>",
+            "\"u\"",
+            "<HEX>",
+            "<HEX_ESC>",
+            "\"{\"",
+            "\"}\"",
+            "\"null\"",
+            "\",\"",
+            "\":\"",
+            "\"[\"",
+            "\"]\"",
+            "\"true\"",
+            "\"false\"",
+            "\"-\"",
+            "\".\"",
+    };
 
 }

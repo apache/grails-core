@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class ViewsEnvironment {
+
     private static final boolean DEVELOPMENT_MODE = Environment.getCurrent() == Environment.DEVELOPMENT && BuildSettings.GRAILS_APP_DIR_PRESENT
 
     /**

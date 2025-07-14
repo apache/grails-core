@@ -52,7 +52,8 @@ class GroovyPageCompilerTask extends MatchingTask {
 
     boolean verbose
 
-    @Delegate GroovyPageCompiler compiler = new GroovyPageCompiler()
+    @Delegate
+    GroovyPageCompiler compiler = new GroovyPageCompiler()
 
     /**
      * Adds a path to the classpath.
@@ -96,7 +97,7 @@ class GroovyPageCompilerTask extends MatchingTask {
             compiler.compilerConfig = config
         }
 
-        if(configs) {
+        if (configs) {
             compiler.configs = configs.list()
         }
         if (!destdir || !destdir.exists()) {
@@ -119,7 +120,7 @@ class GroovyPageCompilerTask extends MatchingTask {
 
         int gspCount = gspFiles?.size()
         if (gspCount) {
-            log("Compiling ${gspCount} GSP file${gspCount>1?'s':''} for package [${packagename}]")
+            log("Compiling ${gspCount} GSP file${gspCount > 1 ? 's' : ''} for package [${packagename}]")
         }
 
         if (tmpdir) {
@@ -130,7 +131,7 @@ class GroovyPageCompilerTask extends MatchingTask {
             compiler.packagePrefix = packagename
         }
         if (serverpath) {
-            compiler.viewPrefix=serverpath
+            compiler.viewPrefix = serverpath
         }
         if (encoding) {
             compiler.encoding = encoding

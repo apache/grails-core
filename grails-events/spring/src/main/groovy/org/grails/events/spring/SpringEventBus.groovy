@@ -68,9 +68,9 @@ class SpringEventBus extends AbstractEventBus {
         void onApplicationEvent(SpringEventBusEvent event) {
             Event e = event.source
             Closure reply = event.replyTo
-            for(reg in registrations.get(e.id)) {
+            for (reg in registrations.get(e.id)) {
                 reg.buildTrigger(e, reply)
-                    .proceed()
+                        .proceed()
             }
         }
     }

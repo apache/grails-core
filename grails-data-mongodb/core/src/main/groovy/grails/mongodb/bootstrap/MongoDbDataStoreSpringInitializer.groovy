@@ -45,8 +45,8 @@ import org.springframework.util.ClassUtils
 class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
 
     public static final String DEFAULT_DATABASE_NAME = "test"
-
     public static final String DATASTORE_TYPE = "mongo"
+
     protected String mongoBeanName = "mongo"
     protected String mongoOptionsBeanName = "mongoOptions"
     protected String databaseName = DEFAULT_DATABASE_NAME
@@ -87,34 +87,31 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             callable.delegate = delegate
             callable.call()
             ApplicationEventPublisher eventPublisher
-            if(beanDefinitionRegistry instanceof ConfigurableApplicationContext){
-                eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)beanDefinitionRegistry)
-            }
-            else if(resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
-                eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)resourcePatternResolver.resourceLoader)
-            }
-            else {
+            if (beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
+                eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext) beanDefinitionRegistry)
+            } else if (resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
+                eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext) resourcePatternResolver.resourceLoader)
+            } else {
                 eventPublisher = new DefaultApplicationEventPublisher()
             }
-            if(mongo == null) {
+            if (mongo == null) {
                 mongoConnectionSourceFactory(MongoConnectionSourceFactory) { bean ->
                     bean.autowire = true
                 }
                 mongoDatastore(MongoDatastore, configuration, ref('mongoConnectionSourceFactory'), eventPublisher, collectMappedClasses(DATASTORE_TYPE))
-                mongo(mongoDatastore:"getMongoClient")
-            }
-            else {
+                mongo(mongoDatastore: "getMongoClient")
+            } else {
                 mongoDatastore(MongoDatastore, mongo, configuration, eventPublisher, collectMappedClasses(DATASTORE_TYPE))
             }
 
-            mongoMappingContext(mongoDatastore:"getMappingContext")
+            mongoMappingContext(mongoDatastore: "getMappingContext")
 
             if (!secondaryDatastore) {
                 registerAlias "mongoMappingContext", "grailsDomainClassMappingContext"
             }
 
-            mongoTransactionManager(mongoDatastore:"getTransactionManager")
-            mongoAutoTimestampEventListener(mongoDatastore:"getAutoTimestampEventListener")
+            mongoTransactionManager(mongoDatastore: "getTransactionManager")
+            mongoAutoTimestampEventListener(mongoDatastore: "getAutoTimestampEventListener")
             mongoPersistenceInterceptor(getPersistenceInterceptorClass(), ref("mongoDatastore"))
             mongoPersistenceContextInterceptorAggregator(PersistenceContextInterceptorAggregator)
             def transactionManagerBeanName = TRANSACTION_MANAGER_BEAN
@@ -131,7 +128,7 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             }
 
             loadDataServices(secondaryDatastore ? "mongo" : null)
-                    .each {serviceName, serviceClass->
+                    .each { serviceName, serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref("mongoDatastore")
                             targetMethod = 'getService'
@@ -141,7 +138,6 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
 
         }
     }
-
 
 
     /**

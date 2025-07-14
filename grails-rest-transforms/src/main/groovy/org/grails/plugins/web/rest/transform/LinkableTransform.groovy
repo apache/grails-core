@@ -21,6 +21,7 @@ package org.grails.plugins.web.rest.transform
 import grails.rest.Link
 import grails.rest.Linkable
 import groovy.transform.CompileStatic
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -41,10 +42,11 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
-import org.apache.grails.common.compiler.GroovyTransformOrder
 
-import static java.lang.reflect.Modifier.*
-import static org.grails.compiler.injection.GrailsASTUtils.*
+import static java.lang.reflect.Modifier.PRIVATE
+import static java.lang.reflect.Modifier.PUBLIC
+import static java.lang.reflect.Modifier.TRANSIENT
+import static org.grails.compiler.injection.GrailsASTUtils.ZERO_PARAMETERS
 
 /**
  * Implementation of the {@link Linkable} transform
@@ -61,7 +63,7 @@ class LinkableTransform implements ASTTransformation, TransformWithPriority {
     public static final String RESOURCE_LINKS_FIELD = '$resourceLinks'
     public static final String LINKS_METHOD = "links"
 
-    public static void addLinkingMethods(ClassNode classNode) {
+    static void addLinkingMethods(ClassNode classNode) {
         def linksField = new FieldNode(RESOURCE_LINKS_FIELD, PRIVATE | TRANSIENT, new ClassNode(Set).getPlainNodeReference(), classNode, new ListExpression())
         classNode.addField(linksField)
 

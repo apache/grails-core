@@ -45,9 +45,8 @@ import java.util.Map;
  *
  * @author Steven Devijver
  * @author Graeme Rocher
- *
- * @since 0.2
  * @see org.springframework.beans.factory.support.BeanDefinitionRegistry
+ * @since 0.2
  */
 @SuppressWarnings("rawtypes")
 public interface GrailsPlugin extends ApplicationContextAware, Comparable, GrailsPluginInfo {
@@ -194,15 +193,16 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      */
     void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
 
-
     /**
      * Makes the plugin excluded for a particular Environment
+     *
      * @param env The Environment
      */
     void addExclude(Environment env);
 
     /**
      * Returns whether this plugin supports the given environment name
+     *
      * @param environment The environment name
      * @return true if it does
      */
@@ -262,7 +262,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      */
     String getDependentVersion(String name);
 
-
     PropertySource<?> getPropertySource();
 
     /**
@@ -272,12 +271,14 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
 
     /**
      * Retrieves the plugin manager if known, otherwise returns null
+     *
      * @return The PluginManager or null
      */
     GrailsPluginManager getManager();
 
     /**
      * Retrieves the wrapped plugin instance for this plugin
+     *
      * @return The plugin instance
      */
     GroovyObject getInstance();
@@ -293,6 +294,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
 
     /**
      * Calls a "doWithDynamicMethods" closure that allows a plugin to register dynamic methods at runtime
+     *
      * @param applicationContext The Spring ApplicationContext instance
      */
     void doWithDynamicMethods(ApplicationContext applicationContext);
@@ -304,6 +306,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
 
     /**
      * Check whether the plugin is enabled for the given profile
+     *
      * @param activeProfiles
      * @return True if it is
      */
@@ -327,7 +330,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * Notifies the plugin of a specific event for the given event id, which is one of ON_CHANGE, ON_CONFIG_CHANGE
      *
      * @param eventKind The event kind
-     * @param source The source of the event
+     * @param source    The source of the event
      * @return a Map that represents the event
      */
     Map notifyOfEvent(int eventKind, Object source);
@@ -351,24 +354,28 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
 
     /**
      * Returns the name of the plugin as represented in the file system including the version. For example TagLibGrailsPlugin would result in "tag-lib-0.1"
+     *
      * @return The file system representation of the plugin name
      */
     String getFileSystemName();
 
     /**
      * Returns the name of the plugin as represented on the file system without the version. For example TagLibGrailsPlugin would result in "tag-lib"
+     *
      * @return The file system name
      */
     String getFileSystemShortName();
 
     /**
      * Returns the underlying class that represents this plugin
+     *
      * @return The plugin class
      */
     Class<?> getPluginClass();
 
     /**
      * A list of resources that the plugin should exclude from the packaged distribution
+     *
      * @return a List of resources
      */
     List<String> getPluginExcludes();
@@ -392,6 +399,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     /**
      * Plugin can provide a list of Spring TypeFilters so that annotated components can
      * be scanned into the ApplicationContext
+     *
      * @return A collection of TypeFilter instance
      */
     Collection<? extends TypeFilter> getTypeFilters();

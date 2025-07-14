@@ -22,7 +22,6 @@ import grails.converters.XML;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
-
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 
@@ -39,21 +38,20 @@ public class InstanceMethodBasedMarshaller implements ObjectMarshaller<XML> {
     public void marshalObject(Object object, XML converter) throws ConverterException {
         MetaMethod method = getToXMLMethod(object);
         try {
-            Object result = method.invoke(object, new Object[]{ converter });
+            Object result = method.invoke(object, new Object[]{converter});
             if (result != null && !(result instanceof XML)) {
                 converter.convertAnother(result);
             }
-        }
-        catch(Throwable e) {
-            throw e instanceof ConverterException ? (ConverterException)e :
-                new ConverterException("Error invoking toXML method of object with class " + object.getClass().getName(),e);
+        } catch (Throwable e) {
+            throw e instanceof ConverterException ? (ConverterException) e :
+                    new ConverterException("Error invoking toXML method of object with class " + object.getClass().getName(), e);
         }
     }
 
     protected MetaMethod getToXMLMethod(Object object) {
         MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass());
         if (mc != null) {
-            return mc.getMetaMethod("toXML", new Object[] { XML.class });
+            return mc.getMetaMethod("toXML", new Object[]{XML.class});
         }
         return null;
     }

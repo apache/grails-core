@@ -40,6 +40,6 @@ class OffsetDateTimeJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        DateTimeFormatter.ISO_OFFSET_DATE_TIME.format((OffsetDateTime)value)
+        DateTimeFormatter.ISO_OFFSET_DATE_TIME.format((OffsetDateTime) value)
     }
 }

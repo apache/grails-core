@@ -96,8 +96,8 @@ class ValidationTagLib implements TagLibrary {
         }
         def valueMessagePrefix = attrs.valueMessagePrefix
         def valueMessage = (valueMessagePrefix) ?
-            messageSource.getMessage("${valueMessagePrefix}.${field}", null, null, request.locale) :
-            null
+                messageSource.getMessage("${valueMessagePrefix}.${field}", null, null, request.locale) :
+                null
 
         def tagSyntaxCall = (attrs instanceof GroovyPageAttributes) ? attrs.isGspTagSyntaxCall() : false
 

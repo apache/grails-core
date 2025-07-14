@@ -46,19 +46,19 @@ class Sitemesh3GrailsPlugin extends Plugin {
     def loadBefore = ['groovyPages']
 
     def providedArtefacts = [
-        RenderSitemeshTagLib,
-        SitemeshTagLib,
+            RenderSitemeshTagLib,
+            SitemeshTagLib,
     ]
 
     static PropertySource getDefaultPropertySource(ConfigurableEnvironment configurableEnvironment, String defaultLayout) {
 
         Map props = [
                 'grails.gsp.view.layoutViewResolver': 'false',
-                'sitemesh.decorator.metaTag': 'layout',
-                'sitemesh.decorator.attribute': WebUtils.LAYOUT_ATTRIBUTE,
-                'sitemesh.decorator.prefix': '/layouts/',
-                'sitemesh.filter.order': GrailsFilters.SITEMESH_FILTER.order,
-                'sitemesh.decorator.tagRuleBundles': ['org.sitemesh.content.tagrules.html.Sm2TagRuleBundle']
+                'sitemesh.decorator.metaTag'        : 'layout',
+                'sitemesh.decorator.attribute'      : WebUtils.LAYOUT_ATTRIBUTE,
+                'sitemesh.decorator.prefix'         : '/layouts/',
+                'sitemesh.filter.order'             : GrailsFilters.SITEMESH_FILTER.order,
+                'sitemesh.decorator.tagRuleBundles' : ['org.sitemesh.content.tagrules.html.Sm2TagRuleBundle']
         ]
         if (defaultLayout) {
             props['sitemesh.decorator.default'] = defaultLayout

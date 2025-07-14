@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.query.api;
 
 /**
@@ -26,20 +25,24 @@ package org.grails.datastore.mapping.query.api;
  * @since 1.0
  */
 public interface ProjectionList {
+
     /**
-      * A Projection that obtains the id of an object
-      * @return The projection list
-      */
+     * A Projection that obtains the id of an object
+     *
+     * @return The projection list
+     */
     ProjectionList id();
 
     /**
      * Count the number of records returned
+     *
      * @return The projection list
      */
     ProjectionList count();
 
     /**
      * Count the number of records returned
+     *
      * @param property The property name to count
      * @return The projection list
      */
@@ -49,7 +52,6 @@ public interface ProjectionList {
      * Defines a group by projection for datastores that support it
      *
      * @param property The property name
-     *
      * @return The projection list
      */
     ProjectionList groupProperty(String property);
@@ -65,19 +67,20 @@ public interface ProjectionList {
      * Projection to return only distinct properties
      *
      * @param property The property name to use
-     *
      * @return The projection list
      */
     ProjectionList distinct(String property);
 
     /**
      * Count the number of records returned
+     *
      * @return The projection list
      */
     ProjectionList rowCount();
 
     /**
      * A projection that obtains the value of a property of an entity
+     *
      * @param name The name of the property
      * @return The PropertyProjection instance
      */

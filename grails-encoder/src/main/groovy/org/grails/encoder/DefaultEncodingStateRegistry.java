@@ -37,9 +37,10 @@ import java.util.Set;
  * @since 2.3
  */
 public final class DefaultEncodingStateRegistry implements EncodingStateRegistry {
+
+    public static final StreamingEncoder NONE_ENCODER = BasicCodecLookup.NONE_ENCODER;
     private static final Logger LOG = LoggerFactory.getLogger(DefaultEncodingStateRegistry.class);
     private Map<Encoder, Map<Long, WeakReference<CharSequence>>> encodedCharSequencesForEncoder = new HashMap<>();
-    public static final StreamingEncoder NONE_ENCODER = BasicCodecLookup.NONE_ENCODER;
 
     private long calculateKey(CharSequence charSequence) {
         int contentHashCode = charSequence.hashCode();
@@ -100,7 +101,9 @@ public final class DefaultEncodingStateRegistry implements EncodingStateRegistry
      * @see EncodingStateRegistry#shouldEncodeWith(Encoder, java.lang.CharSequence)
      */
     public boolean shouldEncodeWith(Encoder encoderToApply, CharSequence string) {
-        if (isNoneEncoder(encoderToApply)) return false;
+        if (isNoneEncoder(encoderToApply)) {
+            return false;
+        }
         EncodingState encodingState = getEncodingStateFor(string);
         return shouldEncodeWith(encoderToApply, encodingState);
     }
@@ -113,7 +116,9 @@ public final class DefaultEncodingStateRegistry implements EncodingStateRegistry
      * @return true, if should encode
      */
     public static boolean shouldEncodeWith(Encoder encoderToApply, EncodingState currentEncodingState) {
-        if (isNoneEncoder(encoderToApply)) return false;
+        if (isNoneEncoder(encoderToApply)) {
+            return false;
+        }
         if (currentEncodingState != null && currentEncodingState.getEncoders() != null) {
             for (Encoder encoder : currentEncodingState.getEncoders()) {
                 if (isPreviousEncoderSafeOrEqual(encoderToApply, encoder)) {

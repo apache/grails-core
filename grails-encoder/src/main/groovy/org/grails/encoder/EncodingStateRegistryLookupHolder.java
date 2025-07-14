@@ -20,7 +20,8 @@ package org.grails.encoder;
 
 import grails.util.Holder;
 
-public class EncodingStateRegistryLookupHolder {
+public final class EncodingStateRegistryLookupHolder {
+
     private static Holder<EncodingStateRegistryLookup> holder = new Holder<EncodingStateRegistryLookup>("encodingStateRegistryLookup");
 
     private EncodingStateRegistryLookupHolder() {
@@ -33,7 +34,7 @@ public class EncodingStateRegistryLookupHolder {
     public static EncodingStateRegistryLookup getEncodingStateRegistryLookup() {
         return holder.get();
     }
-    
+
     public static void clear() {
         holder.set(null);
     }

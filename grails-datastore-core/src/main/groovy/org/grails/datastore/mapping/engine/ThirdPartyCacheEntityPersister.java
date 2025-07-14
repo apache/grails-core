@@ -35,6 +35,7 @@ import java.io.Serializable;
  * @since 4.1
  */
 public abstract class ThirdPartyCacheEntityPersister<T> extends LockableEntityPersister {
+
     protected TPCacheAdapterRepository<T> cacheAdapterRepository;
 
     public ThirdPartyCacheEntityPersister(MappingContext mappingContext, PersistentEntity entity, Session session, ApplicationEventPublisher publisher) {

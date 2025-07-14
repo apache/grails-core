@@ -30,8 +30,9 @@ import java.util.Map;
  * @author Lari Hotari
  * @since 1.2
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable {
+
     boolean gspTagSyntaxCall = true;
 
     public GroovyPageAttributes() {
@@ -44,7 +45,7 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
 
     public GroovyPageAttributes(Map map, boolean gspTagSyntaxCall) {
         super(map);
-        this.gspTagSyntaxCall=gspTagSyntaxCall;
+        this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
     public boolean isGspTagSyntaxCall() {
@@ -52,7 +53,7 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
     }
 
     public void setGspTagSyntaxCall(boolean gspTagSyntaxCall) {
-        this.gspTagSyntaxCall=gspTagSyntaxCall;
+        this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
     @Override

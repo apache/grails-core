@@ -19,7 +19,7 @@
 
 package functionaltests
 
-import groovy.transform.*
+import groovy.transform.InheritConstructors
 
 @InheritConstructors
 class CustomException extends Exception {

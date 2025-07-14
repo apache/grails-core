@@ -20,9 +20,6 @@ package grails.core;
 
 import grails.config.Config;
 import grails.util.Metadata;
-
-import java.util.Map;
-
 import org.grails.datastore.mapping.model.MappingContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -40,12 +37,10 @@ import org.springframework.core.io.Resource;
  * <p>Implementors of this interface should be aware that a GrailsApplication is only initialised when the initialise() method
  * is called. In other words GrailsApplication instances are lazily initialised by the Grails runtime.
  *
- * @see #initialise()
- * @see ArtefactHandler
- *
  * @author Graeme Rocher
  * @author Steven Devijver
- *
+ * @see #initialise()
+ * @see ArtefactHandler
  * @since 0.1
  */
 public interface GrailsApplication extends ApplicationContextAware {
@@ -99,6 +94,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Retrieves all java.lang.Class instances loaded by the Grails class loader
+     *
      * @return An array of classes
      */
     @SuppressWarnings("rawtypes")
@@ -106,6 +102,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Retrieves all java.lang.Class instances considered Artefacts loaded by the Grails class loader
+     *
      * @return An array of classes
      */
     @SuppressWarnings("rawtypes")
@@ -175,6 +172,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Call this to find out if the class you have is an artefact loaded by grails.</p>
+     *
      * @param theClazz A class to test
      * @return true if and only if the class was loaded from grails-app/
      * @since 0.5
@@ -185,8 +183,9 @@ public interface GrailsApplication extends ApplicationContextAware {
     /**
      * <p>Check if the specified artefact Class has been loaded by Grails already AND is
      * of the type expected</p>
+     *
      * @param artefactType A string identifying the artefact type to check for
-     * @param theClazz The class to check
+     * @param theClazz     The class to check
      * @return true if Grails considers the class to be managed as an artefact of the type specified.
      * @since 0.5
      */
@@ -195,8 +194,9 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Check if the artefact Class with the name specified is of the type expected</p>
+     *
      * @param artefactType A string identifying the artefact type to check for
-     * @param className The name of a class to check
+     * @param className    The name of a class to check
      * @return true if Grails considers the class to be managed as an artefact of the type specified.
      * @since 0.5
      */
@@ -205,8 +205,9 @@ public interface GrailsApplication extends ApplicationContextAware {
     /**
      * <p>Gets the GrailsClass associated with the named artefact class</p>
      * <p>i.e. to get the GrailsClass for  controller called "BookController" you pass the name "BookController"</p>
+     *
      * @param artefactType The type of artefact to retrieve, i.e. "Controller"
-     * @param name The name of an artefact such as "BookController"
+     * @param name         The name of an artefact such as "BookController"
      * @return The associated GrailsClass or null
      * @since 0.5
      */
@@ -214,6 +215,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Returns the ArtefactHandler for the given class or null
+     *
      * @param theClass The class
      * @return The ArtefactHandler
      */
@@ -222,6 +224,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Obtain all the class information about the artefactType specified</p>
+     *
      * @param artefactType An artefact type identifier i.e. "Domain"
      * @return The artefact info or null if the artefactType is not recognized
      * @since 0.5
@@ -230,6 +233,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Get an array of all the GrailsClass instances relating to artefacts of the specified type.</p>
+     *
      * @param artefactType The type of artefact to retrieve, i.e. "Controller"
      * @return An array of GrailsClasses which may empty by not null
      * @since 0.5
@@ -239,8 +243,9 @@ public interface GrailsApplication extends ApplicationContextAware {
     /**
      * <p>Get an artefact GrailsClass by a "feature" which depending on the artefact may be a URI or tag name
      * for example</p>
+     *
      * @param artefactType The type ID of the artefact, i.e. "TagLib"
-     * @param featureID The "feature" ID, say a URL or tag name
+     * @param featureID    The "feature" ID, say a URL or tag name
      * @return The grails class or null if none is found
      * @since 0.5
      */
@@ -248,9 +253,10 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Registers a new artefact</p>
-     * @param artefactType The type ID of the artefact, i.e. "TagLib"
+     *
+     * @param artefactType  The type ID of the artefact, i.e. "TagLib"
      * @param artefactClass The class of the artefact. A new GrailsClass will be created automatically and added
-     * to internal structures, using the appropriate ArtefactHandler
+     *                      to internal structures, using the appropriate ArtefactHandler
      * @return The new grails class for the artefact class
      * @since 0.5
      */
@@ -259,7 +265,8 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Registers a new artefact</p>
-     * @param artefactType The type ID of the artefact, i.e. "TagLib"
+     *
+     * @param artefactType        The type ID of the artefact, i.e. "TagLib"
      * @param artefactGrailsClass The GrailsClass of the artefact.
      * @return The supplied grails class for the artefact class
      * @since 0.5
@@ -268,12 +275,14 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Register a new artefact handler</p>
+     *
      * @param handler The new handler to add
      */
     void registerArtefactHandler(ArtefactHandler handler);
 
     /**
      * <p>Test whether an artefact handler exists for a given type</p>
+     *
      * @param type The type of the handler
      * @return true if it does
      */
@@ -281,6 +290,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * <p>Obtain a list of all the artefact handlers</p>
+     *
      * @return The list, possible empty but not null, of all currently registered handlers
      */
     ArtefactHandler[] getArtefactHandlers();
@@ -292,6 +302,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Returns whether this GrailsApplication has been initialised or not.
+     *
      * @return true if it has been initialised
      */
     boolean isInitialised();
@@ -300,6 +311,7 @@ public interface GrailsApplication extends ApplicationContextAware {
      * <p>Get access to the project's metadata, specified in application.yml and grails.build.info if it is present</p>
      * <p>This provides access to information like required grails version, application name, version etc
      * but <b>NOT</b> general application settings.</p>
+     *
      * @return A read-only Map of data about the application, not environment specific
      */
     Metadata getMetadata();
@@ -307,7 +319,8 @@ public interface GrailsApplication extends ApplicationContextAware {
     /**
      * Retrieves an artefact by its logical property name. For example the logical property name of
      * BookController would be book.
-     * @param type The artefact type
+     *
+     * @param type        The artefact type
      * @param logicalName The logical name
      * @return The GrailsClass or null if it doesn't exist
      */
@@ -315,6 +328,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Adds the given artefact, attempting to determine type from
+     *
      * @param artefact The artefact to add
      */
     @SuppressWarnings("rawtypes")
@@ -329,6 +343,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Adds an artefact that can be overriden by user defined classes
+     *
      * @param artefact An overridable artefact
      */
     @SuppressWarnings("rawtypes")
@@ -341,6 +356,7 @@ public interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * Returns the ArtefactHandler for the given type
+     *
      * @param type The artefact handler type
      * @return The artefact handler
      */

@@ -18,11 +18,8 @@
  */
 package org.grails.orm.hibernate.proxy;
 
-import java.io.Serializable;
-import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
@@ -30,6 +27,8 @@ import org.hibernate.Hibernate;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
+
+import java.io.Serializable;
 
 /**
  * Implementation of the ProxyHandler interface for Hibernate using org.hibernate.Hibernate
@@ -58,8 +57,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         try {
             Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
             return isInitialized(proxy);
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             return false;
         }
     }
@@ -68,6 +66,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      * Unproxies a HibernateProxy. If the proxy is uninitialized, it automatically triggers an initialization.
      * In case the supplied object is null or not a proxy, the object will be returned as-is.
      * {@inheritDoc}
+     *
      * @see Hibernate#unproxy
      */
     @Override
@@ -81,14 +80,14 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     /**
      * {@inheritDoc}
+     *
      * @see org.hibernate.proxy.AbstractLazyInitializer#getIdentifier
      */
     @Override
     public Serializable getIdentifier(Object o) {
         if (o instanceof HibernateProxy) {
-            return ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
-        }
-        else {
+            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
+        } else {
             //TODO seems we can get the id here if its has normal getId
             // PersistentEntity persistentEntity = GormEnhancer.findStaticApi(o.getClass()).getGormPersistentEntity();
             // return persistentEntity.getMappingContext().getEntityReflector(persistentEntity).getIdentifier(o);
@@ -98,6 +97,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     /**
      * {@inheritDoc}
+     *
      * @see HibernateProxyHelper#getClassWithoutInitializingProxy
      */
     @Override
@@ -107,6 +107,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     /**
      * calls unwrap which calls unproxy
+     *
      * @see #unwrap(Object)
      * @deprecated use unwrap
      */
@@ -120,7 +121,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isProxy(Object o) {
-        return (o instanceof HibernateProxy)  || (o instanceof PersistentCollection);
+        return (o instanceof HibernateProxy) || (o instanceof PersistentCollection);
     }
 
     /**
@@ -161,8 +162,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
                 return (HibernateProxy) proxy;
             }
             return null;
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             return null;
         }
     }

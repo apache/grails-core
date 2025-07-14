@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core;
 
 import org.springframework.util.ConcurrentReferenceHashMap;
@@ -25,7 +24,6 @@ import org.springframework.util.ConcurrentReferenceHashMap;
  * Creates a InheritableThreadLocal with an intial value of a Map.
  *
  * @author Graeme Rocher
- *
  * @deprecated Do not use
  */
 @Deprecated

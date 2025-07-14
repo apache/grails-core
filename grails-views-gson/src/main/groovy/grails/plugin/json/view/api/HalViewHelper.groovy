@@ -42,7 +42,7 @@ interface HalViewHelper {
     /**
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
-    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer )
+    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object)} but renders HAL links too
@@ -61,7 +61,7 @@ interface HalViewHelper {
     /**
      * Same as {@link GrailsJsonViewHelper#inline(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
-    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer )
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Same as {@link GrailsJsonViewHelper#inline(java.lang.Object)} but renders HAL links too
@@ -143,7 +143,7 @@ interface HalViewHelper {
      * @param max The maximum number of objects to be shown (defaults to 10)
      * @param sort The field to sort on (defaults to null)
      */
-    void paginate(Object object, Integer total, Integer offset, Integer max,  String sort)
+    void paginate(Object object, Integer total, Integer offset, Integer max, String sort)
 
     /**
      * Pagination support which outputs hal links to the resulting pages
@@ -155,7 +155,7 @@ interface HalViewHelper {
      * @param sort The field to sort on (defaults to null)
      * @param order The order in which the results are to be sorted eg: DESC or ASC
      */
-    void paginate(Object object, Integer total, Integer offset, Integer max,  String sort, String order)
+    void paginate(Object object, Integer total, Integer offset, Integer max, String sort, String order)
 
 
     /**

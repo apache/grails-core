@@ -19,7 +19,6 @@
 package org.grails.web.converters.marshaller;
 
 import groovy.lang.Closure;
-
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
 
@@ -51,11 +50,9 @@ public class ClosureObjectMarshaller<T extends Converter> implements ObjectMarsh
             Object result = null;
             if (argCount <= 1) {
                 result = closure.call(object);
-            }
-            else if (argCount == 2) {
+            } else if (argCount == 2) {
                 result = closure.call(new Object[]{object, converter});
-            }
-            else {
+            } else {
                 throw new ConverterException(
                         "Invalid Parameter count for registered Object Marshaller for class " + clazz.getName());
             }
@@ -63,8 +60,7 @@ public class ClosureObjectMarshaller<T extends Converter> implements ObjectMarsh
             if (result != null && result != object && result != converter) {
                 converter.convertAnother(result);
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw e instanceof ConverterException ? (ConverterException) e : new ConverterException(e);
         }
     }

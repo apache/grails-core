@@ -28,9 +28,12 @@ import org.grails.taglib.TemplateVariableBinding;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputContextLookup;
 
-import java.io.*;
-import java.text.DateFormat;
-import java.util.Date;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -42,8 +45,10 @@ import java.util.Map;
  * @since 0.5
  */
 public class GroovyPageWritable implements Writable {
+
     private static final Log LOG = LogFactory.getLog(GroovyPageWritable.class);
-    private static final String GSP_NONE_CODEC_NAME = "none";
+    private static final String GROOVY_SOURCE_CONTENT_TYPE = "text/plain";
+
     private GroovyPageMetaInfo metaInfo;
     private OutputContextLookup outputContextLookup;
     private boolean allowSettingContentType;
@@ -51,14 +56,11 @@ public class GroovyPageWritable implements Writable {
     private Map additionalBinding = new LinkedHashMap();
     private boolean showSource;
 
-    private static final String GROOVY_SOURCE_CONTENT_TYPE = "text/plain";
     public GroovyPageWritable(GroovyPageMetaInfo metaInfo, OutputContextLookup outputContextLookup, boolean allowSettingContentType) {
         this.metaInfo = metaInfo;
         this.outputContextLookup = outputContextLookup;
         this.allowSettingContentType = allowSettingContentType;
     }
-
-
 
     /**
      * This sets any additional variables that need to be placed in the Binding of the GSP page.
@@ -97,10 +99,9 @@ public class GroovyPageWritable implements Writable {
             // Set it to TEXT
             outputContext.setContentType(GROOVY_SOURCE_CONTENT_TYPE); // must come before response.getOutputStream()
             writeGroovySourceToResponse(metaInfo, out);
-        }
-        else {
+        } else {
             // Set it to HTML by default
-            if (metaInfo.getCompilationException()!=null) {
+            if (metaInfo.getCompilationException() != null) {
                 throw metaInfo.getCompilationException();
             }
 
@@ -135,7 +136,7 @@ public class GroovyPageWritable implements Writable {
 
             GroovyPage page = null;
             try {
-                page = (GroovyPage)metaInfo.getPageClass().newInstance();
+                page = (GroovyPage) metaInfo.getPageClass().newInstance();
             } catch (Exception e) {
                 throw new GroovyPagesException("Problem instantiating page class", e);
             }
@@ -146,13 +147,12 @@ public class GroovyPageWritable implements Writable {
 
             try {
                 page.run();
-            }
-            finally {
+            } finally {
                 page.cleanup();
                 if (hasRequest) {
                     if (newParentCreated) {
                         outputContext.setBinding(null);
-                    } else  {
+                    } else {
                         outputContext.setBinding(parentBinding);
                     }
                 }
@@ -170,21 +170,12 @@ public class GroovyPageWritable implements Writable {
         return isShowSource() && Environment.getCurrent() == Environment.DEVELOPMENT && metaInfo.getGroovySource() != null;
     }
 
-    private static final GspNoneCodec gspNoneCodeInstance = new GspNoneCodec();
-
     public boolean isShowSource() {
         return showSource;
     }
 
     public void setShowSource(boolean showSource) {
         this.showSource = showSource;
-    }
-
-    private static final class GspNoneCodec {
-        @SuppressWarnings("unused")
-        public final Object encode(Object object) {
-            return object;
-        }
     }
 
     private GroovyPageBinding createBinding(Binding parent) {
@@ -197,7 +188,7 @@ public class GroovyPageWritable implements Writable {
         // set plugin context path for top level rendering, this means actual view + layout
         // view is top level when parent is GroovyPageRequestBinding
         // pluginContextPath is also resetted when a plugin template is overrided by an application view
-        if (parent==null || (parent instanceof TemplateVariableBinding && ((TemplateVariableBinding)parent).isRoot()) || "".equals(metaInfo.getPluginPath())) {
+        if (parent == null || (parent instanceof TemplateVariableBinding && ((TemplateVariableBinding) parent).isRoot()) || "".equals(metaInfo.getPluginPath())) {
             binding.setPluginContextPath(metaInfo.getPluginPath());
         }
         binding.setPagePlugin(metaInfo.getPagePlugin());
@@ -206,7 +197,8 @@ public class GroovyPageWritable implements Writable {
 
     /**
      * Copy all of input to output.
-     * @param in The input stream to writeInputStreamToResponse from
+     *
+     * @param in  The input stream to writeInputStreamToResponse from
      * @param out The output to write to
      * @throws IOException When an error occurs writing to the response Writer
      */
@@ -216,13 +208,14 @@ public class GroovyPageWritable implements Writable {
             Reader reader = new InputStreamReader(in, "UTF-8");
             char[] buf = new char[8192];
 
-            for (;;) {
+            for (; ; ) {
                 int read = reader.read(buf);
-                if (read <= 0) break;
+                if (read <= 0) {
+                    break;
+                }
                 out.write(buf, 0, read);
             }
-        }
-        finally {
+        } finally {
             out.close();
             in.close();
         }
@@ -233,20 +226,22 @@ public class GroovyPageWritable implements Writable {
      * to the response, prefixing each line with its line number. The
      * line numbers make it easier to match line numbers in exceptions
      * to the generated source.
+     *
      * @param info The meta info for the GSP page that we want to write
-     * the generated source for.
-     * @param out The writer to send the source to.
+     *             the generated source for.
+     * @param out  The writer to send the source to.
      * @throws IOException If there is either a problem with the input
-     * stream for the Groovy source, or the writer.
+     *                     stream for the Groovy source, or the writer.
      */
     protected void writeGroovySourceToResponse(GroovyPageMetaInfo info, Writer out) throws IOException {
         InputStream in = info.getGroovySource();
-        if (in == null) return;
+        if (in == null) {
+            return;
+        }
         try {
             try {
                 in.reset();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 // ignore
             }
             BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
@@ -284,8 +279,7 @@ public class GroovyPageWritable implements Writable {
                 out.write(line);
                 out.write('\n');
             }
-        }
-        finally {
+        } finally {
             out.close();
             in.close();
         }

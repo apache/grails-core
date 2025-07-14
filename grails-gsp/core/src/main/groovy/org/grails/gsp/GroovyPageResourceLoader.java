@@ -29,9 +29,8 @@ import org.springframework.util.Assert;
  * A StaticResourceLoader that loads GSPs from a local grails-app folder instead of from WEB-INF in
  * development mode.
  *
- * @see org.grails.core.io.StaticResourceLoader
- *
  * @author Graeme Rocher
+ * @see org.grails.core.io.StaticResourceLoader
  * @since 0.5
  */
 public class GroovyPageResourceLoader extends StaticResourceLoader {
@@ -64,6 +63,5 @@ public class GroovyPageResourceLoader extends StaticResourceLoader {
         }
         return resource;
     }
-
 
 }

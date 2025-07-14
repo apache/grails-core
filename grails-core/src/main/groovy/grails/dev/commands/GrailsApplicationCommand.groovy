@@ -27,8 +27,10 @@ import grails.dev.commands.template.TemplateRendererImpl
 
 trait GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
 
-    @Delegate TemplateRenderer templateRenderer
-    @Delegate FileSystemInteraction fileSystemInteraction
+    @Delegate
+    TemplateRenderer templateRenderer
+    @Delegate
+    FileSystemInteraction fileSystemInteraction
     ExecutionContext executionContext
 
     boolean handle(ExecutionContext executionContext) {

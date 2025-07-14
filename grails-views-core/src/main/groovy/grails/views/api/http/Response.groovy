@@ -40,14 +40,14 @@ interface Response {
      * Set a single named value header
      * @param nameAndValue The name and value. Example header(foo:"bar")
      */
-    void header(Map<String,String> nameAndValue)
+    void header(Map<String, String> nameAndValue)
 
     /**
      * Set multiple headers
      *
      * @param namesAndValues The names and values
      */
-    void headers(Map<String,String> namesAndValues)
+    void headers(Map<String, String> namesAndValues)
 
     /**
      * Set the response content type

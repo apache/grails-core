@@ -44,12 +44,12 @@ trait DomainUnitTest<T> implements DataTest {
 
     private Class<T> getDomainUnderTest() {
         if (domainClass == null) {
-            ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+            ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
                 genericInterface instanceof ParameterizedType &&
-                        DomainUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
+                        DomainUnitTest.isAssignableFrom((Class) ((ParameterizedType) genericInterface).rawType)
             }
 
-            domainClass = (Class<T>)parameterizedType?.actualTypeArguments[0]
+            domainClass = (Class<T>) parameterizedType?.actualTypeArguments[0]
         }
         domainClass
     }

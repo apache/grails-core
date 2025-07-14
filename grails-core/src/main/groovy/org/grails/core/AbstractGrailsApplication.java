@@ -40,6 +40,7 @@ import org.springframework.core.Ordered;
 import org.springframework.util.ClassUtils;
 
 public abstract class AbstractGrailsApplication extends GroovyObjectSupport implements GrailsApplication, ApplicationContextAware, BeanClassLoaderAware, SmartApplicationListener {
+
     protected ClassLoader classLoader;
     protected Config config;
     @SuppressWarnings("rawtypes")

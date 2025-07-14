@@ -22,7 +22,6 @@ import grails.build.logging.GrailsConsole
 import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.grails.build.parsing.CommandLine
 import org.grails.cli.interactive.completers.ClassNameCompleter
 import org.grails.cli.profile.AbstractStep
 import org.grails.cli.profile.ExecutionContext
@@ -61,13 +60,13 @@ class RenderStep extends AbstractStep {
         def nameAndPackage = resolveNameAndPackage(context, nameAsArgument)
         artifactName = nameAndPackage[0]
         artifactPackage = nameAndPackage[1]
-        def variableResolver = new ArtefactVariableResolver(artifactName, (String) parameters.convention,artifactPackage)
+        def variableResolver = new ArtefactVariableResolver(artifactName, (String) parameters.convention, artifactPackage)
         File destination = variableResolver.resolveFile(parameters.destination.toString(), context)
 
         try {
 
             String relPath = relativePath(context.baseDir, destination)
-            if(destination.exists() && !flag(commandLine, 'force')) {
+            if (destination.exists() && !flag(commandLine, 'force')) {
                 context.console.error("${relPath} already exists.")
                 return false
             }
@@ -83,16 +82,16 @@ class RenderStep extends AbstractStep {
     }
 
     protected Resource searchTemplateDepthFirst(Profile profile, String template) {
-        if(template.startsWith(TEMPLATES_DIR)) {
+        if (template.startsWith(TEMPLATES_DIR)) {
             return searchTemplateDepthFirst(profile, template.substring(TEMPLATES_DIR.length()))
         }
         Resource templateFile = profile.getTemplate(template)
-        if(templateFile.exists()) {
+        if (templateFile.exists()) {
             return templateFile
         } else {
-            for(parent in profile.extends) {
+            for (parent in profile.extends) {
                 templateFile = searchTemplateDepthFirst(parent, template)
-                if(templateFile) {
+                if (templateFile) {
                     return templateFile
                 }
             }
@@ -103,7 +102,7 @@ class RenderStep extends AbstractStep {
     protected void renderToDestination(File destination, Map variables) {
         Profile profile = command.profile
         Resource templateFile = searchTemplateDepthFirst(profile, parameters.template.toString())
-        if(!templateFile) {
+        if (!templateFile) {
             throw new IOException("cannot find template " + parameters.template)
         }
         destination.setText(new SimpleTemplate(templateFile.inputStream.getText(StandardCharsets.UTF_8.name())).render(variables), StandardCharsets.UTF_8.name())
@@ -116,9 +115,9 @@ class RenderStep extends AbstractStep {
         String artifactName
         String artifactPackage
 
-        if(parts.size() == 1) {
+        if (parts.size() == 1) {
             artifactName = parts[0]
-            artifactPackage = context.navigateConfig('grails', 'codegen', 'defaultPackage')?:''
+            artifactPackage = context.navigateConfig('grails', 'codegen', 'defaultPackage') ?: ''
         } else {
             artifactName = parts[-1]
             artifactPackage = parts[0..-2].join('.')
@@ -126,7 +125,7 @@ class RenderStep extends AbstractStep {
 
         [GrailsNameUtils.getClassName(artifactName), artifactPackage]
     }
-    
+
     protected String relativePath(File relbase, File file) {
         def pathParts = []
         def currentFile = file
@@ -136,6 +135,5 @@ class RenderStep extends AbstractStep {
         }
         pathParts.reverse().join('/')
     }
-    
 
 }

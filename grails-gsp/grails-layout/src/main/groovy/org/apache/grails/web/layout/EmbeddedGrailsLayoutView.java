@@ -18,14 +18,11 @@
  */
 package org.apache.grails.web.layout;
 
+import com.opensymphony.module.sitemesh.RequestConstants;
+import com.opensymphony.sitemesh.Content;
 import groovy.text.Template;
-
-import java.io.PrintWriter;
-import java.util.Map;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.grails.web.servlet.WrappedResponseHolder;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.OutputAwareHttpServletResponse;
@@ -35,17 +32,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.View;
 
-import com.opensymphony.module.sitemesh.RequestConstants;
-import com.opensymphony.sitemesh.Content;
+import java.io.PrintWriter;
+import java.util.Map;
 
 public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
 
-    private static final Logger LOG = LoggerFactory.getLogger(EmbeddedGrailsLayoutView.class);
-    GroovyPageLayoutFinder groovyPageLayoutFinder;
-
-    protected View innerView;
-
     public static final String GSP_GRAILS_LAYOUT_PAGE = EmbeddedGrailsLayoutView.class.getName() + ".GSP_GRAILS_LAYOUT_PAGE";
+    private static final Logger LOG = LoggerFactory.getLogger(EmbeddedGrailsLayoutView.class);
+    protected View innerView;
+    GroovyPageLayoutFinder groovyPageLayoutFinder;
 
     public EmbeddedGrailsLayoutView(GroovyPageLayoutFinder groovyPageLayoutFinder, View innerView) {
         this.groovyPageLayoutFinder = groovyPageLayoutFinder;
@@ -88,6 +83,9 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
                             return;
                         }
                         break;
+                    default:
+                        // do nothing
+                        break;
                 }
                 PrintWriter writer = response.getWriter();
                 if (LOG.isDebugEnabled()) {
@@ -99,7 +97,6 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
                 }
             }
         }
-
 
     }
 

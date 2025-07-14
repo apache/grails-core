@@ -32,6 +32,7 @@ import java.beans.PropertyDescriptor;
  * @since 1.0
  */
 public abstract class Simple<T extends Property> extends AbstractPersistentProperty<T> {
+
     public Simple(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor) {
         super(owner, context, descriptor);
     }

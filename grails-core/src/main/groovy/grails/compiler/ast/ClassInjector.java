@@ -18,19 +18,18 @@
  */
 package grails.compiler.ast;
 
-import java.lang.reflect.Modifier;
-import java.net.URL;
-
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
+
+import java.lang.reflect.Modifier;
+import java.net.URL;
 
 /**
  * When implemented allows additional properties to be injected into Grails
  * classes at compile time (ie when they are loaded by the GroovyClassLoader).
  *
  * @author Graeme Rocher
- *
  * @since 0.2
  */
 public interface ClassInjector {
@@ -40,8 +39,8 @@ public interface ClassInjector {
     /**
      * Handles injection of properties, methods etc. into a class.
      *
-     * @param source The source unit
-     * @param context The generator context
+     * @param source    The source unit
+     * @param context   The generator context
      * @param classNode The ClassNode instance
      */
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode);
@@ -49,16 +48,15 @@ public interface ClassInjector {
     /**
      * Handles injection of properties, methods etc. into a class.
      *
-     * @param source The source unit
+     * @param source    The source unit
      * @param classNode The ClassNode instance
      */
     void performInjection(SourceUnit source, ClassNode classNode);
 
-
     /**
      * Handles injection of properties, methods etc. into a class.
      *
-     * @param source The source unit
+     * @param source    The source unit
      * @param classNode The ClassNode instance
      */
     void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode);

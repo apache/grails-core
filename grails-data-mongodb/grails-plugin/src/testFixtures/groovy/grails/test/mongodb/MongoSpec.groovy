@@ -90,8 +90,8 @@ abstract class MongoSpec extends Specification {
         }
 
         Map<String, Object> mapPropertySource = propertySources
-            .findAll { it.getSource() }
-            .collectEntries { it.getSource() as Map }
+                .findAll { it.getSource() }
+                .collectEntries { it.getSource() as Map }
 
         Config config = new PropertySourcesConfig(mapPropertySource)
 
@@ -109,8 +109,7 @@ abstract class MongoSpec extends Specification {
             } else {
                 mongoDatastore = new MongoDatastore((PropertyResolver) config, pkg)
             }
-        }
-        else {
+        } else {
             MongoClient mongoClient = createMongoClient()
             if (mongoClient) {
                 mongoDatastore = new MongoDatastore(mongoClient, config, domainClasses as Class[])
@@ -160,8 +159,8 @@ abstract class MongoSpec extends Specification {
 
     private boolean canLoadFileExtension(PropertySourceLoader loader, String name) {
         return Arrays
-            .stream(loader.fileExtensions)
-            .map { String extension -> extension.toLowerCase() }
-            .anyMatch { String extension -> name.toLowerCase().endsWith(extension) }
+                .stream(loader.fileExtensions)
+                .map { String extension -> extension.toLowerCase() }
+                .anyMatch { String extension -> name.toLowerCase().endsWith(extension) }
     }
 }

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -75,7 +74,7 @@ public class NullableConstraint extends AbstractVetoingConstraint {
     protected boolean processValidateWithVetoing(Object target, Object propertyValue, Errors errors) {
         if (propertyValue == null) {
             if (!nullable) {
-                Object[] args = new Object[] { constraintPropertyName, constraintOwningClass };
+                Object[] args = new Object[]{constraintPropertyName, constraintOwningClass};
                 rejectValue(target, errors, ConstrainedProperty.DEFAULT_NULL_MESSAGE_CODE,
                         ConstrainedProperty.NULLABLE_CONSTRAINT, args);
                 // null value is caught by 'blank' constraint, no addition validation needed

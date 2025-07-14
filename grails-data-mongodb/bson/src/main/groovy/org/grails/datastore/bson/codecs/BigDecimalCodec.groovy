@@ -35,6 +35,7 @@ import org.bson.types.Decimal128
  */
 @CompileStatic
 class BigDecimalCodec implements Codec<BigDecimal> {
+
     @Override
     BigDecimal decode(BsonReader reader, DecoderContext decoderContext) {
         return reader.readDecimal128().bigDecimalValue()

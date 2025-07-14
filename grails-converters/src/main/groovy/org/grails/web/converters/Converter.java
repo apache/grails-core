@@ -19,15 +19,13 @@
 package org.grails.web.converters;
 
 import groovy.lang.Closure;
+import jakarta.servlet.http.HttpServletResponse;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
-
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 /**
  * Defines an Object that can convert an instance and render it to the
@@ -45,7 +43,7 @@ public interface Converter<W> {
      * @param out The Writer to write to
      * @throws ConverterException
      */
-    public void render(Writer out) throws ConverterException;
+    void render(Writer out) throws ConverterException;
 
     /**
      * Marshalls the target and writes it a HttpServletResponse
@@ -54,7 +52,7 @@ public interface Converter<W> {
      * @param response The response to write to
      * @throws ConverterException
      */
-    public void render(HttpServletResponse response) throws ConverterException;
+    void render(HttpServletResponse response) throws ConverterException;
 
     W getWriter() throws ConverterException;
 

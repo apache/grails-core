@@ -61,6 +61,6 @@ trait MultiTenant<D> extends Entity {
      * @return The operations
      */
     static <D> GormAllOperations<D> withTenant(Serializable tenantId) {
-        (GormAllOperations<D>)GormEnhancer.findStaticApi(this).withTenant(tenantId)
+        (GormAllOperations<D>) GormEnhancer.findStaticApi(this).withTenant(tenantId)
     }
 }

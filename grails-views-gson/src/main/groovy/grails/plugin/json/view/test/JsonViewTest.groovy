@@ -36,7 +36,6 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.http.HttpStatus
@@ -86,17 +85,18 @@ trait JsonViewTest {
     @Autowired(required = false)
     JsonApiIdRenderStrategy jsonApiIdRenderStrategy = new DefaultJsonApiIdRenderer()
 
-    @Lazy JsonViewTemplateEngine templateEngine = {
+    @Lazy
+    JsonViewTemplateEngine templateEngine = {
 
         def templateEngine = new JsonViewTemplateEngine(viewConfiguration, Thread.currentThread().contextClassLoader)
-        if(messageSource != null) {
+        if (messageSource != null) {
             templateEngine.setMessageSource(messageSource)
         }
         templateEngine.setLinkGenerator(linkGenerator)
-        if(mimeUtility != null) {
+        if (mimeUtility != null) {
             templateEngine.setMimeUtility(mimeUtility)
         }
-        if(mappingContext != null) {
+        if (mappingContext != null) {
             templateEngine.setMappingContext(mappingContext)
         }
         templateEngine.setJsonApiIdRenderStrategy(jsonApiIdRenderStrategy)
@@ -176,26 +176,24 @@ trait JsonViewTest {
     JsonRenderResult render(Map arguments, @DelegatesTo(TestRequestConfigurer) Closure configurer) {
 
         String viewUri
-        if( arguments.template ) {
+        if (arguments.template) {
             viewUri = templateEngine
-                            .viewUriResolver
-                            .resolveTemplateUri(null, arguments.template.toString())
+                    .viewUriResolver
+                    .resolveTemplateUri(null, arguments.template.toString())
 
-        }
-        else if( arguments.view ) {
+        } else if (arguments.view) {
             viewUri = arguments.view.toString()
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Either a 'view' or 'template' argument is required!")
 
         }
         def template = templateEngine.resolveTemplate(viewUri)
 
-        if(template == null) {
+        if (template == null) {
             throw new IllegalArgumentException("No view or template found for URI $viewUri")
         }
 
-        def model = arguments.model instanceof Map ? (Map)arguments.model : [:]
+        def model = arguments.model instanceof Map ? (Map) arguments.model : [:]
         return produceResult(template, model, configurer)
     }
 
@@ -222,6 +220,7 @@ trait JsonViewTest {
     }
 
     static class TestHttpResponse implements Response {
+
         final JsonRenderResult result
 
         TestHttpResponse(JsonRenderResult result) {

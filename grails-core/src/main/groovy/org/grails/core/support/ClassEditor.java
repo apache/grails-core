@@ -18,16 +18,15 @@
  */
 package org.grails.core.support;
 
-import java.beans.PropertyEditorSupport;
-
 import org.springframework.util.ClassUtils;
+
+import java.beans.PropertyEditorSupport;
 
 /**
  * Converts Strings to Class references for Spring.
  *
  * @author Steven Devijver
  * @author Graeme Rocher
- *
  * @since Aug 8, 2005
  */
 public class ClassEditor extends PropertyEditorSupport {
@@ -50,7 +49,7 @@ public class ClassEditor extends PropertyEditorSupport {
 
     @Override
     public String getAsText() {
-        return ((Class<?>)getValue()).getName();
+        return ((Class<?>) getValue()).getName();
     }
 
     @Override
@@ -59,13 +58,11 @@ public class ClassEditor extends PropertyEditorSupport {
             Class<?> clazz = ClassUtils.resolvePrimitiveClassName(className);
             if (clazz != null) {
                 setValue(clazz);
-            }
-            else {
+            } else {
                 final ClassLoader cl = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
                 setValue(cl.loadClass(className));
             }
-        }
-        catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("Could not load class [" + className + "]!");
         }
     }

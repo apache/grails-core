@@ -22,6 +22,11 @@ package grails.plugin.formfields.taglib
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.plugin.formfields.BeanPropertyAccessorFactory
 import grails.plugin.formfields.FieldsGrailsPlugin
+import grails.plugin.formfields.mock.Address
+import grails.plugin.formfields.mock.Cyborg
+import grails.plugin.formfields.mock.Gender
+import grails.plugin.formfields.mock.Person
+import grails.plugin.formfields.mock.Product
 import grails.testing.gorm.DataTest
 import grails.testing.web.GrailsWebUnitTest
 import org.grails.datastore.mapping.model.MappingContext
@@ -32,7 +37,6 @@ import org.grails.scaffolding.model.property.DomainPropertyFactoryImpl
 import org.grails.spring.beans.factory.InstanceFactoryBean
 import org.springframework.context.support.StaticMessageSource
 import spock.lang.Specification
-import grails.plugin.formfields.mock.*
 
 abstract class AbstractFormFieldsTagLibSpec extends Specification implements GrailsWebUnitTest, DataTest {
 

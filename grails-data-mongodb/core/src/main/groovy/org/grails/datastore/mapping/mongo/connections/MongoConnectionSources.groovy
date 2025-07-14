@@ -39,6 +39,7 @@ import org.springframework.core.env.PropertyResolver
  */
 @CompileStatic
 class MongoConnectionSources extends InMemoryConnectionSources<MongoClient, MongoConnectionSourceSettings> {
+
     private static final String CONNECTION_NAME = "name"
 
     MongoConnectionSources(ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource, ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> connectionSourceFactory, PropertyResolver configuration) {
@@ -50,11 +51,11 @@ class MongoConnectionSources extends InMemoryConnectionSources<MongoClient, Mong
     void initialize(ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
         MongoCollection<Document> mongoCollection = getConnectionsCollection(connectionSource)
         FindIterable findIterable = mongoCollection
-                                              .find()
+                .find()
 
-        for(Document d in findIterable) {
+        for (Document d in findIterable) {
             String connectionName = d.getString(CONNECTION_NAME)
-            if(connectionName) {
+            if (connectionName) {
                 super.addConnectionSource(connectionName, DatastoreUtils.createPropertyResolver(d))
             }
         }
@@ -72,7 +73,7 @@ class MongoConnectionSources extends InMemoryConnectionSources<MongoClient, Mong
         return addConnectionSource(name, DatastoreUtils.createPropertyResolver(configuration))
     }
 
-    ConnectionSource<MongoClient, MongoConnectionSourceSettings> addConnectionSource(String name, Map<String,Object> configuration) {
+    ConnectionSource<MongoClient, MongoConnectionSourceSettings> addConnectionSource(String name, Map<String, Object> configuration) {
         return addConnectionSource(name, new Document(configuration))
     }
 

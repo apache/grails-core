@@ -21,7 +21,6 @@ package scaffolding
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.dev.commands.GrailsApplicationCommand
-import grails.dev.commands.io.FileSystemInteraction
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
 import groovy.transform.CompileStatic
@@ -38,7 +37,8 @@ import org.grails.io.support.SpringIOUtils
 @CompileStatic
 class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap, CommandLineHelper {
 
-    @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
+    @Delegate
+    ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
     final String description = 'Installs scaffolding templates that use f:all to render properties';
 

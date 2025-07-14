@@ -14,19 +14,19 @@
  */
 package org.grails.datastore.mapping.engine;
 
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Method;
-import java.util.Set;
-
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.IdentityMapping;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.PropertyAccessorFactory;
 import org.springframework.core.convert.ConversionService;
-import org.grails.datastore.mapping.model.ClassMapping;
-import org.grails.datastore.mapping.model.IdentityMapping;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.springframework.util.ReflectionUtils;
+
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Method;
+import java.util.Set;
 
 /**
  * Class used to access properties of an entity. Also responsible for
@@ -77,12 +77,11 @@ public class BeanEntityAccess implements EntityAccess {
     @Override
     public void setProperty(String name, Object value) {
         Class type = getPropertyType(name);
-        if(value == null) {
-            if(!type.isPrimitive()) {
+        if (value == null) {
+            if (!type.isPrimitive()) {
                 beanWrapper.setPropertyValue(name, value);
             }
-        }
-        else {
+        } else {
             beanWrapper.setPropertyValue(name, value);
         }
 
@@ -95,7 +94,7 @@ public class BeanEntityAccess implements EntityAccess {
             return getProperty(idName);
         }
         PersistentProperty identity = persistentEntity.getIdentity();
-        if(identity != null) {
+        if (identity != null) {
             return getProperty(identity.getName());
         }
         return null;
@@ -117,7 +116,7 @@ public class BeanEntityAccess implements EntityAccess {
         final IdentityMapping identifier = cm.getIdentifier();
         if (identifier != null && identifier.getIdentifierName() != null) {
             String[] identifierName = identifier.getIdentifierName();
-            if(identifierName.length > 0) {
+            if (identifierName.length > 0) {
                 return identifierName[0];
             }
         }

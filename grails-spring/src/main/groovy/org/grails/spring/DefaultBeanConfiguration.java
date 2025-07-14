@@ -19,12 +19,6 @@
 package org.grails.spring;
 
 import groovy.lang.GroovyObjectSupport;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.PropertyValue;
@@ -37,9 +31,14 @@ import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.util.Assert;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Default implementation of the BeanConfiguration interface .
- *
+ * <p>
  * Credit must go to Solomon Duskis and the
  * article: http://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
  *
@@ -60,17 +59,57 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     private static final String BY_TYPE = "byType";
     private static final String BY_CONSTRUCTOR = "constructor";
     private static final List<String> DYNAMIC_PROPS = Arrays.asList(
-        AUTOWIRE,
-        CONSTRUCTOR_ARGS,
-        DESTROY_METHOD,
-        FACTORY_BEAN,
-        FACTORY_METHOD,
-        INIT_METHOD,
-        BY_NAME,
-        BY_TYPE,
-        BY_CONSTRUCTOR);
+            AUTOWIRE,
+            CONSTRUCTOR_ARGS,
+            DESTROY_METHOD,
+            FACTORY_BEAN,
+            FACTORY_METHOD,
+            INIT_METHOD,
+            BY_NAME,
+            BY_TYPE,
+            BY_CONSTRUCTOR);
 
     private String parentName;
+    private Class<?> clazz;
+    private String name;
+    private boolean singleton = true;
+    private AbstractBeanDefinition definition;
+    private Collection<?> constructorArgs = Collections.emptyList();
+    private BeanWrapper wrapper;
+
+    public DefaultBeanConfiguration(String name, Class<?> clazz) {
+        this.name = name;
+        this.clazz = clazz;
+    }
+
+    public DefaultBeanConfiguration(String name, Class<?> clazz, boolean prototype) {
+        this(name, clazz, Collections.emptyList());
+        singleton = !prototype;
+    }
+
+    public DefaultBeanConfiguration(String name) {
+        this(name, null, Collections.emptyList());
+    }
+
+    public DefaultBeanConfiguration(Class<?> clazz2) {
+        clazz = clazz2;
+    }
+
+    public DefaultBeanConfiguration(String name2, Class<?> clazz2, Collection<?> args) {
+        name = name2;
+        clazz = clazz2;
+        constructorArgs = args;
+    }
+
+    public DefaultBeanConfiguration(String name2, boolean prototype) {
+        this(name2, null, Collections.emptyList());
+        singleton = !prototype;
+    }
+
+    public DefaultBeanConfiguration(Class<?> clazz2, Collection<?> constructorArguments) {
+        clazz = clazz2;
+        constructorArgs = constructorArguments;
+    }
 
     @Override
     public Object getProperty(String property) {
@@ -96,101 +135,43 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         if (AUTOWIRE.equals(property)) {
             if (BY_NAME.equals(newValue)) {
                 bd.setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME);
-            }
-            else if (BY_TYPE.equals(newValue)) {
+            } else if (BY_TYPE.equals(newValue)) {
                 bd.setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE);
-            }
-            else if (Boolean.TRUE.equals(newValue)) {
+            } else if (Boolean.TRUE.equals(newValue)) {
                 bd.setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME);
-            }
-            else if (BY_CONSTRUCTOR.equals(newValue)) {
+            } else if (BY_CONSTRUCTOR.equals(newValue)) {
                 bd.setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
             }
-        }
-        // constructorArgs
-        else if (CONSTRUCTOR_ARGS.equals(property) && newValue instanceof List<?>) {
+        } else if (CONSTRUCTOR_ARGS.equals(property) && newValue instanceof List<?>) {
             ConstructorArgumentValues cav = new ConstructorArgumentValues();
-            for (Object e : (List<?>)newValue) {
+            for (Object e : (List<?>) newValue) {
                 cav.addGenericArgumentValue(e);
             }
             bd.setConstructorArgumentValues(cav);
-        }
-        // destroyMethod
-        else if (DESTROY_METHOD.equals(property)) {
+        } else if (DESTROY_METHOD.equals(property)) {
             if (newValue != null) {
                 bd.setDestroyMethodName(newValue.toString());
             }
-        }
-        // factoryBean
-        else if (FACTORY_BEAN.equals(property)) {
+        } else if (FACTORY_BEAN.equals(property)) {
             if (newValue != null) {
                 bd.setFactoryBeanName(newValue.toString());
             }
-        }
-        // factoryMethod
-        else if (FACTORY_METHOD.equals(property)) {
+        } else if (FACTORY_METHOD.equals(property)) {
             if (newValue != null) {
                 bd.setFactoryMethodName(newValue.toString());
             }
-        }
-        // initMethod
-        else if (INIT_METHOD.equals(property)) {
+        } else if (INIT_METHOD.equals(property)) {
             if (newValue != null) {
                 bd.setInitMethodName(newValue.toString());
             }
-        }
-         // singleton property
-        else if(SINGLETON.equals(property)) {
+        } else if (SINGLETON.equals(property)) {
             bd.setScope(Boolean.TRUE.equals(newValue) ? BeanDefinition.SCOPE_SINGLETON : BeanDefinition.SCOPE_PROTOTYPE);
-        }
-        else if (wrapper.isWritableProperty(property)) {
+        } else if (wrapper.isWritableProperty(property)) {
             wrapper.setPropertyValue(property, newValue);
-        }
-        // autowire
-        else {
+        } else {
+            // autowire
             super.setProperty(property, newValue);
         }
-    }
-
-    private Class<?> clazz;
-    private String name;
-    private boolean singleton = true;
-    private AbstractBeanDefinition definition;
-    private Collection<?> constructorArgs = Collections.emptyList();
-    private BeanWrapper wrapper;
-
-    public DefaultBeanConfiguration(String name, Class<?> clazz) {
-        this.name = name;
-        this.clazz = clazz;
-    }
-
-    public DefaultBeanConfiguration(String name, Class<?> clazz, boolean prototype) {
-        this(name,clazz, Collections.emptyList());
-        singleton = !prototype;
-    }
-
-    public DefaultBeanConfiguration(String name) {
-        this(name,null, Collections.emptyList());
-    }
-
-    public DefaultBeanConfiguration(Class<?> clazz2) {
-        clazz = clazz2;
-    }
-
-    public DefaultBeanConfiguration(String name2, Class<?> clazz2, Collection<?> args) {
-        name = name2;
-        clazz = clazz2;
-        constructorArgs = args;
-    }
-
-    public DefaultBeanConfiguration(String name2, boolean prototype) {
-        this(name2,null, Collections.emptyList());
-        singleton = !prototype;
-    }
-
-    public DefaultBeanConfiguration(Class<?> clazz2, Collection<?> constructorArguments) {
-        clazz = clazz2;
-        constructorArgs = constructorArguments;
     }
 
     public String getName() {
@@ -209,7 +190,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     }
 
     public void setBeanDefinition(BeanDefinition definition) {
-        this.definition = (AbstractBeanDefinition)definition;
+        this.definition = (AbstractBeanDefinition) definition;
     }
 
     protected AbstractBeanDefinition createBeanDefinition() {
@@ -221,8 +202,8 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
             }
             bd.setConstructorArgumentValues(cav);
         }
-        if(clazz != null) {
-            bd.setLazyInit( clazz.getAnnotation(Lazy.class) != null);
+        if (clazz != null) {
+            bd.setLazyInit(clazz.getAnnotation(Lazy.class) != null);
             bd.setBeanClass(clazz);
         }
         bd.setScope(singleton ? AbstractBeanDefinition.SCOPE_SINGLETON : AbstractBeanDefinition.SCOPE_PROTOTYPE);
@@ -235,11 +216,11 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
 
     public BeanConfiguration addProperty(String propertyName, Object propertyValue) {
         if (propertyValue instanceof BeanConfiguration) {
-            propertyValue = ((BeanConfiguration)propertyValue).getBeanDefinition();
+            propertyValue = ((BeanConfiguration) propertyValue).getBeanDefinition();
         }
         getBeanDefinition()
-            .getPropertyValues()
-            .addPropertyValue(propertyName,propertyValue);
+                .getPropertyValues()
+                .addPropertyValue(propertyName, propertyValue);
 
         return this;
     }
@@ -267,8 +248,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     public BeanConfiguration setAutowire(String type) {
         if ("byName".equals(type)) {
             getBeanDefinition().setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
-        }
-        else if ("byType".equals(type)) {
+        } else if ("byType".equals(type)) {
             getBeanDefinition().setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
         }
         return this;
@@ -280,8 +260,8 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
 
     public Object getPropertyValue(String propName) {
         PropertyValue propertyValue = getBeanDefinition()
-            .getPropertyValues()
-            .getPropertyValue(propName);
+                .getPropertyValues()
+                .getPropertyValue(propName);
         if (propertyValue == null) {
             return null;
         }
@@ -306,13 +286,11 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         Assert.notNull(obj, "Parent bean cannot be set to a null runtime bean reference!");
 
         if (obj instanceof String) {
-            parentName = (String)obj;
-        }
-        else if (obj instanceof RuntimeBeanReference) {
-            parentName = ((RuntimeBeanReference)obj).getBeanName();
-        }
-        else if (obj instanceof BeanConfiguration) {
-            parentName = ((BeanConfiguration)obj).getName();
+            parentName = (String) obj;
+        } else if (obj instanceof RuntimeBeanReference) {
+            parentName = ((RuntimeBeanReference) obj).getBeanName();
+        } else if (obj instanceof BeanConfiguration) {
+            parentName = ((BeanConfiguration) obj).getName();
         }
         getBeanDefinition().setParentName(parentName);
         setAbstract(false);

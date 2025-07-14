@@ -28,35 +28,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BeforeValidateHelper implements Serializable {
+
     public static final String BEFORE_VALIDATE = "beforeValidate";
     private transient Map<Class<?>, BeforeValidateEventTriggerCaller> eventTriggerCallerCache = new ConcurrentHashMap<Class<?>, BeforeValidateEventTriggerCaller>();
-    
-    public static final class BeforeValidateEventTriggerCaller {
-        EventTriggerCaller eventTriggerCaller;
-        EventTriggerCaller eventTriggerCallerNoArgs;
-        
-        public BeforeValidateEventTriggerCaller(Class<?> domainClass, MetaClass metaClass) {
-            eventTriggerCaller = build(domainClass, metaClass, new Class<?>[]{List.class});
-            eventTriggerCallerNoArgs = build(domainClass, metaClass, new Class<?>[]{});
-        }
-        
-        protected EventTriggerCaller build(Class<?> domainClass, MetaClass metaClass, Class<?>[] argumentTypes) {
-            return EventTriggerCaller.buildCaller(BEFORE_VALIDATE, domainClass, metaClass, argumentTypes);
-        }
-        
-        public void call(final Object target, final List<?> validatedFieldsList) {
-            if(validatedFieldsList != null && eventTriggerCaller != null) {
-                eventTriggerCaller.call(target, new Object[]{validatedFieldsList});
-            } else if (eventTriggerCallerNoArgs != null) {
-                eventTriggerCallerNoArgs.call(target);
-            }
-        }
-    }
-    
+
     public void invokeBeforeValidate(final Object target, final List<?> validatedFieldsList) {
         Class<?> domainClass = target.getClass();
         BeforeValidateEventTriggerCaller eventTriggerCaller = eventTriggerCallerCache.get(domainClass);
-        if(eventTriggerCaller==null) {
+        if (eventTriggerCaller == null) {
             eventTriggerCaller = new BeforeValidateEventTriggerCaller(domainClass, null);
             eventTriggerCallerCache.put(domainClass, eventTriggerCaller);
         }
@@ -67,5 +46,28 @@ public class BeforeValidateHelper implements Serializable {
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         eventTriggerCallerCache = new ConcurrentHashMap<Class<?>, BeforeValidateEventTriggerCaller>();
+    }
+
+    public static final class BeforeValidateEventTriggerCaller {
+
+        EventTriggerCaller eventTriggerCaller;
+        EventTriggerCaller eventTriggerCallerNoArgs;
+
+        public BeforeValidateEventTriggerCaller(Class<?> domainClass, MetaClass metaClass) {
+            eventTriggerCaller = build(domainClass, metaClass, new Class<?>[]{List.class});
+            eventTriggerCallerNoArgs = build(domainClass, metaClass, new Class<?>[]{});
+        }
+
+        protected EventTriggerCaller build(Class<?> domainClass, MetaClass metaClass, Class<?>[] argumentTypes) {
+            return EventTriggerCaller.buildCaller(BEFORE_VALIDATE, domainClass, metaClass, argumentTypes);
+        }
+
+        public void call(final Object target, final List<?> validatedFieldsList) {
+            if (validatedFieldsList != null && eventTriggerCaller != null) {
+                eventTriggerCaller.call(target, new Object[]{validatedFieldsList});
+            } else if (eventTriggerCallerNoArgs != null) {
+                eventTriggerCallerNoArgs.call(target);
+            }
+        }
     }
 }

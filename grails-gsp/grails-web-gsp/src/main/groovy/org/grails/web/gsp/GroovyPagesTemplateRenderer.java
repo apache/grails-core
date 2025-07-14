@@ -63,19 +63,19 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Service that provides the actual implementation to RenderTagLib's render tag.
- *
+ * <p>
  * This is an internal Grails service and should not be used by plugins directly.
  * The implementation was moved from RenderTagLib, ported to Java and then refactored.
  *
  * @author Lari Hotari
  * @author Graeme Rocher
- *
  * @since 2.0
  */
 public class GroovyPagesTemplateRenderer implements InitializingBean {
+
     private GrailsConventionGroovyPageLocator groovyPageLocator;
     private GroovyPagesTemplateEngine groovyPagesTemplateEngine;
-    private ConcurrentMap<String,CacheEntry<Template>> templateCache = new ConcurrentHashMap<String,CacheEntry<Template>>();
+    private ConcurrentMap<String, CacheEntry<Template>> templateCache = new ConcurrentHashMap<String, CacheEntry<Template>>();
     private Object scaffoldingTemplateGenerator;
     private Map<String, Collection<String>> scaffoldedActionMap;
     private Map<String, GrailsDomainClass> controllerToScaffoldedDomainClassMap;
@@ -86,8 +86,8 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         if (scaffoldingTemplateGenerator != null) {
             // use reflection to locate method (would cause cyclic dependency otherwise)
-            generateViewMethod = ReflectionUtils.findMethod(scaffoldingTemplateGenerator.getClass(), "generateView", new Class<?>[] {
-                GrailsDomainClass.class, String.class, Writer.class});
+            generateViewMethod = ReflectionUtils.findMethod(scaffoldingTemplateGenerator.getClass(), "generateView", new Class<?>[]{
+                    GrailsDomainClass.class, String.class, Writer.class});
         }
     }
 
@@ -129,18 +129,18 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
 
     // required for binary compatibility: GRAILS-11598
     private Template findAndCacheTemplate(Object controller, GrailsWebRequest webRequest, GroovyPageBinding pageScope, String templateName,
-            String contextPath, String pluginName, String uri) throws IOException {
+                                          String contextPath, String pluginName, String uri) throws IOException {
         return findAndCacheTemplate(controller, pageScope, templateName, contextPath, pluginName, uri);
     }
 
     private Template findAndCacheTemplate(Object controller, TemplateVariableBinding pageScope, String templateName,
-            String contextPath, String pluginName, final String uri) throws IOException {
+                                          String contextPath, String pluginName, final String uri) throws IOException {
 
         String templatePath = GrailsStringUtils.isNotEmpty(contextPath) ? GrailsResourceUtils.appendPiecesForUri(contextPath, templateName) : templateName;
         final GroovyPageScriptSource scriptSource;
         if (pluginName == null) {
             scriptSource = groovyPageLocator.findTemplateInBinding(controller, templatePath, pageScope);
-        }  else {
+        } else {
             scriptSource = groovyPageLocator.findTemplateInBinding(controller, pluginName, templatePath, pageScope);
         }
 
@@ -148,10 +148,9 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         if (scriptSource == null) {
             cacheKey = contextPath + pluginName + uri;
         } else {
-            if(pluginName != null) {
+            if (pluginName != null) {
                 cacheKey = contextPath + pluginName + scriptSource.getURI();
-            }
-            else {
+            } else {
                 cacheKey = scriptSource.getURI();
             }
         }
@@ -167,15 +166,15 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                             protected boolean hasExpired(long timeout, Object cacheRequestObject) {
                                 return neverExpire ? false : (allowCaching ? super.hasExpired(timeout, cacheRequestObject) : true);
                             }
-                            
+
                             @Override
                             public boolean isInitialized() {
                                 return allowCaching ? super.isInitialized() : false;
                             }
-                            
+
                             @Override
                             public void setValue(Template val) {
-                                if(allowCaching) {
+                                if (allowCaching) {
                                     super.setValue(val);
                                 }
                             }
@@ -202,7 +201,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                 }, true, null);
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private void makeTemplate(GrailsWebRequest webRequest, Template t, Map<String, Object> attrs, Object body, Writer out) throws IOException {
 
         Writer newOut = wrapWriterWithEncoder(webRequest, attrs, out);
@@ -213,13 +212,12 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         Map b = new LinkedHashMap<String, Object>();
         b.put("body", body);
         if (attrs.get("model") instanceof Map) {
-            b.putAll((Map)attrs.get("model"));
+            b.putAll((Map) attrs.get("model"));
         }
         if (attrs.containsKey("bean")) {
             if (GrailsStringUtils.isNotBlank(var)) {
                 b.put(var, attrs.get("bean"));
-            }
-            else {
+            } else {
                 b.put("it", attrs.get("bean"));
             }
         }
@@ -235,8 +233,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                 itmap.putAll(b);
                 if (GrailsStringUtils.isNotBlank(var)) {
                     itmap.put(var, it);
-                }
-                else {
+                } else {
                     itmap.put("it", it);
                     itmap.put(key, it);
                 }
@@ -254,14 +251,14 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Writer wrapWriterWithEncoder(GrailsWebRequest webRequest, Map<String, Object> attrs, Writer out) {
         Object encodeAs = attrs.get(GroovyPage.ENCODE_AS_ATTRIBUTE_NAME);
         if (encodeAs != null) {
-            Map<String, Object> codecSettings= WithCodecHelper.makeSettingsCanonical(encodeAs);
-            String codecForTaglibs = (String)codecSettings.get(OutputEncodingSettings.TAGLIB_CODEC_NAME);
+            Map<String, Object> codecSettings = WithCodecHelper.makeSettingsCanonical(encodeAs);
+            String codecForTaglibs = (String) codecSettings.get(OutputEncodingSettings.TAGLIB_CODEC_NAME);
             if (codecForTaglibs != null) {
                 Encoder encoder = WithCodecHelper.lookupEncoder(webRequest.getAttributes().getGrailsApplication(), codecForTaglibs);
                 if (out instanceof EncodedAppenderWriterFactory) {
-                    out = ((EncodedAppenderWriterFactory)out).getWriterForEncoder(encoder, webRequest.getEncodingStateRegistry());
+                    out = ((EncodedAppenderWriterFactory) out).getWriterForEncoder(encoder, webRequest.getEncodingStateRegistry());
                 } else if (encoder instanceof StreamingEncoder) {
-                    out=new StreamingEncoderWriter(out, (StreamingEncoder)encoder, webRequest.getEncodingStateRegistry());
+                    out = new StreamingEncoderWriter(out, (StreamingEncoder) encoder, webRequest.getEncodingStateRegistry());
                 } else {
                     out = new CodecPrintWriter(out, encoder, webRequest.getEncodingStateRegistry());
                 }
@@ -291,13 +288,17 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
 
     private String getStringValue(Map<String, Object> attrs, String key) {
         Object val = attrs.get(key);
-        if (val == null) return "";
+        if (val == null) {
+            return "";
+        }
         return String.valueOf(val);
     }
 
     private boolean getBooleanValue(Map<String, Object> attrs, String key) {
         String val = getStringValue(attrs, key);
-        if (val.isBlank()) return false;
+        if (val.isBlank()) {
+            return false;
+        }
         return Boolean.parseBoolean(val);
     }
 
@@ -313,12 +314,12 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         scaffoldingTemplateGenerator = generator;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public void setScaffoldedActionMap(Map map) {
         scaffoldedActionMap = map;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void setControllerToScaffoldedDomainClassMap(Map map) {
         controllerToScaffoldedDomainClassMap = map;
     }

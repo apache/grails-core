@@ -25,9 +25,10 @@ package org.grails.datastore.gorm
  * @author Graeme Rocher
  * @since 5.0.5
  *
- * @param <D> The entity type
+ * @param <D>   The entity type
  */
 trait GormEntityApi<D> {
+
     /**
      * Proxy aware instanceOf implementation.
      */

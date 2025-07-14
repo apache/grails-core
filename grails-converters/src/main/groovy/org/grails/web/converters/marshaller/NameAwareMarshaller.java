@@ -28,6 +28,7 @@ public interface NameAwareMarshaller {
 
     /**
      * Returns the tag name for the object
+     *
      * @param o the object
      * @return the tag name
      */

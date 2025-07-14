@@ -26,7 +26,7 @@ import org.springframework.context.ApplicationContext
  *
  * @since 2.4
  */
-public interface GrailsApplicationDiscoveryStrategy {
+interface GrailsApplicationDiscoveryStrategy {
 
     /**
      * @return Find the GrailsApplication instance

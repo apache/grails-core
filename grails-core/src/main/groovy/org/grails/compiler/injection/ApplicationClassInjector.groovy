@@ -87,9 +87,9 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
     @Override
     @CompileDynamic
     void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
-        if(applicationArtefactHandler.isArtefact(classNode)) {
-            def objectId = Integer.valueOf( System.identityHashCode(classNode) )
-            if(!transformedInstances.contains(objectId)) {
+        if (applicationArtefactHandler.isArtefact(classNode)) {
+            def objectId = Integer.valueOf(System.identityHashCode(classNode))
+            if (!transformedInstances.contains(objectId)) {
                 transformedInstances << objectId
 
                 List<Statement> statements = [
@@ -99,16 +99,16 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
 
                 def packageNamesMethod = classNode.getMethod('packageNames', GrailsASTUtils.ZERO_PARAMETERS)
 
-                if(packageNamesMethod == null || packageNamesMethod.declaringClass != classNode) {
+                if (packageNamesMethod == null || packageNamesMethod.declaringClass != classNode) {
                     def collectionClassNode = GrailsASTUtils.replaceGenericsPlaceholders(ClassHelper.make(Collection), [E: ClassHelper.make(String)])
 
                     def packageNamesBody = new BlockStatement()
                     def grailsAppDir = GrailsResourceUtils.getAppDir(new UrlResource(GrailsASTUtils.getSourceUrl(source)))
-                    if(grailsAppDir.exists()) {
+                    if (grailsAppDir.exists()) {
 
                         def packageNames = ResourceUtils.getProjectPackageNames(grailsAppDir.file.parentFile)
-                                                        .collect() { String str -> new ConstantExpression(str) }
-                        if(packageNames.any() { ConstantExpression packageName -> ['org','com','io','net'].contains(packageName.text) }) {
+                                .collect() { String str -> new ConstantExpression(str) }
+                        if (packageNames.any() { ConstantExpression packageName -> ['org', 'com', 'io', 'net'].contains(packageName.text) }) {
                             GrailsASTUtils.error(source, classNode, "Do not place Groovy sources in common package names such as 'org', 'com', 'io' or 'net' as this can result in performance degradation of classpath scanning")
                         }
                         packageNamesBody.addStatement(new ReturnStatement(new ExpressionStatement(new ListExpression(packageNames.toList()))))
@@ -132,7 +132,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
 
     @Override
     boolean shouldInject(URL url) {
-        if(url == null) return false
+        if (url == null) return false
         def res = new UrlResource(url)
         return GrailsResourceUtils.isGrailsResource(res) && res.filename == "Application.groovy"
     }

@@ -23,15 +23,14 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 /**
  * Adapter for the {@link org.grails.datastore.mapping.core.impl.PendingDelete} interface
  *
- * @since 5.0.0
  * @author Graeme Rocher
+ * @since 5.0.0
  */
-public abstract class PendingDeleteAdapter<E, K> extends PendingOperationAdapter<E, K> implements PendingDelete<E, K>{
-
+public abstract class PendingDeleteAdapter<E, K> extends PendingOperationAdapter<E, K> implements PendingDelete<E, K> {
 
     private boolean vetoed;
 
-    public PendingDeleteAdapter(PersistentEntity entity, K nativeKey,  E nativeEntry) {
+    public PendingDeleteAdapter(PersistentEntity entity, K nativeKey, E nativeEntry) {
         super(entity, nativeKey, nativeEntry);
     }
 

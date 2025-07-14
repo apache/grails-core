@@ -39,6 +39,11 @@ import java.util.Set;
 public abstract class BasePluginFilter implements PluginFilter {
 
     /**
+     * Holds a name to GrailsPlugin map (String, Plugin).
+     */
+    protected Map<String, GrailsPlugin> nameMap;
+
+    /**
      * The supplied included plugin names (a String).
      */
     private final Set<String> suppliedNames;
@@ -52,11 +57,6 @@ public abstract class BasePluginFilter implements PluginFilter {
      * Plugins derivied through a dependency relationship.
      */
     private final List<GrailsPlugin> derivedPlugins = new ArrayList<GrailsPlugin>();
-
-    /**
-     * Holds a name to GrailsPlugin map (String, Plugin).
-     */
-    protected Map<String, GrailsPlugin> nameMap;
 
     /**
      * Temporary field holding list of plugin names added to the filtered List
@@ -93,7 +93,7 @@ public abstract class BasePluginFilter implements PluginFilter {
     /**
      * Template method shared by subclasses of <code>BasePluginFilter</code>.
      */
-    public List<GrailsPlugin>  filterPluginList(List<GrailsPlugin> original) {
+    public List<GrailsPlugin> filterPluginList(List<GrailsPlugin> original) {
 
         originalPlugins = Collections.unmodifiableList(original);
         addedNames = new HashSet<String>();
@@ -128,10 +128,8 @@ public abstract class BasePluginFilter implements PluginFilter {
      * Checks whether a plugin is dependent on another plugin with the specified
      * name
      *
-     * @param plugin
-     *            the plugin to compare
-     * @param pluginName
-     *            the name to compare against
+     * @param plugin     the plugin to compare
+     * @param pluginName the name to compare against
      * @return true if <code>plugin</code> depends on <code>pluginName</code>
      */
     protected boolean isDependentOn(GrailsPlugin plugin, String pluginName) {
@@ -153,12 +151,8 @@ public abstract class BasePluginFilter implements PluginFilter {
     }
 
     /**
-     * Returns the sublist of the supplied set who are explicitly named, either
+     * Sets explicitlyNamedPlugins to a sublist of the supplied set who are explicitly named, either
      * as included or excluded plugins
-     *
-     * @return a sublist containing the elements of the original list
-     *         corresponding with the explicitlyNamed items as passed into the
-     *         constructor
      */
     private void buildExplicitlyNamedList() {
 
@@ -166,7 +160,7 @@ public abstract class BasePluginFilter implements PluginFilter {
         // included set
 
         for (GrailsPlugin plugin : originalPlugins) {
-        // find explicitly included plugins
+            // find explicitly included plugins
             String name = plugin.getName();
             if (suppliedNames.contains(name)) {
                 explicitlyNamedPlugins.add(plugin);

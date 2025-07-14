@@ -18,29 +18,27 @@
  */
 package org.apache.grails.web.layout;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.WriteListener;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletResponseWrapper;
-
-import org.grails.buffer.GrailsRoutablePrintWriter;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.buffer.GrailsPrintWriterAdapter;
-import org.grails.buffer.StreamByteBuffer;
-import org.grails.buffer.StreamCharBuffer;
-import org.grails.web.util.WebUtils;
-
 import com.opensymphony.module.sitemesh.Page;
 import com.opensymphony.module.sitemesh.PageParser;
 import com.opensymphony.module.sitemesh.PageParserSelector;
 import com.opensymphony.module.sitemesh.filter.HttpContentType;
 import com.opensymphony.module.sitemesh.filter.RoutableServletOutputStream;
 import com.opensymphony.module.sitemesh.filter.TextEncoder;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
+import org.grails.buffer.GrailsPrintWriterAdapter;
+import org.grails.buffer.GrailsRoutablePrintWriter;
+import org.grails.buffer.StreamByteBuffer;
+import org.grails.buffer.StreamCharBuffer;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.WebUtils;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 
 /**
  * @author Graeme Rocher
@@ -174,7 +172,9 @@ public class GrailsPageResponseWrapper extends HttpServletResponseWrapper {
      */
     @Override
     public void setContentLength(int contentLength) {
-        if (!parseablePage) super.setContentLength(contentLength);
+        if (!parseablePage) {
+            super.setContentLength(contentLength);
+        }
     }
 
     /**
@@ -182,7 +182,9 @@ public class GrailsPageResponseWrapper extends HttpServletResponseWrapper {
      */
     @Override
     public void flushBuffer() throws IOException {
-        if (!parseablePage) super.flushBuffer();
+        if (!parseablePage) {
+            super.flushBuffer();
+        }
     }
 
     /**
@@ -283,10 +285,10 @@ public class GrailsPageResponseWrapper extends HttpServletResponseWrapper {
     }
 
     private static class GrailsBuffer {
+        private static final TextEncoder TEXT_ENCODER = new TextEncoder();
         private final PageParserSelector parserSelector;
         private final String contentType;
         private final String encoding;
-        private final static TextEncoder TEXT_ENCODER = new TextEncoder();
 
         private StreamCharBuffer charBuffer;
         private GrailsPrintWriterAdapter exposedWriter;

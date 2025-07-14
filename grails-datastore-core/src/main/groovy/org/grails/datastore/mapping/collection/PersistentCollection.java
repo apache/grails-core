@@ -33,6 +33,7 @@ public interface PersistentCollection extends Collection, DirtyCheckableCollecti
 
     /**
      * Check whether the collection has been loaded.
+     *
      * @return <code>true</code> if the collection has been initialized
      */
     boolean isInitialized();
@@ -44,6 +45,7 @@ public interface PersistentCollection extends Collection, DirtyCheckableCollecti
 
     /**
      * Check whether the collection has been modified.
+     *
      * @return <code>true</code> if the collection is initialized and has been changed since initialization
      */
     boolean isDirty();

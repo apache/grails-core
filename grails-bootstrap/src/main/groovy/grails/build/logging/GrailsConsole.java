@@ -40,12 +40,21 @@ import org.grails.build.interactive.CandidateListCompletionHandler;
 import org.grails.build.logging.GrailsConsoleErrorPrintStream;
 import org.grails.build.logging.GrailsConsolePrintStream;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
 
-import static org.fusesource.jansi.Ansi.Color.*;
+import static org.fusesource.jansi.Ansi.Color.DEFAULT;
+import static org.fusesource.jansi.Ansi.Color.RED;
+import static org.fusesource.jansi.Ansi.Color.YELLOW;
 import static org.fusesource.jansi.Ansi.Erase.FORWARD;
 import static org.fusesource.jansi.Ansi.ansi;
 
@@ -56,8 +65,6 @@ import static org.fusesource.jansi.Ansi.ansi;
  * @since 2.0
  */
 public class GrailsConsole implements ConsoleLogger {
-
-    private static GrailsConsole instance;
 
     public static final String ENABLE_TERMINAL = "grails.console.enable.terminal";
     public static final String ENABLE_INTERACTIVE = "grails.console.enable.interactive";
@@ -71,24 +78,8 @@ public class GrailsConsole implements ConsoleLogger {
     public static final String STACKTRACE_FILTERED_MESSAGE = " (NOTE: Stack trace has been filtered. Use --verbose to see entire trace.)";
     public static final String STACKTRACE_MESSAGE = " (Use --stacktrace to see the full trace)";
     public static final Character SECURE_MASK_CHAR = Character.valueOf('*');
-    private PrintStream originalSystemOut;
-    private PrintStream originalSystemErr;
-    private StringBuilder maxIndicatorString;
-    private int cursorMove;
-    private Thread shutdownHookThread;
-    private Character defaultInputMask = null;
 
-    /**
-     * Whether to enable verbose mode
-     */
-    private boolean verbose = Boolean.getBoolean("grails.verbose");
-
-    /**
-     * Whether to show stack traces
-     */
-    private boolean stacktrace = Boolean.getBoolean("grails.show.stacktrace");
-
-    private boolean progressIndicatorActive = false;
+    private static GrailsConsole instance;
 
     /**
      * The progress indicator to use
@@ -119,10 +110,31 @@ public class GrailsConsole implements ConsoleLogger {
     Stack<String> category = new Stack<String>() {
         @Override
         public String toString() {
-            if (size() == 1) return peek() + CATEGORY_SEPARATOR;
-            return DefaultGroovyMethods.join((Iterable) this, CATEGORY_SEPARATOR) + CATEGORY_SEPARATOR;
+            if (size() == 1) {
+                return peek() + CATEGORY_SEPARATOR;
+            }
+            return DefaultGroovyMethods.join(this, CATEGORY_SEPARATOR) + CATEGORY_SEPARATOR;
         }
     };
+
+    private PrintStream originalSystemOut;
+    private PrintStream originalSystemErr;
+    private StringBuilder maxIndicatorString;
+    private int cursorMove;
+    private Thread shutdownHookThread;
+    private Character defaultInputMask = null;
+
+    /**
+     * Whether to enable verbose mode
+     */
+    private boolean verbose = Boolean.getBoolean("grails.verbose");
+
+    /**
+     * Whether to show stack traces
+     */
+    private boolean stacktrace = Boolean.getBoolean("grails.show.stacktrace");
+
+    private boolean progressIndicatorActive = false;
 
     /**
      * Whether ANSI should be enabled for output
@@ -133,6 +145,23 @@ public class GrailsConsole implements ConsoleLogger {
      * Whether user input is currently active
      */
     private boolean userInputActive;
+
+    /**
+     * Logs a message below the current status message
+     *
+     * @param msg The message to log
+     */
+    private boolean appendCalled = false;
+
+    protected GrailsConsole() throws IOException {
+        cursorMove = 1;
+
+        initialize(System.in, System.out, System.err);
+
+        // bit of a WTF this, but see no other way to allow a customization indicator
+        maxIndicatorString = new StringBuilder(indicator).append(indicator).append(indicator).append(indicator).append(indicator);
+
+    }
 
     public void addShutdownHook() {
         if (!Environment.isFork()) {
@@ -150,17 +179,6 @@ public class GrailsConsole implements ConsoleLogger {
         if (shutdownHookThread != null) {
             Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
         }
-    }
-
-
-    protected GrailsConsole() throws IOException {
-        cursorMove = 1;
-
-        initialize(System.in, System.out, System.err);
-
-        // bit of a WTF this, but see no other way to allow a customization indicator
-        maxIndicatorString = new StringBuilder(indicator).append(indicator).append(indicator).append(indicator).append(indicator);
-
     }
 
     /**
@@ -571,7 +589,9 @@ public class GrailsConsole implements ConsoleLogger {
 
     private void outputMessage(String msg, int replaceCount) {
         verifySystemOut();
-        if (msg == null || msg.trim().length() == 0) return;
+        if (msg == null || msg.trim().length() == 0) {
+            return;
+        }
         try {
             if (isAnsiEnabled()) {
                 if (replaceCount > 0) {
@@ -584,7 +604,9 @@ public class GrailsConsole implements ConsoleLogger {
                     cursorMove = replaceCount;
                 }
             } else {
-                if (lastMessage != null && lastMessage.equals(msg)) return;
+                if (lastMessage != null && lastMessage.equals(msg)) {
+                    return;
+                }
 
                 if (progressIndicatorActive) {
                     out.println();
@@ -744,13 +766,6 @@ public class GrailsConsole implements ConsoleLogger {
         printStream.print(ansi()
                 .eraseLine(Ansi.Erase.BACKWARD).cursorLeft(PROMPT.length()));
     }
-
-    /**
-     * Logs a message below the current status message
-     *
-     * @param msg The message to log
-     */
-    private boolean appendCalled = false;
 
     public void append(String msg) {
         verifySystemOut();
@@ -956,7 +971,9 @@ public class GrailsConsole implements ConsoleLogger {
 
     private Ansi erasePreviousLine(String categoryName) {
         int cursorMove = this.cursorMove;
-        if (userInputActive) cursorMove++;
+        if (userInputActive) {
+            cursorMove++;
+        }
         if (cursorMove > 0) {
             int moveLeftLength = categoryName.length() + lastMessage.length();
             if (userInputActive) {

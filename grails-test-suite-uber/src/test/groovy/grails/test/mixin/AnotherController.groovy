@@ -18,7 +18,7 @@
  */
 package grails.test.mixin
 
-import grails.artefact.Controller
+
 import grails.converters.JSON
 import grails.converters.XML
 import grails.web.mime.MimeUtility

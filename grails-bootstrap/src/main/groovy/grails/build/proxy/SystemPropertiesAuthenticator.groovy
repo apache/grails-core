@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.build.proxy
 
 import grails.util.BuildSettings
@@ -33,7 +32,7 @@ class SystemPropertiesAuthenticator extends Authenticator {
 
     @Override
     protected PasswordAuthentication getPasswordAuthentication() {
-        if(getRequestorType() == RequestorType.PROXY) {
+        if (getRequestorType() == RequestorType.PROXY) {
             return new PasswordAuthentication(
                     System.getProperty(BuildSettings.PROXY_HTTP_USER, ""),
                     System.getProperty(BuildSettings.PROXY_HTTP_PASSWORD, "").toCharArray());

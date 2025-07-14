@@ -20,7 +20,6 @@ package grails.util
 
 /**
  * Uses cosine similarity to find matches from a candidate set for a specified input.
- * Based on code from http://www.nearinfinity.com/blogs/seth_schroeder/groovy_cosine_similarity_in_grails.html
  *
  * @author Burt Beckwith
  */
@@ -28,9 +27,9 @@ class CosineSimilarity {
 
     /**
      * Sort the candidates by their similarity to the specified input.
-     * @param pattern  the input string
-     * @param candidates  the possible matches
-     * @return  the ordered candidates
+     * @param pattern the input string
+     * @param candidates the possible matches
+     * @return the ordered candidates
      */
     static List<String> mostSimilar(String pattern, candidates, double threshold = 0) {
         SortedMap<Double, String> sorted = new TreeMap<Double, String>()

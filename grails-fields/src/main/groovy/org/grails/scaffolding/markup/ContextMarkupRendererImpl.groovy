@@ -19,13 +19,12 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.property.DomainProperty
 import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.context.MessageSource
-
 import jakarta.annotation.Resource
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.scaffolding.model.property.DomainProperty
+import org.springframework.context.MessageSource
 
 /**
  * @see {@link ContextMarkupRenderer}
@@ -105,17 +104,17 @@ class ContextMarkupRendererImpl implements ContextMarkupRenderer {
         if (property.required) {
             classes << 'required'
         }
-        { ->
-            content.delegate = delegate
-            div(class: classes.join(' ')) {
-                label([for: property.pathFromRoot], getLabelText(property)) {
-                    if (property.required) {
-                        span(class: 'required-indicator', '*')
+                { ->
+                    content.delegate = delegate
+                    div(class: classes.join(' ')) {
+                        label([for: property.pathFromRoot], getLabelText(property)) {
+                            if (property.required) {
+                                span(class: 'required-indicator', '*')
+                            }
+                        }
+                        content.call()
                     }
                 }
-                content.call()
-            }
-        }
     }
 
     @Override

@@ -40,10 +40,10 @@ class CompositeViewResolver {
     List<ViewResolver> viewResolvers = []
 
     View resolveView(String viewName, Locale locale) {
-        for(resolver in viewResolvers) {
+        for (resolver in viewResolvers) {
 
             def view = resolver.resolveViewName(viewName, locale)
-            if(view != null) {
+            if (view != null) {
                 return view
             }
         }

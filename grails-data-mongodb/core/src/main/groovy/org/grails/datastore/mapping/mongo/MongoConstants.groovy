@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class MongoConstants {
+
     public static final String SET_OPERATOR = '$set';
     public static final String UNSET_OPERATOR = '$unset';
     public static final String CODEC_ENGINE = "codec";
@@ -40,11 +41,11 @@ class MongoConstants {
 
 
     @CompileDynamic
-    public static <T> T mapToObject(Class<T> targetType, Map<String,Object> values) {
+    public static <T> T mapToObject(Class<T> targetType, Map<String, Object> values) {
         T t = targetType.getDeclaredConstructor().newInstance()
-        for(String name in values.keySet()) {
-            if(t.respondsTo(name)) {
-                t."$name"( values.get(name) )
+        for (String name in values.keySet()) {
+            if (t.respondsTo(name)) {
+                t."$name"(values.get(name))
             }
         }
         return t

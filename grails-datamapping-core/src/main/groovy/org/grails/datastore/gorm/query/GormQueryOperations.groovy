@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.gorm.query
 
-
-
 /**
  * Interface defining all typical query GORM operations on class
  *
@@ -31,7 +29,7 @@ interface GormQueryOperations<T> {
     /**
      * Synonym for #get
      */
-    T find(Map args , Closure additionalCriteria)
+    T find(Map args, Closure additionalCriteria)
 
     /**
      * Synonym for #get
@@ -88,7 +86,7 @@ interface GormQueryOperations<T> {
      * @param additionalCriteria The additional criteria
      * @return A list of matching instances
      */
-    List<T> list(Map args , Closure additionalCriteria)
+    List<T> list(Map args, Closure additionalCriteria)
 
     /**
      * Counts the number of records returned by the query

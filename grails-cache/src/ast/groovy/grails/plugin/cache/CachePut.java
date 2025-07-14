@@ -20,7 +20,12 @@ package grails.plugin.cache;
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Indicates that a method (or all methods on a class) trigger(s)
@@ -31,23 +36,23 @@ import java.lang.annotation.*;
  * @author Jeff Brown
  * @author Graeme Rocher
  */
-@Target({ ElementType.METHOD, ElementType.TYPE })
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
 @GroovyASTTransformationClass("org.grails.plugin.cache.compiler.CachePutTransformation")
 public @interface CachePut {
 
-	/**
-	 * Name of the caches in which the update takes place.
-	 * <p>May be used to determine the target cache (or caches), matching the
-	 * qualifier value.
-	 */
-	String[] value();
+    /**
+     * Name of the caches in which the update takes place.
+     * <p>May be used to determine the target cache (or caches), matching the
+     * qualifier value.
+     */
+    String[] value();
 
-	/**
-	 * A closure for computing the key dynamically.
-	 * <p>Default is null, meaning all method parameters are considered as a key.
-	 */
-	Class[] key() default {};
+    /**
+     * A closure for computing the key dynamically.
+     * <p>Default is null, meaning all method parameters are considered as a key.
+     */
+    Class[] key() default {};
 }

@@ -29,6 +29,7 @@ import groovy.transform.builder.SimpleStrategy
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class NaturalId {
+
     /**
      * The property names that make up the natural id
      */

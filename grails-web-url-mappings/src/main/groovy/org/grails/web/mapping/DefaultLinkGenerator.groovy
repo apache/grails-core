@@ -19,36 +19,35 @@
 package org.grails.web.mapping
 
 import grails.config.Settings
+import grails.plugins.GrailsPluginManager
+import grails.plugins.PluginManagerAware
+import grails.util.Environment
 import grails.util.GrailsClassUtils
+import grails.util.GrailsNameUtils
+import grails.util.GrailsWebUtil
 import grails.web.CamelCaseUrlConverter
+import grails.web.UrlConverter
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlCreator
 import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappingsHolder
-import groovy.util.logging.Slf4j
-import org.springframework.beans.factory.annotation.Value
-import jakarta.annotation.PostConstruct
-import java.util.regex.Pattern
-
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.GrailsWebUtil
-import grails.web.UrlConverter
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-
+import groovy.util.logging.Slf4j
+import jakarta.annotation.PostConstruct
 import org.grails.core.artefact.DomainClassArtefactHandler
-import grails.plugins.GrailsPluginManager
-import grails.plugins.PluginManagerAware
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.web.servlet.mvc.DefaultRequestStateLookupStrategy
 import org.grails.web.servlet.mvc.GrailsRequestStateLookupStrategy
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.WebUtils
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.model.PersistentEntity
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
+
+import java.util.regex.Pattern
 
 /**
  * A link generating service for applications to use when generating links.
@@ -73,8 +72,8 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
     @Autowired
     @Qualifier("grailsUrlMappingsHolder")
     UrlMappingsHolder urlMappingsHolder
-    
-    @Autowired(required=false)
+
+    @Autowired(required = false)
     @Qualifier('grailsDomainClassMappingContext')
     MappingContext mappingContext
 
@@ -83,7 +82,6 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
 
     @Value('${grails.resources.pattern:/static/**}')
     String resourcePattern = Settings.DEFAULT_RESOURCE_PATTERN
-
 
 
     DefaultLinkGenerator(String serverBaseURL, String contextPath) {
@@ -97,7 +95,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
 
     @PostConstruct
     void initializeResourcePath() {
-        if(resourcePattern?.endsWith('/**')) {
+        if (resourcePattern?.endsWith('/**')) {
             resourcePath = resourcePattern.substring(0, resourcePattern.length() - 3)
         }
     }
@@ -112,12 +110,11 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
 
         if (attrs.get(ATTRIBUTE_URI) != null) {
             def uri = attrs.get(ATTRIBUTE_URI).toString()
-            if(!isUriAbsolute(uri)){
+            if (!isUriAbsolute(uri)) {
                 final base = handleAbsolute(attrs)
                 if (base != null) {
                     writer.append base
-                }
-                else if(includeContext) {
+                } else if (includeContext) {
 
                     def cp = attrs.get(ATTRIBUTE_CONTEXT_PATH)
                     if (cp == null) cp = getContextPath()
@@ -126,10 +123,10 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 }
             }
             writer.append uri
-            
+
             def params = attrs.get(ATTRIBUTE_PARAMS)
 
-            if(params instanceof Map) {
+            if (params instanceof Map) {
                 def charset = GrailsWebUtil.DEFAULT_ENCODING
                 def paramString = params.collect { Map.Entry entry ->
                     def encodedKey = URLEncoder.encode(entry.key as String, charset)
@@ -137,10 +134,9 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     "$encodedKey=$encodedValue"
                 }.join('&')
                 writer.append(uri.indexOf('?') >= 0 ? '&' : '?')
-                      .append paramString
+                        .append paramString
             }
-        }
-        else if (attrs.get(ATTRIBUTE_RELATIVE_URI) != null) {
+        } else if (attrs.get(ATTRIBUTE_RELATIVE_URI) != null) {
             String relativeUri = attrs.get(ATTRIBUTE_RELATIVE_URI)
             String forwardUri = WebUtils.getForwardURI(requestStateLookupStrategy.webRequest.request)
             int index = forwardUri.lastIndexOf('/')
@@ -148,13 +144,12 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 writer.append forwardUri.substring(0, index + 1)
             }
             writer.append relativeUri
-        }
-        else {
+        } else {
             // prefer a URL attribute
             Map urlAttrs = attrs
             final urlAttribute = attrs.get(ATTRIBUTE_URL)
             if (urlAttribute instanceof Map) {
-                urlAttrs = (Map)urlAttribute
+                urlAttrs = (Map) urlAttribute
             }
             if (!urlAttribute || urlAttribute instanceof Map) {
                 final controllerAttribute = urlAttrs.get(ATTRIBUTE_CONTROLLER)
@@ -174,7 +169,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     else {
                         PersistentEntity persistentEntity = (mappingContext != null) ? mappingContext.getPersistentEntity(resourceAttribute.getClass().getName()) : null
                         boolean hasId = false
-                        if(persistentEntity != null) {
+                        if (persistentEntity != null) {
                             resource = persistentEntity.getDecapitalizedName()
                             hasId = true
                         } else if (DomainClassArtefactHandler.isDomainClass(resourceAttribute.getClass(), true)) {
@@ -185,14 +180,14 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                         } else {
                             resource = resourceAttribute.toString()
                         }
-                        if(!id && hasId) {
+                        if (!id && hasId) {
                             id = getResourceId(resourceAttribute)
                         }
                     }
-                    List tokens = resource.contains('/') ?  resource.tokenize('/') :[resource]
-                    controller = controllerAttribute?:tokens[-1]
-                    if (tokens.size()>1) {
-                        for(t in tokens[0..-2]) {
+                    List tokens = resource.contains('/') ? resource.tokenize('/') : [resource]
+                    controller = controllerAttribute ?: tokens[-1]
+                    if (tokens.size() > 1) {
+                        for (t in tokens[0..-2]) {
                             final key = "${t}Id".toString()
                             final attr = urlAttrs.remove(key)
                             // the params value might not be null
@@ -203,27 +198,23 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                         }
                     }
                     if (!methodAttribute && action) {
-                        httpMethod =  REST_RESOURCE_ACTION_TO_HTTP_METHOD_MAP.get(action.toString())
+                        httpMethod = REST_RESOURCE_ACTION_TO_HTTP_METHOD_MAP.get(action.toString())
                         if (!httpMethod) {
                             httpMethod = HttpMethod.GET.toString()
                         }
-                    }
-                    else if (methodAttribute && !action) {
+                    } else if (methodAttribute && !action) {
                         def method = methodAttribute.toString().toUpperCase()
                         httpMethod = method
                         if (method == 'GET' && id) method = "${method}_ID".toString()
                         action = REST_RESOURCE_HTTP_METHOD_TO_ACTION_MAP[method]
-                    }
-                    else {
+                    } else {
                         httpMethod = methodAttribute == null ? requestStateLookupStrategy.getHttpMethod() ?: UrlMapping.ANY_HTTP_METHOD : methodAttribute.toString()
                     }
 
-                }
-                else {
+                } else {
                     controller = controllerAttribute == null ? requestStateLookupStrategy.getControllerName() : controllerAttribute.toString()
                     httpMethod = methodAttribute == null ? requestStateLookupStrategy.getHttpMethod() ?: UrlMapping.ANY_HTTP_METHOD : methodAttribute.toString()
                 }
-
 
                 String convertedControllerName = grailsUrlConverter.toUrlElement(controller)
 
@@ -238,7 +229,6 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 }
 
                 String frag = urlAttrs.get(ATTRIBUTE_FRAGMENT)?.toString()
-
 
                 def mappingName = urlAttrs.get(ATTRIBUTE_MAPPING)
                 if (mappingName != null) {
@@ -255,12 +245,12 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                         namespace = requestStateLookupStrategy.controllerNamespace
                     }
                 }
-                UrlCreator mapping = urlMappingsHolder.getReverseMappingNoDefault(controller,action,namespace,pluginName,httpMethod,params)
+                UrlCreator mapping = urlMappingsHolder.getReverseMappingNoDefault(controller, action, namespace, pluginName, httpMethod, params)
                 if (mapping == null && isDefaultAction) {
-                    mapping = urlMappingsHolder.getReverseMappingNoDefault(controller,null,namespace,pluginName,httpMethod,params)
+                    mapping = urlMappingsHolder.getReverseMappingNoDefault(controller, null, namespace, pluginName, httpMethod, params)
                 }
                 if (mapping == null) {
-                    mapping = urlMappingsHolder.getReverseMapping(controller,action,namespace,pluginName,httpMethod,params)
+                    mapping = urlMappingsHolder.getReverseMapping(controller, action, namespace, pluginName, httpMethod, params)
                 }
 
                 boolean absolute = isAbsolute(attrs)
@@ -272,13 +262,11 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     if (attrs.get(ATTRIBUTE_BASE) || cp == null) {
                         attrs.put(ATTRIBUTE_ABSOLUTE, true)
                         writer.append handleAbsolute(attrs)
-                    }
-                    else if(includeContext) {
+                    } else if (includeContext) {
                         writer.append cp
                     }
                     writer.append url
-                }
-                else {
+                } else {
                     url = mapping.createRelativeURL(convertedControllerName, convertedActionName, namespace, pluginName, params, encoding, frag)
                     writer.append handleAbsolute(attrs)
                     writer.append url
@@ -325,14 +313,15 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     if (str) {
                         absolute = Boolean.parseBoolean(str)
                     }
-                } catch(e){}
+                } catch (e) {
+                }
             }
         }
         return absolute
     }
 
     /**
-     * {@inheritDoc }
+     * {@inheritDoc}
      */
     String resource(Map attrs) {
         def absolutePath = handleAbsolute(attrs)
@@ -341,9 +330,8 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
         if (absolutePath == null) {
             final cp = contextPathAttribute == null ? getContextPath() : contextPathAttribute
             if (cp == null) {
-                absolutePath = handleAbsolute(absolute:true)
-            }
-            else {
+                absolutePath = handleAbsolute(absolute: true)
+            } else {
                 absolutePath = cp
             }
         }
@@ -352,8 +340,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
         def dir = attrs.dir?.toString()
         if (attrs.plugin) {
             url.append pluginManager?.getPluginPath(attrs.plugin?.toString()) ?: ''
-        }
-        else {
+        } else {
             if (contextPathAttribute == null) {
                 def pluginContextPath = attrs.pluginContextPath?.toString()
                 if (pluginContextPath != null && dir != pluginContextPath) {
@@ -362,9 +349,8 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
             }
         }
 
-
         def slash = '/'
-        if(resourcePath != null) {
+        if (resourcePath != null) {
             url.append(resourcePath)
         }
         if (dir) {
@@ -427,7 +413,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
 
             u = webRequest?.baseUrl
             if (!u && !Environment.isWarDeployed()) {
-                u = "http://localhost:${System.getProperty('server.port') ?: '8080'}${contextPath ?: '' }"
+                u = "http://localhost:${System.getProperty('server.port') ?: '8080'}${contextPath ?: ''}"
             }
         }
         log.trace("Resolved base server URL: $u")

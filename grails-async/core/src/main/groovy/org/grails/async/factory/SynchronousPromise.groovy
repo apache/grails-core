@@ -58,8 +58,12 @@ class SynchronousPromise<T> implements Promise<T> {
     T get() throws Throwable {
         if (!executed) {
             executed = true
-            try { value = callable.call() }
-            catch (e) { value = e }
+            try {
+                value = callable.call()
+            }
+            catch (e) {
+                value = e
+            }
         }
         if (value instanceof Throwable) {
             throw value
@@ -78,14 +82,21 @@ class SynchronousPromise<T> implements Promise<T> {
     }
 
     Promise<T> onComplete(Closure<T> callable) {
-        try { callable.call(get()) }
-        catch (Throwable ignored) {}
+        try {
+            callable.call(get())
+        }
+        catch (Throwable ignored) {
+        }
         return this
     }
 
     Promise<T> onError(Closure<T> callable) {
-        try { get() }
-        catch (Throwable e) { callable.call(e) }
+        try {
+            get()
+        }
+        catch (Throwable e) {
+            callable.call(e)
+        }
         return this
     }
 

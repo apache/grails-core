@@ -30,6 +30,7 @@ import java.io.File;
  * @author Graeme Rocher
  */
 public interface ProjectContext {
+
     /**
      * @return The {@link grails.build.logging.GrailsConsole} instance
      */
@@ -58,7 +59,7 @@ public interface ProjectContext {
      * Obtains a value of the given type from the codegen configuration
      *
      * @param requiredType The required return type
-     * @param path The path to value
+     * @param path         The path to value
      * @return The value or null if not set
      */
     <T> T navigateConfigForType(Class<T> requiredType, String... path);

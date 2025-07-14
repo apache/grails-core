@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.query.api;
 
 import org.grails.datastore.mapping.core.Session;
@@ -31,7 +30,7 @@ public interface QueryAliasAwareSession extends Session {
     /**
      * Creates a query instance for the give type
      *
-     * @param type The type
+     * @param type  The type
      * @param alias The alias to use in the query
      * @return The query
      */

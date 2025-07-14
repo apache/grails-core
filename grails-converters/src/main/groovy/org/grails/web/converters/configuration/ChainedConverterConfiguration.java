@@ -18,7 +18,12 @@
  */
 package org.grails.web.converters.configuration;
 
+import grails.core.support.proxy.DefaultProxyHandler;
+import grails.core.support.proxy.ProxyHandler;
 import grails.util.Environment;
+import org.grails.web.converters.Converter;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,20 +31,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import grails.core.support.proxy.DefaultProxyHandler;
-import grails.core.support.proxy.ProxyHandler;
-
-import org.grails.web.converters.Converter;
-import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
-
 /**
  * An immutable ConverterConfiguration which chains the lookup calls for ObjectMarshallers
  * for performance reasons.
  *
  * @author Siegfried Puchbauer
  * @author Graeme Rocher
- *
  * @since 1.1
  */
 @SuppressWarnings("rawtypes")
@@ -54,10 +51,11 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
     private final boolean cacheObjectMarshallerByClass;
     private Map<Integer, ObjectMarshaller<C>> objectMarshallerForClassCache;
     private final boolean developmentMode = Environment.isDevelopmentMode();
-    private final ObjectMarshaller<C> NULL_HOLDER=new ObjectMarshaller<C>() {
+    private final ObjectMarshaller<C> NULL_HOLDER = new ObjectMarshaller<C>() {
         public boolean supports(Object object) {
             return false;
         }
+
         public void marshalObject(Object object, C converter) throws ConverterException {
         }
     };
@@ -123,6 +121,14 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
         return marshallerList;
     }
 
+    public ProxyHandler getProxyHandler() {
+        return proxyHandler;
+    }
+
+    public boolean isCacheObjectMarshallerByClass() {
+        return cacheObjectMarshallerByClass;
+    }
+
     @SuppressWarnings("hiding")
     public class ChainedObjectMarshaller<C extends Converter> implements ObjectMarshaller<C> {
 
@@ -149,13 +155,5 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
         public void marshalObject(Object object, C converter) throws ConverterException {
             om.marshalObject(object, converter);
         }
-    }
-
-    public ProxyHandler getProxyHandler() {
-        return proxyHandler;
-    }
-
-    public boolean isCacheObjectMarshallerByClass() {
-        return cacheObjectMarshallerByClass;
     }
 }

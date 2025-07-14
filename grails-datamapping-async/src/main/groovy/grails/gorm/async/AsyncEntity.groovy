@@ -32,6 +32,7 @@ import org.grails.datastore.gorm.async.GormAsyncStaticApi
  */
 @CompileStatic
 trait AsyncEntity<D> extends GormEntity<D> {
+
     /**
      * @return The async version of the GORM static API
      */

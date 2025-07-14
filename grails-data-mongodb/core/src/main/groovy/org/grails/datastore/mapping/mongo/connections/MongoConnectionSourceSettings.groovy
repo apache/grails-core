@@ -32,7 +32,7 @@ import groovy.transform.builder.SimpleStrategy
  */
 @AutoClone
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
-class MongoConnectionSourceSettings extends AbstractMongoConnectionSourceSettings  {
+class MongoConnectionSourceSettings extends AbstractMongoConnectionSourceSettings {
 
     /**
      * The MongoClientOptions object

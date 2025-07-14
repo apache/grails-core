@@ -20,11 +20,10 @@ package org.grails.datastore.gorm.proxy;
 
 import groovy.lang.DelegatingMetaClass;
 import groovy.lang.MetaClass;
-
-import java.io.Serializable;
-
 import org.grails.datastore.mapping.core.Session;
 import org.springframework.dao.DataIntegrityViolationException;
+
+import java.io.Serializable;
 
 /**
  * Per-instance metaclass to use for proxied GORM domain objects. It auto-retrieves the associated entity when
@@ -39,9 +38,11 @@ import org.springframework.dao.DataIntegrityViolationException;
  *     <li>target/getTarget() - resolve performed</li>
  *     <li>initialize() - resolve performed</li>
  * </ul>
+ *
  * @author Tom Widmer
  */
 public class ProxyInstanceMetaClass extends DelegatingMetaClass {
+
     /**
      * Session to fetch from, if we need to.
      */
@@ -63,6 +64,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
 
     /**
      * Load the target from the DB.
+     *
      * @return target.
      */
     public Object getProxyTarget() {
@@ -80,7 +82,8 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
 
     /**
      * Handle method calls on our proxy.
-     * @param o The proxy.
+     *
+     * @param o          The proxy.
      * @param methodName
      * @param arguments
      * @return
@@ -101,7 +104,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
         } else if (methodName.equals("getClass") || methodName.equals("getDomainClass")) {
             // return correct class only if loaded, otherwise hope for the best
             resolveTarget = isProxyInitiated();
-        } else if (methodName.equals("setMetaClass") && arguments.length == 1 && (arguments[0]==null || arguments[0] instanceof MetaClass)) {
+        } else if (methodName.equals("setMetaClass") && arguments.length == 1 && (arguments[0] == null || arguments[0] instanceof MetaClass)) {
             resolveTarget = false;
         }
         return delegate.invokeMethod(resolveTarget ? getProxyTarget() : o, methodName, arguments);
@@ -138,9 +141,9 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
     @Override
     public void setProperty(Object object, String property, Object newValue) {
         boolean resolveTarget = true;
-        if(property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
+        if (property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
             resolveTarget = false;
-        }        
+        }
         delegate.setProperty(resolveTarget ? getProxyTarget() : object, property, newValue);
     }
 

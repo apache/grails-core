@@ -36,12 +36,13 @@ import java.util.Set;
  * @author Lari Hotari
  */
 public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableBinding {
+
     private static Log log = LogFactory.getLog(WebRequestTemplateVariableBinding.class);
+    private static Map<String, LazyRequestBasedValue> lazyRequestBasedValuesMap = new HashMap<String, LazyRequestBasedValue>();
     private GrailsWebRequest webRequest;
     private boolean developmentMode = Environment.isDevelopmentMode();
-    private Set<String> requestAttributeVariables=new HashSet<String>();
+    private Set<String> requestAttributeVariables = new HashSet<String>();
 
-    private static Map<String, LazyRequestBasedValue> lazyRequestBasedValuesMap = new HashMap<String, LazyRequestBasedValue>();
     static {
         Map<String, LazyRequestBasedValue> m = lazyRequestBasedValuesMap;
         m.put("webRequest", new LazyRequestBasedValue() {
@@ -112,13 +113,13 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
 
     public Binding findBindingForVariable(String name) {
         Binding binding = super.findBindingForVariable(name);
-        if(binding == null) {
-            if(webRequest.getCurrentRequest().getAttribute(name) != null) {
+        if (binding == null) {
+            if (webRequest.getCurrentRequest().getAttribute(name) != null) {
                 requestAttributeVariables.add(name);
                 binding = this;
             }
         }
-        if(binding == null && lazyRequestBasedValuesMap.containsKey(name)) {
+        if (binding == null && lazyRequestBasedValuesMap.containsKey(name)) {
             binding = this;
         }
         return binding;
@@ -162,10 +163,6 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
         return null;
     }
 
-    private static interface LazyRequestBasedValue {
-        public Object evaluate(GrailsWebRequest webRequest);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public Set<String> getVariableNames() {
@@ -176,5 +173,10 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
         Set<String> variableNames = new HashSet<String>(lazyRequestBasedValuesMap.keySet());
         variableNames.addAll(getVariablesMap().keySet());
         return variableNames;
+    }
+
+    private interface LazyRequestBasedValue {
+
+        Object evaluate(GrailsWebRequest webRequest);
     }
 }

@@ -25,6 +25,7 @@ package grails.web;
  * @since 2.0
  */
 public interface UrlConverter {
+
     String BEAN_NAME = "grailsUrlConverter";
 
     String toUrlElement(String propertyOrClassName);

@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class EmptyParameters implements Parameters {
+
     @Override
     Set<String> keySet() {
         return Collections.emptySet()

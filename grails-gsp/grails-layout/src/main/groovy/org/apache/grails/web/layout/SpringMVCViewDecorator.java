@@ -16,23 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.apache.grails.web.layout;
-
-import groovy.text.Template;
-
-import java.util.Collections;
-import java.util.Map;
-
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.view.AbstractGrailsView;
-import org.grails.web.util.WebUtils;
-import org.springframework.web.servlet.View;
-import org.springframework.web.servlet.view.AbstractUrlBasedView;
 
 import com.opensymphony.module.sitemesh.HTMLPage;
 import com.opensymphony.module.sitemesh.RequestConstants;
@@ -40,6 +24,18 @@ import com.opensymphony.module.sitemesh.mapper.DefaultDecorator;
 import com.opensymphony.sitemesh.Content;
 import com.opensymphony.sitemesh.SiteMeshContext;
 import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
+import groovy.text.Template;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.grails.web.servlet.view.AbstractGrailsView;
+import org.grails.web.util.GrailsApplicationAttributes;
+import org.grails.web.util.WebUtils;
+import org.springframework.web.servlet.View;
+import org.springframework.web.servlet.view.AbstractUrlBasedView;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Encapsulates the logic for rendering a layout.
@@ -48,10 +44,11 @@ import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
  * @since 2.0
  */
 public class SpringMVCViewDecorator extends DefaultDecorator implements com.opensymphony.sitemesh.Decorator {
+
     private View view;
 
     public SpringMVCViewDecorator(String name, View view) {
-        super(name, (view instanceof AbstractUrlBasedView) ? ((AbstractUrlBasedView)view).getUrl() : view.toString(), Collections.emptyMap());
+        super(name, (view instanceof AbstractUrlBasedView) ? ((AbstractUrlBasedView) view).getUrl() : view.toString(), Collections.emptyMap());
         this.view = view;
     }
 
@@ -79,8 +76,8 @@ public class SpringMVCViewDecorator extends DefaultDecorator implements com.open
                 } catch (Exception e) {
                     cleanRequestAttributes(request);
                     String message = "Error applying layout : " + getName();
-                    if(view instanceof AbstractGrailsView) {
-                        ((AbstractGrailsView)view).rethrowRenderException(e, message);
+                    if (view instanceof AbstractGrailsView) {
+                        ((AbstractGrailsView) view).rethrowRenderException(e, message);
                     } else {
                         throw new RuntimeException(message, e);
                     }
@@ -106,8 +103,8 @@ public class SpringMVCViewDecorator extends DefaultDecorator implements com.open
     }
 
     public Template getTemplate() {
-        if(view instanceof AbstractGrailsView) {
-            return ((AbstractGrailsView)view).getTemplate();
+        if (view instanceof AbstractGrailsView) {
+            return ((AbstractGrailsView) view).getTemplate();
         }
         return null;
     }

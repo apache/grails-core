@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.query;
 
 import org.grails.datastore.mapping.core.Datastore;
@@ -36,6 +35,7 @@ import java.util.List;
  * @since 6.0
  */
 public class HibernateHqlQuery extends Query {
+
     private final org.hibernate.query.Query query;
 
     public HibernateHqlQuery(Session session, PersistentEntity entity, org.hibernate.query.Query query) {
@@ -55,13 +55,12 @@ public class HibernateHqlQuery extends Query {
         PreQueryEvent preQueryEvent = new PreQueryEvent(datastore, this);
         applicationEventPublisher.publishEvent(preQueryEvent);
 
-        if(uniqueResult) {
+        if (uniqueResult) {
             query.setMaxResults(1);
             List results = query.list();
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, this, results));
             return results;
-        }
-        else {
+        } else {
 
             List results = query.list();
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, this, results));

@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.grails.datastore.mapping.transactions.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractAttributeStoringSession implements Session {
 
@@ -113,9 +112,8 @@ public abstract class AbstractAttributeStoringSession implements Session {
         try {
             clear();
             attributes.clear();
-        }
-        finally {
-            SessionHolder sessionHolder = (SessionHolder)TransactionSynchronizationManager.getResource(getDatastore());
+        } finally {
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(getDatastore());
             if (sessionHolder != null) {
                 sessionHolder.removeSession(this);
                 if (sessionHolder.isEmpty()) {

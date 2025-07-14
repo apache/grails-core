@@ -19,36 +19,30 @@
 package org.grails.buffer;
 
 import groovy.lang.Writable;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.Writer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.objenesis.ObjenesisStd;
 import org.springframework.objenesis.instantiator.ObjectInstantiator;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Writer;
+
 public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
+
     private static final Logger LOG = LoggerFactory.getLogger(GrailsRoutablePrintWriter.class);
+    private static ObjectInstantiator instantiator = null;
     private DestinationFactory factory;
     private boolean blockFlush = true;
     private boolean blockClose = true;
     private boolean destinationActivated = false;
-    private static ObjectInstantiator instantiator=null;
+
     static {
         try {
             instantiator = new ObjenesisStd(false).getInstantiatorOf(GrailsRoutablePrintWriter.class);
         } catch (Exception e) {
             LOG.debug("Couldn't get direct performance optimized instantiator for GrailsRoutablePrintWriter. Using default instantiation.", e);
         }
-    }
-
-    /**
-     * Factory to lazily instantiate the destination.
-     */
-    public static interface DestinationFactory {
-        Writer activateDestination() throws IOException;
     }
 
     public GrailsRoutablePrintWriter(DestinationFactory factory) {
@@ -58,7 +52,7 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
 
     public static GrailsRoutablePrintWriter newInstance(DestinationFactory factory) {
         if (instantiator != null) {
-            GrailsRoutablePrintWriter instance = (GrailsRoutablePrintWriter)instantiator.newInstance();
+            GrailsRoutablePrintWriter instance = (GrailsRoutablePrintWriter) instantiator.newInstance();
             instance.out = new NullWriter();
             instance.factory = factory;
             instance.blockFlush = true;
@@ -73,8 +67,7 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
         if (!destinationActivated && factory != null) {
             try {
                 super.setTarget(factory.activateDestination());
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 setError();
             }
             destinationActivated = true;
@@ -116,7 +109,7 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
     }
 
     @Override
-    public void println(char x[]) {
+    public void println(char[] x) {
         activateDestination();
         super.println(x);
     }
@@ -176,7 +169,7 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
     }
 
     @Override
-    public void print(char s[]) {
+    public void print(char[] s) {
         activateDestination();
         super.print(s);
     }
@@ -230,13 +223,13 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
     }
 
     @Override
-    public void write(char buf[]) {
+    public void write(char[] buf) {
         activateDestination();
         super.write(buf);
     }
 
     @Override
-    public void write(char buf[], int off, int len) {
+    public void write(char[] buf, int off, int len) {
         activateDestination();
         super.write(buf, off, len);
     }
@@ -276,31 +269,6 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
     public PrintWriter append(CharSequence csq) {
         activateDestination();
         return super.append(csq);
-    }
-
-    /**
-     * Just to keep super constructor for PrintWriter happy - it's never
-     * actually used.
-     */
-    private static class NullWriter extends Writer {
-        protected NullWriter() {
-            super();
-        }
-
-        @Override
-        public void write(char cbuf[], int off, int len) throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void flush() throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void close() throws IOException {
-            throw new UnsupportedOperationException();
-        }
     }
 
     public boolean isBlockFlush() {
@@ -356,5 +324,39 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
         if (!this.destinationActivated) {
             super.setTarget(new NullWriter());
         }
+    }
+
+    /**
+     * Just to keep super constructor for PrintWriter happy - it's never
+     * actually used.
+     */
+    private static class NullWriter extends Writer {
+
+        protected NullWriter() {
+            super();
+        }
+
+        @Override
+        public void write(char[] cbuf, int off, int len) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void flush() throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close() throws IOException {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * Factory to lazily instantiate the destination.
+     */
+    public interface DestinationFactory {
+
+        Writer activateDestination() throws IOException;
     }
 }

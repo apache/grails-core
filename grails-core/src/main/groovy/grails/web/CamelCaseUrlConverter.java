@@ -21,7 +21,6 @@ package grails.web;
 import grails.util.GrailsNameUtils;
 import org.springframework.util.StringUtils;
 
-
 /**
  * URL converter that allows for camel case URLs
  *

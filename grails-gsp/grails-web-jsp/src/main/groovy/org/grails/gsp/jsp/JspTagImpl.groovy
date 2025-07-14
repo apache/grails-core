@@ -19,15 +19,22 @@
 package org.grails.gsp.jsp
 
 import groovy.transform.CompileStatic
+import jakarta.servlet.jsp.JspContext
+import jakarta.servlet.jsp.JspWriter
+import jakarta.servlet.jsp.tagext.BodyContent
+import jakarta.servlet.jsp.tagext.BodyTag
+import jakarta.servlet.jsp.tagext.DynamicAttributes
+import jakarta.servlet.jsp.tagext.IterationTag
+import jakarta.servlet.jsp.tagext.JspFragment
+import jakarta.servlet.jsp.tagext.SimpleTag
+import jakarta.servlet.jsp.tagext.Tag
+import jakarta.servlet.jsp.tagext.TagAdapter
+import jakarta.servlet.jsp.tagext.TryCatchFinally
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.grails.buffer.FastStringWriter
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.util.ClassUtils
-
-import jakarta.servlet.jsp.JspContext
-import jakarta.servlet.jsp.JspWriter
-import jakarta.servlet.jsp.tagext.*
 
 /**
  * @author Graeme Rocher
@@ -35,6 +42,7 @@ import jakarta.servlet.jsp.tagext.*
  */
 @CompileStatic
 class JspTagImpl implements JspTag {
+
     static final Log LOG = LogFactory.getLog(JspTagImpl)
     ClassLoader classLoader
     String tagClassName
@@ -47,7 +55,7 @@ class JspTagImpl implements JspTag {
         this.tagClassName = tagClassName
         this.classLoader = classLoader
     }
-    
+
     JspTagImpl(Class tagClass) {
         this.tagClass = tagClass
         this.tagClassName = tagClass.name
@@ -55,13 +63,13 @@ class JspTagImpl implements JspTag {
         initializeTagClassTypes()
     }
 
-    void doTag(Writer targetWriter, Map<String,Object> attributes) {
-        doTag targetWriter,attributes, null
+    void doTag(Writer targetWriter, Map<String, Object> attributes) {
+        doTag targetWriter, attributes, null
     }
-    
+
     protected void checkInitialized() {
-        if(tagClass==null) {
-            synchronized(this) {
+        if (tagClass == null) {
+            synchronized (this) {
                 tagClass = ClassUtils.forName(tagClassName, classLoader)
                 initializeTagClassTypes()
             }
@@ -76,15 +84,15 @@ class JspTagImpl implements JspTag {
 
     protected jakarta.servlet.jsp.tagext.JspTag createTagInstance() {
         checkInitialized()
-        (jakarta.servlet.jsp.tagext.JspTag)tagClass.newInstance()
+        (jakarta.servlet.jsp.tagext.JspTag) tagClass.newInstance()
     }
 
-    void doTag(Writer targetWriter, Map<String,Object> attributes, Closure<?> body) {
+    void doTag(Writer targetWriter, Map<String, Object> attributes, Closure<?> body) {
         jakarta.servlet.jsp.tagext.JspTag tag = createTagInstance()
         GroovyPagesPageContext pageContext = PageContextFactory.getCurrent()
 
         assignParentTag(pageContext, tag)
-        
+
         assignPageContext(pageContext, tag)
 
         applyAttributes(tag, attributes)
@@ -92,9 +100,8 @@ class JspTagImpl implements JspTag {
         if (tag instanceof SimpleTag) {
             def simpleTag = (SimpleTag) tag
             handleSimpleTag(simpleTag, attributes, pageContext, targetWriter, body)
-        }
-        else if (tag instanceof Tag) {
-            Tag theTag = (Tag)tag
+        } else if (tag instanceof Tag) {
+            Tag theTag = (Tag) tag
             withJspWriterDelegate pageContext, targetWriter, {
 
                 try {
@@ -106,16 +113,16 @@ class JspTagImpl implements JspTag {
                         if (state == BodyTag.EVAL_BODY_BUFFERED && isBody()) {
                             bodyContent = pageContext.pushBody()
                             out = bodyContent
-                            BodyTag bodyTag = (BodyTag)theTag
+                            BodyTag bodyTag = (BodyTag) theTag
                             bodyTag.bodyContent = bodyContent
                             bodyTag.doInitBody()
                         }
                         out << body.call()
                         if (isIterationTag()) {
-                            state = ((IterationTag)theTag).doAfterBody()
+                            state = ((IterationTag) theTag).doAfterBody()
                             while (state != Tag.SKIP_BODY) {
                                 out << body.call()
-                                state = ((IterationTag)theTag).doAfterBody()
+                                state = ((IterationTag) theTag).doAfterBody()
                             }
                         }
                     }
@@ -129,41 +136,39 @@ class JspTagImpl implements JspTag {
                 }
                 catch (Throwable t) {
                     if (isTryCatchFinally() && theTag) {
-                        ((TryCatchFinally)theTag).doCatch(t)
-                    }
-                    else {
+                        ((TryCatchFinally) theTag).doCatch(t)
+                    } else {
                         throw t
                     }
                 }
                 finally {
                     if (isTryCatchFinally() && theTag) {
-                        ((TryCatchFinally)theTag).doFinally()
+                        ((TryCatchFinally) theTag).doFinally()
                     }
                     pageContext.popTopTag()
                     theTag?.release()
                 }
             }
         }
-                }
+    }
 
     private assignPageContext(GroovyPagesPageContext pageContext, jakarta.servlet.jsp.tagext.JspTag tag) {
         if (tag instanceof SimpleTag) {
             tag.jspContext = pageContext
-            }
+        }
         if (tag instanceof Tag) {
             tag.pageContext = pageContext
         }
     }
 
-    private applyAttributes(jakarta.servlet.jsp.tagext.JspTag tag, Map<String,Object> attributes) {
+    private applyAttributes(jakarta.servlet.jsp.tagext.JspTag tag, Map<String, Object> attributes) {
         BeanWrapperImpl tagBean = new BeanWrapperImpl(tag)
 
         attributes?.each { String key, Object value ->
             if (key && tagBean.isWritableProperty(key)) {
                 tagBean.setPropertyValue key, value
-            }
-            else if(key && tag instanceof DynamicAttributes){
-                ((DynamicAttributes)tag).setDynamicAttribute(null,key,value);
+            } else if (key && tag instanceof DynamicAttributes) {
+                ((DynamicAttributes) tag).setDynamicAttribute(null, key, value);
             }
         }
     }
@@ -173,17 +178,15 @@ class JspTagImpl implements JspTag {
         if (parentTag) {
             if (tag instanceof Tag && parentTag instanceof SimpleTag) {
                 tag.parent = new TagAdapter(parentTag)
-            }
-            else if (tag instanceof Tag) {
-                tag.parent = (Tag)parentTag
-            }
-            else if (tag instanceof SimpleTag) {
-                tag.parent = (Tag)parentTag
+            } else if (tag instanceof Tag) {
+                tag.parent = (Tag) parentTag
+            } else if (tag instanceof SimpleTag) {
+                tag.parent = (Tag) parentTag
             }
         }
     }
 
-    void withJspWriterDelegate(GroovyPagesPageContext pageContext,Writer delegate, Closure callable) {
+    void withJspWriterDelegate(GroovyPagesPageContext pageContext, Writer delegate, Closure callable) {
         pageContext.pushWriter new JspWriterDelegate(delegate)
         try {
             callable()
@@ -193,8 +196,8 @@ class JspTagImpl implements JspTag {
         }
     }
 
-    protected handleSimpleTag(SimpleTag tag, Map attributes,GroovyPagesPageContext pageContext,
-            Writer targetWriter, Closure body) {
+    protected handleSimpleTag(SimpleTag tag, Map attributes, GroovyPagesPageContext pageContext,
+                              Writer targetWriter, Closure body) {
 
         withJspWriterDelegate pageContext, targetWriter, {
             if (body) {

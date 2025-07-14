@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.future
 
 import grails.async.Promise
@@ -110,8 +109,7 @@ class FutureTaskPromise<T> extends FutureTask<T> implements Promise<T> {
                 } catch (Throwable ignored) {
                     return this
                 }
-            }
-            else {
+            } else {
                 Promise<T> newPromise = new FutureTaskChildPromise(promiseFactory, this as Promise<T>, callable)
                 successCallbacks.add(newPromise)
                 return newPromise
@@ -129,8 +127,7 @@ class FutureTaskPromise<T> extends FutureTask<T> implements Promise<T> {
                 } catch (Throwable e) {
                     return new BoundPromise(callable.call(e))
                 }
-            }
-            else {
+            } else {
                 Promise<T> newPromise = new FutureTaskChildPromise(promiseFactory, this as Promise<T>, callable)
                 failureCallbacks.add(newPromise)
                 return newPromise

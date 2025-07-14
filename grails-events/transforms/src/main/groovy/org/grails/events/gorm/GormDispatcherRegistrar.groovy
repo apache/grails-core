@@ -19,7 +19,7 @@
 
 package org.grails.events.gorm
 
-import grails.events.annotation.Subscriber
+
 import grails.events.bus.EventBus
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
@@ -41,8 +41,10 @@ import org.springframework.context.ApplicationEventPublisher
 @CompileStatic
 class GormDispatcherRegistrar implements FactoryBean<GormDispatcherRegistrar>, InitializingBean {
 
-    @Autowired(required = false) Datastore[] datastores
-    @Autowired(required = false) GormAnnotatedSubscriber[] subscribers
+    @Autowired(required = false)
+    Datastore[] datastores
+    @Autowired(required = false)
+    GormAnnotatedSubscriber[] subscribers
 
     protected final EventBus eventBus
 
@@ -67,23 +69,22 @@ class GormDispatcherRegistrar implements FactoryBean<GormDispatcherRegistrar>, I
 
     @Override
     void afterPropertiesSet() throws Exception {
-        if(datastores && subscribers && eventBus != null) {
+        if (datastores && subscribers && eventBus != null) {
             Set<Class<? extends AbstractPersistenceEvent>> subscribedEvents = []
             List<GormAnnotatedListener> listeners = []
-            for(sub in subscribers) {
-                if(sub instanceof GormAnnotatedListener) {
-                    listeners.add((GormAnnotatedListener)sub)
-                }
-                else {
+            for (sub in subscribers) {
+                if (sub instanceof GormAnnotatedListener) {
+                    listeners.add((GormAnnotatedListener) sub)
+                } else {
                     subscribedEvents.addAll(sub.getSubscribedEvents())
                 }
             }
-            for(Datastore datastore in datastores) {
+            for (Datastore datastore in datastores) {
                 ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher()
-                if(applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
+                if (applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
 
-                    GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners )
-                    ((ConfigurableApplicationEventPublisher)applicationEventPublisher).addApplicationListener(
+                    GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners)
+                    ((ConfigurableApplicationEventPublisher) applicationEventPublisher).addApplicationListener(
                             eventDispatcher
                     )
                 }

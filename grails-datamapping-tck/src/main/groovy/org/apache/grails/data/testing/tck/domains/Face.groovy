@@ -19,11 +19,11 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-
 import grails.persistence.Entity
 
 @Entity
 class Face implements Serializable {
+
     Long id
     Long version
     String name

@@ -28,6 +28,7 @@ public interface ProxyHandler {
 
     /**
      * Returns true if the specified object is a proxy.
+     *
      * @param o The object in question
      * @return true if it is a proxy
      */
@@ -51,13 +52,15 @@ public interface ProxyHandler {
 
     /**
      * Initializes an existing uninitialized proxy instance.
+     *
      * @param o The proxy instance
      */
     void initialize(Object o);
 
     /**
      * Tests whether an association of the given object has been initialized.
-     * @param obj The object to check
+     *
+     * @param obj             The object to check
      * @param associationName The association
      * @return true if has been init
      */

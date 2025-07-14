@@ -18,12 +18,12 @@
  */
 package org.grails.datastore.mapping.query;
 
-import java.util.List;
-
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query.Criterion;
+
+import java.util.List;
 
 /**
  * Used to capture the metadata for a query on an associated object.

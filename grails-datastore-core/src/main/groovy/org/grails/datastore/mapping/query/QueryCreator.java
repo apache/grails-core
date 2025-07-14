@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.query;
 
 /**
@@ -26,6 +25,7 @@ package org.grails.datastore.mapping.query;
  * @since 6.0
  */
 public interface QueryCreator {
+
     /**
      * Creates a query instance for the give type
      *

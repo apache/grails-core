@@ -53,7 +53,6 @@ class FooGrailsPlugin {
             },Phases.CONVERSION)
             cu.compile(Phases.CONVERSION)
 
-
         expect:"the file doesn't exist"
             !pluginXml.exists()
 

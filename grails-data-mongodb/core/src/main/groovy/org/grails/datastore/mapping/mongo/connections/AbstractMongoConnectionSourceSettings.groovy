@@ -105,10 +105,9 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      * @return Obtain the final URL whether from the connection string or the host/port setting
      */
     ConnectionString getUrl() {
-        if(connectionString != null) {
+        if (connectionString != null) {
             return connectionString
-        }
-        else {
+        } else {
             String uAndP = username && password ? "$username:$password@" : ''
             String portStr = port ? ":$port" : ''
             return new ConnectionString("mongodb://${uAndP}${host}${portStr}/$database")
@@ -126,10 +125,9 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      * @return Obtain the database name
      */
     String getDatabase() {
-        if(connectionString != null) {
+        if (connectionString != null) {
             return connectionString.database ?: databaseName
-        }
-        else {
+        } else {
             return databaseName
         }
     }

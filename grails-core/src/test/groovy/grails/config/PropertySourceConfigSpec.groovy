@@ -58,7 +58,6 @@ class PropertySourceConfigSpec extends Specification {
         !(config.getProperty("grails.mongodb.connections", List.class).get(0) instanceof NavigableMap)
     }
 
-
     void "should merge sub-documents in yaml file to single config"() {
 
         given:

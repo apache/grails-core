@@ -35,7 +35,7 @@ public abstract class IncludeExcludePropertyMarshaller<T extends Converter> impl
     /**
      * Override for custom exclude logic
      *
-     * @param object The object
+     * @param object   The object
      * @param property The property
      * @return True if it is excluded
      */
@@ -46,7 +46,7 @@ public abstract class IncludeExcludePropertyMarshaller<T extends Converter> impl
     /**
      * Override for custom include logic
      *
-     * @param object The object
+     * @param object   The object
      * @param property The property
      * @return True if it is included
      */

@@ -36,7 +36,7 @@ public interface GroovyPagesUriService {
      * Obtains a template name of the given controller name and template name
      *
      * @param controllerName The controller name
-     * @param templateName The template name
+     * @param templateName   The template name
      * @return The template URI
      */
     String getTemplateURI(String controllerName, String templateName);
@@ -63,7 +63,7 @@ public interface GroovyPagesUriService {
      * Obtains a view name for the given controller name and template name
      *
      * @param controllerName The controller name
-     * @param viewName The view name
+     * @param viewName       The view name
      * @return The view URI
      */
     String getViewURI(String controllerName, String viewName);

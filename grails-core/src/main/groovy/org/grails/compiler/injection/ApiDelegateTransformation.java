@@ -20,7 +20,11 @@ package org.grails.compiler.injection;
 
 import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.GroovyBugError;
-import org.codehaus.groovy.ast.*;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -41,6 +45,7 @@ import java.util.Map;
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class ApiDelegateTransformation implements ASTTransformation, TransformWithPriority {
+
     @Override
     public int priority() {
         return GroovyTransformOrder.API_DELEGATE_ORDER;
@@ -67,11 +72,11 @@ public class ApiDelegateTransformation implements ASTTransformation, TransformWi
             GrailsASTUtils.addDelegateInstanceMethods(supportedType, owner, type, new VariableExpression(fieldNode.getName()), resolveGenericsPlaceHolders(supportedType), isNoNullCheck(), isUseCompileStatic());
         }
     }
-    
+
     protected boolean isNoNullCheck() {
         return true;
     }
-    
+
     protected boolean isUseCompileStatic() {
         return true;
     }

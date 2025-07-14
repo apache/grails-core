@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Record {
+
     Long id
     String name
     Date dateCreated

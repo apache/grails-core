@@ -75,11 +75,11 @@ trait DataBinder {
 
     private List convertToListIfCharSequence(value) {
         List result
-        if(value instanceof CharSequence) {
+        if (value instanceof CharSequence) {
             result = []
             result << (value instanceof String ? value : value.toString())
-        } else if(value instanceof List) {
-            result = (List)value
+        } else if (value instanceof List) {
+            result = (List) value
         }
         result
     }

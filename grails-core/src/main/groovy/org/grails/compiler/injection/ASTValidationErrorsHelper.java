@@ -21,9 +21,27 @@ package org.grails.compiler.injection;
 import grails.compiler.ast.GrailsArtefactClassInjector;
 import grails.validation.ValidationErrors;
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils;
-import org.codehaus.groovy.ast.*;
-import org.codehaus.groovy.ast.expr.*;
-import org.codehaus.groovy.ast.stmt.*;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
+import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.BooleanExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.EmptyExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.TupleExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
+import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.IfStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
 import org.springframework.validation.Errors;
@@ -34,6 +52,7 @@ import java.lang.reflect.Modifier;
  * @author Jeff Brown
  */
 public class ASTValidationErrorsHelper implements ASTErrorsHelper {
+
     private static final ConstantExpression NULL_EXPRESSION = new ConstantExpression(null);
     private static final String SET_ERRORS_METHOD_NAME = "setErrors";
     private static final String GET_ERRORS_METHOD_NAME = "getErrors";
@@ -145,7 +164,7 @@ public class ASTValidationErrorsHelper implements ASTErrorsHelper {
     protected void addSetErrorsMethod(final ClassNode paramTypeClassNode) {
         final String errorsArgumentName = "$errorsArg";
         MethodNode setErrorsMethod = paramTypeClassNode.getMethod(SET_ERRORS_METHOD_NAME,
-             new Parameter[] { new Parameter(ERRORS_CLASS_NODE, errorsArgumentName)});
+                new Parameter[]{new Parameter(ERRORS_CLASS_NODE, errorsArgumentName)});
         if (setErrorsMethod == null) {
             final Expression assignErrorsExpression = new BinaryExpression(ERRORS_EXPRESSION,
                     EQUALS_SYMBOL, new VariableExpression(errorsArgumentName));

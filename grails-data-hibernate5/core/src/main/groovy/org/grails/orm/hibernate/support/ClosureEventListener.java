@@ -39,7 +39,25 @@ import org.hibernate.Session;
 import org.hibernate.action.internal.EntityUpdateAction;
 import org.hibernate.engine.spi.ActionQueue;
 import org.hibernate.engine.spi.ExecutableList;
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.AbstractEvent;
+import org.hibernate.event.spi.AbstractPreDatabaseOperationEvent;
+import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostDeleteEventListener;
+import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostInsertEventListener;
+import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostLoadEventListener;
+import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PostUpdateEventListener;
+import org.hibernate.event.spi.PreDeleteEvent;
+import org.hibernate.event.spi.PreDeleteEventListener;
+import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreLoadEvent;
+import org.hibernate.event.spi.PreLoadEventListener;
+import org.hibernate.event.spi.PreUpdateEvent;
+import org.hibernate.event.spi.PreUpdateEventListener;
+import org.hibernate.event.spi.SaveOrUpdateEvent;
+import org.hibernate.event.spi.SaveOrUpdateEventListener;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.slf4j.Logger;
@@ -71,8 +89,8 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         PreDeleteEventListener,
         PreUpdateEventListener {
 
-    private static final long serialVersionUID = 1;
     protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
+    private static final long serialVersionUID = 1;
 
     private final EventTriggerCaller saveOrUpdateCaller;
     private final EventTriggerCaller beforeInsertCaller;
@@ -101,10 +119,9 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         saveOrUpdateCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_SAVE, domainClazz);
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
         EventTriggerCaller preLoadEventCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
-        if (preLoadEventCaller  == null) {
+        if (preLoadEventCaller == null) {
             this.preLoadEventCaller = buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
-        }
-        else {
+        } else {
             this.preLoadEventCaller = preLoadEventCaller;
         }
 
@@ -127,15 +144,14 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         validateParams.put(AbstractHibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
 
         try {
-            actionQueueUpdatesField=ReflectionUtils.findField(ActionQueue.class, "updates");
+            actionQueueUpdatesField = ReflectionUtils.findField(ActionQueue.class, "updates");
             actionQueueUpdatesField.setAccessible(true);
-            entityUpdateActionStateField=ReflectionUtils.findField(EntityUpdateAction.class, "state");
+            entityUpdateActionStateField = ReflectionUtils.findField(EntityUpdateAction.class, "state");
             entityUpdateActionStateField.setAccessible(true);
         } catch (Exception e) {
             // ignore
         }
     }
-
 
     public void onSaveOrUpdate(SaveOrUpdateEvent event) throws HibernateException {
         // no-op, merely a hook for plugins to override
@@ -282,7 +298,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     protected boolean doValidate(Object entity) {
         boolean evict = false;
         GormValidateable validateable = (GormValidateable) entity;
-        if ( !validateable.shouldSkipValidation()
+        if (!validateable.shouldSkipValidation()
                 && !validateable.validate(validateParams)) {
             evict = true;
             if (failOnErrorEnabled) {
@@ -306,25 +322,27 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state, EntityPersister persister, String[] propertyNames) {
         Object entity = event.getEntity();
         EntityReflector reflector = persistentEntity.getReflector();
-        HashMap<Integer, Object> changedState= new HashMap<>();
+        HashMap<Integer, Object> changedState = new HashMap<>();
         EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
         for (int i = 0; i < propertyNames.length; i++) {
             String p = propertyNames[i];
             Integer index = entityMetamodel.getPropertyIndexOrNull(p);
-            if(index == null) continue;
-            
+            if (index == null) {
+                continue;
+            }
+
             PersistentProperty property = persistentEntity.getPropertyByName(p);
             if (property == null) {
                 continue;
             }
             String propertyName = property.getName();
 
-            if(GormProperties.VERSION.equals(propertyName)) {
+            if (GormProperties.VERSION.equals(propertyName)) {
                 continue;
             }
 
             Object value = reflector.getProperty(entity, propertyName);
-            if(state[index] != value) {
+            if (state[index] != value) {
                 changedState.put(i, value);
             }
             state[index] = value;
@@ -335,23 +353,22 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
 
     private void synchronizeEntityUpdateActionState(AbstractPreDatabaseOperationEvent event, Object entity,
                                                     HashMap<Integer, Object> changedState) {
-        if(actionQueueUpdatesField != null && event instanceof PreInsertEvent && changedState.size() > 0) {
+        if (actionQueueUpdatesField != null && event instanceof PreInsertEvent && changedState.size() > 0) {
             try {
-                ExecutableList<EntityUpdateAction> updates = (ExecutableList<EntityUpdateAction>)actionQueueUpdatesField.get(event.getSession().getActionQueue());
-                if(updates != null) {
+                ExecutableList<EntityUpdateAction> updates = (ExecutableList<EntityUpdateAction>) actionQueueUpdatesField.get(event.getSession().getActionQueue());
+                if (updates != null) {
                     for (EntityUpdateAction updateAction : updates) {
-                        if(updateAction.getInstance() == entity) {
-                            Object[] updateState = (Object[])entityUpdateActionStateField.get(updateAction);
+                        if (updateAction.getInstance() == entity) {
+                            Object[] updateState = (Object[]) entityUpdateActionStateField.get(updateAction);
                             if (updateState != null) {
-                                for(Map.Entry<Integer, Object> entry : changedState.entrySet()) {
+                                for (Map.Entry<Integer, Object> entry : changedState.entrySet()) {
                                     updateState[entry.getKey()] = entry.getValue();
                                 }
                             }
                         }
                     }
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 LOG.warn("Error synchronizing object state with Hibernate: " + e.getMessage(), e);
             }
         }

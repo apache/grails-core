@@ -26,27 +26,27 @@ import org.grails.core.io.support.GrailsFactoriesLoader;
  * @author Lari Hotari
  * @author Graeme Rocher
  */
-public class OutputContextLookupHelper {
-    private static final OutputContextLookup outputContextLookup;
+public final class OutputContextLookupHelper {
+
+    private static final OutputContextLookup OUTPUT_CONTEXT_LOOKUP;
 
     static {
         OutputContextLookup foundViaFactory = GrailsFactoriesLoader.loadFactory(OutputContextLookup.class, OutputContextLookupHelper.class.getClassLoader());
-        if(foundViaFactory != null) {
-            outputContextLookup = foundViaFactory;
-        }
-        else {
-            outputContextLookup = new DefaultOutputContextLookup();
+        if (foundViaFactory != null) {
+            OUTPUT_CONTEXT_LOOKUP = foundViaFactory;
+        } else {
+            OUTPUT_CONTEXT_LOOKUP = new DefaultOutputContextLookup();
         }
     }
-
 
     private OutputContextLookupHelper() {
     }
 
     public static OutputContext lookupOutputContext() {
-        return outputContextLookup.lookupOutputContext();
+        return OUTPUT_CONTEXT_LOOKUP.lookupOutputContext();
     }
+
     public static OutputContextLookup getOutputContextLookup() {
-        return outputContextLookup;
+        return OUTPUT_CONTEXT_LOOKUP;
     }
 }

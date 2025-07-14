@@ -26,7 +26,7 @@ import grails.web.mime.MimeType
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface RendererRegistry {
+interface RendererRegistry {
 
     /**
      * Adds a new renderer

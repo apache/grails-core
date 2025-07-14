@@ -20,7 +20,6 @@ package grails.dev.commands.io
 
 import org.grails.io.support.Resource
 
-
 /**
  * Utility methods exposed to scripts for interacting with resources (found on the file system or jars) and the file system
  *
@@ -123,7 +122,7 @@ interface FileSystemInteraction {
      * @return The class name
      */
     String className(Resource resource)
-    
+
     /**
      * Get files matching the given pattern
      *
@@ -133,11 +132,14 @@ interface FileSystemInteraction {
     Collection<File> files(String pattern)
 
     static class CopySpec {
+
         def from
         def into
+
         void from(path) {
             this.from = path
         }
+
         void into(path) {
             this.into = path
         }

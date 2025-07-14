@@ -39,7 +39,6 @@ import liquibase.command.core.DiffCommandStep
 import liquibase.command.core.GenerateChangelogCommandStep
 import liquibase.command.core.helpers.AbstractChangelogCommandStep
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep
 import liquibase.command.core.helpers.DiffOutputControlCommandStep
 import liquibase.command.core.helpers.PreCompareCommandStep
 import liquibase.command.core.helpers.ReferenceDbUrlConnectionCommandStep
@@ -264,7 +263,6 @@ trait DatabaseMigrationCommand {
                 .addArgumentValue(GenerateChangelogCommandStep.OVERWRITE_OUTPUT_FILE_ARG, GenerateChangelogCommandStep.OVERWRITE_OUTPUT_FILE_ARG.getDefaultValue())
                 .addArgumentValue(GenerateChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG, AbstractChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG.getDefaultValue())
                 .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue());
-
 
         if(diffOutputControl.isReplaceIfExistsSet()) {
             command.addArgumentValue(GenerateChangelogCommandStep.USE_OR_REPLACE_OPTION, true)

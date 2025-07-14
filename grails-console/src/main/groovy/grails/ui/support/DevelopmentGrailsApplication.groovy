@@ -24,7 +24,6 @@ import org.springframework.boot.ApplicationContextFactory
 import org.springframework.util.ClassUtils
 import org.springframework.web.context.support.GenericWebApplicationContext
 
-
 /**
  * @author Graeme Rocher
  * @since 3.0

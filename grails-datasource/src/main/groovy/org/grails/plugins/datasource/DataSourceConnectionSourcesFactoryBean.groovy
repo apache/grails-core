@@ -26,7 +26,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.context.ApplicationContext
@@ -73,21 +72,21 @@ class DataSourceConnectionSourcesFactoryBean implements InitializingBean, Factor
     void afterPropertiesSet() throws Exception {
         DataSourceConnectionSourceFactory factory = new DataSourceConnectionSourceFactory()
         this.connectionSources = ConnectionSourcesInitializer.create(factory, configuration)
-        if(applicationContext instanceof ConfigurableApplicationContext) {
-            ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext)applicationContext
-            for(ConnectionSource<DataSource, ConnectionSourceSettings> connectionSource in connectionSources.allConnectionSources) {
+        if (applicationContext instanceof ConfigurableApplicationContext) {
+            ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext
+            for (ConnectionSource<DataSource, ConnectionSourceSettings> connectionSource in connectionSources.allConnectionSources) {
                 if (connectionSource.name != ConnectionSource.DEFAULT) {
                     String suffix = "_${connectionSource.name}"
                     String dsName = "dataSource${suffix}"
                     String tmName = "transactionManager${suffix}"
-                    if(!applicationContext.containsBean(dsName)) {
+                    if (!applicationContext.containsBean(dsName)) {
                         DataSource dataSource = connectionSource.source
                         configurableApplicationContext.beanFactory.registerSingleton(
                                 dsName,
                                 dataSource
                         )
                     }
-                    if(!applicationContext.containsBean(tmName)) {
+                    if (!applicationContext.containsBean(tmName)) {
                         DataSource dataSource = connectionSource.source
                         configurableApplicationContext.beanFactory.registerSingleton(
                                 tmName,

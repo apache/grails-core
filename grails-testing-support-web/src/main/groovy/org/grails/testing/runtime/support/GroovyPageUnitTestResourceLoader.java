@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.testing.runtime.support;
 
 import grails.config.Config;
@@ -47,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader implements GrailsApplicationAware, InitializingBean {
 
     public static final String WEB_INF_PREFIX = "/WEB-INF/grails-app/views";
-    private Map<String,String> groovyPages = new ConcurrentHashMap<String, String>();
+    private Map<String, String> groovyPages = new ConcurrentHashMap<String, String>();
     private String basePath;
     private GrailsApplication grailsApplication;
 
@@ -64,8 +63,8 @@ public class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader impl
         if (groovyPages.containsKey(location)) {
             return new ByteArrayResource(groovyPages.get(location).getBytes(StandardCharsets.UTF_8), location);
         }
-        
-        if(basePath == null) {
+
+        if (basePath == null) {
             String basedir = BuildSettings.BASE_DIR.getAbsolutePath();
             basePath = basedir + File.separatorChar + GrailsResourceUtils.VIEWS_DIR_PATH;
         }
@@ -90,10 +89,10 @@ public class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader impl
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             Config config = grailsApplication.getConfig();
             String viewDir = config.getProperty(Settings.GSP_VIEWS_DIR);
-            if(viewDir != null) {
+            if (viewDir != null) {
                 basePath = viewDir;
             }
         }

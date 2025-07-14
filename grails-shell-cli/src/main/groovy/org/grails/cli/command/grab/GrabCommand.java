@@ -18,50 +18,48 @@
  */
 package org.grails.cli.command.grab;
 
-import java.util.List;
-
 import joptsimple.OptionSet;
-
-import org.springframework.boot.cli.command.Command;
-import org.springframework.boot.cli.command.OptionParsingCommand;
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
 import org.grails.cli.command.options.SourceOptions;
-import org.springframework.boot.cli.command.status.ExitStatus;
 import org.grails.cli.compiler.GroovyCompiler;
 import org.grails.cli.compiler.GroovyCompilerConfiguration;
 import org.grails.cli.compiler.RepositoryConfigurationFactory;
 import org.grails.cli.compiler.grape.RepositoryConfiguration;
+import org.springframework.boot.cli.command.OptionParsingCommand;
+import org.springframework.boot.cli.command.status.ExitStatus;
+
+import java.util.List;
 
 /**
- * {@link Command} to grab the dependencies of one or more Groovy scripts.
+ * {@link org.springframework.boot.cli.command.Command} to grab the dependencies of one or more Groovy scripts.
  *
  * @author Andy Wilkinson
  * @since 1.0.0
  */
 public class GrabCommand extends OptionParsingCommand {
 
-	public GrabCommand() {
-		super("grab", "Download a spring groovy script's dependencies to ./repository", new GrabOptionHandler());
-	}
+    public GrabCommand() {
+        super("grab", "Download a spring groovy script's dependencies to ./repository", new GrabOptionHandler());
+    }
 
-	private static final class GrabOptionHandler extends CompilerOptionHandler {
+    private static final class GrabOptionHandler extends CompilerOptionHandler {
 
-		@Override
-		protected ExitStatus run(OptionSet options) throws Exception {
-			SourceOptions sourceOptions = new SourceOptions(options);
-			List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
-				.createDefaultRepositoryConfiguration();
-			GroovyCompilerConfiguration configuration = new OptionSetGroovyCompilerConfiguration(options, this,
-					repositoryConfiguration);
-			if (System.getProperty("grape.root") == null) {
-				System.setProperty("grape.root", ".");
-			}
-			GroovyCompiler groovyCompiler = new GroovyCompiler(configuration);
-			groovyCompiler.compile(sourceOptions.getSourcesArray());
-			return ExitStatus.OK;
-		}
+        @Override
+        protected ExitStatus run(OptionSet options) throws Exception {
+            SourceOptions sourceOptions = new SourceOptions(options);
+            List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
+                    .createDefaultRepositoryConfiguration();
+            GroovyCompilerConfiguration configuration = new OptionSetGroovyCompilerConfiguration(options, this,
+                    repositoryConfiguration);
+            if (System.getProperty("grape.root") == null) {
+                System.setProperty("grape.root", ".");
+            }
+            GroovyCompiler groovyCompiler = new GroovyCompiler(configuration);
+            groovyCompiler.compile(sourceOptions.getSourcesArray());
+            return ExitStatus.OK;
+        }
 
-	}
+    }
 
 }

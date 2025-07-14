@@ -21,7 +21,6 @@ package grails.core
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Adapter for the {@link GrailsApplicationLifeCycle} interface
  *
@@ -30,9 +29,10 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class GrailsApplicationLifeCycleAdapter implements GrailsApplicationLifeCycle {
+
     @Override
     Closure doWithSpring() {
-        return {->}
+        return { -> }
     }
 
     @Override

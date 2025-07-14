@@ -18,13 +18,13 @@
  */
 package grails.async
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
 import java.lang.annotation.Documented
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
  * An AST transformation that takes each method in the given class and adds a delegate method that returns a {@link grails.async.Promise} and executes the method asynchronously.
@@ -39,7 +39,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
  * If the annotation is applied to a new class:
  *
  * <pre><code>
- * @DelegateAsync(BookApi)
+ * @DelegateAsync (BookApi)
  * class AsyncBookApi {}
  * </code></pre>
  *
@@ -65,5 +65,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target([ElementType.TYPE, ElementType.FIELD])
 @GroovyASTTransformationClass("org.grails.async.transform.internal.DelegateAsyncTransformation")
 @interface DelegateAsync {
+
     Class value() default DelegateAsync
 }

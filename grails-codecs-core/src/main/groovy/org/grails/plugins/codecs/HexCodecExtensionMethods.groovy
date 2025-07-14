@@ -57,8 +57,7 @@ class HexCodecExtensionMethods {
         str.eachWithIndex { val, idx ->
             if (!(idx % 2)) {
                 currentByte = HEXDIGITS.indexOf(val) << 4
-            }
-            else {
+            } else {
                 output << (currentByte | HEXDIGITS.indexOf(val))
                 currentByte = 0
             }

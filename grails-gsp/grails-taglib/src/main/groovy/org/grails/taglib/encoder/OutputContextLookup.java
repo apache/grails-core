@@ -22,5 +22,6 @@ package org.grails.taglib.encoder;
  * Created by lari on 02/01/15.
  */
 public interface OutputContextLookup {
+
     OutputContext lookupOutputContext();
 }

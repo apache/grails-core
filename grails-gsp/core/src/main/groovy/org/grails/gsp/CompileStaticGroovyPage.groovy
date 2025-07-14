@@ -31,6 +31,7 @@ import org.grails.taglib.encoder.OutputContext
  */
 @CompileStatic
 abstract class CompileStaticGroovyPage extends GroovyPage {
+
     TagLibNamespaceMethodDispatcher defaultTagDispatcher
 
     @Override

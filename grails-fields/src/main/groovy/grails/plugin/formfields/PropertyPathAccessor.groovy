@@ -33,8 +33,8 @@ import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.FieldError
 
 import static grails.plugin.formfields.BeanPropertyAccessorFactory.stripIndex
-import static java.util.Collections.EMPTY_LIST
 import static grails.util.GrailsStringUtils.substringAfterLast
+import static java.util.Collections.EMPTY_LIST
 
 @CompileStatic
 @Canonical

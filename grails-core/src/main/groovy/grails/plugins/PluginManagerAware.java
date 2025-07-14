@@ -23,9 +23,8 @@ import org.springframework.beans.factory.Aware;
 /**
  * For implementors interested in obtaining a reference to the Grails PluginManager instance.
  *
- * @see GrailsPluginManager
- *
  * @author Graeme Rocher
+ * @see GrailsPluginManager
  * @since 0.6
  */
 public interface PluginManagerAware extends Aware {

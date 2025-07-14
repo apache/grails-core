@@ -29,7 +29,7 @@ import org.springframework.core.io.Resource
  * @since 3.0
  */
 @CompileStatic
-class GrailsResource implements Resource{
+class GrailsResource implements Resource {
 
     org.grails.io.support.Resource resource
 

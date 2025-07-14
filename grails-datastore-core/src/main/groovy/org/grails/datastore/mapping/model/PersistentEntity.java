@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.mapping.model;
 
-import java.util.List;
-
 import org.grails.datastore.mapping.model.lifecycle.Initializable;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.reflect.EntityReflector;
+
+import java.util.List;
 
 /**
  * Represents a persistent entity.
@@ -68,6 +68,7 @@ public interface PersistentEntity extends Initializable {
 
     /**
      * Whether this PersistentEntity is mapped using a different store. Used for cross store persistence.
+     *
      * @param external true if this entity is externally mapped
      */
     void setExternal(boolean external);
@@ -95,6 +96,7 @@ public interface PersistentEntity extends Initializable {
 
     /**
      * A list of properties to be persisted
+     *
      * @return A list of PersistentProperty instances
      */
     List<PersistentProperty> getPersistentProperties();
@@ -105,7 +107,7 @@ public interface PersistentEntity extends Initializable {
      *
      * @return A list of associations
      */
-    List <Association> getAssociations();
+    List<Association> getAssociations();
 
     /**
      * A list of embedded associations for this entity. This is typically
@@ -113,7 +115,7 @@ public interface PersistentEntity extends Initializable {
      *
      * @return A list of associations
      */
-    List <Embedded> getEmbedded();
+    List<Embedded> getEmbedded();
 
     /**
      * Obtains a PersistentProperty instance by name
@@ -146,12 +148,14 @@ public interface PersistentEntity extends Initializable {
 
     /**
      * Constructs a new instance
+     *
      * @return The new instnace
      */
     Object newInstance();
 
     /**
      * A list of property names that a persistent
+     *
      * @return A List of strings
      */
     List<String> getPersistentPropertyNames();
@@ -172,36 +176,42 @@ public interface PersistentEntity extends Initializable {
 
     /**
      * Returns the parent entity of this entity
+     *
      * @return The ParentEntity instance
      */
     PersistentEntity getParentEntity();
 
     /**
      * Obtains the root entity of an inheritance hierarchy
+     *
      * @return The root entity
      */
     PersistentEntity getRootEntity();
 
     /**
      * Whether this entity is a root entity
+     *
      * @return True if it is a root entity
      */
     boolean isRoot();
 
     /**
      * The discriminator used when persisting subclasses of an inheritance hierarchy
+     *
      * @return The discriminator
      */
     String getDiscriminator();
 
     /**
      * Obtains the MappingContext where this PersistentEntity is defined
+     *
      * @return The MappingContext instance
      */
     MappingContext getMappingContext();
 
     /**
      * Checks whether an entity has a bean property of the given name and type
+     *
      * @param name The name
      * @param type The type
      * @return True if it does
@@ -210,6 +220,7 @@ public interface PersistentEntity extends Initializable {
 
     /**
      * True if the given property is the identifier
+     *
      * @param propertyName the property name
      * @return True if it is the identifier
      */
@@ -222,6 +233,7 @@ public interface PersistentEntity extends Initializable {
 
     /**
      * Add a class to the owners list of this PersistentEntity
+     *
      * @param type The class to add
      * @return True if the operation was successful
      */

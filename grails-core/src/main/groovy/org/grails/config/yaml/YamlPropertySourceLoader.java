@@ -18,7 +18,6 @@
  */
 package org.grails.config.yaml;
 
-
 import grails.plugins.GrailsPlugin;
 import grails.util.Environment;
 import org.grails.config.NavigableMap;
@@ -31,7 +30,11 @@ import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -42,9 +45,10 @@ import java.util.stream.Collectors;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class YamlPropertySourceLoader extends YamlProcessor implements PropertySourceLoader {
+
     @Override
     public String[] getFileExtensions() {
-        return new String[] { "yml", "yaml" };
+        return new String[]{"yml", "yaml"};
     }
 
     @Override
@@ -85,11 +89,10 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
             propertySource.merge(map, true);
         });
         propertySources.add(
-                new NavigableMapPropertySource(name ,propertySource));
+                new NavigableMapPropertySource(name, propertySource));
 
         return propertySources;
     }
-
 
     public List<Map<String, Object>> load() {
         final List<Map<String, Object>> result = new ArrayList<>();

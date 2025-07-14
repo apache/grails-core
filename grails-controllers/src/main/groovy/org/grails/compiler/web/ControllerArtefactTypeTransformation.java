@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.compiler.web;
 
 import grails.web.Controller;
@@ -24,9 +23,9 @@ import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import org.grails.compiler.injection.ArtefactTypeAstTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import org.grails.compiler.injection.ArtefactTypeAstTransformation;
+import org.grails.core.artefact.ControllerArtefactHandler;
 
 /**
  * A transformation that makes an Artefact a controller
@@ -36,6 +35,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation;
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class ControllerArtefactTypeTransformation extends ArtefactTypeAstTransformation {
+
     @Override
     protected String resolveArtefactType(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
         return ControllerArtefactHandler.TYPE;

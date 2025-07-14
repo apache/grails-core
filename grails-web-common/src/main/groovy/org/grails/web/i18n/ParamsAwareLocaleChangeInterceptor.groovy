@@ -19,21 +19,19 @@
 package org.grails.web.i18n
 
 import groovy.transform.CompileStatic
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.servlet.DispatcherServlet
-import org.springframework.web.servlet.LocaleResolver
-
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.propertyeditors.LocaleEditor
+import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.LocaleResolver
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.web.servlet.support.RequestContextUtils
 
- /**
+/**
  * A LocaleChangeInterceptor instance that is aware of the Grails params object.
  *
  * @author Graeme Rocher
@@ -73,16 +71,16 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
         try {
             // choose first if multiple specified
             if (localeParam.getClass().isArray()) {
-                localeParam = ((Object[])localeParam)[0]
+                localeParam = ((Object[]) localeParam)[0]
             }
             def localeResolver = RequestContextUtils.getLocaleResolver(request)
-            if(localeResolver == null) {
+            if (localeResolver == null) {
                 localeResolver = this.localeResolver
                 request.setAttribute(DispatcherServlet.LOCALE_RESOLVER_ATTRIBUTE, localeResolver)
             }
             def localeEditor = new LocaleEditor()
             localeEditor.setAsText localeParam?.toString()
-            localeResolver?.setLocale request, response, (Locale)localeEditor.value
+            localeResolver?.setLocale request, response, (Locale) localeEditor.value
             return true
         }
         catch (Exception e) {

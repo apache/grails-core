@@ -24,13 +24,16 @@ import java.util.List;
 
 /**
  * Marks a class capable of encoding to target Writer
- * 
+ *
  * @author Lari Hotari
  * @since 2.3.10
  *
  */
 public interface EncodesToWriter {
-    public void encodeToWriter(CharSequence str, int off, int len, Writer writer, EncodingState encodingState) throws IOException;
-    public void encodeToWriter(char[] buf, int off, int len, Writer writer, EncodingState encodingState) throws IOException;
-    public EncodesToWriter createChainingEncodesToWriter(List<StreamingEncoder> additionalEncoders, boolean applyAdditionalFirst);
+
+    void encodeToWriter(CharSequence str, int off, int len, Writer writer, EncodingState encodingState) throws IOException;
+
+    void encodeToWriter(char[] buf, int off, int len, Writer writer, EncodingState encodingState) throws IOException;
+
+    EncodesToWriter createChainingEncodesToWriter(List<StreamingEncoder> additionalEncoders, boolean applyAdditionalFirst);
 }

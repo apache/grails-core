@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.security.SecurityProperties;
 /**
  * Stores the default order numbers of all Grails filters for use in configuration.
  * These filters are run prior to the Spring Security Filter Chain which is at DEFAULT_FILTER_ORDER
+ *
  * @since 7.0
  */
 public enum GrailsFilters {
@@ -41,6 +42,7 @@ public enum GrailsFilters {
     GrailsFilters() {
         this.order = SecurityProperties.DEFAULT_FILTER_ORDER - 100 + ordinal() * INTERVAL;
     }
+
     GrailsFilters(int order) {
         this.order = order;
     }

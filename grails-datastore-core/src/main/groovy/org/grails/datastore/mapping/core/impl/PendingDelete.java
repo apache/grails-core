@@ -25,4 +25,5 @@ package org.grails.datastore.mapping.core.impl;
  * @since 5.0.0
  */
 public interface PendingDelete<E, K> extends Runnable, PendingOperation<E, K> {
+
 }

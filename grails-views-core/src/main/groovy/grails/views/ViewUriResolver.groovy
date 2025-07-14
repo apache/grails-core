@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 interface ViewUriResolver {
+
     /**
      * Resolves a template URI for the given path
      *

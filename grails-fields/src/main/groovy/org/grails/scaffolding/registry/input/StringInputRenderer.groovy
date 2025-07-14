@@ -44,7 +44,7 @@ class StringInputRenderer implements DomainInputRenderer {
         Constrained constraints = domainProperty.constrained
         if (constraints?.password) {
             standardAttributes.type = "password"
-        } else if (constraints?.email)  {
+        } else if (constraints?.email) {
             standardAttributes.type = "email"
         } else if (constraints?.url) {
             standardAttributes.type = "url"

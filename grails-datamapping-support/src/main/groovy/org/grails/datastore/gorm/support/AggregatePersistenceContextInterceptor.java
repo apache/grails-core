@@ -22,7 +22,6 @@ import grails.persistence.support.PersistenceContextInterceptor;
 
 import java.util.List;
 
-
 /**
  * @author Graeme Rocher
  * @since 1.0
@@ -33,6 +32,7 @@ public class AggregatePersistenceContextInterceptor implements PersistenceContex
 
     /**
      * Constructor.
+     *
      * @param interceptors the real interceptors
      */
     public AggregatePersistenceContextInterceptor(final List<PersistenceContextInterceptor> interceptors) {

@@ -34,6 +34,7 @@ import org.testcontainers.utility.DockerImageName
  * @author James Daugherty
  */
 class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension implements IGlobalExtension {
+
     DockerImageName desiredDockerImage = getDesiredMongoDockerName()
     MongoContainerHolder containerHolder
 

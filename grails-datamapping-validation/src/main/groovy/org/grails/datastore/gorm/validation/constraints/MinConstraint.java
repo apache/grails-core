@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -72,14 +71,13 @@ public class MinConstraint extends AbstractConstraint {
         }
 
         Class<?> propertyClass = ClassPropertyFetcher.getPropertyType(constraintOwningClass, constraintPropertyName);
-        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(),propertyClass)) {
+        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(), propertyClass)) {
             throw new IllegalArgumentException("Parameter for constraint [" + ConstrainedProperty.MIN_CONSTRAINT +
                     "] of property [" + constraintPropertyName + "] of class [" + constraintOwningClass +
                     "] must be the same type as property: [" + propertyClass.getName() + "]");
         }
         return constraintParameter;
     }
-
 
     public String getName() {
         return ConstrainedProperty.MIN_CONSTRAINT;
@@ -91,7 +89,7 @@ public class MinConstraint extends AbstractConstraint {
             return;
         }
 
-        Object[] args = new Object[] { constraintPropertyName, constraintOwningClass, propertyValue, minValue };
+        Object[] args = new Object[]{constraintPropertyName, constraintOwningClass, propertyValue, minValue};
         rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_MIN_MESSAGE_CODE,
                 ConstrainedProperty.MIN_CONSTRAINT + ConstrainedProperty.NOTMET_SUFFIX, args);
     }

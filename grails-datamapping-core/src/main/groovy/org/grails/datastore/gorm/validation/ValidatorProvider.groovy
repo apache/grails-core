@@ -20,7 +20,6 @@ package org.grails.datastore.gorm.validation
 
 import org.springframework.validation.Validator
 
-
 /**
  * A class that provides a validator
  *
@@ -28,6 +27,7 @@ import org.springframework.validation.Validator
  * @since 5.0
  */
 interface ValidatorProvider {
+
     /**
      * @return The validator
      */

@@ -19,7 +19,6 @@
 package org.grails.datastore.gorm.proxy
 
 import groovy.transform.CompileStatic
-
 import org.codehaus.groovy.runtime.HandleMetaClass
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor
@@ -35,6 +34,7 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
  */
 @CompileStatic
 class GroovyProxyFactory implements ProxyFactory {
+
     /**
      * Check our object has the correct meta class to be a proxy of this type.
      * @param object The object.
@@ -48,7 +48,7 @@ class GroovyProxyFactory implements ProxyFactory {
     @Override
     @Override
     public Class<?> getProxiedClass(Object o) {
-        if(isProxy(o)) {
+        if (isProxy(o)) {
             return o.getClass().getSuperclass()
         }
         return o.getClass()
@@ -60,11 +60,11 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     protected ProxyInstanceMetaClass getProxyInstanceMetaClass(object) {
-        if(object == null) {
+        if (object == null) {
             return null
         }
-        MetaClass mc = unwrapHandleMetaClass(object instanceof GroovyObject ? ((GroovyObject)object).getMetaClass() : object.metaClass)
-        mc instanceof ProxyInstanceMetaClass ? (ProxyInstanceMetaClass)mc : null
+        MetaClass mc = unwrapHandleMetaClass(object instanceof GroovyObject ? ((GroovyObject) object).getMetaClass() : object.metaClass)
+        mc instanceof ProxyInstanceMetaClass ? (ProxyInstanceMetaClass) mc : null
     }
 
     @Override
@@ -85,7 +85,7 @@ class GroovyProxyFactory implements ProxyFactory {
     /**
      * Creates a proxy
      *
-     * @param <T> The type of the proxy to create
+     * @param <T>   The type of the proxy to create
      * @param session The session instance
      * @param type The type of the proxy to create
      * @param key The key to proxy
@@ -98,9 +98,9 @@ class GroovyProxyFactory implements ProxyFactory {
         persister.setObjectIdentifier(proxy, key)
 
         MetaClass metaClass = new ProxyInstanceMetaClass(resolveTargetMetaClass(proxy, type), session, key)
-        if(proxy instanceof GroovyObject) {
+        if (proxy instanceof GroovyObject) {
             // direct assignment of MetaClass to GroovyObject
-            ((GroovyObject)proxy).setMetaClass(metaClass)
+            ((GroovyObject) proxy).setMetaClass(metaClass)
         } else {
             // call DefaultGroovyMethods.setMetaClass
             proxy.metaClass = metaClass
@@ -116,9 +116,9 @@ class GroovyProxyFactory implements ProxyFactory {
     protected <T> MetaClass resolveTargetMetaClass(T proxy, Class<T> type) {
         unwrapHandleMetaClass(proxy.getMetaClass())
     }
-    
+
     private MetaClass unwrapHandleMetaClass(MetaClass metaClass) {
-        (metaClass instanceof HandleMetaClass) ? ((HandleMetaClass)metaClass).getAdaptee() : metaClass
+        (metaClass instanceof HandleMetaClass) ? ((HandleMetaClass) metaClass).getAdaptee() : metaClass
     }
 
     @Override

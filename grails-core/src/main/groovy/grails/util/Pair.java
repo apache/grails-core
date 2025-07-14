@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.util;
 
 public class Pair<A, B> {
+
     final A aValue;
     final B bValue;
 
@@ -47,25 +47,30 @@ public class Pair<A, B> {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
-        Pair other = (Pair)obj;
+        }
+        Pair other = (Pair) obj;
         if (aValue == null) {
-            if (other.aValue != null)
+            if (other.aValue != null) {
                 return false;
-        }
-        else if (!aValue.equals(other.aValue))
+            }
+        } else if (!aValue.equals(other.aValue)) {
             return false;
+        }
         if (bValue == null) {
-            if (other.bValue != null)
+            if (other.bValue != null) {
                 return false;
-        }
-        else if (!bValue.equals(other.bValue))
+            }
+        } else if (!bValue.equals(other.bValue)) {
             return false;
+        }
         return true;
     }
 

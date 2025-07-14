@@ -82,7 +82,7 @@ class DefaultSchemaHandler implements SchemaHandler {
         try {
             connection = dataSource.getConnection()
             ResultSet schemas = connection.getMetaData().getSchemas()
-            while(schemas.next()) {
+            while (schemas.next()) {
                 schemaNames.add(schemas.getString("TABLE_SCHEM"))
             }
         } finally {

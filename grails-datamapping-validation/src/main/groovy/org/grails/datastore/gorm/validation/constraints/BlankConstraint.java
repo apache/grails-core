@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -79,7 +78,7 @@ public class BlankConstraint extends AbstractVetoingConstraint {
     @Override
     protected boolean processValidateWithVetoing(Object target, Object propertyValue, Errors errors) {
         if (!blank && propertyValue instanceof String && !StringUtils.hasText((CharSequence) propertyValue)) {
-            Object[] args = new Object[] { constraintPropertyName, constraintOwningClass };
+            Object[] args = new Object[]{constraintPropertyName, constraintOwningClass};
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_BLANK_MESSAGE_CODE,
                     ConstrainedProperty.BLANK_CONSTRAINT, args);
             // empty string is caught by 'blank' constraint, no addition validation needed

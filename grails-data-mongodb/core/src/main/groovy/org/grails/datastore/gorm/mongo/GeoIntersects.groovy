@@ -26,7 +26,8 @@ import org.springframework.util.Assert
  * @author Graeme Rocher
  * @since 2.0
  */
-class GeoIntersects extends MethodExpression{
+class GeoIntersects extends MethodExpression {
+
     GeoIntersects(Class<?> targetClass, String propertyName) {
         super(targetClass, propertyName)
     }
@@ -43,7 +44,7 @@ class GeoIntersects extends MethodExpression{
 
         def value = arguments[0]
 
-        Assert.isTrue( (value instanceof Map) || (( value instanceof GeoJSON) ),
+        Assert.isTrue((value instanceof Map) || ((value instanceof GeoJSON)),
                 "Argument must be either a Map or a GeoJSON shape (Polygon, LineString or Point)")
 
         super.setArguments(arguments)

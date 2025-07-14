@@ -68,10 +68,10 @@ class ScaffoldingControllerInjector implements GrailsArtefactClassInjector {
         def expression = propertyNode?.getInitialExpression()
         if (expression instanceof ClassExpression || annotationNode) {
             ClassNode controllerClassNode = annotationNode?.getMember("value")?.type
-            ClassNode superClassNode = ClassHelper.make(controllerClassNode?.getTypeClass()?:RestfulController).getPlainNodeReference()
+            ClassNode superClassNode = ClassHelper.make(controllerClassNode?.getTypeClass() ?: RestfulController).getPlainNodeReference()
             ClassNode currentSuperClass = classNode.getSuperClass()
             if (currentSuperClass.equals(GrailsASTUtils.OBJECT_CLASS_NODE)) {
-                def domainClass = expression? ((ClassExpression) expression).getType() : null
+                def domainClass = expression ? ((ClassExpression) expression).getType() : null
                 if (!domainClass) {
                     domainClass = annotationNode.getMember("domain")?.type
                     if (!domainClass) {
@@ -87,9 +87,9 @@ class ScaffoldingControllerInjector implements GrailsArtefactClassInjector {
                 }
                 classNode.setSuperClass(GrailsASTUtils.nonGeneric(superClassNode, domainClass))
                 def readOnlyExpression = (ConstantExpression) annotationNode?.getMember("readOnly")
-                new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean()?:false)
+                new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean() ?: false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {
-               GrailsASTUtils.error(source, classNode, "Scaffolded controllers (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
+                GrailsASTUtils.error(source, classNode, "Scaffolded controllers (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
             }
         } else if (propertyNode != null) {
             GrailsASTUtils.error(source, propertyNode, "The 'scaffold' property must refer to a domain class.", true)

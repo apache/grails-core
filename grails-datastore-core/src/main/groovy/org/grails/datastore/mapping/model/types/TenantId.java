@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.model.types;
 
 import org.grails.datastore.mapping.config.Property;
@@ -33,6 +32,7 @@ import java.beans.PropertyDescriptor;
  * @since 6.0
  */
 public abstract class TenantId<T extends Property> extends AbstractPersistentProperty<T> {
+
     public TenantId(PersistentEntity owner, MappingContext context, String name, Class type) {
         super(owner, context, name, type);
     }

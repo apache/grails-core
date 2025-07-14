@@ -33,14 +33,14 @@ class EventStorage {
     private static Map<String, Collection<Closure>> eventListeners = [:].withDefault { [] }
 
     static void registerEvent(String eventName, Closure callable) {
-        if(!eventListeners[eventName].contains(callable)) {
+        if (!eventListeners[eventName].contains(callable)) {
             eventListeners[eventName] << callable
         }
     }
 
-    static void fireEvent(Object caller, String eventName, Object...args) {
+    static void fireEvent(Object caller, String eventName, Object... args) {
         def listeners = eventListeners[eventName]
-        for(listener in listeners) {
+        for (listener in listeners) {
             listener.delegate = caller
             listener.call args
         }

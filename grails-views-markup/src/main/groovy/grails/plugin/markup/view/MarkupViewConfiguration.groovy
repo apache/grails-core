@@ -44,9 +44,9 @@ class MarkupViewConfiguration extends TemplateConfiguration implements GenericVi
     MarkupViewConfiguration() {
         setExtension(MarkupViewTemplate.EXTENSION)
         setBaseTemplateClass(MarkupViewTemplate)
-        setCacheTemplates( !ViewsEnvironment.isDevelopmentMode() )
+        setCacheTemplates(!ViewsEnvironment.isDevelopmentMode())
         setAutoEscape(true)
-        setPrettyPrint( ViewsEnvironment.isDevelopmentMode() )
+        setPrettyPrint(ViewsEnvironment.isDevelopmentMode())
     }
 
     @Override

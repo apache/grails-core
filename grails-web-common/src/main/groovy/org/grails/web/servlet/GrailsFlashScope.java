@@ -19,9 +19,12 @@
 package org.grails.web.servlet;
 
 import grails.web.mvc.FlashScope;
-import org.grails.web.util.GrailsApplicationAttributes;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
+import jakarta.servlet.http.HttpSession;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,24 +34,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.servlet.http.HttpSession;
-
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.springframework.web.context.request.RequestContextHolder;
-
 /**
  * Grails implementation of Flash scope (@see grails.web.mvc.FlashScope).
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class GrailsFlashScope implements FlashScope {
 
+    public static final String ERRORS_PREFIX = "org.codehaus.groovy.grails.ERRORS_";
+    private static final String ERRORS_PROPERTY = "errors";
     private static final long serialVersionUID = 1457772347769500476L;
     private Map current = new ConcurrentHashMap();
     private Map next = new ConcurrentHashMap();
-    public static final String ERRORS_PREFIX = "org.codehaus.groovy.grails.ERRORS_";
-    private static final String ERRORS_PROPERTY = "errors";
 
     private final boolean registerWithSession;
 
@@ -83,15 +81,14 @@ public class GrailsFlashScope implements FlashScope {
 
     private void reassociateObjectWithErrors(Map scope, Object value) {
         if (value instanceof Collection) {
-            Collection values = (Collection)value;
+            Collection values = (Collection) value;
             for (Object val : values) {
                 reassociateObjectWithErrors(scope, val);
             }
-        }
-        else {
+        } else {
             String errorsKey = ERRORS_PREFIX + System.identityHashCode(value);
             Object errors = scope.get(errorsKey);
-            if (value!=null && errors != null) {
+            if (value != null && errors != null) {
                 MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(value.getClass());
                 if (mc.hasProperty(value, ERRORS_PROPERTY) != null) {
                     mc.setProperty(value, ERRORS_PROPERTY, errors);
@@ -169,39 +166,37 @@ public class GrailsFlashScope implements FlashScope {
     public Object put(String key, Object value) {
         // create the session if it doesn't exist
         registerWithSessionIfNecessary();
-       
+
         if (current.containsKey(key)) {
             current.remove(key);
         }
-        storeErrorsIfPossible(next,value);
+        storeErrorsIfPossible(next, value);
 
         if (value == null) {
             return next.remove(key);
         }
 
-        return next.put(key,value);
+        return next.put(key, value);
     }
 
-    private void storeErrorsIfPossible(Map scope,Object value) {
+    private void storeErrorsIfPossible(Map scope, Object value) {
         if (value == null) {
             return;
         }
 
         if (value instanceof Collection) {
-            Collection values = (Collection)value;
+            Collection values = (Collection) value;
             for (Object val : values) {
                 storeErrorsIfPossible(scope, val);
             }
-        }
-        else if (value instanceof Map) {
-            Map map = (Map)value;
+        } else if (value instanceof Map) {
+            Map map = (Map) value;
             Collection keys = new LinkedList(map.keySet());
             for (Object key : keys) {
                 Object val = map.get(key);
                 storeErrorsIfPossible(map, val);
             }
-        }
-        else {
+        } else {
             MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(value.getClass());
             if (mc.hasProperty(value, ERRORS_PROPERTY) != null) {
                 Object errors = mc.getProperty(value, ERRORS_PROPERTY);
@@ -214,7 +209,7 @@ public class GrailsFlashScope implements FlashScope {
 
     private void registerWithSessionIfNecessary() {
         if (registerWithSession) {
-            GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes();
+            GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes();
             HttpSession session = webRequest.getCurrentRequest().getSession(true);
             if (session.getAttribute(GrailsApplicationAttributes.FLASH_SCOPE) == null) {
                 session.setAttribute(GrailsApplicationAttributes.FLASH_SCOPE, this);

@@ -22,36 +22,36 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * {@link SynchronizationManager} delegating calls to Spring's {@link TransactionSynchronizationManager}.
- * 
+ *
  * @author Michael Hunger
  * @author Oliver Gierke
  * @since 2.3.6
  */
 enum SpringTransactionSynchronizationManager implements SynchronizationManager {
 
-	INSTANCE;
+    INSTANCE;
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.grails.transaction.SynchronizationManager#initSynchronization()
-	 */
-	public void initSynchronization() {
-		TransactionSynchronizationManager.initSynchronization();
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.grails.transaction.SynchronizationManager#initSynchronization()
+     */
+    public void initSynchronization() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.grails.transaction.SynchronizationManager#isSynchronizationActive()
-	 */
-	public boolean isSynchronizationActive() {
-		return TransactionSynchronizationManager.isSynchronizationActive();
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.grails.transaction.SynchronizationManager#isSynchronizationActive()
+     */
+    public boolean isSynchronizationActive() {
+        return TransactionSynchronizationManager.isSynchronizationActive();
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.grails.transaction.SynchronizationManager#clearSynchronization()
-	 */
-	public void clearSynchronization() {
-		TransactionSynchronizationManager.clear();
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.grails.transaction.SynchronizationManager#clearSynchronization()
+     */
+    public void clearSynchronization() {
+        TransactionSynchronizationManager.clear();
+    }
 }

@@ -20,9 +20,6 @@
 package grails.artefact.controller.support
 
 import jakarta.servlet.http.HttpServletRequest
-
-import org.springframework.http.HttpMethod
-
 import spock.lang.Specification
 
 class AllowedMethodsHelperSpec extends Specification {

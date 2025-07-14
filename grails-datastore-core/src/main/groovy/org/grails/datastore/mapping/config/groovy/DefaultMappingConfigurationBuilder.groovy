@@ -25,8 +25,6 @@ import org.grails.datastore.mapping.reflect.NameUtils
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
-import java.lang.reflect.Constructor
-
 /**
  * @author Graeme Rocher
  * @since 1.0
@@ -46,8 +44,8 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
     }
 
     Map<String, Property> getProperties() {
-        if(!target.propertyConfigs.isEmpty()) {
-            properties.putAll( target.propertyConfigs )
+        if (!target.propertyConfigs.isEmpty()) {
+            properties.putAll(target.propertyConfigs)
         }
         return properties
     }
@@ -66,18 +64,15 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
         def setterName = NameUtils.getSetterName(name)
         if (target.respondsTo(setterName)) {
             target[name] = args.size() == 1 ? args[0] : args
-        }
-        else {
-            if(target.respondsTo(name)) {
+        } else {
+            if (target.respondsTo(name)) {
                 target."$name"(*args)
-            }
-            else if (args.size() == 1 && args[0] instanceof Map) {
+            } else if (args.size() == 1 && args[0] instanceof Map) {
 
                 def instance
                 if (properties['*']) {
                     instance = properties['*'].clone()
-                }
-                else {
+                } else {
                     instance = properties[name] ?: propertyClass.newInstance()
                 }
 

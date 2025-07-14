@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.mapping.transactions.support;
 
-import org.springframework.dao.DataAccessException;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.transactions.SessionHolder;
+import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -41,7 +41,7 @@ public class SpringSessionSynchronization implements TransactionSynchronization 
     private boolean holderActive = true;
 
     public SpringSessionSynchronization(SessionHolder sessionHolder,
-            Datastore datastore, boolean newSession) {
+                                        Datastore datastore, boolean newSession) {
         this.sessionHolder = sessionHolder;
         this.datastore = datastore;
         this.newSession = newSession;
@@ -96,8 +96,7 @@ public class SpringSessionSynchronization implements TransactionSynchronization 
         // (closed in beforeCompletion in case of TransactionManagerLookup).
         if (newSession) {
             DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore);
-        }
-        else {
+        } else {
             session.disconnect();
         }
         if (sessionHolder.doesNotHoldNonDefaultSession()) {

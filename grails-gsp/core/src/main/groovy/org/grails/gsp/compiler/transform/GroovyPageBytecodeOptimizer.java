@@ -32,7 +32,7 @@ import java.net.URL;
 @AstTransformer
 public class GroovyPageBytecodeOptimizer implements GroovyPageInjector {
 
-    private final static String RUN_METHOD = "run";
+    private static final String RUN_METHOD = "run";
 
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
 

@@ -33,15 +33,15 @@ import org.grails.cli.profile.Step
 class DefaultStepFactory implements StepFactory {
 
     Map<String, Class<? extends Step>> steps = [
-            render: RenderStep,
-            gradle: GradleStep,
+            render : RenderStep,
+            gradle : GradleStep,
             execute: ExecuteStep,
-            mkdir: MkdirStep
+            mkdir  : MkdirStep
     ]
 
     @Override
     Step createStep(String name, Command command, Map parameters) {
-        if(command instanceof ProfileCommand) {
+        if (command instanceof ProfileCommand) {
             return steps[name]?.newInstance(command, parameters)
         }
     }

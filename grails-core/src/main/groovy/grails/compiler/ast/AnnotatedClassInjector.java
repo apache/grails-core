@@ -32,7 +32,8 @@ public interface AnnotatedClassInjector {
 
     /**
      * Performs injection on an annotated entity
-     * @param source The source unit
+     *
+     * @param source    The source unit
      * @param classNode The class node
      */
     void performInjectionOnAnnotatedClass(SourceUnit source, GeneratorContext context, ClassNode classNode);

@@ -21,13 +21,12 @@ package org.apache.grails.web.layout
 
 import grails.config.Config
 import grails.config.Settings
-import grails.util.Environment
-import grails.util.Metadata
-import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
-import org.grails.plugins.web.taglib.GrailsLayoutTagLib
-
 import grails.plugins.Plugin
+import grails.util.Environment
 import grails.util.GrailsUtil
+import grails.util.Metadata
+import org.grails.plugins.web.taglib.GrailsLayoutTagLib
+import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
 
 /**
  * Plugin responsible for Grails Layout specific configuration.

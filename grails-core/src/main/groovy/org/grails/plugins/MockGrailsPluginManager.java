@@ -18,16 +18,15 @@
  */
 package org.grails.plugins;
 
+import grails.core.DefaultGrailsApplication;
+import grails.core.GrailsApplication;
 import grails.plugins.GrailsPlugin;
+import grails.plugins.exceptions.PluginException;
 import groovy.lang.GroovyClassLoader;
 
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Map;
-
-import grails.core.DefaultGrailsApplication;
-import grails.core.GrailsApplication;
-import grails.plugins.exceptions.PluginException;
 
 /**
  * @author Graeme Rocher

@@ -18,7 +18,6 @@
  */
 package org.grails.datastore.mapping.keyvalue.engine;
 
-import org.springframework.context.ApplicationEventPublisher;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.NativeEntryEntityPersister;
 import org.grails.datastore.mapping.keyvalue.mapping.config.Family;
@@ -28,6 +27,7 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.PropertyMapping;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Abstract implementation of the EntityPersister abstract class
@@ -37,11 +37,12 @@ import org.grails.datastore.mapping.model.PropertyMapping;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class AbstractKeyValueEntityPersister<T,K> extends NativeEntryEntityPersister<T,K> {
+public abstract class AbstractKeyValueEntityPersister<T, K> extends NativeEntryEntityPersister<T, K> {
+
     protected String entityFamily;
 
     protected AbstractKeyValueEntityPersister(MappingContext context, PersistentEntity entity,
-               Session session, ApplicationEventPublisher publisher) {
+                                              Session session, ApplicationEventPublisher publisher) {
         super(context, entity, session, publisher);
         entityFamily = getFamily(entity, classMapping);
     }
@@ -60,7 +61,7 @@ public abstract class AbstractKeyValueEntityPersister<T,K> extends NativeEntryEn
     protected String getNativePropertyKey(PersistentProperty prop) {
         PropertyMapping<KeyValue> pm = prop.getMapping();
         String propKey = null;
-        if (pm.getMappedForm()!=null) {
+        if (pm.getMappedForm() != null) {
             propKey = pm.getMappedForm().getKey();
         }
         if (propKey == null) {
@@ -74,7 +75,9 @@ public abstract class AbstractKeyValueEntityPersister<T,K> extends NativeEntryEn
         if (cm.getMappedForm() != null) {
             table = cm.getMappedForm().getFamily();
         }
-        if (table == null) table = persistentEntity.getJavaClass().getName();
+        if (table == null) {
+            table = persistentEntity.getJavaClass().getName();
+        }
         return table;
     }
 
@@ -83,7 +86,9 @@ public abstract class AbstractKeyValueEntityPersister<T,K> extends NativeEntryEn
         if (cm.getMappedForm() != null) {
             keyspace = cm.getMappedForm().getKeyspace();
         }
-        if (keyspace == null) keyspace = defaultValue;
+        if (keyspace == null) {
+            keyspace = defaultValue;
+        }
         return keyspace;
     }
 }

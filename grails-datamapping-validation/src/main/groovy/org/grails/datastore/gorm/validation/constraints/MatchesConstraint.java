@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
-
 
 import grails.gorm.validation.ConstrainedProperty;
 import org.springframework.context.MessageSource;
@@ -76,7 +74,7 @@ public class MatchesConstraint extends AbstractConstraint {
 
         rejectValue(target, errors, ConstrainedProperty.DEFAULT_DOESNT_MATCH_MESSAGE_CODE,
                 ConstrainedProperty.MATCHES_CONSTRAINT + ConstrainedProperty.INVALID_SUFFIX,
-                new Object[] { constraintPropertyName, constraintOwningClass, propertyValue, regex });
+                new Object[]{constraintPropertyName, constraintOwningClass, propertyValue, regex});
     }
 }
 

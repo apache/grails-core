@@ -1,34 +1,22 @@
-/***
- * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2011 INRIA, France Telecom
- * All rights reserved.
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holders nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.apache.grails.common.compiler.asm;
-
 
 /**
  * The path to a type argument, wildcard bound, array element type, or static
@@ -42,25 +30,25 @@ class TypePath {
      * A type path step that steps into the element type of an array type. See
      * {@link #getStep getStep}.
      */
-    public final static int ARRAY_ELEMENT = 0;
+    public static final int ARRAY_ELEMENT = 0;
 
     /**
      * A type path step that steps into the nested type of a class type. See
      * {@link #getStep getStep}.
      */
-    public final static int INNER_TYPE = 1;
+    public static final int INNER_TYPE = 1;
 
     /**
      * A type path step that steps into the bound of a wildcard type. See
      * {@link #getStep getStep}.
      */
-    public final static int WILDCARD_BOUND = 2;
+    public static final int WILDCARD_BOUND = 2;
 
     /**
      * A type path step that steps into a type argument of a generic type. See
      * {@link #getStep getStep}.
      */
-    public final static int TYPE_ARGUMENT = 3;
+    public static final int TYPE_ARGUMENT = 3;
 
     /**
      * The byte array where the path is stored, in Java class file format.
@@ -75,11 +63,9 @@ class TypePath {
     /**
      * Creates a new type path.
      *
-     * @param b
-     *            the byte array containing the type path in Java class file
-     *            format.
-     * @param offset
-     *            the offset of the first byte of the type path in 'b'.
+     * @param b      the byte array containing the type path in Java class file
+     *               format.
+     * @param offset the offset of the first byte of the type path in 'b'.
      */
     TypePath(byte[] b, int offset) {
         this.b = b;
@@ -98,11 +84,10 @@ class TypePath {
     /**
      * Returns the value of the given step of this path.
      *
-     * @param index
-     *            an index between 0 and {@link #getLength()}, exclusive.
+     * @param index an index between 0 and {@link #getLength()}, exclusive.
      * @return {@link #ARRAY_ELEMENT ARRAY_ELEMENT}, {@link #INNER_TYPE
-     *         INNER_TYPE}, {@link #WILDCARD_BOUND WILDCARD_BOUND}, or
-     *         {@link #TYPE_ARGUMENT TYPE_ARGUMENT}.
+     * INNER_TYPE}, {@link #WILDCARD_BOUND WILDCARD_BOUND}, or
+     * {@link #TYPE_ARGUMENT TYPE_ARGUMENT}.
      */
     public int getStep(int index) {
         return b[offset + 2 * index + 1];
@@ -113,10 +98,9 @@ class TypePath {
      * into. This method should only be used for steps whose value is
      * {@link #TYPE_ARGUMENT TYPE_ARGUMENT}.
      *
-     * @param index
-     *            an index between 0 and {@link #getLength()}, exclusive.
+     * @param index an index between 0 and {@link #getLength()}, exclusive.
      * @return the index of the type argument that the given step is stepping
-     *         into.
+     * into.
      */
     public int getStepArgument(int index) {
         return b[offset + 2 * index + 2];
@@ -126,9 +110,8 @@ class TypePath {
      * Converts a type path in string form, in the format used by
      * {@link #toString()}, into a TypePath object.
      *
-     * @param typePath
-     *            a type path in string form, in the format used by
-     *            {@link #toString()}. May be null or empty.
+     * @param typePath a type path in string form, in the format used by
+     *                 {@link #toString()}. May be null or empty.
      * @return the corresponding TypePath object, or null if the path is empty.
      */
     public static TypePath fromString(final String typePath) {
@@ -138,7 +121,7 @@ class TypePath {
         int n = typePath.length();
         ByteVector out = new ByteVector(n);
         out.putByte(0);
-        for (int i = 0; i < n;) {
+        for (int i = 0; i < n; ) {
             char c = typePath.charAt(i++);
             if (c == '[') {
                 out.put11(ARRAY_ELEMENT, 0);

@@ -16,12 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.cli.compiler.autoconfigure;
 
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
-
 import org.grails.cli.compiler.CompilerAutoConfiguration;
 import org.grails.cli.compiler.DependencyCustomizer;
 

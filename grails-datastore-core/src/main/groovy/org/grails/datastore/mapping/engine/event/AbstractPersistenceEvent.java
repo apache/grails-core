@@ -18,15 +18,15 @@
  */
 package org.grails.datastore.mapping.engine.event;
 
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.engine.EntityAccess;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.springframework.context.ApplicationEvent;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.grails.datastore.mapping.engine.EntityAccess;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.springframework.context.ApplicationEvent;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * @author Burt Beckwith
@@ -53,8 +53,8 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
     private Serializable nativeEvent;
 
     protected AbstractPersistenceEvent(final Datastore source, final PersistentEntity entity,
-            final EntityAccess entityAccess) {
-        this((Object)source, entity, entityAccess);
+                                       final EntityAccess entityAccess) {
+        this((Object) source, entity, entityAccess);
     }
 
     protected AbstractPersistenceEvent(final Object source, final PersistentEntity entity,
@@ -62,10 +62,9 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
         super(source);
         this.entity = entity;
         this.entityAccess = entityAccess;
-        if(entityAccess != null) {
+        if (entityAccess != null) {
             this.entityObject = entityAccess.getEntity();
-        }
-        else {
+        } else {
             this.entityObject = null;
         }
     }
@@ -79,10 +78,9 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
         MappingContext mappingContext = source.getMappingContext();
         entityObject = mappingContext.getProxyHandler().unwrap(entity);
         this.entity = mappingContext.getPersistentEntity(entityObject.getClass().getName());
-        if(this.entity != null) {
+        if (this.entity != null) {
             this.entityAccess = mappingContext.createEntityAccess(this.entity, entityObject);
-        }
-        else {
+        } else {
             this.entityAccess = null;
         }
     }

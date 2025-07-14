@@ -21,7 +21,6 @@ package org.grails.datastore.mapping.dirty.checking
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Dirty checks sorted sets
  *
@@ -31,7 +30,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DirtyCheckingSortedSet extends DirtyCheckingCollection implements SortedSet {
 
-    @Delegate SortedSet target
+    @Delegate
+    SortedSet target
 
     DirtyCheckingSortedSet(SortedSet target, DirtyCheckable parent, String property) {
         super(target, parent, property)

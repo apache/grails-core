@@ -33,4 +33,6 @@ package grails.util;
  * @deprecated as of 7.0 in favor of using {@link org.springframework.mock.web.MockHttpServletResponse} directly.
  */
 @Deprecated(forRemoval = true)
-class MockHttpServletResponse extends org.springframework.mock.web.MockHttpServletResponse {}
+class MockHttpServletResponse extends org.springframework.mock.web.MockHttpServletResponse {
+
+}

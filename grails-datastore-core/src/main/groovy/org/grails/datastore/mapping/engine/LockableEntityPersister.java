@@ -18,14 +18,14 @@
  */
 package org.grails.datastore.mapping.engine;
 
-import java.io.Serializable;
-
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.CannotAcquireLockException;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.CannotAcquireLockException;
+
+import java.io.Serializable;
 
 /**
  * Abstract base class for entity persisters that support locking.
@@ -35,10 +35,12 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  */
 public abstract class LockableEntityPersister extends EntityPersister {
 
+    //CHECKSTYLE:OFF
     public static int DEFAULT_TIMEOUT = 30;
+    //CHECKSTYLE:ON
 
     public LockableEntityPersister(MappingContext mappingContext, PersistentEntity entity,
-               Session session, ApplicationEventPublisher publisher) {
+                                   Session session, ApplicationEventPublisher publisher) {
         super(mappingContext, entity, session, publisher);
     }
 
@@ -53,7 +55,8 @@ public abstract class LockableEntityPersister extends EntityPersister {
 
     /**
      * Acquire a lock using the given identifier and timeout delay
-     * @param id the identifier
+     *
+     * @param id      the identifier
      * @param timeout the amount of time to wait before giving up in seconds
      * @return The locked object
      * @throws CannotAcquireLockException
@@ -62,13 +65,15 @@ public abstract class LockableEntityPersister extends EntityPersister {
 
     /**
      * Return whether an object is locked or not
+     *
      * @param o The object
-     * @return  True if it is locked
+     * @return True if it is locked
      */
     public abstract boolean isLocked(Object o);
 
     /**
      * Unlocks a locked object
+     *
      * @param o The object to unlock
      */
     public abstract void unlock(Object o);
@@ -78,7 +83,7 @@ public abstract class LockableEntityPersister extends EntityPersister {
     public Object proxy(Serializable key) {
         PersistentEntity entity = getPersistentEntity();
         PersistentProperty identity = entity.getIdentity();
-        if(identity != null) {
+        if (identity != null) {
             key = (Serializable) getMappingContext().getConversionService().convert(key, identity.getType());
         }
         return getProxyFactory().createProxy(session, entity.getJavaClass(), key);

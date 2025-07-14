@@ -18,10 +18,10 @@
  */
 package org.grails.core.artefact;
 
+import jakarta.persistence.Entity;
+
 import java.util.HashSet;
 import java.util.Set;
-
-import jakarta.persistence.Entity;
 
 /**
  * Detects annotated domain classes for EJB3 style mappings.

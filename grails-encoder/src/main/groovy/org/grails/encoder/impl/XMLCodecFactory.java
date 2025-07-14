@@ -25,6 +25,7 @@ import org.grails.encoder.Encoder;
 import org.springframework.web.util.HtmlUtils;
 
 public class XMLCodecFactory implements CodecFactory {
+
     protected Encoder encoder = new BasicXMLEncoder();
     protected Decoder decoder = new Decoder() {
         public CodecIdentifier getCodecIdentifier() {

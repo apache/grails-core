@@ -24,6 +24,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest;
  * Created by lari on 02/01/15.
  */
 public class WebRequestOutputContext extends WebOutputContextLookup.WebOutputContext {
+
     private final GrailsWebRequest webRequest;
 
     public WebRequestOutputContext(GrailsWebRequest webRequest) {

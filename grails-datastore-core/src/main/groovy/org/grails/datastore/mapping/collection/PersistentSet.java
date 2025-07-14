@@ -18,14 +18,14 @@
  */
 package org.grails.datastore.mapping.collection;
 
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+import org.grails.datastore.mapping.model.types.Association;
+
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.model.types.Association;
 
 /**
  * A lazy loaded set.
@@ -52,12 +52,12 @@ public class PersistentSet extends AbstractPersistentCollection implements Set {
         super(keys, childType, session, createCollection());
     }
 
-    protected static HashSet createCollection() {
-        return new HashSet();
-    }
-
     public PersistentSet(Serializable associationKey, Session session, AssociationQueryExecutor indexer) {
         super(associationKey, session, indexer, createCollection());
+    }
+
+    protected static HashSet createCollection() {
+        return new HashSet();
     }
 
 }

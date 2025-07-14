@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 interface ViewConfiguration {
+
     /**
      * @return Should compile statically
      */

@@ -19,7 +19,7 @@
 
 package functionaltests
 
-import org.grails.exceptions.*
+import org.grails.exceptions.ExceptionUtils
 
 class ErrorsController {
     def throwErrorInInterceptor() {

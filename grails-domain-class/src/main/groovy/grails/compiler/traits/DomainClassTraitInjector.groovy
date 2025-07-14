@@ -22,7 +22,7 @@ import grails.artefact.DomainClass
 import org.grails.core.artefact.DomainClassArtefactHandler
 
 /**
- * 
+ *
  * @author Jeff Brown
  * @since 3.0
  *
@@ -32,7 +32,6 @@ class DomainClassTraitInjector implements TraitInjector {
     Class getTrait() {
         DomainClass
     }
-
 
     @Override
     String[] getArtefactTypes() {

@@ -27,7 +27,7 @@ import org.grails.encoder.Encoder
 
 /**
  * Implements the 'www-form-urlencoded' encoding scheme, also misleadingly known as URL encoding.
- * 
+ *
  * @see <a href="http://www.w3.org/TR/html4/interact/forms.html#h-17.13.4.1">Chapter 17.13.4 Form content types</a>
  *           of the <a href="http://www.w3.org/TR/html4/">HTML 4.01 Specification</a>
  *
@@ -35,16 +35,18 @@ import org.grails.encoder.Encoder
  */
 @CompileStatic
 public class URLCodecFactory implements CodecFactory {
+
     static final CodecIdentifier URL_CODEC_IDENTIFIER = new DefaultCodecIdentifier("URL");
 
     Encoder encoder = new Encoder() {
+
         @Override
         public CodecIdentifier getCodecIdentifier() {
             URL_CODEC_IDENTIFIER;
         }
 
         public Object encode(Object o) {
-            if(o==null) return o;
+            if (o == null) return o;
             URLEncoder.encode(String.valueOf(o), resolveEncoding());
         }
 
@@ -57,18 +59,19 @@ public class URLCodecFactory implements CodecFactory {
         }
 
         public void markEncoded(CharSequence string) {
-            
+
         }
     };
 
     Decoder decoder = new Decoder() {
+
         public CodecIdentifier getCodecIdentifier() {
             URL_CODEC_IDENTIFIER;
         }
 
         @Override
         public Object decode(Object o) {
-            if(o==null) return o;
+            if (o == null) return o;
             URLDecoder.decode(String.valueOf(o), resolveEncoding());
         }
     };

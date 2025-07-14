@@ -48,10 +48,9 @@ import java.lang.annotation.Target;
  * <p>For specific information about the semantics of this annotation's attributes,
  * consider the {@link org.springframework.transaction.TransactionDefinition} and
  * {@link org.springframework.transaction.interceptor.TransactionAttribute} javadocs.
-
+ *
  * @author Graeme Rocher
  * @author Juergen Hoeller
- *
  * @since 6.1
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
@@ -74,6 +73,7 @@ public @interface Transactional {
     /**
      * The transaction propagation type.
      * Defaults to {@link org.springframework.transaction.annotation.Propagation#REQUIRED}.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#getPropagationBehavior()
      */
     Propagation propagation() default Propagation.REQUIRED;
@@ -81,6 +81,7 @@ public @interface Transactional {
     /**
      * The transaction isolation level.
      * Defaults to {@link org.springframework.transaction.annotation.Isolation#DEFAULT}.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#getIsolationLevel()
      */
     Isolation isolation() default Isolation.DEFAULT;
@@ -88,6 +89,7 @@ public @interface Transactional {
     /**
      * The timeout for this transaction.
      * Defaults to the default timeout of the underlying transaction system.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#getTimeout()
      */
     int timeout() default TransactionDefinition.TIMEOUT_DEFAULT;
@@ -99,6 +101,7 @@ public @interface Transactional {
      * it will <i>not necessarily</i> cause failure of write access attempts.
      * A transaction manager which cannot interpret the read-only hint will
      * <i>not</i> throw an exception when asked for a read-only transaction.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#isReadOnly()
      */
     boolean readOnly() default false;
@@ -150,10 +153,9 @@ public @interface Transactional {
      */
     String[] noRollbackForClassName() default {};
 
-
     /**
      * In Spring, when there are nested transaction calls, the execution of the outermost callback will throw UnexpectedRollbackException if TransactionStatus.setRollbackOnly() was called in a nested transaction callback.
-     *
+     * <p>
      * This feature will make the setRollbackOnly state get inherited to parent level transaction template calls and therefore prevent UnexpectedRollbackException.
      * The default value is true.
      *

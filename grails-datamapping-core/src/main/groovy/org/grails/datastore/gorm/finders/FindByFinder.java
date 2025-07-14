@@ -18,10 +18,10 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import java.util.regex.Pattern;
-
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.MappingContext;
+
+import java.util.regex.Pattern;
 
 /**
  * Finder used to return a single result

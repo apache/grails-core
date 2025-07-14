@@ -38,15 +38,13 @@ class EventBusBuilder {
      */
     EventBus build() {
         List<EventBus> eventBuses = ServiceLoader.load(EventBus).toList()
-        if(eventBuses.size() == 1) {
+        if (eventBuses.size() == 1) {
             EventBus eventBus = eventBuses.get(0)
             log.debug('Found event bus class to use [{}]', eventBus.getClass().name)
             return eventBus
-        }
-        else if(eventBuses.size() > 1) {
+        } else if (eventBuses.size() > 1) {
             throw new IllegalStateException("More than one event bus implementation found on classpath ${eventBuses}. Remove one to continue.")
-        }
-        else {
+        } else {
             return createDefaultEventBus()
         }
     }

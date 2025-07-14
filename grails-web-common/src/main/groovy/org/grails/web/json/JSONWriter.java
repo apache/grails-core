@@ -1,16 +1,19 @@
 /*
 Public Domain.
 */
-
 package org.grails.web.json;
-
-import static org.grails.web.json.JSONWriter.Mode.*;
 
 import groovy.lang.Writable;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Stack;
+
+import static org.grails.web.json.JSONWriter.Mode.ARRAY;
+import static org.grails.web.json.JSONWriter.Mode.DONE;
+import static org.grails.web.json.JSONWriter.Mode.INIT;
+import static org.grails.web.json.JSONWriter.Mode.KEY;
+import static org.grails.web.json.JSONWriter.Mode.OBJECT;
 
 /**
  * JSONWriter provides a quick and convenient way of producing JSON text.
@@ -73,27 +76,29 @@ public class JSONWriter {
         this.mode = INIT;
         this.writer = w;
     }
-    
+
     private static class WritableString implements Writable {
+
         private String string;
-        
+
         WritableString(String string) {
             this.string = string;
         }
-        
+
         @Override
         public Writer writeTo(Writer out) throws IOException {
             out.write(string);
             return out;
         }
-        
+
         public String toString() {
             return string;
         }
     }
-    
+
     /**
      * Append a value.
+     *
      * @param s A string value.
      * @return this
      */
@@ -218,7 +223,6 @@ public class JSONWriter {
         throw new JSONException("Misplaced key: expected mode of KEY but was " + this.mode);
     }
 
-
     /**
      * Begin appending a new object. All keys and values until the balancing
      * <code>endObject</code> will be appended to this object. The
@@ -240,7 +244,6 @@ public class JSONWriter {
 
     }
 
-
     /**
      * Pop an array or object scope.
      *
@@ -250,10 +253,11 @@ public class JSONWriter {
         if (this.stack.size() == 0 || this.stack.pop() != c) {
             throw new JSONException("Nesting error.");
         }
-        if (this.stack.size() > 0)
+        if (this.stack.size() > 0) {
             this.mode = this.stack.peek();
-        else
+        } else {
             this.mode = DONE;
+        }
 
     }
 
@@ -266,7 +270,6 @@ public class JSONWriter {
         this.stack.push(c);
         this.mode = c;
     }
-
 
     /**
      * Append either the value <code>true</code> or the value
@@ -301,21 +304,22 @@ public class JSONWriter {
 
     /**
      * Append a number value
-     * 
+     *
      * @param number
      * @return
      */
     public JSONWriter value(Number number) {
         return number != null ? append(number.toString()) : valueNull();
     }
-    
+
     public JSONWriter valueNull() {
         return append(nullWritable);
     }
-    
+
     static Writable nullWritable = new NullWritable();
-    
+
     private static class NullWritable implements Writable {
+
         @Override
         public Writer writeTo(Writer out) throws IOException {
             out.write("null");
@@ -331,12 +335,13 @@ public class JSONWriter {
      * @return this
      */
     public JSONWriter value(Object o) {
-        return  o != null ? append(new QuotedWritable(o)) : valueNull();
+        return o != null ? append(new QuotedWritable(o)) : valueNull();
     }
-    
+
     private static class QuotedWritable implements Writable {
+
         Object o;
-        
+
         QuotedWritable(Object o) {
             this.o = o;
         }
@@ -346,7 +351,7 @@ public class JSONWriter {
             JSONObject.writeValue(out, o);
             return out;
         }
-        
+
         public String toString() {
             return String.valueOf(o);
         }

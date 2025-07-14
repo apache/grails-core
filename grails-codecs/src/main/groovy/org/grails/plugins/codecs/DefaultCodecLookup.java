@@ -18,25 +18,26 @@
  */
 package org.grails.plugins.codecs;
 
+import grails.core.GrailsApplication;
+import grails.core.GrailsClass;
+import grails.core.support.GrailsApplicationAware;
+import org.grails.commons.CodecArtefactHandler;
+import org.grails.commons.GrailsCodecClass;
+import org.grails.encoder.impl.BasicCodecLookup;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.OrderComparator;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
-import org.grails.commons.CodecArtefactHandler;
-import grails.core.GrailsApplication;
-import grails.core.GrailsClass;
-import org.grails.commons.GrailsCodecClass;
-import grails.core.support.GrailsApplicationAware;
-import org.grails.encoder.impl.BasicCodecLookup;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.OrderComparator;
 
 /**
  * @author Lari Hotari
  * @since 2.3
  */
 public class DefaultCodecLookup extends BasicCodecLookup implements GrailsApplicationAware {
+
     protected ApplicationContext applicationContext;
     protected GrailsApplication grailsApplication;
 
@@ -54,7 +55,7 @@ public class DefaultCodecLookup extends BasicCodecLookup implements GrailsApplic
         Collections.sort(codecs, OrderComparator.INSTANCE);
         Collections.reverse(codecs);
         for (GrailsClass grailsClass : codecs) {
-            registerCodec((GrailsCodecClass)grailsClass);
+            registerCodec((GrailsCodecClass) grailsClass);
         }
     }
 

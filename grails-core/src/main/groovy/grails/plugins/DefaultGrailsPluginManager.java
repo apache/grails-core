@@ -210,11 +210,15 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         if (plugin == null) {
             return;
         }
-        if (!plugin.isEnabled(applicationContext.getEnvironment().getActiveProfiles())) return;
+        if (!plugin.isEnabled(applicationContext.getEnvironment().getActiveProfiles())) {
+            return;
+        }
 
         for (GrailsPlugin observingPlugin : getPluginObservers(plugin)) {
 
-            if (!observingPlugin.isEnabled(applicationContext.getEnvironment().getActiveProfiles())) continue;
+            if (!observingPlugin.isEnabled(applicationContext.getEnvironment().getActiveProfiles())) {
+                continue;
+            }
 
             observingPlugin.notifyOfEvent(event);
         }
@@ -245,22 +249,6 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
     }
 
     protected List<GrailsPlugin> sortPlugins(List<GrailsPlugin> toSort) {
-        /* http://en.wikipedia.org/wiki/Topological_sorting
-         *
-        * L <- Empty list that will contain the sorted nodes
-         S <- Set of all nodes
-
-        function visit(node n)
-            if n has not been visited yet then
-                mark n as visited
-                for each node m with an edge from n to m do
-                    visit(m)
-                add n to L
-
-        for each node n in S do
-            visit(n)
-
-         */
         List<GrailsPlugin> sortedPlugins = new ArrayList<GrailsPlugin>(toSort.size());
         Set<GrailsPlugin> visitedPlugins = new HashSet<GrailsPlugin>();
         Map<GrailsPlugin, List<GrailsPlugin>> loadOrderDependencies = resolveLoadDependencies(toSort);
@@ -575,7 +563,9 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         String[] dependencyNames = other.getDependencyNames();
         for (String dependencyName : dependencyNames) {
             for (GrailsPlugin grailsPlugin : delayedLoadPlugins) {
-                if (grailsPlugin.getName().equals(dependencyName)) return true;
+                if (grailsPlugin.getName().equals(dependencyName)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -593,8 +583,9 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
             String requiredVersion = plugin.getDependentVersion(name);
 
             if (name.equals(dependency.getName()) &&
-                    GrailsVersionUtils.isValidVersion(dependency.getVersion(), requiredVersion))
+                    GrailsVersionUtils.isValidVersion(dependency.getVersion(), requiredVersion)) {
                 return true;
+            }
         }
         return false;
     }
@@ -760,8 +751,8 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         checkInitialised();
         // remove common meta classes just to be sure
         MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
-        for (Class<?> COMMON_CLASS : COMMON_CLASSES) {
-            registry.removeMetaClass(COMMON_CLASS);
+        for (Class<?> commonClass : COMMON_CLASSES) {
+            registry.removeMetaClass(commonClass);
         }
         for (GrailsPlugin plugin : pluginList) {
             if (plugin.supportsCurrentScopeAndEnvironment()) {

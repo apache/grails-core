@@ -18,9 +18,8 @@
  */
 package org.grails.web.servlet;
 
-import org.grails.core.lifecycle.ShutdownOperations;
-
 import jakarta.servlet.http.HttpServletResponse;
+import org.grails.core.lifecycle.ShutdownOperations;
 
 /**
  * A holder for the original Wrapped response for use when using includes.
@@ -37,11 +36,13 @@ public class WrappedResponseHolder {
             }
         }, true);
     }
+
     private static ThreadLocal<HttpServletResponse> wrappedResponseHolder =
-        new ThreadLocal<HttpServletResponse>();
+            new ThreadLocal<HttpServletResponse>();
 
     /**
      * Bind the given HttpServletResponse to the current thread.
+     *
      * @param response the HttpServletResponse to expose
      */
     public static void setWrappedResponse(HttpServletResponse response) {
@@ -50,6 +51,7 @@ public class WrappedResponseHolder {
 
     /**
      * Return the HttpServletResponse currently bound to the thread.
+     *
      * @return the HttpServletResponse currently bound to the thread, or <code>null</code>
      */
     public static HttpServletResponse getWrappedResponse() {

@@ -23,10 +23,10 @@ import org.eclipse.aether.graph.Dependency
 class GradleDependency {
 
     static final Map<String, String> SCOPE_MAP = [
-        compile: 'implementation',
-        runtime: 'runtimeOnly',
-        testRuntime: 'testRuntimeOnly',
-        testCompile: 'testImplementation',
+            compile    : 'implementation',
+            runtime    : 'runtimeOnly',
+            testRuntime: 'testRuntimeOnly',
+            testCompile: 'testImplementation',
 //        provided: 'developmentOnly'
     ]
 

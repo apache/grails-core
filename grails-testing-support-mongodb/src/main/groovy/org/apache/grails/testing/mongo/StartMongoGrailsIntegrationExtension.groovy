@@ -33,16 +33,17 @@ import org.testcontainers.utility.DockerImageName
  * @author James Daugherty
  */
 class StartMongoGrailsIntegrationExtension extends AbstractMongoGrailsExtension implements IGlobalExtension {
+
     static GenericContainer dbContainer
     static String connectionString
 
     @Override
     void start() {
-        if(!isIntegrationTestRun()) {
+        if (!isIntegrationTestRun()) {
             return
         }
 
-        if(!isMongoAlreadyRunning()) {
+        if (!isMongoAlreadyRunning()) {
             System.out.println("Starting MongoDB container on port ${DEFAULT_MONGO_PORT}")
             DockerImageName dockerImage = getDesiredMongoDockerName()
             dbContainer = MongoContainerHolder.startMongoContainer(dockerImage)
@@ -51,8 +52,7 @@ class StartMongoGrailsIntegrationExtension extends AbstractMongoGrailsExtension 
             System.setProperty('grails.mongodb.port', dbContainer.getMappedPort(DEFAULT_MONGO_PORT) as String)
             connectionString = createConnectionString(dbContainer.getHost(), dbContainer.getMappedPort(DEFAULT_MONGO_PORT))
             System.setProperty('grails.mongodb.url', connectionString)
-        }
-        else {
+        } else {
             // Assume the defaults, for consistency, set the same variables
             System.out.println("MongoDB is already running on localhost:${DEFAULT_MONGO_PORT}")
 
@@ -67,7 +67,7 @@ class StartMongoGrailsIntegrationExtension extends AbstractMongoGrailsExtension 
 
     @Override
     void stop() {
-        if(dbContainer) {
+        if (dbContainer) {
             dbContainer.start()
         }
     }

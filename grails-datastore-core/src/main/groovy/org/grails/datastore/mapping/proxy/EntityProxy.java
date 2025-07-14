@@ -33,12 +33,14 @@ public interface EntityProxy<T> {
 
     /**
      * Obtains the target performing initialization if necessary
+     *
      * @return The target
      */
     T getTarget();
 
     /**
      * Checks whether the proxy has been initialized
+     *
      * @return True if it has
      */
     boolean isInitialized();

@@ -18,14 +18,14 @@
  */
 package org.grails.orm.hibernate;
 
-import java.io.Serializable;
-import java.util.Collection;
-
 import groovy.lang.Closure;
 import org.hibernate.Criteria;
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
+
+import java.io.Serializable;
+import java.util.Collection;
 
 /**
  * Template interface that can be used with both Hibernate 3 and Hibernate 4

@@ -18,12 +18,6 @@
  */
 package org.grails.orm.hibernate.support;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Properties;
-
-import javax.sql.DataSource;
-
 import org.grails.orm.hibernate.exceptions.CouldNotDetermineHibernateDialectException;
 import org.hibernate.HibernateException;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
@@ -32,7 +26,11 @@ import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl;
 import org.hibernate.engine.jdbc.dialect.internal.StandardDialectResolver;
-import org.hibernate.engine.jdbc.dialect.spi.*;
+import org.hibernate.engine.jdbc.dialect.spi.DatabaseMetaDataDialectResolutionInfoAdapter;
+import org.hibernate.engine.jdbc.dialect.spi.DialectFactory;
+import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
+import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfoSource;
+import org.hibernate.engine.jdbc.dialect.spi.DialectResolver;
 import org.hibernate.service.Service;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceBinding;
@@ -44,6 +42,11 @@ import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  * @author Steven Devijver
@@ -88,7 +91,7 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
 
         Connection connection = null;
 
-        String dbName = (String)JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
+        String dbName = (String) JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
 
         try {
             connection = DataSourceUtils.getConnection(dataSource);
@@ -113,12 +116,12 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
                 hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
             }
 
-           if (!StringUtils.hasText(hibernateDialectClassName)) {
+            if (!StringUtils.hasText(hibernateDialectClassName)) {
                 throw new CouldNotDetermineHibernateDialectException(
                         "Could not determine Hibernate dialect for database name [" + dbName + "]!");
-           }
+            }
         } finally {
-            DataSourceUtils.releaseConnection(connection,dataSource);
+            DataSourceUtils.releaseConnection(connection, dataSource);
         }
     }
 

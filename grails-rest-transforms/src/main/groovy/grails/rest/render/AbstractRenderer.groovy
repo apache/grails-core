@@ -18,8 +18,8 @@
  */
 package grails.rest.render
 
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
+import groovy.transform.CompileStatic
 
 /**
  * Abstract implementation of the {@link Renderer} interface
@@ -29,7 +29,7 @@ import grails.web.mime.MimeType
  *
  */
 @CompileStatic
-abstract class AbstractRenderer<T> implements Renderer<T>{
+abstract class AbstractRenderer<T> implements Renderer<T> {
 
     Class<T> targetType
     MimeType[] mimeTypes

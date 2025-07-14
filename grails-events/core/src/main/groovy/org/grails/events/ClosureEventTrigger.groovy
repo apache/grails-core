@@ -48,7 +48,7 @@ class ClosureEventTrigger<T> implements EventTrigger<T> {
         this.subscriberClosure = subscriber
         this.reply = reply
         this.data = event.data
-        Closure closure = (Closure)subscriber
+        Closure closure = (Closure) subscriber
         Class[] parameterTypes = closure.parameterTypes
         this.argCount = parameterTypes.length
         this.eventArg = argCount == 1 && Event.isAssignableFrom(parameterTypes[0])
@@ -61,31 +61,28 @@ class ClosureEventTrigger<T> implements EventTrigger<T> {
 
     @Override
     Object proceed() {
-        int dataLength = data.getClass().isArray() ? ((Object[])data).length : 1
+        int dataLength = data.getClass().isArray() ? ((Object[]) data).length : 1
 
         boolean isSpread = !eventArg && dataLength > 1 && argCount == dataLength
         try {
             def result
-            if(isSpread) {
+            if (isSpread) {
                 result = callSpread(subscriberClosure, data)
-            }
-            else {
-                if(eventArg) {
+            } else {
+                if (eventArg) {
                     result = subscriberClosure.call(event)
-                }
-                else {
+                } else {
                     result = subscriberClosure.call(data)
                 }
             }
-            if(reply != null) {
+            if (reply != null) {
                 return reply.call(result)
             }
             return result
         } catch (Throwable e) {
-            if(reply != null && reply.parameterTypes && reply.parameterTypes[0].isInstance(e)) {
+            if (reply != null && reply.parameterTypes && reply.parameterTypes[0].isInstance(e)) {
                 reply.call(e)
-            }
-            else {
+            } else {
                 throw e
             }
         }

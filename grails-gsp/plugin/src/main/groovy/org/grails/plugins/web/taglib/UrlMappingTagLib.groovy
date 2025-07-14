@@ -43,7 +43,7 @@ import org.springframework.web.servlet.support.RequestContextUtils
  */
 @CompileStatic
 @TagLib
-class UrlMappingTagLib implements TagLibrary{
+class UrlMappingTagLib implements TagLibrary {
 
     CodecLookup codecLookup
 
@@ -67,16 +67,16 @@ class UrlMappingTagLib implements TagLibrary{
     Closure include = { Map attrs, body ->
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
-            def controllerName = ((GroovyObject)controller)?.getProperty("controllerName")
+            def controllerName = ((GroovyObject) controller)?.getProperty("controllerName")
             attrs.controller = controllerName
         }
 
         if (attrs.controller || attrs.view) {
             def mapping = new ForwardUrlMappingInfo(controller: attrs.controller as String,
-                action: attrs.action as String,
-                view: attrs.view as String,
-                id: attrs.id as String,
-                params: attrs.params as Map)
+                    action: attrs.action as String,
+                    view: attrs.view as String,
+                    id: attrs.id as String,
+                    params: attrs.params as Map)
 
             if (attrs.namespace != null) {
                 mapping.namespace = attrs.namespace as String
@@ -84,7 +84,7 @@ class UrlMappingTagLib implements TagLibrary{
             if (attrs.plugin != null) {
                 mapping.pluginName = attrs.plugin as String
             }
-            out << UrlMappingUtils.includeForUrlMappingInfo(request, response, mapping, (Map)(attrs.model ?: [:]), linkGenerator)?.content
+            out << UrlMappingUtils.includeForUrlMappingInfo(request, response, mapping, (Map) (attrs.model ?: [:]), linkGenerator)?.content
         }
     }
 
@@ -118,7 +118,7 @@ class UrlMappingTagLib implements TagLibrary{
      * @attr fragment The link fragment (often called anchor tag) to use
      */
     Closure paginate = { Map attrsMap ->
-        TypeConvertingMap attrs = (TypeConvertingMap)attrsMap
+        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
         def writer = out
         if (attrs.total == null) {
             throwTagError("Tag [paginate] is missing required attribute [total]")
@@ -134,7 +134,7 @@ class UrlMappingTagLib implements TagLibrary{
         if (!max) max = (attrs.int('max') ?: 10)
 
         Map linkParams = [:]
-        if (attrs.params instanceof Map) linkParams.putAll((Map)attrs.params)
+        if (attrs.params instanceof Map) linkParams.putAll((Map) attrs.params)
         linkParams.offset = offset - max
         linkParams.max = max
         if (params.sort) linkParams.sort = params.sort
@@ -166,7 +166,7 @@ class UrlMappingTagLib implements TagLibrary{
         if (attrs.containsKey('class')) {
             linkTagAttrs.put('class', attrs.get('class'))
         }
-        String activeClass = attrs.activeClass?:'currentStep'
+        String activeClass = attrs.activeClass ?: 'currentStep'
 
         if (attrs.fragment != null) {
             linkTagAttrs.fragment = attrs.fragment
@@ -210,32 +210,31 @@ class UrlMappingTagLib implements TagLibrary{
             // display firststep link when beginstep is not firststep
             if (beginstep > firststep && !attrs.boolean('omitFirst')) {
                 linkParams.offset = 0
-                writer << callLink((Map)stepAttrs.clone()) {firststep.toString()}
+                writer << callLink((Map) stepAttrs.clone()) { firststep.toString() }
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
-            if (beginstep > firststep+1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev')) ) {
+            if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
                 writer << '<span class="step gap">..</span>'
             }
 
             // display paginate steps
             (beginstep..endstep).each { int i ->
                 if (currentstep == i) {
-                    writer << "<span class=\"${[attrs.get('class')?:'',activeClass].join(' ').trim()}\">${i}</span>"
-                }
-                else {
+                    writer << "<span class=\"${[attrs.get('class') ?: '', activeClass].join(' ').trim()}\">${i}</span>"
+                } else {
                     linkParams.offset = (i - 1) * max
-                    writer << callLink((Map)stepAttrs.clone()) {i.toString()}
+                    writer << callLink((Map) stepAttrs.clone()) { i.toString() }
                 }
             }
 
             //show a gap if beginstep isn't immediately before firststep, and if were not omitting first or rev
-            if (endstep+1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
+            if (endstep + 1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
                 writer << '<span class="step gap">..</span>'
             }
             // display laststep link when endstep is not laststep
             if (endstep < laststep && !attrs.boolean('omitLast')) {
                 linkParams.offset = (laststep - 1) * max
-                writer << callLink((Map)stepAttrs.clone()) { laststep.toString() }
+                writer << callLink((Map) stepAttrs.clone()) { laststep.toString() }
             }
         }
 
@@ -313,12 +312,10 @@ class UrlMappingTagLib implements TagLibrary{
             attrs['class'] = (attrs['class'] as String) + " sorted " + order
             if (order == "asc") {
                 linkParams.order = "desc"
-            }
-            else {
+            } else {
                 linkParams.order = "asc"
             }
-        }
-        else {
+        } else {
             linkParams.order = defaultOrder
         }
 
@@ -352,7 +349,7 @@ class UrlMappingTagLib implements TagLibrary{
         linkAttrs.action = action
         linkAttrs.namespace = namespace
 
-        writer << callLink((Map)linkAttrs) {
+        writer << callLink((Map) linkAttrs) {
             title
         }
         writer << '</th>'

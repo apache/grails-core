@@ -30,6 +30,7 @@ import org.grails.buffer.FastStringWriter
  */
 @CompileStatic
 class GenericViewUriResolver implements ViewUriResolver {
+
     private static final String SLASH_STR = "/"
     private static final char SLASH = '/'
     private static final char UNDERSCORE = '_'
@@ -59,22 +60,20 @@ class GenericViewUriResolver implements ViewUriResolver {
             pathToTemplate = templateName.substring(0, lastSlash + 1)
             templateName = templateName.substring(lastSlash + 1)
         }
-        if(controllerNamespace != null) {
+        if (controllerNamespace != null) {
             buf << SLASH << controllerNamespace
         }
-        if(controllerName != null) {
-            if(controllerName.startsWith(SLASH_STR)) {
+        if (controllerName != null) {
+            if (controllerName.startsWith(SLASH_STR)) {
                 buf << controllerName
-            }
-            else {
+            } else {
                 buf << SLASH << controllerName
             }
         }
         buf << SLASH << pathToTemplate << UNDERSCORE << templateName
-        if(includeExtension) {
+        if (includeExtension) {
             return buf.append(extension).toString()
-        }
-        else {
+        } else {
             return buf.toString()
         }
     }
@@ -88,17 +87,16 @@ class GenericViewUriResolver implements ViewUriResolver {
      */
     protected String getAbsoluteTemplateURI(String templateName, boolean includeExtension = true) {
         def buf = new FastStringWriter()
-        String tmp = templateName.substring(1,templateName.length())
+        String tmp = templateName.substring(1, templateName.length())
         if (tmp.indexOf(SLASH_STR) > -1) {
             buf << SLASH
             int i = tmp.lastIndexOf(SLASH_STR)
             buf << tmp.substring(0, i) << SLASH_UNDR
-            buf << tmp.substring(i + 1,tmp.length())
+            buf << tmp.substring(i + 1, tmp.length())
+        } else {
+            buf << SLASH_UNDR << templateName.substring(1, templateName.length())
         }
-        else {
-            buf << SLASH_UNDR << templateName.substring(1,templateName.length())
-        }
-        if(includeExtension) {
+        if (includeExtension) {
             String uri = buf.append(extension).toString()
             buf.close()
             return uri

@@ -25,7 +25,10 @@ import grails.util.GrailsNameUtils
 import grails.web.http.HttpHeaders
 import org.springframework.http.HttpStatus
 
-import static org.springframework.http.HttpStatus.*
+import static org.springframework.http.HttpStatus.CREATED
+import static org.springframework.http.HttpStatus.NOT_FOUND
+import static org.springframework.http.HttpStatus.NO_CONTENT
+import static org.springframework.http.HttpStatus.OK
 
 /**
  * Base class that can be extended to get the basic CRUD operations needed for a RESTful API.
@@ -36,6 +39,7 @@ import static org.springframework.http.HttpStatus.*
 @Artefact("Controller")
 @ReadOnly
 class RestfulController<T> {
+
     static allowedMethods = [save: "POST", update: ["PUT", "POST"], patch: "PATCH", delete: "DELETE"]
 
     Class<T> resource
@@ -61,7 +65,9 @@ class RestfulController<T> {
      * @return A list of resources
      */
     def index(Integer max) {
-        if (max < 0) { max = null }
+        if (max < 0) {
+            max = null
+        }
         params.max = Math.min(max ?: 10, 100)
         respond listAllResources(params), model: [("${resourceName}Count".toString()): countResources()]
     }
@@ -79,7 +85,7 @@ class RestfulController<T> {
      * Displays a form to create a new resource
      */
     def create() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         respond createResource()
@@ -90,7 +96,7 @@ class RestfulController<T> {
      */
     @Transactional
     def save() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         def instance = createResource()
@@ -98,7 +104,7 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view:'create' // STATUS CODE 422
+            respond instance.errors, view: 'create' // STATUS CODE 422
             return
         }
 
@@ -111,15 +117,15 @@ class RestfulController<T> {
             }
             '*' {
                 response.addHeader(HttpHeaders.LOCATION,
-                        grailsLinkGenerator.link( resource: this.controllerName, action: 'show',id: instance.id, absolute: true,
-                                            namespace: hasProperty('namespace') ? this.namespace : null ))
-                respond instance, [status: CREATED, view:'show']
+                        grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
+                                namespace: hasProperty('namespace') ? this.namespace : null))
+                respond instance, [status: CREATED, view: 'show']
             }
         }
     }
 
     def edit() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         respond queryForResource(params.id)
@@ -140,7 +146,7 @@ class RestfulController<T> {
      */
     @Transactional
     def update() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
 
@@ -156,7 +162,7 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view:'edit' // STATUS CODE 422
+            respond instance.errors, view: 'edit' // STATUS CODE 422
             return
         }
 
@@ -166,10 +172,10 @@ class RestfulController<T> {
                 flash.message = message(code: 'default.updated.message', args: [classMessageArg, instance.id])
                 redirect instance
             }
-            '*'{
+            '*' {
                 response.addHeader(HttpHeaders.LOCATION,
-                        grailsLinkGenerator.link( resource: this.controllerName, action: 'show',id: instance.id, absolute: true,
-                                            namespace: hasProperty('namespace') ? this.namespace : null ))
+                        grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
+                                namespace: hasProperty('namespace') ? this.namespace : null))
                 respond instance, [status: OK]
             }
         }
@@ -181,7 +187,7 @@ class RestfulController<T> {
      */
     @Transactional
     def delete() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
 
@@ -197,31 +203,31 @@ class RestfulController<T> {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.deleted.message', args: [classMessageArg, instance.id])
-                redirect action:"index", method:"GET"
+                redirect action: "index", method: "GET"
             }
-            '*'{ render status: NO_CONTENT } // NO CONTENT STATUS CODE
+            '*' { render status: NO_CONTENT } // NO CONTENT STATUS CODE
         }
     }
-    
+
     /**
      * handles the request for write methods (create, edit, update, save, delete) when controller is in read only mode
-     * 
+     *
      * @return true if controller is read only
      */
     protected boolean handleReadOnly() {
-        if(readOnly) {
+        if (readOnly) {
             render status: HttpStatus.METHOD_NOT_ALLOWED.value()
             return true
         } else {
             return false
         }
     }
-    
+
     /**
      * The object that can be bound to a domain instance.  Defaults to the request.  Subclasses may override this
      * method to return anything that is a valid second argument to the bindData method in a controller.  This
      * could be the request, a {@link java.util.Map} or a {@link org.grails.databinding.DataBindingSource}.
-     * 
+     *
      * @return the object to bind to a domain instance
      */
     protected getObjectToBind() {
@@ -247,7 +253,7 @@ class RestfulController<T> {
     protected T createResource(Map params) {
         resource.newInstance(params)
     }
-    
+
     /**
      * Creates a new instance of the resource.  If the request
      * contains a body the body will be parsed and used to
@@ -286,7 +292,7 @@ class RestfulController<T> {
                 flash.message = message(code: 'default.not.found.message', args: [classMessageArg, params.id])
                 redirect action: "index", method: "GET"
             }
-            '*'{ render status: NOT_FOUND }
+            '*' { render status: NOT_FOUND }
         }
     }
 
@@ -312,7 +318,7 @@ class RestfulController<T> {
 
     /**
      * Deletes a resource
-     * 
+     *
      * @param resource The resource to be deleted
      */
     protected void deleteResource(T resource) {

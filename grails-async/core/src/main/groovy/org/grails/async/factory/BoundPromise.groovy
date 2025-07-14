@@ -91,8 +91,7 @@ class BoundPromise<T> implements Promise<T> {
             } catch (Throwable e) {
                 return new BoundPromise(e)
             }
-        }
-        else {
+        } else {
             return this
         }
     }

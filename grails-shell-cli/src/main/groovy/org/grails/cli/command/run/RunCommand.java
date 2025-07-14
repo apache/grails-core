@@ -18,128 +18,126 @@
  */
 package org.grails.cli.command.run;
 
-import java.io.File;
-import java.util.List;
-import java.util.logging.Level;
-
 import org.grails.cli.compiler.GroovyCompilerScope;
 import org.grails.cli.compiler.RepositoryConfigurationFactory;
 import org.grails.cli.compiler.grape.RepositoryConfiguration;
-
 import org.grails.cli.profile.Command;
 import org.grails.cli.profile.CommandDescription;
 import org.grails.cli.profile.ExecutionContext;
 
+import java.io.File;
+import java.util.List;
+import java.util.logging.Level;
+
 /**
- * {@link Command} to 'run' a groovy script or scripts.
+ * {@link org.springframework.boot.cli.command.Command;} to 'run' a groovy script or scripts.
  *
  * @author Phillip Webb
  * @author Dave Syer
  * @author Andy Wilkinson
- * @since 1.0.0
  * @see SpringApplicationRunner
+ * @since 1.0.0
  */
 public class RunCommand implements Command {
 
-	public static final String NAME = "run";
+    public static final String NAME = "run";
 
-	private final Object monitor = new Object();
+    private final Object monitor = new Object();
 
-	private SpringApplicationRunner runner;
+    private SpringApplicationRunner runner;
 
-	public RunCommand() {
-	}
+    public RunCommand() {
+    }
 
-	@Override
-	public String getName() {
-		return NAME;
-	}
+    @Override
+    public String getName() {
+        return NAME;
+    }
 
-	@Override
-	public CommandDescription getDescription() {
-		CommandDescription description = new CommandDescription();
-		description.setName(NAME);
-		description.setDescription("Run a grails groovy script");
-		description.setUsage("run [SCRIPT NAME]");
-		return description;
-	}
+    @Override
+    public CommandDescription getDescription() {
+        CommandDescription description = new CommandDescription();
+        description.setName(NAME);
+        description.setDescription("Run a grails groovy script");
+        description.setUsage("run [SCRIPT NAME]");
+        return description;
+    }
 
-	@Override
-	public synchronized boolean handle(ExecutionContext executionContext) {
-		synchronized (this.monitor) {
-			String[] sources = executionContext.getCommandLine().getRemainingArgs().toArray(new String[0]);
-			List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
-					.createDefaultRepositoryConfiguration();
-			repositoryConfiguration.add(0,
-					new RepositoryConfiguration("local", new File("repository").toURI(), true));
+    @Override
+    public synchronized boolean handle(ExecutionContext executionContext) {
+        synchronized (this.monitor) {
+            String[] sources = executionContext.getCommandLine().getRemainingArgs().toArray(new String[0]);
+            List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
+                    .createDefaultRepositoryConfiguration();
+            repositoryConfiguration.add(0,
+                    new RepositoryConfiguration("local", new File("repository").toURI(), true));
 
-			SpringApplicationRunnerConfiguration configuration = new SpringApplicationRunnerConfigurationAdapter(
-					repositoryConfiguration);
+            SpringApplicationRunnerConfiguration configuration = new SpringApplicationRunnerConfigurationAdapter(
+                    repositoryConfiguration);
 
-			try {
-				this.runner = new SpringApplicationRunner(configuration, sources);
-				this.runner.compileAndRun();
-			}
-			catch (Exception e) {
-				throw new RuntimeException(e);
-			}
+            try {
+                this.runner = new SpringApplicationRunner(configuration, sources);
+                this.runner.compileAndRun();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
 
-			return true;
-		}
-	}
+            return true;
+        }
+    }
 
-	static class SpringApplicationRunnerConfigurationAdapter implements SpringApplicationRunnerConfiguration {
+    static class SpringApplicationRunnerConfigurationAdapter implements SpringApplicationRunnerConfiguration {
 
-		private final List<RepositoryConfiguration> repositoryConfiguration;
+        private final List<RepositoryConfiguration> repositoryConfiguration;
 
-		public SpringApplicationRunnerConfigurationAdapter(List<RepositoryConfiguration> repositoryConfiguration) {
-			this.repositoryConfiguration = repositoryConfiguration;
-		}
+        public SpringApplicationRunnerConfigurationAdapter(List<RepositoryConfiguration> repositoryConfiguration) {
+            this.repositoryConfiguration = repositoryConfiguration;
+        }
 
-		@Override
-		public boolean isWatchForFileChanges() {
-			return true;
-		}
+        @Override
+        public boolean isWatchForFileChanges() {
+            return true;
+        }
 
-		@Override
-		public Level getLogLevel() {
-			return Level.INFO;
-		}
+        @Override
+        public Level getLogLevel() {
+            return Level.INFO;
+        }
 
-		@Override
-		public GroovyCompilerScope getScope() {
-			return GroovyCompilerScope.DEFAULT;
-		}
+        @Override
+        public GroovyCompilerScope getScope() {
+            return GroovyCompilerScope.DEFAULT;
+        }
 
-		@Override
-		public boolean isGuessImports() {
-			return true;
-		}
+        @Override
+        public boolean isGuessImports() {
+            return true;
+        }
 
-		@Override
-		public boolean isGuessDependencies() {
-			return true;
-		}
+        @Override
+        public boolean isGuessDependencies() {
+            return true;
+        }
 
-		@Override
-		public boolean isAutoconfigure() {
-			return true;
-		}
+        @Override
+        public boolean isAutoconfigure() {
+            return true;
+        }
 
-		@Override
-		public String[] getClasspath() {
-			return new String[0];
-		}
+        @Override
+        public String[] getClasspath() {
+            return new String[0];
+        }
 
-		@Override
-		public List<RepositoryConfiguration> getRepositoryConfiguration() {
-			return this.repositoryConfiguration;
-		}
+        @Override
+        public List<RepositoryConfiguration> getRepositoryConfiguration() {
+            return this.repositoryConfiguration;
+        }
 
-		@Override
-		public boolean isQuiet() {
-			return false;
-		}
+        @Override
+        public boolean isQuiet() {
+            return false;
+        }
 
-	}
+    }
 }

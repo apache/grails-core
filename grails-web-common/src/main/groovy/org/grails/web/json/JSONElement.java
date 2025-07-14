@@ -1,7 +1,6 @@
 /*
 Public Domain.
 */
-
 package org.grails.web.json;
 
 import groovy.lang.Writable;

@@ -51,7 +51,7 @@ class GparsPromise<T> implements Promise<T> {
 
     @Override
     boolean cancel(boolean mayInterruptIfRunning) {
-        if(isDone()) return false
+        if (isDone()) return false
         throw new UnsupportedOperationException('Cancellation not supported')
     }
 
@@ -77,7 +77,7 @@ class GparsPromise<T> implements Promise<T> {
 
     @Override
     Promise<T> accept(T value) {
-        internalPromise = Dataflow.task({value})
+        internalPromise = Dataflow.task({ value })
         return this
     }
 
@@ -87,7 +87,7 @@ class GparsPromise<T> implements Promise<T> {
 
     @Override
     Promise<T> onComplete(Closure<T> callable) {
-        def decoratedCallable= promiseFactory.applyDecorators(callable, null)
+        def decoratedCallable = promiseFactory.applyDecorators(callable, null)
         internalPromise.whenBound { T value ->
             if (!(value instanceof Throwable)) {
                 return decoratedCallable.call(value)

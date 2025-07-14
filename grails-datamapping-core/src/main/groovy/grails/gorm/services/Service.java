@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm.services;
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
@@ -31,8 +30,8 @@ import java.lang.annotation.Target;
 /**
  * Makes any class into a GORM {@link org.grails.datastore.mapping.services.Service}
  *
- * @since 6.1
  * @author Graeme Rocher
+ * @since 6.1
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})

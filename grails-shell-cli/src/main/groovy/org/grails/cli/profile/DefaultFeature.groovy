@@ -41,6 +41,7 @@ import static org.grails.cli.profile.ProfileUtil.createDependency
 @ToString(includes = ['profile', 'name'])
 @CompileStatic
 class DefaultFeature implements Feature {
+
     final Profile profile
     final String name
     final Resource location
@@ -54,12 +55,12 @@ class DefaultFeature implements Feature {
         this.name = name
         this.location = location
         def featureYml = location.createRelative("feature.yml")
-        Map<String, Object> featureConfig = new Yaml(new SafeConstructor(new LoaderOptions())).<Map<String, Object>>load(featureYml.getInputStream())
+        Map<String, Object> featureConfig = new Yaml(new SafeConstructor(new LoaderOptions())).<Map<String, Object>> load(featureYml.getInputStream())
         configuration.merge(featureConfig)
         def dependenciesConfig = configuration.get("dependencies")
 
-        if(dependenciesConfig instanceof List) {
-            for(entry in ((List) dependenciesConfig)) {
+        if (dependenciesConfig instanceof List) {
+            for (entry in ((List) dependenciesConfig)) {
                 if (entry instanceof Map) {
                     def scope = (String) entry.scope
                     def os = entry.os
@@ -72,7 +73,7 @@ class DefaultFeature implements Feature {
                 }
             }
         }
-        this.buildPlugins = (List<String>)configuration.get("build.plugins", [])
+        this.buildPlugins = (List<String>) configuration.get("build.plugins", [])
         this.buildRepositories = (List<String>) configuration.get("build.repositories", [])
     }
 

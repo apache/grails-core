@@ -18,9 +18,7 @@
  */
 package org.grails.core.artefact;
 
-import org.grails.core.AbstractGrailsClass;
 import grails.core.ArtefactHandlerAdapter;
-import grails.core.GrailsClass;
 import grails.core.GrailsControllerClass;
 import org.grails.core.DefaultGrailsControllerClass;
 
@@ -32,7 +30,7 @@ import org.grails.core.DefaultGrailsControllerClass;
  * <p>Lookups are cached in non-development mode, and the cache size can be controlled using the grails.urlmapping.cache.maxsize config property.</p>
  *
  * @author Marc Palmer (marc@anyware.co.uk)
-*/
+ */
 public class ControllerArtefactHandler extends ArtefactHandlerAdapter {
 
     public static final String TYPE = "Controller";
@@ -47,6 +45,5 @@ public class ControllerArtefactHandler extends ArtefactHandlerAdapter {
     public String getPluginName() {
         return PLUGIN_NAME;
     }
-
 
 }

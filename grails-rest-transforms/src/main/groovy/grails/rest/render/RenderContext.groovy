@@ -28,7 +28,7 @@ import org.springframework.http.HttpStatus
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface RenderContext {
+interface RenderContext {
 
     /**
      * Which properties should be included in rendering

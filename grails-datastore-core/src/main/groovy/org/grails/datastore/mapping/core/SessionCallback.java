@@ -18,12 +18,11 @@
  */
 package org.grails.datastore.mapping.core;
 
-import org.grails.datastore.mapping.core.Session;
-
 /**
- * @author Burt Beckwith
  * @param <T>
+ * @author Burt Beckwith
  */
 public interface SessionCallback<T> {
+
     T doInSession(Session session);
 }

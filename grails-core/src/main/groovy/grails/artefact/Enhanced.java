@@ -33,7 +33,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface Enhanced {
+
     String version();
+
     String[] enhancedFor() default {};
+
     Class<?>[] mixins() default {};
 }

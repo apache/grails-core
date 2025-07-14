@@ -21,11 +21,10 @@ package example
 
 import grails.events.EventPublisher
 import grails.plugin.springsecurity.rest.RestAuthenticationSuccessHandler
-import org.springframework.security.core.Authentication
-
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.security.core.Authentication
 
 class LoginAuthenticationSucessHandler extends RestAuthenticationSuccessHandler implements EventPublisher {
 

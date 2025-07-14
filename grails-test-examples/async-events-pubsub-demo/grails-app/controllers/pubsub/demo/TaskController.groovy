@@ -21,7 +21,7 @@ package pubsub.demo
 
 import groovy.transform.CompileStatic
 
-import static grails.async.web.WebPromises.*
+import static grails.async.web.WebPromises.task
 
 @CompileStatic
 class TaskController {

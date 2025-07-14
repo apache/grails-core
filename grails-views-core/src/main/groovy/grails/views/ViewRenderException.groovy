@@ -30,6 +30,7 @@ import org.grails.exceptions.reporting.SourceCodeAware
  */
 @CompileStatic
 class ViewRenderException extends ViewException implements SourceCodeAware {
+
     final File sourceFile
     final WritableScript view
     final int lineNumber
@@ -48,13 +49,13 @@ class ViewRenderException extends ViewException implements SourceCodeAware {
 
     StackTraceElement findFirstElementCausedByScript() {
         def cause = getCause()
-        while(cause != null) {
-            for(StackTraceElement e in cause.stackTrace) {
+        while (cause != null) {
+            for (StackTraceElement e in cause.stackTrace) {
                 def cls = e.className
-                if(cls.contains('$')) {
+                if (cls.contains('$')) {
                     cls = cls.substring(0, cls.indexOf('$'))
                 }
-                if(cls == view.getClass().name) {
+                if (cls == view.getClass().name) {
                     return e
                 }
             }

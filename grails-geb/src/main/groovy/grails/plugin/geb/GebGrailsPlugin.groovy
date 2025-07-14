@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 @PluginSource
 @CompileStatic
 class GebGrailsPlugin extends Plugin {
+
     def grailsVersion = "7.0.0 > *"
     def pluginExcludes = []
     def title = "Grails Geb Plugin"

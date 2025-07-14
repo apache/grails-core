@@ -18,8 +18,8 @@
  */
 package grails.rest.render
 
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
+import groovy.transform.CompileStatic
 import org.grails.core.util.IncludeExcludeSupport
 
 /**
@@ -44,7 +44,7 @@ abstract class AbstractIncludeExcludeRenderer<T> extends AbstractRenderer<T> {
     }
 
     boolean shouldIncludeProperty(RenderContext renderContext, Object object, String property) {
-        includeExcludeSupport.shouldInclude(renderContext.includes,renderContext.excludes, property) && includeExcludeSupport.shouldInclude(includes, excludes, property)
+        includeExcludeSupport.shouldInclude(renderContext.includes, renderContext.excludes, property) && includeExcludeSupport.shouldInclude(includes, excludes, property)
     }
 
     boolean includesProperty(Object object, String property) {

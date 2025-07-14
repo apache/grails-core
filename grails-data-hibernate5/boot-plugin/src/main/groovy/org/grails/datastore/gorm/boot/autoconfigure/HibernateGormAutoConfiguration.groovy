@@ -24,9 +24,7 @@ import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryAware
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
@@ -38,14 +36,8 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfigurat
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.context.EnvironmentAware
-import org.springframework.context.ResourceLoaderAware
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar
-import org.springframework.core.env.Environment
-import org.springframework.core.io.ResourceLoader
-import org.springframework.core.type.AnnotationMetadata
 import org.springframework.transaction.PlatformTransactionManager
 
 import javax.sql.DataSource
@@ -64,7 +56,7 @@ import java.beans.Introspector
 @ConditionalOnMissingBean(type = "grails.orm.bootstrap.HibernateDatastoreSpringInitializer")
 @AutoConfigureAfter(DataSourceAutoConfiguration)
 @AutoConfigureBefore([HibernateJpaAutoConfiguration])
-class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFactoryAware {
+class HibernateGormAutoConfiguration implements ApplicationContextAware, BeanFactoryAware {
 
     BeanFactory beanFactory
 
@@ -77,24 +69,23 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
     HibernateDatastore hibernateDatastore() {
         List<String> packageNames = AutoConfigurationPackages.get(this.beanFactory)
         List<Package> packages = []
-        for(name in packageNames) {
+        for (name in packageNames) {
             Package pkg = Package.getPackage(name)
-            if(pkg != null) {
+            if (pkg != null) {
                 packages.add(pkg)
             }
         }
 
         ConfigurableListableBeanFactory beanFactory = applicationContext.beanFactory
         HibernateDatastore datastore
-        if(dataSource == null) {
+        if (dataSource == null) {
             datastore = new HibernateDatastore(
                     applicationContext.getEnvironment(),
                     new ConfigurableApplicationContextEventPublisher(applicationContext),
                     packages as Package[]
             )
             beanFactory.registerSingleton("dataSource", datastore.getDataSource())
-        }
-        else {
+        } else {
             datastore = new HibernateDatastore(
                     dataSource,
                     applicationContext.getEnvironment(),
@@ -103,17 +94,17 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
             )
         }
 
-        for(Service service in datastore.getServices()) {
+        for (Service service in datastore.getServices()) {
             Class serviceClass = service.getClass()
             grails.gorm.services.Service ann = serviceClass.getAnnotation(grails.gorm.services.Service)
             String serviceName = ann?.name()
-            if(serviceName == null) {
+            if (serviceName == null) {
                 serviceName = Introspector.decapitalize(serviceClass.simpleName)
             }
-            if(!applicationContext.containsBean(serviceName)) {
+            if (!applicationContext.containsBean(serviceName)) {
                 applicationContext.beanFactory.registerSingleton(
-                    serviceName,
-                    service
+                        serviceName,
+                        service
                 )
             }
         }
@@ -132,9 +123,9 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(!(applicationContext instanceof ConfigurableApplicationContext)) {
+        if (!(applicationContext instanceof ConfigurableApplicationContext)) {
             throw new IllegalArgumentException("Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext")
         }
-        this.applicationContext = (ConfigurableApplicationContext)applicationContext
+        this.applicationContext = (ConfigurableApplicationContext) applicationContext
     }
 }

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.finders;
 
 import org.grails.datastore.mapping.core.Datastore;
@@ -26,18 +25,20 @@ import org.grails.datastore.mapping.model.MappingContext;
  * The "findAll&lt;booleanProperty&gt;By*" static persistent method. This method allows querying for
  * instances of grails domain classes based on a boolean property and any other arbitrary
  * properties.
- *
+ * <p>
  * eg.
  * Account.findAllActiveByHolder("Joe Blogs"); // Where class "Account" has a properties called "active" and "holder"
  * Account.findAllActiveByHolderAndBranch("Joe Blogs", "London"); // Where class "Account" has a properties called "active', "holder" and "branch"
- *
+ * <p>
  * In both of those queries, the query will only select Account objects where active=true.
  *
  * @author Jeff Brown
  * @author Graeme Rocher
  */
-public class FindAllByBooleanFinder extends FindAllByFinder{
+public class FindAllByBooleanFinder extends FindAllByFinder {
+
     public static final String METHOD_PATTERN = "(findAll)((\\w+)(By)([A-Z]\\w*)|(\\w+))";
+
     public FindAllByBooleanFinder(Datastore datastore) {
         super(datastore);
         setPattern(METHOD_PATTERN);

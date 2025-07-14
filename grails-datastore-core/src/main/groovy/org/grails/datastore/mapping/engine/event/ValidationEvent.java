@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.engine.event;
-
-import java.util.List;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.model.PersistentEntity;
+
+import java.util.List;
 
 /**
  * @author Burt Beckwith
@@ -35,7 +34,7 @@ public class ValidationEvent extends AbstractPersistenceEvent {
     private List<?> validatedFields;
 
     public ValidationEvent(final Datastore source, final PersistentEntity entity,
-            final EntityAccess entityAccess) {
+                           final EntityAccess entityAccess) {
         super(source, entity, entityAccess);
     }
 
@@ -46,8 +45,6 @@ public class ValidationEvent extends AbstractPersistenceEvent {
     public ValidationEvent(Object source, PersistentEntity entity, EntityAccess entityAccess) {
         super(source, entity, entityAccess);
     }
-
-
 
     public List<?> getValidatedFields() {
         return validatedFields;

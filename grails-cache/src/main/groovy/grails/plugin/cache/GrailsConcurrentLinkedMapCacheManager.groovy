@@ -33,43 +33,43 @@ import java.util.concurrent.ConcurrentMap
 @CompileStatic
 class GrailsConcurrentLinkedMapCacheManager implements GrailsCacheManager {
 
-   protected final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<String, Cache>()
+    protected final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<String, Cache>()
 
-   Collection<String> getCacheNames() {
-      return Collections.unmodifiableSet(cacheMap.keySet())
-   }
+    Collection<String> getCacheNames() {
+        return Collections.unmodifiableSet(cacheMap.keySet())
+    }
 
-   Cache getCache(String name) {
-      return getCache(name, 10000)
-   }
+    Cache getCache(String name) {
+        return getCache(name, 10000)
+    }
 
-   Cache getCache(String name, int capacity) {
-      Cache cache = cacheMap.get(name)
-      if (cache == null) {
-         cache = createConcurrentLinkedMapCache(name, capacity)
-         Cache existing = cacheMap.putIfAbsent(name, cache)
-         if (existing != null) {
-            cache = existing
-         }
-      }
-      return cache
-   }
+    Cache getCache(String name, int capacity) {
+        Cache cache = cacheMap.get(name)
+        if (cache == null) {
+            cache = createConcurrentLinkedMapCache(name, capacity)
+            Cache existing = cacheMap.putIfAbsent(name, cache)
+            if (existing != null) {
+                cache = existing
+            }
+        }
+        return cache
+    }
 
-   boolean cacheExists(String name) {
-      getCacheNames().contains(name)
-   }
+    boolean cacheExists(String name) {
+        getCacheNames().contains(name)
+    }
 
-   boolean destroyCache(String name) {
-      cacheMap.remove(name) != null
-   }
+    boolean destroyCache(String name) {
+        cacheMap.remove(name) != null
+    }
 
-   protected GrailsConcurrentLinkedMapCache createConcurrentLinkedMapCache(String name, long capacity) {
-      return new GrailsConcurrentLinkedMapCache(name, capacity)
-   }
+    protected GrailsConcurrentLinkedMapCache createConcurrentLinkedMapCache(String name, long capacity) {
+        return new GrailsConcurrentLinkedMapCache(name, capacity)
+    }
 
-   void setConfiguration(CachePluginConfiguration configuration) {
-      configuration.caches.each { String key, CachePluginConfiguration.CacheConfig value ->
-         getCache(key, value.maxCapacity)
-      }
-   }
+    void setConfiguration(CachePluginConfiguration configuration) {
+        configuration.caches.each { String key, CachePluginConfiguration.CacheConfig value ->
+            getCache(key, value.maxCapacity)
+        }
+    }
 }

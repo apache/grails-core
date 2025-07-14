@@ -19,9 +19,9 @@
 
 package org.grails.web.pages
 
+import grails.artefact.Artefact
 import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Specification
-import grails.artefact.Artefact
 
 /**
  *

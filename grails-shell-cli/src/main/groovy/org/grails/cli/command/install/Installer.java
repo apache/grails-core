@@ -18,15 +18,7 @@
  */
 package org.grails.cli.command.install;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-
 import joptsimple.OptionSet;
-
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
 import org.grails.cli.compiler.GroovyCompilerConfiguration;
@@ -36,6 +28,13 @@ import org.springframework.boot.cli.util.Log;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.SystemPropertyUtils;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+
 /**
  * Shared logic for the {@link InstallCommand} and {@link UninstallCommand}.
  *
@@ -43,115 +42,114 @@ import org.springframework.util.SystemPropertyUtils;
  */
 class Installer {
 
-	private final DependencyResolver dependencyResolver;
+    private final DependencyResolver dependencyResolver;
 
-	private final Properties installCounts;
+    private final Properties installCounts;
 
-	Installer(OptionSet options, CompilerOptionHandler compilerOptionHandler) throws IOException {
-		this(new GroovyGrabDependencyResolver(createCompilerConfiguration(options, compilerOptionHandler)));
-	}
+    Installer(OptionSet options, CompilerOptionHandler compilerOptionHandler) throws IOException {
+        this(new GroovyGrabDependencyResolver(createCompilerConfiguration(options, compilerOptionHandler)));
+    }
 
-	Installer(DependencyResolver resolver) throws IOException {
-		this.dependencyResolver = resolver;
-		this.installCounts = loadInstallCounts();
-	}
+    Installer(DependencyResolver resolver) throws IOException {
+        this.dependencyResolver = resolver;
+        this.installCounts = loadInstallCounts();
+    }
 
-	private static GroovyCompilerConfiguration createCompilerConfiguration(OptionSet options,
-			CompilerOptionHandler compilerOptionHandler) {
-		List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
-			.createDefaultRepositoryConfiguration();
-		return new OptionSetGroovyCompilerConfiguration(options, compilerOptionHandler, repositoryConfiguration) {
-			@Override
-			public boolean isAutoconfigure() {
-				return false;
-			}
-		};
-	}
+    private static GroovyCompilerConfiguration createCompilerConfiguration(OptionSet options,
+                                                                           CompilerOptionHandler compilerOptionHandler) {
+        List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
+                .createDefaultRepositoryConfiguration();
+        return new OptionSetGroovyCompilerConfiguration(options, compilerOptionHandler, repositoryConfiguration) {
+            @Override
+            public boolean isAutoconfigure() {
+                return false;
+            }
+        };
+    }
 
-	private Properties loadInstallCounts() throws IOException {
-		Properties properties = new Properties();
-		File installed = getInstalled();
-		if (installed.exists()) {
-			FileReader reader = new FileReader(installed);
-			properties.load(reader);
-			reader.close();
-		}
-		return properties;
-	}
+    private Properties loadInstallCounts() throws IOException {
+        Properties properties = new Properties();
+        File installed = getInstalled();
+        if (installed.exists()) {
+            FileReader reader = new FileReader(installed);
+            properties.load(reader);
+            reader.close();
+        }
+        return properties;
+    }
 
-	private void saveInstallCounts() throws IOException {
-		try (FileWriter writer = new FileWriter(getInstalled())) {
-			this.installCounts.store(writer, null);
-		}
-	}
+    private void saveInstallCounts() throws IOException {
+        try (FileWriter writer = new FileWriter(getInstalled())) {
+            this.installCounts.store(writer, null);
+        }
+    }
 
-	void install(List<String> artifactIdentifiers) throws Exception {
-		File extDirectory = getDefaultExtDirectory();
-		extDirectory.mkdirs();
-		Log.info("Installing into: " + extDirectory);
-		List<File> artifactFiles = this.dependencyResolver.resolve(artifactIdentifiers);
-		for (File artifactFile : artifactFiles) {
-			int installCount = getInstallCount(artifactFile);
-			if (installCount == 0) {
-				FileCopyUtils.copy(artifactFile, new File(extDirectory, artifactFile.getName()));
-			}
-			setInstallCount(artifactFile, installCount + 1);
-		}
-		saveInstallCounts();
-	}
+    void install(List<String> artifactIdentifiers) throws Exception {
+        File extDirectory = getDefaultExtDirectory();
+        extDirectory.mkdirs();
+        Log.info("Installing into: " + extDirectory);
+        List<File> artifactFiles = this.dependencyResolver.resolve(artifactIdentifiers);
+        for (File artifactFile : artifactFiles) {
+            int installCount = getInstallCount(artifactFile);
+            if (installCount == 0) {
+                FileCopyUtils.copy(artifactFile, new File(extDirectory, artifactFile.getName()));
+            }
+            setInstallCount(artifactFile, installCount + 1);
+        }
+        saveInstallCounts();
+    }
 
-	private int getInstallCount(File file) {
-		String countString = this.installCounts.getProperty(file.getName());
-		if (countString == null) {
-			return 0;
-		}
-		return Integer.parseInt(countString);
-	}
+    private int getInstallCount(File file) {
+        String countString = this.installCounts.getProperty(file.getName());
+        if (countString == null) {
+            return 0;
+        }
+        return Integer.parseInt(countString);
+    }
 
-	private void setInstallCount(File file, int count) {
-		if (count == 0) {
-			this.installCounts.remove(file.getName());
-		}
-		else {
-			this.installCounts.setProperty(file.getName(), Integer.toString(count));
-		}
-	}
+    private void setInstallCount(File file, int count) {
+        if (count == 0) {
+            this.installCounts.remove(file.getName());
+        } else {
+            this.installCounts.setProperty(file.getName(), Integer.toString(count));
+        }
+    }
 
-	void uninstall(List<String> artifactIdentifiers) throws Exception {
-		File extDirectory = getDefaultExtDirectory();
-		Log.info("Uninstalling from: " + extDirectory);
-		List<File> artifactFiles = this.dependencyResolver.resolve(artifactIdentifiers);
-		for (File artifactFile : artifactFiles) {
-			int installCount = getInstallCount(artifactFile);
-			if (installCount <= 1) {
-				new File(extDirectory, artifactFile.getName()).delete();
-			}
-			setInstallCount(artifactFile, installCount - 1);
-		}
-		saveInstallCounts();
-	}
+    void uninstall(List<String> artifactIdentifiers) throws Exception {
+        File extDirectory = getDefaultExtDirectory();
+        Log.info("Uninstalling from: " + extDirectory);
+        List<File> artifactFiles = this.dependencyResolver.resolve(artifactIdentifiers);
+        for (File artifactFile : artifactFiles) {
+            int installCount = getInstallCount(artifactFile);
+            if (installCount <= 1) {
+                new File(extDirectory, artifactFile.getName()).delete();
+            }
+            setInstallCount(artifactFile, installCount - 1);
+        }
+        saveInstallCounts();
+    }
 
-	void uninstallAll() throws Exception {
-		File extDirectory = getDefaultExtDirectory();
-		Log.info("Uninstalling from: " + extDirectory);
-		for (String name : this.installCounts.stringPropertyNames()) {
-			new File(extDirectory, name).delete();
-		}
-		this.installCounts.clear();
-		saveInstallCounts();
-	}
+    void uninstallAll() throws Exception {
+        File extDirectory = getDefaultExtDirectory();
+        Log.info("Uninstalling from: " + extDirectory);
+        for (String name : this.installCounts.stringPropertyNames()) {
+            new File(extDirectory, name).delete();
+        }
+        this.installCounts.clear();
+        saveInstallCounts();
+    }
 
-	private File getDefaultExtDirectory() {
-		String home = SystemPropertyUtils.resolvePlaceholders("${spring.home:${SPRING_HOME:.}}");
-		File extDirectory = new File(new File(home, "lib"), "ext");
-		if (!extDirectory.isDirectory() && !extDirectory.mkdirs()) {
-			throw new IllegalStateException("Failed to create ext directory " + extDirectory);
-		}
-		return extDirectory;
-	}
+    private File getDefaultExtDirectory() {
+        String home = SystemPropertyUtils.resolvePlaceholders("${spring.home:${SPRING_HOME:.}}");
+        File extDirectory = new File(new File(home, "lib"), "ext");
+        if (!extDirectory.isDirectory() && !extDirectory.mkdirs()) {
+            throw new IllegalStateException("Failed to create ext directory " + extDirectory);
+        }
+        return extDirectory;
+    }
 
-	private File getInstalled() {
-		return new File(getDefaultExtDirectory(), ".installed");
-	}
+    private File getInstalled() {
+        return new File(getDefaultExtDirectory(), ".installed");
+    }
 
 }

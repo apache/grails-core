@@ -21,7 +21,6 @@ package org.grails.spring;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
-
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.BeansException;
@@ -45,10 +44,10 @@ import org.springframework.ui.context.support.UiApplicationContextUtils;
  */
 public class GrailsApplicationContext extends GenericApplicationContext implements GroovyObject {
 
+    private static final String GRAILS_ENVIRONMENT_BEAN_NAME = "springEnvironment";
     protected MetaClass metaClass;
     private BeanWrapper ctxBean = new BeanWrapperImpl(this);
     private ThemeSource themeSource;
-    private static final String GRAILS_ENVIRONMENT_BEAN_NAME = "springEnvironment";
 
     public GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory) {
         super(defaultListableBeanFactory);
@@ -114,9 +113,8 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
                 removeBeanDefinition(property);
             }
 
-            registerBeanDefinition(property, (BeanDefinition)newValue);
-        }
-        else {
+            registerBeanDefinition(property, (BeanDefinition) newValue);
+        } else {
             metaClass.setProperty(this, property, newValue);
         }
     }
@@ -124,6 +122,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
     /**
      * Register a singleton bean with the underlying bean factory.
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
+     *
      * @see #getDefaultListableBeanFactory
      */
     public void registerSingleton(String name, Class<?> clazz) throws BeansException {
@@ -135,6 +134,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
     /**
      * Register a singleton bean with the underlying bean factory.
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
+     *
      * @see #getDefaultListableBeanFactory
      */
     public void registerSingleton(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
@@ -147,6 +147,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
     /**
      * Register a prototype bean with the underlying bean factory.
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
+     *
      * @see #getDefaultListableBeanFactory
      */
     public void registerPrototype(String name, Class<?> clazz) throws BeansException {
@@ -159,6 +160,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
     /**
      * Register a prototype bean with the underlying bean factory.
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
+     *
      * @see #getDefaultListableBeanFactory
      */
     public void registerPrototype(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
@@ -174,8 +176,8 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
         super.prepareBeanFactory(beanFactory);
 
         // workaround for GRAILS-7851, until Spring allows the environment bean name to be configurable
-        ((DefaultListableBeanFactory)beanFactory).destroySingleton(ENVIRONMENT_BEAN_NAME);
-        beanFactory.registerSingleton(GRAILS_ENVIRONMENT_BEAN_NAME,getEnvironment());
+        ((DefaultListableBeanFactory) beanFactory).destroySingleton(ENVIRONMENT_BEAN_NAME);
+        beanFactory.registerSingleton(GRAILS_ENVIRONMENT_BEAN_NAME, getEnvironment());
     }
 
     @Override

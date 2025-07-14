@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.reflect
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.TypeChecked
+import jakarta.persistence.Entity
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -35,7 +36,6 @@ import org.codehaus.groovy.ast.PropertyNode
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
-import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
@@ -53,17 +53,13 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.trait.Traits
 import org.springframework.util.StringUtils
-import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse
 
-import jakarta.persistence.Entity
 import java.lang.annotation.Annotation
 import java.lang.reflect.Modifier
 import java.util.regex.Pattern
 
-import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse
-
 
 /**
  * Utility methods for dealing with Groovy ASTs
@@ -73,6 +69,7 @@ import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecR
  */
 @CompileStatic
 class AstUtils {
+
     private static final String SPEC_CLASS = "spock.lang.Specification"
     private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
     private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
@@ -94,7 +91,7 @@ class AstUtils {
      * @return The names of the transformed entities for this context
      */
     static Collection<String> getKnownEntityNames() {
-        return Collections.unmodifiableCollection( TRANSFORMED_CLASSES )
+        return Collections.unmodifiableCollection(TRANSFORMED_CLASSES)
     }
 
     /**
@@ -167,30 +164,29 @@ class AstUtils {
     }
 
     protected static void findAbstractMethodsInternal(ClassNode classNode, List<MethodNode> methods, boolean includeProtected) {
-        if(classNode == null || classNode == ClassHelper.GROOVY_OBJECT_TYPE || Traits.isTrait(classNode) || classNode.name.indexOf('$') > -1) {
+        if (classNode == null || classNode == ClassHelper.GROOVY_OBJECT_TYPE || Traits.isTrait(classNode) || classNode.name.indexOf('$') > -1) {
             return
         }
         if (classNode.isInterface()) {
             methods.addAll(classNode.methods)
-        }
-        else {
-            for(MethodNode m in classNode.getMethods()) {
+        } else {
+            for (MethodNode m in classNode.getMethods()) {
                 int modifiers = m.modifiers
                 def traitBridge = findAnnotation(m, Traits.TraitBridge)
                 boolean isInternal = m.name.indexOf('$') > -1
-                if(traitBridge != null || isInternal) {
+                if (traitBridge != null || isInternal) {
                     continue
                 }
-                if(Modifier.isAbstract(modifiers) && (Modifier.isPublic(modifiers) || (Modifier.isProtected(modifiers) && includeProtected))  && !m.isSynthetic()) {
+                if (Modifier.isAbstract(modifiers) && (Modifier.isPublic(modifiers) || (Modifier.isProtected(modifiers) && includeProtected)) && !m.isSynthetic()) {
                     methods.add(m)
                 }
             }
             ClassNode superClass = classNode.getSuperClass()
-            if(superClass != ClassHelper.OBJECT_TYPE) {
+            if (superClass != ClassHelper.OBJECT_TYPE) {
                 findAbstractMethodsInternal(superClass, methods, includeProtected)
             }
         }
-        for(i in classNode.getInterfaces()) {
+        for (i in classNode.getInterfaces()) {
             findAbstractMethodsInternal(i, methods, includeProtected)
         }
     }
@@ -220,7 +216,7 @@ class AstUtils {
         String methodName = (useBooleanGetter ? "is" : "get") + MetaClassHelper.capitalize(propertyName)
         MethodCallExpression methodCallExpression = new MethodCallExpression(objectExpression, methodName, MethodCallExpression.NO_ARGUMENTS)
         MethodNode getterMethod = targetClassNode.getGetterMethod(methodName)
-        if(getterMethod != null) {
+        if (getterMethod != null) {
             methodCallExpression.setMethodTarget(getterMethod)
         }
         return methodCallExpression
@@ -239,7 +235,7 @@ class AstUtils {
         String methodName = "set" + MetaClassHelper.capitalize(propertyName)
         MethodCallExpression methodCallExpression = new MethodCallExpression(objectExpression, methodName, new ArgumentListExpression(valueExpression))
         MethodNode setterMethod = targetClassNode.getSetterMethod(methodName)
-        if(setterMethod != null) {
+        if (setterMethod != null) {
             methodCallExpression.setMethodTarget(setterMethod)
         }
         return methodCallExpression
@@ -247,7 +243,7 @@ class AstUtils {
 
     static void processVariableScopes(SourceUnit source, ClassNode classNode, MethodNode methodNode) {
         VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source)
-        if(methodNode == null) {
+        if (methodNode == null) {
             scopeVisitor.visitClass(classNode)
         } else {
             scopeVisitor.prepareVisit(classNode)
@@ -289,7 +285,6 @@ class AstUtils {
         AstAnnotationUtils.hasJunitAnnotation(md)
     }
 
-
     /**
      * Returns true if MethodNode is marked with annotationClass
      * @param methodNode A MethodNode to inspect
@@ -303,7 +298,6 @@ class AstUtils {
     static boolean hasAnnotation(List<AnnotationNode> annotationNodes, AnnotationNode annotationNode) {
         AstAnnotationUtils.hasAnnotation(annotationNodes, annotationNode)
     }
-
 
     /**
      * @param classNode a ClassNode to search
@@ -357,10 +351,10 @@ class AstUtils {
 
     static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to, final Set<String> included, final Set<String> excluded) {
         final List<AnnotationNode> annotationsToCopy = from.getAnnotations()
-        for(final AnnotationNode node : annotationsToCopy) {
+        for (final AnnotationNode node : annotationsToCopy) {
             String annotationClassName = node.getClassNode().getName()
-            if((excluded==null || !excluded.contains(annotationClassName)) &&
-                    (included==null || included.contains(annotationClassName))) {
+            if ((excluded == null || !excluded.contains(annotationClassName)) &&
+                    (included == null || included.contains(annotationClassName))) {
                 final AnnotationNode copyOfAnnotationNode = cloneAnnotation(node)
                 to.addAnnotation(copyOfAnnotationNode)
             }
@@ -370,7 +364,7 @@ class AstUtils {
     static AnnotationNode cloneAnnotation(final AnnotationNode node) {
         final AnnotationNode copyOfAnnotationNode = new AnnotationNode(node.getClassNode())
         final Map<String, Expression> members = node.getMembers()
-        for(final Map.Entry<String, Expression> entry : members.entrySet()) {
+        for (final Map.Entry<String, Expression> entry : members.entrySet()) {
             copyOfAnnotationNode.addMember(entry.getKey(), entry.getValue())
         }
         return copyOfAnnotationNode
@@ -397,7 +391,7 @@ class AstUtils {
      * @return True if it is
      */
     static boolean isNumberType(ClassNode classNode) {
-        if(classNode != null) {
+        if (classNode != null) {
             return ClassHelper.isNumberType(classNode) || isSubclassOfOrImplementsInterface(classNode, Number.name)
         }
         return false
@@ -413,18 +407,19 @@ class AstUtils {
     static PropertyNode getPropertyFromHierarchy(ClassNode cn, String name) {
         PropertyNode pn = cn.getProperty(name)
         ClassNode superClass = cn.getSuperClass()
-        while(pn == null && superClass != null) {
+        while (pn == null && superClass != null) {
             pn = superClass.getProperty(name)
-            if(pn != null) return pn
+            if (pn != null) return pn
             superClass = superClass.getSuperClass()
         }
         return pn
     }
+
     @Memoized
     static boolean isDomainClass(ClassNode classNode) {
         if (classNode == null) return false
         if (classNode.isArray()) return false
-        if(implementsInterface(classNode, "org.grails.datastore.gorm.GormEntity")) {
+        if (implementsInterface(classNode, "org.grails.datastore.gorm.GormEntity")) {
             return true
         }
         String filePath = classNode.getModule() != null ? classNode.getModule().getDescription() : null
@@ -441,7 +436,7 @@ class AstUtils {
         if (annotations != null && !annotations.isEmpty()) {
             for (AnnotationNode annotation : annotations) {
                 String className = annotation.getClassNode().getName()
-                if( ENTITY_ANNOTATIONS.any() { String ann -> ann.equals(className)} ) {
+                if (ENTITY_ANNOTATIONS.any() { String ann -> ann.equals(className) }) {
                     return true
                 }
             }
@@ -471,14 +466,14 @@ class AstUtils {
             return type.getPlainNodeReference()
         }
 
-        if(type.isGenericsPlaceHolder() && genericsPlaceholders != null) {
+        if (type.isGenericsPlaceHolder() && genericsPlaceholders != null) {
             final ClassNode placeHolderType
-            if(genericsPlaceholders.containsKey(type.getUnresolvedName())) {
+            if (genericsPlaceholders.containsKey(type.getUnresolvedName())) {
                 placeHolderType = genericsPlaceholders.get(type.getUnresolvedName())
             } else {
                 placeHolderType = defaultPlaceholder
             }
-            if(placeHolderType != null) {
+            if (placeHolderType != null) {
                 return placeHolderType.getPlainNodeReference()
             } else {
                 return ClassHelper.make(Object.class).getPlainNodeReference()
@@ -487,12 +482,12 @@ class AstUtils {
 
         final ClassNode nonGen = type.getPlainNodeReference()
 
-        if("java.lang.Object".equals(type.getName())) {
+        if ("java.lang.Object".equals(type.getName())) {
             nonGen.setGenericsPlaceHolder(false)
             nonGen.setGenericsTypes(null)
             nonGen.setUsingGenerics(false)
         } else {
-            if(type.isUsingGenerics()) {
+            if (type.isUsingGenerics()) {
                 GenericsType[] parameterized = type.getGenericsTypes()
                 if (parameterized != null && parameterized.length > 0) {
                     GenericsType[] copiedGenericsTypes = new GenericsType[parameterized.length]
@@ -501,7 +496,7 @@ class AstUtils {
                         GenericsType copiedGenericsType = null
                         if (parameterizedType.isPlaceholder() && genericsPlaceholders != null) {
                             ClassNode placeHolderType = genericsPlaceholders.get(parameterizedType.getName())
-                            if(placeHolderType != null) {
+                            if (placeHolderType != null) {
                                 copiedGenericsType = new GenericsType(placeHolderType.getPlainNodeReference())
                             } else {
                                 copiedGenericsType = new GenericsType(ClassHelper.make(Object.class).getPlainNodeReference())
@@ -532,8 +527,8 @@ class AstUtils {
         if (!implementsTrait && !traitNotLoaded) {
             final GenericsType[] genericsTypes = traitClassNode.getGenericsTypes()
             final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<String, ClassNode>()
-            if(genericsTypes != null) {
-                for(GenericsType gt : genericsTypes) {
+            if (genericsTypes != null) {
+                for (GenericsType gt : genericsTypes) {
                     parameterNameToParameterValue.put(gt.getName(), classNode)
                 }
             }
@@ -560,7 +555,7 @@ class AstUtils {
     /**
      * Returns whether a classNode has the specified property or not
      *
-     * @param classNode    The ClassNode
+     * @param classNode The ClassNode
      * @param propertyName The name of the property
      * @return true if the property exists in the ClassNode
      */
@@ -573,7 +568,7 @@ class AstUtils {
         if (method != null) return true
 
         // check read-only field with setter
-        if( classNode.getField(propertyName) != null && !classNode.getMethods(NameUtils.getSetterName(propertyName)).isEmpty()) {
+        if (classNode.getField(propertyName) != null && !classNode.getMethods(NameUtils.getSetterName(propertyName)).isEmpty()) {
             return true
         }
 
@@ -589,7 +584,7 @@ class AstUtils {
     /**
      * Returns the property type if it exists
      *
-     * @param classNode    The ClassNode
+     * @param classNode The ClassNode
      * @param propertyName The name of the property
      * @return true if the property exists in the ClassNode
      */
@@ -676,7 +671,7 @@ class AstUtils {
     /**
      * Tests whether the ClasNode implements the specified method name.
      *
-     * @param classNode  The ClassNode
+     * @param classNode The ClassNode
      * @param methodName The method name
      * @return true if it does implement the method
      */
@@ -701,7 +696,6 @@ class AstUtils {
         return false
     }
 
-
     static boolean isSubclassOfOrImplementsInterface(ClassNode childClass, ClassNode superClass) {
         String superClassName = superClass.getName()
         return isSubclassOfOrImplementsInterface(childClass, superClassName)
@@ -719,17 +713,16 @@ class AstUtils {
      * @return True if it is a subclass
      */
     static boolean isSubclassOf(ClassNode classNode, String parentClassName) {
-        if(classNode.name == parentClassName) return true
+        if (classNode.name == parentClassName) return true
         ClassNode currentSuper = classNode.getSuperClass()
-        while (currentSuper != null ) {
+        while (currentSuper != null) {
             if (currentSuper.getName() == parentClassName) {
                 return true
             }
 
-            if(currentSuper.getName() == OBJECT_CLASS_NODE.getName()) {
+            if (currentSuper.getName() == OBJECT_CLASS_NODE.getName()) {
                 break
-            }
-            else {
+            } else {
                 currentSuper = currentSuper.getSuperClass()
             }
 
@@ -780,7 +773,7 @@ class AstUtils {
 
     static ClassNode findInterface(ClassNode classNode, String interfaceName) {
         ClassNode currentClassNode = classNode
-        if(currentClassNode.name == interfaceName) return classNode
+        if (currentClassNode.name == interfaceName) return classNode
         while (currentClassNode != null && !currentClassNode.getName().equals(OBJECT_CLASS_NODE.getName())) {
             ClassNode[] interfaces = currentClassNode.getInterfaces()
 
@@ -795,12 +788,12 @@ class AstUtils {
 
     private static ClassNode implementsInterfaceInternal(ClassNode[] interfaces, String interfaceName) {
         for (ClassNode anInterface : interfaces) {
-            if(anInterface.getName().equals(interfaceName)) {
+            if (anInterface.getName().equals(interfaceName)) {
                 return anInterface
             }
             ClassNode[] childInterfaces = anInterface.getInterfaces()
-            if(childInterfaces != null && childInterfaces.length>0) {
-                return implementsInterfaceInternal(childInterfaces,interfaceName )
+            if (childInterfaces != null && childInterfaces.length > 0) {
+                return implementsInterfaceInternal(childInterfaces, interfaceName)
             }
 
         }
@@ -819,7 +812,6 @@ class AstUtils {
                 sourceUnit)
         )
     }
-
 
     static boolean isSetter(MethodNode declaredMethod) {
         return declaredMethod.getParameters().length == 1 && ReflectionUtils.isSetter(declaredMethod.getName(), OBJECT_CLASS_ARG)
@@ -855,7 +847,7 @@ class AstUtils {
      */
     static MapExpression mapX(Map<String, ? extends Expression> map) {
         def me = new MapExpression()
-        for(entry in map) {
+        for (entry in map) {
             me.addMapEntryExpression(new MapEntryExpression(GeneralUtils.constX(entry.key), entry.value))
         }
         return me
@@ -883,6 +875,7 @@ class AstUtils {
         }
 
         CodeVisitorSupport variableTransformer = new ClassCodeExpressionTransformer() {
+
             @Override
             protected SourceUnit getSourceUnit() {
                 methodNode.declaringClass.module.context

@@ -27,6 +27,7 @@ import groovy.xml.slurpersupport.NodeChild
  * @since 2.3
  */
 class GPathResultMap implements Map {
+
     protected GPathResult gpath
     protected id
 
@@ -44,7 +45,7 @@ class GPathResultMap implements Map {
     }
 
     boolean containsKey(key) {
-        if(key == 'id') {
+        if (key == 'id') {
             return this.@id != null || gpath['id'].size()
         }
         gpath[key].size()
@@ -60,30 +61,30 @@ class GPathResultMap implements Map {
             def value = get name
             entries << new AbstractMap.SimpleImmutableEntry(name, value)
         }
-        if(this.@id != null) {
+        if (this.@id != null) {
             entries << new AbstractMap.SimpleImmutableEntry('id', this.@id)
         }
         return entries
     }
 
     Object get(key) {
-        if('id' == key && this.@id) {
+        if ('id' == key && this.@id) {
             return this.@id
         }
 
         def value = gpath.children().findAll { it.name() == key }
-        if(value.size() == 0) {
+        if (value.size() == 0) {
             return null
         }
-        if(value.size() > 1) {
+        if (value.size() > 1) {
             def list = []
             value.iterator().each {
                 def theId = it.@id.text()
-                if(!''.equals(theId)) {
+                if (!''.equals(theId)) {
                     def theMap = new GPathResultMap(it)
                     list << theMap
                 } else {
-                    if(it.children().size() > 0) {
+                    if (it.children().size() > 0) {
                         def theMap = new GPathResultMap(it)
                         list << theMap
                     } else {
@@ -93,8 +94,8 @@ class GPathResultMap implements Map {
             }
             return list
         }
-        if(value.children().size() == 0) {
-            if(value.@id.text()) {
+        if (value.children().size() == 0) {
+            if (value.@id.text()) {
                 return [id: value.@id.text()]
             }
             return value.text()
@@ -106,7 +107,7 @@ class GPathResultMap implements Map {
         def keys = gpath.children().collect {
             getPropertyNameForNodeChild it
         } as Set
-        if(this.@id != null) {
+        if (this.@id != null) {
             keys << 'id'
         }
         keys

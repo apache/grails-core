@@ -43,8 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy.ProxyFactory {
 
-    private static final Map<Class, Class > PROXY_FACTORIES = new ConcurrentHashMap<Class, Class >();
-    private static final Map<Class, Class > ID_TYPES = new ConcurrentHashMap<Class, Class >();
+    private static final Map<Class, Class> PROXY_FACTORIES = new ConcurrentHashMap<Class, Class>();
+    private static final Map<Class, Class> ID_TYPES = new ConcurrentHashMap<Class, Class>();
     private static final Class[] EMPTY_CLASS_ARRAY = {};
 
     private static final Set<String> EXCLUDES = new HashSet(Arrays.asList("$getStaticMetaClass"));
@@ -56,17 +56,16 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
     }
 
     public Serializable getIdentifier(Object obj) {
-        if(obj instanceof EntityProxy) {
-            return ((EntityProxy)obj).getProxyKey();
-        }
-        else {
+        if (obj instanceof EntityProxy) {
+            return ((EntityProxy) obj).getProxyKey();
+        } else {
             return null;
         }
     }
 
     @Override
     public Class<?> getProxiedClass(Object o) {
-        if(isProxy(o)) {
+        if (isProxy(o)) {
             return o.getClass().getSuperclass();
         }
         return o.getClass();
@@ -74,10 +73,9 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
 
     @Override
     public void initialize(Object o) {
-        if(o instanceof EntityProxy) {
-            ((EntityProxy)o).initialize();
-        }
-        else if(o instanceof PersistentCollection) {
+        if (o instanceof EntityProxy) {
+            ((EntityProxy) o).initialize();
+        } else if (o instanceof PersistentCollection) {
             ((PersistentCollection) o).initialize();
         }
     }
@@ -89,13 +87,11 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
      * @return True if it is
      */
     public boolean isInitialized(Object object) {
-        if(!isProxy(object)) {
+        if (!isProxy(object)) {
             return true;
-        }
-        else if(object instanceof EntityProxy) {
+        } else if (object instanceof EntityProxy) {
             return ((EntityProxy) object).isInitialized();
-        }
-        else if(object instanceof PersistentCollection) {
+        } else if (object instanceof PersistentCollection) {
             return ((PersistentCollection) object).isInitialized();
         }
         return true;
@@ -115,7 +111,7 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
      */
     public Object unwrap(Object object) {
         if (isProxy(object) && object instanceof EntityProxy) {
-            return ((EntityProxy)object).getTarget();
+            return ((EntityProxy) object).getTarget();
         }
         return object;
     }
@@ -129,14 +125,14 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
         MethodHandler mi = createMethodHandler(session, executor, associationKey);
         Class proxyClass = getProxyClass(executor.getIndexedEntity().getJavaClass());
         Object proxy = ReflectionUtils.instantiate(proxyClass);
-        ((ProxyObject)proxy).setHandler(mi);
+        ((ProxyObject) proxy).setHandler(mi);
         return (T) proxy;
     }
 
     protected Object createProxiedInstance(final Session session, final Class cls, Class proxyClass, final Serializable id) {
         MethodHandler mi = createMethodHandler(session, cls, proxyClass, id);
         Object proxy = ReflectionUtils.instantiate(proxyClass);
-        ((ProxyObject)proxy).setHandler(mi);
+        ((ProxyObject) proxy).setHandler(mi);
         return proxy;
     }
 
@@ -163,10 +159,10 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
             pf.setFilter(new MethodFilter() {
                 public boolean isHandled(Method method) {
                     Traits.TraitBridge traitBridge = method.getAnnotation(Traits.TraitBridge.class);
-                    if(traitBridge != null) {
+                    if (traitBridge != null) {
                         Class traitClass = traitBridge.traitClass();
                         // ignore core traits
-                        if(traitClass.getPackage().getName().startsWith(DATASTORE_PACKAGE_PREFIX)) {
+                        if (traitClass.getPackage().getName().startsWith(DATASTORE_PACKAGE_PREFIX)) {
                             return false;
                         }
                     }
@@ -185,10 +181,10 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
             });
             proxyClass = pf.createClass();
             PROXY_FACTORIES.put(type, proxyClass);
-            
+
             Method getIdMethod = org.springframework.util.ReflectionUtils.findMethod(type, "getId", EMPTY_CLASS_ARRAY);
             Class<?> idType = getIdMethod.getReturnType();
-            if(idType != null) {
+            if (idType != null) {
                 ID_TYPES.put(type, idType);
             }
         }
@@ -196,7 +192,7 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
     }
 
     protected Class[] getProxyInterfaces() {
-        return new Class[]{ EntityProxy.class, GroovyObject.class };
+        return new Class[]{EntityProxy.class, GroovyObject.class};
     }
 
 }

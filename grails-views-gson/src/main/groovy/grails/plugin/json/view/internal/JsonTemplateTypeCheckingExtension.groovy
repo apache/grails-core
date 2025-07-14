@@ -40,6 +40,7 @@ import org.codehaus.groovy.control.SourceUnit
  */
 @CompileStatic
 class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
+
     private static final ClassNode BUILDER_CLASS_NODE = ClassHelper.make(StreamingJsonBuilder)
     private static final MethodNode JSON_BUILDER_INVOKE_METHOD = ClassHelper.make(StreamingJsonBuilder).getMethods('invokeMethod')[0]
     private static final MethodNode JSON_DELEGATE_INVOKE_METHOD = ClassHelper.make(StreamingJsonBuilder.StreamingJsonDelegate).getMethods('invokeMethod')[0]
@@ -53,13 +54,12 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
 
     @Override
     void beforeMethodCallExpression(MethodCallExpression methodCallExpression) {
-        if(!insideScope) {
-            if(methodCallExpression.methodAsString == 'json') {
+        if (!insideScope) {
+            if (methodCallExpression.methodAsString == 'json') {
                 insideScope = true
-            }
-            else if(methodCallExpression.objectExpression instanceof VariableExpression) {
+            } else if (methodCallExpression.objectExpression instanceof VariableExpression) {
                 VariableExpression ve = methodCallExpression.objectExpression as VariableExpression
-                if(ve.name == 'json') {
+                if (ve.name == 'json') {
                     insideScope = true
                 }
             }
@@ -69,7 +69,7 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
     @Override
     @CompileDynamic
     boolean isMethodDynamic(Object receiver, Object name, Object argList, Object argTypes, Object call) {
-        if( receiver.name == TEMPLATE_NAMESPACE.name) {
+        if (receiver.name == TEMPLATE_NAMESPACE.name) {
             return true
         }
         return super.isMethodDynamic(receiver, name, argList, argTypes, call)
@@ -78,8 +78,8 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
     @Override
     boolean isPropertyDynamic(PropertyExpression propertyExpression) {
         def oe = propertyExpression.getObjectExpression()
-        if(oe instanceof VariableExpression) {
-            return "params".equals(((VariableExpression)oe).name)
+        if (oe instanceof VariableExpression) {
+            return "params".equals(((VariableExpression) oe).name)
         }
         return super.isPropertyDynamic(propertyExpression)
     }

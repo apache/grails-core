@@ -35,7 +35,8 @@ import org.springframework.validation.DataBinder
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class CacheConfig implements Cloneable {
-    static final List USAGE_OPTIONS = ['read-only', 'read-write','nonstrict-read-write','transactional']
+
+    static final List USAGE_OPTIONS = ['read-only', 'read-write', 'nonstrict-read-write', 'transactional']
     static final List INCLUDE_OPTIONS = ['all', 'non-lazy']
 
     /**

@@ -27,6 +27,7 @@ import java.io.Serializable;
  * @since 1.0
  */
 public interface SourceCodeAware extends Serializable {
+
     String getFileName();
 
     int getLineNumber();

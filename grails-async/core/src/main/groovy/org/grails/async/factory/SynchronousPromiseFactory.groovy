@@ -54,14 +54,17 @@ class SynchronousPromiseFactory extends AbstractPromiseFactory {
             promise = new SynchronousPromise<T>(closures[0])
         } else {
             def promiseList = new PromiseList()
-            for(p in closures) {
+            for (p in closures) {
                 promiseList << p
             }
             promise = promiseList
         }
 
-        try { promise.get() }
-        catch (Throwable ignored) {}
+        try {
+            promise.get()
+        }
+        catch (Throwable ignored) {
+        }
 
         return promise
     }

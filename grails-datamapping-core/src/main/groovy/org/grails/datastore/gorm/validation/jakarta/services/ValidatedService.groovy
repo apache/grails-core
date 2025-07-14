@@ -20,12 +20,6 @@
 package org.grails.datastore.gorm.validation.jakarta.services
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.validation.jakarta.ConstraintViolationUtils
-import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
-import org.grails.datastore.mapping.services.Service
-import org.grails.datastore.mapping.validation.ValidationException
-import org.springframework.validation.Errors
-
 import jakarta.validation.Configuration
 import jakarta.validation.ConstraintViolation
 import jakarta.validation.ConstraintViolationException
@@ -33,6 +27,12 @@ import jakarta.validation.ParameterNameProvider
 import jakarta.validation.Validation
 import jakarta.validation.ValidatorFactory
 import jakarta.validation.executable.ExecutableValidator
+import org.grails.datastore.gorm.validation.jakarta.ConstraintViolationUtils
+import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
+import org.grails.datastore.mapping.services.Service
+import org.grails.datastore.mapping.validation.ValidationException
+import org.springframework.validation.Errors
+
 import java.lang.reflect.Method
 
 /**
@@ -61,21 +61,20 @@ trait ValidatedService<T> extends Service<T> {
      * @return The validator factory for this service
      */
     ValidatorFactory getValidatorFactory() {
-        if(validatorFactoryInstance == null) {
+        if (validatorFactoryInstance == null) {
 
             Configuration configuration
-            if(datastore != null) {
+            if (datastore != null) {
                 configuration = JakartaValidatorRegistry.buildConfigurationFor(
                         datastore.mappingContext,
                         datastore.mappingContext.validatorRegistry.messageSource
                 )
-            }
-            else {
+            } else {
                 configuration = Validation.byDefaultProvider()
-                                            .configure()
+                        .configure()
                 configuration = configuration.ignoreXmlConfiguration()
             }
-            if(parameterNameProvider != null) {
+            if (parameterNameProvider != null) {
                 configuration = configuration.parameterNameProvider(parameterNameProvider)
             }
             validatorFactoryInstance = configuration.buildValidatorFactory()
@@ -92,10 +91,10 @@ trait ValidatedService<T> extends Service<T> {
      *
      * @throws ConstraintViolationException If a validation error occurs
      */
-    void jakartaValidate(Object instance, Method method, Object...args) throws ConstraintViolationException {
+    void jakartaValidate(Object instance, Method method, Object... args) throws ConstraintViolationException {
         ExecutableValidator validator = executableValidatorMap.get(method)
         Set<ConstraintViolation<Object>> constraintViolations = validator.validateParameters(instance, method, args)
-        if(!constraintViolations.isEmpty()) {
+        if (!constraintViolations.isEmpty()) {
             throw new ConstraintViolationException(constraintViolations)
         }
     }
@@ -109,10 +108,10 @@ trait ValidatedService<T> extends Service<T> {
      *
      * @throws ValidationException If a validation error occurs
      */
-    void validate(Object instance, Method method, Object...args) throws ValidationException {
+    void validate(Object instance, Method method, Object... args) throws ValidationException {
         ExecutableValidator validator = executableValidatorMap.get(method)
         Set<ConstraintViolation<Object>> constraintViolations = validator.validateParameters(instance, method, args)
-        if(!constraintViolations.isEmpty()) {
+        if (!constraintViolations.isEmpty()) {
             throw ValidationException.newInstance("Validation failed for method: $method.name ", asErrors(instance, constraintViolations))
         }
     }

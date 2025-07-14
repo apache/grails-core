@@ -22,8 +22,24 @@ import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 import com.mongodb.ReadPreference
 import com.mongodb.WriteConcern
-import com.mongodb.client.*
-import com.mongodb.client.model.*
+import com.mongodb.client.AggregateIterable
+import com.mongodb.client.ChangeStreamIterable
+import com.mongodb.client.DistinctIterable
+import com.mongodb.client.FindIterable
+import com.mongodb.client.MongoCollection
+import com.mongodb.client.MongoDatabase
+import com.mongodb.client.MongoIterable
+import com.mongodb.client.model.CountOptions
+import com.mongodb.client.model.CreateCollectionOptions
+import com.mongodb.client.model.DeleteOptions
+import com.mongodb.client.model.DropIndexOptions
+import com.mongodb.client.model.FindOneAndDeleteOptions
+import com.mongodb.client.model.FindOneAndReplaceOptions
+import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.InsertManyOptions
+import com.mongodb.client.model.ReplaceOptions
+import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.lang.Nullable
@@ -51,38 +67,32 @@ import static java.util.Arrays.asList
 @CompileStatic
 class MongoExtensions {
 
-
     static <T> T asType(Document document, Class<T> cls) {
-        if(Document.isAssignableFrom(cls)) {
-            return (T)document
-        }
-        else {
+        if (Document.isAssignableFrom(cls)) {
+            return (T) document
+        } else {
             def datastore = GormEnhancer.findDatastore(cls)
-            AbstractMongoSession session = (AbstractMongoSession)datastore.currentSession
+            AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
             if (session != null) {
                 return session.decode(cls, document)
-            }
-            else if(cls.name == 'grails.converters.JSON') {
-                return cls.newInstance( document )
-            }
-            else {
+            } else if (cls.name == 'grails.converters.JSON') {
+                return cls.newInstance(document)
+            } else {
                 throw new IllegalArgumentException("Cannot convert DBOject [$document] to writer type $cls. Type is not a persistent entity")
             }
         }
     }
 
     static <T> T asType(FindIterable iterable, Class<T> cls) {
-        if(FindIterable.isAssignableFrom(cls)) {
-            return (T)iterable
-        }
-        else {
+        if (FindIterable.isAssignableFrom(cls)) {
+            return (T) iterable
+        } else {
             def datastore = GormEnhancer.findDatastore(cls)
-            AbstractMongoSession session = (AbstractMongoSession)datastore.currentSession
+            AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
 
             if (session != null) {
                 return session.decode(cls, iterable)
-            }
-            else {
+            } else {
                 throw new IllegalArgumentException("Cannot convert DBOject [$iterable] to writer type $cls. Type is not a persistent entity")
             }
         }
@@ -90,11 +100,11 @@ class MongoExtensions {
 
     static <T> List<T> toList(FindIterable iterable, Class<T> cls) {
         def datastore = GormEnhancer.findDatastore(cls)
-        AbstractMongoSession session = (AbstractMongoSession)datastore.currentSession
+        AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
 
-        MongoEntityPersister p = (MongoEntityPersister)session.getPersister(cls)
+        MongoEntityPersister p = (MongoEntityPersister) session.getPersister(cls)
         if (p)
-            return new MongoQuery.MongoResultList(((FindIterable<Document>)iterable).iterator(),0,p)
+            return new MongoQuery.MongoResultList(((FindIterable<Document>) iterable).iterator(), 0, p)
         else {
             throw new IllegalArgumentException("Cannot convert DBCursor [$iterable] to writer type $cls. Type is not a persistent entity")
         }
@@ -103,19 +113,17 @@ class MongoExtensions {
     @CompileStatic
     static DBObject toDBObject(Document document) {
         def object = new BasicDBObject()
-        for(key in document.keySet()) {
+        for (key in document.keySet()) {
             def value = document.get(key)
-            if(value instanceof Document) {
-                value = toDBObject((Document)value)
-            }
-            else if(value instanceof Collection) {
-                Collection col = (Collection)value
+            if (value instanceof Document) {
+                value = toDBObject((Document) value)
+            } else if (value instanceof Collection) {
+                Collection col = (Collection) value
                 Collection newCol = []
-                for(i in col) {
-                    if(i instanceof Document) {
-                        newCol << toDBObject((Document)i)
-                    }
-                    else {
+                for (i in col) {
+                    if (i instanceof Document) {
+                        newCol << toDBObject((Document) i)
+                    } else {
                         newCol << i
                     }
                 }
@@ -162,24 +170,28 @@ class MongoExtensions {
         list.collect { toBson(it) }
     }
 
-
     /************** FindIterable Extensions *************/
 
     static FindIterable<Document> filter(FindIterable<Document> iterable, @Nullable Map<String, Object> filter) {
         iterable.filter(toBson(filter))
     }
+
     static FindIterable<Document> projection(FindIterable<Document> iterable, @Nullable Map<String, Object> projection) {
         iterable.projection(toBson(projection))
     }
+
     static FindIterable<Document> sort(FindIterable<Document> iterable, @Nullable Map<String, Object> sort) {
         iterable.sort(toBson(sort))
     }
+
     static FindIterable<Document> hint(FindIterable<Document> iterable, @Nullable Map<String, Object> hint) {
         iterable.hint(toBson(hint))
     }
+
     static FindIterable<Document> max(FindIterable<Document> iterable, @Nullable Map<String, Object> max) {
         iterable.max(toBson(max))
     }
+
     static FindIterable<Document> min(FindIterable<Document> iterable, @Nullable Map<String, Object> min) {
         iterable.min(toBson(min))
     }
@@ -230,7 +242,7 @@ class MongoExtensions {
                 .countDocuments(toBson(query))
     }
 
-    static long getCount(MongoCollection<Document> collection, final Map<String, Object> query, final  Map<String, Object> options) {
+    static long getCount(MongoCollection<Document> collection, final Map<String, Object> query, final Map<String, Object> options) {
         collection.countDocuments(toBson(query), MongoConstants.mapToObject(CountOptions, options))
     }
 
@@ -245,7 +257,7 @@ class MongoExtensions {
     static Document findOne(MongoCollection<Document> collection, ObjectId id) {
         def query = new Document()
         query.put(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, id)
-        collection.find((Bson)query)
+        collection.find((Bson) query)
                 .limit(1)
                 .first()
     }
@@ -253,7 +265,7 @@ class MongoExtensions {
     static Document findOne(MongoCollection<Document> collection, CharSequence id) {
         def query = new Document()
         query.put(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, id)
-        collection.find((Bson)query)
+        collection.find((Bson) query)
                 .limit(1)
                 .first()
     }
@@ -262,12 +274,12 @@ class MongoExtensions {
         def query = new Document()
         query.put(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, id)
         collection
-                .find((Bson)query, type)
+                .find((Bson) query, type)
                 .limit(1)
                 .first()
     }
 
-    static Document findOne(MongoCollection<Document> collection, final Map<String,Object> query, final Map<String, Object> projection) {
+    static Document findOne(MongoCollection<Document> collection, final Map<String, Object> query, final Map<String, Object> projection) {
         collection
                 .find(toBson(query))
                 .projection(toBson(projection))
@@ -275,7 +287,7 @@ class MongoExtensions {
                 .first()
     }
 
-    static Document findOne(MongoCollection<Document> collection, final Map<String,Object> query, final Map<String,Object> projection, final Map<String,Object> sort) {
+    static Document findOne(MongoCollection<Document> collection, final Map<String, Object> query, final Map<String, Object> projection, final Map<String, Object> sort) {
         collection
                 .find(toBson(query))
                 .projection(toBson(projection))
@@ -290,7 +302,7 @@ class MongoExtensions {
                 .first()
     }
 
-    static Document findOne(MongoCollection<Document> collection, final Map<String,Object> query, final Map<String,Object> projection, final ReadPreference readPreference) {
+    static Document findOne(MongoCollection<Document> collection, final Map<String, Object> query, final Map<String, Object> projection, final ReadPreference readPreference) {
         collection
                 .withReadPreference(readPreference)
                 .find(toBson(query))
@@ -300,9 +312,9 @@ class MongoExtensions {
     }
 
     static Document findOne(MongoCollection<Document> collection,
-                            final Map<String,Object> query,
-                            final Map<String,Object> projection,
-                            final Map<String,Object> sort,
+                            final Map<String, Object> query,
+                            final Map<String, Object> projection,
+                            final Map<String, Object> sort,
                             final ReadPreference readPreference) {
         collection
                 .withReadPreference(readPreference)
@@ -317,7 +329,7 @@ class MongoExtensions {
         collection.find(toBson(query))
     }
 
-    static <T>  FindIterable<T> find(MongoCollection<T> collection, final Map<String, Object> query, Class<T> type) {
+    static <T> FindIterable<T> find(MongoCollection<T> collection, final Map<String, Object> query, Class<T> type) {
         collection.find(toBson(query), type)
     }
 
@@ -369,11 +381,11 @@ class MongoExtensions {
         collection.watch(toBson(pipeline), resultClass)
     }
 
-    static DeleteResult deleteMany(final MongoCollection<Document> collection, final Map<String,Object> query) {
+    static DeleteResult deleteMany(final MongoCollection<Document> collection, final Map<String, Object> query) {
         collection.deleteMany(toBson(query))
     }
 
-    static DeleteResult remove(final MongoCollection<Document> collection, final Map<String,Object> query) {
+    static DeleteResult remove(final MongoCollection<Document> collection, final Map<String, Object> query) {
         deleteMany collection, query
     }
 
@@ -382,63 +394,63 @@ class MongoExtensions {
         return collection
     }
 
-    static DeleteResult deleteMany(final MongoCollection<Document> collection, final Map<String,Object> query, final WriteConcern writeConcern) {
+    static DeleteResult deleteMany(final MongoCollection<Document> collection, final Map<String, Object> query, final WriteConcern writeConcern) {
         collection
                 .withWriteConcern(writeConcern)
                 .deleteMany(toBson(query))
     }
 
-    static DeleteResult deleteOne(final MongoCollection<Document> collection, final Map<String,Object> query) {
+    static DeleteResult deleteOne(final MongoCollection<Document> collection, final Map<String, Object> query) {
         collection.deleteOne(toBson(query))
     }
 
-    static DeleteResult deleteOne(final MongoCollection<Document> collection, final Map<String,Object> query, final WriteConcern writeConcern) {
+    static DeleteResult deleteOne(final MongoCollection<Document> collection, final Map<String, Object> query, final WriteConcern writeConcern) {
         collection
                 .withWriteConcern(writeConcern)
                 .deleteOne(toBson(query))
     }
 
-    static DeleteResult deleteOne(final MongoCollection<Document> collection, final Map<String,Object> query, final Map<String, Object> options) {
+    static DeleteResult deleteOne(final MongoCollection<Document> collection, final Map<String, Object> query, final Map<String, Object> options) {
         collection.deleteOne(toBson(query), MongoConstants.mapToObject(DeleteOptions, options))
     }
 
-    static DeleteResult deleteMany(final MongoCollection<Document> collection, final Map<String,Object> query, final Map<String, Object> options) {
+    static DeleteResult deleteMany(final MongoCollection<Document> collection, final Map<String, Object> query, final Map<String, Object> options) {
         collection.deleteMany(toBson(query), MongoConstants.mapToObject(DeleteOptions, options))
     }
 
-    static UpdateResult updateOne(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update) {
+    static UpdateResult updateOne(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update) {
         collection.updateOne(toBson(filter), toBson(update))
     }
 
-    static UpdateResult update(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update) {
+    static UpdateResult update(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update) {
         collection.updateOne(toBson(filter), toBson(update))
     }
 
-    static UpdateResult updateOne(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update, Map<String, Object> options) {
+    static UpdateResult updateOne(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, Map<String, Object> options) {
         collection.updateOne(toBson(filter), toBson(update), MongoConstants.mapToObject(UpdateOptions, options))
     }
 
-    static UpdateResult update(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update, Map<String, Object> options) {
+    static UpdateResult update(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, Map<String, Object> options) {
         collection.updateOne(toBson(filter), toBson(update), MongoConstants.mapToObject(UpdateOptions, options))
     }
 
-    static UpdateResult updateOne(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update, UpdateOptions updateOptions) {
+    static UpdateResult updateOne(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, UpdateOptions updateOptions) {
         collection.updateOne(toBson(filter), toBson(update), updateOptions)
     }
 
-    static UpdateResult update(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update, UpdateOptions updateOptions) {
+    static UpdateResult update(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, UpdateOptions updateOptions) {
         collection.updateOne(toBson(filter), toBson(update), updateOptions)
     }
 
-    static UpdateResult updateMany(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update) {
+    static UpdateResult updateMany(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update) {
         collection.updateMany(toBson(filter), toBson(update))
     }
 
-    static UpdateResult updateMany(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update, Map<String, Object> options) {
+    static UpdateResult updateMany(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, Map<String, Object> options) {
         collection.updateMany(toBson(filter), toBson(update), MongoConstants.mapToObject(UpdateOptions, options))
     }
 
-    static UpdateResult updateMany(final MongoCollection<Document> collection, Map<String,Object> filter, Map<String, Object> update, UpdateOptions updateOptions) {
+    static UpdateResult updateMany(final MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, UpdateOptions updateOptions) {
         collection.updateMany(toBson(filter), toBson(update), updateOptions)
     }
 
@@ -535,7 +547,7 @@ class MongoExtensions {
         insert(collection, documents, writeConcern);
     }
 
-    static MongoCollection<Document> insert(final MongoCollection<Document> collection, final Map<String,Object>[] documents, final WriteConcern writeConcern) {
+    static MongoCollection<Document> insert(final MongoCollection<Document> collection, final Map<String, Object>[] documents, final WriteConcern writeConcern) {
         insert(collection, asList(documents), writeConcern);
     }
 
@@ -560,11 +572,11 @@ class MongoExtensions {
         return collection
     }
 
-    static  MongoCollection save(final MongoCollection<Document> collection, final Map<String, Object> document) {
+    static MongoCollection save(final MongoCollection<Document> collection, final Map<String, Object> document) {
         insert collection, document
     }
 
-    static  MongoCollection save(final MongoCollection<Document> collection, final Map<String, Object> document, final WriteConcern writeConcern) {
+    static MongoCollection save(final MongoCollection<Document> collection, final Map<String, Object> document, final WriteConcern writeConcern) {
         insert collection, document, writeConcern
     }
 
@@ -572,7 +584,7 @@ class MongoExtensions {
         collection.replaceOne(toBson(filter), replacement)
     }
 
-    static UpdateResult replaceOne(MongoCollection<Document> collection, Map<String, Object> filter, Document replacement, Map<String,Object> options) {
+    static UpdateResult replaceOne(MongoCollection<Document> collection, Map<String, Object> filter, Document replacement, Map<String, Object> options) {
         collection.replaceOne(
                 toBson(filter),
                 replacement,
@@ -580,27 +592,27 @@ class MongoExtensions {
     }
 
     static Document findOneAndDelete(MongoCollection<Document> collection, Map<String, Object> filter) {
-        collection.findOneAndDelete( toBson(filter) )
+        collection.findOneAndDelete(toBson(filter))
     }
 
     static Document findOneAndDelete(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> options) {
-        collection.findOneAndDelete( toBson(filter), MongoConstants.mapToObject(FindOneAndDeleteOptions, options) )
+        collection.findOneAndDelete(toBson(filter), MongoConstants.mapToObject(FindOneAndDeleteOptions, options))
     }
 
     static Document findOneAndReplace(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> replacement) {
-        collection.findOneAndReplace( toBson(filter), new Document(replacement) )
+        collection.findOneAndReplace(toBson(filter), new Document(replacement))
     }
 
     static Document findOneAndReplace(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> replacement, Map<String, Object> options) {
-        collection.findOneAndReplace( toBson(filter), new Document(replacement), MongoConstants.mapToObject(FindOneAndReplaceOptions, options) )
+        collection.findOneAndReplace(toBson(filter), new Document(replacement), MongoConstants.mapToObject(FindOneAndReplaceOptions, options))
     }
 
     static Document findOneAndUpdate(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update) {
-        collection.findOneAndUpdate( toBson(filter), new Document(update) )
+        collection.findOneAndUpdate(toBson(filter), new Document(update))
     }
 
     static Document findOneAndUpdate(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, Map<String, Object> options) {
-        collection.findOneAndUpdate( toBson(filter), new Document(update), MongoConstants.mapToObject(FindOneAndUpdateOptions, options) )
+        collection.findOneAndUpdate(toBson(filter), new Document(update), MongoConstants.mapToObject(FindOneAndUpdateOptions, options))
     }
 
 }

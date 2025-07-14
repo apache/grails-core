@@ -16,6 +16,7 @@ package org.grails.datastore.mapping.core;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import jakarta.persistence.FlushModeType;
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.core.impl.PendingDelete;
@@ -48,7 +49,6 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.util.Assert;
 
-import jakarta.persistence.FlushModeType;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
 
 /**
  * Abstract implementation of the {@link org.grails.datastore.mapping.core.Session} interface that uses
@@ -100,18 +99,22 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
 
     protected Map<Class, Persister> persisters = new ConcurrentHashMap<>();
     protected boolean isSynchronizedWithTransaction = false;
-    private MappingContext mappingContext;
     protected ConcurrentLinkedQueue lockedObjects = new ConcurrentLinkedQueue();
     protected Transaction transaction;
-    private Datastore datastore;
-    private FlushModeType flushMode = FlushModeType.AUTO;
     protected Map<Class, Map<Serializable, Object>> firstLevelCache = new ConcurrentHashMap<>();
     protected Map<Class, Map<Serializable, Object>> firstLevelEntryCache = new ConcurrentHashMap<>();
     protected Map<Class, Map<Serializable, Object>> firstLevelEntryCacheDirtyCheck = new ConcurrentHashMap<>();
     protected Map<CollectionKey, Collection> firstLevelCollectionCache = new ConcurrentHashMap<>();
-
     protected TPCacheAdapterRepository cacheAdapterRepository;
+    protected Collection<Runnable> postFlushOperations = new ConcurrentLinkedQueue<>();
+    protected ApplicationEventPublisher publisher;
 
+    protected boolean stateless = false;
+    protected boolean flushActive = false;
+
+    private MappingContext mappingContext;
+    private Datastore datastore;
+    private FlushModeType flushMode = FlushModeType.AUTO;
     private Collection<Serializable> objectsPendingOperations = new ConcurrentLinkedQueue<>();
     private Map<PersistentEntity, Collection<PendingInsert>> pendingInserts =
             Caffeine.newBuilder()
@@ -131,13 +134,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
                     .executor(Runnable::run)
                     .maximumSize(5000).build().asMap();
 
-    protected Collection<Runnable> postFlushOperations = new ConcurrentLinkedQueue<>();
     private boolean exceptionOccurred;
-    protected ApplicationEventPublisher publisher;
-
-    protected boolean stateless = false;
-    protected boolean flushActive = false;
-
 
     public AbstractSession(Datastore datastore, MappingContext mappingContext,
                            ApplicationEventPublisher publisher) {
@@ -253,12 +250,16 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
     }
 
     public Object getCachedEntry(PersistentEntity entity, Serializable key) {
-        if (isStateless(entity)) return null;
+        if (isStateless(entity)) {
+            return null;
+        }
         return getCachedEntry(entity, key, false);
     }
 
     public Object getCachedEntry(PersistentEntity entity, Serializable key, boolean forDirtyCheck) {
-        if (isStateless(entity)) return null;
+        if (isStateless(entity)) {
+            return null;
+        }
         if (key == null) {
             return null;
         }
@@ -267,7 +268,9 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
     }
 
     public void cacheEntry(PersistentEntity entity, Serializable key, Object entry) {
-        if (isStateless(entity)) return;
+        if (isStateless(entity)) {
+            return;
+        }
         if (key == null || entry == null) {
             return;
         }
@@ -282,12 +285,16 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
     }
 
     protected void cacheEntry(Serializable key, Object entry, Map<Serializable, Object> entryCache, boolean forDirtyCheck) {
-        if (isStateless()) return;
+        if (isStateless()) {
+            return;
+        }
         entryCache.put(key, entry);
     }
 
     public Collection getCachedCollection(PersistentEntity entity, Serializable key, String name) {
-        if (isStateless(entity)) return null;
+        if (isStateless(entity)) {
+            return null;
+        }
         if (key == null || name == null) {
             return null;
         }
@@ -297,7 +304,9 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
     }
 
     public void cacheCollection(PersistentEntity entity, Serializable key, Collection collection, String name) {
-        if (isStateless(entity)) return;
+        if (isStateless(entity)) {
+            return;
+        }
         if (key == null || collection == null || name == null) {
             return;
         }
@@ -336,7 +345,9 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
     }
 
     public void flush() {
-        if (flushActive) return;
+        if (flushActive) {
+            return;
+        }
 
         boolean hasInserts;
         try {
@@ -378,7 +389,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             return false;
         }
 
-
         EntityPersister persister = (EntityPersister) getPersister(instance);
         if (persister == null) {
             return false;
@@ -411,7 +421,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
         return null;
     }
-
 
     /**
      * The default implementation of flushPendingUpdates is to iterate over each update operation
@@ -497,7 +506,9 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
     }
 
     public final Persister getPersister(Object o) {
-        if (o == null) return null;
+        if (o == null) {
+            return null;
+        }
         Class cls;
         if (o instanceof Class) {
             cls = (Class) o;
@@ -547,16 +558,22 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         if (type == null || key == null || instance == null) {
             return;
         }
-        if (isStateless(getMappingContext().getPersistentEntity(type.getName()))) return;
+        if (isStateless(getMappingContext().getPersistentEntity(type.getName()))) {
+            return;
+        }
         getInstanceCache(type).put(key, instance);
     }
 
     public Object getCachedInstance(Class type, Serializable key) {
-        if (isStateless()) return null;
+        if (isStateless()) {
+            return null;
+        }
         if (type == null || key == null) {
             return null;
         }
-        if (isStateless(getMappingContext().getPersistentEntity(type.getName()))) return null;
+        if (isStateless(getMappingContext().getPersistentEntity(type.getName()))) {
+            return null;
+        }
         return getInstanceCache(type).get(key);
     }
 
@@ -760,7 +777,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             return;
         }
 
-
         p.delete(obj);
         clear(obj);
     }
@@ -782,7 +798,8 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             }
             List listForPersister = toDelete.get(p);
             if (listForPersister == null) {
-                toDelete.put(p, listForPersister = new ArrayList());
+                listForPersister = new ArrayList();
+                toDelete.put(p, listForPersister);
             }
             listForPersister.add(object);
         }
@@ -933,7 +950,8 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         this.isSynchronizedWithTransaction = isSynchronizedWithTransaction;
     }
 
-    private static class CollectionKey {
+    private static final class CollectionKey {
+
         final Class clazz;
         final Serializable key;
         final String collectionName;

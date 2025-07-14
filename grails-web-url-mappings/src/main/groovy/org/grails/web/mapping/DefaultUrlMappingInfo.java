@@ -18,23 +18,15 @@
  */
 package org.grails.web.mapping;
 
-import grails.boot.GrailsApp;
+import grails.core.GrailsApplication;
 import grails.util.GrailsNameUtils;
 import grails.web.CamelCaseUrlConverter;
 import grails.web.UrlConverter;
-
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Map;
-
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-
 import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingData;
-import grails.core.GrailsApplication;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.exceptions.UrlMappingException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
@@ -45,6 +37,10 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.servlet.DispatcherServlet;
+
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Map;
 
 /**
  * Holds information established from a matched URL.
@@ -64,6 +60,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     private static final String VIEW_PREFIX = "view:";
     private static final String METHOD_PREFIX = "method:";
     private static final String VERSION_PREFIX = "version:";
+    private static final String ID_PARAM = "id";
 
     private final GrailsApplication grailsApplication;
     private Object controllerName;
@@ -72,7 +69,6 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     private Object namespace;
     private Object redirectInfo;
     private Object id;
-    private static final String ID_PARAM = "id";
     private UrlMappingData urlData;
     private Object viewName;
     private boolean parsingRequest;
@@ -88,20 +84,19 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         this.urlData = urlData;
         this.grailsApplication = grailsApplication;
         ApplicationContext applicationContext = null;
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             applicationContext = grailsApplication.getMainContext();
         }
-        if(applicationContext != null && applicationContext.containsBean(UrlConverter.BEAN_NAME)) {
+        if (applicationContext != null && applicationContext.containsBean(UrlConverter.BEAN_NAME)) {
             urlConverter = applicationContext.getBean(UrlConverter.BEAN_NAME, UrlConverter.class);
-        }
-        else {
+        } else {
             urlConverter = new CamelCaseUrlConverter();
         }
     }
 
     @SuppressWarnings("rawtypes")
     public DefaultUrlMappingInfo(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, Map params,
-            UrlMappingData urlData, GrailsApplication grailsApplication) {
+                                 UrlMappingData urlData, GrailsApplication grailsApplication) {
         this(redirectInfo, controllerName, actionName, namespace, pluginName, viewName, null, UrlMapping.ANY_VERSION, params, urlData, grailsApplication);
     }
 
@@ -122,11 +117,6 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         }
     }
 
-    @Override
-    public String getVersion() {
-        return this.version;
-    }
-
     public DefaultUrlMappingInfo(Object viewName, Map params, UrlMappingData urlData, GrailsApplication grailsApplication) {
         this(params, urlData, grailsApplication);
         this.viewName = viewName;
@@ -139,7 +129,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         Assert.notNull(uri, "Argument [uri] cannot be null or blank");
     }
 
-    public DefaultUrlMappingInfo(Object uri,String httpMethod, UrlMappingData data, GrailsApplication grailsApplication) {
+    public DefaultUrlMappingInfo(Object uri, String httpMethod, UrlMappingData data, GrailsApplication grailsApplication) {
         this(Collections.emptyMap(), data, grailsApplication);
         this.uri = uri;
         this.httpMethod = httpMethod;
@@ -156,6 +146,10 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         this.viewName = info.getViewName();
     }
 
+    @Override
+    public String getVersion() {
+        return this.version;
+    }
 
     @Override
     public String getHttpMethod() {
@@ -191,6 +185,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         String name = evaluateNameForValue(namespace);
         return urlConverter.toUrlElement(name);
     }
+
     public String getControllerName() {
         String name = evaluateNameForValue(controllerName);
         if (name == null && getViewName() == null && uri == null) {
@@ -219,8 +214,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     /**
-     * @deprecated
-     * This method will be removed in a future grails version since the associated g:submitAction is being removed.
+     * @deprecated This method will be removed in a future grails version since the associated g:submitAction is being removed.
      * Grails will no longer support redirecting to a different action name by adding a parameter with the prefix
      * '_action'
      */
@@ -275,17 +269,17 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     private boolean isMultipartDisabled() {
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             return grailsApplication.getConfig().getProperty(SETTING_GRAILS_WEB_DISABLE_MULTIPART, Boolean.class, false);
         }
         return false;
     }
 
     private MultipartResolver getMultipartResolver() {
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             ApplicationContext ctx = grailsApplication.getMainContext();
-            if(ctx != null) {
-                return (MultipartResolver)ctx.getBean(DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME);
+            if (ctx != null) {
+                return (MultipartResolver) ctx.getBean(DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME);
             }
         }
         return null;
@@ -307,22 +301,45 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         DefaultUrlMappingInfo that = (DefaultUrlMappingInfo) o;
 
-        if (actionName != null ? !actionName.equals(that.actionName) : that.actionName != null) return false;
-        if (controllerName != null ? !controllerName.equals(that.controllerName) : that.controllerName != null)
+        if (actionName != null ? !actionName.equals(that.actionName) : that.actionName != null) {
             return false;
-        if (httpMethod != null ? !httpMethod.equals(that.httpMethod) : that.httpMethod != null) return false;
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) return false;
-        if (pluginName != null ? !pluginName.equals(that.pluginName) : that.pluginName != null) return false;
-        if (redirectInfo != null ? !redirectInfo.equals(that.redirectInfo) : that.redirectInfo != null) return false;
-        if (uri != null ? !uri.equals(that.uri) : that.uri != null) return false;
-        if (version != null ? !version.equals(that.version) : that.version != null) return false;
-        if (viewName != null ? !viewName.equals(that.viewName) : that.viewName != null) return false;
+        }
+        if (controllerName != null ? !controllerName.equals(that.controllerName) : that.controllerName != null) {
+            return false;
+        }
+        if (httpMethod != null ? !httpMethod.equals(that.httpMethod) : that.httpMethod != null) {
+            return false;
+        }
+        if (id != null ? !id.equals(that.id) : that.id != null) {
+            return false;
+        }
+        if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) {
+            return false;
+        }
+        if (pluginName != null ? !pluginName.equals(that.pluginName) : that.pluginName != null) {
+            return false;
+        }
+        if (redirectInfo != null ? !redirectInfo.equals(that.redirectInfo) : that.redirectInfo != null) {
+            return false;
+        }
+        if (uri != null ? !uri.equals(that.uri) : that.uri != null) {
+            return false;
+        }
+        if (version != null ? !version.equals(that.version) : that.version != null) {
+            return false;
+        }
+        if (viewName != null ? !viewName.equals(that.viewName) : that.viewName != null) {
+            return false;
+        }
 
         return true;
     }
@@ -337,8 +354,8 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         result = 31 * result + (id != null ? (ID_PREFIX + id).hashCode() : 0);
         result = 31 * result + (viewName != null ? (VIEW_PREFIX + viewName).hashCode() : 0);
         result = 31 * result + (uri != null ? uri.hashCode() : 0);
-        result = 31 * result + (httpMethod != null ? (METHOD_PREFIX +httpMethod).hashCode() : 0);
-        result = 31 * result + (version != null ? (VERSION_PREFIX +version).hashCode() : 0);
+        result = 31 * result + (httpMethod != null ? (METHOD_PREFIX + httpMethod).hashCode() : 0);
+        result = 31 * result + (version != null ? (VERSION_PREFIX + version).hashCode() : 0);
         return result;
     }
 }

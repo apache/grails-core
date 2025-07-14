@@ -30,6 +30,7 @@ import org.springframework.core.env.EnumerablePropertySource
 
 @CompileStatic
 class PrefixedMapPropertySource extends EnumerablePropertySource {
+
     final EnumerablePropertySource source
     final String prefix
     final String[] propertyNames

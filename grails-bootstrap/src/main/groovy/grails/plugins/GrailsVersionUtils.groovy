@@ -18,8 +18,8 @@
  */
 package grails.plugins
 
-import groovy.transform.CompileStatic
 import grails.plugins.metadata.GrailsPlugin
+import groovy.transform.CompileStatic
 
 @CompileStatic
 class GrailsVersionUtils {
@@ -53,7 +53,7 @@ class GrailsVersionUtils {
         def vc = new VersionComparator()
         pluginVersion = trimTag(pluginVersion)
 
-        if (requiredVersion.indexOf('>') >- 1) {
+        if (requiredVersion.indexOf('>') > -1) {
             def tokens = requiredVersion.split(">")*.trim()
             tokens = tokens.stream().collect({ String it -> trimTag(it) })
             tokens << pluginVersion
@@ -62,8 +62,7 @@ class GrailsVersionUtils {
             if (tokens[1] == pluginVersion) {
                 return true
             }
-        }
-        else if (pluginVersion.equals(trimTag(requiredVersion))) {
+        } else if (pluginVersion.equals(trimTag(requiredVersion))) {
             return true
         }
 
@@ -112,13 +111,12 @@ class GrailsVersionUtils {
 
     private static String trimTag(String pluginVersion) {
         def i = pluginVersion.indexOf('-')
-        if (i >- 1) {
-            pluginVersion = pluginVersion[0..i-1]
+        if (i > -1) {
+            pluginVersion = pluginVersion[0..i - 1]
         }
         def tokens = pluginVersion.split(/\./)
 
-        return tokens.findAll { String it -> it ==~ /\d+/ || it =='*'}.join(".")
+        return tokens.findAll { String it -> it ==~ /\d+/ || it == '*' }.join(".")
     }
 }
-
 

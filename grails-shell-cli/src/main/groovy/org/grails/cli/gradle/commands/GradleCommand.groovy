@@ -17,12 +17,17 @@
  *  under the License.
  */
 package org.grails.cli.gradle.commands
+
 import groovy.transform.CompileStatic
 import jline.console.completer.Completer
 import org.gradle.tooling.BuildLauncher
 import org.grails.cli.gradle.GradleUtil
 import org.grails.cli.interactive.completers.ClosureCompleter
-import org.grails.cli.profile.*
+import org.grails.cli.profile.CommandDescription
+import org.grails.cli.profile.ExecutionContext
+import org.grails.cli.profile.ProjectCommand
+import org.grails.cli.profile.ProjectContext
+import org.grails.cli.profile.ProjectContextAware
 
 /**
  * A command for invoking Gradle commands
@@ -31,6 +36,7 @@ import org.grails.cli.profile.*
  */
 @CompileStatic
 class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
+
     public static final String GRADLE = "gradle"
 
     final String name = GRADLE
@@ -49,7 +55,7 @@ class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
     boolean handle(ExecutionContext context) {
         GradleUtil.runBuildWithConsoleOutput(context) { BuildLauncher buildLauncher ->
             def args = context.commandLine.remainingArgsString?.trim()
-            if(args) {
+            if (args) {
                 buildLauncher.withArguments(args)
             }
         }
@@ -60,7 +66,7 @@ class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
     int complete(String buffer, int cursor, List<CharSequence> candidates) {
         initializeCompleter()
 
-        if(completer)
+        if (completer)
             return completer.complete(buffer, cursor, candidates)
         else
             return cursor

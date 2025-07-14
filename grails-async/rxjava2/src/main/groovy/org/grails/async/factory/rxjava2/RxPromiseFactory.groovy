@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.rxjava2
 
 import grails.async.Promise
@@ -53,10 +52,9 @@ class RxPromiseFactory extends AbstractPromiseFactory {
 
     @Override
     <T> Promise<T> createPromise(Closure<T>[] closures) {
-        if(closures.length == 1) {
+        if (closures.length == 1) {
             return new RxPromise<T>(this, closures[0], Schedulers.io())
-        }
-        else {
+        } else {
             def promiseList = new PromiseList()
             for (Closure closure : closures) {
                 promiseList.add(closure)
@@ -78,23 +76,22 @@ class RxPromiseFactory extends AbstractPromiseFactory {
     @Override
     <T> Promise<T> onComplete(List<Promise<T>> promises, Closure<T> callable) {
         new RxPromise<T>(this, Observable.concat(
-            promises.collect { Promise p ->
-                if(p instanceof BoundPromise) {
-                    return Observable.just(((BoundPromise)p).value) as Observable<T>
+                promises.collect { Promise p ->
+                    if (p instanceof BoundPromise) {
+                        return Observable.just(((BoundPromise) p).value) as Observable<T>
+                    } else {
+                        return ((RxPromise) p).toObservable() as Observable<T>
+                    }
                 }
-                else {
-                    return ((RxPromise)p).toObservable() as Observable<T>
-                }
-            }
         ).toList())
-         .onComplete(callable)
+                .onComplete(callable)
     }
 
     @Override
     <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
         new RxPromise(this, Observable.concat(
-                promises.collect { ((RxPromise<T>)it).toObservable() }
+                promises.collect { ((RxPromise<T>) it).toObservable() }
         ).toList())
-        .onError(callable) as Promise<List<T>>
+                .onError(callable) as Promise<List<T>>
     }
 }

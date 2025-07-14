@@ -40,6 +40,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
  */
 @CompileStatic
 class FindAllStringQueryImplementer extends AbstractStringQueryImplementer implements IterableServiceImplementer<GormEntity> {
+
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
         boolean isCompatibleReturnType = false
@@ -53,7 +54,7 @@ class FindAllStringQueryImplementer extends AbstractStringQueryImplementer imple
 
     @Override
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression args) {
-        ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
+        ClassNode returnType = (ClassNode) newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
         String methodName = AstUtils.isIterableOrArrayOfDomainClasses(returnType) ? "findAll" : "executeQuery"
         Expression methodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), methodName, args)
         methodCall = castX(returnType.plainNodeReference, methodCall)

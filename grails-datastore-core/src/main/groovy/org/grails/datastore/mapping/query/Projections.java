@@ -25,11 +25,13 @@ package org.grails.datastore.mapping.query;
  * @since 1.0
  */
 public class Projections {
+
     public static final Query.IdProjection ID_PROJECTION = new Query.IdProjection();
     public static final Query.CountProjection COUNT_PROJECTION = new Query.CountProjection();
 
     /**
      * Projection used to obtain the id of an object
+     *
      * @return The IdProjection instance
      */
     public static Query.IdProjection id() {
@@ -48,6 +50,7 @@ public class Projections {
 
     /**
      * A projection that obtains the value of a property of an entity
+     *
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
@@ -85,7 +88,7 @@ public class Projections {
         return new Query.MaxProjection(name);
     }
 
-   /**
+    /**
      * Computes the average value of a property
      *
      * @param name The name of the property
@@ -128,7 +131,6 @@ public class Projections {
      * Defines a group by projection for datastores that support it
      *
      * @param property The property name
-     *
      * @return The projection list
      */
     public static Query.GroupPropertyProjection groupProperty(String property) {

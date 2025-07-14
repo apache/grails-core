@@ -20,27 +20,25 @@ package org.grails.plugins.web.taglib
 
 import grails.artefact.TagLibrary
 import grails.config.Settings
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
 import grails.gsp.TagLib
+import grails.plugins.GrailsPluginManager
+import grails.util.GrailsStringUtils
 import grails.util.GrailsUtil
 import grails.util.Metadata
-import groovy.transform.CompileStatic
-
-import grails.core.GrailsApplication
-import grails.util.GrailsStringUtils
-import grails.plugins.GrailsPluginManager
-import grails.core.support.GrailsApplicationAware
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappingsHolder
-import org.grails.web.servlet.mvc.GrailsWebRequest
+import groovy.transform.CompileStatic
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.codehaus.groovy.runtime.InvokerHelper
+import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.web.servlet.support.RequestDataValueProcessor
-
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 
 /**
  * The base application tag library for Grails many of which take inspiration from Rails helpers (thanks guys! :)
@@ -50,6 +48,7 @@ import jakarta.servlet.http.HttpServletResponse
  */
 @TagLib
 class ApplicationTagLib implements ApplicationContextAware, InitializingBean, GrailsApplicationAware, TagLibrary {
+
     static returnObjectForTags = ['createLink', 'resource', 'createLinkTo', 'cookie', 'header', 'img', 'join', 'meta', 'set', 'applyCodec']
 
     ApplicationContext applicationContext
@@ -62,11 +61,11 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
     RequestDataValueProcessor requestDataValueProcessor
 
-    static final SCOPES = [page: 'pageScope',
+    static final SCOPES = [page       : 'pageScope',
                            application: 'servletContext',
-                           request:'request',
-                           session:'session',
-                           flash:'flash']
+                           request    : 'request',
+                           session    : 'session',
+                           flash      : 'flash']
 
     boolean useJsessionId = false
     boolean hasResourceProcessor = false
@@ -223,11 +222,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         def linkAttrs
         if (attrs.params instanceof Map && attrs.params.containsKey('attrs')) {
             linkAttrs = attrs.params.remove('attrs').clone()
-        }
-        else {
+        } else {
             linkAttrs = [:]
         }
-        writer <<  '<a href=\"'
+        writer << '<a href=\"'
         writer << createLink(attrs).encodeAsHTML()
         writer << '"'
         if (elementId) {
@@ -248,10 +246,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     @CompileStatic
     static String attrsToString(Map attrs) {
         // Output any remaining user-specified attributes
-        StringBuilder sb=new StringBuilder()
+        StringBuilder sb = new StringBuilder()
         // For some strange reason Groovy creates ClassCastExceptions internally in PogoMetaMethodSite.checkCall without this hack
         for (Iterator i = InvokerHelper.asIterator(attrs); i.hasNext();) {
-            Map.Entry e = (Map.Entry)i.next()
+            Map.Entry e = (Map.Entry) i.next()
             if (e.value != null) {
                 sb.append(' ')
                 sb.append(e.key)
@@ -264,13 +262,13 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static LINK_WRITERS = [
-        js: { url, constants, attrs ->
-           return "<script src=\"${url}\"${getAttributesToRender(constants, attrs)}></script>"
-        },
+            js  : { url, constants, attrs ->
+                return "<script src=\"${url}\"${getAttributesToRender(constants, attrs)}></script>"
+            },
 
-        link: { url, constants, attrs ->
-           return "<link href=\"${url}\"${getAttributesToRender(constants, attrs)}/>"
-        }
+            link: { url, constants, attrs ->
+                return "<link href=\"${url}\"${getAttributesToRender(constants, attrs)}/>"
+            }
     ]
 
     static getAttributesToRender(constants, attrs) {
@@ -285,26 +283,22 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static SUPPORTED_TYPES = [
-        css:[type:"text/css", rel:'stylesheet', media:'screen, projection'],
-        js:[type:'text/javascript', writer:'js'],
+            css      : [type: "text/css", rel: 'stylesheet', media: 'screen, projection'],
+            js       : [type: 'text/javascript', writer: 'js'],
 
-        gif:[rel:'shortcut icon'],
-        jpg:[rel:'shortcut icon'],
-        png:[rel:'shortcut icon'],
-        ico:[rel:'shortcut icon'],
-        appleicon:[rel:'apple-touch-icon']
+            gif      : [rel: 'shortcut icon'],
+            jpg      : [rel: 'shortcut icon'],
+            png      : [rel: 'shortcut icon'],
+            ico      : [rel: 'shortcut icon'],
+            appleicon: [rel: 'apple-touch-icon']
 
-        // @todo add feed link types here too
+            // @todo add feed link types here too
     ]
 
     /**
      * Render the appropriate kind of external link for use in <head> based on the type of the URI.
      * For JS will render <script> tags, for CSS will render <link> with the correct rel, and so on for icons.
-     * @attr uri
-     * @attr dir
-     * @attr file
-     * @attr plugin
-     * @attr type
+     * @attr uri* @attr dir* @attr file* @attr plugin* @attr type
      */
     Closure external = { attrs ->
         if (!attrs.uri) {
@@ -315,8 +309,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
     /**
      *
-     * @attr uri
-     * @attr type
+     * @attr uri* @attr type
      */
     protected renderResourceLink(attrs) {
         def uri = attrs.remove('uri')
@@ -362,18 +355,18 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr event Webflow _eventId parameter
      */
     Closure createLink = { attrs ->
-       return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
+        return doCreateLink(attrs instanceof Map ? (Map) attrs : Collections.emptyMap())
     }
 
     @CompileStatic
     protected String doCreateLink(Map attrs) {
         Map urlAttrs = attrs
         if (attrs.url instanceof Map) {
-            urlAttrs = (Map)attrs.url
+            urlAttrs = (Map) attrs.url
         }
-        Map params = urlAttrs.params && urlAttrs.params instanceof Map ? (Map)urlAttrs.params : [:]
-        HttpServletRequest req = (HttpServletRequest)getProperty('request')
-        HttpServletResponse res = (HttpServletResponse)getProperty('response')
+        Map params = urlAttrs.params && urlAttrs.params instanceof Map ? (Map) urlAttrs.params : [:]
+        HttpServletRequest req = (HttpServletRequest) getProperty('request')
+        HttpServletResponse res = (HttpServletResponse) getProperty('response')
         def flowExecutionKey = req.getAttribute('flowExecutionKey')
         if (flowExecutionKey) {
             if (attrs.controller == null && attrs.action == null && attrs.url == null && attrs.uri == null) {
@@ -404,14 +397,13 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     Closure withTag = { attrs, body ->
         def writer = out
         writer << "<${attrs.name}"
-        attrs.attrs?.each { k,v ->
+        attrs.attrs?.each { k, v ->
             if (!v) return
             if (v instanceof Closure) {
                 writer << " $k=\""
                 v()
                 writer << '"'
-            }
-            else {
+            } else {
                 writer << " $k=\"$v\""
             }
         }

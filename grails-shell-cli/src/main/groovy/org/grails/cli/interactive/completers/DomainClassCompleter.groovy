@@ -31,6 +31,7 @@ import org.grails.io.support.Resource
  */
 @CompileStatic
 class DomainClassCompleter extends ClassNameCompleter {
+
     DomainClassCompleter() {
         super(new File(BuildSettings.BASE_DIR, "grails-app/domain"))
     }

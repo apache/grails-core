@@ -20,7 +20,6 @@
 package org.grails.datastore.gorm.validation.jakarta
 
 import groovy.transform.CompileStatic
-
 import jakarta.validation.ClockProvider
 import jakarta.validation.ConstraintValidatorFactory
 import jakarta.validation.MessageInterpolator
@@ -38,7 +37,7 @@ import jakarta.validation.valueextraction.ValueExtractor
  * @since 6.1
  */
 @CompileStatic
-class GormValidatorFactoryAdapter implements ValidatorFactory  {
+class GormValidatorFactoryAdapter implements ValidatorFactory {
 
     final ValidatorFactory factory
 
@@ -93,6 +92,7 @@ class GormValidatorFactoryAdapter implements ValidatorFactory  {
 
     @CompileStatic
     static class GormValidatorContext implements ValidatorContext {
+
         final ValidatorContext delegate
 
         GormValidatorContext(ValidatorContext delegate) {
@@ -137,7 +137,7 @@ class GormValidatorFactoryAdapter implements ValidatorFactory  {
 
         @Override
         Validator getValidator() {
-            return new GormValidatorAdapter( delegate.getValidator() )
+            return new GormValidatorAdapter(delegate.getValidator())
         }
     }
 }

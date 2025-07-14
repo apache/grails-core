@@ -19,8 +19,7 @@
 package grails.web.mime
 
 import grails.util.Holders
-import groovy.transform.CompileStatic;
-
+import groovy.transform.CompileStatic
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
@@ -64,14 +63,14 @@ class MimeType {
     }
 
     MimeType(String name, String extension, Map<String, String> params = [:]) {
-        if(name && name.contains(';')) {
+        if (name && name.contains(';')) {
             List tokenWithArgs = name.split(';').toList()
             name = tokenWithArgs[0]
             final paramsList = tokenWithArgs[1..-1]
-            paramsList.each{ String it ->
+            paramsList.each { String it ->
                 def i = it.indexOf('=')
                 if (i > -1) {
-                    parameters[it[0..i-1].trim()] = it[i+1..-1].trim()
+                    parameters[it[0..i - 1].trim()] = it[i + 1..-1].trim()
                 }
             }
 
@@ -93,7 +92,7 @@ class MimeType {
      * @return The quality in BigDecimal form
      */
     BigDecimal getQualityAsNumber() {
-        if(this.qualityNumberField == null) {
+        if (this.qualityNumberField == null) {
             this.qualityNumberField = getOrConvertQualityParameterToBigDecimal(this)
         }
         return this.qualityNumberField
@@ -142,10 +141,10 @@ class MimeType {
      */
     static MimeType[] getConfiguredMimeTypes() {
         def ctx = Holders.findApplicationContext()
-        if(ctx == null) {
+        if (ctx == null) {
             ctx = GrailsWebRequest.lookup()?.getApplicationContext()
         }
-        (MimeType[])(ctx?.containsBean(MimeType.BEAN_NAME) ? ctx?.getBean(MimeType.BEAN_NAME, MimeType[]) : DEFAULTS)
+        (MimeType[]) (ctx?.containsBean(MimeType.BEAN_NAME) ? ctx?.getBean(MimeType.BEAN_NAME, MimeType[]) : DEFAULTS)
     }
 
     /**
@@ -166,7 +165,7 @@ class MimeType {
         BigDecimal bd
         try {
             def q = mt.parameters.q
-            if(q == null) return QUALITY_RATING_NUMBER
+            if (q == null) return QUALITY_RATING_NUMBER
             else {
                 bd = q.toString().toBigDecimal()
                 // replace to avoid expensive conversion again

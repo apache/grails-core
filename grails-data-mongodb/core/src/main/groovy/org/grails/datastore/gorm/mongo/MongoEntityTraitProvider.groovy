@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.reflect.ClassUtils
  */
 @CompileStatic
 class MongoEntityTraitProvider implements GormEntityTraitProvider {
+
     final Class entityTrait = MongoEntity
 
     final boolean available = ClassUtils.isPresent("com.mongodb.client.MongoClient")

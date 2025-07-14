@@ -117,7 +117,7 @@ String getVersion(String artifact) {
 
 def generateBomDocumentation = tasks.register('generateBomDocumentation')
 generateBomDocumentation.configure { Task it ->
-    it.dependsOn(':grails-bom:extractConstraints')
+    it.dependsOn(':grails-bom:extractConstraints', ':grails-bom:checkstyleNohttp', ':grails-bom:spotlessJava', ':grails-bom:spotlessGroovy', ':grails-bom:spotlessJavaMisc')
 
     it.description = 'Generates an AsciiDoc table listing Group, Artifact, and Version for project dependencies.'
     it.group = 'documentation'

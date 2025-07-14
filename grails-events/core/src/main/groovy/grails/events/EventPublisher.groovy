@@ -36,7 +36,7 @@ import org.springframework.transaction.event.TransactionPhase
 trait EventPublisher extends EventBusAware implements EventEmitter {
 
     /**
-     * @see {@link EventEmitter#notify(java.lang.CharSequence, java.lang.Object[])}
+     * @see {@link EventEmitter#notify(java.lang.CharSequence, java.lang.Object [ ])}
      */
     @Override
     EventEmitter notify(CharSequence eventId, Object... data) {
@@ -68,7 +68,7 @@ trait EventPublisher extends EventBusAware implements EventEmitter {
     }
 
     /**
-     * @see {@link EventEmitter#notify(java.lang.CharSequence, java.lang.Object[])} )}
+     * @see {@link EventEmitter#notify(java.lang.CharSequence, java.lang.Object [ ])} )}
      */
     @Override
     EventEmitter publish(CharSequence eventId, Object... data) {

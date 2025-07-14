@@ -53,20 +53,22 @@ class MarkupViewGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://grails.org']
 
     // Any additional developers beyond the author specified above.
-    def developers = [ [ name: "Graeme Rocher", email: "graeme.rocher@gmail.com" ]]
+    def developers = [[name: "Graeme Rocher", email: "graeme.rocher@gmail.com"]]
 
     // Location of the plugin's issue tracker.
-    def issueManagement = [ system: "Github", url: "https://github.com/grails/grails-views/issues" ]
+    def issueManagement = [system: "Github", url: "https://github.com/grails/grails-views/issues"]
 
     // Online location of the plugin's browseable source code.
-    def scm = [ url: "https://github.com/grails/grails-views" ]
+    def scm = [url: "https://github.com/grails/grails-views"]
 
-    Closure doWithSpring() { {->
-        markupViewConfiguration(MarkupViewConfiguration)
-        markupTemplateEngine(MarkupViewTemplateEngine, markupViewConfiguration, applicationContext.classLoader)
-        smartMarkupViewResolver(MarkupViewResolver, markupTemplateEngine) {
-            templateResolver = bean(PluginAwareTemplateResolver, markupViewConfiguration)
+    Closure doWithSpring() {
+        { ->
+            markupViewConfiguration(MarkupViewConfiguration)
+            markupTemplateEngine(MarkupViewTemplateEngine, markupViewConfiguration, applicationContext.classLoader)
+            smartMarkupViewResolver(MarkupViewResolver, markupTemplateEngine) {
+                templateResolver = bean(PluginAwareTemplateResolver, markupViewConfiguration)
+            }
+            markupViewResolver(GenericGroovyTemplateViewResolver, smartMarkupViewResolver)
         }
-        markupViewResolver(GenericGroovyTemplateViewResolver, smartMarkupViewResolver)
-    } }
+    }
 }

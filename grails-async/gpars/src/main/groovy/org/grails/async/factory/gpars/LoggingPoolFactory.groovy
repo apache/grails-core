@@ -28,7 +28,11 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.Method
-import java.util.concurrent.*
+import java.util.concurrent.RejectedExecutionHandler
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * A pool factory that logs error instead of printing them to standard err as is the default in GPars
@@ -74,18 +78,20 @@ class LoggingPoolFactory implements PoolFactory {
      * Creates a fixed-thread pool of given size. Each thread will have the uncaught exception handler set
      * to print the unhandled exception to standard error output.
      *
-     * @param daemon   Sets the daemon flag of threads in the pool.
+     * @param daemon Sets the daemon flag of threads in the pool.
      * @param poolSize The required pool size  @return The created thread pool
      * @return The newly created thread pool
      */
     private static ThreadPoolExecutor createResizeablePool(boolean daemon, int poolSize) {
         assert poolSize > 0;
         return new ThreadPoolExecutor(poolSize, 1000, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new ThreadFactory() {
+
             @Override
             Thread newThread(Runnable r) {
                 Thread thread = new Thread(r, createThreadNameMethod.invoke(DefaultPool).toString())
                 thread.daemon = daemon
                 thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+
                     @Override
                     void uncaughtException(Thread t, Throwable e) {
                         LOG.error("Async execution error: ${e.message}", e)
@@ -94,11 +100,12 @@ class LoggingPoolFactory implements PoolFactory {
                 return thread
             }
         }, new RejectedExecutionHandler() {
+
             @Override
             void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
                 throw new IllegalStateException("The thread pool executor cannot run the task. " +
-                    "The upper limit of the thread pool size has probably been reached. " +
-                    "Current pool size: $executor.poolSize Maximum pool size: $executor.maximumPoolSize")
+                        "The upper limit of the thread pool size has probably been reached. " +
+                        "Current pool size: $executor.poolSize Maximum pool size: $executor.maximumPoolSize")
             }
         })
     }

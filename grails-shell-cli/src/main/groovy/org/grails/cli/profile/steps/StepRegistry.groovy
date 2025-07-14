@@ -36,7 +36,7 @@ class StepRegistry {
     static {
         def stepFactories = ServiceLoader.load(StepFactory, StepRegistry.classLoader).iterator()
 
-        while(stepFactories.hasNext()) {
+        while (stepFactories.hasNext()) {
             StepFactory stepFactory = stepFactories.next()
             registeredStepFactories << stepFactory
         }
@@ -49,10 +49,10 @@ class StepRegistry {
      * @return A step or null if it doesn't exist for the given name
      */
     static Step getStep(String name, Command command, Map parameters) {
-        if(!name) return null
-        for(StepFactory sf in registeredStepFactories) {
+        if (!name) return null
+        for (StepFactory sf in registeredStepFactories) {
             def step = sf.createStep(name, command, parameters)
-            if(step) return step
+            if (step) return step
         }
     }
 }

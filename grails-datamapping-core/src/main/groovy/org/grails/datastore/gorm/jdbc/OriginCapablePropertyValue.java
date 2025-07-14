@@ -60,5 +60,4 @@ class OriginCapablePropertyValue extends PropertyValue {
         }
         return new OriginCapablePropertyValue(propertyValue).getOrigin();
     }
-
 }

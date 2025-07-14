@@ -43,14 +43,14 @@ abstract class MultiStepCommand implements ProfileCommand, CommandEvents {
 
     @Override
     boolean handle(ExecutionContext context) {
-        if(minArguments > 0 && (!context.commandLine.getRemainingArgs() || context.commandLine.getRemainingArgs().size() < minArguments)) {
+        if (minArguments > 0 && (!context.commandLine.getRemainingArgs() || context.commandLine.getRemainingArgs().size() < minArguments)) {
             context.console.error("Expecting ${minArguments ? 'an argument' : minArguments + ' arguments'} to $name.")
             context.console.info("${description.usage}")
             return true
         }
         notify("${name}Start", context)
-        for(AbstractStep step : getSteps()) {
-            if(!step.handle(context)) {
+        for (AbstractStep step : getSteps()) {
+            if (!step.handle(context)) {
                 break
             }
         }

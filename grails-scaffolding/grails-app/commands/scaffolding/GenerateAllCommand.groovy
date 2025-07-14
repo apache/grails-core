@@ -47,6 +47,6 @@ class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper,
             return FAILURE
         }
         return new GenerateControllerCommand().handle(executionContext) &&
-        new GenerateViewsCommand().handle(executionContext)
+                new GenerateViewsCommand().handle(executionContext)
     }
 }

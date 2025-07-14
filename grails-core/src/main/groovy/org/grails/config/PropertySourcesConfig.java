@@ -44,7 +44,6 @@ public class PropertySourcesConfig extends NavigableMapConfig {
     protected PropertySources propertySources;
     protected PropertySourcesPropertyResolver propertySourcesPropertyResolver;
 
-
     public PropertySourcesConfig(PropertySources propertySources) {
         this.propertySources = propertySources;
         this.propertySourcesPropertyResolver = new PropertySourcesPropertyResolver(propertySources);
@@ -66,6 +65,7 @@ public class PropertySourcesConfig extends NavigableMapConfig {
         this.propertySourcesPropertyResolver = new PropertySourcesPropertyResolver(propertySources);
         initializeFromPropertySources(propertySources);
     }
+
     public PropertySourcesConfig(PropertySource propertySource) {
         MutablePropertySources mutablePropertySources = new MutablePropertySources();
         mutablePropertySources.addFirst(propertySource);
@@ -73,6 +73,7 @@ public class PropertySourcesConfig extends NavigableMapConfig {
         this.propertySourcesPropertyResolver = new PropertySourcesPropertyResolver(propertySources);
         initializeFromPropertySources(propertySources);
     }
+
     public PropertySources getPropertySources() {
         return propertySources;
     }
@@ -84,20 +85,20 @@ public class PropertySourcesConfig extends NavigableMapConfig {
     protected void initializeFromPropertySources(PropertySources propertySources) {
 
         EnvironmentAwarePropertySource environmentAwarePropertySource = new EnvironmentAwarePropertySource(propertySources);
-        if(propertySources instanceof MutablePropertySources) {
+        if (propertySources instanceof MutablePropertySources) {
             final String applicationConfig = "applicationConfigurationProperties";
             if (propertySources.contains(applicationConfig)) {
-                ((MutablePropertySources)propertySources).addBefore(applicationConfig, environmentAwarePropertySource);
+                ((MutablePropertySources) propertySources).addBefore(applicationConfig, environmentAwarePropertySource);
             } else {
-                ((MutablePropertySources)propertySources).addLast(environmentAwarePropertySource);
+                ((MutablePropertySources) propertySources).addLast(environmentAwarePropertySource);
             }
         }
 
         List<PropertySource<?>> propertySourceList = DefaultGroovyMethods.toList(propertySources);
         Collections.reverse(propertySourceList);
-        for(PropertySource propertySource : propertySourceList) {
-            if(propertySource instanceof EnumerablePropertySource) {
-                EnumerablePropertySource enumerablePropertySource = (EnumerablePropertySource)propertySource;
+        for (PropertySource propertySource : propertySourceList) {
+            if (propertySource instanceof EnumerablePropertySource) {
+                EnumerablePropertySource enumerablePropertySource = (EnumerablePropertySource) propertySource;
                 mergeEnumerablePropertySource(enumerablePropertySource);
             }
         }
@@ -113,7 +114,9 @@ public class PropertySourcesConfig extends NavigableMapConfig {
             for (String propertyName : propertyNames) {
                 Object value = enumerablePropertySource.getProperty(propertyName);
                 if (value instanceof ConfigObject) {
-                    if (((ConfigObject) value).isEmpty()) continue;
+                    if (((ConfigObject) value).isEmpty()) {
+                        continue;
+                    }
                 } else {
                     value = processAndEvaluate(value);
                 }
@@ -129,13 +132,13 @@ public class PropertySourcesConfig extends NavigableMapConfig {
             value = resolvePlaceholders(value.toString());
         } else if (value instanceof List) {
             List<Object> result = new ArrayList<>();
-            for (Object element : (List)value) {
+            for (Object element : (List) value) {
                 result.add(processAndEvaluate(element));
             }
             return result;
         } else if (value instanceof Map) {
             Map<Object, Object> result = new LinkedHashMap<>();
-            for (Object key : ((Map)value).keySet()) {
+            for (Object key : ((Map) value).keySet()) {
                 result.put(key, processAndEvaluate(((Map) value).get(key)));
             }
             return result;
@@ -154,7 +157,7 @@ public class PropertySourcesConfig extends NavigableMapConfig {
 
     @Override
     public String resolvePlaceholders(String text) {
-        if(!GrailsStringUtils.isBlank(text)) {
+        if (!GrailsStringUtils.isBlank(text)) {
             return propertySourcesPropertyResolver.resolvePlaceholders(text);
         }
         return text;
@@ -164,6 +167,5 @@ public class PropertySourcesConfig extends NavigableMapConfig {
     public String resolveRequiredPlaceholders(String text) throws IllegalArgumentException {
         return propertySourcesPropertyResolver.resolveRequiredPlaceholders(text);
     }
-
 
 }

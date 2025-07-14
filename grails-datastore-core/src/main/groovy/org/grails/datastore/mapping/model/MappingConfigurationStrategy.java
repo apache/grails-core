@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.model;
 
 import java.util.List;
@@ -62,8 +61,8 @@ public interface MappingConfigurationStrategy {
      * Obtains a List of PersistentProperty instances for the given Mapped class
      *
      * @param javaClass The Java class
-     * @param context The MappingContext instance
-     * @param mapping The mapping for this class
+     * @param context   The MappingContext instance
+     * @param mapping   The mapping for this class
      * @return The PersistentProperty instances
      */
     List<PersistentProperty> getPersistentProperties(Class javaClass, MappingContext context, ClassMapping mapping);
@@ -72,7 +71,7 @@ public interface MappingConfigurationStrategy {
      * Obtains the identity of a persistent entity
      *
      * @param javaClass The Java class
-     * @param context The MappingContext
+     * @param context   The MappingContext
      * @return A PersistentProperty instance
      */
     PersistentProperty getIdentity(Class javaClass, MappingContext context);
@@ -81,7 +80,7 @@ public interface MappingConfigurationStrategy {
      * Obtains the identity of a persistent entity
      *
      * @param javaClass The Java class
-     * @param context The MappingContext
+     * @param context   The MappingContext
      * @return A PersistentProperty instance
      */
     PersistentProperty[] getCompositeIdentity(Class javaClass, MappingContext context);
@@ -91,8 +90,8 @@ public interface MappingConfigurationStrategy {
      * this is just using a property called 'id', but in other frameworks this
      * may differ. For example JPA expects an annotated @Id property
      *
-     * @return The default identifier mapping
      * @param classMapping The ClassMapping instance
+     * @return The default identifier mapping
      */
     IdentityMapping getDefaultIdentityMapping(ClassMapping classMapping);
 
@@ -102,7 +101,7 @@ public interface MappingConfigurationStrategy {
      * then saves, updates and deletes will cascade from A to B
      *
      * @param javaClass The Java class
-     * @param context The MappingContext
+     * @param context   The MappingContext
      * @return A Set of owning classes
      */
     Set getOwningEntities(Class javaClass, MappingContext context);

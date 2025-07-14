@@ -21,7 +21,12 @@ package grails.gorm.time
 
 import groovy.transform.CompileStatic
 
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 /**
  * A trait to convert a {@link LocalDate} to and from a long

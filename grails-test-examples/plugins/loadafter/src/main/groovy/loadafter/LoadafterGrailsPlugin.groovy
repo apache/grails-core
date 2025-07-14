@@ -19,7 +19,7 @@
 
 package loadafter
 
-import grails.plugins.*
+import grails.plugins.Plugin
 
 class LoadafterGrailsPlugin extends Plugin {
 

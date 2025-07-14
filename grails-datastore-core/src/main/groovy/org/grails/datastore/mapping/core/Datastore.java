@@ -46,14 +46,15 @@ public interface Datastore extends ServiceRegistry {
 
     /**
      * Obtains the current session (if any)
-     * @return The current thread bound session
      *
+     * @return The current thread bound session
      * @throws ConnectionNotFoundException Thrown if the {@link #connect()} method has not yet been called
      */
     Session getCurrentSession() throws ConnectionNotFoundException;
 
     /**
      * Checks if there is a current session.
+     *
      * @return true if there's a bound active session
      */
     boolean hasCurrentSession();
@@ -67,16 +68,17 @@ public interface Datastore extends ServiceRegistry {
 
     /**
      * Get the application event publisher.
+     *
      * @return the publisher
      */
     ApplicationEventPublisher getApplicationEventPublisher();
 
     /**
      * Get the application context.
+     *
      * @return the context
      */
     ConfigurableApplicationContext getApplicationContext();
-
 
     /**
      * Whether the datastore is schema-less. That is it allows changes to the schema runtime, dynamic attributes etc.
@@ -89,9 +91,9 @@ public interface Datastore extends ServiceRegistry {
      * Execute the given closure with a session
      *
      * @param callable The callable
-     * @param <T> The return type
+     * @param <T>      The return type
      * @return An instance of the return type
      */
-    public <T> T withSession(Closure<T> callable);
+    <T> T withSession(Closure<T> callable);
 
 }

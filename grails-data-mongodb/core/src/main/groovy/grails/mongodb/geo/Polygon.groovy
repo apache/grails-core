@@ -20,11 +20,11 @@ import org.springframework.util.Assert
 
 /**
  * Represents a GeoJSON polygon for use in Geo data models.
- * See http://geojson.org/geojson-spec.html#polygon
+ * See https://geojson.org/geojson-spec.html#polygon
  */
 @CompileStatic
 @EqualsAndHashCode
-class Polygon extends Shape implements GeoJSON{
+class Polygon extends Shape implements GeoJSON {
 
     /**
      * The {@link Point} instances that constitute the Polygon
@@ -39,7 +39,7 @@ class Polygon extends Shape implements GeoJSON{
      * @param z The z {@link Point}
      * @param others The remaining {@link Point} instances
      */
-    Polygon(Point x, Point y, Point z, Point...others) {
+    Polygon(Point x, Point y, Point z, Point... others) {
         Assert.notNull(x, "Point x is required")
         Assert.notNull(y, "Point y is required")
         Assert.notNull(z, "Point z is required")
@@ -51,7 +51,7 @@ class Polygon extends Shape implements GeoJSON{
         this.points = [list]
     }
 
-    private Polygon(List<List<Point>> points){
+    private Polygon(List<List<Point>> points) {
         this.points = points
     }
 
@@ -62,8 +62,8 @@ class Polygon extends Shape implements GeoJSON{
      * @return The list
      */
     public List<List<List<Double>>> asList() {
-         points.collect() { List<Point> ring ->
-            ring.collect { Point p -> 
+        points.collect() { List<Point> ring ->
+            ring.collect { Point p ->
                 p.asList()
             }
         }
@@ -74,15 +74,14 @@ class Polygon extends Shape implements GeoJSON{
         points.toString()
     }
 /**
-     * The inverse of {@link Polygon#asList()}, constructs a Polygon from a coordinate list
-     *
-     * @param coords The coordinate list
-     * @return A Polygon
-     */
+ * The inverse of {@link Polygon#asList()}, constructs a Polygon from a coordinate list
+ *
+ * @param coords The coordinate list
+ * @return A Polygon
+ */
     static Polygon valueOf(List coords) {
         Assert.notNull(coords, "Argument coords cannot be null")
 
-        
 
         /*
          * Search for list type - it could be 
@@ -91,40 +90,33 @@ class Polygon extends Shape implements GeoJSON{
          * (3) List<List<Point> - a multi-ring polygon
          * (4) List<List<List<Double> - a multi-ring polygon with list as long/lat/alt
          */
-         try 
-         {
-            if(coords[0] instanceof Point){
-                return new Polygon( [fromSingleCoordsList(coords)] ) // case (1) above
-             }
-             else if(coords[0] instanceof List )
-             {
-                if( ((List)coords[0])[0] instanceof Number) {
-                    return new Polygon( [fromSingleCoordsList(coords)] ) // case (2) above
-                }
-                else if( ((List)coords[0])[0] instanceof Point){
-                    return new Polygon( coords.collect { poly_ring ->
+        try {
+            if (coords[0] instanceof Point) {
+                return new Polygon([fromSingleCoordsList(coords)]) // case (1) above
+            } else if (coords[0] instanceof List) {
+                if (((List) coords[0])[0] instanceof Number) {
+                    return new Polygon([fromSingleCoordsList(coords)]) // case (2) above
+                } else if (((List) coords[0])[0] instanceof Point) {
+                    return new Polygon(coords.collect { poly_ring ->
                         // each is a List<Point>
-                        return fromSingleCoordsList((List<Point>)poly_ring)
+                        return fromSingleCoordsList((List<Point>) poly_ring)
                     }) // case (3) above
-                }
-                else if( ((List)coords[0])[0] instanceof List && ((List)((List)coords[0])[0])[0] instanceof Number ){
-                    return new Polygon( coords.collect { poly_ring ->
+                } else if (((List) coords[0])[0] instanceof List && ((List) ((List) coords[0])[0])[0] instanceof Number) {
+                    return new Polygon(coords.collect { poly_ring ->
                         // each is a List<Point>
-                        return fromSingleCoordsList((List<List<Number>>)poly_ring)
-                    } ) // case (4) above
-                }
-                else {
+                        return fromSingleCoordsList((List<List<Number>>) poly_ring)
+                    }) // case (4) above
+                } else {
                     throw new IllegalArgumentException("Coordinate list must be Points or number-lists")
                 }
-             }
-             else {
+            } else {
                 throw new IllegalArgumentException("Coordinate list must be Points or number-lists")
-             }
-         }
-         catch(IndexOutOfBoundsException ioobe){
+            }
+        }
+        catch (IndexOutOfBoundsException ioobe) {
             throw new IllegalArgumentException("Coordinate lists cannot be empty")
-         }
-         
+        }
+
     }
 
     /**
@@ -134,16 +126,14 @@ class Polygon extends Shape implements GeoJSON{
     private static List<Point> fromSingleCoordsList(List coords) {
         Assert.notNull(coords, "Argument coords cannot be null")
 
-        if(coords.size() < 4) throw new IllegalArgumentException("Coordinates should contain at least 4 entries for a Polygon")
+        if (coords.size() < 4) throw new IllegalArgumentException("Coordinates should contain at least 4 entries for a Polygon")
 
         return coords.collect {
-            if(it instanceof Point) {
-                return (Point)it
-            }
-            else if(it instanceof List) {
-                return Point.valueOf((List<Number>)it)
-            }
-            else {
+            if (it instanceof Point) {
+                return (Point) it
+            } else if (it instanceof List) {
+                return Point.valueOf((List<Number>) it)
+            } else {
                 throw new IllegalArgumentException("Invalid coordinates: $coords")
             }
         }

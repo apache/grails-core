@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc.connections;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -33,14 +32,14 @@ import java.util.Map;
  * @since 6.1.7
  */
 public class CachedDataSourceConnectionSourceFactory extends DataSourceConnectionSourceFactory {
+
     private final Map<String, ConnectionSource<DataSource, DataSourceSettings>> dataSources = new LinkedHashMap<>();
 
     @Override
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, PropertyResolver configuration) {
-        if(dataSources.containsKey(name)) {
+        if (dataSources.containsKey(name)) {
             return dataSources.get(name);
-        }
-        else {
+        } else {
             ConnectionSource<DataSource, DataSourceSettings> connectionSource = super.create(name, configuration);
             dataSources.put(name, connectionSource);
             return connectionSource;
@@ -49,10 +48,9 @@ public class CachedDataSourceConnectionSourceFactory extends DataSourceConnectio
 
     @Override
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, DataSourceSettings settings) {
-        if(dataSources.containsKey(name)) {
+        if (dataSources.containsKey(name)) {
             return dataSources.get(name);
-        }
-        else {
+        } else {
             ConnectionSource<DataSource, DataSourceSettings> connectionSource = super.create(name, settings);
             dataSources.put(name, connectionSource);
             return connectionSource;

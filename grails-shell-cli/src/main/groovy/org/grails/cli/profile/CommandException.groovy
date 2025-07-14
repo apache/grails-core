@@ -26,5 +26,5 @@ import groovy.transform.InheritConstructors
  * @since 3.0
  */
 @InheritConstructors
-class CommandException extends RuntimeException{
+class CommandException extends RuntimeException {
 }

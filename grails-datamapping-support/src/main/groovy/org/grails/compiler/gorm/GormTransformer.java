@@ -39,11 +39,11 @@ import java.util.Collection;
  * @since 2.0
  */
 @AstTransformer
-public class GormTransformer implements GrailsArtefactClassInjector{
+public class GormTransformer implements GrailsArtefactClassInjector {
 
     @Override
     public String[] getArtefactTypes() {
-        return new String[] {DomainClassArtefactHandler.TYPE};
+        return new String[]{DomainClassArtefactHandler.TYPE};
     }
 
     public boolean shouldInject(URL url) {
@@ -54,10 +54,9 @@ public class GormTransformer implements GrailsArtefactClassInjector{
         return AstUtils.getKnownEntityNames();
     }
 
-
     @Override
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
-        if(GrailsASTUtils.hasAnnotation(classNode, Canonical.class)) {
+        if (GrailsASTUtils.hasAnnotation(classNode, Canonical.class)) {
             GrailsASTUtils.error(source, classNode, "Class [" + classNode.getName() + "] is marked with @groovy.transform.Canonical which is not supported for GORM entities.", true);
         }
         final GormEntityTransformation transformation = new GormEntityTransformation();
@@ -67,7 +66,7 @@ public class GormTransformer implements GrailsArtefactClassInjector{
 
     @Override
     public void performInjection(SourceUnit source, ClassNode classNode) {
-        if(GrailsASTUtils.hasAnnotation(classNode, Canonical.class)) {
+        if (GrailsASTUtils.hasAnnotation(classNode, Canonical.class)) {
             GrailsASTUtils.error(source, classNode, "Class [" + classNode.getName() + "] is marked with @groovy.transform.Canonical which is not supported for GORM entities.", true);
         }
         new GormEntityTransformation().visit(classNode, source);

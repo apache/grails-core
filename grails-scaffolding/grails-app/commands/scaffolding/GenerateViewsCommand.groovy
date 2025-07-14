@@ -37,7 +37,8 @@ import org.grails.io.support.Resource
 @CompileStatic
 class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
-    @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
+    @Delegate
+    ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
     @Override
     boolean handle() {

@@ -27,16 +27,13 @@ import grails.plugins.PluginManagerAware
 import grails.web.servlet.bootstrap.GrailsBootstrapClass
 import groovy.transform.CompileStatic
 import groovy.util.logging.Commons
+import jakarta.servlet.ServletContext
 import org.grails.web.servlet.boostrap.BootstrapArtefactHandler
 import org.grails.web.servlet.context.GrailsConfigUtils
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.web.context.ServletContextAware
 import org.springframework.web.context.WebApplicationContext
-
-import jakarta.servlet.ServletContext
-
-
 
 /**
  * Runs the BootStrap classes on startup
@@ -55,19 +52,19 @@ class BootStrapClassRunner extends GrailsApplicationLifeCycleAdapter implements 
 
     @Override
     void onStartup(Map<String, Object> event) {
-        if(grailsApplication && applicationContext && servletContext) {
-            GrailsConfigUtils.executeGrailsBootstraps(grailsApplication, (WebApplicationContext)applicationContext, servletContext, pluginManager )
+        if (grailsApplication && applicationContext && servletContext) {
+            GrailsConfigUtils.executeGrailsBootstraps(grailsApplication, (WebApplicationContext) applicationContext, servletContext, pluginManager)
         }
     }
 
     @Override
     void onShutdown(Map<String, Object> event) {
-        if(grailsApplication && applicationContext) {
-            for(GrailsClass cls in grailsApplication.getArtefacts(BootstrapArtefactHandler.TYPE)) {
+        if (grailsApplication && applicationContext) {
+            for (GrailsClass cls in grailsApplication.getArtefacts(BootstrapArtefactHandler.TYPE)) {
                 try {
-                    ((GrailsBootstrapClass)cls).callDestroy()
+                    ((GrailsBootstrapClass) cls).callDestroy()
                 } catch (Throwable e) {
-                     log.error("Error occurred running Bootstrap destroy method: " + e.getMessage(), e)
+                    log.error("Error occurred running Bootstrap destroy method: " + e.getMessage(), e)
                 }
             }
         }

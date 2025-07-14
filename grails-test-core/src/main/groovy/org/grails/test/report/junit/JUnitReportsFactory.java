@@ -19,11 +19,10 @@
 package org.grails.test.report.junit;
 
 import groovy.lang.Binding;
+import org.apache.tools.ant.taskdefs.optional.junit.JUnitResultFormatter;
 
 import java.io.File;
 import java.util.List;
-
-import org.apache.tools.ant.taskdefs.optional.junit.JUnitResultFormatter;
 
 public class JUnitReportsFactory {
 
@@ -35,16 +34,6 @@ public class JUnitReportsFactory {
     protected final File reportsDir;
     protected final List<String> formats;
 
-    @SuppressWarnings("unchecked")
-    public static JUnitReportsFactory createFromBuildBinding(Binding buildBinding) {
-        // This is not great, the phase and type names probably shouldn't be sourced from the binding.
-        return new JUnitReportsFactory(
-                (String)buildBinding.getProperty("currentTestPhaseName"),
-                (String)buildBinding.getProperty("currentTestTypeName"),
-                (File)buildBinding.getProperty("testReportsDir"),
-                (List<String>)buildBinding.getProperty("reportFormats"));
-    }
-
     public JUnitReportsFactory(String phaseName, String typeName, File reportsDir, List<String> formats) {
         this.phaseName = phaseName;
         this.typeName = typeName;
@@ -52,8 +41,18 @@ public class JUnitReportsFactory {
         this.formats = formats;
     }
 
+    @SuppressWarnings("unchecked")
+    public static JUnitReportsFactory createFromBuildBinding(Binding buildBinding) {
+        // This is not great, the phase and type names probably shouldn't be sourced from the binding.
+        return new JUnitReportsFactory(
+                (String) buildBinding.getProperty("currentTestPhaseName"),
+                (String) buildBinding.getProperty("currentTestTypeName"),
+                (File) buildBinding.getProperty("testReportsDir"),
+                (List<String>) buildBinding.getProperty("reportFormats"));
+    }
+
     public JUnitReports createReports(String name) {
-        JUnitResultFormatter formatters[] = new JUnitResultFormatter[formats.size()];
+        JUnitResultFormatter[] formatters = new JUnitResultFormatter[formats.size()];
         for (int i = 0; i < formats.size(); ++i) {
             formatters[i] = createReport(formats.get(i), name);
         }

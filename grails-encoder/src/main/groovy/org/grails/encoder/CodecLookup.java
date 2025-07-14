@@ -19,6 +19,8 @@
 package org.grails.encoder;
 
 public interface CodecLookup {
-    public Encoder lookupEncoder(String codecName);
-    public Decoder lookupDecoder(String codecName);
+
+    Encoder lookupEncoder(String codecName);
+
+    Decoder lookupDecoder(String codecName);
 }

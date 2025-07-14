@@ -19,12 +19,12 @@
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
-
 import org.grails.orm.hibernate.AbstractHibernateGormInstanceApi
 import org.grails.orm.hibernate.AbstractHibernateGormValidationApi
 
 @CompileStatic
 class InstanceProxy {
+
     protected instance
     protected AbstractHibernateGormValidationApi validateApi
     protected AbstractHibernateGormInstanceApi instanceApi
@@ -46,10 +46,9 @@ class InstanceProxy {
 
     def invokeMethod(String name, args) {
         if (validateMethods.contains(name)) {
-            validateApi.invokeMethod(name, prependToArray(instance, (Object[])args))
-        }
-        else {
-            instanceApi.invokeMethod(name, prependToArray(instance, (Object[])args))
+            validateApi.invokeMethod(name, prependToArray(instance, (Object[]) args))
+        } else {
+            instanceApi.invokeMethod(name, prependToArray(instance, (Object[]) args))
         }
     }
 

@@ -13,16 +13,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package reactor.fn;
 
 /**
  * Implementations accept a given value and perform work on the argument.
  *
+ * @param <T> the type of values to accept
  * @author Jon Brisbin
  * @author Stephane Maldini
- *
- * @param <T> the type of values to accept
  * @deprecated Here for compatibility only. Do not use directly
  */
 @Deprecated

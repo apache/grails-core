@@ -18,14 +18,14 @@
  */
 package org.grails.plugins.web.mapping.factory;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A factory bean that creates the URL mappings, checking if there is a bean
@@ -35,7 +35,7 @@ import org.springframework.context.ApplicationContextAware;
  * @author Graeme Rocher
  * @since 0.3
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class UrlMappingFactoryBean extends AbstractFactoryBean<Map> implements ApplicationContextAware {
 
     private static final Log LOG = LogFactory.getLog(UrlMappingFactoryBean.class);
@@ -51,7 +51,7 @@ public class UrlMappingFactoryBean extends AbstractFactoryBean<Map> implements A
         if (applicationContext.containsBean(UrlMappingFactoryBean.URL_MAP_BEAN)) {
             Object o = applicationContext.getBean(UrlMappingFactoryBean.URL_MAP_BEAN);
             if (o instanceof Map) {
-                mappings.putAll((Map)o);
+                mappings.putAll((Map) o);
             }
         }
         if (LOG.isDebugEnabled()) {

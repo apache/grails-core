@@ -75,6 +75,7 @@ import java.util.concurrent.Future
  */
 @CompileStatic
 class GrailsCli {
+
     static final String ARG_SPLIT_PATTERN = /(?<!\\)\s+/
     public static final String DEFAULT_PROFILE_NAME = ProfileRepository.DEFAULT_PROFILE_NAME
     private static final int KEYPRESS_CTRL_C = 3
@@ -115,7 +116,6 @@ class GrailsCli {
             }
         }
     }
-
 
     SortedAggregateCompleter aggregateCompleter = new SortedAggregateCompleter()
     CommandLineParser cliParser = new CommandLineParser()
@@ -220,7 +220,6 @@ class GrailsCli {
             console.addStatus("JVM Version: ${System.getProperty('java.version')}")
             exit(0)
         }
-
 
         if (mainCommandLine.hasOption(CommandLine.HELP_ARGUMENT) || mainCommandLine.hasOption('h')) {
             profileRepository = createMavenProfileRepository()
@@ -384,7 +383,6 @@ class GrailsCli {
         }
     }
 
-
     private void handleInteractiveMode() {
         GrailsConsole console = setupCompleters()
         startInteractiveMode(console)
@@ -491,11 +489,10 @@ class GrailsCli {
     private initializeProfile() {
         BuildSettings.TARGET_DIR?.mkdirs()
 
-        if(!new File(BuildSettings.BASE_DIR, "profile.yml").exists()) {
+        if (!new File(BuildSettings.BASE_DIR, "profile.yml").exists()) {
             // must be inside of a grails app, so share the classpath from the grails app to find all of the necessary commands, scripts, etc
             populateContextLoader()
-        }
-        else {
+        } else {
             this.profileRepository = createMavenProfileRepository()
         }
 
@@ -525,7 +522,6 @@ class GrailsCli {
                             return []
                         }
                     }
-
 
                     @Override
                     Map<String, List<URL>> readFromGradle(ProjectConnection connection) {
@@ -566,7 +562,6 @@ class GrailsCli {
             exit(1)
         }
     }
-
 
     private CodeGenConfig loadApplicationConfig() {
         CodeGenConfig config = new CodeGenConfig()
@@ -655,8 +650,8 @@ class GrailsCli {
         }
     }
 
-
     static class ExecutionContextImpl implements ExecutionContext {
+
         CommandLine commandLine
         @Delegate(excludes = ['getConsole', 'getBaseDir'])
         ProjectContext projectContext
@@ -701,6 +696,7 @@ class GrailsCli {
 
     @Canonical
     private static class ProjectContextImpl implements ProjectContext {
+
         GrailsConsole console = GrailsConsole.getInstance()
         File baseDir
         CodeGenConfig grailsConfig

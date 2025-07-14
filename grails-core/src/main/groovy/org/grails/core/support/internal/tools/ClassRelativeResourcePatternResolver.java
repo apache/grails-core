@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.core.support.internal.tools;
 
 import org.springframework.core.io.Resource;

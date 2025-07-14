@@ -18,9 +18,9 @@
  */
 package org.grails.databinding.xml
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
-import grails.databinding.SimpleMapDataBindingSource;
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
+import grails.databinding.SimpleMapDataBindingSource
 import groovy.transform.CompileStatic
 import groovy.xml.slurpersupport.GPathResult
 
@@ -31,7 +31,7 @@ class GPathResultCollectionDataBindingSource implements CollectionDataBindingSou
 
     GPathResultCollectionDataBindingSource(GPathResult gpath) {
         dataBindingSources = gpath?.children()?.collect { child ->
-            def map = new GPathResultMap((GPathResult)child)
+            def map = new GPathResultMap((GPathResult) child)
             DataBindingSource bindingSource = new SimpleMapDataBindingSource(map)
             bindingSource
         }

@@ -36,8 +36,9 @@ import java.util.List;
  * @author Graeme Rocher
  * @since 1.0
  */
-@GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
+@GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class GlobalDetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
+
     /**
      * The method is invoked when an AST Transformation is active. For local transformations, it is invoked once
      * each time the local annotation is encountered. For global transformations, it is invoked once for every source

@@ -31,9 +31,9 @@ import org.springframework.beans.factory.InitializingBean
  */
 @CompileStatic
 class HotSwappableTargetSourceFactoryBean implements FactoryBean<HotSwappableTargetSource>, InitializingBean {
+
     protected HotSwappableTargetSource targetSource
     protected Object target
-
 
     @Override
     HotSwappableTargetSource getObject() throws Exception {

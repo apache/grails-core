@@ -25,6 +25,7 @@ package grails.persistence.support;
  * @since 1.1.1
  */
 public class NullPersistentContextInterceptor implements PersistenceContextInterceptor {
+
     public void init() {
         // NOOP
     }

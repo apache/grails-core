@@ -16,18 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.engine;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * @author Graeme Rocher
- *
  * @since 4.1
  *
  */
 public interface EntityAccess {
+
     /**
      * @return The entity being persisted
      */
@@ -35,6 +34,7 @@ public interface EntityAccess {
 
     /**
      * Obtains a property value
+     *
      * @param name the name of the value
      * @return The value of the property
      */
@@ -42,6 +42,7 @@ public interface EntityAccess {
 
     /**
      * Obtains a property value
+     *
      * @param name the name of the value
      * @return The value of the property
      */
@@ -49,6 +50,7 @@ public interface EntityAccess {
 
     /**
      * Obtains a property type
+     *
      * @param name The name of the property
      * @return The type of of the property
      */
@@ -56,7 +58,8 @@ public interface EntityAccess {
 
     /**
      * Sets a property value
-     * @param name The name of the property
+     *
+     * @param name  The name of the property
      * @param value The value of the property
      */
     void setProperty(String name, Object value);
@@ -68,12 +71,14 @@ public interface EntityAccess {
 
     /**
      * Sets the entity identifier to the given value
+     *
      * @param id The value to set
      */
     void setIdentifier(Object id);
 
     /**
      * Sets the entity identifier to the given value
+     *
      * @param id The value to set
      */
     void setIdentifierNoConversion(Object id);
@@ -96,7 +101,7 @@ public interface EntityAccess {
     /**
      * Sets a property without applying any automatic type conversion
      *
-     * @param name The name of the property
+     * @param name  The name of the property
      * @param value The value
      */
     void setPropertyNoConversion(String name, Object value);

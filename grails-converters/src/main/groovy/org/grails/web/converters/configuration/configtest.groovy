@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.web.converters.configuration
 
 import grails.converters.JSON
@@ -45,23 +44,23 @@ catch (e) {
     e.printStackTrace()
 }
 
-def map = [ immutable: 0, chained: 0, default: 0 ]
+def map = [immutable: 0, chained: 0, default: 0]
 
 def test = { label, jsonConfig ->
-def start = System.currentTimeMillis()
-30000.times {
-    assert jsonConfig.getMarshaller(new Object())
-}
-def time = System.currentTimeMillis()-start
-println "$label --> ${time}ms"
-map[label] = map[label] + time
+    def start = System.currentTimeMillis()
+    30000.times {
+        assert jsonConfig.getMarshaller(new Object())
+    }
+    def time = System.currentTimeMillis() - start
+    println "$label --> ${time}ms"
+    map[label] = map[label] + time
 }
 
 test("default", defcfg)
 test("chained", chcfg)
 test("immutable", imcfg)
 
- map = [ immutable: 0, chained: 0, default: 0 ]
+map = [immutable: 0, chained: 0, default: 0]
 
 100.times {
     test("chained", chcfg)

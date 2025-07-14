@@ -20,6 +20,7 @@
 package grails.plugin.markup.view.api
 
 import grails.views.api.GrailsView
+
 /**
  * Extra methods added to markup views
  *

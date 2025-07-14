@@ -29,5 +29,6 @@ import org.codehaus.groovy.ast.expr.ListExpression;
  * @since 2.3
  */
 public interface DelegateAsyncTransactionalMethodTransformer {
+
     void transformTransactionalMethod(ClassNode classNode, ClassNode delegateClassNode, MethodNode methodNode, ListExpression promiseDecoratorLookupArguments);
 }

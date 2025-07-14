@@ -16,16 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.mongo;
-
-import java.util.Collection;
-import java.util.List;
 
 import org.grails.datastore.gorm.finders.MethodExpression;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query.Criterion;
 import org.springframework.util.Assert;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Dynamic finder expression for within polygon queries
@@ -46,11 +45,11 @@ public class WithinPolygon extends MethodExpression {
     @Override
     public void setArguments(Object[] arguments) {
         Assert.isTrue(arguments.length > 0 && arguments[0] instanceof List,
-            "Only a list of elements is supported in a 'withinPolygon' query");
+                "Only a list of elements is supported in a 'withinPolygon' query");
 
         Collection<?> argument = (Collection<?>) arguments[0];
         Assert.isTrue(argument.size() == 2,
-            "A 'withinPolygon' query requires a two dimensional list of values");
+                "A 'withinPolygon' query requires a two dimensional list of values");
 
         super.setArguments(arguments);
     }

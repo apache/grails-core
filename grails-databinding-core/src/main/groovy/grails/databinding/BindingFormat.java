@@ -18,23 +18,23 @@
  */
 package grails.databinding;
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
-
 /**
  * Apply BindingFormat to a field to provide a format
  * to be used when binding a String to this field.
  *
-<pre>
-class DateContainer {
-    &#064;BindingFormat('MMddyyyy')
-    Date someDate
-}
-</pre>
+ * <pre>
+ * class DateContainer {
+ * &#064;BindingFormat('MMddyyyy')
+ * Date someDate
+ * }
+ * </pre>
  *
  * @author Jeff Brown
  * @since 2.3
@@ -43,6 +43,8 @@ class DateContainer {
 @Target(ElementType.FIELD)
 @GroovyASTTransformationClass("org.grails.databinding.compiler.BindingFormatASTTransformation")
 public @interface BindingFormat {
+
     String value() default "";
+
     String code() default "";
 }

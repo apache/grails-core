@@ -19,15 +19,14 @@
 package org.grails.web.pages;
 
 import groovy.lang.GroovyObject;
+import org.springframework.util.Assert;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.springframework.util.Assert;
-
 /**
  * Provides services for resolving URIs.
- *
+ * <p>
  * Caches lookups in an internal ConcurrentMap cache.
  *
  * @author Lari Hotari , Sagire Software Oy
@@ -39,75 +38,6 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
     ConcurrentMap<ControllerObjectKey, String> controllerNameCache = new ConcurrentHashMap<ControllerObjectKey, String>();
     ConcurrentMap<TupleStringKey, String> noSuffixViewURICache = new ConcurrentHashMap<TupleStringKey, String>();
 
-    private static class TupleStringKey {
-        String keyPart1;
-        String keyPart2;
-
-        TupleStringKey(String keyPart1, String keyPart2) {
-            this.keyPart1 = keyPart1;
-            this.keyPart2 = keyPart2;
-        }
-
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            TupleStringKey that = (TupleStringKey) o;
-
-            if (keyPart1 != null ? !keyPart1.equals(that.keyPart1) : that.keyPart1 != null) {
-                return false;
-            }
-            if (keyPart2 != null ? !keyPart2.equals(that.keyPart2) : that.keyPart2 != null) {
-                return false;
-            }
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = keyPart1 != null ? keyPart1.hashCode() : 0;
-            result = 31 * result + (keyPart2 != null ? keyPart2.hashCode() : 0);
-            return result;
-        }
-    }
-
-    private static class ControllerObjectKey {
-        private long controllerHashCode;
-        private String controllerClassName;
-
-        ControllerObjectKey(GroovyObject controller) {
-            controllerHashCode = controller.getClass().hashCode();
-            controllerClassName = controller.getClass().getName();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            ControllerObjectKey that = (ControllerObjectKey) o;
-
-            if (controllerHashCode != that.controllerHashCode) return false;
-            if (!controllerClassName.equals(that.controllerClassName)) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (controllerHashCode ^ (controllerHashCode >>> 32));
-            result = 31 * result + controllerClassName.hashCode();
-            return result;
-        }
-    }
-
     /* (non-Javadoc)
      * @see grails.web.pages.GroovyPagesUriService#getTemplateURI(java.lang.String, java.lang.String)
      */
@@ -117,7 +47,7 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
         String uri = templateURICache.get(key);
         if (uri == null) {
             uri = super.getTemplateURI(controllerName, templateName);
-            String prevuri=templateURICache.putIfAbsent(key, uri);
+            String prevuri = templateURICache.putIfAbsent(key, uri);
             if (prevuri != null) {
                 return prevuri;
             }
@@ -162,7 +92,7 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
     @Override
     public String getNoSuffixViewURI(GroovyObject controller, String viewName) {
         Assert.notNull(controller, "Argument [controller] cannot be null");
-        return getNoSuffixViewURI(getLogicalControllerName(controller),viewName);
+        return getNoSuffixViewURI(getLogicalControllerName(controller), viewName);
     }
 
     /* (non-Javadoc)
@@ -199,5 +129,83 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
         deployedViewURICache.clear();
         controllerNameCache.clear();
         noSuffixViewURICache.clear();
+    }
+
+    private static class TupleStringKey {
+
+        String keyPart1;
+        String keyPart2;
+
+        TupleStringKey(String keyPart1, String keyPart2) {
+            this.keyPart1 = keyPart1;
+            this.keyPart2 = keyPart2;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            TupleStringKey that = (TupleStringKey) o;
+
+            if (keyPart1 != null ? !keyPart1.equals(that.keyPart1) : that.keyPart1 != null) {
+                return false;
+            }
+            if (keyPart2 != null ? !keyPart2.equals(that.keyPart2) : that.keyPart2 != null) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = keyPart1 != null ? keyPart1.hashCode() : 0;
+            result = 31 * result + (keyPart2 != null ? keyPart2.hashCode() : 0);
+            return result;
+        }
+    }
+
+    private static class ControllerObjectKey {
+
+        private long controllerHashCode;
+        private String controllerClassName;
+
+        ControllerObjectKey(GroovyObject controller) {
+            controllerHashCode = controller.getClass().hashCode();
+            controllerClassName = controller.getClass().getName();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            ControllerObjectKey that = (ControllerObjectKey) o;
+
+            if (controllerHashCode != that.controllerHashCode) {
+                return false;
+            }
+            if (!controllerClassName.equals(that.controllerClassName)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Long.hashCode(controllerHashCode);
+            result = 31 * result + controllerClassName.hashCode();
+            return result;
+        }
     }
 }

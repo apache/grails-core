@@ -27,7 +27,7 @@ import org.grails.scaffolding.registry.DomainInputRenderer
  * of options and a default option
  *
  * @author James Kleeh
- * @param <T> Any type
+ * @param <T>   Any type
  */
 trait MapToSelectInputRenderer<T> implements DomainInputRenderer {
 
@@ -59,7 +59,7 @@ trait MapToSelectInputRenderer<T> implements DomainInputRenderer {
      */
     abstract Map<String, String> getOptions()
 
-    /** @see DomainInputRenderer#renderInput() **/
+    /** @see DomainInputRenderer#renderInput() *  */
     Closure renderInput(Map defaultAttributes, DomainProperty property) {
         String selected = getOptionKey(defaultOption)
 

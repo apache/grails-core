@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.document.config;
 
 import groovy.lang.Closure;
@@ -36,6 +35,7 @@ import org.springframework.util.Assert;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class DocumentMappingContext extends AbstractMappingContext {
+
     protected String defaultDatabaseName;
     protected MappingFactory<Collection, Attribute> mappingFactory;
 
@@ -70,7 +70,7 @@ public class DocumentMappingContext extends AbstractMappingContext {
     protected void initialize(ConnectionSourceSettings settings) {
 
         this.defaultMapping = settings.getDefault().getMapping();
-        AbstractGormMappingFactory documentMappingFactory = (AbstractGormMappingFactory)createDocumentMappingFactory(defaultMapping);
+        AbstractGormMappingFactory documentMappingFactory = (AbstractGormMappingFactory) createDocumentMappingFactory(defaultMapping);
         documentMappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
 
         mappingFactory = documentMappingFactory;

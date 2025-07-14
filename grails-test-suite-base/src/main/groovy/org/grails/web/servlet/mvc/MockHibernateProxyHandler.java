@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.web.servlet.mvc;
 
 import grails.core.support.proxy.EntityProxyHandler;
 
 public class MockHibernateProxyHandler implements EntityProxyHandler {
+
     public boolean isProxy(Object o) {
         return false;
     }

@@ -18,12 +18,12 @@
  */
 package grails.gorm.annotation;
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 
 /**
  * A class annotation used to make a class into a GORM domain class.

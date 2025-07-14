@@ -41,11 +41,11 @@ import java.util.Map;
  */
 public abstract class GroovySyntaxTag implements GrailsTag {
 
-    private static final String ERROR_NO_VAR_WITH_STATUS = "When using <g:each> with a [status] attribute, you must also define a [var]. eg. <g:each var=\"myVar\">";
-    private static final String ERROR_NO_VAR_WITH_COMPILE_STATIC = "When using <g:each> in CompileStatic mode, you must also define a [var]. eg. <g:each var=\"myVar\">";
     protected static final String ATTRIBUTE_IN = "in";
     protected static final String ATTRIBUTE_VAR = "var";
     protected static final String ATTRIBUTES_STATUS = "status";
+    private static final String ERROR_NO_VAR_WITH_STATUS = "When using <g:each> with a [status] attribute, you must also define a [var]. eg. <g:each var=\"myVar\">";
+    private static final String ERROR_NO_VAR_WITH_COMPILE_STATIC = "When using <g:each> in CompileStatic mode, you must also define a [var]. eg. <g:each var=\"myVar\">";
     @SuppressWarnings("rawtypes")
     protected Map tagContext;
     protected PrintWriter out;
@@ -60,7 +60,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         parser = (GroovyPageParser) context.get(GroovyPageParser.class);
         Object outObj = context.get(GroovyPage.OUT);
         if (outObj instanceof PrintWriter) {
-            out = (PrintWriter)context.get(GroovyPage.OUT);
+            out = (PrintWriter) context.get(GroovyPage.OUT);
         }
     }
 
@@ -70,27 +70,28 @@ public abstract class GroovySyntaxTag implements GrailsTag {
 
     public void setWriter(Writer w) {
         Assert.isInstanceOf(PrintWriter.class, w, "A GroovySynax tag requires a java.io.PrintWriter instance");
-        out = (PrintWriter)w;
+        out = (PrintWriter) w;
     }
 
     @SuppressWarnings("rawtypes")
     public void setAttributes(Map attributes) {
-        for (Iterator i = attributes.keySet().iterator(); i.hasNext();) {
+        for (Iterator i = attributes.keySet().iterator(); i.hasNext(); ) {
             String attrName = (String) i.next();
-            setAttribute(attrName,attributes.get(attrName));
+            setAttribute(attrName, attributes.get(attrName));
         }
     }
 
     public void setAttribute(String name, Object value) {
         Assert.isInstanceOf(String.class, value, "A GroovySyntax tag requires only string valued attributes");
 
-        attributes.put(name.substring(1,name.length()-1), (String)value);
+        attributes.put(name.substring(1, name.length() - 1), (String) value);
     }
 
     /**
      * <p>Tags must return the correct value to indicate whether or not whitespace before this tag should be kept in the output.</p>
      * <p>This is for tags that must follow other tags, such as g:else or g:elseif that do not allow content between them and the
      * previous tag, and need to swallow the whitespace between them.</p>
+     *
      * @return true if any whitespace immediately before the tag should be kept in the output - false if it is to be discarded
      */
     public abstract boolean isKeepPrecedingWhiteSpace();
@@ -100,6 +101,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
      * <p>This is for tags that must follow other tags, such as g:else or g:elseif that do not allow content between them and the
      * previous tag. It is simply used as a safety mechanism to trap incorrect usage of tags.</p>
      * TODO rework this and combine with isKeepPrecedingWhiteSpace as really they are used in the same situations
+     *
      * @return true if any content is allowed immediately before the tag - false if it is an error to have such content before it
      */
     public abstract boolean isAllowPrecedingContent();
@@ -110,11 +112,11 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         expr = expr.trim();
         if ((expr.startsWith("\"") && expr.endsWith("\"")) ||
                 (expr.startsWith("\'") && expr.endsWith("\'"))) {
-            expr = expr.substring(1,expr.length()-1);
+            expr = expr.substring(1, expr.length() - 1);
             expr = expr.trim();
         }
         if (expr.startsWith("${") && expr.endsWith("}")) {
-            expr = expr.substring(2,expr.length()-1);
+            expr = expr.substring(2, expr.length() - 1);
             expr = expr.trim();
         }
         return expr;
@@ -142,13 +144,13 @@ public abstract class GroovySyntaxTag implements GrailsTag {
 
         if (hasStatus) {
             out.println("loop:{");
-            out.println("int "+ status +" = 0");
+            out.println("int " + status + " = 0");
         }
         if (!hasVar) {
             if (isCompileStaticMode()) {
                 throw new GrailsTagException(ERROR_NO_VAR_WITH_COMPILE_STATIC, parser.getPageName(), parser.getCurrentOutputLineNumber());
             }
-            var = "_it"+ Math.abs(System.identityHashCode(this));
+            var = "_it" + Math.abs(System.identityHashCode(this));
             foreachRenamedIt = var;
         }
 
@@ -165,7 +167,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         out.print(" {"); // start closure
         out.println();
         if (!hasVar) {
-            out.println("changeItVariable(" + foreachRenamedIt +")" );
+            out.println("changeItVariable(" + foreachRenamedIt + ")");
         } else if (entryVars != null) {
             out.println("def " + entryVars[0].trim() + "=" + var + ".getKey()");
             out.println("def " + entryVars[1].trim() + "=" + var + ".getValue()");
@@ -178,7 +180,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         boolean hasStatus = !GrailsStringUtils.isBlank(status);
 
         if (hasStatus) {
-            out.println(status +"++");
+            out.println(status + "++");
             out.println("}");
         }
         out.println("}");
@@ -189,10 +191,10 @@ public abstract class GroovySyntaxTag implements GrailsTag {
             return "";
         }
         if (((attr.startsWith("\"") && attr.endsWith("\"")) || (attr.startsWith("'") && attr.endsWith("'"))) && attr.length() > 1) {
-            attr = attr.substring(1,attr.length()-1);
+            attr = attr.substring(1, attr.length() - 1);
         }
         if (attr.endsWith("?") && attr.length() > 1) {
-            attr = attr.substring(0,attr.length()-1);
+            attr = attr.substring(0, attr.length() - 1);
         }
         return attr;
     }

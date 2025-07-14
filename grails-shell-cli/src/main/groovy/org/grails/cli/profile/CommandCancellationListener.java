@@ -25,8 +25,9 @@ package org.grails.cli.profile;
  * @author Graeme Rocher
  */
 public interface CommandCancellationListener {
+
     /**
      * Fired when a {@link org.grails.cli.profile.Command} is cancelled
      */
-    public void commandCancelled();
+    void commandCancelled();
 }

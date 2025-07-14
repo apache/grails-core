@@ -24,7 +24,7 @@ package grails.core.support.proxy;
  * @author Graeme Rocher
  * @since 1.3.6
  */
-public interface EntityProxyHandler extends ProxyHandler{
+public interface EntityProxyHandler extends ProxyHandler {
 
     /**
      * This method returns the identifier of the proxy or null if the

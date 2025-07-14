@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.web.pages;
 
+import jakarta.servlet.ServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.grails.buffer.GrailsRoutablePrintWriter;
 import org.grails.buffer.StreamCharBuffer;
 import org.grails.buffer.StreamCharBuffer.LazyInitializingWriter;
 import org.grails.buffer.StreamCharBuffer.StreamCharBufferWriter;
@@ -29,13 +30,11 @@ import org.grails.encoder.EncodedAppenderFactory;
 import org.grails.encoder.Encoder;
 import org.grails.encoder.EncoderAware;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.buffer.GrailsRoutablePrintWriter;
 import org.grails.web.util.BoundedCharsAsEncodedBytesCounter;
 import org.grails.web.util.WebUtils;
 import org.springframework.objenesis.ObjenesisStd;
 import org.springframework.objenesis.instantiator.ObjectInstantiator;
 
-import jakarta.servlet.ServletResponse;
 import java.io.IOException;
 import java.io.Writer;
 
@@ -49,20 +48,21 @@ import java.io.Writer;
  * @author Troy Heninger
  * @author Graeme Rocher
  * @author Lari Hotari, Sagire Software Oy
- *
+ * <p>
  * Date: Jan 10, 2004
  */
-public class GSPResponseWriter extends GrailsRoutablePrintWriter implements EncoderAware, EncodedAppenderFactory {
-    protected static final Log LOG = LogFactory.getLog(GSPResponseWriter.class);
+public final class GSPResponseWriter extends GrailsRoutablePrintWriter implements EncoderAware, EncodedAppenderFactory {
+
+    public static final boolean CONTENT_LENGTH_COUNTING_ENABLED = Boolean.getBoolean("GSPResponseWriter.enableContentLength");
+    public static final boolean BUFFERING_ENABLED = Boolean.parseBoolean(System.getProperty("GSPResponseWriter.enableBuffering", "true"));
+    public static final boolean AUTOFLUSH_ENABLED = Boolean.getBoolean("GSPResponseWriter.enableAutoFlush");
+    private static final Log LOG = LogFactory.getLog(GSPResponseWriter.class);
+    private static final int BUFFER_SIZE = Integer.getInteger("GSPResponseWriter.bufferSize", 8042);
+    private static ObjectInstantiator<GSPResponseWriter> instantiator = null;
     private ServletResponse response;
     private BoundedCharsAsEncodedBytesCounter bytesCounter;
-    public static final boolean CONTENT_LENGTH_COUNTING_ENABLED = Boolean.getBoolean("GSPResponseWriter.enableContentLength");
-    public static final boolean BUFFERING_ENABLED = Boolean.valueOf(System.getProperty("GSPResponseWriter.enableBuffering", "true"));
-    public static final boolean AUTOFLUSH_ENABLED = Boolean.getBoolean("GSPResponseWriter.enableAutoFlush");
-    private static final int BUFFER_SIZE = Integer.getInteger("GSPResponseWriter.bufferSize", 8042);
     private Encoder encoder;
     private StreamCharBuffer buffer;
-    private static ObjectInstantiator<GSPResponseWriter> instantiator = null;
 
     static {
         try {
@@ -70,6 +70,29 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
         } catch (Exception e) {
             LOG.debug("Couldn't get direct performance optimized instantiator for GSPResponseWriter. Using default instantiation.", e);
         }
+    }
+
+    /**
+     * Private constructor.  Use getInstance() instead.
+     *
+     * @param buffer       buffered writer
+     * @param response     The servlet response
+     * @param bytesCounter Keeps count of encoded bytes count
+     */
+    private GSPResponseWriter(final StreamCharBuffer buffer, final ServletResponse response, BoundedCharsAsEncodedBytesCounter bytesCounter) {
+        super(null);
+
+        initialize(buffer, response, bytesCounter);
+    }
+
+    /**
+     * Private constructor.  Use getInstance() instead.
+     *
+     * @param activeWriter buffered writer
+     */
+    private GSPResponseWriter(final Writer activeWriter) {
+        super(null);
+        initialize(activeWriter);
     }
 
     public static GSPResponseWriter getInstance(final ServletResponse response) {
@@ -80,7 +103,7 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
      * Static factory methdirectWritingod to create the writer.
      *
      * @param response The {@link ServletResponse}
-     * @param max The chunkSize
+     * @param max      The chunkSize
      * @return A {@link GSPResponseWriter} instance
      */
     private static GSPResponseWriter getInstance(final ServletResponse response, final int max) {
@@ -131,7 +154,7 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
      * TODO: this can be removed?
      *
      * @param target The target writer to write too
-     * @param max The chunkSize
+     * @param max    The chunkSize
      * @return A {@link GSPResponseWriter} instance
      */
     @SuppressWarnings("unused")
@@ -151,19 +174,6 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
         return instance;
     }
 
-    /**
-     * Private constructor.  Use getInstance() instead.
-     *
-     * @param buffer       buffered writer
-     * @param response     The servlet response
-     * @param bytesCounter Keeps count of encoded bytes count
-     */
-    private GSPResponseWriter(final StreamCharBuffer buffer, final ServletResponse response, BoundedCharsAsEncodedBytesCounter bytesCounter) {
-        super(null);
-
-        initialize(buffer, response, bytesCounter);
-    }
-
     void initialize(final StreamCharBuffer buffer, final ServletResponse response,
                     BoundedCharsAsEncodedBytesCounter bytesCounter) {
         DestinationFactory lazyTargetFactory = () -> {
@@ -180,16 +190,6 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
         this.bytesCounter = bytesCounter;
         setBlockClose(true);
         setBlockFlush(false);
-    }
-
-    /**
-     * Private constructor.  Use getInstance() instead.
-     *
-     * @param activeWriter buffered writer
-     */
-    private GSPResponseWriter(final Writer activeWriter) {
-        super(null);
-        initialize(activeWriter);
     }
 
     void initialize(final Writer activeWriter) {

@@ -37,6 +37,7 @@ import org.grails.core.io.support.GrailsFactoriesLoader
 @CompileStatic
 @InheritConstructors
 class JsonViewsTransform extends ViewsTransform {
+
     @Override
     protected List<TraitInjector> findTraitInjectors() {
         def injectors = super.findTraitInjectors()

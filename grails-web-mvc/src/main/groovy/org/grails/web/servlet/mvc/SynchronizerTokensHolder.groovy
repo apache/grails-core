@@ -18,9 +18,9 @@
  */
 package org.grails.web.servlet.mvc
 
-import java.util.concurrent.CopyOnWriteArraySet
-
 import jakarta.servlet.http.HttpSession
+
+import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * A token used to handle double-submits.
@@ -36,7 +36,7 @@ class SynchronizerTokensHolder implements Serializable {
     public static final String TOKEN_KEY = "SYNCHRONIZER_TOKEN"
     public static final String TOKEN_URI = "SYNCHRONIZER_URI"
 
-    Map<String, Set<UUID>> currentTokens= [:]
+    Map<String, Set<UUID>> currentTokens = [:]
 
     boolean isValid(String url, String token) {
         try {
@@ -63,7 +63,8 @@ class SynchronizerTokensHolder implements Serializable {
             try {
                 set.remove UUID.fromString(token)
             }
-            catch (IllegalArgumentException ignored) {}
+            catch (IllegalArgumentException ignored) {
+            }
             if (set.isEmpty()) {
                 currentTokens.remove(url)
             }

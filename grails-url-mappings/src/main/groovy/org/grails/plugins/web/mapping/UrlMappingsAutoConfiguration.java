@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.web.mapping;
 
 import grails.config.Settings;
@@ -39,12 +38,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@EnableConfigurationProperties({ GrailsCorsConfiguration.class })
+@EnableConfigurationProperties({GrailsCorsConfiguration.class})
 public class UrlMappingsAutoConfiguration {
+
     @Value("${" + Settings.WEB_LINK_GENERATOR_USE_CACHE + ":#{null}}")
     private Boolean cacheUrls;
 
@@ -71,7 +71,7 @@ public class UrlMappingsAutoConfiguration {
         if (cacheUrls == null) {
             cacheUrls = !Environment.isDevelopmentMode() && !Environment.getCurrent().isReloadEnabled();
         }
-        return cacheUrls? new CachingLinkGenerator(serverURL) : new DefaultLinkGenerator(serverURL);
+        return cacheUrls ? new CachingLinkGenerator(serverURL) : new DefaultLinkGenerator(serverURL);
     }
 
     @Bean

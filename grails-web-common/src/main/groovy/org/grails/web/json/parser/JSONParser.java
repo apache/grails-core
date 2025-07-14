@@ -35,7 +35,9 @@ public final class JSONParser implements JsonParserConstants {
                 throw new ParseException();
         }
         {
-            if (true) return json;
+            if (true) {
+                return json;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -55,7 +57,9 @@ public final class JSONParser implements JsonParserConstants {
                 throw new ParseException();
         }
         {
-            if (true) return json;
+            if (true) {
+                return json;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -74,7 +78,9 @@ public final class JSONParser implements JsonParserConstants {
         }
         jj_consume_token(21);
         {
-            if (true) return o;
+            if (true) {
+                return o;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -83,7 +89,9 @@ public final class JSONParser implements JsonParserConstants {
         Object o = null;
         jj_consume_token(22);
         {
-            if (true) return o;
+            if (true) {
+                return o;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -132,13 +140,15 @@ public final class JSONParser implements JsonParserConstants {
         jj_consume_token(26);
         //array.reverse();
         {
-            if (true) return array;
+            if (true) {
+                return array;
+            }
         }
         throw new Error("Missing return statement in function");
     }
 
     final private void Elements(JSONArray array) throws ParseException {
-        while(addElementAndGetNextToken(array) == 23) {
+        while (addElementAndGetNextToken(array) == 23) {
             jj_consume_token(23);
         }
         jj_la1[5] = jj_gen;
@@ -183,7 +193,9 @@ public final class JSONParser implements JsonParserConstants {
                 throw new ParseException();
         }
         {
-            if (true) return o;
+            if (true) {
+                return o;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -195,26 +207,34 @@ public final class JSONParser implements JsonParserConstants {
             case DOUBLE_QUOTE_LITERAL:
                 value = JsonString();
             {
-                if (true) return value;
+                if (true) {
+                    return value;
+                }
             }
             break;
             case DIGITS:
             case 29:
                 value = JsonNumber();
             {
-                if (true) return value;
+                if (true) {
+                    return value;
+                }
             }
             break;
             case 27:
                 jj_consume_token(27);
             {
-                if (true) return Boolean.TRUE;
+                if (true) {
+                    return Boolean.TRUE;
+                }
             }
             break;
             case 28:
                 jj_consume_token(28);
             {
-                if (true) return Boolean.FALSE;
+                if (true) {
+                    return Boolean.FALSE;
+                }
             }
             break;
             default:
@@ -263,7 +283,9 @@ public final class JSONParser implements JsonParserConstants {
             }
         }
         {
-            if (true) return n;
+            if (true) {
+                return n;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -282,10 +304,14 @@ public final class JSONParser implements JsonParserConstants {
         }
         digits = Digits();
         if (negative) {
-            if (true) return "-" + digits;
+            if (true) {
+                return "-" + digits;
+            }
         }
         {
-            if (true) return digits;
+            if (true) {
+                return digits;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -295,7 +321,9 @@ public final class JSONParser implements JsonParserConstants {
         jj_consume_token(30);
         digits = Digits();
         {
-            if (true) return "." + digits;
+            if (true) {
+                return "." + digits;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -306,7 +334,9 @@ public final class JSONParser implements JsonParserConstants {
         t = jj_consume_token(E);
         digits = Digits();
         {
-            if (true) return t.image + digits;
+            if (true) {
+                return t.image + digits;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -315,7 +345,9 @@ public final class JSONParser implements JsonParserConstants {
         Token t;
         t = jj_consume_token(DIGITS);
         {
-            if (true) return t.image;
+            if (true) {
+                return t.image;
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -335,7 +367,9 @@ public final class JSONParser implements JsonParserConstants {
                 throw new ParseException();
         }
         {
-            if (true) return StringUnmarshaller.unmarshall(t.image);
+            if (true) {
+                return StringUnmarshaller.unmarshall(t.image);
+            }
         }
         throw new Error("Missing return statement in function");
     }
@@ -460,8 +494,11 @@ public final class JSONParser implements JsonParserConstants {
 
     private Token jj_consume_token(int kind) throws ParseException {
         Token oldToken;
-        if ((oldToken = token).next != null) token = token.next;
-        else token = token.next = token_source.getNextToken();
+        if ((oldToken = token).next != null) {
+            token = token.next;
+        } else {
+            token = token.next = token_source.getNextToken();
+        }
         jj_ntk = -1;
         if (token.kind == kind) {
             jj_gen++;
@@ -477,8 +514,11 @@ public final class JSONParser implements JsonParserConstants {
      * Get the next Token.
      */
     final public Token getNextToken() {
-        if (token.next != null) token = token.next;
-        else token = token.next = token_source.getNextToken();
+        if (token.next != null) {
+            token = token.next;
+        } else {
+            token = token.next = token_source.getNextToken();
+        }
         jj_ntk = -1;
         jj_gen++;
         return token;
@@ -490,17 +530,21 @@ public final class JSONParser implements JsonParserConstants {
     final public Token getToken(int index) {
         Token t = token;
         for (int i = 0; i < index; i++) {
-            if (t.next != null) t = t.next;
-            else t = t.next = token_source.getNextToken();
+            if (t.next != null) {
+                t = t.next;
+            } else {
+                t = t.next = token_source.getNextToken();
+            }
         }
         return t;
     }
 
     private int jj_ntk() {
-        if ((jj_nt = token.next) == null)
+        if ((jj_nt = token.next) == null) {
             return (jj_ntk = (token.next = token_source.getNextToken()).kind);
-        else
+        } else {
             return (jj_ntk = jj_nt.kind);
+        }
     }
 
     private java.util.List jj_expentries = new java.util.ArrayList();

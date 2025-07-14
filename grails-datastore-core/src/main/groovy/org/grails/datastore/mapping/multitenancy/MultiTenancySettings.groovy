@@ -48,10 +48,9 @@ class MultiTenancySettings {
      * @return The tenant resolver
      */
     TenantResolver getTenantResolver() {
-        if(tenantResolver != null) {
+        if (tenantResolver != null) {
             return tenantResolver
-        }
-        else if(tenantResolverClass != null) {
+        } else if (tenantResolverClass != null) {
             return BeanUtils.instantiateClass(tenantResolverClass)
         }
         return new NoTenantResolver()
@@ -104,10 +103,9 @@ class MultiTenancySettings {
      * @return
      */
     static String resolveConnectionForTenantId(MultiTenancyMode mode, Serializable tenantId) {
-        if(mode.isSharedConnection()) {
+        if (mode.isSharedConnection()) {
             return ConnectionSource.DEFAULT
-        }
-        else {
+        } else {
             return tenantId.toString()
         }
     }

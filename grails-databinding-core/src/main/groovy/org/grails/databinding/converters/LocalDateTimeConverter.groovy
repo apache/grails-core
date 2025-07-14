@@ -31,6 +31,7 @@ import java.time.LocalDateTime
  */
 @CompileStatic
 class LocalDateTimeConverter implements ValueConverter {
+
     @Override
     boolean canConvert(Object value) {
         return value instanceof String || value instanceof LocalDateTime

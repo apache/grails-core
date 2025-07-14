@@ -58,10 +58,9 @@ abstract class AbstractWritableScript extends Script implements WritableScript, 
         try {
             return doWrite(out)
         } catch (Throwable e) {
-            if(ViewsEnvironment.isDevelopmentMode() && sourceFile != null) {
+            if (ViewsEnvironment.isDevelopmentMode() && sourceFile != null) {
                 throw new ViewRenderException("Error rendering view: ${e.message}", e, this)
-            }
-            else {
+            } else {
                 throw new ViewException("Error rendering view: ${e.message}", e)
             }
         }

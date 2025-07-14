@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.web.support;
 
 import jakarta.persistence.FlushModeType;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.grails.datastore.mapping.core.Datastore;
@@ -78,7 +76,7 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
         final Session session = sessionHolder.getSession();
 
         if (session.getFlushMode() == FlushModeType.AUTO) {
-            if(session.hasTransaction()) {
+            if (session.hasTransaction()) {
                 session.flush();
             }
         }

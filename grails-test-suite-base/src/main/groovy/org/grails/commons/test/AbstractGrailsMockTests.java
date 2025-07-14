@@ -18,17 +18,13 @@
  */
 package org.grails.commons.test;
 
-import grails.util.Metadata;
-import groovy.lang.ExpandoMetaClass;
-import groovy.lang.GroovyClassLoader;
-import groovy.util.ConfigObject;
-import groovy.util.ConfigSlurper;
-import groovy.test.GroovyTestCase;
-
-import java.io.IOException;
-
 import grails.core.DefaultGrailsApplication;
 import grails.core.GrailsApplication;
+import groovy.lang.ExpandoMetaClass;
+import groovy.lang.GroovyClassLoader;
+import groovy.test.GroovyTestCase;
+import groovy.util.ConfigObject;
+import groovy.util.ConfigSlurper;
 import org.grails.config.PropertySourcesConfig;
 import org.grails.support.MockApplicationContext;
 import org.springframework.context.MessageSource;
@@ -38,6 +34,8 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.util.ClassUtils;
 
+import java.io.IOException;
+
 /**
  * Abstract simple test harness for testing Grails Applications that just loads
  * the parsed classes into the GrailsApplication instance.
@@ -46,6 +44,7 @@ import org.springframework.util.ClassUtils;
  */
 public abstract class AbstractGrailsMockTests extends GroovyTestCase {
 
+    //CHECKSTYLE:OFF
     /**
      * A GroovyClassLoader instance
      */
@@ -55,6 +54,7 @@ public abstract class AbstractGrailsMockTests extends GroovyTestCase {
      */
     public DefaultGrailsApplication ga;
     public MockApplicationContext ctx;
+    //CHECKSTYLE:ON
 
     @Override
     protected final void setUp() throws Exception {
@@ -65,8 +65,8 @@ public abstract class AbstractGrailsMockTests extends GroovyTestCase {
         ctx = new MockApplicationContext();
         ctx.registerMockBean(GrailsApplication.CLASS_LOADER_BEAN, gcl);
         onSetUp();
-        ga = new DefaultGrailsApplication(gcl.getLoadedClasses(),gcl);
-        if(ClassUtils.isPresent("Config", gcl)) {
+        ga = new DefaultGrailsApplication(gcl.getLoadedClasses(), gcl);
+        if (ClassUtils.isPresent("Config", gcl)) {
             ConfigObject config = new ConfigSlurper().parse(gcl.loadClass("Config"));
             ga.setConfig(new PropertySourcesConfig(config));
         }

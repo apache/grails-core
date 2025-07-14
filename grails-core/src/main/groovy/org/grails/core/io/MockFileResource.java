@@ -18,10 +18,10 @@
  */
 package org.grails.core.io;
 
+import org.springframework.core.io.ByteArrayResource;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
-
-import org.springframework.core.io.ByteArrayResource;
 
 /**
  * Mocks the behavior of a FileResource.

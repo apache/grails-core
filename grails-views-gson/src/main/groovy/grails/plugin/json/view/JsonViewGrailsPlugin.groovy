@@ -49,22 +49,23 @@ class JsonViewGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://grails.org']
 
     // Any additional developers beyond the author specified above.
-    def developers = [ [ name: "Graeme Rocher", email: "graeme.rocher@gmail.com" ]]
+    def developers = [[name: "Graeme Rocher", email: "graeme.rocher@gmail.com"]]
 
     // Location of the plugin's issue tracker.
-    def issueManagement = [ system: "Github", url: "https://github.com/grails/grails-views/issues" ]
+    def issueManagement = [system: "Github", url: "https://github.com/grails/grails-views/issues"]
 
     // Online location of the plugin's browseable source code.
-    def scm = [ url: "https://github.com/grails/grails-views" ]
+    def scm = [url: "https://github.com/grails/grails-views"]
 
-    Closure doWithSpring() { {->
+    Closure doWithSpring() {
+        { ->
             jsonApiIdRenderStrategy(DefaultJsonApiIdRenderer)
             jsonViewConfiguration(JsonViewConfiguration)
             jsonTemplateEngine(JsonViewTemplateEngine, jsonViewConfiguration, applicationContext.classLoader)
             jsonSmartViewResolver(JsonViewResolver, jsonTemplateEngine) {
                 templateResolver = bean(PluginAwareTemplateResolver, jsonViewConfiguration)
             }
-            jsonViewResolver(GenericGroovyTemplateViewResolver, jsonSmartViewResolver )
+            jsonViewResolver(GenericGroovyTemplateViewResolver, jsonSmartViewResolver)
         }
     }
 }

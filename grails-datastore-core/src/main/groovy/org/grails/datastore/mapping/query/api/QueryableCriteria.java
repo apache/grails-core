@@ -33,6 +33,7 @@ public interface QueryableCriteria<T> extends Criteria {
      * @return The target entity
      */
     PersistentEntity getPersistentEntity();
+
     /**
      * @return A list of all criteria
      */
@@ -47,6 +48,7 @@ public interface QueryableCriteria<T> extends Criteria {
 
     /**
      * List all results
+     *
      * @return All results
      */
     List<T> list();

@@ -23,7 +23,7 @@ import org.codehaus.groovy.runtime.NullObject
 class SHA1BytesCodecExtensionMethods {
     // Returns the byte[] of the digest
     static encodeAsSHA1Bytes(theTarget) {
-        if(theTarget == null || theTarget instanceof NullObject) {
+        if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
         DigestUtils.digest("SHA-1", theTarget)

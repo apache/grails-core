@@ -18,20 +18,20 @@
  */
 package grails.gsp
 
+import jakarta.servlet.ServletContext
+import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.buffer.FastStringWriter
 import org.grails.gsp.GroovyPagesTemplateEngine
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.gsp.io.GroovyPageScriptSource
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.web.context.ServletContextAware
 import org.springframework.web.context.request.RequestContextHolder
 
-import jakarta.servlet.ServletContext
-import jakarta.servlet.http.Cookie
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -119,8 +119,8 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
         try {
             def localeToUse = locale ?: (oldRequestAttributes?.locale ?: Locale.default)
             def webRequest = new GrailsWebRequest(PageRenderRequestCreator.createInstance(source.URI, localeToUse),
-                PageRenderResponseCreator.createInstance(writer instanceof PrintWriter ? writer : new PrintWriter(writer), localeToUse),
-                servletContext, applicationContext)
+                    PageRenderResponseCreator.createInstance(writer instanceof PrintWriter ? writer : new PrintWriter(writer), localeToUse),
+                    servletContext, applicationContext)
             RequestContextHolder.setRequestAttributes(webRequest)
             def template = templateEngine.createTemplate(source)
             if (template != null) {
@@ -139,6 +139,7 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
      * Creates the request object used during the GSP rendering pipeline for render operations outside a web request.
      * Created dynamically to avoid issues with different servlet API spec versions.
      */
+
     static class PageRenderRequestCreator {
 
         static HttpServletRequest createInstance(final String requestURI, Locale localeToUse = Locale.getDefault()) {
@@ -149,7 +150,8 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
             String contentType = null
             String characterEncoding = "UTF-8"
 
-            (HttpServletRequest)Proxy.newProxyInstance(HttpServletRequest.classLoader, [HttpServletRequest] as Class[], new InvocationHandler() {
+            (HttpServletRequest) Proxy.newProxyInstance(HttpServletRequest.classLoader, [HttpServletRequest] as Class[], new InvocationHandler() {
+
                 Object invoke(proxy, Method method, Object[] args) {
 
                     String methodName = method.name
@@ -209,8 +211,8 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                         return true
                     }
                     if (methodName in [
-                        'isRequestedSessionIdFromCookie', 'isRequestedSessionIdFromURL', 'isRequestedSessionIdFromUrl',
-                        'authenticate', 'isUserInRole', 'isSecure', 'isAsyncStarted', 'isAsyncSupported']) {
+                            'isRequestedSessionIdFromCookie', 'isRequestedSessionIdFromURL', 'isRequestedSessionIdFromUrl',
+                            'authenticate', 'isUserInRole', 'isSecure', 'isAsyncStarted', 'isAsyncSupported']) {
                         return false
                     }
 
@@ -306,9 +308,10 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                 }
             })
         }
-        
+
         private static Enumeration iteratorAsEnumeration(Iterator iterator) {
             new Enumeration() {
+
                 @Override
                 boolean hasMoreElements() {
                     iterator.hasNext()
@@ -330,7 +333,8 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
             String contentType = null
             int bufferSize = 0
 
-            (HttpServletResponse)Proxy.newProxyInstance(HttpServletResponse.classLoader, [HttpServletResponse] as Class[], new InvocationHandler() {
+            (HttpServletResponse) Proxy.newProxyInstance(HttpServletResponse.classLoader, [HttpServletResponse] as Class[], new InvocationHandler() {
+
                 Object invoke(proxy, Method method, Object[] args) {
 
                     String methodName = method.name

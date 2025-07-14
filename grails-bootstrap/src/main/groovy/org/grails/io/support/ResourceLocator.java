@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 3.0
  */
 public class ResourceLocator {
+
     public static final String WILDCARD = "*";
     public static final String FILE_SEPARATOR = File.separator;
     public static final String CLOSURE_MARKER = "$";
@@ -48,7 +49,7 @@ public class ResourceLocator {
     protected List<String> resourceSearchDirectories = new ArrayList<String>();
     protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<String, Resource>();
     protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected ResourceLoader defaultResourceLoader =  new FileSystemResourceLoader();
+    protected ResourceLoader defaultResourceLoader = new FileSystemResourceLoader();
     protected boolean warDeployed = Environment.isWarDeployed();
 
     public void setSearchLocation(String searchLocation) {
@@ -100,16 +101,14 @@ public class ResourceLocator {
                 if (defaultResource != null && defaultResource.exists()) {
                     resource = defaultResource;
                 }
-            }
-            else {
+            } else {
                 String uriWebAppRelative = WEB_APP_DIR + uri;
 
                 for (String resourceSearchDirectory : resourceSearchDirectories) {
                     Resource res = resolveExceptionSafe(resourceSearchDirectory + uriWebAppRelative);
                     if (res.exists()) {
                         resource = res;
-                    }
-                    else if (!warDeployed) {
+                    } else if (!warDeployed) {
                         Resource dir = resolveExceptionSafe(resourceSearchDirectory);
                         if (dir.exists() && info != null) {
                             String filename = dir.getFilename();
@@ -124,7 +123,6 @@ public class ResourceLocator {
                 }
             }
 
-
             if (resource == null || !resource.exists()) {
                 Resource tmp = defaultResourceLoader != null ? defaultResourceLoader.getResource(uri) : null;
                 if (tmp != null && tmp.exists()) {
@@ -134,14 +132,12 @@ public class ResourceLocator {
 
             if (resource != null) {
                 uriToResourceCache.put(uri, resource);
-            }
-            else if (warDeployed) {
+            } else if (warDeployed) {
                 uriToResourceCache.put(uri, NULL_RESOURCE);
             }
         }
         return resource == NULL_RESOURCE ? null : resource;
     }
-
 
     private PluginResourceInfo inferPluginNameFromURI(String uri) {
         if (uri.startsWith("/plugins/")) {
@@ -173,7 +169,7 @@ public class ResourceLocator {
                 }
             }
             if (resource == null || !resource.exists()) {
-                for(String ext : new String[]{".groovy", ".java"}) {
+                for (String ext : new String[]{".groovy", ".java"}) {
                     resource = resolveExceptionSafe(GrailsResourceUtils.DOMAIN_DIR_PATH + "**/" + className + ext);
                     if (resource != null && resource.exists()) {
                         classNameToResourceCache.put(className, resource);
@@ -214,8 +210,8 @@ public class ResourceLocator {
         defaultResourceLoader = resourceLoader;
     }
 
-
     class PluginResourceInfo {
+
         String pluginName;
         String uri;
     }

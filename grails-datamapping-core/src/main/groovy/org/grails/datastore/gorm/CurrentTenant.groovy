@@ -30,7 +30,7 @@ import groovy.transform.PackageScope
  */
 @PackageScope
 @CompileStatic
-class CurrentTenant  {
+class CurrentTenant {
 
     private static final ThreadLocal<Serializable> currentTenantThreadLocal = new ThreadLocal<>()
 

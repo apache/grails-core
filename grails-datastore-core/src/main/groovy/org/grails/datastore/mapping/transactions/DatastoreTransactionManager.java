@@ -19,13 +19,12 @@
 package org.grails.datastore.mapping.transactions;
 
 import jakarta.persistence.FlushModeType;
-
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataAccessResourceFailureException;
 import org.grails.datastore.mapping.core.ConnectionNotFoundException;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
@@ -79,15 +78,14 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
         TransactionObject txObject = new TransactionObject();
 
         SessionHolder sessionHolder =
-            (SessionHolder) TransactionSynchronizationManager.getResource(getDatastore());
+                (SessionHolder) TransactionSynchronizationManager.getResource(getDatastore());
         if (sessionHolder != null) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Found thread-bound Session [" +
                         sessionHolder.getSession() + "] for Datastore transaction");
             }
             txObject.setSessionHolder(sessionHolder);
-        }
-        else if (datastoreManagedSession) {
+        } else if (datastoreManagedSession) {
             try {
                 Session session = getDatastore().getCurrentSession();
                 if (logger.isDebugEnabled()) {
@@ -95,13 +93,11 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
                             session + "] for Spring-managed transaction");
                 }
                 txObject.setExistingSession(session);
-            }
-            catch (ConnectionNotFoundException ex) {
+            } catch (ConnectionNotFoundException ex) {
                 throw new DataAccessResourceFailureException(
                         "Could not obtain Datastore-managed Session for Spring-managed transaction", ex);
             }
-        }
-        else {
+        } else {
             Session session = getDatastore().connect();
             txObject.setSession(session);
         }
@@ -134,21 +130,18 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
                 TransactionSynchronizationManager.bindResource(getDatastore(), txObject.getSessionHolder());
             }
             txObject.getSessionHolder().setSynchronizedWithTransaction(true);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             if (txObject.isNewSession()) {
                 try {
                     if (session != null) {
                         Transaction transaction = session.getTransaction();
-                        if(transaction != null && transaction.isActive()) {
+                        if (transaction != null && transaction.isActive()) {
                             transaction.rollback();
                         }
                     }
-                }
-                catch (Throwable ex2) {
+                } catch (Throwable ex2) {
                     logger.debug("Could not rollback Session after failed transaction begin", ex);
-                }
-                finally {
+                } finally {
                     DatastoreUtils.closeSession(session);
                 }
             }
@@ -162,9 +155,9 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
         final SessionHolder sessionHolder = txObject.getSessionHolder();
         try {
             Transaction<?> transaction = txObject.getTransaction();
-            if(transaction != null && transaction.isActive() ) {
+            if (transaction != null && transaction.isActive()) {
                 Session session = sessionHolder.getSession();
-                if(!status.isReadOnly()) {
+                if (!status.isReadOnly()) {
                     if (session != null) {
                         if (status.isDebug()) {
                             logger.debug("Flushing Session prior to transaction commit [" + session + "]");
@@ -177,8 +170,7 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
                 }
                 transaction.commit();
             }
-        }
-        catch (DataAccessException ex) {
+        } catch (DataAccessException ex) {
             throw new TransactionSystemException("Could not commit Datastore transaction", ex);
         }
     }
@@ -189,18 +181,16 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
         final SessionHolder sessionHolder = txObject.getSessionHolder();
         try {
             Transaction<?> transaction = txObject.getTransaction();
-            if(transaction != null && transaction.isActive()) {
+            if (transaction != null && transaction.isActive()) {
                 if (status.isDebug()) {
                     logger.debug("Rolling back Datastore transaction on Session [" +
                             sessionHolder.getSession() + "]");
                 }
                 transaction.rollback();
             }
-        }
-        catch (DataAccessException ex) {
+        } catch (DataAccessException ex) {
             throw new TransactionSystemException("Could not rollback Datastore transaction", ex);
-        }
-        finally {
+        } finally {
             // Clear all pending inserts/updates/deletes in the Session.
             // Necessary for pre-bound Sessions, to avoid inconsistent state.
             if (sessionHolder.getSession() != null) {

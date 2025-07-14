@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate;
 
 import org.apache.commons.logging.Log;
@@ -64,9 +63,20 @@ import java.util.Properties;
 public class HibernateMappingContextSessionFactoryBean extends HibernateExceptionTranslator
         implements FactoryBean<SessionFactory>, ResourceLoaderAware, DisposableBean,
         ApplicationContextAware, InitializingBean, BeanClassLoaderAware {
+
+    private static final Log LOG = LogFactory.getLog(HibernateMappingContextSessionFactoryBean.class);
+
     protected Class<? extends HibernateMappingContextConfiguration> configClass = HibernateMappingContextConfiguration.class;
     protected HibernateMappingContext hibernateMappingContext;
     protected PlatformTransactionManager transactionManager;
+    protected Class<?> currentSessionContextClass;
+    protected Map<String, Object> eventListeners;
+    protected HibernateEventListeners hibernateEventListeners;
+    protected ApplicationContext applicationContext;
+    protected boolean proxyIfReloadEnabled = false;
+    protected String sessionFactoryBeanName = "sessionFactory";
+    protected String dataSourceName = ConnectionSource.DEFAULT;
+    protected ClassLoader classLoader;
 
     private DataSource dataSource;
     private Resource[] configLocations;
@@ -85,17 +95,6 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     private HibernateMappingContextConfiguration configuration;
     private SessionFactory sessionFactory;
 
-    private static final Log LOG = LogFactory.getLog(HibernateMappingContextSessionFactoryBean.class);
-    protected Class<?> currentSessionContextClass;
-    protected Map<String, Object> eventListeners;
-    protected HibernateEventListeners hibernateEventListeners;
-    protected ApplicationContext applicationContext;
-    protected boolean proxyIfReloadEnabled = false;
-    protected String sessionFactoryBeanName = "sessionFactory";
-    protected String dataSourceName = ConnectionSource.DEFAULT;
-    protected ClassLoader classLoader;
-
-
     @Override
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
@@ -107,8 +106,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
         try {
             thread.setContextClassLoader(classLoader);
             buildSessionFactory();
-        }
-        finally {
+        } finally {
             thread.setContextClassLoader(cl);
         }
     }
@@ -127,11 +125,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
 
     /**
      * Sets the class to be used for Hibernate Configuration.
+     *
      * @param configClass A subclass of the Hibernate Configuration class
      */
     public void setConfigClass(Class<? extends HibernateMappingContextConfiguration> configClass) {
         this.configClass = configClass;
     }
+
     /**
      * Set the DataSource to be used by the SessionFactory.
      * If set, this will override corresponding settings in Hibernate properties.
@@ -141,6 +141,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setDataSource(DataSource dataSource) {
         this.dataSource = dataSource;
     }
+
     public DataSource getDataSource() {
         return dataSource;
     }
@@ -150,10 +151,11 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * classpath resource "classpath:hibernate.cfg.xml".
      * <p>Note: Can be omitted when all necessary properties and mapping
      * resources are specified locally via this bean.
+     *
      * @see org.hibernate.cfg.Configuration#configure(java.net.URL)
      */
     public void setConfigLocation(Resource configLocation) {
-        configLocations = new Resource[] {configLocation};
+        configLocations = new Resource[]{configLocation};
     }
 
     /**
@@ -161,11 +163,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * classpath resources "classpath:hibernate.cfg.xml,classpath:extension.cfg.xml".
      * <p>Note: Can be omitted when all necessary properties and mapping
      * resources are specified locally via this bean.
+     *
      * @see org.hibernate.cfg.Configuration#configure(java.net.URL)
      */
     public void setConfigLocations(Resource[] configLocations) {
         this.configLocations = configLocations;
     }
+
     public Resource[] getConfigLocations() {
         return configLocations;
     }
@@ -177,12 +181,14 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * Alternative to the more generic setMappingLocations method.
      * <p>Can be used to add to mappings from a Hibernate XML config file,
      * or to specify all mappings locally.
+     *
      * @see #setMappingLocations
      * @see org.hibernate.cfg.Configuration#addResource
      */
     public void setMappingResources(String[] mappingResources) {
         this.mappingResources = mappingResources;
     }
+
     public String[] getMappingResources() {
         return mappingResources;
     }
@@ -194,11 +200,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * "WEB-INF/mappings/example.hbm.xml" when running in an application context.
      * <p>Can be used to add to mappings from a Hibernate XML config file,
      * or to specify all mappings locally.
+     *
      * @see org.hibernate.cfg.Configuration#addInputStream
      */
     public void setMappingLocations(Resource[] mappingLocations) {
         this.mappingLocations = mappingLocations;
     }
+
     public Resource[] getMappingLocations() {
         return mappingLocations;
     }
@@ -210,11 +218,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * in the file system.
      * <p>Can be used to add to mappings from a Hibernate XML config file,
      * or to specify all mappings locally.
+     *
      * @see org.hibernate.cfg.Configuration#addCacheableFile(java.io.File)
      */
     public void setCacheableMappingLocations(Resource[] cacheableMappingLocations) {
         this.cacheableMappingLocations = cacheableMappingLocations;
     }
+
     public Resource[] getCacheableMappingLocations() {
         return cacheableMappingLocations;
     }
@@ -224,11 +234,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * like "WEB-INF/lib/example.hbm.jar".
      * <p>Can be used to add to mappings from a Hibernate XML config file,
      * or to specify all mappings locally.
+     *
      * @see org.hibernate.cfg.Configuration#addJar(java.io.File)
      */
     public void setMappingJarLocations(Resource[] mappingJarLocations) {
         this.mappingJarLocations = mappingJarLocations;
     }
+
     public Resource[] getMappingJarLocations() {
         return mappingJarLocations;
     }
@@ -238,11 +250,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * like "WEB-INF/mappings".
      * <p>Can be used to add to mappings from a Hibernate XML config file,
      * or to specify all mappings locally.
+     *
      * @see org.hibernate.cfg.Configuration#addDirectory(java.io.File)
      */
     public void setMappingDirectoryLocations(Resource[] mappingDirectoryLocations) {
         this.mappingDirectoryLocations = mappingDirectoryLocations;
     }
+
     public Resource[] getMappingDirectoryLocations() {
         return mappingDirectoryLocations;
     }
@@ -251,11 +265,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * Set a Hibernate entity interceptor that allows to inspect and change
      * property values before writing to and reading from the database.
      * Will get applied to any new Session created by this factory.
+     *
      * @see org.hibernate.cfg.Configuration#setInterceptor
      */
     public void setEntityInterceptor(Interceptor entityInterceptor) {
         this.entityInterceptor = entityInterceptor;
     }
+
     public Interceptor getEntityInterceptor() {
         return entityInterceptor;
     }
@@ -267,6 +283,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setNamingStrategy(NamingStrategy namingStrategy) {
         this.namingStrategy = namingStrategy;
     }
+
     public NamingStrategy getNamingStrategy() {
         return namingStrategy;
     }
@@ -276,6 +293,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * <p>Note: Do not specify a transaction provider here when using
      * Spring-driven transactions. It is also advisable to omit connection
      * provider settings and use a Spring-set DataSource instead.
+     *
      * @see #setDataSource
      */
     public void setHibernateProperties(Properties hibernateProperties) {
@@ -295,11 +313,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
 
     /**
      * Specify annotated entity classes to register with this Hibernate SessionFactory.
+     *
      * @see org.hibernate.cfg.Configuration#addAnnotatedClass(Class)
      */
     public void setAnnotatedClasses(Class<?>[] annotatedClasses) {
         this.annotatedClasses = annotatedClasses;
     }
+
     public Class<?>[] getAnnotatedClasses() {
         return annotatedClasses;
     }
@@ -307,11 +327,13 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     /**
      * Specify the names of annotated packages, for which package-level
      * annotation metadata will be read.
+     *
      * @see org.hibernate.cfg.Configuration#addPackage(String)
      */
     public void setAnnotatedPackages(String[] annotatedPackages) {
         this.annotatedPackages = annotatedPackages;
     }
+
     public String[] getAnnotatedPackages() {
         return annotatedPackages;
     }
@@ -324,6 +346,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setPackagesToScan(String... packagesToScan) {
         this.packagesToScan = packagesToScan;
     }
+
     public String[] getPackagesToScan() {
         return packagesToScan;
     }
@@ -338,6 +361,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setProxyIfReloadEnabled(boolean proxyIfReloadEnabled) {
         this.proxyIfReloadEnabled = proxyIfReloadEnabled;
     }
+
     public boolean isProxyIfReloadEnabled() {
         return proxyIfReloadEnabled;
     }
@@ -350,6 +374,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setCurrentSessionContextClass(Class<?> currentSessionContextClass) {
         this.currentSessionContextClass = currentSessionContextClass;
     }
+
     public Class<?> getCurrentSessionContextClass() {
         return currentSessionContextClass;
     }
@@ -361,6 +386,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setHibernateEventListeners(final HibernateEventListeners listeners) {
         hibernateEventListeners = listeners;
     }
+
     public HibernateEventListeners getHibernateEventListeners() {
         return hibernateEventListeners;
     }
@@ -368,6 +394,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setSessionFactoryBeanName(String name) {
         sessionFactoryBeanName = name;
     }
+
     public String getSessionFactoryBeanName() {
         return sessionFactoryBeanName;
     }
@@ -375,6 +402,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void setDataSourceName(String name) {
         dataSourceName = name;
     }
+
     public String getDataSourceName() {
         return dataSourceName;
     }
@@ -385,12 +413,14 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
      * you can also pass in a list or set of listeners objects as value.
      * <p>See the Hibernate documentation for further details on listener types
      * and associated listener interfaces.
+     *
      * @param eventListeners Map with listener type Strings as keys and
-     * listener objects as values
+     *                       listener objects as values
      */
     public void setEventListeners(Map<String, Object> eventListeners) {
         this.eventListeners = eventListeners;
     }
+
     public Map<String, Object> getEventListeners() {
         return eventListeners;
     }
@@ -399,7 +429,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
 
         configuration = newConfiguration();
 
-        if(hibernateMappingContext == null) {
+        if (hibernateMappingContext == null) {
 
             throw new IllegalArgumentException("HibernateMappingContext is required.");
         }
@@ -457,9 +487,9 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
             configuration.setInterceptor(entityInterceptor);
         }
 
-        if (namingStrategy != null) {
+//        if (namingStrategy != null) {
 //            configuration.setNamingStrategy(namingStrategy);
-        }
+//        }
 
         if (hibernateProperties != null) {
             configuration.addProperties(hibernateProperties);
@@ -492,6 +522,7 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     /**
      * Return the Hibernate Configuration object used to build the SessionFactory.
      * Allows for access to configuration metadata stored there (rarely needed).
+     *
      * @throws IllegalStateException if the Configuration object has not been initialized yet
      */
     public final Configuration getConfiguration() {
@@ -514,12 +545,10 @@ public class HibernateMappingContextSessionFactoryBean extends HibernateExceptio
     public void destroy() {
         try {
             sessionFactory.close();
-        }
-        catch (HibernateException e) {
+        } catch (HibernateException e) {
             if (e.getCause() instanceof NameNotFoundException) {
                 LOG.debug(e.getCause().getMessage(), e);
-            }
-            else {
+            } else {
                 throw e;
             }
         }

@@ -18,8 +18,8 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.DataBindingSource;
-import grails.databinding.StructuredBindingEditor;
+import grails.databinding.DataBindingSource
+import grails.databinding.StructuredBindingEditor
 import groovy.transform.CompileStatic
 
 /**
@@ -33,16 +33,16 @@ abstract class AbstractStructuredDateBindingEditor<T> implements StructuredBindi
         final prefix = propertyName + '_'
         assert fieldValues.containsProperty(prefix + "year"), "Can't populate a date without a year"
 
-        def yearString = (String)fieldValues.getPropertyValue(prefix + "year")
+        def yearString = (String) fieldValues.getPropertyValue(prefix + "year")
         def monthString = (String) fieldValues.getPropertyValue(prefix + "month")
         def dayString = (String) fieldValues.getPropertyValue(prefix + "day")
         def hourString = (String) fieldValues.getPropertyValue(prefix + "hour")
         def minuteString = (String) fieldValues.getPropertyValue(prefix + "minute")
         if (!yearString &&
-            !monthString &&
-            !dayString &&
-            !hourString &&
-            !minuteString) {
+                !monthString &&
+                !dayString &&
+                !hourString &&
+                !minuteString) {
             return null
         }
         def year
@@ -56,7 +56,7 @@ abstract class AbstractStructuredDateBindingEditor<T> implements StructuredBindi
             int hour = getIntegerValue(fieldValues, prefix + "hour", 0)
             int minute = getIntegerValue(fieldValues, prefix + "minute", 0)
 
-            def c = new GregorianCalendar(year,month - 1,day,hour,minute)
+            def c = new GregorianCalendar(year, month - 1, day, hour, minute)
             return getDate(c)
         }
         catch (NumberFormatException nfe) {

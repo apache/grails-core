@@ -41,6 +41,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 trait JsonView extends GrailsView {
+
     /**
      * The default generator
      */
@@ -91,24 +92,23 @@ trait JsonView extends GrailsView {
      * @param arguments The arguments
      */
     void inherits(Map arguments) {
-        ResolvableGroovyTemplateEngine templateEngine = (ResolvableGroovyTemplateEngine)viewTemplate.templateEngine
+        ResolvableGroovyTemplateEngine templateEngine = (ResolvableGroovyTemplateEngine) viewTemplate.templateEngine
 
         def template = arguments.template
 
-        if(template) {
-            Map model = (Map)arguments.model ?: [:]
+        if (template) {
+            Map model = (Map) arguments.model ?: [:]
             def templateUri = templateEngine
                     .viewUriResolver
                     .resolveTemplateUri(getControllerNamespace(), getControllerName(), template.toString())
-            GrailsViewTemplate parentTemplate = (GrailsViewTemplate)templateEngine.resolveTemplate(templateUri, locale)
-            if(parentTemplate != null) {
+            GrailsViewTemplate parentTemplate = (GrailsViewTemplate) templateEngine.resolveTemplate(templateUri, locale)
+            if (parentTemplate != null) {
                 ParentInfo parentInfo = new ParentInfo(
-                    parentTemplate: parentTemplate,
-                    parentModel: model
+                        parentTemplate: parentTemplate,
+                        parentModel: model
                 )
                 parentData.add(parentInfo)
-            }
-            else {
+            } else {
                 throw new ViewException("Template not found for name $template")
             }
         }

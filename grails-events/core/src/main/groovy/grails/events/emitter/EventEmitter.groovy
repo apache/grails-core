@@ -38,7 +38,7 @@ interface EventEmitter {
      *
      * @return This emitter
      */
-    EventEmitter notify(CharSequence eventId, Object...data)
+    EventEmitter notify(CharSequence eventId, Object... data)
 
     /**
      * Notify of an event
@@ -62,7 +62,7 @@ interface EventEmitter {
     /**
      * Synonym for {@link #notify(Event)}
      */
-    EventEmitter publish(CharSequence eventId, Object...data)
+    EventEmitter publish(CharSequence eventId, Object... data)
 
     /**
      * Synonym for {@link #notify(Event)}

@@ -28,7 +28,11 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedArgs
 
 /**
@@ -39,14 +43,14 @@ import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedAr
  */
 @CompileStatic
 class SaveImplementer extends AbstractSaveImplementer implements SingleResultServiceImplementer<GormEntity> {
+
     static final List<String> HANDLED_PREFIXES = ['save', 'store', 'persist']
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( methodNode.parameters.length == 0 ) {
+        if (methodNode.parameters.length == 0) {
             return false
-        }
-        else {
+        } else {
             return super.doesImplement(domainClass, methodNode)
         }
     }
@@ -56,18 +60,17 @@ class SaveImplementer extends AbstractSaveImplementer implements SingleResultSer
         BlockStatement body = (BlockStatement) newMethodNode.getCode()
         Parameter[] parameters = newMethodNode.parameters
         int parameterCount = parameters.length
-        if(parameterCount == 1 && AstUtils.isDomainClass(parameters[0].type)) {
+        if (parameterCount == 1 && AstUtils.isDomainClass(parameters[0].type)) {
             body.addStatement(
-                returnS( callX( varX( parameters[0] ), "save", namedArgs(failOnError: ConstantExpression.TRUE) ) )
+                    returnS(callX(varX(parameters[0]), "save", namedArgs(failOnError: ConstantExpression.TRUE)))
             )
-        }
-        else {
+        } else {
             VariableExpression entityVar = varX('$entity')
             body.addStatement(
-                declS(entityVar, ctorX(domainClassNode))
+                    declS(entityVar, ctorX(domainClassNode))
             )
             body.addStatement(
-                bindParametersAndSave(domainClassNode, abstractMethodNode, parameters, body, entityVar)
+                    bindParametersAndSave(domainClassNode, abstractMethodNode, parameters, body, entityVar)
             )
 
         }

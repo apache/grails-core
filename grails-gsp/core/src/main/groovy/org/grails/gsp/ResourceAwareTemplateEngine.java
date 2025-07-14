@@ -26,7 +26,14 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethodsSupport;
 import org.grails.buffer.StreamByteBuffer;
 import org.springframework.core.io.Resource;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
 import java.net.URL;
 
 /**
@@ -37,6 +44,7 @@ import java.net.URL;
  * @since 0.4
  */
 public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
+
     public static final String BEAN_ID = "groovyPagesTemplateEngine";
     private static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
 
@@ -45,7 +53,7 @@ public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
      *
      * @param resource The Spring Resource to create the template for
      * @return A Template instance
-     * @throws IOException Thrown when there was an error reading the Template
+     * @throws IOException            Thrown when there was an error reading the Template
      * @throws ClassNotFoundException Thrown when there was a problem loading the Template into a class
      */
     public Template createTemplate(Resource resource) throws IOException, ClassNotFoundException {
@@ -55,7 +63,7 @@ public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
     /**
      * Creates the specified Template using the given Spring Resource
      *
-     * @param resource The Spring Resource to create the template for
+     * @param resource  The Spring Resource to create the template for
      * @param cacheable Whether the resource can be cached
      * @return A Template instance
      *
@@ -64,7 +72,7 @@ public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
 
     @Override
     public final Template createTemplate(Reader reader) throws IOException {
-        StreamByteBuffer buf=new StreamByteBuffer();
+        StreamByteBuffer buf = new StreamByteBuffer();
         IOUtils.copy(reader, new OutputStreamWriter(buf.getOutputStream(), GROOVY_SOURCE_CHAR_ENCODING));
         return createTemplate(buf.getInputStream());
     }
@@ -101,8 +109,8 @@ public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
             DefaultGroovyMethodsSupport.closeWithWarning(input);
         }
     }
-    
-    abstract public Template createTemplateForUri(String[] uris);
-    
-    abstract public int mapStackLineNumber(String url, int lineNumber);
+
+    public abstract Template createTemplateForUri(String[] uris);
+
+    public abstract int mapStackLineNumber(String url, int lineNumber);
 }

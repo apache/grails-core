@@ -62,23 +62,21 @@ class DefaultStackTracePrinter implements StackTracePrinter {
                 printCausedByMessage(sb, e)
             }
             if (e instanceof MultipleCompilationErrorsException) break
-            if(last > 0) {
+            if (last > 0) {
                 stackTrace[0..-1].eachWithIndex { te, idx ->
                     def fileName = getFileName(te)
                     def lineNumber
                     if (e instanceof SourceCodeAware) {
                         if (e.lineNumber && e.lineNumber > -1) {
                             lineNumber = e.lineNumber.toString().padLeft(lineNumWidth)
-                        }
-                        else {
+                        } else {
                             lineNumber = te.lineNumber.toString().padLeft(lineNumWidth)
                         }
                         if (e.fileName) {
                             fileName = e.fileName
                             fileName = makeRelativeIfPossible(fileName)
                         }
-                    }
-                    else {
+                    } else {
                         lineNumber = te.lineNumber.toString().padLeft(lineNumWidth)
                     }
 

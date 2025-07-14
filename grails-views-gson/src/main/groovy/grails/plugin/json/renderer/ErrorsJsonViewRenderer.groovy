@@ -31,6 +31,7 @@ import org.springframework.validation.Errors
  */
 @InheritConstructors
 @CompileStatic
-class ErrorsJsonViewRenderer extends AbstractJsonViewContainerRenderer<Errors, Object>{
+class ErrorsJsonViewRenderer extends AbstractJsonViewContainerRenderer<Errors, Object> {
+
     final Class<Object> componentType = Object
 }

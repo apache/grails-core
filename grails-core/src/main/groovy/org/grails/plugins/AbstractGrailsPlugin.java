@@ -52,14 +52,16 @@ import java.util.Map;
  * @author Graeme Rocher
  */
 public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implements GrailsPlugin {
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractGrailsPlugin.class);
 
     public static final String PLUGIN_YML = "plugin.yml";
     public static final String PLUGIN_YML_PATH = "/" + PLUGIN_YML;
     public static final String PLUGIN_GROOVY = "plugin.groovy";
     public static final String PLUGIN_GROOVY_PATH = "/" + PLUGIN_GROOVY;
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractGrailsPlugin.class);
     private static final List<String> DEFAULT_CONFIG_IGNORE_LIST = Arrays.asList("dataSource", "hibernate");
     private static Resource basePluginResource = null;
+
     protected PropertySource<?> propertySource;
     protected GrailsApplication grailsApplication;
     protected boolean isBase = false;
@@ -72,17 +74,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     protected String[] evictionList = {};
     protected Config config;
 
-    /**
-     * Wrapper Grails class for plugins.
-     *
-     * @author Graeme Rocher
-     */
-    class GrailsPluginClass extends AbstractGrailsClass {
-        public GrailsPluginClass(Class<?> clazz) {
-            super(clazz, TRAILING_NAME);
-        }
-    }
-
     public AbstractGrailsPlugin(Class<?> pluginClass, GrailsApplication application) {
         Assert.notNull(pluginClass, "Argument [pluginClass] cannot be null");
         Assert.isTrue(pluginClass.getName().endsWith(TRAILING_NAME),
@@ -92,7 +83,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         this.pluginClass = pluginClass;
         Resource resource = readPluginConfiguration(pluginClass);
 
-        if(resource != null && resource.exists()) {
+        if (resource != null && resource.exists()) {
             final String filename = resource.getFilename();
             try {
                 if (filename.equals(PLUGIN_YML)) {
@@ -103,7 +94,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
                     this.propertySource = propertySourceLoader.load(GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin") + "-" + PLUGIN_GROOVY, resource, DEFAULT_CONFIG_IGNORE_LIST).stream().findFirst().orElse(null);
                 }
             } catch (IOException e) {
-                LOG.warn("Error loading " + filename + " for plugin: " + pluginClass.getName() +": " + e.getMessage(), e);
+                LOG.warn("Error loading {} for plugin: {}: {}", filename, pluginClass.getName(), e.getMessage(), e);
             }
         }
     }
@@ -114,12 +105,11 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     }
 
     /* (non-Javadoc)
-                 * @see grails.plugins.GrailsPlugin#refresh()
-                 */
+     * @see grails.plugins.GrailsPlugin#refresh()
+     */
     public void refresh() {
         // do nothing
     }
-
 
     @Override
     public boolean isEnabled(String[] profiles) {
@@ -132,13 +122,13 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
         Boolean groovyResourceExists = groovyResource != null && groovyResource.exists();
 
-        if(ymlResource != null && ymlResource.exists()) {
+        if (ymlResource != null && ymlResource.exists()) {
             if (groovyResourceExists) {
                 throw new RuntimeException("A plugin [" + pluginClass.getName() + "] may define a plugin.yml or a plugin.groovy, but not both");
             }
             return ymlResource;
         }
-        if(groovyResourceExists) {
+        if (groovyResourceExists) {
             return groovyResource;
         }
         return null;
@@ -176,7 +166,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     public boolean hasInterestInChange(String path) {
         return false;
     }
-
 
     public String[] getDependencyNames() {
         return dependencyNames;
@@ -240,13 +229,21 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof AbstractGrailsPlugin)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof AbstractGrailsPlugin)) {
+            return false;
+        }
 
         AbstractGrailsPlugin that = (AbstractGrailsPlugin) o;
 
-        if (!pluginClass.equals(that.pluginClass)) return false;
-        if (!version.equals(that.version)) return false;
+        if (!pluginClass.equals(that.pluginClass)) {
+            return false;
+        }
+        if (!version.equals(that.version)) {
+            return false;
+        }
 
         return true;
     }
@@ -260,22 +257,44 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
     public int compareTo(Object o) {
         AbstractGrailsPlugin that = (AbstractGrailsPlugin) o;
-        if (equals(that)) return 0;
+        if (equals(that)) {
+            return 0;
+        }
 
         String thatName = that.getName();
         for (String pluginName : getLoadAfterNames()) {
-            if (pluginName.equals(thatName)) return -1;
+            if (pluginName.equals(thatName)) {
+                return -1;
+            }
         }
         for (String pluginName : getLoadBeforeNames()) {
-            if (pluginName.equals(thatName)) return 1;
+            if (pluginName.equals(thatName)) {
+                return 1;
+            }
         }
         for (String pluginName : that.getLoadAfterNames()) {
-            if (pluginName.equals(getName())) return 1;
+            if (pluginName.equals(getName())) {
+                return 1;
+            }
         }
         for (String pluginName : that.getLoadBeforeNames()) {
-            if (pluginName.equals(getName())) return -1;
+            if (pluginName.equals(getName())) {
+                return -1;
+            }
         }
 
         return 0;
+    }
+
+    /**
+     * Wrapper Grails class for plugins.
+     *
+     * @author Graeme Rocher
+     */
+    static class GrailsPluginClass extends AbstractGrailsClass {
+
+        public GrailsPluginClass(Class<?> clazz) {
+            super(clazz, TRAILING_NAME);
+        }
     }
 }

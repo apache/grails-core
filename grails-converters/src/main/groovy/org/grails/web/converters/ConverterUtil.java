@@ -19,13 +19,6 @@
 package org.grails.web.converters;
 
 import groovy.lang.Closure;
-
-import java.io.File;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.util.Collection;
-import java.util.Map;
-
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.NullObject;
 import org.codehaus.groovy.runtime.ResourceGroovyMethods;
@@ -37,20 +30,26 @@ import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+import java.io.File;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.util.Collection;
+import java.util.Map;
+
 /**
  * A utility class for creating and dealing with Converter objects.
  *
  * @author Siegfried Puchbauer
  * @since 0.6
  */
-public class ConverterUtil {
+public final class ConverterUtil {
 
     private static final String PERSISTENCE_BEAN_WRAPPER_CLASS = "org.codehaus.groovy.grails.orm.hibernate.support.HibernateBeanWrapper";
 
     private static final Object[] EMPTY_OBJECT_ARRAY = {};
 
     private ConverterUtil() {
-       // static only
+        // static only
     }
 
     public static BeanWrapper createBeanWrapper(Object o) {
@@ -58,9 +57,8 @@ public class ConverterUtil {
         try {
             Class<?> c = Class.forName(PERSISTENCE_BEAN_WRAPPER_CLASS, true, Thread.currentThread().getContextClassLoader());
             Constructor<?> init = c.getConstructor(new Class[]{Object.class});
-            beanWrapper = (BeanWrapper)init.newInstance(new Object[]{o});
-        }
-        catch (Exception e) {
+            beanWrapper = (BeanWrapper) init.newInstance(new Object[]{o});
+        } catch (Exception e) {
             beanWrapper = new BeanWrapperImpl(o);
         }
         return beanWrapper;
@@ -70,16 +68,15 @@ public class ConverterUtil {
         return createConverter(converterClass, target, null);
     }
 
-    public static <T> T createConverter(Class<T> converterClass, Object target, ApplicationContext applicationContext) throws ConverterException{
+    public static <T> T createConverter(Class<T> converterClass, Object target, ApplicationContext applicationContext) throws ConverterException {
         try {
             T converter = converterClass.newInstance();
             if (converter instanceof ApplicationContextAware && applicationContext != null) {
-                ((ApplicationContextAware)converter).setApplicationContext(applicationContext);
+                ((ApplicationContextAware) converter).setApplicationContext(applicationContext);
             }
-            ((AbstractConverter)converter).setTarget(target);
+            ((AbstractConverter) converter).setTarget(target);
             return converter;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Initialization of Converter Object " + converterClass.getName() +
                     " failed for target " + target.getClass().getName(), e);
         }
@@ -107,15 +104,15 @@ public class ConverterUtil {
         }
 
         if (delegate instanceof NullObject) {
-            return ((NullObject)delegate).asType(clazz);
+            return ((NullObject) delegate).asType(clazz);
         }
         if (delegate instanceof Collection<?> && clazz.isArray()) {
-            int size = ((Collection<?>)delegate).size();
+            int size = ((Collection<?>) delegate).size();
             if (clazz.getComponentType() == Object.class) {
                 if (size == 0) {
                     return EMPTY_OBJECT_ARRAY;
                 }
-                return ((Collection<?>)delegate).toArray((Object[])Array.newInstance(clazz.getComponentType(), size));
+                return ((Collection<?>) delegate).toArray((Object[]) Array.newInstance(clazz.getComponentType(), size));
             }
             if (size == 0) {
                 return Array.newInstance(clazz.getComponentType(), 0);

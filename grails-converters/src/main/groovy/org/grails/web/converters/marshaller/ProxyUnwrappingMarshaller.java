@@ -22,7 +22,6 @@ import grails.util.GrailsNameUtils;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaClassRegistry;
-
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
 
@@ -31,17 +30,18 @@ import org.grails.web.converters.exceptions.ConverterException;
  *
  * @author Siegfried Puchbauer
  * @author Graeme Rocher
- *
  * @since 1.1
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ProxyUnwrappingMarshaller<C extends Converter> implements ObjectMarshaller<C>, NameAwareMarshaller {
 
     private static final String HIBERNATE_LAZY_INITIALIZER_PROP = "hibernateLazyInitializer";
     private static final String IMPLEMENTATION_PROP = "implementation";
 
     public boolean supports(Object object) {
-        if (object == null) return false;
+        if (object == null) {
+            return false;
+        }
         MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass());
         return mc.hasProperty(object, HIBERNATE_LAZY_INITIALIZER_PROP) != null;
     }
@@ -52,7 +52,9 @@ public class ProxyUnwrappingMarshaller<C extends Converter> implements ObjectMar
     }
 
     private Object unwrap(Object o) {
-        if (o == null) return o;
+        if (o == null) {
+            return o;
+        }
 
         final MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
         MetaClass mc = registry.getMetaClass(o.getClass());

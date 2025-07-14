@@ -51,8 +51,11 @@ import spock.lang.Specification
 @CompileStatic
 abstract class HibernateSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore
-    @Shared PlatformTransactionManager transactionManager
+    @Shared
+    @AutoCleanup
+    HibernateDatastore hibernateDatastore
+    @Shared
+    PlatformTransactionManager transactionManager
 
     void setupSpec() {
 
@@ -71,7 +74,7 @@ abstract class HibernateSpec extends Specification {
                 propertySources.addLast(it)
             }
         }
-        propertySources.addFirst(new MapPropertySource("defaults", getConfiguration()))
+        propertySources.addFirst(new MapPropertySource("defaults", getConfiguration() as Map<String, Object>))
         Config config = new PropertySourcesConfig(propertySources)
         List<Class> domainClasses = getDomainClasses()
         String packageName = getPackageToScan(config)
@@ -156,8 +159,8 @@ abstract class HibernateSpec extends Specification {
 
     private boolean canLoadFileExtension(PropertySourceLoader loader, String name) {
         return Arrays
-            .stream(loader.fileExtensions)
-            .map { String extension -> extension.toLowerCase() }
-            .anyMatch { String extension -> name.toLowerCase().endsWith(extension) }
+                .stream(loader.fileExtensions)
+                .map { String extension -> extension.toLowerCase() }
+                .anyMatch { String extension -> name.toLowerCase().endsWith(extension) }
     }
 }

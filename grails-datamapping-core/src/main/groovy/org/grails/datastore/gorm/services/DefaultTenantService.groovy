@@ -21,7 +21,6 @@ package org.grails.datastore.gorm.services
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.Tenants
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -46,10 +45,9 @@ class DefaultTenantService implements Service, TenantService {
     Serializable currentId() {
         MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
         def mode = multiTenantCapableDatastore.getMultiTenancyMode()
-        if(mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+        if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
             return Tenants.currentId(multiTenantCapableDatastore)
-        }
-        else {
+        } else {
             throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
         }
     }
@@ -58,10 +56,9 @@ class DefaultTenantService implements Service, TenantService {
     def <T> T withoutId(Closure<T> callable) {
         MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
         def mode = multiTenantCapableDatastore.getMultiTenancyMode()
-        if(mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+        if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
             return Tenants.withoutId(multiTenantCapableDatastore, callable)
-        }
-        else {
+        } else {
             throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
         }
     }
@@ -70,10 +67,9 @@ class DefaultTenantService implements Service, TenantService {
     def <T> T withCurrent(Closure<T> callable) {
         MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
         def mode = multiTenantCapableDatastore.getMultiTenancyMode()
-        if(mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+        if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
             return Tenants.withId(multiTenantCapableDatastore, currentId(), callable)
-        }
-        else {
+        } else {
             throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
         }
     }
@@ -82,10 +78,9 @@ class DefaultTenantService implements Service, TenantService {
     def <T> T withId(Serializable tenantId, Closure<T> callable) {
         MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
         def mode = multiTenantCapableDatastore.getMultiTenancyMode()
-        if(mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+        if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
             return Tenants.withId(multiTenantCapableDatastore, tenantId, callable)
-        }
-        else {
+        } else {
             throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
         }
     }

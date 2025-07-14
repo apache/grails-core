@@ -23,7 +23,7 @@ import org.grails.cli.profile.Command
 import org.grails.cli.profile.Profile
 
 /**
- * Factory for the creation of {@link Command} instances
+ * Factory for the creation of {@link org.springframework.boot.cli.command.Command;} instances
  *
  * @author Graeme Rocher
  * @since 3.0
@@ -38,6 +38,6 @@ interface CommandFactory {
      * @param inherited Whether the profile passed is inherited (ie a parent profile)
      * @return A command or null if it wasn't possible to create one
      */
-    Collection<Command> findCommands( Profile profile, boolean inherited )
+    Collection<Command> findCommands(Profile profile, boolean inherited)
 
 }

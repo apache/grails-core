@@ -23,6 +23,8 @@ import grails.util.GrailsWebUtil;
 import grails.web.mime.MimeType;
 import groovy.lang.Closure;
 import groovy.util.BuilderSupport;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.grails.web.converters.AbstractConverter;
@@ -35,12 +37,25 @@ import org.grails.web.converters.configuration.DefaultConverterConfiguration;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.*;
+import org.grails.web.json.JSONArray;
+import org.grails.web.json.JSONElement;
+import org.grails.web.json.JSONException;
+import org.grails.web.json.JSONObject;
+import org.grails.web.json.JSONTokener;
+import org.grails.web.json.JSONWriter;
+import org.grails.web.json.PathCapturingJSONWriterWrapper;
+import org.grails.web.json.PrettyPrintJSONWriter;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
 
 /**
  * A converter that converts domain classes, Maps, Lists, Arrays, POJOs and POGOs to JSON.
@@ -50,7 +65,7 @@ import java.util.*;
  */
 public class JSON extends AbstractConverter<JSONWriter> implements IncludeExcludeConverter<JSONWriter> {
 
-    private final static Log log = LogFactory.getLog(JSON.class);
+    private static final Log LOG = LogFactory.getLog(JSON.class);
     private static final String CACHED_JSON = "org.codehaus.groovy.grails.CACHED_JSON_REQUEST_CONTENT";
 
     protected Object target;
@@ -59,10 +74,6 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     protected boolean prettyPrint;
     protected JSONWriter writer;
     protected Stack<Object> referenceStack;
-
-    protected ConverterConfiguration<JSON> initConfig() {
-        return ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
-    }
 
     /**
      * Default Constructor for a JSON Converter
@@ -85,6 +96,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         setTarget(target);
     }
 
+    protected ConverterConfiguration<JSON> initConfig() {
+        return ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
+    }
+
     public void setPrettyPrint(boolean prettyPrint) {
         this.prettyPrint = prettyPrint;
     }
@@ -92,8 +107,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     private void prepareRender(Writer out) {
         writer = prettyPrint ? new PrettyPrintJSONWriter(out) : new JSONWriter(out);
         if (circularReferenceBehaviour == CircularReferenceBehaviour.PATH) {
-            if (log.isInfoEnabled()) {
-                log.info(String.format("Using experimental CircularReferenceBehaviour.PATH for %s", getClass().getName()));
+            if (LOG.isInfoEnabled()) {
+                LOG.info(String.format("Using experimental CircularReferenceBehaviour.PATH for %s", getClass().getName()));
             }
             writer = new PathCapturingJSONWriterWrapper(writer);
         }
@@ -104,9 +119,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         try {
             out.flush();
             out.close();
-        }
-        catch (Exception e) {
-            log.warn("Unexpected exception while closing a writer: " + e.getMessage());
+        } catch (Exception e) {
+            LOG.warn("Unexpected exception while closing a writer: " + e.getMessage());
         }
     }
 
@@ -133,8 +147,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         response.setContentType(GrailsWebUtil.getContentType(contentType, encoding));
         try {
             render(response.getWriter());
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new ConverterException(e);
         }
     }
@@ -160,25 +173,20 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         try {
             if (o == null) {
                 writer.valueNull();
-            }
-            else if (o instanceof CharSequence) {
+            } else if (o instanceof CharSequence) {
                 writer.value(o);
-            }
-            else if (o instanceof Class<?>) {
-                writer.value(((Class<?>)o).getName());
-            }
-            else if (o instanceof Number) {
-                writer.value((Number)o);
+            } else if (o instanceof Class<?>) {
+                writer.value(((Class<?>) o).getName());
+            } else if (o instanceof Number) {
+                writer.value((Number) o);
             } else if (o instanceof Boolean) {
-                writer.value((Boolean)o);
+                writer.value((Boolean) o);
             } else if (o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) {
                 writer.value(o);
-            }
-            else {
+            } else {
                 if (referenceStack.contains(o)) {
                     handleCircularRelationship(o);
-                }
-                else {
+                } else {
                     referenceStack.push(o);
                     ObjectMarshaller<JSON> marshaller = config.getMarshaller(o);
                     if (marshaller == null) {
@@ -188,11 +196,9 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                     referenceStack.pop();
                 }
             }
-        }
-        catch (ConverterException ce) {
+        } catch (ConverterException ce) {
             throw ce;
-        }
-        catch (JSONException e) {
+        } catch (JSONException e) {
             throw new ConverterException(e);
         }
     }
@@ -258,8 +264,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
 
             // return empty object
             return new JSONObject();
-        }
-        catch (JSONException e) {
+        } catch (JSONException e) {
             throw new ConverterException("Error parsing JSON", e);
         }
     }
@@ -273,7 +278,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException when the JSON content is not valid
      */
     public static JSONElement parse(InputStream is, String encoding) throws ConverterException {
-          return parse(IOUtils.toString(is, encoding));
+        return parse(IOUtils.toString(is, encoding));
     }
 
     /**
@@ -299,20 +304,19 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             try {
                 pushbackInputStream = new PushbackInputStream(request.getInputStream());
                 firstByte = pushbackInputStream.read();
-            } catch (IOException ioe) {}
+            } catch (IOException ioe) {
+            }
 
             // code has only been changed from here down
             if (firstByte == -1) {
                 json = new JSONObject();
-            }
-            else {
+            } else {
                 pushbackInputStream.unread(firstByte);
                 json = parse(pushbackInputStream, encoding);
             }
             request.setAttribute(CACHED_JSON, json);
             return json;
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new ConverterException("Error parsing JSON", e);
         }
     }
@@ -343,13 +347,13 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                     }
                     props.put("_ref", ref.substring(0, ref.length() - 1));
                     value(props);
-                }
-                else {
-                    if(isMap) {
-                        writer.object(); writer.endObject();
-                    }
-                    else {
-                        writer.array(); writer.endArray();
+                } else {
+                    if (isMap) {
+                        writer.object();
+                        writer.endObject();
+                    } else {
+                        writer.array();
+                        writer.endArray();
                     }
                 }
                 break;
@@ -368,6 +372,9 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 break;
             case IGNORE:
                 break;
+            default:
+                // do nothing
+                break;
         }
     }
 
@@ -385,8 +392,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, cfg);
         try {
             return callable.call();
-        }
-        finally {
+        } finally {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, old);
         }
     }
@@ -394,8 +400,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     public static void use(String cfgName) throws ConverterException {
         if (cfgName == null || "default".equals(cfgName)) {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, null);
-        }
-        else {
+        } else {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, getNamedConfig(cfgName));
         }
     }
@@ -437,8 +442,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         try {
             callable.call(cfg);
             ConvertersConfigurationHolder.setNamedConverterConfiguration(JSON.class, name, cfg);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
     }
@@ -452,8 +456,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             callable.call(cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             throw ConverterUtil.resolveConverterException(t);
         }
     }
@@ -468,9 +471,17 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         setExcludes(target.getClass(), excludes);
     }
 
+    private enum BuilderMode {
+        ARRAY,
+        OBJECT
+    }
+
     public class Builder extends BuilderSupport {
 
         private JSON json;
+        private Stack<BuilderMode> stack = new Stack<BuilderMode>();
+        private boolean start = true;
+        private JSONWriter writer;
 
         public Builder(JSON json) {
             this.json = json;
@@ -480,12 +491,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         public void execute(Closure<?> callable) {
             callable.setDelegate(this);
 //            callable.setDelegate(Closure.DELEGATE_FIRST);
-            invokeMethod("json", new Object[] { callable });
+            invokeMethod("json", new Object[]{callable});
         }
-
-        private Stack<BuilderMode> stack = new Stack<BuilderMode>();
-        private boolean start = true;
-        private JSONWriter writer;
 
         @Override
         protected Object createNode(Object name) {
@@ -494,8 +501,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 if (start) {
                     start = false;
                     writeObject();
-                }
-                else {
+                } else {
                     if (getCurrent() == null && stack.peek() == BuilderMode.OBJECT) {
                         throw new IllegalArgumentException("only call to [element { }] is allowed when creating array");
                     }
@@ -506,8 +512,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                     writer.key(String.valueOf(name)).array();
                     stack.push(BuilderMode.ARRAY);
                 }
-            }
-            catch (JSONException e) {
+            } catch (JSONException e) {
                 throw new IllegalArgumentException("invalid element");
             }
 
@@ -524,13 +529,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 writer.object();
                 for (Object o : valueMap.entrySet()) {
                     Map.Entry element = (Map.Entry) o;
-                    writer.key(String.valueOf(element.getKey()));//.value(element.getValue());
+                    writer.key(String.valueOf(element.getKey())); //.value(element.getValue());
                     json.convertAnother(element.getValue());
                 }
                 writer.endObject();
                 return null;
-            }
-            catch (JSONException e) {
+            } catch (JSONException e) {
                 throw new IllegalArgumentException("invalid element");
             }
         }
@@ -544,7 +548,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         @SuppressWarnings("rawtypes")
         @Override
         protected Object createNode(Object key, Object value) {
-            if (getCurrent() == null && stack.peek()== BuilderMode.OBJECT) {
+            if (getCurrent() == null && stack.peek() == BuilderMode.OBJECT) {
                 throw new IllegalArgumentException("only call to [element { }] is allowed when creating array");
             }
 
@@ -555,17 +559,15 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                     retVal = 1;
                 }
                 if (value instanceof Collection) {
-                    Collection c = (Collection)value;
+                    Collection c = (Collection) value;
                     writer.key(String.valueOf(key));
                     handleCollectionRecurse(c);
-                }
-                else {
+                } else {
                     writer.key(String.valueOf(key));
                     json.convertAnother(value); //.value(value);
                 }
                 return retVal != 0 ? retVal : null;
-            }
-            catch (JSONException e) {
+            } catch (JSONException e) {
                 throw new IllegalArgumentException("invalid element");
             }
         }
@@ -576,8 +578,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             for (Object element : c) {
                 if (element instanceof Collection) {
                     handleCollectionRecurse((Collection) element);
-                }
-                else {
+                } else {
                     json.convertAnother(element);
                 }
             }
@@ -593,7 +594,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             }
 
             try {
-                int i = ((Integer)node);
+                int i = ((Integer) node);
                 while (i-- > 0) {
                     last = stack.pop();
                     if (BuilderMode.ARRAY == last) {
@@ -603,8 +604,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                         writer.endObject();
                     }
                 }
-            }
-            catch (JSONException e) {
+            } catch (JSONException e) {
                 throw new IllegalArgumentException("invalid element on the stack");
             }
         }
@@ -618,10 +618,5 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             writer.object();
             stack.push(BuilderMode.OBJECT);
         }
-    }
-
-    private enum BuilderMode {
-        ARRAY,
-        OBJECT
     }
 }

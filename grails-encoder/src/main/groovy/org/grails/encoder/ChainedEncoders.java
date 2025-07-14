@@ -18,29 +18,29 @@
  */
 package org.grails.encoder;
 
+import org.grails.buffer.StreamCharBuffer;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.grails.buffer.StreamCharBuffer;
-
-public class ChainedEncoders {
+public final class ChainedEncoders {
 
     private ChainedEncoders() {
     }
 
     public static List<StreamingEncoder> toStreamingEncoders(List<Encoder> encoders) {
-        if(encoders == null || encoders.isEmpty()) {
+        if (encoders == null || encoders.isEmpty()) {
             return null;
         }
         List<StreamingEncoder> streamingEncoders = new ArrayList<StreamingEncoder>();
-        for(Encoder encoder : encoders) {
-            if(!(encoder instanceof StreamingEncoder)) {
+        for (Encoder encoder : encoders) {
+            if (!(encoder instanceof StreamingEncoder)) {
                 return null;
             }
-            StreamingEncoder streamingEncoder = (StreamingEncoder)encoder;
-            if(shouldApplyEncoder(streamingEncoder)) {
+            StreamingEncoder streamingEncoder = (StreamingEncoder) encoder;
+            if (shouldApplyEncoder(streamingEncoder)) {
                 streamingEncoders.add(streamingEncoder);
             }
         }
@@ -49,7 +49,7 @@ public class ChainedEncoders {
 
     public static void chainEncode(StreamEncodeable streamEncodeable, EncodedAppender appender, List<Encoder> encoders) throws IOException {
         List<StreamingEncoder> streamingEncoders = toStreamingEncoders(encoders);
-        if(streamingEncoders != null) {
+        if (streamingEncoders != null) {
             chainStreamingEncode(streamEncodeable, appender, streamingEncoders);
         } else {
             chainMixedEncode(streamEncodeable, appender, encoders);
@@ -57,32 +57,32 @@ public class ChainedEncoders {
     }
 
     private static void chainMixedEncode(StreamEncodeable streamEncodeable, EncodedAppender appender,
-            List<Encoder> encoders) throws IOException {
-        if(encoders==null || encoders.isEmpty()) {
+                                         List<Encoder> encoders) throws IOException {
+        if (encoders == null || encoders.isEmpty()) {
             streamEncodeable.encodeTo(appender, null);
-        } else {     
+        } else {
             StreamEncodeable lastStreamEncodeable = streamEncodeable;
-            if(encoders.size() > 1) {
+            if (encoders.size() > 1) {
                 StreamCharBuffer buffer;
-                if(streamEncodeable instanceof StreamCharBuffer) {
-                    buffer = (StreamCharBuffer)streamEncodeable;
+                if (streamEncodeable instanceof StreamCharBuffer) {
+                    buffer = (StreamCharBuffer) streamEncodeable;
                 } else {
                     buffer = new StreamCharBuffer();
-                    streamEncodeable.encodeTo(((StreamCharBuffer.StreamCharBufferWriter)buffer.getWriter()).getEncodedAppender(), null);
+                    streamEncodeable.encodeTo(((StreamCharBuffer.StreamCharBufferWriter) buffer.getWriter()).getEncodedAppender(), null);
                 }
-                for(int i=0;i < encoders.size()-1;i++) {
+                for (int i = 0; i < encoders.size() - 1; i++) {
                     buffer = buffer.encodeToBuffer(encoders.get(i));
                 }
                 lastStreamEncodeable = buffer;
             }
-            lastStreamEncodeable.encodeTo(appender, encoders.get(encoders.size()-1));
+            lastStreamEncodeable.encodeTo(appender, encoders.get(encoders.size() - 1));
         }
     }
 
     public static void chainStreamingEncode(StreamEncodeable streamEncodeable, EncodedAppender appender, List<StreamingEncoder> encoders) throws IOException {
         EncodedAppender target;
         Encoder lastEncoder;
-        if(encoders != null && encoders.size() > 0) {
+        if (encoders != null && encoders.size() > 0) {
             target = chainAllButLastEncoders(appender, encoders);
             lastEncoder = encoders.get(0);
         } else {
@@ -93,28 +93,28 @@ public class ChainedEncoders {
     }
 
     public static EncodedAppender chainAllButLastEncoders(EncodedAppender appender, List<StreamingEncoder> encoders) {
-        EncodedAppender target=appender;
-        for(int i=encoders.size()-1;i >= 1;i--) {
-            StreamingEncoder encoder=encoders.get(i);
-            target=new StreamingEncoderEncodedAppender(encoder, target);
+        EncodedAppender target = appender;
+        for (int i = encoders.size() - 1; i >= 1; i--) {
+            StreamingEncoder encoder = encoders.get(i);
+            target = new StreamingEncoderEncodedAppender(encoder, target);
         }
         return target;
     }
 
     public static EncodedAppender chainAllEncoders(EncodedAppender appender, List<StreamingEncoder> encoders) {
-        EncodedAppender target=appender;
-        for(int i=encoders.size()-1;i >= 0;i--) {
-            StreamingEncoder encoder=encoders.get(i);
-            target=new StreamingEncoderEncodedAppender(encoder, target);
+        EncodedAppender target = appender;
+        for (int i = encoders.size() - 1; i >= 0; i--) {
+            StreamingEncoder encoder = encoders.get(i);
+            target = new StreamingEncoderEncodedAppender(encoder, target);
         }
         return target;
     }
 
     public static List<Encoder> appendEncoder(List<Encoder> encoders, Encoder encodeToEncoder) {
         List<Encoder> nextEncoders;
-        if(encodeToEncoder != null) {
-            if(encoders != null) {
-                List<Encoder> joined = new ArrayList<Encoder>(encoders.size()+1);
+        if (encodeToEncoder != null) {
+            if (encoders != null) {
+                List<Encoder> joined = new ArrayList<Encoder>(encoders.size() + 1);
                 joined.addAll(encoders);
                 joined.add(encodeToEncoder);
                 nextEncoders = Collections.unmodifiableList(joined);
@@ -129,7 +129,7 @@ public class ChainedEncoders {
 
     /**
      * checks that the encoder isn't a NoneEncoder instance
-     * 
+     *
      * @param encoder
      * @return
      */

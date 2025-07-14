@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.web.controllers;
 
 import grails.config.Settings;
@@ -47,9 +46,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.EnumSet;
 
-@AutoConfiguration(before = { HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class })
+@AutoConfiguration(before = {HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ControllersAutoConfiguration {
+
+    @Value("${" + Settings.WEB_SERVLET_PATH + ":#{null}}")
+    String grailsServletPath;
 
     @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
     private String filtersEncoding;
@@ -77,9 +79,6 @@ public class ControllersAutoConfiguration {
 
     @Value("${" + Settings.CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD + ":0}")
     private int fileSizeThreshold;
-
-    @Value("${" + Settings.WEB_SERVLET_PATH + ":#{null}}")
-    String grailsServletPath;
 
     @Bean
     @ConditionalOnMissingBean(CharacterEncodingFilter.class)
@@ -152,9 +151,9 @@ public class ControllersAutoConfiguration {
 
     static class GrailsWebMvcConfigurer implements WebMvcConfigurer {
 
-        private static final String[] SERVLET_RESOURCE_LOCATIONS = new String[] { "/" };
+        private static final String[] SERVLET_RESOURCE_LOCATIONS = new String[]{"/"};
 
-        private static final String[] CLASSPATH_RESOURCE_LOCATIONS = new String[] {
+        private static final String[] CLASSPATH_RESOURCE_LOCATIONS = new String[]{
                 "classpath:/META-INF/resources/", "classpath:/resources/",
                 "classpath:/static/", "classpath:/public/"
         };

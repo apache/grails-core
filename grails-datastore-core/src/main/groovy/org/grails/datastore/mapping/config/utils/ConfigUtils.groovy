@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.types.conversion.DefaultConversionService
 import org.springframework.core.convert.ConversionService
 
-
 /**
  * @author Graeme Rocher
  * @since 3.0
@@ -30,6 +29,7 @@ import org.springframework.core.convert.ConversionService
 @CompileStatic
 @Deprecated
 class ConfigUtils {
+
     private static ConversionService conversionService = new DefaultConversionService();
 
     public static <T> T read(Class<T> type, String key, Map<String, String> config, T defaultValue) {

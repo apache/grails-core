@@ -19,18 +19,17 @@
 package org.grails.web.converters.marshaller.json;
 
 import grails.converters.JSON;
-
-import java.util.Locale;
-
-import org.grails.web.json.JSONWriter;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JSONWriter;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+
+import java.util.Locale;
 
 /**
  * @author Siegfried Puchbauer
@@ -63,8 +62,7 @@ public class ValidationErrorsMarshaller implements ObjectMarshaller<JSON>, Appli
                     Locale locale = LocaleContextHolder.getLocale();
                     if (applicationContext != null) {
                         json.property("message", applicationContext.getMessage(fe, locale));
-                    }
-                    else {
+                    } else {
                         json.property("message", fe.getDefaultMessage());
                     }
                     writer.endObject();
@@ -75,8 +73,7 @@ public class ValidationErrorsMarshaller implements ObjectMarshaller<JSON>, Appli
                     Locale locale = LocaleContextHolder.getLocale();
                     if (applicationContext != null) {
                         json.property("message", applicationContext.getMessage(fe, locale));
-                    }
-                    else {
+                    } else {
                         json.property("message", fe.getDefaultMessage());
                     }
                     writer.endObject();
@@ -84,11 +81,9 @@ public class ValidationErrorsMarshaller implements ObjectMarshaller<JSON>, Appli
             }
             writer.endArray();
             writer.endObject();
-        }
-        catch (ConverterException ce) {
+        } catch (ConverterException ce) {
             throw ce;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Error converting Bean with class " + object.getClass().getName(), e);
         }
     }

@@ -19,13 +19,12 @@
 package org.grails.transaction;
 
 import grails.util.CollectionUtils;
+import org.springframework.transaction.interceptor.NameMatchTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionAttribute;
 
 import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.Set;
-
-import org.springframework.transaction.interceptor.NameMatchTransactionAttributeSource;
-import org.springframework.transaction.interceptor.TransactionAttribute;
 
 /**
  * @author Graeme Rocher
@@ -43,13 +42,17 @@ public class GroovyAwareNamedTransactionAttributeSource extends NameMatchTransac
     @SuppressWarnings("rawtypes")
     @Override
     public TransactionAttribute getTransactionAttribute(Method method, Class targetClass) {
-        if (method.isSynthetic()) return null;
+        if (method.isSynthetic()) {
+            return null;
+        }
         return super.getTransactionAttribute(method, targetClass);
     }
 
     @Override
     protected boolean isMatch(String methodName, String mappedName) {
-        if (NONTRANSACTIONAL_GROOVY_METHODS.contains(methodName)) return false;
+        if (NONTRANSACTIONAL_GROOVY_METHODS.contains(methodName)) {
+            return false;
+        }
         return super.isMatch(methodName, mappedName);
     }
 

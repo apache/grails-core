@@ -19,12 +19,11 @@
 
 package grails.gorm.api
 
-
 /**
  * Instance methods of the GORM API.
  *
  * @author Graeme Rocher
- * @param <D> the entity/domain class
+ * @param <D>   the entity/domain class
  */
 interface GormInstanceOperations<D> {
     /**
@@ -60,7 +59,6 @@ interface GormInstanceOperations<D> {
      * @return The instance
      */
     D refresh(D instance)
-
 
     /**
      * Saves an object the datastore

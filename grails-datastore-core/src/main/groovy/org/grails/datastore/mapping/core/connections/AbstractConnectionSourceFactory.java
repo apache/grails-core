@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.connections;
 
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
@@ -61,11 +60,11 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
     public ConnectionSource<T, S> create(String name, PropertyResolver configuration) {
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration);
         ConnectionSourceSettings fallbackSettings = builder.build();
-        if(tenantResolver != null) {
+        if (tenantResolver != null) {
             fallbackSettings.getMultiTenancy().setTenantResolver(tenantResolver);
         }
-        if(customTypes != null) {
-            fallbackSettings.getCustom().getTypes().addAll( this.customTypes );
+        if (customTypes != null) {
+            fallbackSettings.getCustom().getTypes().addAll(this.customTypes);
         }
         return create(name, configuration, fallbackSettings);
     }
@@ -87,7 +86,7 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
         S settings = buildRuntimeSettings(name, configuration, fallbackSettings);
         return create(name, settings);
     }
-    
+
     public <F extends ConnectionSourceSettings> S buildRuntimeSettings(String name, PropertyResolver configuration, F fallbackSettings) {
         return buildSettings(name, configuration, fallbackSettings, false);
     }

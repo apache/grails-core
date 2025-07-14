@@ -33,5 +33,5 @@ interface ConnectionSourcesListener<T, S extends ConnectionSourceSettings> {
      *
      * @param connectionSource The connection source
      */
-    void newConnectionSource(ConnectionSource<T,S> connectionSource)
+    void newConnectionSource(ConnectionSource<T, S> connectionSource)
 }

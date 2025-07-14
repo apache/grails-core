@@ -20,7 +20,16 @@ package org.grails.config;
 
 import grails.config.Config;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * A config that accepts a prefix
@@ -42,13 +51,21 @@ public class PrefixedConfig implements Config {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         PrefixedConfig entries = (PrefixedConfig) o;
 
-        if (delegate != null ? !delegate.equals(entries.delegate) : entries.delegate != null) return false;
-        if (prefix != null ? !prefix.equals(entries.prefix) : entries.prefix != null) return false;
+        if (delegate != null ? !delegate.equals(entries.delegate) : entries.delegate != null) {
+            return false;
+        }
+        if (prefix != null ? !prefix.equals(entries.prefix) : entries.prefix != null) {
+            return false;
+        }
 
         return true;
     }
@@ -78,7 +95,6 @@ public class PrefixedConfig implements Config {
         properties.putAll(flattened);
         return properties;
     }
-
 
     @Override
     public Object getAt(Object key) {
@@ -233,7 +249,6 @@ public class PrefixedConfig implements Config {
         throw new UnsupportedOperationException("Config cannot be modified");
     }
 
-
     @Override
     public Config merge(Map<String, Object> toMerge) {
         throw new UnsupportedOperationException("Config cannot be modified");
@@ -241,7 +256,7 @@ public class PrefixedConfig implements Config {
 
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue, List<T> allowedValues) {
-        return delegate.getProperty(key,targetType,defaultValue,allowedValues);
+        return delegate.getProperty(key, targetType, defaultValue, allowedValues);
     }
 
     @Override

@@ -16,15 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.cfg;
 
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.MappedSuperclass;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
@@ -64,12 +64,17 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.MappedSuperclass;
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
@@ -77,11 +82,12 @@ import java.util.*;
  * @since 5.0
  */
 public class HibernateMappingContextConfiguration extends Configuration implements ApplicationContextAware {
+
     private static final long serialVersionUID = -7115087342689305517L;
 
     private static final String RESOURCE_PATTERN = "/**/*.class";
 
-    private static final TypeFilter[] ENTITY_TYPE_FILTERS = new TypeFilter[] {
+    private static final TypeFilter[] ENTITY_TYPE_FILTERS = new TypeFilter[]{
             new AnnotationTypeFilter(Entity.class, false),
             new AnnotationTypeFilter(Embeddable.class, false),
             new AnnotationTypeFilter(MappedSuperclass.class, false)};
@@ -107,7 +113,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
         Properties properties = getProperties();
 
-        if(applicationContext.containsBean(dsName)) {
+        if (applicationContext.containsBean(dsName)) {
             properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
         }
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
@@ -134,6 +140,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
     /**
      * Add the given annotated classes in a batch.
+     *
      * @see #addAnnotatedClass
      * @see #scanPackages
      */
@@ -151,11 +158,12 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
     /**
      * Add the given annotated packages in a batch.
+     *
      * @see #addPackage
      * @see #scanPackages
      */
     public void addPackages(String... annotatedPackages) {
-        for (String annotatedPackage :annotatedPackages) {
+        for (String annotatedPackage : annotatedPackages) {
             addPackage(annotatedPackage);
         }
     }
@@ -163,6 +171,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     /**
      * Perform Spring-based scanning for entity classes, registering them
      * as annotated classes with this {@code Configuration}.
+     *
      * @param packagesToScan one or more Java package names
      * @throws HibernateException if scanning fails for any reason
      */
@@ -184,11 +193,9 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                     }
                 }
             }
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new MappingException("Failed to scan classpath for unlisted classes", ex);
-        }
-        catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ex) {
             throw new MappingException("Failed to load annotated classes from classpath", ex);
         }
     }
@@ -228,10 +235,9 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
         ClassLoader appClassLoader;
 
-        if(classLoaderObject instanceof ClassLoader) {
+        if (classLoaderObject instanceof ClassLoader) {
             appClassLoader = (ClassLoader) classLoaderObject;
-        }
-        else {
+        } else {
             appClassLoader = getClass().getClassLoader();
         }
 
@@ -246,43 +252,41 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         List<Class> annotatedClasses = new ArrayList<>();
         for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
             Class javaClass = persistentEntity.getJavaClass();
-            if(javaClass.isAnnotationPresent(Entity.class)) {
+            if (javaClass.isAnnotationPresent(Entity.class)) {
                 annotatedClasses.add(javaClass);
             }
         }
 
-        if(!additionalClasses.isEmpty()) {
+        if (!additionalClasses.isEmpty()) {
             for (Class additionalClass : additionalClasses) {
-                if(GormEntity.class.isAssignableFrom(additionalClass)) {
+                if (GormEntity.class.isAssignableFrom(additionalClass)) {
                     hibernateMappingContext.addPersistentEntity(additionalClass);
                 }
             }
         }
 
-        addAnnotatedClasses( annotatedClasses.toArray(new Class[annotatedClasses.size()]));
+        addAnnotatedClasses(annotatedClasses.toArray(new Class[annotatedClasses.size()]));
 
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
-                if(MetadataContributor.class.isAssignableFrom(serviceContract)) {
-                    if(metadataContributor != null) {
+                if (MetadataContributor.class.isAssignableFrom(serviceContract)) {
+                    if (metadataContributor != null) {
                         return (Collection<S>) Arrays.asList(domainBinder, metadataContributor);
-                    }
-                    else {
+                    } else {
                         return Collections.singletonList((S) domainBinder);
                     }
-                }
-                else {
+                } else {
                     return super.loadJavaServices(serviceContract);
                 }
             }
         };
         EventListenerIntegrator eventListenerIntegrator = new EventListenerIntegrator(hibernateEventListeners, eventListeners);
         BootstrapServiceRegistry bootstrapServiceRegistry = createBootstrapServiceRegistryBuilder()
-                                                                    .applyIntegrator(eventListenerIntegrator)
-                                                                    .applyIntegrator(new MetadataIntegrator())
-                                                                    .applyClassLoaderService(classLoaderService)
-                                                                    .build();
+                .applyIntegrator(eventListenerIntegrator)
+                .applyIntegrator(new MetadataIntegrator())
+                .applyClassLoaderService(classLoaderService)
+                .build();
         StrategySelector strategySelector = bootstrapServiceRegistry.getService(StrategySelector.class);
 
         strategySelector.registerStrategyImplementor(
@@ -291,16 +295,19 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
         setSessionFactoryObserver(new SessionFactoryObserver() {
             private static final long serialVersionUID = 1;
-            public void sessionFactoryCreated(SessionFactory factory) {}
+
+            public void sessionFactoryCreated(SessionFactory factory) {
+            }
+
             public void sessionFactoryClosed(SessionFactory factory) {
                 if (serviceRegistry != null) {
-                    ((ServiceRegistryImplementor)serviceRegistry).destroy();
+                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
                 }
             }
         });
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder = createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
-                                                                                    .applySettings(getProperties());
+                .applySettings(getProperties());
 
         StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
         sessionFactory = super.buildSessionFactory(serviceRegistry);
@@ -330,6 +337,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
     /**
      * Default listeners.
+     *
      * @param listeners the listeners
      */
     public void setEventListeners(Map<String, Object> listeners) {
@@ -338,6 +346,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
     /**
      * User-specifiable extra listeners.
+     *
      * @param listeners the listeners
      */
     public void setHibernateEventListeners(HibernateEventListeners listeners) {
@@ -348,14 +357,12 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         return serviceRegistry;
     }
 
-
     @Override
     protected void reset() {
         super.reset();
         try {
             GrailsIdentifierGeneratorFactory.applyNewInstance(this);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // ignore exception
         }
     }

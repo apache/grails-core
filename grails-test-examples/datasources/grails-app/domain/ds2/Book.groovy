@@ -19,7 +19,7 @@
 
 package ds2
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+import static grails.gorm.hibernate.mapping.MappingBuilder.orm
 
 class Book {
 

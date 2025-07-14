@@ -138,7 +138,7 @@ class PromiseList<T> implements Promise<List<T>> {
 
     @Override
     boolean isDone() {
-        return promises.every {promise -> promise.isDone() }
+        return promises.every { promise -> promise.isDone() }
     }
 
     @Override

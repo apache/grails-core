@@ -18,7 +18,7 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.ValueConverter;
+import grails.databinding.converters.ValueConverter
 import groovy.transform.CompileStatic
 
 /**
@@ -35,7 +35,7 @@ class TimeZoneConverter implements ValueConverter {
 
     @Override
     def convert(value) {
-        TimeZone.getTimeZone((String)value)
+        TimeZone.getTimeZone((String) value)
     }
 
     @Override

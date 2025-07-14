@@ -60,7 +60,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
 
     @Override
     Object getFormatFromPattern(String format, Object timeZone, Locale locale) {
-        DateTimeFormatter.ofPattern(format, locale).withZone((ZoneId)timeZone)
+        DateTimeFormatter.ofPattern(format, locale).withZone((ZoneId) timeZone)
 
     }
 
@@ -69,7 +69,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         new DateTimeFormatterBuilder()
                 .appendLocalized(parseStyle(dateStyle), null)
                 .toFormatter(locale)
-                .withZone((ZoneId)timeZone)
+                .withZone((ZoneId) timeZone)
     }
 
     @Override
@@ -77,7 +77,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         new DateTimeFormatterBuilder()
                 .appendLocalized(null, parseStyle(timeStyle))
                 .toFormatter(locale)
-                .withZone((ZoneId)timeZone)
+                .withZone((ZoneId) timeZone)
     }
 
     @Override
@@ -85,7 +85,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         new DateTimeFormatterBuilder()
                 .appendLocalized(parseStyle(dateStyle), parseStyle(timeStyle))
                 .toFormatter(locale)
-                .withZone((ZoneId)timeZone)
+                .withZone((ZoneId) timeZone)
     }
 
     @Override
@@ -105,15 +105,15 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
             throw new IllegalArgumentException("Cannot format class as date: " +
                     (date == null ? "<null>" : date.getClass().getName()));
         }
-        ((DateTimeFormatter)formatter).format(instant)
+        ((DateTimeFormatter) formatter).format(instant)
     }
 
     private static FormatStyle parseStyle(String styleStr) {
         switch (styleStr) {
-            case 'FULL':   return FormatStyle.FULL
-            case 'LONG':   return FormatStyle.LONG
+            case 'FULL': return FormatStyle.FULL
+            case 'LONG': return FormatStyle.LONG
             case 'MEDIUM': return FormatStyle.MEDIUM
-            default:       return FormatStyle.SHORT
+            default: return FormatStyle.SHORT
         }
     }
 
@@ -127,7 +127,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
     GregorianCalendar buildCalendar(Object date) {
         if (date instanceof Date) {
             GregorianCalendar c = new GregorianCalendar()
-            c.setTime((Date)date)
+            c.setTime((Date) date)
             c
         } else {
             ZonedDateTime zonedDateTime

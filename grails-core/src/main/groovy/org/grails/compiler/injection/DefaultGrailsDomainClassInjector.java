@@ -19,15 +19,6 @@
 package org.grails.compiler.injection;
 
 import grails.artefact.Artefact;
-
-import java.lang.reflect.Modifier;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-
 import grails.compiler.ast.AstTransformer;
 import grails.compiler.ast.GrailsArtefactClassInjector;
 import grails.compiler.ast.GrailsDomainClassInjector;
@@ -38,7 +29,16 @@ import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.expr.BooleanExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.GStringExpression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.GeneratorContext;
@@ -46,6 +46,13 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.io.support.GrailsResourceUtils;
+
+import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Default implementation of domain class injector interface that adds the 'id'
@@ -61,7 +68,9 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
 
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
         if (GrailsASTUtils.isDomainClass(classNode, source) && shouldInjectClass(classNode)) {
-            if (!classNode.getAnnotations(new ClassNode(Artefact.class)).isEmpty()) return;
+            if (!classNode.getAnnotations(new ClassNode(Artefact.class)).isEmpty()) {
+                return;
+            }
             performInjectionOnAnnotatedEntity(classNode);
         }
     }
@@ -212,7 +221,9 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
     private boolean isEnum(ClassNode classNode) {
         ClassNode parent = classNode.getSuperClass();
         while (parent != null) {
-            if (parent.getName().equals("java.lang.Enum")) return true;
+            if (parent.getName().equals("java.lang.Enum")) {
+                return true;
+            }
             parent = parent.getSuperClass();
         }
         return false;
@@ -241,7 +252,6 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
     public void performInjection(SourceUnit source, ClassNode classNode) {
         performInjection(source, null, classNode);
     }
-
 
     public void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
         performInjectionOnAnnotatedEntity(classNode);

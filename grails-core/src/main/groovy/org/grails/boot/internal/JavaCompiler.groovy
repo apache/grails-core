@@ -25,7 +25,6 @@ import org.springframework.util.ClassUtils
 import javax.tools.ToolProvider
 import java.nio.charset.Charset
 
-
 /**
  * Helper for recompiling Java code at runtime
  *

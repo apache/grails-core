@@ -19,6 +19,7 @@
 package org.grails.gsp.compiler.tags;
 
 public class GroovyIfTag extends GroovyConditionalTag {
+
     public static final String TAG_NAME = "if";
 
     @Override

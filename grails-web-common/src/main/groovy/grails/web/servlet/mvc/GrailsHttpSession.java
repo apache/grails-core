@@ -18,11 +18,11 @@
  */
 package grails.web.servlet.mvc;
 
-import java.util.Enumeration;
-
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+
+import java.util.Enumeration;
 
 /**
  * An adapter class that takes a regular HttpSession and allows you to access it like a Groovy map.
@@ -50,13 +50,15 @@ public class GrailsHttpSession implements HttpSession {
     }
 
     private void createSessionIfNecessary() {
-        if (adaptee == null) adaptee = request.getSession(true);
+        if (adaptee == null) {
+            adaptee = request.getSession(true);
+        }
     }
 
     /* (non-Javadoc)
      * @see jakarta.servlet.http.HttpSession#getAttributeNames()
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public Enumeration getAttributeNames() {
         createSessionIfNecessary();
         synchronized (this) {

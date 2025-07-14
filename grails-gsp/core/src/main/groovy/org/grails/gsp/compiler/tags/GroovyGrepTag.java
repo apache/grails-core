@@ -21,12 +21,13 @@ package org.grails.gsp.compiler.tags;
 import grails.util.GrailsStringUtils;
 import org.grails.taglib.GrailsTagException;
 
+//CHECKSTYLE:OFF
 /**
  *
  * Example:
  *
  * <pre>
- * {@code 
+ * {@code
  *  <gr:grep in="${thing}" filter="${Pattern.compile('[a-zA-Z]')}">
  *        <p>${it}</p>
  *  </gr:grep>
@@ -35,6 +36,7 @@ import org.grails.taglib.GrailsTagException;
  *
  * @author Graeme Rocher
  */
+//CHECKSTYLE:ON
 public class GroovyGrepTag extends GroovySyntaxTag {
 
     public static final String TAG_NAME = "grep";

@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.web.servlet.mvc;
 
 public interface LazyInitializer {
-   Object getImplementation();
+
+    Object getImplementation();
 }

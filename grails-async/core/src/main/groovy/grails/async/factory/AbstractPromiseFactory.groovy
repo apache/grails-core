@@ -59,13 +59,13 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     <T> Closure<T> applyDecorators(Closure<T> closure, List<PromiseDecorator> decorators) {
-        List<PromiseDecorator> allDecorators = decorators != null ? new ArrayList<PromiseDecorator>(decorators): new ArrayList<PromiseDecorator>()
+        List<PromiseDecorator> allDecorators = decorators != null ? new ArrayList<PromiseDecorator>(decorators) : new ArrayList<PromiseDecorator>()
         for (PromiseDecoratorLookupStrategy lookupStrategy : lookupStrategies) {
             allDecorators.addAll(lookupStrategy.findDecorators())
         }
         def decoratedClosure = closure
         if (!allDecorators.empty) {
-            for(PromiseDecorator decorator : allDecorators) {
+            for (PromiseDecorator decorator : allDecorators) {
                 decoratedClosure = decorator.decorate(decoratedClosure)
             }
         }
@@ -76,7 +76,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      * @see PromiseFactory#createPromise(java.util.List)
      */
     <T> Promise<List<T>> createPromise(List<Closure<T>> closures) {
-        return createPromise(closures,null)
+        return createPromise(closures, null)
     }
 
     /**
@@ -95,11 +95,11 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     /**
-     * @see PromiseFactory#createPromise(grails.async.Promise[])
+     * @see PromiseFactory#createPromise(grails.async.Promise [ ])
      */
     <T> Promise<List<T>> createPromise(Promise<T>... promises) {
         PromiseList<T> promiseList = new PromiseList<>()
-        for(Promise<T> promise : promises) {
+        for (Promise<T> promise : promises) {
             promiseList.add(promise)
         }
         return promiseList
@@ -107,17 +107,15 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
 
     @Override
     <K, V> Promise<Map<K, V>> createPromise(Map<K, V> map, List<PromiseDecorator> decorators) {
-        PromiseMap<K,V> promiseMap = new PromiseMap<>()
+        PromiseMap<K, V> promiseMap = new PromiseMap<>()
         map.forEach((K key, V value) -> {
             if (value instanceof Promise) {
                 promiseMap.put(key, value as Promise<V>)
-            }
-            else if (value instanceof Closure) {
+            } else if (value instanceof Closure) {
                 Closure<V> closure = value as Closure<V>
                 applyDecorators(closure, decorators)
                 promiseMap.put(key, createPromiseInternal(closure))
-            }
-            else {
+            } else {
                 promiseMap.put(key, new BoundPromise<V>(value))
             }
 
@@ -129,15 +127,15 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      * @see PromiseFactory#createPromise(java.util.Map)
      */
     <K, V> Promise<Map<K, V>> createPromise(Map<K, V> map) {
-        return createPromise(map, Collections.<PromiseDecorator>emptyList())
+        return createPromise(map, Collections.<PromiseDecorator> emptyList())
     }
 
     protected <T> Promise<T> createPromiseInternal(Closure<T> closure) {
-       return createPromise(closure)
+        return createPromise(closure)
     }
 
     /**
-     * @see PromiseFactory#waitAll(grails.async.Promise[])
+     * @see PromiseFactory#waitAll(grails.async.Promise [ ])
      */
     <T> List<T> waitAll(Promise<T>... promises) {
         return waitAll(Arrays.asList(promises))

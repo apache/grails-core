@@ -63,8 +63,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
         if (idType == Integer) {
             lastKey = this.datastore[family].size()
-        }
-        else {
+        } else {
             lastKey = this.datastore[family].size().longValue()
         }
     }
@@ -146,7 +145,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     AssociationIndexer getAssociationIndexer(Map nativeEntry, Association association) {
-        if(association?.associatedEntity == null) {
+        if (association?.associatedEntity == null) {
             return null
         }
 
@@ -212,8 +211,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         def identifiers
         if (manyToMany.isOwningSide()) {
             identifiers = session.persist(associatedObjects)
-        }
-        else {
+        } else {
             identifiers = associatedObjects.collect {
                 EntityPersister persister = session.getPersister(it)
                 persister.getObjectIdentifier(it)
@@ -249,7 +247,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         nativeEntry[key] = values
     }
 
-    protected Map getEmbedded( Map nativeEntry, String key) {
+    protected Map getEmbedded(Map nativeEntry, String key) {
         nativeEntry[key]
     }
 
@@ -269,18 +267,15 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             def key
             if (isRoot) {
                 key = ++lastKey
-            }
-            else {
+            } else {
                 def root = persistentEntity.rootEntity
                 session.getPersister(root).lastKey++
                 key = session.getPersister(root).lastKey
             }
             return type == String ? key.toString() : key
-        }
-        else if (UUID.isAssignableFrom(type)) {
-          return UUID.randomUUID()
-        }
-        else {
+        } else if (UUID.isAssignableFrom(type)) {
+            return UUID.randomUUID()
+        } else {
             try {
                 return type.newInstance()
             } catch (e) {
@@ -326,8 +321,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         if (isVersioned(entityAccess)) {
             if (existing == null) {
                 setVersion entityAccess
-            }
-            else {
+            } else {
                 def oldVersion = existing.version
                 def currentVersion = entityAccess.getProperty('version')
                 if (Number.isAssignableFrom(entityAccess.getPropertyType('version'))) {
@@ -349,8 +343,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         indexIdentifier(persistentEntity, key)
         if (existing == null) {
             datastore[family].put(key, entry)
-        }
-        else {
+        } else {
             existing.putAll(entry)
         }
         updateInheritanceHierarchy(persistentEntity, key, entry)

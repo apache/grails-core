@@ -32,6 +32,9 @@ import grails.web.pages.GroovyPagesUriService
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
+import org.apache.grails.web.layout.GSPGrailsLayoutPage
+import org.apache.grails.web.layout.GrailsHTMLPageParser
 import org.grails.buffer.FastStringWriter
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.ControllerArtefactHandler
@@ -55,9 +58,6 @@ import org.grails.web.pages.DefaultGroovyPagesUriService
 import org.grails.web.pages.GSPResponseWriter
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.apache.grails.web.layout.GSPGrailsLayoutPage
-import org.apache.grails.web.layout.GrailsHTMLPageParser
-import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 import org.grails.web.util.GrailsApplicationAttributes
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

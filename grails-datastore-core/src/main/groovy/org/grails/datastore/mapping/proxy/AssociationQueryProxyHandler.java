@@ -35,7 +35,7 @@ import java.util.List;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class AssociationQueryProxyHandler  extends EntityProxyMethodHandler {
+public class AssociationQueryProxyHandler extends EntityProxyMethodHandler {
 
     protected final Session session;
     protected final AssociationQueryExecutor executor;
@@ -59,26 +59,24 @@ public class AssociationQueryProxyHandler  extends EntityProxyMethodHandler {
         return associationKey;
     }
 
-
     @Override
     protected Object resolveDelegate(Object self) {
         if (target == null) {
             final List results = executor.query(associationKey);
-            if(executor.doesReturnKeys()) {
-                if(!results.isEmpty()) {
+            if (executor.doesReturnKeys()) {
+                if (!results.isEmpty()) {
                     target = session.retrieve(executor.getIndexedEntity().getJavaClass(), (Serializable) results.get(0));
                 }
-            }
-            else {
-                if(!results.isEmpty()) {
+            } else {
+                if (!results.isEmpty()) {
                     target = results.get(0);
                 }
             }
 
             // This tends to happen during unit testing if the proxy class is not properly mocked
             // and therefore can't be found in the session.
-            if( target == null ) {
-                throw new DataIntegrityViolationException("Proxy for ["+ proxyClass.getName()+"] for association ["+executor.getIndexedEntity().getName()+"] could not be initialized");
+            if (target == null) {
+                throw new DataIntegrityViolationException("Proxy for [" + proxyClass.getName() + "] for association [" + executor.getIndexedEntity().getName() + "] could not be initialized");
             }
             if (target instanceof DirtyCheckable) {
                 ((DirtyCheckable) target).syncChangedProperties(self);
@@ -89,16 +87,16 @@ public class AssociationQueryProxyHandler  extends EntityProxyMethodHandler {
 
     protected Object handleInvocationFallback(Object self, Method thisMethod, Object[] args) {
         Object actualTarget = getProxyTarget(self);
-        if(!thisMethod.getDeclaringClass().isInstance(actualTarget)) {
-            if(Modifier.isPublic(thisMethod.getModifiers())) {
+        if (!thisMethod.getDeclaringClass().isInstance(actualTarget)) {
+            if (Modifier.isPublic(thisMethod.getModifiers())) {
                 final Method method = ReflectionUtils.findMethod(actualTarget.getClass(), thisMethod.getName(), thisMethod.getParameterTypes());
-                if(method != null) {
+                if (method != null) {
                     ReflectionUtils.makeAccessible(method);
                     thisMethod = method;
                 }
             } else {
                 final Method method = ReflectionUtils.findMethod(actualTarget.getClass(), thisMethod.getName(), thisMethod.getParameterTypes());
-                if(method != null) {
+                if (method != null) {
                     thisMethod = method;
                 }
             }

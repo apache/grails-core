@@ -49,7 +49,7 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
 
     final String[] artefactTypes = [ServiceArtefactHandler.TYPE] as String[]
     public static Pattern SERVICE_PATTERN = Pattern.compile(".+/" +
-        GrailsResourceUtils.GRAILS_APP_DIR + "/services/(.+)Service\\.groovy");
+            GrailsResourceUtils.GRAILS_APP_DIR + "/services/(.+)Service\\.groovy");
 
     @Override
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
@@ -66,7 +66,7 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
         def annotationNode = classNode.getAnnotations(ClassHelper.make(Scaffold)).find()
         if (annotationNode) {
             ClassNode serviceClassNode = annotationNode?.getMember("value")?.type
-            ClassNode superClassNode = ClassHelper.make(serviceClassNode?.getTypeClass()?:GormService).getPlainNodeReference()
+            ClassNode superClassNode = ClassHelper.make(serviceClassNode?.getTypeClass() ?: GormService).getPlainNodeReference()
             ClassNode currentSuperClass = classNode.getSuperClass()
             if (currentSuperClass.equals(GrailsASTUtils.OBJECT_CLASS_NODE)) {
                 def domainClass = annotationNode.getMember("domain")?.type
@@ -78,9 +78,9 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
                 }
                 classNode.setSuperClass(GrailsASTUtils.nonGeneric(superClassNode, domainClass))
                 def readOnlyExpression = (ConstantExpression) annotationNode.getMember("readOnly")
-                new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean()?:false)
+                new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean() ?: false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {
-               GrailsASTUtils.error(source, classNode, "Scaffolded services (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
+                GrailsASTUtils.error(source, classNode, "Scaffolded services (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
             }
         }
     }

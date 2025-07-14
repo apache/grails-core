@@ -24,11 +24,10 @@ import grails.core.GrailsClass;
 import grails.persistence.support.PersistenceContextInterceptor;
 import grails.plugins.GrailsPluginManager;
 import grails.web.servlet.bootstrap.GrailsBootstrapClass;
+import jakarta.servlet.ServletContext;
 import org.grails.web.servlet.boostrap.BootstrapArtefactHandler;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.web.context.WebApplicationContext;
-
-import jakarta.servlet.ServletContext;
 
 /**
  * A common class where shared configurational methods can reside.
@@ -37,12 +36,11 @@ import jakarta.servlet.ServletContext;
  */
 public class GrailsConfigUtils {
 
-
     /**
      * Executes Grails bootstrap classes
      *
-     * @param application The Grails ApplicationContext instance
-     * @param webContext The WebApplicationContext instance
+     * @param application    The Grails ApplicationContext instance
+     * @param webContext     The WebApplicationContext instance
      * @param servletContext The ServletContext instance
      */
     @Deprecated
@@ -50,15 +48,16 @@ public class GrailsConfigUtils {
                                                ServletContext servletContext) {
         executeGrailsBootstraps(application, webContext, servletContext, null);
     }
+
     /**
      * Executes Grails bootstrap classes
      *
-     * @param application The Grails ApplicationContext instance
-     * @param webContext The WebApplicationContext instance
+     * @param application    The Grails ApplicationContext instance
+     * @param webContext     The WebApplicationContext instance
      * @param servletContext The ServletContext instance
      */
     public static void executeGrailsBootstraps(GrailsApplication application, WebApplicationContext webContext,
-            ServletContext servletContext, GrailsPluginManager grailsPluginManager) {
+                                               ServletContext servletContext, GrailsPluginManager grailsPluginManager) {
         configureServletContextAttributes(
                 servletContext,
                 application,
@@ -69,7 +68,7 @@ public class GrailsConfigUtils {
         PersistenceContextInterceptor interceptor = null;
         String[] beanNames = webContext.getBeanNamesForType(PersistenceContextInterceptor.class);
         if (beanNames.length > 0) {
-            interceptor = (PersistenceContextInterceptor)webContext.getBean(beanNames[0]);
+            interceptor = (PersistenceContextInterceptor) webContext.getBean(beanNames[0]);
         }
 
         if (interceptor != null) {
@@ -88,15 +87,12 @@ public class GrailsConfigUtils {
             if (interceptor != null) {
                 interceptor.flush();
             }
-        }
-        finally {
+        } finally {
             if (interceptor != null) {
                 interceptor.destroy();
             }
         }
     }
-
-
 
     public static void configureServletContextAttributes(ServletContext servletContext, GrailsApplication application, GrailsPluginManager pluginManager, WebApplicationContext webContext) {
         servletContext.setAttribute(ApplicationAttributes.PLUGIN_MANAGER, pluginManager);
@@ -107,8 +103,6 @@ public class GrailsConfigUtils {
         servletContext.setAttribute(ApplicationAttributes.APPLICATION_CONTEXT, webContext);
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext);
     }
-
-
 
     /**
      * Checks if a Config parameter is true or a System property with the same name is true

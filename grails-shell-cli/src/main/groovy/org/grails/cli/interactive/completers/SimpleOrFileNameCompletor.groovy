@@ -21,7 +21,6 @@ package org.grails.cli.interactive.completers
 import jline.console.completer.Completer
 import jline.console.completer.StringsCompleter
 
-
 /**
  * JLine Completor that mixes a fixed set of options with file path matches.
  * Fixed options that match will appear first, followed by file path matches.
@@ -30,6 +29,7 @@ import jline.console.completer.StringsCompleter
  * @since 2.0
  */
 class SimpleOrFileNameCompletor implements Completer {
+
     private simpleCompletor
     private fileNameCompletor
 

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.engine.event;
 
 import org.grails.datastore.mapping.core.Datastore;
@@ -31,7 +30,7 @@ public class SaveOrUpdateEvent extends AbstractPersistenceEvent {
     private static final long serialVersionUID = 1;
 
     public SaveOrUpdateEvent(final Datastore source, final PersistentEntity entity,
-            final EntityAccess entityAccess) {
+                             final EntityAccess entityAccess) {
         super(source, entity, entityAccess);
     }
 

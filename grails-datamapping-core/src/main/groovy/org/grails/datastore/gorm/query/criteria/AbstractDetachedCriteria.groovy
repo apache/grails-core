@@ -22,6 +22,8 @@ package org.grails.datastore.gorm.query.criteria
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+import jakarta.persistence.FetchType
+import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -34,9 +36,6 @@ import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryableCriteria
-
-import jakarta.persistence.FetchType
-import jakarta.persistence.criteria.JoinType
 
 /**
  * Abstract super class for DetachedCriteria implementations
@@ -64,9 +63,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected String connectionName = ConnectionSource.DEFAULT
     protected Map<String, DetachedAssociationCriteria> associationCriteriaMap = [:]
 
-
     ProjectionList projectionList = new DetachedProjections(projections)
-
 
     /**
      * Constructs a DetachedCriteria instance target the given class and alias for the name
@@ -82,14 +79,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return Obtain the fetch strategies for each property
      */
     Map<String, FetchType> getFetchStrategies() {
-        return Collections.unmodifiableMap( fetchStrategies )
+        return Collections.unmodifiableMap(fetchStrategies)
     }
 
     /**
      * @return Obtain the join types
      */
     Map<String, JoinType> getJoinTypes() {
-        return Collections.unmodifiableMap( joinTypes )
+        return Collections.unmodifiableMap(joinTypes)
     }
     /**
      * @return The root alias to be used for the query
@@ -118,34 +115,31 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     Criteria createAlias(String associationPath, String alias) {
         initialiseIfNecessary(targetClass)
         PersistentProperty prop
-        if(associationPath.contains('.')) {
+        if (associationPath.contains('.')) {
             def tokens = associationPath.split(/\./)
             def entity = this.persistentEntity
-            for(t in tokens) {
+            for (t in tokens) {
                 prop = entity.getPropertyByName(t)
                 if (!(prop instanceof Association)) {
                     throw new IllegalArgumentException("Argument [$associationPath] is not an association")
-                }
-                else {
-                    entity = ((Association)prop).associatedEntity
+                } else {
+                    entity = ((Association) prop).associatedEntity
                 }
             }
-        }
-        else {
+        } else {
             prop = persistentEntity.getPropertyByName(associationPath)
         }
         if (!(prop instanceof Association)) {
             throw new IllegalArgumentException("Argument [$associationPath] is not an association")
         }
 
-        Association a = (Association)prop
+        Association a = (Association) prop
         DetachedAssociationCriteria associationCriteria = associationCriteriaMap[associationPath]
-        if(associationCriteria == null) {
+        if (associationCriteria == null) {
             associationCriteria = new DetachedAssociationCriteria(a.associatedEntity.javaClass, a, associationPath, alias)
             associationCriteriaMap[associationPath] = associationCriteria
             add associationCriteria
-        }
-        else {
+        } else {
             associationCriteria.setAlias(alias)
         }
         return associationCriteria
@@ -161,7 +155,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         fetchStrategies[property] = FetchType.EAGER
         return this
     }
-
 
     /**
      * Specifies whether a join query should be used (if join queries are supported by the underlying datastore)
@@ -188,7 +181,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     T getPersistentClass() {
-        (T)getPersistentEntity().getJavaClass()
+        (T) getPersistentEntity().getJavaClass()
     }
 
     PersistentEntity getPersistentEntity() {
@@ -214,13 +207,12 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         applyLazyCriteria()
         if (criterion instanceof Query.PropertyCriterion) {
             if (criterion.value instanceof Closure) {
-                criterion.value = buildQueryableCriteria((Closure)criterion.value)
+                criterion.value = buildQueryableCriteria((Closure) criterion.value)
             }
         }
-        if (junctions)  {
+        if (junctions) {
             junctions[-1].add criterion
-        }
-        else {
+        } else {
             criteria << criterion
         }
     }
@@ -235,7 +227,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * Evaluate projections within the context of the given closure
      *
      * @param callable The callable
-     * @return  The projection list
+     * @return The projection list
      */
     Criteria projections(@DelegatesTo(ProjectionList) Closure callable) {
         callable.delegate = projectionList
@@ -357,7 +349,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected List convertArgumentList(Collection argList) {
         List convertedList = new ArrayList(argList.size());
         for (Object item : argList) {
-            if(item instanceof CharSequence) {
+            if (item instanceof CharSequence) {
                 item = item.toString();
             }
             convertedList.add(item);
@@ -424,7 +416,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria eqProperty(String propertyName, String otherPropertyName) {
-        add Restrictions.eqProperty(propertyName,otherPropertyName)
+        add Restrictions.eqProperty(propertyName, otherPropertyName)
         return this
     }
 
@@ -432,7 +424,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria#neProperty(java.lang.String, java.lang.String)
      */
     Criteria neProperty(String propertyName, String otherPropertyName) {
-        add Restrictions.neProperty(propertyName,otherPropertyName)
+        add Restrictions.neProperty(propertyName, otherPropertyName)
         return this
     }
 
@@ -453,7 +445,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria gtProperty(String propertyName, String otherPropertyName) {
-        add Restrictions.gtProperty(propertyName,otherPropertyName)
+        add Restrictions.gtProperty(propertyName, otherPropertyName)
         return this
     }
 
@@ -461,7 +453,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria geProperty(String propertyName, String otherPropertyName) {
-        add Restrictions.geProperty(propertyName,otherPropertyName)
+        add Restrictions.geProperty(propertyName, otherPropertyName)
         return this
     }
 
@@ -469,7 +461,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria ltProperty(String propertyName, String otherPropertyName) {
-        add Restrictions.ltProperty(propertyName,otherPropertyName)
+        add Restrictions.ltProperty(propertyName, otherPropertyName)
         return this
     }
 
@@ -477,7 +469,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria leProperty(String propertyName, String otherPropertyName) {
-        add Restrictions.leProperty(propertyName,otherPropertyName)
+        add Restrictions.leProperty(propertyName, otherPropertyName)
         return this
     }
 
@@ -543,7 +535,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria eq(String propertyName, Object propertyValue) {
-        add Restrictions.eq(propertyName,propertyValue)
+        add Restrictions.eq(propertyName, propertyValue)
         return this
     }
 
@@ -559,7 +551,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria ne(String propertyName, Object propertyValue) {
-        add Restrictions.ne(propertyName,propertyValue)
+        add Restrictions.ne(propertyName, propertyValue)
         return this
     }
 
@@ -575,7 +567,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria gte(String property, Object value) {
-        add Restrictions.gte(property,value)
+        add Restrictions.gte(property, value)
         return this
     }
 
@@ -590,7 +582,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria gt(String property, Object value) {
-        add Restrictions.gt(property,value)
+        add Restrictions.gt(property, value)
         return this
     }
 
@@ -606,14 +598,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria le(String property, Object value) {
-        lte(property,value)
+        lte(property, value)
     }
 
     /**
      * @see Criteria
      */
     Criteria lt(String property, Object value) {
-        add Restrictions.lt(property,value)
+        add Restrictions.lt(property, value)
         return this
     }
 
@@ -621,7 +613,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria like(String propertyName, Object propertyValue) {
-        add Restrictions.like(propertyName,propertyValue.toString())
+        add Restrictions.like(propertyName, propertyValue.toString())
         return this
     }
 
@@ -827,7 +819,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         return newQuery.build(additionalQuery)
     }
 
-
     /**
      * Enable the builder syntax for constructing Criteria
      *
@@ -855,7 +846,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         newCriteria.lazyQuery = callable
         return newCriteria
     }
-
 
     /**
      * Create a return a new DetachedCriteria that uses the given connection
@@ -1011,7 +1001,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         return newCriteria
     }
 
-
     def propertyMissing(String name) {
         final entity = getPersistentEntity()
         final p = entity.getPropertyByName(name)
@@ -1046,7 +1035,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         def method = dynamicFinders.find { FinderMethod f -> f.isMethodMatch(methodName) }
         if (method != null) {
             applyLazyCriteria()
-            return method.invoke(targetClass, methodName,this, args)
+            return method.invoke(targetClass, methodName, this, args)
         }
 
         if (!args) {
@@ -1058,7 +1047,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             throw new MissingMethodException(methodName, AbstractDetachedCriteria, args)
         }
 
-
         def alias = args[0] instanceof CharSequence ? args[0].toString() : null
 
         def existing = associationCriteriaMap[methodName]
@@ -1069,16 +1057,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         associationCriteriaMap[methodName] = associationCriteria
         add associationCriteria
 
-
-
         def lastArg = args[-1]
-        if(lastArg instanceof Closure) {
+        if (lastArg instanceof Closure) {
             Closure callable = lastArg
             callable.resolveStrategy = Closure.DELEGATE_FIRST
 
             Closure parentCallable = callable
-            while(parentCallable.delegate instanceof Closure) {
-                parentCallable = (Closure)parentCallable.delegate
+            while (parentCallable.delegate instanceof Closure) {
+                parentCallable = (Closure) parentCallable.delegate
             }
 
             def previous = parentCallable.delegate
@@ -1092,7 +1078,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         }
     }
 
-
     protected void handleJunction(Closure callable) {
         try {
             callable.delegate = this
@@ -1105,7 +1090,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     protected abstract QueryableCriteria buildQueryableCriteria(Closure queryClosure)
-
 
     protected void applyLazyCriteria() {
         if (lazyQuery == null) {

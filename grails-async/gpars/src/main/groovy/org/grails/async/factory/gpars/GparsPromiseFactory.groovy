@@ -20,13 +20,12 @@ package org.grails.async.factory.gpars
 
 import grails.async.Promise
 import grails.async.PromiseList
+import grails.async.factory.AbstractPromiseFactory
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowVariable
-
-import grails.async.factory.AbstractPromiseFactory
 
 import java.util.concurrent.TimeUnit
 
@@ -42,16 +41,24 @@ class GparsPromiseFactory extends AbstractPromiseFactory {
 
     static final boolean GPARS_PRESENT
     static {
-        try { GPARS_PRESENT = Thread.currentThread().contextClassLoader.loadClass('groovyx.gpars.GParsConfig') }
-        catch (Throwable ignore) { GPARS_PRESENT = false }
+        try {
+            GPARS_PRESENT = Thread.currentThread().contextClassLoader.loadClass('groovyx.gpars.GParsConfig')
+        }
+        catch (Throwable ignore) {
+            GPARS_PRESENT = false
+        }
     }
+
     static boolean isGparsAvailable() { GPARS_PRESENT }
 
     private static final Closure<List<?>> originalValuesClosure = { List<?> values -> values } as Closure<List<?>>
 
     GparsPromiseFactory() {
-        try { GParsConfig.setPoolFactory(new LoggingPoolFactory()) }
-        catch (IllegalArgumentException ignore) {}
+        try {
+            GParsConfig.setPoolFactory(new LoggingPoolFactory())
+        }
+        catch (IllegalArgumentException ignore) {
+        }
     }
 
     @Override
@@ -75,7 +82,7 @@ class GparsPromiseFactory extends AbstractPromiseFactory {
     <T> Promise<T> createPromise(Closure<T>... closures) {
         if (closures.length == 1) {
             def callable = closures[0]
-            return new GparsPromise(this, applyDecorators(callable,null))
+            return new GparsPromise(this, applyDecorators(callable, null))
         }
         PromiseList<T> promiseList = new PromiseList<>()
         for (c in closures) {
@@ -105,16 +112,16 @@ class GparsPromiseFactory extends AbstractPromiseFactory {
     @Override
     <T> Promise<T> onComplete(List<Promise<T>> promises, Closure<T> callable) {
         return new GparsPromise<T>(
-            this,
-            Dataflow.whenAllBound(toGparsPromises(promises), callable as Closure)
+                this,
+                Dataflow.whenAllBound(toGparsPromises(promises), callable as Closure)
         )
     }
 
     @Override
     <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
         return new GparsPromise<List<T>>(
-            this,
-            Dataflow.whenAllBound(toGparsPromises(promises), {} as Closure<T>, callable as Closure<T>)
+                this,
+                Dataflow.whenAllBound(toGparsPromises(promises), {} as Closure<T>, callable as Closure<T>)
         )
     }
 }

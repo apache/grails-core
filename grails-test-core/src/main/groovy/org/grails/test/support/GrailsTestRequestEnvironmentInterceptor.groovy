@@ -20,12 +20,11 @@ package org.grails.test.support
 
 import grails.util.GrailsWebMockUtil
 import grails.util.Holders
-import org.grails.web.util.GrailsApplicationAttributes
-
 import org.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.context.ApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
 

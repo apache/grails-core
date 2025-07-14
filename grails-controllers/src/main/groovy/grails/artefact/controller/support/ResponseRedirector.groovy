@@ -30,14 +30,13 @@ import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import grails.web.mvc.FlashScope
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+import jakarta.servlet.http.HttpServletRequest
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpMethod
 import org.springframework.web.servlet.support.RequestDataValueProcessor
-
-import jakarta.servlet.http.HttpServletRequest
 
 /**
  * A trait for objects that redirect the response
@@ -48,7 +47,6 @@ import jakarta.servlet.http.HttpServletRequest
 @CompileStatic
 trait ResponseRedirector implements WebAttributes {
 
-
     private LinkGenerator linkGenerator
 
     private boolean useJsessionId = false
@@ -57,7 +55,7 @@ trait ResponseRedirector implements WebAttributes {
     private Collection<RedirectEventListener> redirectListeners
 
     @Generated
-    @Autowired(required=false)
+    @Autowired(required = false)
     void setRedirectListeners(Collection<RedirectEventListener> redirectListeners) {
         this.redirectListeners = redirectListeners
     }
@@ -76,7 +74,7 @@ trait ResponseRedirector implements WebAttributes {
 
     @Generated
     LinkGenerator getGrailsLinkGenerator() {
-        if(this.linkGenerator == null) {
+        if (this.linkGenerator == null) {
             this.linkGenerator = webRequest.getApplicationContext().getBean(LinkGenerator)
         }
         return this.linkGenerator
@@ -90,13 +88,13 @@ trait ResponseRedirector implements WebAttributes {
      */
     @Generated
     void redirect(object) {
-        if(object) {
+        if (object) {
 
             Class<?> objectClass = object.getClass()
             boolean isDomain = DomainClassArtefactHandler.isDomainClass(objectClass) && object instanceof GroovyObject
-            if(isDomain) {
-                def id = ((GroovyObject)object).getProperty(GormProperties.IDENTITY)
-                if(id != null) {
+            if (isDomain) {
+                def id = ((GroovyObject) object).getProperty(GormProperties.IDENTITY)
+                if (id != null) {
                     def args = [:]
                     args.put LinkGenerator.ATTRIBUTE_RESOURCE, object
                     args.put LinkGenerator.ATTRIBUTE_METHOD, HttpMethod.GET.toString()
@@ -136,9 +134,8 @@ trait ResponseRedirector implements WebAttributes {
      */
     @Generated
     Map getChainModel() {
-        (Map)getFlash().get(FlashScope.CHAIN_MODEL)
+        (Map) getFlash().get(FlashScope.CHAIN_MODEL)
     }
-
 
     /**
      * Chains from one action to another via an HTTP redirect. The model is retained in the following request in the 'chainModel' property within flash scope.
@@ -149,7 +146,7 @@ trait ResponseRedirector implements WebAttributes {
      */
     @Generated
     void chain(Map args) {
-        String controller = (args.controller ?: GrailsNameUtils.getLogicalPropertyName( getClass().name, ControllerArtefactHandler.TYPE)).toString()
+        String controller = (args.controller ?: GrailsNameUtils.getLogicalPropertyName(getClass().name, ControllerArtefactHandler.TYPE)).toString()
         String action = args.action?.toString()
         String namespace = args.remove('namespace')
         String plugin = args.remove('plugin')?.toString()
@@ -160,7 +157,6 @@ trait ResponseRedirector implements WebAttributes {
         def actionParams = params.findAll { Map.Entry it -> it.key?.toString()?.startsWith('_action_') }
         actionParams.each { Map.Entry it -> params.remove(it.key) }
 
-
         def currentWebRequest = webRequest
         def currentFlash = currentWebRequest.flashScope
         def chainModel = currentFlash.chainModel
@@ -169,7 +165,6 @@ trait ResponseRedirector implements WebAttributes {
             model = chainModel
         }
         currentFlash.chainModel = model
-
 
         def appCtx = currentWebRequest.applicationContext
 

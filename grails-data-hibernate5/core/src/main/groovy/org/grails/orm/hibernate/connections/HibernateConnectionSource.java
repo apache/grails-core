@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.connections;
 
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.hibernate.SessionFactory;
 
 import javax.sql.DataSource;
@@ -36,7 +35,7 @@ import java.io.IOException;
  */
 public class HibernateConnectionSource extends DefaultConnectionSource<SessionFactory, HibernateConnectionSourceSettings> {
 
-    protected final ConnectionSource<DataSource, DataSourceSettings>  dataSource;
+    protected final ConnectionSource<DataSource, DataSourceSettings> dataSource;
 
     public HibernateConnectionSource(String name, SessionFactory sessionFactory, ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource, HibernateConnectionSourceSettings settings) {
         super(name, sessionFactory, settings);
@@ -50,7 +49,7 @@ public class HibernateConnectionSource extends DefaultConnectionSource<SessionFa
             SessionFactory sessionFactory = getSource();
             sessionFactory.close();
         } finally {
-            if(dataSource != null) {
+            if (dataSource != null) {
                 dataSource.close();
             }
         }

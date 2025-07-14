@@ -13,7 +13,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package reactor.bus.selector;
 
 /**
@@ -25,8 +24,7 @@ package reactor.bus.selector;
  * @deprecated Here for compatibility only. Do not use directly
  */
 @Deprecated
-public interface Selector<T>  {
-
+public interface Selector<T> {
 
     /**
      * Get the object being used for comparisons and equals checks.
@@ -39,7 +37,6 @@ public interface Selector<T>  {
      * Indicates whether this Selector matches the {@code key}.
      *
      * @param key The key to match
-     *
      * @return {@code true} if there's a match, otherwise {@code false}.
      */
     boolean matches(T key);

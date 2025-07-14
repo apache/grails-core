@@ -19,7 +19,6 @@
 package org.grails.datastore.mapping.model.types.conversion
 
 import groovy.transform.CompileStatic
-
 import org.springframework.core.convert.converter.Converter
 
 /**
@@ -27,6 +26,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToShortConverter implements Converter<String, Short> {
+
     Short convert(String source) {
         new Short(source)
     }

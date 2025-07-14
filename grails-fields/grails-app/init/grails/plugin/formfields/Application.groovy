@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 
 @CompileStatic
 @PluginSource
-class Application extends GrailsAutoConfiguration  {
+class Application extends GrailsAutoConfiguration {
 
     static void main(String[] args) {
         GrailsApp.run(Application, args)

@@ -18,30 +18,31 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import java.lang.reflect.Field;
-
 import org.hibernate.cfg.Configuration;
 import org.hibernate.id.SequenceGenerator;
 import org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory;
 import org.springframework.util.ReflectionUtils;
 
+import java.lang.reflect.Field;
+
 /**
  * Hibernate IdentifierGeneratorFactory that prefers sequence-identity generator over sequence generator
- * 
+ *
  * @author Lari Hotari
  */
 public class GrailsIdentifierGeneratorFactory extends DefaultIdentifierGeneratorFactory {
+
     private static final long serialVersionUID = 1L;
 
     @Override
     public Class getIdentifierGeneratorClass(String strategy) {
         Class generatorClass = super.getIdentifierGeneratorClass(strategy);
-        if("native".equals(strategy) && generatorClass == SequenceGenerator.class) {
+        if ("native".equals(strategy) && generatorClass == SequenceGenerator.class) {
             generatorClass = super.getIdentifierGeneratorClass("sequence-identity");
         }
         return generatorClass;
     }
-    
+
     public static void applyNewInstance(Configuration cfg) throws IllegalArgumentException, IllegalAccessException {
         Field field = ReflectionUtils.findField(Configuration.class, "identifierGeneratorFactory");
         field.setAccessible(true);

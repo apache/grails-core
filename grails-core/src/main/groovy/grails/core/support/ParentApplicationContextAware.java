@@ -27,6 +27,7 @@ import org.springframework.context.ApplicationContext;
  * @author Graeme Rocher
  * @since 0.4
  */
-public interface ParentApplicationContextAware  extends Aware {
+public interface ParentApplicationContextAware extends Aware {
+
     void setParentApplicationContext(ApplicationContext parent);
 }

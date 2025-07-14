@@ -37,7 +37,6 @@ import spock.lang.Specification
  */
 class ArtefactTypeAstTransformationSpec extends Specification {
 
-
     void "test resolveArtefactType with string literal"() {
         given:
         ArtefactTypeAstTransformation ast = new ArtefactTypeAstTransformation()
@@ -131,7 +130,6 @@ class ArtefactTypeAstTransformationSpec extends Specification {
 		then:
 		thrown(MissingMethodException)
 
-
 		when: "Supports returns true"
 		TraitInjectionUtils.@traitInjectors = [new TestTraitInjectorForSupportsClassNode(true)]
 		clazz = gcl.parseClass """
@@ -146,7 +144,6 @@ class ArtefactTypeAstTransformationSpec extends Specification {
 		then: "Trait is applied"
 		t instanceof Test10531Trait
 		t.hello10531() == "Hello"
-
 
 		cleanup:
 		TraitInjectionUtils.@traitInjectors = null

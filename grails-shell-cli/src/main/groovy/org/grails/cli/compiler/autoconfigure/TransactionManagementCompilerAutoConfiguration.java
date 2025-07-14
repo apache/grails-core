@@ -20,7 +20,6 @@ package org.grails.cli.compiler.autoconfigure;
 
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
-
 import org.grails.cli.compiler.AstUtils;
 import org.grails.cli.compiler.CompilerAutoConfiguration;
 import org.grails.cli.compiler.DependencyCustomizer;
@@ -34,22 +33,22 @@ import org.grails.cli.compiler.DependencyCustomizer;
  */
 public class TransactionManagementCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-	@Override
-	public boolean matches(ClassNode classNode) {
-		return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableTransactionManagement");
-	}
+    @Override
+    public boolean matches(ClassNode classNode) {
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableTransactionManagement");
+    }
 
-	@Override
-	public void applyDependencies(DependencyCustomizer dependencies) {
-		dependencies.ifAnyMissingClasses("org.springframework.transaction.annotation.Transactional")
-			.add("spring-tx", "spring-boot-starter-aop");
-	}
+    @Override
+    public void applyDependencies(DependencyCustomizer dependencies) {
+        dependencies.ifAnyMissingClasses("org.springframework.transaction.annotation.Transactional")
+                .add("spring-tx", "spring-boot-starter-aop");
+    }
 
-	@Override
-	public void applyImports(ImportCustomizer imports) {
-		imports.addStarImports("org.springframework.transaction.annotation", "org.springframework.transaction.support");
-		imports.addImports("org.springframework.transaction.PlatformTransactionManager",
-				"org.springframework.transaction.support.AbstractPlatformTransactionManager");
-	}
+    @Override
+    public void applyImports(ImportCustomizer imports) {
+        imports.addStarImports("org.springframework.transaction.annotation", "org.springframework.transaction.support");
+        imports.addImports("org.springframework.transaction.PlatformTransactionManager",
+                "org.springframework.transaction.support.AbstractPlatformTransactionManager");
+    }
 
 }

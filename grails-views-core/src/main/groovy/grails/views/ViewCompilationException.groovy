@@ -47,14 +47,13 @@ class ViewCompilationException extends ViewException implements SourceCodeAware 
         def cause = getCause()
         ASTNode node = ((CompilationFailedException) cause).getNode()
 
-        if(node != null) {
+        if (node != null) {
             return node.getLineNumber()
-        }
-        else if(cause instanceof MultipleCompilationErrorsException) {
-            MultipleCompilationErrorsException mce = (MultipleCompilationErrorsException)cause
+        } else if (cause instanceof MultipleCompilationErrorsException) {
+            MultipleCompilationErrorsException mce = (MultipleCompilationErrorsException) cause
             def message = mce.errorCollector.errors[0]
-            if(message instanceof SyntaxErrorMessage) {
-                return ((SyntaxErrorMessage)message).getCause().line
+            if (message instanceof SyntaxErrorMessage) {
+                return ((SyntaxErrorMessage) message).getCause().line
             }
         }
         return -1

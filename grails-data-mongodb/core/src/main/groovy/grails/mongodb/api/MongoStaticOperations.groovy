@@ -189,5 +189,5 @@ interface MongoStaticOperations<D> extends GormStaticOperations<D> {
      * @param limit The maximum number of results. Defaults to 5.
      * @return The results
      */
-    List<D> searchTop(String query, int limit, Map options )
+    List<D> searchTop(String query, int limit, Map options)
 }

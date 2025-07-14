@@ -18,11 +18,11 @@
  */
 package grails.web.mapping;
 
+import org.springframework.http.HttpMethod;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.springframework.http.HttpMethod;
 
 /**
  * Main entry point of Grails URL mapping mechanism. This interface defines methods to match
@@ -54,9 +54,9 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
+     * @param action     The name of the action or null
      * @param pluginName the name of the plugin which provides the controller
-     * @param params The parameters or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -66,11 +66,11 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param namespace The controller namespace
+     * @param action     The name of the action or null
+     * @param namespace  The controller namespace
      * @param pluginName the name of the plugin which provides the controller
      * @param httpMethod The HTTP method to reverse map
-     * @param params The parameters or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -80,12 +80,12 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param namespace The controller namespace
+     * @param action     The name of the action or null
+     * @param namespace  The controller namespace
      * @param pluginName the name of the plugin which provides the controller
      * @param httpMethod The HTTP method to reverse map
-     * @param version The version of the mapping
-     * @param params The parameters or null
+     * @param version    The version of the mapping
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -95,10 +95,10 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param namespace The controller namespace or null
+     * @param action     The name of the action or null
+     * @param namespace  The controller namespace or null
      * @param pluginName the name of the plugin which provides the controller
-     * @param params The parameters or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -108,8 +108,8 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param params The parameters or null
+     * @param action     The name of the action or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -119,8 +119,8 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters or null if non could be found.
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param params The parameters or null
+     * @param action     The name of the action or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -130,11 +130,11 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters or null if non could be found.
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param namespace The controller namespace or null
+     * @param action     The name of the action or null
+     * @param namespace  The controller namespace or null
      * @param pluginName the name of the plugin which provides the controller
      * @param httpMethod the HTTP method
-     * @param params The parameters or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
@@ -144,15 +144,16 @@ public interface UrlMappingsHolder {
      * Retrieves the best guess of a URI for the given controller, action and parameters or null if non could be found.
      *
      * @param controller The name of the controller
-     * @param action The name of the action or null
-     * @param namespace The controller namespace or null
+     * @param action     The name of the action or null
+     * @param namespace  The controller namespace or null
      * @param pluginName the name of the plugin which provides the controller
      * @param httpMethod the HTTP method
-     * @param params The parameters or null
+     * @param params     The parameters or null
      * @return A URI for the given arguments
      */
     @SuppressWarnings("rawtypes")
     UrlCreator getReverseMappingNoDefault(String controller, String action, String namespace, String pluginName, String httpMethod, String version, Map params);
+
     /**
      * Match and return the first UrlMappingInfo instance possible
      *
@@ -172,7 +173,7 @@ public interface UrlMappingsHolder {
     /**
      * Match all possible UrlMappingInfo instances to the given URI and HTTP method
      *
-     * @param uri The URI to match
+     * @param uri        The URI to match
      * @param httpMethod The HTTP method (GET,POST,PUT,DELETE etc.)
      * @return An array of 0 or many UrlMappingInfo instances
      */
@@ -181,19 +182,18 @@ public interface UrlMappingsHolder {
     /**
      * Match all possible UrlMappingInfo instances to the given URI and HTTP method
      *
-     * @param uri The URI to match
+     * @param uri        The URI to match
      * @param httpMethod The HTTP method (GET,POST,PUT,DELETE etc.)
-     * @param version The version of the API
+     * @param version    The version of the API
      * @return An array of 0 or many UrlMappingInfo instances
      *
      */
     UrlMappingInfo[] matchAll(String uri, String httpMethod, String version);
 
-
     /**
      * Match all possible UrlMappingInfo instances to the given URI and HTTP method
      *
-     * @param uri The URI to match
+     * @param uri        The URI to match
      * @param httpMethod The HTTP method (GET,POST,PUT,DELETE etc.)
      * @return An array of 0 or many UrlMappingInfo instances
      */
@@ -202,9 +202,9 @@ public interface UrlMappingsHolder {
     /**
      * Match all possible UrlMappingInfo instances to the given URI and HTTP method
      *
-     * @param uri The URI to match
+     * @param uri        The URI to match
      * @param httpMethod The HTTP method (GET,POST,PUT,DELETE etc.)
-     * @param version The version
+     * @param version    The version
      * @return An array of 0 or many UrlMappingInfo instances
      */
     UrlMappingInfo[] matchAll(String uri, HttpMethod httpMethod, String version);
@@ -219,6 +219,7 @@ public interface UrlMappingsHolder {
 
     /**
      * Return the allowed HTTP methods for the given URI
+     *
      * @param uri The URI
      * @return The allowed methods
      */
@@ -228,7 +229,7 @@ public interface UrlMappingsHolder {
      * Match and return for first UrlMappingInfo for the give response code and exception
      *
      * @param responseCode The response code
-     * @param e The exception
+     * @param e            The exception
      * @return The UrlMappingInfo instance
      */
     UrlMappingInfo matchStatusCode(int responseCode, Throwable e);

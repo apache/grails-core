@@ -22,7 +22,7 @@ import org.grails.datastore.mapping.query.Query;
 
 /**
  * This criterion calls a function on the property before apply the appropriate comparison.
- *
+ * <p>
  * Example in SQL: year(date) == 2007 where the function is 'year', the property 'date' and the value is '2007'
  */
 public class FunctionCallingCriterion extends Query.PropertyNameCriterion {

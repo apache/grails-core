@@ -30,7 +30,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
 
-    final @Delegate Collection target
+    final @Delegate
+    Collection target
     final DirtyCheckable parent
     final String property
     final int originalSize
@@ -94,7 +95,6 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
         parent.markDirty(property)
         target.remove(o)
     }
-
 
 }
 

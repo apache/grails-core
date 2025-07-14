@@ -31,16 +31,21 @@ import org.springframework.core.Ordered;
 import java.io.Writer;
 
 public class DefaultOutputContextLookup implements OutputContextLookup, EncodingStateRegistryLookup, Ordered {
-    private ThreadLocal<OutputContext> outputContextThreadLocal = new ThreadLocal<OutputContext>(){
+
+    private ThreadLocal<OutputContext> outputContextThreadLocal = new ThreadLocal<OutputContext>() {
         @Override
         protected OutputContext initialValue() {
             return new DefaultOutputContext();
         }
     };
 
+    public DefaultOutputContextLookup() {
+
+    }
+
     @Override
     public OutputContext lookupOutputContext() {
-        if(EncodingStateRegistryLookupHolder.getEncodingStateRegistryLookup()==null) {
+        if (EncodingStateRegistryLookupHolder.getEncodingStateRegistryLookup() == null) {
             // TODO: improve EncodingStateRegistry solution so that global state doesn't have to be used
             EncodingStateRegistryLookupHolder.setEncodingStateRegistryLookup(this);
         }
@@ -57,11 +62,8 @@ public class DefaultOutputContextLookup implements OutputContextLookup, Encoding
         return lookupOutputContext().getEncodingStateRegistry();
     }
 
-    public DefaultOutputContextLookup() {
-
-    }
-
     public static class DefaultOutputContext implements OutputContext {
+
         private OutputEncodingStack outputEncodingStack;
         private Writer currentWriter;
         private AbstractTemplateVariableBinding binding;

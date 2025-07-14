@@ -1,26 +1,25 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.apache.grails.common.annotation;
 
-import java.lang.reflect.Field;
-import java.security.AccessControlException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.SpringAsmInfo;
 import org.springframework.asm.Type;
@@ -29,9 +28,12 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 
+import java.lang.reflect.Field;
+import java.security.AccessControlException;
+
 /**
  * {@link AnnotationVisitor} to recursively visit annotations.
-
+ *
  * <p>Note: This class was ported to Grails 7 from Spring Framework 5.3 as it was
  * removed in Spring 6 without a public replacement.
  *
@@ -54,13 +56,11 @@ abstract class AbstractRecursiveAnnotationVisitor extends AnnotationVisitor {
     @Nullable
     protected final ClassLoader classLoader;
 
-
     public AbstractRecursiveAnnotationVisitor(@Nullable ClassLoader classLoader, AnnotationAttributes attributes) {
         super(SpringAsmInfo.ASM_VERSION);
         this.classLoader = classLoader;
         this.attributes = attributes;
     }
-
 
     @Override
     public void visit(String attributeName, Object attributeValue) {
@@ -95,11 +95,9 @@ abstract class AbstractRecursiveAnnotationVisitor extends AnnotationVisitor {
                 ReflectionUtils.makeAccessible(enumConstant);
                 valueToUse = enumConstant.get(null);
             }
-        }
-        catch (ClassNotFoundException | NoClassDefFoundError ex) {
+        } catch (ClassNotFoundException | NoClassDefFoundError ex) {
             logger.debug("Failed to classload enum type while reading annotation metadata", ex);
-        }
-        catch (IllegalAccessException | AccessControlException ex) {
+        } catch (IllegalAccessException | AccessControlException ex) {
             logger.debug("Could not access enum value while reading annotation metadata", ex);
         }
         return valueToUse;

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.async.web
 
 import grails.async.Promise
@@ -32,7 +31,7 @@ import java.util.concurrent.TimeUnit
  * A specific promises factory class designed for use in controllers and other web contexts
  *
  * @since 3.2.7
- * @author  Graeme Rocher
+ * @author Graeme Rocher
  */
 @CompileStatic
 class WebPromises {
@@ -57,73 +56,73 @@ class WebPromises {
     private WebPromises() {}
 
     /**
-     * @see grails.async.PromiseFactory#waitAll(grails.async.Promise[])
+     * @see grails.async.PromiseFactory#waitAll(grails.async.Promise [ ])
      */
-    static<T> List<T> waitAll(Promise<T>...promises) {
+    static <T> List<T> waitAll(Promise<T>... promises) {
         return getPromiseFactory().waitAll(promises)
     }
 
     /**
      * @see grails.async.PromiseFactory#waitAll(java.util.List)
      */
-    static<T> List<T> waitAll(List<Promise<T>> promises) {
+    static <T> List<T> waitAll(List<Promise<T>> promises) {
         return getPromiseFactory().waitAll(promises)
     }
 
     /**
      * @see grails.async.PromiseFactory#waitAll(java.util.List)
      */
-    static<T> List<T> waitAll(List<Promise<T>> promises, final long timeout, final TimeUnit units) {
+    static <T> List<T> waitAll(List<Promise<T>> promises, final long timeout, final TimeUnit units) {
         return getPromiseFactory().waitAll(promises, timeout, units)
     }
 
     /**
      * @see grails.async.PromiseFactory#onComplete(java.util.List, groovy.lang.Closure)
      */
-    static<T> Promise<List<T>> onComplete(List<Promise<T>> promises, Closure<T> callable) {
+    static <T> Promise<List<T>> onComplete(List<Promise<T>> promises, Closure<T> callable) {
         return getPromiseFactory().onComplete(promises, callable)
     }
     /**
      * @see grails.async.PromiseFactory#onError(java.util.List, groovy.lang.Closure)
      */
-    static<T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
+    static <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
         return getPromiseFactory().onError(promises, callable)
     }
     /**
      * @see grails.async.PromiseFactory#createPromise(java.util.Map)
      */
-    static<K,V> Promise<Map<K,V>> createPromise(Map<K, V> map) {
+    static <K, V> Promise<Map<K, V>> createPromise(Map<K, V> map) {
         return getPromiseFactory().createPromise(map, DECORATOR_LOOKUP.findDecorators())
     }
     /**
-     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
+     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure [ ])
      */
-    static<T> Promise<List<T>> createPromise(Closure<T>... c) {
+    static <T> Promise<List<T>> createPromise(Closure<T>... c) {
         return getPromiseFactory().createPromise(Arrays.asList(c), DECORATOR_LOOKUP.findDecorators())
     }
 
     /**
      * @see grails.async.PromiseFactory#createPromise(java.util.Map)
      */
-    static<K,V> Promise<Map<K,V>> tasks(Map<K, V> map) {
+    static <K, V> Promise<Map<K, V>> tasks(Map<K, V> map) {
         return createPromise(map)
     }
     /**
-     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
+     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure [ ])
      */
-    static<T> Promise<T> task(Closure<T> c) {
+    static <T> Promise<T> task(Closure<T> c) {
         return getPromiseFactory().createPromise(c, DECORATOR_LOOKUP.findDecorators())
     }
     /**
-     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
+     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure [ ])
      */
-    static<T> Promise<List<T>> tasks(Closure<T>... c) {
+    static <T> Promise<List<T>> tasks(Closure<T>... c) {
         return createPromise(c)
     }
     /**
-     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
+     * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure [ ])
      */
-    static<T> Promise<List<T>> tasks(List<Closure<T>> closures) {
+    static <T> Promise<List<T>> tasks(List<Closure<T>> closures) {
         return getPromiseFactory().createPromise(closures, DECORATOR_LOOKUP.findDecorators())
     }
 
@@ -137,33 +136,33 @@ class WebPromises {
     /**
      * @see grails.async.PromiseFactory#createPromise(Class)
      */
-    static<T> Promise<T> createPromise(Class<T> returnType) {
+    static <T> Promise<T> createPromise(Class<T> returnType) {
         return getPromiseFactory().createPromise(returnType)
     }
 
     /**
      * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure, java.util.List)
      */
-    static<T> Promise<T> createPromise(Closure<T> c, List<PromiseDecorator> decorators) {
+    static <T> Promise<T> createPromise(Closure<T> c, List<PromiseDecorator> decorators) {
         return getPromiseFactory().createPromise(c, DECORATOR_LOOKUP.findDecorators())
     }
     /**
      * @see grails.async.PromiseFactory#createPromise(java.util.List, java.util.List)
      */
-    static<T> Promise<List<T>> createPromise(List<Closure<T>> closures, List<PromiseDecorator> decorators) {
+    static <T> Promise<List<T>> createPromise(List<Closure<T>> closures, List<PromiseDecorator> decorators) {
         return getPromiseFactory().createPromise(closures, DECORATOR_LOOKUP.findDecorators())
     }
     /**
-     * @see grails.async.PromiseFactory#createPromise(grails.async.Promise[])
+     * @see grails.async.PromiseFactory#createPromise(grails.async.Promise [ ])
      */
-    static <T> Promise<List<T>> createPromise(Promise<T>...promises) {
+    static <T> Promise<List<T>> createPromise(Promise<T>... promises) {
         return getPromiseFactory().createPromise(promises)
     }
 
     /**
      * @see grails.async.PromiseFactory#createBoundPromise(java.lang.Object)
      */
-    static<T> Promise<T> createBoundPromise(T value) {
+    static <T> Promise<T> createBoundPromise(T value) {
         return getPromiseFactory().createBoundPromise(value)
     }
 }

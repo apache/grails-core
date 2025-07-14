@@ -26,10 +26,9 @@ import java.util.List;
 /**
  * Evaluates URL mapping from the given Spring Resource or class.
  *
+ * @author Graeme Rocher
  * @see UrlMapping
  * @see UrlMappingInfo
- *
- * @author Graeme Rocher
  * @since 0.5
  */
 public interface UrlMappingEvaluator {
@@ -38,7 +37,6 @@ public interface UrlMappingEvaluator {
      * Evaluates URL mapping from the give Spring Resource
      *
      * @param resource The Spring Resource to evaluate mapping from
-     *
      * @return A list of UrlMapping instances
      */
     List<UrlMapping> evaluateMappings(Resource resource);

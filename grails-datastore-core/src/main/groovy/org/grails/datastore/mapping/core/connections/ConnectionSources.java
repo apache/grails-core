@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.connections;
 
 import org.springframework.core.env.PropertyResolver;
@@ -27,10 +26,9 @@ import java.util.Map;
 /**
  * Models multiple connection sources
  *
+ * @param <T> The underlying native type of the {@link ConnectionSource}, for example a SQL {@link javax.sql.DataSource}
  * @author Graeme Rocher
  * @since 6.0
- *
- * @param <T> The underlying native type of the {@link ConnectionSource}, for example a SQL {@link javax.sql.DataSource}
  */
 public interface ConnectionSources<T, S extends ConnectionSourceSettings> extends Iterable<ConnectionSource<T, S>>, Closeable {
 
@@ -38,6 +36,7 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      * @return Obtains the base configuration
      */
     PropertyResolver getBaseConfiguration();
+
     /**
      * @return The factory used to create new connections
      */
@@ -52,7 +51,6 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      * Obtain a {@link ConnectionSource} by name
      *
      * @param name The name of the source
-     *
      * @return A {@link ConnectionSource} or null if it doesn't exist
      */
     ConnectionSource<T, S> getConnectionSource(String name);
@@ -67,25 +65,22 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
     /**
      * Adds a new {@link ConnectionSource}
      *
-     * @param name The name of the connection source
+     * @param name          The name of the connection source
      * @param configuration The configuration
      * @return The {@link ConnectionSource}
-     *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException if the configuration is invalid
      */
     ConnectionSource<T, S> addConnectionSource(String name, PropertyResolver configuration);
 
-
     /**
      * Adds a new {@link ConnectionSource}
      *
-     * @param name The name of the connection source
+     * @param name          The name of the connection source
      * @param configuration The configuration
      * @return The {@link ConnectionSource}
-     *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException if the configuration is invalid
      */
-    ConnectionSource<T, S> addConnectionSource(String name, Map<String,Object> configuration);
+    ConnectionSource<T, S> addConnectionSource(String name, Map<String, Object> configuration);
 
     /**
      * Adds a listener
@@ -93,5 +88,5 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      * @param listener The listener
      * @return This connection sources
      */
-    ConnectionSources<T,S> addListener(ConnectionSourcesListener<T,S> listener);
+    ConnectionSources<T, S> addListener(ConnectionSourcesListener<T, S> listener);
 }

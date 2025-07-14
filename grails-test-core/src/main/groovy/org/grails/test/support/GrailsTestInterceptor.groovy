@@ -18,8 +18,8 @@
  */
 package org.grails.test.support
 
-import org.springframework.context.ApplicationContext
 import groovy.transform.CompileStatic
+import org.springframework.context.ApplicationContext
 
 @CompileStatic
 class GrailsTestInterceptor {

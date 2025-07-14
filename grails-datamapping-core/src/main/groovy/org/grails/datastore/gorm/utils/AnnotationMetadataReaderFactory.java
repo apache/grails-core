@@ -14,7 +14,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.grails.datastore.gorm.utils;
 
 import org.apache.grails.common.compiler.asm.AnnotationMetadataReader;
@@ -28,6 +27,7 @@ import java.io.IOException;
  * A {@link CachingMetadataReaderFactory} that only reads annotations and not the whole class body
  */
 class AnnotationMetadataReaderFactory extends CachingMetadataReaderFactory {
+
     public AnnotationMetadataReaderFactory(ClassLoader classLoader) {
         super(classLoader);
     }

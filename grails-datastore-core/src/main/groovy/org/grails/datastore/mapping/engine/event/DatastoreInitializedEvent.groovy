@@ -20,7 +20,6 @@ package org.grails.datastore.mapping.engine.event
 
 import org.springframework.context.ApplicationEvent
 
-
 /**
  * Fired when the datastore is initialised
  *
@@ -28,6 +27,7 @@ import org.springframework.context.ApplicationEvent
  * @since 4.0.x
  */
 class DatastoreInitializedEvent extends ApplicationEvent {
+
     DatastoreInitializedEvent(Object source) {
         super(source)
     }

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.transactions;
 
 import org.grails.datastore.mapping.core.Datastore;

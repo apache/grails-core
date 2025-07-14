@@ -19,7 +19,6 @@
 package grails.gsp.boot;
 
 import grails.config.Config;
-
 import grails.core.ArtefactHandler;
 import grails.core.ArtefactInfo;
 import grails.core.GrailsClass;
@@ -66,13 +65,16 @@ public class StandaloneGrailsApplication extends AbstractGrailsApplication {
     }
 
     @Override
-    public void setMappingContext(MappingContext mappingContext) {}
+    public void setMappingContext(MappingContext mappingContext) {
+    }
 
     @Override
-    public void refresh() {}
+    public void refresh() {
+    }
 
     @Override
-    public void rebuild() {}
+    public void rebuild() {
+    }
 
     @Override
     public Resource getResourceForClass(Class theClazz) {
@@ -130,7 +132,8 @@ public class StandaloneGrailsApplication extends AbstractGrailsApplication {
     }
 
     @Override
-    public void registerArtefactHandler(ArtefactHandler handler) {}
+    public void registerArtefactHandler(ArtefactHandler handler) {
+    }
 
     @Override
     public boolean hasArtefactHandler(String type) {
@@ -143,7 +146,8 @@ public class StandaloneGrailsApplication extends AbstractGrailsApplication {
     }
 
     @Override
-    public void initialise() {}
+    public void initialise() {
+    }
 
     @Override
     public boolean isInitialised() {
@@ -156,10 +160,12 @@ public class StandaloneGrailsApplication extends AbstractGrailsApplication {
     }
 
     @Override
-    public void addArtefact(Class artefact) {}
+    public void addArtefact(Class artefact) {
+    }
 
     @Override
-    public void addOverridableArtefact(Class artefact) {}
+    public void addOverridableArtefact(Class artefact) {
+    }
 
     @Override
     public ArtefactHandler getArtefactHandler(String type) {

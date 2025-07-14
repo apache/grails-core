@@ -25,7 +25,6 @@ import java.util.Collection;
 /**
  * Interface that allows access to all defined URL mappings and registration of new mappings at runtime
  *
- *
  * @author Graeme Rocher
  * @since 2.3
  */

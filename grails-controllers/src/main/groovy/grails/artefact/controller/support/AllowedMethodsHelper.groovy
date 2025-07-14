@@ -19,12 +19,11 @@
 package grails.artefact.controller.support
 
 import groovy.transform.CompileStatic
-
 import jakarta.servlet.http.HttpServletRequest
 
 /**
  * A helper class for interrogating the allowedMethods property.
- * 
+ *
  * @author Jeff Brown
  * @since 3.0
  *
@@ -34,10 +33,10 @@ class AllowedMethodsHelper {
 
     static boolean isAllowed(final String actionName, final HttpServletRequest request, final Map allowedMethods) {
         boolean isAllowed = true
-        if(allowedMethods?.containsKey(actionName)) {
+        if (allowedMethods?.containsKey(actionName)) {
             def method = request.method
             def value = allowedMethods[actionName]
-            if(value instanceof String) {
+            if (value instanceof String) {
                 isAllowed = method.equalsIgnoreCase(value)
             } else if (value instanceof List) {
                 isAllowed = value.find { s -> method.equalsIgnoreCase((String) s) }

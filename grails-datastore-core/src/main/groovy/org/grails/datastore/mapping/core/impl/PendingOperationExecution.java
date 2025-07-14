@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.impl;
 
 import java.util.List;
@@ -35,7 +34,7 @@ public class PendingOperationExecution {
             preOperation.run();
         }
         pendingOperation.run();
-        if(!pendingOperation.isVetoed()) {
+        if (!pendingOperation.isVetoed()) {
             List<PendingOperation> cascadeOperations = pendingOperation.getCascadeOperations();
             for (PendingOperation cascadeOperation : cascadeOperations) {
                 cascadeOperation.run();

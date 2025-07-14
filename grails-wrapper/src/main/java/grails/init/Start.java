@@ -1,18 +1,20 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package grails.init;
 
@@ -67,7 +69,7 @@ public class Start {
                 }
             }
 
-            if(updated) {
+            if (updated) {
                 System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
             }
 
@@ -84,26 +86,25 @@ public class Start {
     private static GrailsVersion getPreferredGrailsVersion() {
         // Check for a properties file in case inside a grails project
         File gradleProperties = new File("gradle.properties");
-        if(!gradleProperties.exists()) {
+        if (!gradleProperties.exists()) {
             return null;
         }
 
         Properties properties = new Properties();
         try (InputStream in = new FileInputStream(gradleProperties)) {
             properties.load(in);
-        }
-        catch(Exception e) {
-            System.err.println("Failed to load gradle.properties from "+ gradleProperties);
+        } catch (Exception e) {
+            System.err.println("Failed to load gradle.properties from " + gradleProperties);
             e.printStackTrace();
             System.exit(1);
         }
 
-        if(!properties.containsKey("grailsVersion")) {
+        if (!properties.containsKey("grailsVersion")) {
             return null;
         }
 
         String grailsVersion = properties.getProperty("grailsVersion");
-        if(grailsVersion == null) {
+        if (grailsVersion == null) {
             System.out.println("gradle.properties does not contain grailsVersion; downloading latest Grails Version");
 
             String overrideGrailsVersion = System.getenv("PREFERRED_GRAILS_VERSION");
@@ -122,8 +123,7 @@ public class Start {
 
         try {
             return new GrailsVersion(grailsVersion);
-        }
-        catch(Exception e) {
+        } catch (Exception e) {
             System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
             e.printStackTrace();
             System.exit(1);

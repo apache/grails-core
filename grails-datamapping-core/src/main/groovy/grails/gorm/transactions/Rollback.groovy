@@ -20,7 +20,6 @@
 package grails.gorm.transactions
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
-import org.grails.datastore.gorm.transactions.transform.RollbackTransform
 import org.grails.datastore.gorm.transform.GormASTTransformationClass
 
 import java.lang.annotation.Documented

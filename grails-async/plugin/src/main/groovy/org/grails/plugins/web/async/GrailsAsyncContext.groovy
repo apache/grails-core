@@ -37,7 +37,8 @@ class GrailsAsyncContext implements AsyncContext {
 
     private static final String PERSISTENCE_INTERCEPTORS = 'org.codehaus.groovy.grails.PERSISTENCE_INTERCEPTORS'
 
-    final @Delegate AsyncContext delegate
+    final @Delegate
+    AsyncContext delegate
     final GrailsWebRequest originalWebRequest
     final AsyncGrailsWebRequest asyncGrailsWebRequest
 
@@ -53,7 +54,7 @@ class GrailsAsyncContext implements AsyncContext {
 
     void start(Runnable runnable) {
         delegate.start {
-            GrailsWebRequest webRequest =  asyncGrailsWebRequest ?: new GrailsWebRequest((HttpServletRequest)request, (HttpServletResponse)response, request.getServletContext())
+            GrailsWebRequest webRequest = asyncGrailsWebRequest ?: new GrailsWebRequest((HttpServletRequest) request, (HttpServletResponse) response, request.getServletContext())
             WebUtils.storeGrailsWebRequest(webRequest)
             def interceptors = getPersistenceInterceptors(webRequest)
 
@@ -74,11 +75,11 @@ class GrailsAsyncContext implements AsyncContext {
 
     void complete() {
         delegate.complete()
-     }
+    }
 
     protected Collection<PersistenceContextInterceptor> getPersistenceInterceptors(GrailsWebRequest webRequest) {
         def servletContext = webRequest.servletContext
-        Collection<PersistenceContextInterceptor> interceptors = (Collection<PersistenceContextInterceptor>)servletContext?.getAttribute(PERSISTENCE_INTERCEPTORS)
+        Collection<PersistenceContextInterceptor> interceptors = (Collection<PersistenceContextInterceptor>) servletContext?.getAttribute(PERSISTENCE_INTERCEPTORS)
         if (interceptors == null) {
             interceptors = webRequest.applicationContext?.getBeansOfType(PersistenceContextInterceptor)?.values() ?: []
             servletContext.setAttribute(PERSISTENCE_INTERCEPTORS, interceptors)

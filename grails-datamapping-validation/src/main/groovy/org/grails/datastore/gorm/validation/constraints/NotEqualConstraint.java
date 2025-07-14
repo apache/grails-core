@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
-
 
 import grails.gorm.validation.ConstrainedProperty;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
@@ -36,8 +34,8 @@ public class NotEqualConstraint extends AbstractConstraint {
     }
 
     /* (non-Javadoc)
-         * @see org.grails.validation.Constraint#supports(java.lang.Class)
-         */
+     * @see org.grails.validation.Constraint#supports(java.lang.Class)
+     */
     @SuppressWarnings("rawtypes")
     public boolean supports(Class type) {
         return type != null;
@@ -56,7 +54,7 @@ public class NotEqualConstraint extends AbstractConstraint {
         }
 
         Class<?> propertyClass = ClassPropertyFetcher.getPropertyType(constraintOwningClass, constraintPropertyName);
-        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(),propertyClass)  && propertyClass != null) {
+        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(), propertyClass) && propertyClass != null) {
             throw new IllegalArgumentException("Parameter for constraint [" +
                     ConstrainedProperty.NOT_EQUAL_CONSTRAINT + "] of property [" +
                     constraintPropertyName + "] of class [" + constraintOwningClass +
@@ -64,7 +62,6 @@ public class NotEqualConstraint extends AbstractConstraint {
         }
         return constraintParameter;
     }
-
 
     /**
      * @return Returns the notEqualTo.
@@ -76,7 +73,7 @@ public class NotEqualConstraint extends AbstractConstraint {
     @Override
     protected void processValidate(Object target, Object propertyValue, Errors errors) {
         if (constraintParameter.equals(propertyValue)) {
-            Object[] args = new Object[] { constraintPropertyName, constraintOwningClass, propertyValue, constraintParameter };
+            Object[] args = new Object[]{constraintPropertyName, constraintOwningClass, propertyValue, constraintParameter};
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_NOT_EQUAL_MESSAGE_CODE,
                     ConstrainedProperty.NOT_EQUAL_CONSTRAINT, args);
         }

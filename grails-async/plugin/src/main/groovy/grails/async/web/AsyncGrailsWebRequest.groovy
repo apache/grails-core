@@ -16,22 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.async.web
 
 import groovy.transform.CompileStatic
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.context.ApplicationContext
-import org.springframework.util.Assert
-import org.springframework.web.context.request.async.AsyncWebRequest
-
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.AsyncEvent
 import jakarta.servlet.AsyncListener
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+import org.springframework.context.ApplicationContext
+import org.springframework.util.Assert
+import org.springframework.web.context.request.async.AsyncWebRequest
+
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
@@ -42,7 +41,8 @@ import java.util.function.Consumer
  * @since 3.0
  */
 @CompileStatic
-class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest, AsyncListener{
+class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest, AsyncListener {
+
     static final String WEB_REQUEST = "org.grails.ASYNC_WEB_REQUEST"
 
     Long timeout
@@ -97,7 +97,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
     @Override
     void startAsync() {
         Assert.state(request.asyncSupported, "The current request does not support Async processing")
-        if(!isAsyncStarted()) {
+        if (!isAsyncStarted()) {
             asyncContext = request.startAsync(request, response)
             asyncContext.addListener(this)
         }
@@ -110,8 +110,8 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
 
     @Override
     void dispatch() {
-       Assert.notNull this.asyncContext, "Cannot dispatch without an AsyncContext"
-       asyncContext.dispatch()
+        Assert.notNull this.asyncContext, "Cannot dispatch without an AsyncContext"
+        asyncContext.dispatch()
     }
 
     @Override
@@ -121,7 +121,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
 
     @Override
     void onComplete(AsyncEvent event) throws IOException {
-        for(handler in completionHandlers) {
+        for (handler in completionHandlers) {
             handler.run()
         }
         asyncContext = null
@@ -130,7 +130,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
 
     @Override
     void onTimeout(AsyncEvent event) throws IOException {
-        for(handler in timeoutHandlers) {
+        for (handler in timeoutHandlers) {
             handler.run()
         }
     }

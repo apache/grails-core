@@ -18,25 +18,24 @@
  */
 package org.grails.datastore.mapping.core.impl;
 
-import java.util.List;
-
 import org.grails.datastore.mapping.model.PersistentEntity;
+
+import java.util.List;
 
 /**
  * An operation that is pending execution.
  *
- * @author Graeme Rocher
- *
  * @param <E> The native entity type (examples could be Row, Document etc.)
  * @param <K> The native key
+ * @author Graeme Rocher
  */
 public interface PendingOperation<E, K> extends Runnable {
-
 
     /**
      * @return Whether it was already executed
      */
     boolean wasExecuted();
+
     /**
      * @return Whether the operation has been vetoed
      */
@@ -64,21 +63,24 @@ public interface PendingOperation<E, K> extends Runnable {
 
     /**
      * Operations to be executed directly prior to this operation
+     *
      * @return The operations to execute prior
      */
-    List<PendingOperation<E,K>> getPreOperations();
+    List<PendingOperation<E, K>> getPreOperations();
 
     /**
      * Adds an operation to executed prior to other operations
+     *
      * @param preOperation The prior operation
      */
     void addPreOperation(PendingOperation<E, K> preOperation);
 
     /**
      * Operations to be executed directly following this operation
+     *
      * @return The operations to cascade to
      */
-    List<PendingOperation<E,K>> getCascadeOperations();
+    List<PendingOperation<E, K>> getCascadeOperations();
 
     /**
      * Adds an operation that should be executed after this operation

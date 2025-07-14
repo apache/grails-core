@@ -31,7 +31,6 @@ import spock.lang.Unroll
 
 class DomainClassMarshallerSpec extends Specification {
 
-
     void setup() {
     }
 

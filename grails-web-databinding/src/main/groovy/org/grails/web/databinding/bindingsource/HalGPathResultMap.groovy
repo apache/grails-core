@@ -21,7 +21,6 @@ package org.grails.web.databinding.bindingsource
 import groovy.xml.slurpersupport.GPathResult
 import groovy.xml.slurpersupport.Node
 import groovy.xml.slurpersupport.NodeChild
-
 import org.grails.databinding.xml.GPathResultMap
 
 /**
@@ -36,15 +35,15 @@ class HalGPathResultMap extends GPathResultMap {
 
     Object get(key) {
         def resourceElements = this.@gpath['resource']
-        if(resourceElements.size() > 0) {
+        if (resourceElements.size() > 0) {
             def match = resourceElements.iterator().findAll {
                 it.@rel.text() == key
             }
-            if(match) {
-                if(match.size() == 1) {
+            if (match) {
+                if (match.size() == 1) {
                     return new HalGPathResultMap(match[0])
                 }
-                if(match.size() > 1) {
+                if (match.size() > 1) {
                     def list = []
                     match.each {
                         list << new HalGPathResultMap(it)
@@ -58,7 +57,7 @@ class HalGPathResultMap extends GPathResultMap {
 
     protected String getPropertyNameForNodeChild(NodeChild child) {
         def propertyName = child.name()
-        if(propertyName == 'resource') {
+        if (propertyName == 'resource') {
             propertyName = child.attributes().get('rel')
         }
         propertyName
@@ -66,7 +65,7 @@ class HalGPathResultMap extends GPathResultMap {
 
     protected String getPropertyNameForNode(Node node) {
         def propertyName = node.name()
-        if(propertyName == 'resource') {
+        if (propertyName == 'resource') {
             propertyName = node.attributes().get('rel')
         }
         propertyName

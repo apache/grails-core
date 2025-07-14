@@ -1,18 +1,20 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package grails.init;
 
@@ -30,6 +32,7 @@ import java.util.stream.Stream;
  * Helper class for managing the `grails-cli` jar files in the Grails Wrapper home directory.
  */
 public class GrailsWrapperHome {
+
     public static final String CLI_COMBINED_PROJECT_NAME = "grails-cli";
 
     public final File home;
@@ -43,10 +46,9 @@ public class GrailsWrapperHome {
         this.allowedReleaseTypes = allowedReleaseTypes == null ? new LinkedHashSet<>() : allowedReleaseTypes;
 
         wrapperDirectory = new File(home, "wrapper");
-        if(!wrapperDirectory.exists()) {
+        if (!wrapperDirectory.exists()) {
             wrapperDirectory.mkdirs();
-        }
-        else if(!wrapperDirectory.isDirectory()) {
+        } else if (!wrapperDirectory.isDirectory()) {
             throw new IllegalStateException("GRAILS_WRAPPER_HOME must contain a wrapper directory. File exists instead at " + wrapperDirectory.getAbsolutePath());
         }
 
@@ -59,7 +61,7 @@ public class GrailsWrapperHome {
     }
 
     File getVersionDirectory(GrailsVersion version) {
-        if(version == null) {
+        if (version == null) {
             return null;
         }
 
@@ -72,7 +74,7 @@ public class GrailsWrapperHome {
     }
 
     File getWrapperImplementation(GrailsVersion version, File implDirectory) {
-        if(implDirectory == null) {
+        if (implDirectory == null) {
             return null;
         }
 
@@ -81,7 +83,7 @@ public class GrailsWrapperHome {
 
     void cleanupOtherVersions(GrailsVersion toKeep) {
         File[] children = wrapperDirectory.listFiles();
-        if(children == null) {
+        if (children == null) {
             return;
         }
 
@@ -104,7 +106,7 @@ public class GrailsWrapperHome {
     }
 
     private GrailsVersion findLatestVersion() {
-        if(versions.isEmpty()) {
+        if (versions.isEmpty()) {
             return null;
         }
 
@@ -113,16 +115,13 @@ public class GrailsWrapperHome {
         GrailsVersion lastMilestone = null;
         GrailsVersion lastSnapshot = null;
         for (GrailsVersion version : versions) {
-            if(version.releaseType == GrailsReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
+            if (version.releaseType == GrailsReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
                 lastRelease = version;
-            }
-            else if(version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
+            } else if (version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
                 lastReleaseCandidate = version;
-            }
-            else if(version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
+            } else if (version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
                 lastMilestone = version;
-            }
-            else if(version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
+            } else if (version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
                 lastSnapshot = version;
             }
         }
@@ -145,24 +144,23 @@ public class GrailsWrapperHome {
      */
     private List<GrailsVersion> determineVersions() {
         File[] children = wrapperDirectory.listFiles();
-        if(children == null || children.length == 0) {
+        if (children == null || children.length == 0) {
             return new ArrayList<>();
         }
 
         List<GrailsVersion> versions = new ArrayList<>();
-        for(File child : children) {
-            if(!child.isDirectory()) {
+        for (File child : children) {
+            if (!child.isDirectory()) {
                 continue;
             }
 
             try {
                 GrailsVersion version = new GrailsVersion(child.getName());
-                if(!allowedReleaseTypes.isEmpty() && !allowedReleaseTypes.contains(version.releaseType)) {
+                if (!allowedReleaseTypes.isEmpty() && !allowedReleaseTypes.contains(version.releaseType)) {
                     continue;
                 }
                 versions.add(version);
-            }
-            catch(Exception ignored) {
+            } catch (Exception ignored) {
                 throw new IllegalStateException("Grails Version [" + child.getName() + "] at [" + child.getAbsolutePath() + "] is not a valid Grails version.");
             }
         }

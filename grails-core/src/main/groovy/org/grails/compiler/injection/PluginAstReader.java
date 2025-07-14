@@ -23,13 +23,20 @@ import grails.util.GrailsNameUtils;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.PropertyNode;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.io.support.Resource;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -39,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 3.0
  */
 class PluginAstReader {
+
     private BasicGrailsPluginInfo pluginInfo;
 
     public PluginAstReader() {
@@ -52,7 +60,7 @@ class PluginAstReader {
     public GrailsPluginInfo readPluginInfo(ClassNode classNode) throws CompilationFailedException {
         String className = classNode.getNameWithoutPackage();
 
-        if(className.endsWith("GrailsPlugin")) {
+        if (className.endsWith("GrailsPlugin")) {
             visitContents(className, classNode);
         }
         return pluginInfo;
@@ -65,32 +73,28 @@ class PluginAstReader {
             public void visitProperty(PropertyNode node) {
                 String name = node.getName();
 
-
-
                 final Expression expr = node.getField().getInitialExpression();
 
                 if (expr != null) {
                     Object value = null;
                     if (expr instanceof ListExpression) {
                         final List<String> list = new ArrayList<String>();
-                        for (Expression i : ((ListExpression)expr).getExpressions()) {
+                        for (Expression i : ((ListExpression) expr).getExpressions()) {
                             list.add(i.getText());
                         }
                         value = list;
-                    }
-                    else if (expr instanceof MapExpression) {
+                    } else if (expr instanceof MapExpression) {
                         final Map<String, String> map = new LinkedHashMap<String, String>();
                         value = map;
-                        for (MapEntryExpression mee : ((MapExpression)expr).getMapEntryExpressions()) {
+                        for (MapEntryExpression mee : ((MapExpression) expr).getMapEntryExpressions()) {
                             map.put(mee.getKeyExpression().getText(), mee.getValueExpression().getText());
                         }
-                    }
-                    else {
-                        if(expr instanceof ConstantExpression)  {
+                    } else {
+                        if (expr instanceof ConstantExpression) {
                             value = expr.getText();
                         }
                     }
-                    if(value != null) {
+                    if (value != null) {
                         pluginInfo.setProperty(name, value);
                         super.visitProperty(node);
                     }
@@ -109,7 +113,6 @@ class PluginAstReader {
         pluginInfo.setName(GrailsNameUtils.getPluginName(className + ".groovy"));
     }
 
-
     /**
      * Simple Javabean implementation of the GrailsPluginInfo interface.
      *
@@ -120,7 +123,7 @@ class PluginAstReader {
 
         private String name;
         private String version;
-        private Map<String,Object> attributes = new ConcurrentHashMap<String,Object>();
+        private Map<String, Object> attributes = new ConcurrentHashMap<String, Object>();
 
         public BasicGrailsPluginInfo() {
         }
@@ -146,7 +149,7 @@ class PluginAstReader {
         }
 
         public Object getProperty(String property) {
-           return attributes.get(property);
+            return attributes.get(property);
         }
 
         public String getFullName() {
@@ -161,7 +164,7 @@ class PluginAstReader {
             return null;
         }
 
-        @SuppressWarnings({ "unchecked", "rawtypes" })
+        @SuppressWarnings({"unchecked", "rawtypes"})
         public Map getProperties() {
             Map props = new HashMap();
             props.putAll(attributes);

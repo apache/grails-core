@@ -19,8 +19,8 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * Used to output context surrounding any given content. Context is any markup that will be rendered
@@ -28,7 +28,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
  * any HTML input type element (A way to retrieve users input). Output is used in this class to mean
  * the display of a domain property on the page.
  *
- * An example of what might be returned with {@link #inputContext(DomainProperty,Closure)}
+ * An example of what might be returned with {@link #inputContext(DomainProperty, Closure)}
  * <pre>{@code
  * { ->
  *      div([class: "form-group"]) {
@@ -36,7 +36,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
  *          content.delegate = delegate
  *          content.call()
  *      }}
- * }</pre>
+ *}</pre>
  *
  * @author James Kleeh
  */

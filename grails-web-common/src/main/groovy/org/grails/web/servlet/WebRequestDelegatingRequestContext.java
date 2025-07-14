@@ -18,19 +18,18 @@
  */
 package org.grails.web.servlet;
 
-import java.io.Writer;
-import java.util.Map;
-
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.WebUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import java.io.Writer;
+import java.util.Map;
 
 /**
  * Delegates calls to a passed GrailsWebRequest instance.
@@ -43,11 +42,12 @@ public class WebRequestDelegatingRequestContext implements GrailsRequestContext 
     private GrailsWebRequest webRequest;
 
     public WebRequestDelegatingRequestContext() {
-        webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes();
+        webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes();
     }
 
     /**
      * Retrieves the webRequest object.
+     *
      * @return The webrequest object
      */
     public GrailsWebRequest getWebRequest() {
@@ -94,7 +94,7 @@ public class WebRequestDelegatingRequestContext implements GrailsRequestContext 
 
     public String getRequestURI() {
         HttpServletRequest request = getRequest();
-        String uri = (String)request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
+        String uri = (String) request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
         if (uri == null) {
             uri = request.getRequestURI();
         }

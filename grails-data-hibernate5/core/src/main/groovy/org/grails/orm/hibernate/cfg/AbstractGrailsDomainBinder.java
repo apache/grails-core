@@ -32,8 +32,8 @@ import java.util.Map;
  * @since 0.1
  */
 public abstract class AbstractGrailsDomainBinder {
-    protected static final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
 
+    protected static final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
 
     /**
      * Obtains a mapping object for the given domain class nam
@@ -46,10 +46,9 @@ public abstract class AbstractGrailsDomainBinder {
     }
 
     /**
-     * Obtains a mapping object for the given domain class nam
+     * Obtains a mapping object for the given domain class name and caches it
      *
      * @param theClass The domain class in question
-     * @return A Mapping object or null
      */
     static void cacheMapping(Class<?> theClass, Mapping mapping) {
         MAPPING_CACHE.put(theClass, mapping);
@@ -71,7 +70,7 @@ public abstract class AbstractGrailsDomainBinder {
 
     public static void clearMappingCache(Class<?> theClass) {
         String className = theClass.getName();
-        for(Iterator<Map.Entry<Class<?>, Mapping>> it = MAPPING_CACHE.entrySet().iterator(); it.hasNext();) {
+        for (Iterator<Map.Entry<Class<?>, Mapping>> it = MAPPING_CACHE.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Class<?>, Mapping> entry = it.next();
             if (className.equals(entry.getKey().getName())) {
                 it.remove();

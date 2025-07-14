@@ -38,6 +38,7 @@ import java.util.Map;
  */
 @SuppressWarnings("rawtypes")
 public class TagBodyClosure extends Closure {
+
     private static final long serialVersionUID = 4396762064131558457L;
     private static final Class[] PARAMETER_TYPES = new Class[]{Map.class};
     private Closure<?> bodyClosure;
@@ -66,7 +67,7 @@ public class TagBodyClosure extends Closure {
     private Object captureClosureOutput(Object args, boolean hasArgument) {
         final GroovyPageTagWriter capturedOut = new GroovyPageTagWriter();
         Binding currentBinding = outputContext.getBinding();
-        Map<String,Object> savedVariablesMap = null;
+        Map<String, Object> savedVariablesMap = null;
         Object originalIt = null;
         try {
             pushCapturedOut(capturedOut);
@@ -78,7 +79,7 @@ public class TagBodyClosure extends Closure {
                     originalIt = saveItVariable(currentBinding, args);
                 }
 
-                if (args instanceof Map && ((Map)args).size() > 0) {
+                if (args instanceof Map && ((Map) args).size() > 0) {
                     // The body can be passed a set of variables as a map that
                     // are then made available in the binding. This allows the
                     // contents of the body to reference any of these variables
@@ -99,7 +100,7 @@ public class TagBodyClosure extends Closure {
 
                     // Binding is only changed currently when body gets a map
                     // argument
-                    savedVariablesMap = addAndSaveVariables(currentBinding, (Map)args);
+                    savedVariablesMap = addAndSaveVariables(currentBinding, (Map) args);
                 }
             }
             bodyResult = executeClosure(args);
@@ -108,8 +109,7 @@ public class TagBodyClosure extends Closure {
                 return bodyResult;
             }
             return capturedOut.getBuffer();
-        }
-        finally {
+        } finally {
             if (currentBinding != null) {
                 restoreVariables(currentBinding, savedVariablesMap);
                 if (hasArgument) {
@@ -122,14 +122,14 @@ public class TagBodyClosure extends Closure {
 
     /**
      * Sets "it" variable to binding and returns the previous value.
-     *
+     * <p>
      * changing "it" variable is required to support refering to body argument with "it"; that was supported pre Grails 2.0
      * "it" is in binding because g:each loops are converted to ordinary for loops in Grails 2.0 with a generated variable name (if no variable name is specified)
      */
     @SuppressWarnings("unchecked")
     private Object saveItVariable(Binding currentBinding, Object args) {
         Object originalIt;
-        Map<String,Object> variablesMap = (currentBinding instanceof AbstractTemplateVariableBinding) ? ((AbstractTemplateVariableBinding)currentBinding)
+        Map<String, Object> variablesMap = (currentBinding instanceof AbstractTemplateVariableBinding) ? ((AbstractTemplateVariableBinding) currentBinding)
                 .getVariablesMap() : currentBinding.getVariables();
         originalIt = variablesMap.get("it");
         variablesMap.put("it", args);
@@ -141,7 +141,7 @@ public class TagBodyClosure extends Closure {
      */
     @SuppressWarnings("unchecked")
     private void restoreItVariable(Binding currentBinding, Object originalIt) {
-        Map<String,Object> variablesMap = (currentBinding instanceof AbstractTemplateVariableBinding) ? ((AbstractTemplateVariableBinding)currentBinding)
+        Map<String, Object> variablesMap = (currentBinding instanceof AbstractTemplateVariableBinding) ? ((AbstractTemplateVariableBinding) currentBinding)
                 .getVariablesMap() : currentBinding.getVariables();
         variablesMap.put("it", originalIt);
     }
@@ -150,14 +150,14 @@ public class TagBodyClosure extends Closure {
      * Adds variables to binding and returns a map with previous values.
      */
     @SuppressWarnings("unchecked")
-    private Map<String,Object> addAndSaveVariables(Binding binding, Map args) {
-        Map<String,Object> savedVariablesMap = new LinkedHashMap<String,Object>();
+    private Map<String, Object> addAndSaveVariables(Binding binding, Map args) {
+        Map<String, Object> savedVariablesMap = new LinkedHashMap<String, Object>();
         for (Iterator<Object> i = args.keySet().iterator(); i.hasNext(); ) {
             String varname = String.valueOf(i.next());
             savedVariablesMap.put(varname, binding.getVariable(varname));
         }
         if (binding instanceof AbstractTemplateVariableBinding) {
-            ((AbstractTemplateVariableBinding)binding).addMap(args);
+            ((AbstractTemplateVariableBinding) binding).addMap(args);
         } else {
             for (Iterator<Map.Entry> i = args.entrySet().iterator(); i.hasNext(); ) {
                 Map.Entry entry = i.next();
@@ -181,8 +181,7 @@ public class TagBodyClosure extends Closure {
     private void popCapturedOut() {
         if (outputContext != null) {
             OutputEncodingStack.currentStack(outputContext).pop();
-        }
-        else {
+        } else {
             OutputEncodingStack.currentStack().pop();
         }
     }
@@ -190,8 +189,7 @@ public class TagBodyClosure extends Closure {
     private void pushCapturedOut(GroovyPageTagWriter capturedOut) {
         if (outputContext != null) {
             OutputEncodingStack.currentStack(outputContext).push(capturedOut);
-        }
-        else {
+        } else {
             OutputEncodingStack.currentStack().push(capturedOut);
         }
     }

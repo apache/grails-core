@@ -39,15 +39,14 @@ class CommandCompleter implements Completer {
     int complete(String buffer, int cursor, List<CharSequence> candidates) {
         def cmd = commands.find() {
             def trimmed = buffer.trim()
-            if(trimmed.split(/\s/).size() > 1) {
-                return trimmed.startsWith( it.name )
-            }
-            else {
+            if (trimmed.split(/\s/).size() > 1) {
+                return trimmed.startsWith(it.name)
+            } else {
                 return trimmed == it.name
             }
         }
-        if(cmd instanceof Completer) {
-            return ((Completer)cmd).complete(buffer, cursor, candidates)
+        if (cmd instanceof Completer) {
+            return ((Completer) cmd).complete(buffer, cursor, candidates)
         }
         return cursor
     }

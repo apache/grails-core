@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Generated
 import org.grails.cli.profile.commands.script.GroovyScriptCommand
 
-
 /**
  * Allows for listening and reacting to events triggered by other commands
  *
@@ -31,7 +30,6 @@ import org.grails.cli.profile.commands.script.GroovyScriptCommand
  */
 @CompileStatic
 trait CommandEvents {
-
 
     /**
      * Register to listen for an event
@@ -43,7 +41,6 @@ trait CommandEvents {
     void on(String eventName, @DelegatesTo(GroovyScriptCommand) Closure callable) {
         EventStorage.registerEvent(eventName, callable)
     }
-
 
     /**
      * Register to listen for an event that runs before the given command
@@ -74,7 +71,7 @@ trait CommandEvents {
      * @param args The arguments to the event
      */
     @Generated
-    void notify(String eventName, Object...args) {
+    void notify(String eventName, Object... args) {
         EventStorage.fireEvent(this, eventName, args)
     }
 

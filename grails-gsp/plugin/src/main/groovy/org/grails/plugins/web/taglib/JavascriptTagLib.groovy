@@ -21,10 +21,9 @@ package org.grails.plugins.web.taglib
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
 import grails.plugins.GrailsPluginManager
+import jakarta.annotation.PostConstruct
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
-
-import jakarta.annotation.PostConstruct
 
 /**
  * Javascript tags.
@@ -33,14 +32,15 @@ import jakarta.annotation.PostConstruct
  */
 @TagLib
 class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
+
     ApplicationContext applicationContext
 
     GrailsPluginManager pluginManager
 
     boolean hasResourceProcessor = false
 
-    static encodeAsForTags = [escapeJavascript: 'JavaScript', 
-                              javascript: [expressionCodec:"JavaScript", scriptletCodec:"JavaScript", replaceOnly:true]]
+    static encodeAsForTags = [escapeJavascript: 'JavaScript',
+                              javascript      : [expressionCodec: "JavaScript", scriptletCodec: "JavaScript", replaceOnly: true]]
 
     @PostConstruct
     private void initHasResourceProcessor() {
@@ -88,12 +88,10 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
         def requestPluginContext
         if (attrs.plugin) {
             requestPluginContext = pluginManager.getPluginPath(attrs.remove('plugin')) ?: ''
-        }
-        else {
+        } else {
             if (attrs.contextPath != null) {
                 requestPluginContext = attrs.remove('contextPath').toString()
-            }
-            else {
+            } else {
                 requestPluginContext = pageScope.pluginContextPath ?: ''
             }
         }
@@ -109,7 +107,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             if (requestPluginContext) {
                 reqResCtx = (requestPluginContext.startsWith("/") ? requestPluginContext.substring(1) : requestPluginContext) + '/'
             }
-            attrs.uri = appBase + reqResCtx + 'js/'+attrs.remove('src')
+            attrs.uri = appBase + reqResCtx + 'js/' + attrs.remove('src')
         }
         out << g.external(attrs)
     }
@@ -122,8 +120,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
     Closure escapeJavascript = { attrs, body ->
         if (body) {
             out << body()
-        }
-        else if (attrs.value) {
+        } else if (attrs.value) {
             out << attrs.value
         }
     }

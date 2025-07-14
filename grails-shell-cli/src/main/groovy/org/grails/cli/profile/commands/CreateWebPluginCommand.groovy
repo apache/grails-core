@@ -46,11 +46,10 @@ class CreateWebPluginCommand extends CreateAppCommand {
 
     protected boolean validateProfile(Profile profileInstance, String profileName, ExecutionContext executionContext) {
         def pluginProfile = profileInstance.extends.find() { Profile parent -> parent.name == 'plugin' }
-        if(profileName != 'plugin' && pluginProfile == null) {
+        if (profileName != 'plugin' && pluginProfile == null) {
             executionContext.console.error("No valid plugin profile found for name [$profileName]")
             return false
-        }
-        else {
+        } else {
             return super.validateProfile(profileInstance, profileName)
         }
     }

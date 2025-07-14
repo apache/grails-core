@@ -25,7 +25,6 @@ import grails.core.InjectableGrailsClass;
  *
  * @author Graeme Rocher
  * @author Steven Devijver
- *
  * @since 0.1
  */
 public abstract class AbstractInjectableGrailsClass extends AbstractGrailsClass implements InjectableGrailsClass {

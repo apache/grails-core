@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.validation;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -32,6 +31,7 @@ import org.springframework.validation.Validator;
  * @since 6.0
  */
 public class BeanFactoryValidatorRegistry implements ValidatorRegistry {
+
     private final BeanFactory beanFactory;
 
     public BeanFactoryValidatorRegistry(BeanFactory beanFactory) {

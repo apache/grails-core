@@ -31,7 +31,7 @@ class AutowiredInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        ((AutowiredTest)invocation.instance).autowire()
+        ((AutowiredTest) invocation.instance).autowire()
         invocation.proceed()
     }
 }

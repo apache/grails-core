@@ -18,14 +18,14 @@
  */
 package grails.plugin.cache;
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 
 /**
  * Indicates that a method (or all the methods on a class) can be cached.

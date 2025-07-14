@@ -31,16 +31,17 @@ import org.grails.cli.compiler.DependencyCustomizer
  *
  */
 @CompileStatic
-class GormCompilerAutoConfiguration extends CompilerAutoConfiguration{
+class GormCompilerAutoConfiguration extends CompilerAutoConfiguration {
+
     @Override
     boolean matches(ClassNode classNode) {
-        return AstUtils.hasAtLeastOneAnnotation(classNode, "grails.persistence.Entity", "grails.gorm.annotation.Entity" ,"Entity")
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "grails.persistence.Entity", "grails.gorm.annotation.Entity", "Entity")
     }
 
     @Override
     void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         dependencies.ifAnyMissingClasses("grails.persistence.Entity", "grails.gorm.annotation.Entity")
-                        .add("grails-data-hibernate5-core")
+                .add("grails-data-hibernate5-core")
     }
 
     @Override

@@ -48,7 +48,7 @@ class UrlMappingsErrorPageCustomizer implements WebServerFactoryCustomizer<Confi
 
         List<ErrorPage> errorPages = []
         for (UrlMapping urlMapping : allMappings) {
-            if(urlMapping instanceof ResponseCodeUrlMapping) {
+            if (urlMapping instanceof ResponseCodeUrlMapping) {
                 ResponseCodeUrlMapping responseCodeUrlMapping = (ResponseCodeUrlMapping) urlMapping;
                 ResponseCodeMappingData data = (ResponseCodeMappingData) responseCodeUrlMapping.urlData
                 final int code = data.responseCode

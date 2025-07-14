@@ -18,23 +18,23 @@
  */
 package org.grails.encoder.impl
 
-import groovy.transform.CompileStatic
-
 import grails.util.GrailsMetaClassUtils
+import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.GStringImpl
 import org.grails.encoder.CodecFactory
 import org.grails.encoder.CodecMetaClassSupport
 
 @CompileStatic
 class StandaloneCodecLookup extends BasicCodecLookup {
+
     boolean registerMetaMethods = true
     boolean cacheLookupsInMetaMethods = true
     Collection<Class<? extends Object>> targetClassesForMetaMethods = [
-        String,
-        GStringImpl,
-        StringBuffer,
-        StringBuilder,
-        Object
+            String,
+            GStringImpl,
+            StringBuffer,
+            StringBuilder,
+            Object
     ]
     Collection<Class<? extends CodecFactory>> codecFactoryClasses = [
             XMLCodecFactory,
@@ -44,12 +44,12 @@ class StandaloneCodecLookup extends BasicCodecLookup {
             HTMLJSCodec,
             URLCodecFactory,
             RawCodec
-        ]
+    ]
 
     @Override
     protected void registerCodecs() {
         codecFactoryClasses.each { Class clazz ->
-            registerCodecFactory((CodecFactory)clazz.getDeclaredConstructor().newInstance())
+            registerCodecFactory((CodecFactory) clazz.getDeclaredConstructor().newInstance())
         }
     }
 
@@ -60,7 +60,7 @@ class StandaloneCodecLookup extends BasicCodecLookup {
     }
 
     protected registerMetaMethods(CodecFactory codecFactory) {
-        if(registerMetaMethods && targetClassesForMetaMethods) {
+        if (registerMetaMethods && targetClassesForMetaMethods) {
             new CodecMetaClassSupport().configureCodecMethods(codecFactory, cacheLookupsInMetaMethods, resolveMetaClasses())
         }
     }
@@ -68,7 +68,7 @@ class StandaloneCodecLookup extends BasicCodecLookup {
     protected List<ExpandoMetaClass> resolveMetaClasses() {
         targetClassesForMetaMethods.collect {
             Class clazz ->
-            GrailsMetaClassUtils.getExpandoMetaClass(clazz)
+                GrailsMetaClassUtils.getExpandoMetaClass(clazz)
         }
     }
 }

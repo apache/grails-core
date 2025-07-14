@@ -22,7 +22,7 @@ import grails.web.databinding.WebDataBinding
 import org.grails.core.artefact.DomainClassArtefactHandler
 
 /**
- * 
+ *
  * @author Jeff Brown
  * @since 3.0
  *

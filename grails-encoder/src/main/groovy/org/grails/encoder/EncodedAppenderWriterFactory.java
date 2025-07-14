@@ -34,10 +34,8 @@ public interface EncodedAppenderWriterFactory {
      * Gets the EncodedAppenderWriter instance that is connected to this
      * instance implementation with a certain encoder fixed.
      *
-     * @param encoder
-     *            the encoder to use
-     * @param encodingStateRegistry
-     *            the current EncodingStateRegistry to use
+     * @param encoder               the encoder to use
+     * @param encodingStateRegistry the current EncodingStateRegistry to use
      * @return the java.io.Writer instance
      */
     Writer getWriterForEncoder(Encoder encoder, EncodingStateRegistry encodingStateRegistry);

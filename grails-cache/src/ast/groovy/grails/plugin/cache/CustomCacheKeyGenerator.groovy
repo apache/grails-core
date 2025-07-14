@@ -125,7 +125,6 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
 		return new TemporaryGrailsCacheKey(className, methodName, objHashCode, simpleKey)
 	}
 
-
 	@CompileStatic
 	private static class TemporaryGrailsCacheKey implements Serializable {
 		final String targetClassName

@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
+import jakarta.persistence.criteria.JoinType;
 import org.grails.datastore.gorm.query.criteria.AbstractCriteriaBuilder;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -30,7 +30,6 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 
-import jakarta.persistence.criteria.JoinType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -99,8 +98,8 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     /**
      * Defines and executes a list query in a single call. Example: Foo.createCriteria.list { }
-     * @param callable The closure to execute
      *
+     * @param callable The closure to execute
      * @return The result list
      */
     public List list(Closure callable) {
@@ -113,9 +112,7 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
     /**
      * Defines and executes a get query (a single result) in a single call. Example: Foo.createCriteria.get { }
      *
-     *
      * @param callable The closure to execute
-     *
      * @return A single result
      */
     public Object get(Closure callable) {
@@ -128,8 +125,8 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     /**
      * Defines and executes a list distinct query in a single call. Example: Foo.createCriteria.listDistinct { }
-     * @param callable The closure to execute
      *
+     * @param callable The closure to execute
      * @return The result list
      */
     public List listDistinct(Closure callable) {
@@ -155,8 +152,8 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     /**
      * Defines and executes a count query in a single call. Example: Foo.createCriteria.count { }
-     * @param callable The closure to execute
      *
+     * @param callable The closure to execute
      * @return The result count
      */
     public Number count(Closure callable) {
@@ -166,11 +163,10 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
         query.projections().count();
         return (Number) query.singleResult();
     }
-    
+
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(SCROLL_CALL, new Object[]{c});
     }
-
 
 }

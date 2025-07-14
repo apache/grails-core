@@ -32,6 +32,7 @@ import java.util.List;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractPersistentCollection implements PersistentCollection, Serializable {
+
     protected final transient Session session;
     protected final transient AssociationQueryExecutor indexer;
     protected final transient Class childType;
@@ -136,7 +137,6 @@ public abstract class AbstractPersistentCollection implements PersistentCollecti
     public boolean hasChangedSize() {
         return isInitialized() && (size() != originalSize);
     }
-
 
     /* Collection methods */
 
@@ -270,7 +270,9 @@ public abstract class AbstractPersistentCollection implements PersistentCollecti
     }
 
     public void initialize() {
-        if(initializing != null) return;
+        if (initializing != null) {
+            return;
+        }
 
         setInitializing(Boolean.TRUE);
 
@@ -293,24 +295,21 @@ public abstract class AbstractPersistentCollection implements PersistentCollecti
 
                     loadInverseChildKeys(session, childType, keys);
                 }
-            }
-            else {
+            } else {
                 List results = indexer.query(associationKey);
-                if(indexer.doesReturnKeys()) {
+                if (indexer.doesReturnKeys()) {
 
                     PersistentEntity entity = indexer.getIndexedEntity();
 
                     // This should really only happen for unit testing since entities are
                     // mocked selectively and may not always be registered in the indexer. In this
                     // case, there can't be any results to be added to the collection.
-                    if( entity != null ) {
+                    if (entity != null) {
                         loadInverseChildKeys(session, entity.getJavaClass(), results);
-                    }
-                    else if(childType != null ){
+                    } else if (childType != null) {
                         loadInverseChildKeys(session, childType, results);
                     }
-                }
-                else {
+                } else {
                     addAll(results);
                 }
             }
@@ -321,15 +320,14 @@ public abstract class AbstractPersistentCollection implements PersistentCollecti
     }
 
     protected void loadInverseChildKeys(Session session, Class childType, Collection keys) {
-        if(!keys.isEmpty()) {
-            if(proxyEntities) {
+        if (!keys.isEmpty()) {
+            if (proxyEntities) {
                 for (Object key : keys) {
                     add(
                             session.proxy(childType, (Serializable) key)
                     );
                 }
-            }
-            else {
+            } else {
                 addAll(session.retrieveAll(childType, keys));
             }
         }
@@ -344,7 +342,7 @@ public abstract class AbstractPersistentCollection implements PersistentCollecti
     }
 
     public void markDirty() {
-        if(!currentlyInitializing()) {
+        if (!currentlyInitializing()) {
             dirty = true;
         }
     }

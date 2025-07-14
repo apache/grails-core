@@ -19,15 +19,14 @@
 package org.grails.web.converters.marshaller.xml;
 
 import grails.converters.XML;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.springframework.beans.BeanUtils;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.springframework.beans.BeanUtils;
 
 /**
  * @author Siegfried Puchbauer
@@ -60,11 +59,9 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
                     xml.end();
                 }
             }
-        }
-        catch (ConverterException ce) {
+        } catch (ConverterException ce) {
             throw ce;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Error converting Bean with class " + o.getClass().getName(), e);
         }
     }

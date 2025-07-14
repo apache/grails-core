@@ -23,7 +23,10 @@ import grails.gorm.multitenancy.WithoutTenant
 import grails.validation.ValidationException
 import org.grails.datastore.mapping.multitenancy.web.SessionTenantResolver
 
-import static org.springframework.http.HttpStatus.*
+import static org.springframework.http.HttpStatus.CREATED
+import static org.springframework.http.HttpStatus.NOT_FOUND
+import static org.springframework.http.HttpStatus.NO_CONTENT
+import static org.springframework.http.HttpStatus.OK
 
 class BookController {
 

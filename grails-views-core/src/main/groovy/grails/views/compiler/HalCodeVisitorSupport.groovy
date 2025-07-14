@@ -26,7 +26,10 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilationUnit
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 @CompileStatic
 class HalCodeVisitorSupport extends CodeVisitorSupport {
@@ -44,7 +47,7 @@ class HalCodeVisitorSupport extends CodeVisitorSupport {
     void visitBlockStatement(BlockStatement block) {
         currentBlock = block
         List<Statement> statements = block.statements
-        for(int i = 0; i < statements.size(); i++) {
+        for (int i = 0; i < statements.size(); i++) {
             statements[i].visit(this)
             if (newStatements.containsKey(block)) {
                 statements.add(i, newStatements.get(block))
@@ -58,7 +61,7 @@ class HalCodeVisitorSupport extends CodeVisitorSupport {
     void visitVariableExpression(VariableExpression expression) {
         if (expression.accessedVariable && expression.accessedVariable.name == "hal") {
             Statement statement = stmt(
-                assignX(propX(varX(expression.accessedVariable), 'delegate'), varX('delegate'))
+                    assignX(propX(varX(expression.accessedVariable), 'delegate'), varX('delegate'))
             )
             newStatements.put(currentBlock, statement)
         }

@@ -22,7 +22,8 @@ import org.grails.encoder.Encoder;
 
 import java.io.Writer;
 
-public class OutputEncodingStackAttributes {
+public final class OutputEncodingStackAttributes {
+
     private final Writer topWriter;
     private final Encoder staticEncoder;
     private final Encoder outEncoder;
@@ -36,10 +37,25 @@ public class OutputEncodingStackAttributes {
     private final boolean replaceOnly;
     private final OutputContext outputContext;
 
+    private OutputEncodingStackAttributes(Builder builder) {
+        this.topWriter = builder.topWriter;
+        this.staticEncoder = builder.staticEncoder;
+        this.outEncoder = builder.outEncoder;
+        this.taglibEncoder = builder.taglibEncoder;
+        this.defaultTaglibEncoder = builder.defaultTaglibEncoder;
+        this.expressionEncoder = builder.expressionEncoder;
+        this.allowCreate = builder.allowCreate;
+        this.pushTop = builder.pushTop;
+        this.autoSync = builder.autoSync;
+        this.outputContext = builder.outputContext;
+        this.inheritPreviousEncoders = builder.inheritPreviousEncoders;
+        this.replaceOnly = builder.replaceOnly;
+    }
+
     public boolean isInheritPreviousEncoders() {
         return inheritPreviousEncoders;
     }
-    
+
     public boolean isReplaceOnly() {
         return replaceOnly;
     }
@@ -85,18 +101,19 @@ public class OutputEncodingStackAttributes {
     }
 
     public static class Builder {
+
         private Writer topWriter;
         private Encoder staticEncoder;
         private Encoder outEncoder;
         private Encoder expressionEncoder;
         private Encoder taglibEncoder;
         private Encoder defaultTaglibEncoder;
-        private boolean allowCreate=true;
-        private boolean pushTop=true;
-        private boolean autoSync=true;
+        private boolean allowCreate = true;
+        private boolean pushTop = true;
+        private boolean autoSync = true;
         private OutputContext outputContext;
-        private boolean inheritPreviousEncoders=false;
-        private boolean replaceOnly=false;
+        private boolean inheritPreviousEncoders = false;
+        private boolean replaceOnly = false;
 
         public Builder() {
         }
@@ -165,7 +182,7 @@ public class OutputEncodingStackAttributes {
             this.inheritPreviousEncoders = inheritPreviousEncoders;
             return this;
         }
-        
+
         public Builder replaceOnly(boolean replaceOnly) {
             this.replaceOnly = replaceOnly;
             return this;
@@ -179,20 +196,5 @@ public class OutputEncodingStackAttributes {
         public OutputEncodingStackAttributes build() {
             return new OutputEncodingStackAttributes(this);
         }
-    }
-
-    private OutputEncodingStackAttributes(Builder builder) {
-        this.topWriter = builder.topWriter;
-        this.staticEncoder = builder.staticEncoder;
-        this.outEncoder = builder.outEncoder;
-        this.taglibEncoder = builder.taglibEncoder;
-        this.defaultTaglibEncoder = builder.defaultTaglibEncoder;
-        this.expressionEncoder = builder.expressionEncoder;
-        this.allowCreate = builder.allowCreate;
-        this.pushTop = builder.pushTop;
-        this.autoSync = builder.autoSync;
-        this.outputContext = builder.outputContext;
-        this.inheritPreviousEncoders = builder.inheritPreviousEncoders;
-        this.replaceOnly = builder.replaceOnly;
     }
 }

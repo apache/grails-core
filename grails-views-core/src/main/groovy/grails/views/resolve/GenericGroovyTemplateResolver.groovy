@@ -56,9 +56,9 @@ class GenericGroovyTemplateResolver implements TemplateResolver {
 
     @Override
     URL resolveTemplate(String path) {
-        if(baseDir != null) {
+        if (baseDir != null) {
             def f = new File(baseDir, path)
-            if(f.exists()) {
+            if (f.exists()) {
                 return f.toURI().toURL()
             }
         }
@@ -76,20 +76,20 @@ class GenericGroovyTemplateResolver implements TemplateResolver {
         try {
             log.trace("Attempting to load class [$className] for template [$path]")
             def cls = classLoader.loadClass(className)
-            return (Class<? extends Template>)cls
+            return (Class<? extends Template>) cls
         } catch (Throwable e) {
         }
         return null
     }
 
     static String resolveTemplateName(String scope, String path) {
-        if(path.startsWith(File.separator) || path.startsWith('/')) {
+        if (path.startsWith(File.separator) || path.startsWith('/')) {
             path = path.substring(1) // remove leading path separator 
         }
         path = path.replace(File.separatorChar, UNDERSCORE_CHAR)
         path = path.replace(SLASH_CHAR, UNDERSCORE_CHAR)
         path = path.replace(DOT_CHAR, UNDERSCORE_CHAR)
-        if(scope) {
+        if (scope) {
             scope = scope.replaceAll(/[\W\s]/, String.valueOf(UNDERSCORE_CHAR))
             path = "${scope}_${path}"
         }

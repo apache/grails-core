@@ -96,7 +96,7 @@ class Entity<P extends Property> {
      * Get the datasource names that this domain class works with.
      * @return the datasource names
      */
-    List<String> datasources = [ ConnectionSource.DEFAULT ]
+    List<String> datasources = [ConnectionSource.DEFAULT]
 
     /**
      * Sets the datastore to use
@@ -109,7 +109,6 @@ class Entity<P extends Property> {
         return this
     }
 
-
     /**
      * Sets the datastore to use
      *
@@ -121,14 +120,13 @@ class Entity<P extends Property> {
         return this
     }
 
-
     /**
      * Sets the connection to use
      *
      * @param name
      * @return
      */
-    Entity<P> connections(String...names) {
+    Entity<P> connections(String... names) {
         connections(Arrays.asList(names))
         return this
     }
@@ -140,7 +138,7 @@ class Entity<P extends Property> {
      * @return
      */
     Entity<P> connections(List<String> names) {
-        if(names != null && names.size() > 0) {
+        if (names != null && names.size() > 0) {
             this.datasources = names
         }
         return this
@@ -167,8 +165,8 @@ class Entity<P extends Property> {
      */
     Entity<P> id(Map identityConfig) {
         Property.configureExisting(
-            getOrInitializePropertyConfig(GormProperties.IDENTITY),
-            identityConfig
+                getOrInitializePropertyConfig(GormProperties.IDENTITY),
+                identityConfig
         )
         return this
     }
@@ -177,7 +175,7 @@ class Entity<P extends Property> {
      * @param identityConfig The id config
      * @return This mapping
      */
-    Entity<P> id(@DelegatesTo(type='P') Closure identityConfig) {
+    Entity<P> id(@DelegatesTo(type = 'P') Closure identityConfig) {
         Property.configureExisting(
                 getOrInitializePropertyConfig(GormProperties.IDENTITY),
                 identityConfig
@@ -190,7 +188,7 @@ class Entity<P extends Property> {
      *
      * @param isVersioned True if a version property should be configured
      */
-    Entity<P> version(@DelegatesTo(type='P') Closure versionConfig) {
+    Entity<P> version(@DelegatesTo(type = 'P') Closure versionConfig) {
         P pc = getOrInitializePropertyConfig(GormProperties.VERSION)
         Property.configureExisting(pc, versionConfig)
         return this
@@ -223,7 +221,7 @@ class Entity<P extends Property> {
      * @param propertyConfig The property config
      * @return This mapping
      */
-    Entity<P> property(String name, @DelegatesTo(type='P') Closure propertyConfig) {
+    Entity<P> property(String name, @DelegatesTo(type = 'P') Closure propertyConfig) {
         P pc = getOrInitializePropertyConfig(name)
         Property.configureExisting(pc, propertyConfig)
         return this
@@ -247,12 +245,11 @@ class Entity<P extends Property> {
      * @param propertyConfig The property config
      * @return This mapping
      */
-    P property(@DelegatesTo(type='P') Closure propertyConfig) {
-        if(propertyConfigs.containsKey('*')) {
+    P property(@DelegatesTo(type = 'P') Closure propertyConfig) {
+        if (propertyConfigs.containsKey('*')) {
             P cloned = cloneGlobalConstraint()
             return Property.configureExisting(cloned, propertyConfig)
-        }
-        else {
+        } else {
             P prop = newProperty()
             return Property.configureExisting(prop, propertyConfig)
         }
@@ -264,13 +261,12 @@ class Entity<P extends Property> {
      * @param propertyConfig The property config
      * @return This mapping
      */
-    P property( Map propertyConfig) {
-        if(propertyConfigs.containsKey('*')) {
+    P property(Map propertyConfig) {
+        if (propertyConfigs.containsKey('*')) {
             // apply global constraints constraints
             P cloned = cloneGlobalConstraint()
             return Property.configureExisting(cloned, propertyConfig)
-        }
-        else {
+        } else {
             P prop = newProperty()
             return Property.configureExisting(prop, propertyConfig)
         }
@@ -290,57 +286,50 @@ class Entity<P extends Property> {
     }
 
     def propertyMissing(String name, Object val) {
-        if(val instanceof Closure) {
-            property(name, (Closure)val)
-        }
-        else if(val instanceof Property) {
-            propertyConfigs[name] =((P)val)
-        }
-        else {
+        if (val instanceof Closure) {
+            property(name, (Closure) val)
+        } else if (val instanceof Property) {
+            propertyConfigs[name] = ((P) val)
+        } else {
             throw new MissingPropertyException(name, Entity)
         }
     }
 
     @CompileDynamic
     def methodMissing(String name, Object args) {
-        if(args && args.getClass().isArray()) {
-            if(args[0] instanceof Closure) {
-                property(name, (Closure)args[0])
-            }
-            else if(args[0] instanceof Property) {
-                propertyConfigs[name] = (P)args[0]
-            }
-            else if(args[0] instanceof Map) {
+        if (args && args.getClass().isArray()) {
+            if (args[0] instanceof Closure) {
+                property(name, (Closure) args[0])
+            } else if (args[0] instanceof Property) {
+                propertyConfigs[name] = (P) args[0]
+            } else if (args[0] instanceof Map) {
                 P property = getOrInitializePropertyConfig(name)
                 Map namedArgs = (Map) args[0]
-                if(args[-1] instanceof Closure) {
+                if (args[-1] instanceof Closure) {
                     Property.configureExisting(
                             property,
-                            ((Closure)args[-1])
+                            ((Closure) args[-1])
                     )
 
                 }
                 Property.configureExisting(property, namedArgs)
-            }
-            else {
+            } else {
                 throw new MissingMethodException(name, getClass(), args)
             }
-        }
-        else {
+        } else {
             throw new MissingMethodException(name, getClass(), args)
         }
     }
 
     protected P getOrInitializePropertyConfig(String name) {
         P pc = propertyConfigs[name]
-        if(pc == null && propertyConfigs.containsKey('*')) {
+        if (pc == null && propertyConfigs.containsKey('*')) {
             // apply global constraints constraints
             P globalConstraints = propertyConfigs.get('*')
-            if(globalConstraints != null) {
-                pc = (P)globalConstraints.clone()
+            if (globalConstraints != null) {
+                pc = (P) globalConstraints.clone()
             }
-        }
-        else {
+        } else {
             pc = propertyConfigs[name]
         }
         if (pc == null) {
@@ -351,7 +340,7 @@ class Entity<P extends Property> {
     }
 
     protected P newProperty() {
-        (P)new Property()
+        (P) new Property()
     }
 
     protected P cloneGlobalConstraint() {

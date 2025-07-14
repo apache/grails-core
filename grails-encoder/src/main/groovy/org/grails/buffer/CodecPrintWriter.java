@@ -18,15 +18,16 @@
  */
 package org.grails.buffer;
 
-import java.io.Writer;
-
 import org.grails.encoder.EncodedAppender;
 import org.grails.encoder.EncodedAppenderFactory;
 import org.grails.encoder.Encoder;
 import org.grails.encoder.EncoderAware;
 import org.grails.encoder.EncodingStateRegistry;
 
+import java.io.Writer;
+
 public class CodecPrintWriter extends GrailsPrintWriter implements EncoderAware, EncodedAppenderFactory {
+
     private final Encoder encoder;
     private final StreamCharBuffer buffer;
     private boolean ignoreEncodingState;
@@ -34,11 +35,11 @@ public class CodecPrintWriter extends GrailsPrintWriter implements EncoderAware,
     public CodecPrintWriter(Writer out, Encoder encoder, EncodingStateRegistry encodingStateRegistry) {
         this(out, encoder, encodingStateRegistry, false);
     }
-    
+
     public CodecPrintWriter(Writer out, Encoder encoder, EncodingStateRegistry encodingStateRegistry, boolean ignoreEncodingState) {
         super(null);
         this.encoder = encoder;
-        buffer=new StreamCharBuffer();
+        buffer = new StreamCharBuffer();
         buffer.setNotifyParentBuffersEnabled(false);
         allowUnwrappingOut = false;
         buffer.connectTo(out, false);
@@ -54,7 +55,7 @@ public class CodecPrintWriter extends GrailsPrintWriter implements EncoderAware,
     }
 
     public EncodedAppender getEncodedAppender() {
-        EncodedAppender encodedAppender = ((EncodedAppenderFactory)buffer.getWriter()).getEncodedAppender();
+        EncodedAppender encodedAppender = ((EncodedAppenderFactory) buffer.getWriter()).getEncodedAppender();
         encodedAppender.setIgnoreEncodingState(ignoreEncodingState);
         return encodedAppender;
     }

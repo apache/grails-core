@@ -72,7 +72,6 @@ class RequestForwarderSpec extends Specification {
         webRequest.request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW) == null
 
 
-
         cleanup:
         RequestContextHolder.setRequestAttributes(null)
     }

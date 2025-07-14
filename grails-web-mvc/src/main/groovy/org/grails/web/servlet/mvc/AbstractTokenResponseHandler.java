@@ -23,12 +23,11 @@ import groovy.lang.Closure;
 /**
  * Implements the behavior of wasInvoked in the TokenResponseHandler interface.
  *
- * @see TokenResponseHandler#wasInvoked()
- *
  * @author Graeme Rocher
+ * @see TokenResponseHandler#wasInvoked()
  * @since 1.1
  */
-public abstract class AbstractTokenResponseHandler implements TokenResponseHandler{
+public abstract class AbstractTokenResponseHandler implements TokenResponseHandler {
 
     private boolean invoked = false;
     private boolean valid;

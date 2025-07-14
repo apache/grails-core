@@ -48,58 +48,60 @@ class DataSourceGrailsPlugin extends Plugin {
     def dependsOn = [core: version]
 
     @Override
-    Closure doWithSpring() {{->
-        GrailsApplication application = grailsApplication
+    Closure doWithSpring() {
+        { ->
+            GrailsApplication application = grailsApplication
 
-        if (pluginManager.hasGrailsPlugin('hibernate')) {
+            if (pluginManager.hasGrailsPlugin('hibernate')) {
 
-            if (!springConfig.unrefreshedApplicationContext?.containsBean('transactionManager')) {
-                Boolean enabled = config.getProperty(TRANSACTION_MANAGER_ENABLED, Boolean, false)
-                if (enabled) {
-                    def whitelistPattern=config.getProperty(TRANSACTION_MANAGER_WHITE_LIST_PATTERN, '')
-                    def blacklistPattern=config.getProperty(TRANSACTION_MANAGER_BLACK_LIST_PATTERN,'')
-                    chainedTransactionManagerPostProcessor(ChainedTransactionManagerPostProcessor, config, whitelistPattern ?: null, blacklistPattern ?: null)
-                }
-            }
-            if (ClassUtils.isPresent('org.h2.Driver', this.class.classLoader)) {
-                embeddedDatabaseShutdownHook(EmbeddedDatabaseShutdownHook)
-            }
-
-        } else {
-            def dataSources = config.getProperty('dataSources', Map, [:])
-            if(!dataSources) {
-                def defaultDataSource = config.getProperty('dataSource', Map)
-                if(defaultDataSource) {
-                    dataSources['dataSource'] = defaultDataSource
-                }
-            }
-            if(dataSources) {
-                "dataSourceConnectionSources"(DataSourceConnectionSourcesFactoryBean, grailsApplication.config)
-                "dataSource"(InstanceFactoryBean, "#{dataSourceConnectionSources.defaultConnectionSource.source}", DataSource)
-            }
-        }
-
-        if(config.getProperty('dataSource.jmxExport', Boolean, false) && ClassUtils.isPresent('org.apache.tomcat.jdbc.pool.DataSource', getClass().classLoader)) {
-            try {
-                def jmxMBeanServer = JmxUtils.locateMBeanServer()
-                if(jmxMBeanServer) {
-                    tomcatJDBCPoolMBeanExporter(TomcatJDBCPoolMBeanExporter) { bean ->
-                        delegate.grailsApplication = application
-                        server = jmxMBeanServer
+                if (!springConfig.unrefreshedApplicationContext?.containsBean('transactionManager')) {
+                    Boolean enabled = config.getProperty(TRANSACTION_MANAGER_ENABLED, Boolean, false)
+                    if (enabled) {
+                        def whitelistPattern = config.getProperty(TRANSACTION_MANAGER_WHITE_LIST_PATTERN, '')
+                        def blacklistPattern = config.getProperty(TRANSACTION_MANAGER_BLACK_LIST_PATTERN, '')
+                        chainedTransactionManagerPostProcessor(ChainedTransactionManagerPostProcessor, config, whitelistPattern ?: null, blacklistPattern ?: null)
                     }
                 }
-            } catch(e) {
-                if(!Environment.isDevelopmentMode() && Environment.isWarDeployed()) {
-                    log.warn("Cannot locate JMX MBeanServer. Disabling autoregistering dataSource pools to JMX.", e)
+                if (ClassUtils.isPresent('org.h2.Driver', this.class.classLoader)) {
+                    embeddedDatabaseShutdownHook(EmbeddedDatabaseShutdownHook)
+                }
+
+            } else {
+                def dataSources = config.getProperty('dataSources', Map, [:])
+                if (!dataSources) {
+                    def defaultDataSource = config.getProperty('dataSource', Map)
+                    if (defaultDataSource) {
+                        dataSources['dataSource'] = defaultDataSource
+                    }
+                }
+                if (dataSources) {
+                    "dataSourceConnectionSources"(DataSourceConnectionSourcesFactoryBean, grailsApplication.config)
+                    "dataSource"(InstanceFactoryBean, "#{dataSourceConnectionSources.defaultConnectionSource.source}", DataSource)
+                }
+            }
+
+            if (config.getProperty('dataSource.jmxExport', Boolean, false) && ClassUtils.isPresent('org.apache.tomcat.jdbc.pool.DataSource', getClass().classLoader)) {
+                try {
+                    def jmxMBeanServer = JmxUtils.locateMBeanServer()
+                    if (jmxMBeanServer) {
+                        tomcatJDBCPoolMBeanExporter(TomcatJDBCPoolMBeanExporter) { bean ->
+                            delegate.grailsApplication = application
+                            server = jmxMBeanServer
+                        }
+                    }
+                } catch (e) {
+                    if (!Environment.isDevelopmentMode() && Environment.isWarDeployed()) {
+                        log.warn("Cannot locate JMX MBeanServer. Disabling autoregistering dataSource pools to JMX.", e)
+                    }
                 }
             }
         }
-    }}
+    }
 
     @Override
     @CompileStatic
     void onShutdown(Map<String, Object> event) {
-        if(!Environment.developmentEnvironmentAvailable || !Environment.isReloadingAgentEnabled()) {
+        if (!Environment.developmentEnvironmentAvailable || !Environment.isReloadingAgentEnabled()) {
             try {
                 DataSourceUtils.clearJdbcDriverRegistrations()
             }

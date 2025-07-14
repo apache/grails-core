@@ -29,7 +29,9 @@ import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+
 /**
  * Handles implementation for a finder that returns a single result
  *
@@ -38,23 +40,23 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
  */
 @CompileStatic
 class FindOneByImplementer extends FindAllByImplementer implements SingleResultServiceImplementer<GormEntity> {
-    static final List<String> HANDLED_PREFIXES = ['findBy','getBy', 'findOneBy']
+
+    static final List<String> HANDLED_PREFIXES = ['findBy', 'getBy', 'findOneBy']
 
     @Override
     void doImplement(ClassNode domainClassNode, ClassNode targetClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, boolean isArray) {
-        BlockStatement body = (BlockStatement)newMethodNode.getCode()
+        BlockStatement body = (BlockStatement) newMethodNode.getCode()
         Parameter[] parameters = newMethodNode.parameters
-        if(parameters.length == 1 && parameters[0].name == GormProperties.IDENTITY) {
+        if (parameters.length == 1 && parameters[0].name == GormProperties.IDENTITY) {
             // add a method that invokes get(id)
             ArgumentListExpression argList = buildArgs(parameters, abstractMethodNode, body)
             Expression queryMethodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), "get", argList)
             body.addStatement(
-                returnS(
-                    queryMethodCall
-                )
+                    returnS(
+                            queryMethodCall
+                    )
             )
-        }
-        else {
+        } else {
             super.doImplement(domainClassNode, targetClassNode, abstractMethodNode, newMethodNode, isArray)
         }
     }

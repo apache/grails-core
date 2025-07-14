@@ -18,7 +18,6 @@
  */
 package org.grails.build.interactive;
 
-
 import jline.console.ConsoleReader;
 import jline.console.CursorBuffer;
 import jline.console.completer.CompletionHandler;
@@ -82,7 +81,7 @@ public class CandidateListCompletionHandler implements CompletionHandler {
      * <i>foobar</i>, <i>foobaz</i>, <i>foobuz</i>, the
      * method will return <i>foob</i>.
      */
-    private final String getUnambiguousCompletions(final List<?> candidates) {
+    private String getUnambiguousCompletions(final List<?> candidates) {
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
@@ -106,9 +105,9 @@ public class CandidateListCompletionHandler implements CompletionHandler {
 
     /**
      * @return true is all the elements of <i>candidates</i>
-     *         start with <i>starts</i>
+     * start with <i>starts</i>
      */
-    private final boolean startsWith(final String starts, final String[] candidates) {
+    private boolean startsWith(final String starts, final String[] candidates) {
         for (int i = 0; i < candidates.length; i++) {
             if (!candidates[i].startsWith(starts)) {
                 return false;

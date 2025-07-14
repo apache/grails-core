@@ -172,6 +172,5 @@ grails:
         config.getProperty('grails.mime.types', Object) == ( config.grails.mime.types )
         config.getProperty('grails.mime.types', Object).is( config.grails.mime.types )
 
-
     }
 }

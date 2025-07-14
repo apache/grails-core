@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.rxjava2
 
 import grails.async.Promise
@@ -28,7 +27,6 @@ import io.reactivex.Observer
 import io.reactivex.Scheduler
 import io.reactivex.Single
 import io.reactivex.SingleEmitter
-import io.reactivex.SingleObserver
 import io.reactivex.SingleOnSubscribe
 import io.reactivex.disposables.Disposable
 import io.reactivex.functions.Consumer
@@ -50,7 +48,7 @@ import java.util.concurrent.TimeoutException
 @AutoFinal
 @CompileStatic
 @PackageScope
-class RxPromise<T>  implements Promise<T> {
+class RxPromise<T> implements Promise<T> {
 
     protected final Subject<T> subject
     protected final RxPromiseFactory promiseFactory
@@ -61,9 +59,9 @@ class RxPromise<T>  implements Promise<T> {
 
     RxPromise(RxPromiseFactory promiseFactory, Closure callable, Scheduler scheduler) {
 
-        this(promiseFactory, Single.create( { SingleEmitter<? super T> singleSubscriber ->
+        this(promiseFactory, Single.create({ SingleEmitter<? super T> singleSubscriber ->
             try {
-                singleSubscriber.onSuccess((T)runCallable(callable))
+                singleSubscriber.onSuccess((T) runCallable(callable))
             } catch (Throwable t) {
                 singleSubscriber.onError(t)
             }
@@ -87,6 +85,7 @@ class RxPromise<T>  implements Promise<T> {
         this.observable = observable
         this.promiseFactory = promiseFactory
         observable.subscribe(new Observer<T>() {
+
             @Override
             void onSubscribe(Disposable d) {
                 subscription = d
@@ -138,7 +137,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean cancel(boolean mayInterruptIfRunning) {
-        if(subscription != null) {
+        if (subscription != null) {
             subscription.dispose()
             return subscription.isDisposed()
         }
@@ -147,10 +146,9 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean isCancelled() {
-        if(subscription == null) {
+        if (subscription == null) {
             return false
-        }
-        else {
+        } else {
             return subscription.isDisposed()
         }
     }
@@ -170,10 +168,9 @@ class RxPromise<T>  implements Promise<T> {
         try {
             return subject.timeout(timeout, unit).blockingFirst()
         } catch (Throwable e) {
-            if(e.cause instanceof TimeoutException) {
+            if (e.cause instanceof TimeoutException) {
                 throw e.cause
-            }
-            else {
+            } else {
                 throw e
             }
         }
@@ -181,7 +178,7 @@ class RxPromise<T>  implements Promise<T> {
 
     static Object runCallable(Closure callable) {
         Object rtn = callable.call()
-        if(rtn == null) {
+        if (rtn == null) {
             return Void
         } else {
             return rtn

@@ -18,11 +18,11 @@
  */
 package org.apache.grails.web.layout;
 
+import com.opensymphony.module.sitemesh.parser.TokenizedHTMLPage;
+import com.opensymphony.sitemesh.Content;
+
 import java.io.IOException;
 import java.io.Writer;
-
-import com.opensymphony.sitemesh.Content;
-import com.opensymphony.module.sitemesh.parser.TokenizedHTMLPage;
 
 final class TokenizedHTMLPage2Content implements Content {
 

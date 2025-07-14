@@ -22,7 +22,6 @@ package org.grails.compiler.injection
 import grails.compiler.traits.TraitInjector
 import groovy.transform.CompileStatic
 
-
 /**
  * Utility methods used by {@link TraitInjectionUtils}
  *
@@ -37,13 +36,12 @@ class TraitInjectionSupport {
         injectors.sort { TraitInjector o1, TraitInjector o2 ->
             final Class t1 = o1.trait
             final Class t2 = o2.trait
-            if(t1 == t2) return 0
+            if (t1 == t2) return 0
 
             // lower priority of core traits so that plugins can override
-            if(o1.getClass().name.startsWith('grails.compiler.traits')) {
+            if (o1.getClass().name.startsWith('grails.compiler.traits')) {
                 return -1
-            }
-            else {
+            } else {
                 return 1
             }
         }

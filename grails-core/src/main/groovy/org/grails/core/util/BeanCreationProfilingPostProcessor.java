@@ -35,8 +35,8 @@ import org.springframework.lang.Nullable;
  */
 public class BeanCreationProfilingPostProcessor implements InstantiationAwareBeanPostProcessor, ApplicationListener<ContextRefreshedEvent> {
 
-    private final StopWatch stopWatch = new StopWatch("Bean Creation StopWatch");
     private static final Logger LOG = LoggerFactory.getLogger("org.grails.startup");
+    private final StopWatch stopWatch = new StopWatch("Bean Creation StopWatch");
 
     @Override
     public Object postProcessBeforeInstantiation(@Nullable Class<?> beanClass, @Nullable String beanName) throws BeansException {
@@ -53,7 +53,7 @@ public class BeanCreationProfilingPostProcessor implements InstantiationAwareBea
     @Override
     public void onApplicationEvent(@NonNull ContextRefreshedEvent event) {
         stopWatch.complete();
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug(stopWatch.prettyPrint());
         }
     }

@@ -25,18 +25,19 @@ import org.grails.encoder.DefaultCodecIdentifier;
  * HTMLEncoder implementation currently this doesn't add any extra features to
  * XMLEncoder This encoder is for XML, XHTML and HTML5 documents.
  *
- * @see HTML4Encoder
  * @author Lari Hotari
+ * @see HTML4Encoder
  * @since 2.3
  */
 public class HTMLEncoder extends BasicXMLEncoder {
+
     public static final CodecIdentifier HTML_CODEC_IDENTIFIER = new DefaultCodecIdentifier("HTML");
 
     public HTMLEncoder() {
         super(HTML_CODEC_IDENTIFIER);
     }
-    
+
     protected Object doEncode(Object o) {
         return doCharReplacementEncoding(o);
-    }    
+    }
 }

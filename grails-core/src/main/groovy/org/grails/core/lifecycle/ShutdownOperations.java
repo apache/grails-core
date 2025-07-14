@@ -32,12 +32,13 @@ import java.util.LinkedHashSet;
  * @since 2.0
  */
 public class ShutdownOperations {
-    private static final Log LOG = LogFactory.getLog(ShutdownOperations.class);
-
-    private static final Collection<Runnable> shutdownOperations = new LinkedHashSet<>();
-    private static final Collection<Runnable> preservedShutdownOperations = new LinkedHashSet<>();
 
     public static final Runnable DEFAULT_SHUTDOWN_OPERATION = Holders::reset;
+
+    private static final Log LOG = LogFactory.getLog(ShutdownOperations.class);
+
+    private static final Collection<Runnable> SHUTDOWN_OPERATIONS = new LinkedHashSet<>();
+    private static final Collection<Runnable> PRESERVED_SHUTDOWN_OPERATIONS = new LinkedHashSet<>();
 
     static {
         resetOperations();
@@ -48,7 +49,7 @@ public class ShutdownOperations {
      */
     public static synchronized void runOperations() {
         try {
-            for (Runnable shutdownOperation : shutdownOperations) {
+            for (Runnable shutdownOperation : SHUTDOWN_OPERATIONS) {
                 try {
                     shutdownOperation.run();
                 } catch (Exception e) {
@@ -56,13 +57,14 @@ public class ShutdownOperations {
                 }
             }
         } finally {
-            shutdownOperations.clear();
-            shutdownOperations.addAll(preservedShutdownOperations);
+            SHUTDOWN_OPERATIONS.clear();
+            SHUTDOWN_OPERATIONS.addAll(PRESERVED_SHUTDOWN_OPERATIONS);
         }
     }
 
     /**
      * Adds a shutdown operation which will be run once for the next shutdown
+     *
      * @param runnable The runnable operation
      */
     public static synchronized void addOperation(Runnable runnable) {
@@ -71,13 +73,14 @@ public class ShutdownOperations {
 
     /**
      * Adds a shutdown operation
-     * @param runnable The runnable operation
+     *
+     * @param runnable                The runnable operation
      * @param preserveForNextShutdown should preserve the operation for subsequent shutdowns, useful in tests
      */
     public static synchronized void addOperation(Runnable runnable, boolean preserveForNextShutdown) {
-        shutdownOperations.add(runnable);
-        if(preserveForNextShutdown) {
-            preservedShutdownOperations.add(runnable);
+        SHUTDOWN_OPERATIONS.add(runnable);
+        if (preserveForNextShutdown) {
+            PRESERVED_SHUTDOWN_OPERATIONS.add(runnable);
         }
     }
 
@@ -85,8 +88,8 @@ public class ShutdownOperations {
      * Clears all shutdown operations without running them. Also clears operations that are kept after running operations.
      */
     public static synchronized void resetOperations() {
-        shutdownOperations.clear();
-        preservedShutdownOperations.clear();
+        SHUTDOWN_OPERATIONS.clear();
+        PRESERVED_SHUTDOWN_OPERATIONS.clear();
         // default operations
         addOperation(DEFAULT_SHUTDOWN_OPERATION, true);
     }

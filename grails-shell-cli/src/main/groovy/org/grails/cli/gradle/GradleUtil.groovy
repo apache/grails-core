@@ -46,6 +46,7 @@ import org.grails.cli.profile.ProjectContext
  */
 @CompileStatic
 class GradleUtil {
+
     private static final boolean DEFAULT_SUPPRESS_OUTPUT = true
 
     public static ProjectConnection openGradleConnection(File baseDir) {
@@ -104,8 +105,8 @@ class GradleUtil {
     public static LongRunningOperation setupConsoleOutput(ProjectContext context, LongRunningOperation operation) {
         GrailsConsole grailsConsole = context.console
         operation.colorOutput = grailsConsole.ansiEnabled
-        operation.standardOutput = new GrailsConsolePrintStream( grailsConsole.out )
-        operation.standardError = new GrailsConsoleErrorPrintStream( grailsConsole.err )
+        operation.standardOutput = new GrailsConsolePrintStream(grailsConsole.out)
+        operation.standardError = new GrailsConsoleErrorPrintStream(grailsConsole.err)
         operation
     }
 
@@ -126,13 +127,13 @@ class GradleUtil {
         runBuildActionWithConsoleOutput(connection, context, buildAction, null)
     }
 
-    public static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction, @ClosureParams(value=FromString.class, options="org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
+    public static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction, @ClosureParams(value = FromString.class, options = "org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
         BuildActionExecuter<T> buildActionExecuter = connection.action(buildAction)
         setupConsoleOutput(context, buildActionExecuter)
         buildActionExecuterCustomizationClosure?.call(buildActionExecuter)
         return buildActionExecuter.run()
     }
-    
+
     public static wireCancellationSupport(ExecutionContext context, BuildLauncher buildLauncher) {
         DefaultCancellationTokenSource cancellationTokenSource = new DefaultCancellationTokenSource()
         buildLauncher.withCancellationToken(cancellationTokenSource.token())

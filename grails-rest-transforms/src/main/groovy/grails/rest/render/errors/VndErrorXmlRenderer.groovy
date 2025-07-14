@@ -20,15 +20,15 @@ package grails.rest.render.errors
 
 import grails.rest.render.RenderContext
 import grails.util.GrailsWebUtil
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
+import groovy.transform.CompileStatic
 import org.grails.web.xml.PrettyPrintXMLStreamWriter
 import org.grails.web.xml.StreamingMarkupWriter
 import org.grails.web.xml.XMLStreamWriter
+import org.springframework.http.HttpStatus
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 import org.springframework.validation.ObjectError
-import org.springframework.http.HttpStatus
 
 /**
  * A renderer that renders errors in in the Vnd.Error format (see https://github.com/blongden/vnd.error)
@@ -39,6 +39,7 @@ import org.springframework.http.HttpStatus
  */
 @CompileStatic
 class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
+
     public static final MimeType MIME_TYPE = new MimeType("application/vnd.error+xml", "xml")
     public static final String ERRORS_TAG = "errors"
     public static final String ERROR_TAG = "error"
@@ -60,19 +61,19 @@ class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
             XMLStreamWriter w = prettyPrint ? new PrettyPrintXMLStreamWriter(streamingWriter) : new XMLStreamWriter(streamingWriter)
             w.startDocument(encoding, "1.0")
             w.startNode(ERRORS_TAG)
-                .attribute('xml:lang', language)
+                    .attribute('xml:lang', language)
             for (ObjectError oe in errors.allErrors) {
                 def logref = resolveLogRef(target, oe)
                 w.startNode(ERROR_TAG)
-                    .attribute(LOGREF_ATTRIBUTE, logref)
-                    .startNode(MESSAGE_ATTRIBUTE)
+                        .attribute(LOGREF_ATTRIBUTE, logref)
+                        .startNode(MESSAGE_ATTRIBUTE)
                         .characters(messageSource.getMessage(oe, locale))
-                    .end()
-                    .startNode(LINK_TAG)
+                        .end()
+                        .startNode(LINK_TAG)
                         .attribute("rel", "resource")
                         .attribute("href", linkGenerator.link(resource: target, method: "GET", absolute: true))
-                    .end()
-                .end()
+                        .end()
+                        .end()
             }
             w.end()
         }

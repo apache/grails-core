@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.jakarta;
 
 import java.util.Arrays;
@@ -28,6 +27,7 @@ import java.util.Arrays;
  * @since 6.1
  */
 class MethodKey {
+
     private final String name;
     private final Class[] parameterTypes;
 
@@ -38,12 +38,18 @@ class MethodKey {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         MethodKey methodKey = (MethodKey) o;
 
-        if (name != null ? !name.equals(methodKey.name) : methodKey.name != null) return false;
+        if (name != null ? !name.equals(methodKey.name) : methodKey.name != null) {
+            return false;
+        }
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
         return Arrays.equals(parameterTypes, methodKey.parameterTypes);
     }

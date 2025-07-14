@@ -21,7 +21,7 @@ package gorm
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import spock.lang.*
+import spock.lang.Specification
 
 @Integration(applicationClass = Application)
 @Rollback

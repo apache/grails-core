@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core;
 
 /**
  * Adds a getOrder() method to any class that implements it.
- *
+ * <p>
  * Can be used in combination with {@link org.grails.datastore.mapping.core.order.OrderedComparator} to sort objects
  *
  * @author Graeme Rocher

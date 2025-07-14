@@ -22,7 +22,6 @@ package org.grails.datastore.gorm.jdbc
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler
 
-import javax.sql.DataSource
 import java.sql.Connection
 import java.sql.SQLException
 
@@ -35,7 +34,8 @@ import java.sql.SQLException
 @CompileStatic
 class MultiTenantConnection implements Connection {
 
-    final @Delegate Connection target
+    final @Delegate
+    Connection target
     final SchemaHandler schemaHandler
 
     MultiTenantConnection(Connection target, SchemaHandler schemaHandler) {
@@ -46,7 +46,7 @@ class MultiTenantConnection implements Connection {
     @Override
     void close() throws SQLException {
         try {
-            if(!isClosed()) {
+            if (!isClosed()) {
                 schemaHandler.useDefaultSchema(this)
             }
         } finally {

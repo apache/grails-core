@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
@@ -79,16 +78,14 @@ public class MinSizeConstraint extends AbstractConstraint {
         int length;
         if (propertyValue.getClass().isArray()) {
             length = Array.getLength(propertyValue);
-        }
-        else if (propertyValue instanceof Collection<?>) {
-            length = ((Collection<?>)propertyValue).size();
-        }
-        else { // String
-            length = ((String)propertyValue).length();
+        } else if (propertyValue instanceof Collection<?>) {
+            length = ((Collection<?>) propertyValue).size();
+        } else { // String
+            length = ((String) propertyValue).length();
         }
 
         if (length < minSize) {
-            Object[] args = { constraintPropertyName, constraintOwningClass, propertyValue, minSize};
+            Object[] args = {constraintPropertyName, constraintOwningClass, propertyValue, minSize};
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_MIN_SIZE_MESSAGE_CODE,
                     ConstrainedProperty.MIN_SIZE_CONSTRAINT + ConstrainedProperty.NOTMET_SUFFIX, args);
         }

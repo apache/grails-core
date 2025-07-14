@@ -29,9 +29,10 @@ import reactor.fn.Consumer
  */
 @Deprecated
 @Slf4j
-class EventBus  implements Bus {
+class EventBus implements Bus {
 
-    @Delegate(interfaces = false) grails.events.bus.EventBus eventBus
+    @Delegate(interfaces = false)
+    grails.events.bus.EventBus eventBus
 
     EventBus(grails.events.bus.EventBus eventBus) {
         this.eventBus = eventBus

@@ -21,11 +21,12 @@ package org.grails.gsp.compiler.tags;
 import grails.util.GrailsStringUtils;
 import org.grails.taglib.GrailsTagException;
 
+//CHECKSTYLE:OFF
 /**
  * Example:
  *
  * <pre>
- * {@code 
+ * {@code
  *  <gr:findAll in="${thing}" expr="it.length() == 3">
  *        <p>${it}</p>
  *  </gr:findAll>
@@ -35,6 +36,7 @@ import org.grails.taglib.GrailsTagException;
  * @author Graeme Rocher
  * @since 19-Jan-2006
  */
+//CHECKSTYLE:ON
 public class GroovyFindAllTag extends GroovySyntaxTag {
 
     public static final String TAG_NAME = "findAll";
@@ -51,10 +53,10 @@ public class GroovyFindAllTag extends GroovySyntaxTag {
     }
 
     public void doStartTag() {
-      String in = attributes.get(ATTRIBUTE_IN);
-      if (GrailsStringUtils.isBlank(in)) {
-          throw new GrailsTagException("Tag [" + TAG_NAME + "] missing required attribute [" + ATTRIBUTE_IN + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
-      }
+        String in = attributes.get(ATTRIBUTE_IN);
+        if (GrailsStringUtils.isBlank(in)) {
+            throw new GrailsTagException("Tag [" + TAG_NAME + "] missing required attribute [" + ATTRIBUTE_IN + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
+        }
 
         String expr = attributes.get(ATTRIBUTE_EXPR);
         if (GrailsStringUtils.isBlank(expr)) {

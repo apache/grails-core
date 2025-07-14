@@ -40,7 +40,12 @@ import org.springframework.core.io.ResourceLoader;
 
 import java.io.File;
 import java.security.PrivilegedAction;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -55,16 +60,16 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoaderAware, ApplicationContextAware, PluginManagerAware {
 
-    private static final Log LOG = LogFactory.getLog(DefaultGroovyPageLocator.class);
     public static final String PATH_TO_WEB_INF_VIEWS = "/WEB-INF/grails-app/views";
+    private static final Log LOG = LogFactory.getLog(DefaultGroovyPageLocator.class);
     private static final String SLASHED_VIEWS_DIR_PATH = "/" + GrailsResourceUtils.VIEWS_DIR_PATH;
     private static final String PLUGINS_PATH = "/plugins/";
     private static final String BLANK = "";
     protected Collection<ResourceLoader> resourceLoaders = new ConcurrentLinkedQueue<ResourceLoader>();
     protected GrailsPluginManager pluginManager;
-    private ConcurrentMap<String, String> precompiledGspMap;
     protected boolean warDeployed = Environment.isWarDeployed();
     protected boolean reloadEnabled = !warDeployed;
+    private ConcurrentMap<String, String> precompiledGspMap;
     private Set<String> reloadedPrecompiledGspClassNames = new CopyOnWriteArraySet<String>();
 
     public void setResourceLoader(ResourceLoader resourceLoader) {
@@ -110,24 +115,23 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         String contextPath = resolveContextPath(pluginName, uri, binding);
         String fullURI = GrailsResourceUtils.appendPiecesForUri(contextPath, uri);
 
-        if(pluginManager != null) {
+        if (pluginManager != null) {
             GrailsPlugin grailsPlugin = pluginManager.getGrailsPlugin(pluginName);
-            if(grailsPlugin instanceof BinaryGrailsPlugin) {
+            if (grailsPlugin instanceof BinaryGrailsPlugin) {
                 BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) grailsPlugin;
                 File projectDirectory = binaryGrailsPlugin.getProjectDirectory();
-                if(projectDirectory != null) {
+                if (projectDirectory != null) {
                     File f = new File(projectDirectory, GrailsResourceUtils.VIEWS_DIR_PATH + uri);
-                    if(f.exists()) {
+                    if (f.exists()) {
                         scriptSource = new GroovyPageResourceScriptSource(uri, new FileSystemResource(f));
                     }
-                }
-                else {
+                } else {
                     scriptSource = resolveViewInBinaryPlugin(binaryGrailsPlugin, uri);
                 }
             }
         }
 
-        if(scriptSource == null) {
+        if (scriptSource == null) {
             scriptSource = findPageInBinding(fullURI, binding);
         }
 
@@ -241,10 +245,9 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
                     LOG.debug(String.format("Found GSP view [%s] in plugin [%s]", uri, plugin.getName()));
                 }
                 return scriptSource;
-            }
-            else if(binaryPlugin.getProjectDirectory() != null) {
+            } else if (binaryPlugin.getProjectDirectory() != null) {
                 scriptSource = resolveViewInPluginProjectDirectory(binaryPlugin, uri);
-                if(scriptSource != null) {
+                if (scriptSource != null) {
                     return scriptSource;
                 }
             }
@@ -256,7 +259,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     private GroovyPageScriptSource resolveViewInPluginProjectDirectory(BinaryGrailsPlugin binaryPlugin, String uri) {
         File projectDirectory = binaryPlugin.getProjectDirectory();
         File f = new File(projectDirectory, "grails-app/views" + uri);
-        if(f.exists()) {
+        if (f.exists()) {
             return new GroovyPageResourceScriptSource(uri, new FileSystemResource(f));
         }
         return null;
@@ -344,9 +347,9 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             }
         } else {
             searchPaths = CollectionUtils.newList(
-                GrailsResourceUtils.appendPiecesForUri(SLASHED_VIEWS_DIR_PATH, uri),
-                GrailsResourceUtils.appendPiecesForUri(PATH_TO_WEB_INF_VIEWS, uri),
-                uri);
+                    GrailsResourceUtils.appendPiecesForUri(SLASHED_VIEWS_DIR_PATH, uri),
+                    GrailsResourceUtils.appendPiecesForUri(PATH_TO_WEB_INF_VIEWS, uri),
+                    uri);
         }
         return searchPaths;
     }
@@ -399,7 +402,9 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
                     break;
                 }
             }
-            if (foundResource != null) break;
+            if (foundResource != null) {
+                break;
+            }
         }
         return foundResource;
     }
@@ -420,10 +425,21 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         return new PluginViewPathInfo(uri);
     }
 
+    public boolean isReloadEnabled() {
+        return reloadEnabled;
+    }
+
+    public void setReloadEnabled(boolean reloadEnabled) {
+        this.reloadEnabled = reloadEnabled;
+    }
+
     public static class PluginViewPathInfo {
+
+        //CHECKSTYLE:OFF
         public String basePath;
         public String pluginName;
         public String path;
+        //CHECKSTYLE:ON
 
         public PluginViewPathInfo(String uri) {
             basePath = uri.substring(PLUGINS_PATH.length(), uri.length());
@@ -433,13 +449,5 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
                 path = basePath.substring(i, basePath.length());
             }
         }
-    }
-
-    public boolean isReloadEnabled() {
-        return reloadEnabled;
-    }
-
-    public void setReloadEnabled(boolean reloadEnabled) {
-        this.reloadEnabled = reloadEnabled;
     }
 }

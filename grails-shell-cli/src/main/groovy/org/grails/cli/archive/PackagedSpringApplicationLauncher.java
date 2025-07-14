@@ -18,13 +18,13 @@
  */
 package org.grails.cli.archive;
 
+import org.grails.cli.boot.SpringApplicationLauncher;
+
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Enumeration;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
-
-import org.grails.cli.boot.SpringApplicationLauncher;
 
 /**
  * A launcher for a CLI application that has been compiled and packaged as a jar file.
@@ -35,53 +35,53 @@ import org.grails.cli.boot.SpringApplicationLauncher;
  */
 public final class PackagedSpringApplicationLauncher {
 
-	/**
-	 * The entry containing the source class.
-	 */
-	public static final String SOURCE_ENTRY = "Spring-Application-Source-Classes";
+    /**
+     * The entry containing the source class.
+     */
+    public static final String SOURCE_ENTRY = "Spring-Application-Source-Classes";
 
-	/**
-	 * The entry containing the start class.
-	 */
-	public static final String START_CLASS_ENTRY = "Start-Class";
+    /**
+     * The entry containing the start class.
+     */
+    public static final String START_CLASS_ENTRY = "Start-Class";
 
-	private PackagedSpringApplicationLauncher() {
-	}
+    private PackagedSpringApplicationLauncher() {
+    }
 
-	private void run(String[] args) throws Exception {
-		URLClassLoader classLoader = (URLClassLoader) Thread.currentThread().getContextClassLoader();
-		new SpringApplicationLauncher(classLoader).launch(getSources(classLoader), args);
-	}
+    private void run(String[] args) throws Exception {
+        URLClassLoader classLoader = (URLClassLoader) Thread.currentThread().getContextClassLoader();
+        new SpringApplicationLauncher(classLoader).launch(getSources(classLoader), args);
+    }
 
-	private Class<?>[] getSources(URLClassLoader classLoader) throws Exception {
-		Enumeration<URL> urls = classLoader.getResources("META-INF/MANIFEST.MF");
-		while (urls.hasMoreElements()) {
-			URL url = urls.nextElement();
-			Manifest manifest = new Manifest(url.openStream());
-			if (isCliPackaged(manifest)) {
-				String sources = manifest.getMainAttributes().getValue(SOURCE_ENTRY);
-				return loadClasses(classLoader, sources.split(","));
-			}
-		}
-		throw new IllegalStateException("Cannot locate " + SOURCE_ENTRY + " in MANIFEST.MF");
-	}
+    private Class<?>[] getSources(URLClassLoader classLoader) throws Exception {
+        Enumeration<URL> urls = classLoader.getResources("META-INF/MANIFEST.MF");
+        while (urls.hasMoreElements()) {
+            URL url = urls.nextElement();
+            Manifest manifest = new Manifest(url.openStream());
+            if (isCliPackaged(manifest)) {
+                String sources = manifest.getMainAttributes().getValue(SOURCE_ENTRY);
+                return loadClasses(classLoader, sources.split(","));
+            }
+        }
+        throw new IllegalStateException("Cannot locate " + SOURCE_ENTRY + " in MANIFEST.MF");
+    }
 
-	private boolean isCliPackaged(Manifest manifest) {
-		Attributes attributes = manifest.getMainAttributes();
-		String startClass = attributes.getValue(START_CLASS_ENTRY);
-		return getClass().getName().equals(startClass);
-	}
+    private boolean isCliPackaged(Manifest manifest) {
+        Attributes attributes = manifest.getMainAttributes();
+        String startClass = attributes.getValue(START_CLASS_ENTRY);
+        return getClass().getName().equals(startClass);
+    }
 
-	private Class<?>[] loadClasses(ClassLoader classLoader, String[] names) throws ClassNotFoundException {
-		Class<?>[] classes = new Class<?>[names.length];
-		for (int i = 0; i < names.length; i++) {
-			classes[i] = Class.forName(names[i], false, classLoader);
-		}
-		return classes;
-	}
+    private Class<?>[] loadClasses(ClassLoader classLoader, String[] names) throws ClassNotFoundException {
+        Class<?>[] classes = new Class<?>[names.length];
+        for (int i = 0; i < names.length; i++) {
+            classes[i] = Class.forName(names[i], false, classLoader);
+        }
+        return classes;
+    }
 
-	public static void main(String[] args) throws Exception {
-		new PackagedSpringApplicationLauncher().run(args);
-	}
+    public static void main(String[] args) throws Exception {
+        new PackagedSpringApplicationLauncher().run(args);
+    }
 
 }

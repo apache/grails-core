@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.plugin.json.builder;
 
 import groovy.json.JsonException;
@@ -29,10 +28,15 @@ import org.apache.groovy.json.internal.CharBuf;
 import org.apache.groovy.json.internal.Chr;
 import org.grails.buffer.FastStringWriter;
 
-import jakarta.validation.constraints.NotNull;
-import java.io.*;
+import java.io.IOException;
+import java.io.StringReader;
 import java.net.URL;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Temporary fork of {@link groovy.json.JsonOutput} until Groovy 2.5.0 is out.
@@ -45,7 +49,6 @@ import java.util.*;
  * @author Andrey Bloschetsov
  * @author Rick Hightower
  * @author Graeme Rocher
- *
  * @since 1.8.0
  */
 public class JsonOutput {
@@ -90,8 +93,7 @@ public class JsonOutput {
     /**
      * @param n a {@link Number} to write as JSON string
      * @return a string representation for a number
-     * @throws groovy.json.JsonException
-     *         If the number is infinite or not a number
+     * @throws groovy.json.JsonException If the number is infinite or not a number
      */
     public static String toJson(Number n) {
         return DEFAULT_GENERATOR.toJson(n);
@@ -283,6 +285,7 @@ public class JsonOutput {
      * Represents unescaped JSON
      */
     public static class JsonUnescaped {
+
         private final CharSequence text;
 
         public JsonUnescaped(CharSequence text) {
@@ -302,7 +305,7 @@ public class JsonOutput {
     /**
      * Represents unescaped JSON
      */
-    public static abstract class JsonWritable implements Writable, CharSequence {
+    public abstract static class JsonWritable implements Writable, CharSequence {
 
         protected boolean inline = false;
         protected boolean first = true;

@@ -26,5 +26,6 @@ import java.util.Locale;
  * Interface to customize the view when rendering
  */
 public interface GrailsRenderViewMutator {
+
     View mutateView(boolean renderWithLayout, String templateUri, Locale locale, View exisitngView);
 }

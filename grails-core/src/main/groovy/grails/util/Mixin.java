@@ -18,13 +18,12 @@
  */
 package grails.util;
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
-
 
 /**
  *
@@ -38,5 +37,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 @GroovyASTTransformationClass("org.grails.compiler.injection.MixinTransformation")
 @Deprecated
 public @interface Mixin {
-    Class<?>[] value ();
+
+    Class<?>[] value();
 }

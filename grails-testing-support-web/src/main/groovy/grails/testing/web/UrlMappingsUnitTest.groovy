@@ -25,16 +25,13 @@ import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
 import groovy.transform.CompileDynamic
 import junit.framework.AssertionFailedError
+import junit.framework.ComparisonFailure
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.testing.ParameterizedGrailsUnitTest
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 import org.grails.web.mapping.mvc.GrailsControllerUrlMappingInfo
-import junit.framework.ComparisonFailure
-
-import static junit.framework.Assert.assertEquals
-import static junit.framework.Assert.assertNotNull
 
 trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnitTest {
 
@@ -46,8 +43,8 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     void configuredMockedControllers() {
-        for(Class c : controllersToMock) {
-            final GrailsControllerClass controllerArtefact = (GrailsControllerClass)grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, c)
+        for (Class c : controllersToMock) {
+            final GrailsControllerClass controllerArtefact = (GrailsControllerClass) grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, c)
             controllerArtefact.initialize()
             defineBeans {
                 "$controllerArtefact.name"(c) { bean ->
@@ -82,7 +79,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
             webRequest.params.putAll(backupParams)
             if (info.viewName == null && info.URI == null) {
-                if(info instanceof GrailsControllerUrlMappingInfo) {
+                if (info instanceof GrailsControllerUrlMappingInfo) {
                     def controller = info.controllerClass
                     if (controller != null) {
                         return applicationContext.getBean(controller.name)
@@ -148,7 +145,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     private boolean checkView(String controller, String view, boolean throwEx) {
-        def pathPattern =  ((controller) ? "$controller/" : "") + "${view}.gsp"
+        def pathPattern = ((controller) ? "$controller/" : "") + "${view}.gsp"
         if (!pathPattern.startsWith('/')) {
             pathPattern = "/$pathPattern"
         }
@@ -182,7 +179,6 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     boolean verifyView(String controller, String view) {
         checkView(controller, view, false)
     }
-
 
     /**
      * Asserts a URL mapping maps to the specified controller, action, and optionally also parameters. Example:
@@ -239,12 +235,12 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
         }
 
         if (assertions.controller) {
-            if (!checkController((String)assertions.controller, throwEx)) {
+            if (!checkController((String) assertions.controller, throwEx)) {
                 return false
             }
         }
         if (assertions.action) {
-            if (!checkAction((String)assertions.controller, (String)assertions.action, throwEx)) {
+            if (!checkAction((String) assertions.controller, (String) assertions.action, throwEx)) {
                 return false
             }
         }
@@ -264,26 +260,25 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
                 mapping = mappingsHolder.matchStatusCode(url)
             }
             if (mapping) mappingInfos << mapping
-        }
-        else {
-            mappingInfos = mappingsHolder.matchAll((String)url, request.method).toList()
+        } else {
+            mappingInfos = mappingsHolder.matchAll((String) url, request.method).toList()
         }
 
         if (mappingInfos.size() == 0) {
             if (throwEx) {
                 throw new AssertionFailedError("url '$url' did not match any mappings")
-            }   else {
+            } else {
                 return false
             }
         }
 
         boolean returnVal = true
 
-        def mappingMatched = mappingInfos.any {mapping ->
+        def mappingMatched = mappingInfos.any { mapping ->
             mapping.configure(webRequest)
             for (key in assertionKeys) {
                 if (assertions.containsKey(key)) {
-                    String expected = (String)assertions[key]
+                    String expected = (String) assertions[key]
                     String actual = mapping."${key}Name"
 
                     switch (key) {
@@ -316,7 +311,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
                 paramAssertions.delegate = params
                 paramAssertions.resolveStrategy = Closure.DELEGATE_ONLY
                 paramAssertions.call()
-                params.each {name, value ->
+                params.each { name, value ->
                     String actual = mapping.parameters[name]
                     String expected = value
 
@@ -346,7 +341,6 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
         checkForwardUrlMapping(assertions, url, paramAssertions, false)
     }
 
-
     private boolean checkReverseUrlMapping(Map<String, String> assertions, String url, Closure paramAssertions, boolean throwEx) {
         UrlMappingsHolder mappingsHolder = applicationContext.getBean("grailsUrlMappingsHolder", UrlMappingsHolder)
         UrlConverter urlConverter = applicationContext.getBean(UrlConverter.BEAN_NAME, UrlConverter)
@@ -358,8 +352,8 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
         String convertedControllerName = null, convertedActionName = null
 
-        if(controller) convertedControllerName = urlConverter.toUrlElement(controller) ?: controller
-        if(action) convertedActionName = urlConverter.toUrlElement(action) ?: action
+        if (controller) convertedControllerName = urlConverter.toUrlElement(controller) ?: controller
+        if (action) convertedActionName = urlConverter.toUrlElement(action) ?: action
 
         def params = [:]
         if (paramAssertions) {
@@ -422,7 +416,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     GrailsControllerClass getControllerClass(String controller) {
-        (GrailsControllerClass)grailsApplication.getArtefactByLogicalPropertyName(ControllerArtefactHandler.TYPE, controller)
+        (GrailsControllerClass) grailsApplication.getArtefactByLogicalPropertyName(ControllerArtefactHandler.TYPE, controller)
     }
 
     @CompileDynamic

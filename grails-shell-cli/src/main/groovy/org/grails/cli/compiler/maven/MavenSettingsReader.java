@@ -18,9 +18,6 @@
  */
 package org.grails.cli.compiler.maven;
 
-import java.io.File;
-import java.util.Map;
-
 import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.building.DefaultSettingsBuilderFactory;
 import org.apache.maven.settings.building.DefaultSettingsBuildingRequest;
@@ -32,8 +29,10 @@ import org.apache.maven.settings.crypto.SettingsDecrypter;
 import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.sonatype.plexus.components.cipher.DefaultPlexusCipher;
 import org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher;
-
 import org.springframework.boot.cli.util.Log;
+
+import java.io.File;
+import java.util.Map;
 
 /**
  * {@code MavenSettingsReader} reads settings from a user's Maven settings.xml file,
@@ -44,50 +43,48 @@ import org.springframework.boot.cli.util.Log;
  */
 public class MavenSettingsReader {
 
-	private final String homeDir;
+    private final String homeDir;
 
-	public MavenSettingsReader() {
-		this(System.getProperty("user.home"));
-	}
+    public MavenSettingsReader() {
+        this(System.getProperty("user.home"));
+    }
 
-	public MavenSettingsReader(String homeDir) {
-		this.homeDir = homeDir;
-	}
+    public MavenSettingsReader(String homeDir) {
+        this.homeDir = homeDir;
+    }
 
-	public MavenSettings readSettings() {
-		Settings settings = loadSettings();
-		SettingsDecryptionResult decrypted = decryptSettings(settings);
-		if (!decrypted.getProblems().isEmpty()) {
-			Log.error("Maven settings decryption failed. Some Maven repositories may be inaccessible");
-			// Continue - the encrypted credentials may not be used
-		}
-		return new MavenSettings(settings, decrypted);
-	}
+    public MavenSettings readSettings() {
+        Settings settings = loadSettings();
+        SettingsDecryptionResult decrypted = decryptSettings(settings);
+        if (!decrypted.getProblems().isEmpty()) {
+            Log.error("Maven settings decryption failed. Some Maven repositories may be inaccessible");
+            // Continue - the encrypted credentials may not be used
+        }
+        return new MavenSettings(settings, decrypted);
+    }
 
-	private Settings loadSettings() {
-		File settingsFile = new File(this.homeDir, ".m2/settings.xml");
-		SettingsBuildingRequest request = new DefaultSettingsBuildingRequest();
-		request.setUserSettingsFile(settingsFile);
-		request.setSystemProperties(System.getProperties());
-		try {
-			return new DefaultSettingsBuilderFactory().newInstance().build(request).getEffectiveSettings();
-		}
-		catch (SettingsBuildingException ex) {
-			throw new IllegalStateException("Failed to build settings from " + settingsFile, ex);
-		}
-	}
+    private Settings loadSettings() {
+        File settingsFile = new File(this.homeDir, ".m2/settings.xml");
+        SettingsBuildingRequest request = new DefaultSettingsBuildingRequest();
+        request.setUserSettingsFile(settingsFile);
+        request.setSystemProperties(System.getProperties());
+        try {
+            return new DefaultSettingsBuilderFactory().newInstance().build(request).getEffectiveSettings();
+        } catch (SettingsBuildingException ex) {
+            throw new IllegalStateException("Failed to build settings from " + settingsFile, ex);
+        }
+    }
 
-	private SettingsDecryptionResult decryptSettings(Settings settings) {
-		DefaultSettingsDecryptionRequest request = new DefaultSettingsDecryptionRequest(settings);
+    private SettingsDecryptionResult decryptSettings(Settings settings) {
+        DefaultSettingsDecryptionRequest request = new DefaultSettingsDecryptionRequest(settings);
 
-		return createSettingsDecrypter().decrypt(request);
-	}
+        return createSettingsDecrypter().decrypt(request);
+    }
 
-	private SettingsDecrypter createSettingsDecrypter() {
-		String SECURITY_XML = ".m2/settings-security.xml";
-		File configurationFile = new File(homeDir, SECURITY_XML);
+    private SettingsDecrypter createSettingsDecrypter() {
+        File configurationFile = new File(homeDir,  ".m2/settings-security.xml");
 
-		DefaultSecDispatcher dispatcher = new DefaultSecDispatcher(new DefaultPlexusCipher(), Map.of(), configurationFile.getAbsolutePath());
-		return new DefaultSettingsDecrypter(dispatcher);
-	}
+        DefaultSecDispatcher dispatcher = new DefaultSecDispatcher(new DefaultPlexusCipher(), Map.of(), configurationFile.getAbsolutePath());
+        return new DefaultSettingsDecrypter(dispatcher);
+    }
 }

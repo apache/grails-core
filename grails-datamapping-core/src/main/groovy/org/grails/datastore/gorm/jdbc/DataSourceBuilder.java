@@ -18,24 +18,22 @@
  */
 package org.grails.datastore.gorm.jdbc;
 
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-
-import javax.sql.DataSource;
-
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.util.ClassUtils;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
 /**
  * NOTE: Forked from Spring Boot logic to avoid hard dependency on Boot.
- *
+ * <p>
  * Convenience class for building a {@link DataSource} with common implementations and
  * properties. If Tomcat, HikariCP or Commons DBCP are on the classpath one of them will
  * be selected (in that order with Tomcat first). In the interest of a uniform interface,
@@ -46,12 +44,11 @@ import org.springframework.util.ClassUtils;
  *
  * @author Dave Syer
  * @author Graeme Rocher
- *
  * @since 1.1.0
  */
 public class DataSourceBuilder {
 
-    private static final String[] DATA_SOURCE_TYPE_NAMES = new String[] {
+    private static final String[] DATA_SOURCE_TYPE_NAMES = new String[]{
             "org.apache.tomcat.jdbc.pool.DataSource",
             "com.zaxxer.hikari.HikariDataSource",
             "org.apache.commons.dbcp.BasicDataSource",
@@ -66,16 +63,16 @@ public class DataSourceBuilder {
     private boolean pooled = true;
     private boolean readOnly = false;
 
+    public DataSourceBuilder(ClassLoader classLoader) {
+        this.classLoader = classLoader;
+    }
+
     public static DataSourceBuilder create() {
         return new DataSourceBuilder(null);
     }
 
     public static DataSourceBuilder create(ClassLoader classLoader) {
         return new DataSourceBuilder(classLoader);
-    }
-
-    public DataSourceBuilder(ClassLoader classLoader) {
-        this.classLoader = classLoader;
     }
 
     public DataSource build() {
@@ -97,7 +94,7 @@ public class DataSourceBuilder {
     }
 
     private void bind(DataSource result) {
-        if(properties.containsKey("dbProperties")) {
+        if (properties.containsKey("dbProperties")) {
             coerceDbProperties();
         }
         MutablePropertyValues properties = new MutablePropertyValues(this.properties);
@@ -105,7 +102,7 @@ public class DataSourceBuilder {
                 .withAlias("username", "user").bind(properties);
     }
 
-    public DataSourceBuilder properties( Map<String, String> properties) {
+    public DataSourceBuilder properties(Map<String, String> properties) {
         this.properties.putAll(properties);
         return this;
     }
@@ -113,12 +110,12 @@ public class DataSourceBuilder {
     private void coerceDbProperties() {
         Map propertiesMap = this.properties;
         Object dbPropertiesObject = propertiesMap.get("dbProperties");
-        if(dbPropertiesObject instanceof Map) {
+        if (dbPropertiesObject instanceof Map) {
             Map dbProperties = (Map) dbPropertiesObject;
             Properties properties = new Properties();
             for (Object key : dbProperties.keySet()) {
                 Object value = dbProperties.get(key);
-                if(value != null) {
+                if (value != null) {
                     properties.put(key.toString(), value.toString());
                 }
             }
@@ -156,12 +153,10 @@ public class DataSourceBuilder {
 
         if (this.type != null) {
             return this.type;
-        }
-        else if(!pooled) {
-            if(this.readOnly) {
+        } else if (!pooled) {
+            if (this.readOnly) {
                 return ReadOnlyDriverManagerDataSource.class;
-            }
-            else {
+            } else {
                 return org.springframework.jdbc.datasource.DriverManagerDataSource.class;
             }
         }
@@ -170,8 +165,7 @@ public class DataSourceBuilder {
             try {
                 return (Class<? extends DataSource>) ClassUtils.forName(name,
                         this.classLoader);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 // Swallow and continue
             }
         }

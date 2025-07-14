@@ -30,13 +30,14 @@ import org.grails.io.support.SpringIOUtils
  */
 @CompileStatic
 class TldReader {
-    private static final Log log=LogFactory.getLog(TldReader.class)
-    final Map<String,String> tags = [:]
+
+    private static final Log log = LogFactory.getLog(TldReader.class)
+    final Map<String, String> tags = [:]
     final List<String> listeners = []
     String uri
-        
+
     public TldReader(InputStream inputStream) {
-        inputStream.withStream { 
+        inputStream.withStream {
             init(new BufferedInputStream(inputStream))
         }
     }

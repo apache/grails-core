@@ -48,7 +48,7 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
 
     public static final String TYPE = "Domain";
     public static final String PLUGIN_NAME = "domainClass";
-    private  static final String ENTITY_ANN_NAME = "Entity";
+    private static final String ENTITY_ANN_NAME = "Entity";
     private static final String GRAILS_PACKAGE_PREFIX = "grails.";
     private static final String JAKARTA_PERSISTENCE = "jakarta.persistence";
 
@@ -86,17 +86,19 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
         return !classNode.isEnum() && !(classNode instanceof InnerClassNode);
     }
 
-
     @Override
     public boolean isArtefact(ClassNode classNode) {
-        if(classNode == null) return false;
-        if(!isValidArtefactClassNode(classNode, classNode.getModifiers())) return false;
+        if (classNode == null) {
+            return false;
+        }
+        if (!isValidArtefactClassNode(classNode, classNode.getModifiers())) {
+            return false;
+        }
 
         URL url = GrailsASTUtils.getSourceUrl(classNode);
-        if(url != null) {
+        if (url != null) {
             return GrailsResourceUtils.isDomainClass(url);
-        }
-        else {
+        } else {
             return super.isArtefact(classNode);
         }
     }
@@ -109,12 +111,12 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
 
     public static boolean isDomainClass(Class<?> clazz, boolean allowProxyClass) {
         boolean retval = isDomainClass(clazz);
-        if(!retval && allowProxyClass && clazz != null && clazz.getSimpleName().contains("$")) {
+        if (!retval && allowProxyClass && clazz != null && clazz.getSimpleName().contains("$")) {
             retval = isDomainClass(clazz.getSuperclass());
         }
         return retval;
     }
-    
+
     public static boolean isDomainClass(Class<?> clazz) {
         return clazz != null && doIsDomainClassCheck(clazz);
 
@@ -126,7 +128,9 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
             return false;
         }
 
-        if (clazz.isEnum()) return false;
+        if (clazz.isEnum()) {
+            return false;
+        }
         Artefact artefactAnn = null;
         try {
             artefactAnn = clazz.getAnnotation(Artefact.class);
@@ -134,7 +138,7 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
             // happens if a reference to a class that no longer exists is there
         }
 
-        if( artefactAnn != null && artefactAnn.value().equals(DomainClassArtefactHandler.TYPE) ) {
+        if (artefactAnn != null && artefactAnn.value().equals(DomainClassArtefactHandler.TYPE)) {
             return true;
         }
 
@@ -151,7 +155,7 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
                 String annName = annType.getSimpleName();
 
                 String pkgName = annType.getPackage().getName();
-                if(ENTITY_ANN_NAME.equals(annName) && pkgName.startsWith(GRAILS_PACKAGE_PREFIX) || pkgName.startsWith(JAKARTA_PERSISTENCE)) {
+                if (ENTITY_ANN_NAME.equals(annName) && pkgName.startsWith(GRAILS_PACKAGE_PREFIX) || pkgName.startsWith(JAKARTA_PERSISTENCE)) {
                     return true;
                 }
             }

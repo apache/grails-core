@@ -38,11 +38,11 @@ class EmbeddedEncoder implements PropertyEncoder<Embedded> {
 
     @Override
     void encode(BsonWriter writer, Embedded property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
-        if(value != null) {
+        if (value != null) {
 
             def mappingContext = parentAccess.persistentEntity.mappingContext
             PersistentEntity associatedEntity = mappingContext.getPersistentEntity(value.getClass().name)
-            if(associatedEntity == null) {
+            if (associatedEntity == null) {
                 associatedEntity = property.associatedEntity
             }
 

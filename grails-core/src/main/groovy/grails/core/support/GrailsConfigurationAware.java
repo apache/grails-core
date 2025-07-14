@@ -21,7 +21,6 @@ package grails.core.support;
 import grails.config.Config;
 import org.springframework.beans.factory.Aware;
 
-
 /**
  * Obtains the Grails ConfigObject via Spring.
  *

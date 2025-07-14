@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package reactor.bus;
 
 import reactor.bus.registry.Subscription;
@@ -50,8 +49,8 @@ public interface Bus<T> {
      * @param consumer The {@literal Consumer} to be triggered
      * @return A {@link Subscription} object that allows the caller to interact with the given mapping
      */
-    <V extends T> Subscription<Object, Consumer<? extends T>> on(final Selector selector,
-                                                                 final Consumer<V> consumer);
+    <V extends T> Subscription<Object, Consumer<? extends T>> on(Selector selector,
+                                                                 Consumer<V> consumer);
 
 
     /**

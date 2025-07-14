@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class PersonEvent implements Serializable {
+
     Long id
     Long version
     String name
@@ -35,7 +36,7 @@ class PersonEvent implements Serializable {
             beforeDelete: 0, afterDelete: 0,
             beforeUpdate: 0, afterUpdate: 0,
             beforeInsert: 0, afterInsert: 0,
-            beforeLoad:   0, afterLoad:   0]
+            beforeLoad: 0, afterLoad: 0]
 
     static STORE = [:] + STORE_INITIAL
 

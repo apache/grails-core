@@ -43,7 +43,7 @@ class EventBusGrailsPlugin extends Plugin {
 
     @Override
     Closure doWithSpring() {
-        {->
+        { ->
             Config config = grailsApplication.config
             grailsEventBus(EventBusFactoryBean)
             gormDispatchEventRegistrar(GormDispatcherRegistrar, ref("grailsEventBus"))
@@ -53,7 +53,7 @@ class EventBusGrailsPlugin extends Plugin {
 
 
             // make it possible to enable reactor events
-            if(config.getProperty(TRANSLATE_SPRING_EVENTS, Boolean.class, false)) {
+            if (config.getProperty(TRANSLATE_SPRING_EVENTS, Boolean.class, false)) {
                 springEventTranslator(SpringEventTranslator, ref('grailsEventBus'))
             }
         }

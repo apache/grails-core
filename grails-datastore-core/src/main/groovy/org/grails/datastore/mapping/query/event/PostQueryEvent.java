@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.query.event;
 
 import org.grails.datastore.mapping.query.Query;
@@ -27,6 +26,7 @@ import java.util.List;
  * Query fired after a query has run.
  */
 public class PostQueryEvent extends AbstractQueryEvent {
+
     /**
      * The results of the query.
      */
@@ -51,6 +51,7 @@ public class PostQueryEvent extends AbstractQueryEvent {
 
     /**
      * Reset the list of results to a new list. This allows an event handler to modify the results of a query.
+     *
      * @param results The replacement results.
      */
     public void setResults(List results) {

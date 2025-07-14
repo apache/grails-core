@@ -35,6 +35,7 @@ import org.springframework.validation.DataBinder
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class Identity extends Property {
+
     /**
      * The generator to use
      */

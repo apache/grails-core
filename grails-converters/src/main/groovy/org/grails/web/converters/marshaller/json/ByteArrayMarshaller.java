@@ -19,7 +19,6 @@
 package org.grails.web.converters.marshaller.json;
 
 import grails.converters.JSON;
-
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 

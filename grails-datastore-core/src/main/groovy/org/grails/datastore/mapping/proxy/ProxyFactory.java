@@ -18,10 +18,10 @@
  */
 package org.grails.datastore.mapping.proxy;
 
-import java.io.Serializable;
-
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+
+import java.io.Serializable;
 
 /**
  * The factory used to create proxies
@@ -34,10 +34,10 @@ public interface ProxyFactory extends ProxyHandler {
     /**
      * Creates a proxy
      *
-     * @param <T> The type of the proxy to create
+     * @param <T>     The type of the proxy to create
      * @param session The session instance
-     * @param type The type of the proxy to create
-     * @param key The key to proxy
+     * @param type    The type of the proxy to create
+     * @param key     The key to proxy
      * @return A proxy instance
      */
     <T> T createProxy(Session session, Class<T> type, Serializable key);
@@ -45,12 +45,12 @@ public interface ProxyFactory extends ProxyHandler {
     /**
      * Creates a proxy
      *
-     * @param <T> The type of the proxy to create
-     * @param session The session instance
-     * @param executor The query executor
+     * @param <T>            The type of the proxy to create
+     * @param session        The session instance
+     * @param executor       The query executor
      * @param associationKey The key to proxy
      * @return A proxy instance
      */
-    <T,K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey);
+    <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey);
 
 }

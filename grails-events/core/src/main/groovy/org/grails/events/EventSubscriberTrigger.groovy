@@ -49,10 +49,9 @@ class EventSubscriberTrigger implements EventTrigger {
     @Override
     Object proceed() {
         try {
-            if(subscriber instanceof EventSubscriber) {
+            if (subscriber instanceof EventSubscriber) {
                 return subscriber.call(event)
-            }
-            else {
+            } else {
                 return subscriber.call(event.data)
             }
         } catch (Throwable e) {

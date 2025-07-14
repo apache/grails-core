@@ -33,7 +33,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class ControllerTraitInjector implements TraitInjector {
-    
+
     @Override
     Class getTrait() {
         Controller

@@ -99,8 +99,8 @@ abstract class AbstractEventBus implements EventBus {
     @Override
     Subjects unsubscribeAll(CharSequence event) {
         def subs = subscriptions.get(event.toString())
-        for(sub in subs) {
-            if(!sub.isCancelled()) {
+        for (sub in subs) {
+            if (!sub.isCancelled()) {
                 sub.cancel()
             }
         }
@@ -109,14 +109,13 @@ abstract class AbstractEventBus implements EventBus {
     }
 
     EventEmitter notify(Event event) {
-        if(TransactionSynchronizationManager.isSynchronizationActive()) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
             notify(event, TransactionPhase.AFTER_COMMIT)
-        }
-        else {
+        } else {
             String eventId = event.id
-            if(subscriptions.containsKey(eventId))  {
+            if (subscriptions.containsKey(eventId)) {
                 Collection<Subscription> eventSubscriptions = subscriptions.get(event.id)
-                if(!eventSubscriptions.isEmpty()) {
+                if (!eventSubscriptions.isEmpty()) {
                     buildNotificationTrigger(event, eventSubscriptions)
                             .run()
                 }
@@ -127,14 +126,14 @@ abstract class AbstractEventBus implements EventBus {
 
     @Override
     EventEmitter sendAndReceive(Event event, Closure reply) {
-        if(event == null) throw new IllegalArgumentException("Argument [event] cannot be null")
-        if(event == null) throw new IllegalArgumentException("Argument [reply] cannot be null")
+        if (event == null) throw new IllegalArgumentException("Argument [event] cannot be null")
+        if (event == null) throw new IllegalArgumentException("Argument [reply] cannot be null")
         String eventId = event.id
-        if(subscriptions.containsKey(eventId))  {
+        if (subscriptions.containsKey(eventId)) {
             Collection<Subscription> eventSubscriptions = subscriptions.get(eventId)
-            if(!eventSubscriptions.isEmpty()) {
+            if (!eventSubscriptions.isEmpty()) {
                 buildNotificationTrigger(event, eventSubscriptions, reply)
-                    .run()
+                        .run()
             }
         }
         this
@@ -142,17 +141,16 @@ abstract class AbstractEventBus implements EventBus {
 
     @Override
     EventEmitter notify(Event event, TransactionPhase transactionPhase) {
-        if(TransactionSynchronizationManager.isSynchronizationActive()) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
             String eventId = event.getId()
             Collection<Subscription> eventSubscriptions = subscriptions.get(eventId)
-            if(!eventSubscriptions.isEmpty()) {
+            if (!eventSubscriptions.isEmpty()) {
                 TransactionSynchronizationManager.registerSynchronization(
-                    new EventTriggerTransactionSynchronization(buildNotificationTrigger(event, eventSubscriptions), transactionPhase)
+                        new EventTriggerTransactionSynchronization(buildNotificationTrigger(event, eventSubscriptions), transactionPhase)
                 )
             }
             return this
-        }
-        else {
+        } else {
             return notify(event)
         }
     }
@@ -170,6 +168,7 @@ abstract class AbstractEventBus implements EventBus {
         final Callable callable = buildNotificationCallable(event, eventSubscriptions, reply)
 
         new NotificationTrigger(event, eventSubscriptions, reply) {
+
             @Override
             void run() {
                 callable.call()
@@ -212,24 +211,23 @@ abstract class AbstractEventBus implements EventBus {
 
         @Override
         void beforeCommit(boolean readOnly) {
-            if(transactionPhase == TransactionPhase.BEFORE_COMMIT && !readOnly) {
+            if (transactionPhase == TransactionPhase.BEFORE_COMMIT && !readOnly) {
                 notificationTrigger.run()
             }
         }
 
         @Override
         void afterCommit() {
-            if(transactionPhase == TransactionPhase.AFTER_COMMIT) {
+            if (transactionPhase == TransactionPhase.AFTER_COMMIT) {
                 notificationTrigger.run()
             }
         }
 
         @Override
         void afterCompletion(int status) {
-            if(transactionPhase == TransactionPhase.AFTER_COMPLETION && status == STATUS_COMMITTED) {
+            if (transactionPhase == TransactionPhase.AFTER_COMPLETION && status == STATUS_COMMITTED) {
                 notificationTrigger.run()
-            }
-            else if(transactionPhase == TransactionPhase.AFTER_ROLLBACK && status == STATUS_ROLLED_BACK) {
+            } else if (transactionPhase == TransactionPhase.AFTER_ROLLBACK && status == STATUS_ROLLED_BACK) {
                 notificationTrigger.run()
             }
         }

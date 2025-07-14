@@ -50,7 +50,7 @@ interface PromiseFactory {
     /**
      * Creates a promise with a value pre-bound to it
      * @param value The value
-     * @param <T> The type of the value
+     * @param <T>    The type of the value
      * @return A Promise
      */
     <T> Promise<T> createBoundPromise(T value)
@@ -58,7 +58,7 @@ interface PromiseFactory {
     /**
      * Creates an unfulfilled promise that returns the given type
      * @param returnType The return type
-     * @param <T> The type of the class
+     * @param <T>    The type of the class
      * @return The unfulfilled promise
      */
     <T> Promise<T> createPromise(Class<T> returnType)
@@ -76,7 +76,7 @@ interface PromiseFactory {
      * @param map The map
      * @return A promise
      */
-    <K,V> Promise<Map<K,V>> createPromise(Map<K, V> map)
+    <K, V> Promise<Map<K, V>> createPromise(Map<K, V> map)
 
     /**
      * Creates a promise from the given map where the values of the map are either closures or Promise instances
@@ -84,7 +84,7 @@ interface PromiseFactory {
      * @param map The map
      * @return A promise
      */
-    <K,V> Promise<Map<K,V>> createPromise(Map<K, V> map, List<PromiseDecorator> decorators)
+    <K, V> Promise<Map<K, V>> createPromise(Map<K, V> map, List<PromiseDecorator> decorators)
 
     /**
      * Creates a promise from one or more other promises
@@ -92,7 +92,7 @@ interface PromiseFactory {
      * @param promises The promises
      * @return The promise
      */
-    <T> Promise<List<T>> createPromise(Promise<T>...promises)
+    <T> Promise<List<T>> createPromise(Promise<T>... promises)
 
     /**
      * Creates a promise from one or many closures
@@ -132,7 +132,7 @@ interface PromiseFactory {
      * @param promises The promises
      * @return The list of bound values
      */
-    <T> List<T> waitAll(Promise<T>...promises)
+    <T> List<T> waitAll(Promise<T>... promises)
     /**
      * Synchronously waits for all promises to complete returning a list of values
      *

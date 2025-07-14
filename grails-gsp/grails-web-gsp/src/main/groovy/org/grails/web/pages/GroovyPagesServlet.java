@@ -23,15 +23,18 @@ import grails.plugins.GrailsPluginManager;
 import grails.plugins.PluginManagerAware;
 import grails.util.GrailsStringUtils;
 import grails.web.pages.GroovyPagesUriService;
-import org.grails.web.util.GrailsApplicationAttributes;
 import groovy.text.Template;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.grails.core.io.support.GrailsFactoriesLoader;
 import org.grails.gsp.GroovyPageTemplate;
 import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.plugins.BinaryGrailsPlugin;
 import org.grails.gsp.io.GroovyPageCompiledScriptSource;
 import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.plugins.BinaryGrailsPlugin;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.web.context.WebApplicationContext;
@@ -41,13 +44,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.FrameworkServlet;
 import org.springframework.web.util.WebUtils;
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+//CHECKSTYLE:OFF
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
  * Main servlet class.  Example usage in web.xml:
@@ -74,13 +75,22 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Date: Jan 10, 2004
  */
+//CHECKSTYLE:ON
 public class GroovyPagesServlet extends FrameworkServlet implements PluginManagerAware {
 
-    private static final long serialVersionUID = -1918149859392123495L;
+    /**
+     * The size of the buffer used when formulating the response
+     */
+    public static final String SERVLET_INSTANCE = "org.codehaus.groovy.grails.GSP_SERVLET";
 
+    private static final long serialVersionUID = -1918149859392123495L;
     private static final String WEB_INF = "/WEB-INF";
     private static final String GRAILS_APP = "/grails-app";
 
+    private GroovyPagesTemplateEngine groovyPagesTemplateEngine;
+    private GrailsPluginManager pluginManager;
+    @SuppressWarnings("rawtypes")
+    private final Map<String, Class> binaryPluginViewsMap = new ConcurrentHashMap<String, Class>();
     private ServletContext context;
     private GrailsApplicationAttributes grailsAttributes;
 
@@ -97,15 +107,6 @@ public class GroovyPagesServlet extends FrameworkServlet implements PluginManage
             return super.buildRequestAttributes(request, response, previousAttributes);
         }
     }
-
-    /**
-     * The size of the buffer used when formulating the response
-     */
-    public static final String SERVLET_INSTANCE = "org.codehaus.groovy.grails.GSP_SERVLET";
-    private GroovyPagesTemplateEngine groovyPagesTemplateEngine;
-    private GrailsPluginManager pluginManager;
-    @SuppressWarnings("rawtypes")
-    private final Map<String, Class> binaryPluginViewsMap = new ConcurrentHashMap<String, Class>();
 
     @Override
     protected void initFrameworkServlet() throws BeansException {
@@ -226,7 +227,9 @@ public class GroovyPagesServlet extends FrameworkServlet implements PluginManage
             out.setError();
             throw e;
         } finally {
-            if (out != null) out.close();
+            if (out != null) {
+                out.close();
+            }
         }
     }
 

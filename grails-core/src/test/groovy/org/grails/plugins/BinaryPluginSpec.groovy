@@ -54,7 +54,6 @@ class BinaryPluginSpec extends Specification {
             binaryPlugin.binaryDescriptor != null
     }
 
-
     def "Test load static resource from binary plugin"() {
         when:
             def resource = new MockBinaryPluginResource(testBinary.getBytes('UTF-8'))

@@ -18,11 +18,10 @@
  */
 package org.grails.datastore.mapping.core;
 
-import org.grails.datastore.mapping.core.Session;
-
 /**
  * @author Burt Beckwith
  */
 public interface VoidSessionCallback {
+
     void doInSession(Session session);
 }

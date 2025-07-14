@@ -31,6 +31,7 @@ import org.springframework.util.Assert
  */
 @CompileStatic
 class GeoWithin extends MethodExpression {
+
     GeoWithin(Class<?> targetClass, String propertyName) {
         super(targetClass, propertyName)
     }
@@ -47,8 +48,8 @@ class GeoWithin extends MethodExpression {
 
         def value = arguments[0]
 
-        Assert.isTrue( (value instanceof Map) || (( value instanceof Shape) && !((value instanceof LineString) || (value instanceof Point))),
-                        "Argument must be either a Box, Circle, Polygon or Sphere")
+        Assert.isTrue((value instanceof Map) || ((value instanceof Shape) && !((value instanceof LineString) || (value instanceof Point))),
+                "Argument must be either a Box, Circle, Polygon or Sphere")
 
         super.setArguments(arguments)
     }

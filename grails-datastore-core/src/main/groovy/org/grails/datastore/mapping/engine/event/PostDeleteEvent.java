@@ -30,7 +30,7 @@ public class PostDeleteEvent extends AbstractPersistenceEvent {
     private static final long serialVersionUID = 1;
 
     public PostDeleteEvent(final Datastore source, final PersistentEntity entity,
-            final EntityAccess entityAccess) {
+                           final EntityAccess entityAccess) {
         super(source, entity, entityAccess);
     }
 

@@ -24,7 +24,12 @@ import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.WithoutTenant
 import groovy.transform.CompileStatic
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.codehaus.groovy.ast.*
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.Expression
@@ -34,7 +39,6 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -42,7 +46,20 @@ import org.grails.datastore.mapping.services.ServiceRegistry
 
 import static org.codehaus.groovy.ast.ClassHelper.CLOSURE_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.equalsNullX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.param
+import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.throwS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
@@ -56,14 +73,15 @@ import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
+
     private static final Object APPLIED_MARKER = new Object()
     private static final ClassExpression CURRENT_TENANT_ANNOTATION_TYPE_EXPR = classX(CurrentTenant)
     private static final ClassExpression TENANT_ANNOTATION_TYPE_EXPR = classX(Tenant)
     private static final ClassExpression WITHOUT_TENANT_ANNOTATION_TYPE_EXPR = classX(WithoutTenant)
 
     public static final ClassNode TENANT_ANNOTATION_TYPE = TENANT_ANNOTATION_TYPE_EXPR.getType()
-    public  static final ClassNode CURRENT_TENANT_ANNOTATION_TYPE = CURRENT_TENANT_ANNOTATION_TYPE_EXPR.getType()
-    public  static final ClassNode WITHOUT_TENANT_ANNOTATION_TYPE = WITHOUT_TENANT_ANNOTATION_TYPE_EXPR.getType()
+    public static final ClassNode CURRENT_TENANT_ANNOTATION_TYPE = CURRENT_TENANT_ANNOTATION_TYPE_EXPR.getType()
+    public static final ClassNode WITHOUT_TENANT_ANNOTATION_TYPE = WITHOUT_TENANT_ANNOTATION_TYPE_EXPR.getType()
 
     public static final String RENAMED_METHOD_PREFIX = '$mt__'
     public static final String VAR_TENANT_ID = "tenantId"
@@ -80,9 +98,9 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         ClassNode tenantServiceClassNode = make(TenantService)
         VariableScope variableScope = methodNode.getVariableScope()
         VariableExpression tenantServiceVar = varX('$tenantService', tenantServiceClassNode)
-        variableScope.putDeclaredVariable( tenantServiceVar )
+        variableScope.putDeclaredVariable(tenantServiceVar)
         newMethodBody.addStatement(
-            declS(tenantServiceVar, callD(ServiceRegistry, "targetDatastore", "getService", classX(tenantServiceClassNode) ) )
+                declS(tenantServiceVar, callD(ServiceRegistry, "targetDatastore", "getService", classX(tenantServiceClassNode)))
         )
 
         ClassNode serializableClassNode = make(Serializable)
@@ -94,44 +112,42 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         } else {
             // must be @Tenant
             Expression annValue = annotationNode.getMember("value")
-            if(annValue instanceof ClosureExpression) {
+            if (annValue instanceof ClosureExpression) {
                 VariableExpression closureVar = varX('$tenantResolver', CLOSURE_TYPE)
                 VariableExpression tenantIdVar = varX('$tenantId', serializableClassNode)
                 tenantIdVar.setClosureSharedVariable(true)
-                variableScope.putDeclaredVariable( closureVar )
-                variableScope.putReferencedLocalVariable( tenantIdVar )
-                variableScope.putDeclaredVariable( tenantIdVar )
+                variableScope.putDeclaredVariable(closureVar)
+                variableScope.putReferencedLocalVariable(tenantIdVar)
+                variableScope.putDeclaredVariable(tenantIdVar)
                 // Generates:
                 // Closure $tenantResolver = ...
                 // $tenantResolver = $tenantResolver.clone()
                 // $tenantResolver.setDelegate(this)
                 // Serializable $tenantId = (Serializable)$tenantResolver.call()
                 // if($tenantId == null) throw new TenantNotFoundException(..)
-                newMethodBody.addStatement  declS( closureVar, annValue)
-                newMethodBody.addStatement  assignS( closureVar, callD( closureVar, "clone"))
-                newMethodBody.addStatement  stmt( callD( closureVar, "setDelegate", varThis() ) )
-                newMethodBody.addStatement  declS( tenantIdVar, castX( serializableClassNode, callD( closureVar, "call") ))
-                newMethodBody.addStatement ifS( equalsNullX(tenantIdVar),
-                    throwS( ctorX( make(TenantNotFoundException), constX("Tenant id resolved from @Tenant is null")) )
+                newMethodBody.addStatement declS(closureVar, annValue)
+                newMethodBody.addStatement assignS(closureVar, callD(closureVar, "clone"))
+                newMethodBody.addStatement stmt(callD(closureVar, "setDelegate", varThis()))
+                newMethodBody.addStatement declS(tenantIdVar, castX(serializableClassNode, callD(closureVar, "call")))
+                newMethodBody.addStatement ifS(equalsNullX(tenantIdVar),
+                        throwS(ctorX(make(TenantNotFoundException), constX("Tenant id resolved from @Tenant is null")))
                 )
-                return makeDelegatingClosureCall( tenantServiceVar, "withId", args(tenantIdVar), params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
-            }
-            else {
+                return makeDelegatingClosureCall(tenantServiceVar, "withId", args(tenantIdVar), params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+            } else {
                 addError("@Tenant value should be a closure", annotationNode)
-                return makeDelegatingClosureCall( tenantServiceVar, "withCurrent", params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+                return makeDelegatingClosureCall(tenantServiceVar, "withCurrent", params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
         }
     }
 
     @Override
     protected Parameter[] prepareNewMethodParameters(MethodNode methodNode, Map<String, ClassNode> genericsSpec, ClassNode classNode = null) {
-        if(methodNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty() && (!classNode || classNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty())) {
+        if (methodNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty() && (!classNode || classNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty())) {
             final Parameter tenantIdParameter = param(make(Serializable), VAR_TENANT_ID)
             Parameter[] parameters = methodNode.getParameters()
             Parameter[] newParameters = parameters.length > 0 ? (copyParameters(((parameters as List) + [tenantIdParameter]) as Parameter[], genericsSpec)) : [tenantIdParameter] as Parameter[]
             return newParameters
-        }
-        else {
+        } else {
             return copyParameters(methodNode.getParameters())
         }
     }
@@ -160,19 +176,18 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
      */
     static boolean hasTenantAnnotation(AnnotatedNode node) {
         ClassNode classNode
-        if(node instanceof MethodNode) {
-            if(AstUtils.findAnnotation(node, WithoutTenant)) {
+        if (node instanceof MethodNode) {
+            if (AstUtils.findAnnotation(node, WithoutTenant)) {
                 return false
             }
-            classNode = ((MethodNode)node).getDeclaringClass()
+            classNode = ((MethodNode) node).getDeclaringClass()
+        } else if (node instanceof ClassNode) {
+            classNode = ((ClassNode) node)
         }
-        else if(node instanceof ClassNode) {
-            classNode = ((ClassNode)node)
-        }
-        if(classNode != null) {
+        if (classNode != null) {
 
-            for(ann in [CurrentTenant, Tenant]) {
-                if(AstUtils.findAnnotation(classNode, ann) || AstUtils.findAnnotation(node, ann)) {
+            for (ann in [CurrentTenant, Tenant]) {
+                if (AstUtils.findAnnotation(classNode, ann) || AstUtils.findAnnotation(node, ann)) {
                     return true
                 }
             }

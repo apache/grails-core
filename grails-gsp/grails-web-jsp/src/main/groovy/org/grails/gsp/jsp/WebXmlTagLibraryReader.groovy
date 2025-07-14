@@ -29,6 +29,7 @@ import org.grails.io.support.SpringIOUtils
  */
 @CompileStatic
 class WebXmlTagLibraryReader {
+
     /**
      * Contains a map of URI to tag library locations once the handler has read the web.xml file
      */
@@ -45,7 +46,7 @@ class WebXmlTagLibraryReader {
         def rootNode = SpringIOUtils.createXmlSlurper().parse(inputStream)
         rootNode.taglib.each { taglib ->
             String uri = taglib.'taglib-uri'.text()
-            String location =  taglib.'taglib-location'.text()
+            String location = taglib.'taglib-location'.text()
             tagLocations[uri] = location
         }
     }

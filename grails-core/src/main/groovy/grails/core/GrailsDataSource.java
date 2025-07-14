@@ -71,6 +71,7 @@ public interface GrailsDataSource extends InjectableGrailsClass {
 
     /**
      * Whether to generate the database with HBM 2 DDL, values can be "create", "create-drop" or "update".
+     *
      * @return The dbCreate method to use
      */
     String getDbCreate();
@@ -83,6 +84,7 @@ public interface GrailsDataSource extends InjectableGrailsClass {
 
     /**
      * The dialect implementation to use.
+     *
      * @return The dialect class or null if none configured
      */
     @SuppressWarnings("rawtypes")

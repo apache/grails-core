@@ -124,7 +124,7 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
     abstract void renderInternal(T object, RenderContext context)
 
     protected boolean isDomainResource(Class clazz) {
-        if(mappingContext != null) {
+        if (mappingContext != null) {
             return mappingContext.isPersistentEntity(clazz)
         } else {
             DomainClassArtefactHandler.isDomainClass(clazz, true)
@@ -138,7 +138,7 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
 
     protected String getResourceTitle(String uri, Locale locale) {
         if (uri.startsWith('/')) uri = uri.substring(1)
-        if (uri.endsWith('/')) uri = uri.substring(0, uri.length()-1)
+        if (uri.endsWith('/')) uri = uri.substring(0, uri.length() - 1)
         uri = uri.replace('/', '.')
         messageSource.getMessage("resource.${uri}.href.title", [uri] as Object[], '', locale)
     }
@@ -230,5 +230,6 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
     }
 
     protected abstract void writeLink(Link link, Locale locale, writerObject)
+
     protected abstract void writeDomainProperty(value, String propertyName, writer)
 }

@@ -34,5 +34,4 @@ public class CouldNotDetermineHibernateDialectException extends GrailsHibernateE
     public CouldNotDetermineHibernateDialectException(String message, Throwable cause) {
         super(message, cause);
     }
-
 }

@@ -125,7 +125,7 @@ class DataSourceSettings extends ConnectionSourceSettings {
         props.put("hibernate.hbm2ddl.auto", dbCreate)
         props.put("hibernate.show_sql", String.valueOf(logSql))
         props.put("hibernate.format_sql", String.valueOf(formatSql))
-        if(dialect != null) {
+        if (dialect != null) {
             props.put("hibernate.dialect", dialect.name)
         }
         return props
@@ -135,20 +135,20 @@ class DataSourceSettings extends ConnectionSourceSettings {
      * @return Convert to datasource properties
      */
     @CompileStatic
-    Map<String,String> toProperties() {
-        Map<String,String> properties = new LinkedHashMap<>()
+    Map<String, String> toProperties() {
+        Map<String, String> properties = new LinkedHashMap<>()
         properties.putAll(this.properties)
         properties.put("url", url)
-        if(driverClassName) {
+        if (driverClassName) {
             properties.put("driverClassName", driverClassName)
         }
-        if(username) {
+        if (username) {
             properties.put("username", username)
         }
-        if(password) {
+        if (password) {
             properties.put("username", password)
         }
-        if(readOnly) {
+        if (readOnly) {
             properties.put("defaultReadOnly", String.valueOf(readOnly))
         }
         return properties

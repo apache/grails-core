@@ -30,7 +30,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DirtyCheckingMap implements Map, DirtyCheckableCollection {
 
-    final @Delegate Map target
+    final @Delegate
+    Map target
     final DirtyCheckable parent
     final String property
     final int originalSize

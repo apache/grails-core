@@ -28,7 +28,8 @@ import groovy.lang.MetaClassRegistryChangeEventListener;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class MetaClassChangeReporter implements MetaClassRegistryChangeEventListener{
+public class MetaClassChangeReporter implements MetaClassRegistryChangeEventListener {
+
     /**
      * Called when the a constant MetaClass is updated. If the new MetaClass is null, then the MetaClass
      * is removed. Be careful, while this method is executed other updates may happen. If you want this
@@ -40,7 +41,7 @@ public class MetaClassChangeReporter implements MetaClassRegistryChangeEventList
         Class<?> classToUpdate = cmcu.getClassToUpdate();
         MetaClass newMetaClass = cmcu.getNewMetaClass();
 
-        System.out.println("Class ["+classToUpdate+"] updated MetaClass to ["+newMetaClass+"]");
+        System.out.println("Class [" + classToUpdate + "] updated MetaClass to [" + newMetaClass + "]");
         Thread.dumpStack();
     }
 }

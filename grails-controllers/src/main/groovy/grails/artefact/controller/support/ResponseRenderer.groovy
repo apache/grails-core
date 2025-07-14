@@ -32,8 +32,10 @@ import grails.web.pages.GrailsRenderViewMutator
 import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import groovy.xml.slurpersupport.GPathResult
 import groovy.xml.StreamingMarkupBuilder
+import groovy.xml.slurpersupport.GPathResult
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.grails.gsp.GroovyPageTemplate
 import org.grails.io.support.SpringIOUtils
 import org.grails.web.json.JSONElement
@@ -52,10 +54,28 @@ import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.View
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
-
-import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.*
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.APPLICATION_XML
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_BEAN
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_BUILDER
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_COLLECTION
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_CONTENT_TYPE
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_CONTEXTPATH
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_ENCODING
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_FILE
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_FILE_NAME
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_LAYOUT
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_MODEL
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_PLUGIN
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_STATUS
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_TEMPLATE
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_TEXT
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_VAR
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.ARGUMENT_VIEW
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.BUILDER_TYPE_JSON
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.DEFAULT_ARGUMENT
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.DEFAULT_ENCODING
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.DISPOSITION_HEADER_PREFIX
+import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.TEXT_HTML
 
 /**
  *
@@ -239,7 +259,6 @@ trait ResponseRenderer extends WebAttributes {
         HttpServletResponse response = webRequest.currentResponse
         String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
         boolean statusSet = handleStatusArgument(argMap, webRequest, response)
-
 
         def applicationAttributes = webRequest.attributes
         if (argMap.containsKey(ARGUMENT_TEXT)) {
@@ -437,7 +456,6 @@ trait ResponseRenderer extends WebAttributes {
             }
         }
     }
-
 
     private boolean handleStatusArgument(Map argMap, GrailsWebRequest webRequest, HttpServletResponse response) {
         boolean statusSet

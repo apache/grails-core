@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.gsp.compiler;
 
 import java.lang.annotation.ElementType;
@@ -27,5 +26,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface GroovyPageTypeCheckingConfig {
+
     String[] taglibs() default {};
 }

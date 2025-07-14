@@ -18,10 +18,6 @@
  */
 package org.grails.cli.compiler.grape;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ServiceLoader;
-
 import groovy.lang.GroovyClassLoader;
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
@@ -35,6 +31,10 @@ import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.transport.file.FileTransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ServiceLoader;
+
 /**
  * Utility class to create a pre-configured {@link MavenResolverGrapeEngine}.
  *
@@ -43,44 +43,44 @@ import org.eclipse.aether.transport.http.HttpTransporterFactory;
  */
 public abstract class MavenResolverGrapeEngineFactory {
 
-	public static MavenResolverGrapeEngine create(GroovyClassLoader classLoader,
-			List<RepositoryConfiguration> repositoryConfigurations,
-			DependencyResolutionContext dependencyResolutionContext, boolean quiet) {
-		RepositorySystem repositorySystem = createRepositorySystem();
-		DefaultRepositorySystemSession repositorySystemSession = MavenRepositorySystemUtils.newSession();
-		repositorySystemSession.setSystemProperties(System.getProperties());
-		ServiceLoader<RepositorySystemSessionAutoConfiguration> autoConfigurations = ServiceLoader
-			.load(RepositorySystemSessionAutoConfiguration.class);
-		for (RepositorySystemSessionAutoConfiguration autoConfiguration : autoConfigurations) {
-			autoConfiguration.apply(repositorySystemSession, repositorySystem);
-		}
-		new DefaultRepositorySystemSessionAutoConfiguration().apply(repositorySystemSession, repositorySystem);
-		return new MavenResolverGrapeEngine(classLoader, repositorySystem, repositorySystemSession,
-				createRepositories(repositoryConfigurations), dependencyResolutionContext, quiet);
-	}
+    public static MavenResolverGrapeEngine create(GroovyClassLoader classLoader,
+                                                  List<RepositoryConfiguration> repositoryConfigurations,
+                                                  DependencyResolutionContext dependencyResolutionContext, boolean quiet) {
+        RepositorySystem repositorySystem = createRepositorySystem();
+        DefaultRepositorySystemSession repositorySystemSession = MavenRepositorySystemUtils.newSession();
+        repositorySystemSession.setSystemProperties(System.getProperties());
+        ServiceLoader<RepositorySystemSessionAutoConfiguration> autoConfigurations = ServiceLoader
+                .load(RepositorySystemSessionAutoConfiguration.class);
+        for (RepositorySystemSessionAutoConfiguration autoConfiguration : autoConfigurations) {
+            autoConfiguration.apply(repositorySystemSession, repositorySystem);
+        }
+        new DefaultRepositorySystemSessionAutoConfiguration().apply(repositorySystemSession, repositorySystem);
+        return new MavenResolverGrapeEngine(classLoader, repositorySystem, repositorySystemSession,
+                createRepositories(repositoryConfigurations), dependencyResolutionContext, quiet);
+    }
 
-	@SuppressWarnings("deprecation")
-	private static RepositorySystem createRepositorySystem() {
-		org.eclipse.aether.impl.DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
-		locator.addService(RepositorySystem.class, DefaultRepositorySystem.class);
-		locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
-		locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
-		locator.addService(TransporterFactory.class, FileTransporterFactory.class);
-		return locator.getService(RepositorySystem.class);
-	}
+    @SuppressWarnings("deprecation")
+    private static RepositorySystem createRepositorySystem() {
+        org.eclipse.aether.impl.DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
+        locator.addService(RepositorySystem.class, DefaultRepositorySystem.class);
+        locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
+        locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
+        locator.addService(TransporterFactory.class, FileTransporterFactory.class);
+        return locator.getService(RepositorySystem.class);
+    }
 
-	private static List<RemoteRepository> createRepositories(List<RepositoryConfiguration> repositoryConfigurations) {
-		List<RemoteRepository> repositories = new ArrayList<>(repositoryConfigurations.size());
-		for (RepositoryConfiguration repositoryConfiguration : repositoryConfigurations) {
-			RemoteRepository.Builder builder = new RemoteRepository.Builder(repositoryConfiguration.getName(),
-					"default", repositoryConfiguration.getUri().toASCIIString());
-			if (!repositoryConfiguration.getSnapshotsEnabled()) {
-				builder.setSnapshotPolicy(new RepositoryPolicy(false, RepositoryPolicy.UPDATE_POLICY_NEVER,
-						RepositoryPolicy.CHECKSUM_POLICY_IGNORE));
-			}
-			repositories.add(builder.build());
-		}
-		return repositories;
-	}
+    private static List<RemoteRepository> createRepositories(List<RepositoryConfiguration> repositoryConfigurations) {
+        List<RemoteRepository> repositories = new ArrayList<>(repositoryConfigurations.size());
+        for (RepositoryConfiguration repositoryConfiguration : repositoryConfigurations) {
+            RemoteRepository.Builder builder = new RemoteRepository.Builder(repositoryConfiguration.getName(),
+                    "default", repositoryConfiguration.getUri().toASCIIString());
+            if (!repositoryConfiguration.getSnapshotsEnabled()) {
+                builder.setSnapshotPolicy(new RepositoryPolicy(false, RepositoryPolicy.UPDATE_POLICY_NEVER,
+                        RepositoryPolicy.CHECKSUM_POLICY_IGNORE));
+            }
+            repositories.add(builder.build());
+        }
+        return repositories;
+    }
 
 }

@@ -30,6 +30,7 @@ import java.util.List;
  * @since 5.0.2
  */
 public class MultipleDataSourceSupport {
+
     /**
      * If a domain class uses more than one datasource, we need to know which one to use
      * when calling a method without a namespace qualifier.

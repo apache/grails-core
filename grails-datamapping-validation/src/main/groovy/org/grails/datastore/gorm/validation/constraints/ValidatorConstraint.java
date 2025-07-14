@@ -16,16 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
 
 import grails.gorm.validation.ConstrainedProperty;
 import groovy.lang.Closure;
-
-import java.util.Collection;
-
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
+
+import java.util.Collection;
 
 /**
  * <p>A constraint class that validates using a user-supplied closure.</p>
@@ -74,11 +72,11 @@ public class ValidatorConstraint extends AbstractConstraint {
         Class<?>[] params = validator.getParameterTypes();
         // Groovy should always force one parameter, but let's check anyway...
         if (params.length == 0) {
-            throw new IllegalArgumentException("Parameter for constraint ["+ConstrainedProperty.VALIDATOR_CONSTRAINT+"] of property ["+constraintPropertyName+"] of class ["+constraintOwningClass+"] must be a Closure taking at least 1 parameter (value, [object])");
+            throw new IllegalArgumentException("Parameter for constraint [" + ConstrainedProperty.VALIDATOR_CONSTRAINT + "] of property [" + constraintPropertyName + "] of class [" + constraintOwningClass + "] must be a Closure taking at least 1 parameter (value, [object])");
         }
 
         if (params.length > 3) {
-            throw new IllegalArgumentException("Parameter for constraint ["+ConstrainedProperty.VALIDATOR_CONSTRAINT+"] of property ["+constraintPropertyName+"] of class ["+constraintOwningClass+"] must be a Closure taking no more than 3 parameters (value, [object, [errors]])");
+            throw new IllegalArgumentException("Parameter for constraint [" + ConstrainedProperty.VALIDATOR_CONSTRAINT + "] of property [" + constraintPropertyName + "] of class [" + constraintOwningClass + "] must be a Closure taking no more than 3 parameters (value, [object, [errors]])");
         }
         return constraintParameter;
     }
@@ -130,42 +128,39 @@ public class ValidatorConstraint extends AbstractConstraint {
 
         if (result != null) {
             if (result instanceof Boolean) {
-                bad = !(Boolean)result;
-            }
-            else if (result instanceof CharSequence) {
+                bad = !(Boolean) result;
+            } else if (result instanceof CharSequence) {
                 bad = true;
                 errmsg = result.toString();
-            }
-            else if ((result instanceof Collection<?>) || result.getClass().isArray()) {
+            } else if ((result instanceof Collection<?>) || result.getClass().isArray()) {
                 bad = true;
-                Object[] values = (result instanceof Collection<?>) ? ((Collection<?>)result).toArray() : (Object[])result;
+                Object[] values = (result instanceof Collection<?>) ? ((Collection<?>) result).toArray() : (Object[]) result;
                 if (!(values[0] instanceof String)) {
                     throw new IllegalArgumentException("Return value from validation closure [" +
-                            ConstrainedProperty.VALIDATOR_CONSTRAINT+"] of property ["+constraintPropertyName+"] of class [" +
-                            constraintOwningClass+"] is returning a list but the first element must be a string " +
+                            ConstrainedProperty.VALIDATOR_CONSTRAINT + "] of property [" + constraintPropertyName + "] of class [" +
+                            constraintOwningClass + "] is returning a list but the first element must be a string " +
                             "containing the error message code");
                 }
-                errmsg = (String)values[0];
+                errmsg = (String) values[0];
                 args = new Object[values.length - 1 + 3];
                 int i = 0;
                 args[i++] = constraintPropertyName;
                 args[i++] = constraintOwningClass;
                 args[i++] = propertyValue;
                 System.arraycopy(values, 1, args, i, values.length - 1);
-            }
-            else {
+            } else {
                 throw new IllegalArgumentException("Return value from validation closure [" +
-                        ConstrainedProperty.VALIDATOR_CONSTRAINT+"] of property [" + constraintPropertyName +
+                        ConstrainedProperty.VALIDATOR_CONSTRAINT + "] of property [" + constraintPropertyName +
                         "] of class [" + constraintOwningClass +
                         "] must be a boolean, a string, an array or a collection");
             }
         }
         if (bad) {
             if (args == null) {
-                args = new Object[] { constraintPropertyName, constraintOwningClass, propertyValue };
+                args = new Object[]{constraintPropertyName, constraintOwningClass, propertyValue};
             }
             rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_VALIDATOR_MESSAGE_CODE,
-                    errmsg == null ? ConstrainedProperty.VALIDATOR_CONSTRAINT + ConstrainedProperty.INVALID_SUFFIX: errmsg, args);
+                    errmsg == null ? ConstrainedProperty.VALIDATOR_CONSTRAINT + ConstrainedProperty.INVALID_SUFFIX : errmsg, args);
         }
     }
 
@@ -179,6 +174,7 @@ public class ValidatorConstraint extends AbstractConstraint {
     }
 
     private static class ValidatorDelegate {
+
         private String propertyName;
 
         @SuppressWarnings("unused")

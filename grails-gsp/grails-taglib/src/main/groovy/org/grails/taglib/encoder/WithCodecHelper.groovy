@@ -18,8 +18,8 @@
  */
 package org.grails.taglib.encoder
 
-import groovy.transform.CompileStatic
 import grails.core.GrailsApplication
+import groovy.transform.CompileStatic
 import groovy.util.logging.Commons
 import org.grails.encoder.CodecLookupHelper
 import org.grails.encoder.Encoder
@@ -41,7 +41,6 @@ class WithCodecHelper {
     public static final String OUT_AND_EXPRESSION_CODECS_FALLBACK_KEY_NAME = "name"
 
     private static final String ALREADY_CANONICAL_KEY_NAME = "_canonical_"
-
 
     /**
      * Executes closure with given codecs.
@@ -72,7 +71,7 @@ class WithCodecHelper {
      * @return the return value of the closure
      */
     static <T> T withCodec(GrailsApplication grailsApplication, Object codecInfo, Closure<T> closure) {
-        OutputEncodingStack outputStack=OutputEncodingStack.currentStack()
+        OutputEncodingStack outputStack = OutputEncodingStack.currentStack()
         try {
             outputStack.push(createOutputStackAttributesBuilder(codecInfo, grailsApplication).build(), false)
             return closure.call()
@@ -89,7 +88,7 @@ class WithCodecHelper {
      * @return the builder instance for building {@link OutputEncodingStackAttributes} instance
      */
     static Builder createOutputStackAttributesBuilder(Object codecInfo, GrailsApplication grailsApplication) {
-        Builder builder=new Builder()
+        Builder builder = new Builder()
         builder.inheritPreviousEncoders(true)
         if (codecInfo != null) {
             Map<String, Object> codecInfoMap = makeSettingsCanonical(codecInfo)
@@ -100,10 +99,10 @@ class WithCodecHelper {
                     encoders.put(codecNameString, lookupEncoder(grailsApplication, codecNameString))
                 }
             }
-            builder.outEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.OUT_CODEC_NAME)))
-            builder.taglibEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.TAGLIB_CODEC_NAME)))
-            builder.expressionEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.EXPRESSION_CODEC_NAME)))
-            builder.staticEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.STATIC_CODEC_NAME)))
+            builder.outEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.OUT_CODEC_NAME)))
+            builder.taglibEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.TAGLIB_CODEC_NAME)))
+            builder.expressionEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.EXPRESSION_CODEC_NAME)))
+            builder.staticEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.STATIC_CODEC_NAME)))
             if (codecInfoMap.containsKey(OutputEncodingSettings.INHERIT_SETTING_NAME)) {
                 builder.inheritPreviousEncoders(codecInfoMap.get(OutputEncodingSettings.INHERIT_SETTING_NAME) as boolean)
             }
@@ -118,10 +117,10 @@ class WithCodecHelper {
         if (!codecInfo) {
             return null
         }
-        Map<String, Object> codecInfoMap =[:]
+        Map<String, Object> codecInfoMap = [:]
         if (codecInfo instanceof Map) {
             if (codecInfo.get(ALREADY_CANONICAL_KEY_NAME)) {
-                return (Map<String, Object>)codecInfo
+                return (Map<String, Object>) codecInfo
             }
             String allFallback = null
             String nameFallback = null
@@ -130,7 +129,7 @@ class WithCodecHelper {
                 if (codecWriterName == OutputEncodingSettings.INHERIT_SETTING_NAME || codecWriterName == OutputEncodingSettings.REPLACE_ONLY_SETTING_NAME) {
                     codecInfoMap.put(codecWriterName, convertToBoolean(v))
                 } else {
-                    String codecName=v?.toString() ?: 'none'
+                    String codecName = v?.toString() ?: 'none'
                     if (OutputEncodingSettings.VALID_CODEC_SETTING_NAMES.contains(codecWriterName)) {
                         codecInfoMap.put(codecWriterName, codecName)
                     } else if (codecWriterName == WithCodecHelper.ALL_CODECS_FALLBACK_KEY_NAME) {
@@ -142,8 +141,8 @@ class WithCodecHelper {
             }
 
             if (allFallback || nameFallback) {
-                for(String codecWriterName : OutputEncodingSettings.VALID_CODEC_SETTING_NAMES) {
-                    String codecName=codecInfoMap.get(codecWriterName)?.toString()
+                for (String codecWriterName : OutputEncodingSettings.VALID_CODEC_SETTING_NAMES) {
+                    String codecName = codecInfoMap.get(codecWriterName)?.toString()
                     if (!codecName) {
                         if (nameFallback && codecWriterName != OutputEncodingSettings.STATIC_CODEC_NAME) {
                             codecName = nameFallback
@@ -156,7 +155,7 @@ class WithCodecHelper {
             }
         } else {
             String codecName = codecInfo.toString()
-            for(String codecWriterName : OutputEncodingSettings.VALID_CODEC_SETTING_NAMES) {
+            for (String codecWriterName : OutputEncodingSettings.VALID_CODEC_SETTING_NAMES) {
                 if (codecWriterName != OutputEncodingSettings.STATIC_CODEC_NAME) {
                     codecInfoMap.put(codecWriterName, codecName)
                 }
@@ -168,7 +167,7 @@ class WithCodecHelper {
 
     private static boolean convertToBoolean(v) {
         Boolean booleanValue = v as Boolean
-        if (booleanValue && v instanceof CharSequence && (v.toString()=="false" || v.toString()=="no")) {
+        if (booleanValue && v instanceof CharSequence && (v.toString() == "false" || v.toString() == "no")) {
             booleanValue = false
         }
         return booleanValue
@@ -183,7 +182,7 @@ class WithCodecHelper {
     }
 
     static Map<String, Object> mergeSettingsAndMakeCanonical(Object currentSettings,
-            Map<String, Object> parentSettings) {
+                                                             Map<String, Object> parentSettings) {
         Map<String, Object> codecInfoMap
         if (currentSettings) {
             Map<String, Object> canonicalCodecInfo = makeSettingsCanonical(currentSettings)
@@ -194,7 +193,7 @@ class WithCodecHelper {
             } else {
                 codecInfoMap = canonicalCodecInfo
             }
-            codecInfoMap = (Map<String, Object>)codecInfoMap.asImmutable()
+            codecInfoMap = (Map<String, Object>) codecInfoMap.asImmutable()
         }
         if (codecInfoMap == null) {
             codecInfoMap = parentSettings

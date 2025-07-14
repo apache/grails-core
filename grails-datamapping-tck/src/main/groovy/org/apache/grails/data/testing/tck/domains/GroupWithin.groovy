@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class GroupWithin implements Serializable {
+
     Long id
     Long version
     String name

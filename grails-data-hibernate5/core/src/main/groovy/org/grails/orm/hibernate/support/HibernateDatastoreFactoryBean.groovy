@@ -28,6 +28,7 @@ import org.springframework.beans.factory.FactoryBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.core.env.PropertyResolver
+
 /**
  * Helper for constructing the datastore
  *
@@ -62,7 +63,7 @@ public class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore>
         AbstractHibernateDatastore datastore = objectType.newInstance(mappingContext, sessionFactory, configuration, dataSourceName)
 
 
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             datastore.setApplicationContext(applicationContext)
         }
 

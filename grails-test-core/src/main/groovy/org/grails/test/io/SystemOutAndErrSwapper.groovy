@@ -19,7 +19,6 @@
 package org.grails.test.io
 
 import groovy.transform.CompileStatic
-
 import org.grails.build.logging.GrailsConsolePrintStream
 
 /**
@@ -52,11 +51,11 @@ class SystemOutAndErrSwapper {
         return swapped
     }
 /**
-     * Replaces System.out and System.err with PrintStream's wrapping outStream and errStream
-     *
-     * @return [outStream, errStream]
-     * @throws IllegalStateException if a swap is already on
-     */
+ * Replaces System.out and System.err with PrintStream's wrapping outStream and errStream
+ *
+ * @return [outStream, errStream]
+ * @throws IllegalStateException if a swap is already on
+ */
     List<OutputStream> swapIn() {
         swapIn(new ByteArrayOutputStream(), new ByteArrayOutputStream())
     }
@@ -119,13 +118,13 @@ class SystemOutAndErrSwapper {
 
     @CompileStatic
     static class TestOutputCapturingPrintStream extends GrailsConsolePrintStream {
+
         BufferedWriter textOut
 
         TestOutputCapturingPrintStream(PrintStream out) {
             super(out)
             textOut = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"))
         }
-
 
         @Override
         void print(Object o) {

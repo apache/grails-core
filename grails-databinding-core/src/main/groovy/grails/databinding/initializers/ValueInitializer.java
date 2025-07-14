@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.databinding.initializers;
 
-
 public interface ValueInitializer {
+
     Object initialize();
+
     Class<?> getTargetType();
 }

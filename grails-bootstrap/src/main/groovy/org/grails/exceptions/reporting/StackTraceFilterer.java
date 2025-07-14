@@ -21,8 +21,8 @@ package org.grails.exceptions.reporting;
 /**
  * Improves the output of stack traces produced by exceptions in a Grails application.
  *
- * @since 2.0
  * @author Graeme Rocher
+ * @since 2.0
  */
 public interface StackTraceFilterer {
 
@@ -38,6 +38,7 @@ public interface StackTraceFilterer {
 
     /**
      * Sets the package where the stack trace should end
+     *
      * @param cutOffPackage The cut off package
      */
     void setCutOffPackage(String cutOffPackage);
@@ -45,7 +46,8 @@ public interface StackTraceFilterer {
     /**
      * <p>Remove all apparently Grails-internal trace entries from the exception instance<p>
      * <p>This modifies the original instance and returns it, it does not clone</p>
-     * @param source The source exception
+     *
+     * @param source    The source exception
      * @param recursive Whether to recursively filter the cause
      * @return The exception passed in, after cleaning the stack trace
      */
@@ -54,6 +56,7 @@ public interface StackTraceFilterer {
     /**
      * <p>Remove all apparently Grails-internal trace entries from the exception instance<p>
      * <p>This modifies the original instance and returns it, it does not clone</p>
+     *
      * @param source The source exception
      * @return The exception passed in, after cleaning the stack trace
      */

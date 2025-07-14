@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.impl;
 
 import org.grails.datastore.mapping.engine.EntityAccess;
@@ -26,11 +25,10 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * Provides default implementation for most of the methods in the {@link PendingInsert} interafce
  *
  * @param <E> The native entry to persist
- *
  * @author Graeme Rocher
  * @since 1.0
  */
-public abstract class PendingInsertAdapter<E, K> extends PendingOperationAdapter<E, K> implements PendingInsert<E, K>{
+public abstract class PendingInsertAdapter<E, K> extends PendingOperationAdapter<E, K> implements PendingInsert<E, K> {
 
     private EntityAccess entityAccess;
 
@@ -56,7 +54,7 @@ public abstract class PendingInsertAdapter<E, K> extends PendingOperationAdapter
     @Override
     public Object getObject() {
         final EntityAccess ea = getEntityAccess();
-        if(ea != null) {
+        if (ea != null) {
             return ea.getEntity();
         }
         return null;

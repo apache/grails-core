@@ -31,7 +31,7 @@ public interface UrlMappingData {
      * <p>Retrieves the tokens that make up a URL. For example the tokens for the URL /blog/2007/* would
      * be "blog", "2007" and "*"
      *
-      * @return The tokens as a string array
+     * @return The tokens as a string array
      */
     String[] getTokens();
 
@@ -55,12 +55,13 @@ public interface UrlMappingData {
      * relating to the the first entry
      *
      * @param index The index of the matching token
-     * @return  True if it is optional
+     * @return True if it is optional
      */
     boolean isOptional(int index);
 
     /**
      * Creates a new UrlMappingData instance relative to this one for the given path
+     *
      * @param path The path
      * @return The new instance
      */

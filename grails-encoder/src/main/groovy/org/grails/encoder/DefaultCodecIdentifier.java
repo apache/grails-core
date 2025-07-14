@@ -30,11 +30,12 @@ import java.util.Set;
  * @since 2.3
  */
 public class DefaultCodecIdentifier implements CodecIdentifier {
-    final private String codecName;
-    final private Set<String> codecAliases;
+
+    private final String codecName;
+    private final Set<String> codecAliases;
 
     public DefaultCodecIdentifier(String codecName) {
-        this(codecName, (Set<String>)null);
+        this(codecName, (Set<String>) null);
     }
 
     public DefaultCodecIdentifier(String codecName, String... codecAliases) {
@@ -77,25 +78,30 @@ public class DefaultCodecIdentifier implements CodecIdentifier {
      */
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
-        DefaultCodecIdentifier other = (DefaultCodecIdentifier)obj;
+        }
+        DefaultCodecIdentifier other = (DefaultCodecIdentifier) obj;
         if (codecAliases == null) {
-            if (other.codecAliases != null)
+            if (other.codecAliases != null) {
                 return false;
-        }
-        else if (!codecAliases.equals(other.codecAliases))
+            }
+        } else if (!codecAliases.equals(other.codecAliases)) {
             return false;
+        }
         if (codecName == null) {
-            if (other.codecName != null)
+            if (other.codecName != null) {
                 return false;
-        }
-        else if (!codecName.equals(other.codecName))
+            }
+        } else if (!codecName.equals(other.codecName)) {
             return false;
+        }
         return true;
     }
 

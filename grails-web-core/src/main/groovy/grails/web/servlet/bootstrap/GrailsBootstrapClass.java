@@ -18,10 +18,8 @@
  */
 package grails.web.servlet.bootstrap;
 
-import jakarta.servlet.ServletContext;
-
-import groovy.lang.Closure;
 import grails.core.GrailsClass;
+import groovy.lang.Closure;
 
 /**
  * Loaded and executed on application load.

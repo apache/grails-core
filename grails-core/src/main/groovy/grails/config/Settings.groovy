@@ -215,7 +215,7 @@ interface Settings {
     /**
      * The default encoding
      */
-    String DEFAULT_ENCODING = System.getProperty('file.encoding',"UTF-8")
+    String DEFAULT_ENCODING = System.getProperty('file.encoding', "UTF-8")
 
     /**
      * Whether to log request parameters in the console

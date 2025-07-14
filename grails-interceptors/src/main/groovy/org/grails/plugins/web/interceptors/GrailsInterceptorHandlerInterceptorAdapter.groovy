@@ -23,6 +23,8 @@ import grails.interceptors.Matcher
 import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.grails.datastore.mapping.services.ServiceRegistry
@@ -32,9 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.OrderComparator
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.ModelAndView
-
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 
 /**
  * Adapts Grails {@link Interceptor} instances to the Spring {@link HandlerInterceptor} interface
@@ -61,9 +60,9 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     void setInterceptors(Interceptor[] interceptors) {
         this.interceptors = interceptors.sort(new OrderComparator()) as List<Interceptor>
         this.reverseInterceptors = this.interceptors.reverse()
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug("Computed interceptor execution order:")
-            for(Interceptor i in interceptors) {
+            for (Interceptor i in interceptors) {
                 LOG.debug("- ${GrailsNameUtils.getLogicalPropertyName(i.getClass().name, "Interceptor")} (order: ${i.order}) ")
             }
         }
@@ -71,13 +70,13 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     @Override
     boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if(!interceptors.isEmpty()) {
+        if (!interceptors.isEmpty()) {
             List<Interceptor> matchInterceptors = []
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, matchInterceptors)
-            for(i in interceptors) {
-                if(i.doesMatch(request)) {
+            for (i in interceptors) {
+                if (i.doesMatch(request)) {
                     matchInterceptors.add(i)
-                    if( !i.before() ) {
+                    if (!i.before()) {
                         return false
                     }
                 }
@@ -89,16 +88,16 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     @Override
     void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
         Object matchedInterceptorsObject = request.getAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS)
-        if(matchedInterceptorsObject) {
+        if (matchedInterceptorsObject) {
             if (modelAndView != null) {
                 request.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView)
             }
 
             List<Interceptor> reversedInterceptors = ((List<Interceptor>) matchedInterceptorsObject).reverse()
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, reversedInterceptors)
-            for(i in reversedInterceptors) {
-                if( !i.after() ) {
-                    if(request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
+            for (i in reversedInterceptors) {
+                if (!i.after()) {
+                    if (request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
                         ModelAndView interceptorsModelAndView = i.modelAndView
                         modelAndView.viewName = interceptorsModelAndView.viewName
                         modelAndView.model.clear()
@@ -116,12 +115,12 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         if (!ex) {
             //Attempting to find an existing exception in the request
-            ex = (Exception)request.getAttribute(WebUtils.EXCEPTION_ATTRIBUTE)
+            ex = (Exception) request.getAttribute(WebUtils.EXCEPTION_ATTRIBUTE)
         }
         request.setAttribute(Matcher.THROWABLE, ex)
         Object matchedInterceptorsObject = request.getAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS)
-        if(matchedInterceptorsObject) {
-            for(i in ((List<Interceptor>) matchedInterceptorsObject)) {
+        if (matchedInterceptorsObject) {
+            for (i in ((List<Interceptor>) matchedInterceptorsObject)) {
                 i.afterView()
             }
         }

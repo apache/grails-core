@@ -29,7 +29,8 @@ import org.grails.datastore.gorm.GormEntity
  * @author Graeme Rocher
  * @since 6.1.1
  */
-interface IterableProjectionServiceImplementer extends IterableServiceImplementer<GormEntity>  {
+interface IterableProjectionServiceImplementer extends IterableServiceImplementer<GormEntity> {
+
     /**
      * Is the return type compatible with the projection query
      *

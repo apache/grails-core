@@ -21,8 +21,13 @@ package org.grails.cli.profile.commands
 import grails.build.logging.GrailsConsole
 import groovy.transform.CompileDynamic
 import jline.console.completer.Completer
-import org.grails.cli.profile.*
+import org.grails.cli.profile.AbstractStep
+import org.grails.cli.profile.CommandDescription
+import org.grails.cli.profile.MultiStepCommand
+import org.grails.cli.profile.Profile
+import org.grails.cli.profile.Step
 import org.grails.cli.profile.steps.StepRegistry
+
 /**
  * Simple implementation of the {@link MultiStepCommand} abstract class that parses commands defined in YAML or JSON
  *
@@ -31,6 +36,7 @@ import org.grails.cli.profile.steps.StepRegistry
  * @since 3.0
  */
 class DefaultMultiStepCommand extends MultiStepCommand {
+
     private Map<String, Object> data
     private List<AbstractStep> steps
 
@@ -41,30 +47,28 @@ class DefaultMultiStepCommand extends MultiStepCommand {
         this.data = data
 
         def description = data?.description
-        if(description instanceof List) {
-            List descList = (List)description
-            if(descList) {
+        if (description instanceof List) {
+            List descList = (List) description
+            if (descList) {
 
                 this.description = new CommandDescription(name: name, description: descList.get(0).toString(), usage: data?.usage)
 
-                if(descList.size()>1) {
-                    for(arg in descList[1..-1]) {
-                        if(arg instanceof Map) {
-                            Map map = (Map)arg
-                            if(map.containsKey('usage')) {
+                if (descList.size() > 1) {
+                    for (arg in descList[1..-1]) {
+                        if (arg instanceof Map) {
+                            Map map = (Map) arg
+                            if (map.containsKey('usage')) {
                                 this.description.usage = map.get('usage')?.toString()
-                            }
-                            else if(map.containsKey('completer')) {
+                            } else if (map.containsKey('completer')) {
                                 def completerClass = map.get('completer')
-                                if(completerClass) {
+                                if (completerClass) {
                                     try {
-                                        this.description.completer = (Completer)Thread.currentThread().contextClassLoader.loadClass(completerClass.toString()).getDeclaredConstructor().newInstance()
+                                        this.description.completer = (Completer) Thread.currentThread().contextClassLoader.loadClass(completerClass.toString()).getDeclaredConstructor().newInstance()
                                     } catch (e) {
                                         // ignore
                                     }
                                 }
-                            }
-                            else {
+                            } else {
                                 handleArgumentOrFlag(map, 'argument')
                                 handleArgumentOrFlag(map, 'flag')
                             }
@@ -72,8 +76,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
                     }
                 }
             }
-        }
-        else {
+        } else {
             this.description = new CommandDescription(name: name, description: description.toString(), usage: data?.usage)
         }
     }
@@ -81,7 +84,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
     @CompileDynamic
     boolean handleArgumentOrFlag(Map map, String name) {
         try {
-            if(map.containsKey(name)) {
+            if (map.containsKey(name)) {
                 def argName = map.remove(name)
                 map.put('name', argName)
                 this.description."$name"(map)
@@ -94,10 +97,10 @@ class DefaultMultiStepCommand extends MultiStepCommand {
     }
 
     List<Step> getSteps() {
-        if(steps==null) {
+        if (steps == null) {
             steps = []
-            data.steps?.each { 
-                Map<String, Object> stepParameters = it.collectEntries { k,v -> [k as String, v] }
+            data.steps?.each {
+                Map<String, Object> stepParameters = it.collectEntries { k, v -> [k as String, v] }
                 AbstractStep step = createStep(stepParameters)
                 if (step != null) {
                     steps.add(step)

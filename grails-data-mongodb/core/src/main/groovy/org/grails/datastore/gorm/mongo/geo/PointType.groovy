@@ -22,13 +22,14 @@ import grails.mongodb.geo.Point
  * @author Graeme Rocher
  * @since 2.4
  */
-class PointType extends GeoJSONType<Point>{
+class PointType extends GeoJSONType<Point> {
 
     PointType() {
         super(Point)
     }
+
     @Override
     Point createFromCoords(List coords) {
-        return new Point((double)coords.get(0), (double)coords.get(1))
+        return new Point((double) coords.get(0), (double) coords.get(1))
     }
 }

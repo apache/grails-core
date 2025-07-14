@@ -28,6 +28,7 @@ import groovy.transform.builder.SimpleStrategy
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class SortConfig {
+
     /**
      * The property to sort bu
      */

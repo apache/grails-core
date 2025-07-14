@@ -32,7 +32,8 @@ import java.util.concurrent.ConcurrentMap;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class CachingGroovyPageStaticResourceLocator extends GroovyPageStaticResourceLocator{
+public class CachingGroovyPageStaticResourceLocator extends GroovyPageStaticResourceLocator {
+
     private ConcurrentMap<String, CacheEntry<Resource>> uriResolveCache = new ConcurrentHashMap<String, CacheEntry<Resource>>();
     private long cacheTimeout = -1;
 

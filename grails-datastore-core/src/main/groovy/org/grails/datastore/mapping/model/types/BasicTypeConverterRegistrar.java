@@ -18,12 +18,12 @@
  */
 package org.grails.datastore.mapping.model.types;
 
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.core.convert.converter.ConverterRegistry;
+
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.core.convert.converter.ConverterRegistry;
 
 /**
  * A registrar that registers basic type converters
@@ -62,10 +62,10 @@ public class BasicTypeConverterRegistrar {
         });
 
         registry.addConverter(new Converter<Long, Integer>() {
-             public Integer convert(Long longValue) {
-                 return longValue.intValue();
-             }
-         });
+            public Integer convert(Long longValue) {
+                return longValue.intValue();
+            }
+        });
 
         registry.addConverter(new Converter<Integer, Double>() {
             public Double convert(Integer integer) {

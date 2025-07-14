@@ -23,7 +23,16 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.VariableScope
-import org.codehaus.groovy.ast.expr.*
+import org.codehaus.groovy.ast.expr.ClassExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
+import org.codehaus.groovy.ast.expr.EmptyExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.PropertyExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
@@ -56,44 +65,39 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
     GStringExpression transformQuery(GStringExpression query) {
         Expression transformed = transform(query)
         transformed = transformPropertyExpressions(transformed)
-        GStringExpression transformedGString = (GStringExpression)transformed
+        GStringExpression transformedGString = (GStringExpression) transformed
 
         int i = 0
         List<ConstantExpression> newStrings = []
         List<Expression> newValues = []
         ConstantExpression currentConstant
         List<Expression> values = transformedGString.values
-        for(ConstantExpression exp in transformedGString.strings) {
-            if(i < values.size()) {
+        for (ConstantExpression exp in transformedGString.strings) {
+            if (i < values.size()) {
                 Expression valueExpr = values[i++]
-                if(valueExpr instanceof ConstantExpression) {
-                    ConstantExpression valueConstant = (ConstantExpression)valueExpr
+                if (valueExpr instanceof ConstantExpression) {
+                    ConstantExpression valueConstant = (ConstantExpression) valueExpr
                     String newConstant = exp.value.toString() + valueConstant.value.toString()
-                    if(currentConstant != null) {
-                        currentConstant = constX(currentConstant.value.toString() + newConstant )
-                    }
-                    else {
+                    if (currentConstant != null) {
+                        currentConstant = constX(currentConstant.value.toString() + newConstant)
+                    } else {
                         currentConstant = constX(newConstant)
                     }
-                }
-                else if(currentConstant != null) {
+                } else if (currentConstant != null) {
                     currentConstant = constX(currentConstant.value.toString() + exp.text)
                     newStrings.add(currentConstant)
                     newValues.add(valueExpr)
                     currentConstant = null
-                }
-                else {
+                } else {
                     newStrings.add(exp)
                     newValues.add(valueExpr)
                 }
-            }
-            else {
-                if(currentConstant != null) {
+            } else {
+                if (currentConstant != null) {
                     currentConstant = constX(currentConstant.value.toString() + exp.text)
                     newStrings.add(currentConstant)
                     currentConstant = null
-                }
-                else {
+                } else {
                     newStrings.add(exp)
                 }
             }
@@ -104,38 +108,34 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
 
     @Override
     Expression transform(Expression exp) {
-        if(exp instanceof ClassExpression) {
+        if (exp instanceof ClassExpression) {
             ClassNode type = ((ClassExpression) exp).type
-            if(AstUtils.isDomainClass(type)) {
+            if (AstUtils.isDomainClass(type)) {
                 return constX(type.name)
-            }
-            else {
+            } else {
                 AstUtils.error(sourceUnit, exp, "Invalid query class [$type.name]. Referenced classes in queries must be domain classes")
             }
-        }
-        else if(exp instanceof PropertyExpression) {
+        } else if (exp instanceof PropertyExpression) {
             return transformPropertyExpressions(exp)
-        }
-        else if(exp instanceof MethodCallExpression) {
-            MethodCallExpression mce = (MethodCallExpression)exp
+        } else if (exp instanceof MethodCallExpression) {
+            MethodCallExpression mce = (MethodCallExpression) exp
             Expression methodTarget = mce.objectExpression
-            if( methodTarget instanceof ClosureExpression && mce.methodAsString == 'call') {
-                ClosureExpression closureExpression = (ClosureExpression)methodTarget
+            if (methodTarget instanceof ClosureExpression && mce.methodAsString == 'call') {
+                ClosureExpression closureExpression = (ClosureExpression) methodTarget
                 Statement body = closureExpression.code
-                if(body instanceof BlockStatement) {
+                if (body instanceof BlockStatement) {
                     def statements = ((BlockStatement) body).statements
-                    if(statements.size() == 1) {
-                        for(stmt in statements) {
-                            if(stmt instanceof ExpressionStatement) {
-                                def stmtExpr = ((ExpressionStatement)stmt).expression
-                                if(stmtExpr instanceof DeclarationExpression) {
-                                    return transformDeclarationExpression((DeclarationExpression)stmtExpr)
+                    if (statements.size() == 1) {
+                        for (stmt in statements) {
+                            if (stmt instanceof ExpressionStatement) {
+                                def stmtExpr = ((ExpressionStatement) stmt).expression
+                                if (stmtExpr instanceof DeclarationExpression) {
+                                    return transformDeclarationExpression((DeclarationExpression) stmtExpr)
                                 }
-                            }
-                            else if(stmt instanceof ReturnStatement) {
-                                def stmtExpr = ((ReturnStatement)stmt).expression
-                                if(stmtExpr instanceof DeclarationExpression) {
-                                    return transformDeclarationExpression((DeclarationExpression)stmtExpr)
+                            } else if (stmt instanceof ReturnStatement) {
+                                def stmtExpr = ((ReturnStatement) stmt).expression
+                                if (stmtExpr instanceof DeclarationExpression) {
+                                    return transformDeclarationExpression((DeclarationExpression) stmtExpr)
                                 }
                             }
                         }
@@ -144,13 +144,12 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
             }
         }
 
-        if(exp instanceof VariableExpression) {
-            VariableExpression var = (VariableExpression)exp
+        if (exp instanceof VariableExpression) {
+            VariableExpression var = (VariableExpression) exp
             def declared = variableScope.getDeclaredVariable(var.name)
-            if(declared != null) {
+            if (declared != null) {
                 return varX(declared)
-            }
-            else if(declaredQueryTargets.containsKey(var.name)) {
+            } else if (declaredQueryTargets.containsKey(var.name)) {
                 return constX(var.name)
             }
         }
@@ -158,51 +157,46 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
     }
 
     Expression transformDeclarationExpression(DeclarationExpression dec) {
-        if(dec.leftExpression instanceof VariableExpression && dec.rightExpression instanceof EmptyExpression) {
-            VariableExpression declaredVar = (VariableExpression)dec.leftExpression
+        if (dec.leftExpression instanceof VariableExpression && dec.rightExpression instanceof EmptyExpression) {
+            VariableExpression declaredVar = (VariableExpression) dec.leftExpression
             ClassNode variableType = declaredVar.type
             String variableName = declaredVar.name
-            if(AstUtils.isDomainClass(variableType)) {
+            if (AstUtils.isDomainClass(variableType)) {
                 declaredQueryTargets.put(variableName, variableType)
                 return constX(formatDomainClassVariable(variableType, variableName))
             }
-        }
-        else if(dec.leftExpression instanceof VariableExpression && dec.rightExpression instanceof PropertyExpression) {
-            VariableExpression declaredVar = (VariableExpression)dec.leftExpression
+        } else if (dec.leftExpression instanceof VariableExpression && dec.rightExpression instanceof PropertyExpression) {
+            VariableExpression declaredVar = (VariableExpression) dec.leftExpression
             ClassNode variableType = declaredVar.type
             String variableName = declaredVar.name
-            if(AstUtils.isDomainClass(variableType)) {
-                PropertyExpression pe = (PropertyExpression)dec.rightExpression
+            if (AstUtils.isDomainClass(variableType)) {
+                PropertyExpression pe = (PropertyExpression) dec.rightExpression
                 Expression obj = pe.objectExpression
                 String currentProperty = pe.propertyAsString
                 StringBuilder path = new StringBuilder()
-                if(obj instanceof  VariableExpression) {
-                    VariableExpression ve = (VariableExpression)obj
+                if (obj instanceof VariableExpression) {
+                    VariableExpression ve = (VariableExpression) obj
                     ClassNode declaredType = declaredQueryTargets.get(ve.name)
-                    if(declaredType == null) {
+                    if (declaredType == null) {
                         AstUtils.error(sourceUnit, dec, "Invalid property path $path in query")
-                    }
-                    else {
+                    } else {
                         declaredQueryTargets.put(variableName, variableType)
                         return constX(formatPropertyReference(ve, currentProperty, variableName))
                     }
-                }
-                else if(obj instanceof PropertyExpression) {
+                } else if (obj instanceof PropertyExpression) {
                     List<String> propertyPath = calculatePropertyPath(pe)
                     ClassNode currentType = declaredQueryTargets.get(propertyPath[0])
-                    for(String pp in propertyPath[1..-1]) {
-                        if(currentType == null) {
+                    for (String pp in propertyPath[1..-1]) {
+                        if (currentType == null) {
                             AstUtils.error(sourceUnit, dec, "Invalid property path $path in query")
-                        }
-                        else {
+                        } else {
                             currentType = AstPropertyResolveUtils.getPropertyType(currentType, pp)
                         }
                     }
-                    if(currentType != null) {
+                    if (currentType != null) {
                         declaredQueryTargets.put(variableName, currentType)
                         return constX(formatPropertyPath(propertyPath, variableName))
-                    }
-                    else {
+                    } else {
                         AstUtils.error(sourceUnit, dec, "Invalid property path ${propertyPath.join('.')} in query")
                     }
                 }
@@ -249,29 +243,29 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
         List<String> propertyPath = []
         propertyPath.add(p.propertyAsString)
         Expression obj = p.objectExpression
-        while(obj instanceof PropertyExpression) {
-            PropertyExpression nextProperty = (PropertyExpression)obj
+        while (obj instanceof PropertyExpression) {
+            PropertyExpression nextProperty = (PropertyExpression) obj
             propertyPath.add(nextProperty.propertyAsString)
             obj = nextProperty.objectExpression
         }
-        if(obj instanceof VariableExpression) {
-            propertyPath.add(((VariableExpression)obj).name)
+        if (obj instanceof VariableExpression) {
+            propertyPath.add(((VariableExpression) obj).name)
         }
         return propertyPath.reverse()
     }
+
     Expression transformPropertyExpressions(Expression exp) {
-        if(exp instanceof PropertyExpression) {
-            PropertyExpression pe = (PropertyExpression)exp
+        if (exp instanceof PropertyExpression) {
+            PropertyExpression pe = (PropertyExpression) exp
             Expression targetObject = pe.objectExpression
-            if( targetObject instanceof VariableExpression) {
-                VariableExpression var = (VariableExpression)targetObject
+            if (targetObject instanceof VariableExpression) {
+                VariableExpression var = (VariableExpression) targetObject
                 ClassNode domainType = declaredQueryTargets.get(var.name)
-                if(domainType != null) {
+                if (domainType != null) {
                     String propertyName = pe.propertyAsString
-                    if(( AstUtils.isDomainClass(domainType) && propertyName == "id" )|| AstUtils.hasOrInheritsProperty(domainType, propertyName) ) {
+                    if ((AstUtils.isDomainClass(domainType) && propertyName == "id") || AstUtils.hasOrInheritsProperty(domainType, propertyName)) {
                         return constX("${var.name}.$propertyName".toString())
-                    }
-                    else {
+                    } else {
                         AstUtils.error(sourceUnit, exp, "No property [$propertyName] existing for domain class [$domainType.name]")
                     }
                 }

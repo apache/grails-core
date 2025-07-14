@@ -74,22 +74,22 @@ class BootInitializerClassInjector extends GlobalClassInjectorAdapter {
     @Override
     void performInjectionInternal(SourceUnit source, ClassNode classNode) {
         // if this is a plugin source, then exit
-        if( classNode.getAnnotations(PLUGIN_SOURCE_ANNOTATION) ) {
+        if (classNode.getAnnotations(PLUGIN_SOURCE_ANNOTATION)) {
             return
         }
         // don't generate for plugins
-        if( classNode.getNodeMetaData('isPlugin') ) return
+        if (classNode.getNodeMetaData('isPlugin')) return
 
 
-        if(GrailsASTUtils.isAssignableFrom(GRAILS_CONFIGURATION_CLASS_NODE, classNode) && !GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, GrailsPluginApplication.name)) {
+        if (GrailsASTUtils.isAssignableFrom(GRAILS_CONFIGURATION_CLASS_NODE, classNode) && !GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, GrailsPluginApplication.name)) {
             def methods = classNode.getMethods("main")
-            for(MethodNode mn in methods) {
-                if(Modifier.isStatic(mn.modifiers) && Modifier.isPublic(mn.modifiers)) {
+            for (MethodNode mn in methods) {
+                if (Modifier.isStatic(mn.modifiers) && Modifier.isPublic(mn.modifiers)) {
 
                     def mainMethodBody = mn.code
-                    if(mainMethodBody instanceof BlockStatement) {
-                        BlockStatement bs = (BlockStatement)mainMethodBody
-                        if( !bs.statements.isEmpty() ) {
+                    if (mainMethodBody instanceof BlockStatement) {
+                        BlockStatement bs = (BlockStatement) mainMethodBody
+                        if (!bs.statements.isEmpty()) {
 
                             def methodCallExpression = new MethodCallExpression(
                                     new ClassExpression(ClassHelper.make(System)),
@@ -113,8 +113,8 @@ class BootInitializerClassInjector extends GlobalClassInjectorAdapter {
                     def parameter = new Parameter(springApplicationBuilder, "application")
                     def methodBody = new BlockStatement()
 
-                    methodBody.addStatement( new ExpressionStatement( new MethodCallExpression( new VariableExpression(parameter), "sources", new ClassExpression(classNode))))
-                    loaderClassNode.addMethod( new MethodNode("configure", Modifier.PROTECTED, springApplicationBuilder, [parameter] as Parameter[], [] as ClassNode[], methodBody))
+                    methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression(parameter), "sources", new ClassExpression(classNode))))
+                    loaderClassNode.addMethod(new MethodNode("configure", Modifier.PROTECTED, springApplicationBuilder, [parameter] as Parameter[], [] as ClassNode[], methodBody))
                     source.getAST().addClass(
                             loaderClassNode
                     )

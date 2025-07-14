@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.connections;
 
 /**
@@ -30,5 +29,5 @@ public interface ConnectionSourcesProvider<T, S extends ConnectionSourceSettings
     /**
      * @return The {@link ConnectionSources}
      */
-    public ConnectionSources<T, S> getConnectionSources();
+    ConnectionSources<T, S> getConnectionSources();
 }

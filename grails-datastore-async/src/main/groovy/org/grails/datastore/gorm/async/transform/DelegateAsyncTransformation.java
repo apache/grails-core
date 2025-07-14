@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.async.transform;
 
 import grails.async.Promise;
@@ -25,8 +24,24 @@ import groovy.lang.Closure;
 import groovy.lang.GroovyObjectSupport;
 import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.GroovyBugError;
-import org.codehaus.groovy.ast.*;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.GenericsType;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.tools.GenericsUtils;
@@ -40,17 +55,22 @@ import org.grails.async.transform.internal.DelegateAsyncUtils;
 
 import java.beans.Introspector;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse;
 import static org.codehaus.groovy.ast.tools.GenericsUtils.createGenericsSpec;
 
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class DelegateAsyncTransformation implements ASTTransformation, TransformWithPriority {
-    private static final ArgumentListExpression NO_ARGS = new ArgumentListExpression();
-    private static final String VOID = "void";
+
     public static final ClassNode GROOVY_OBJECT_CLASS_NODE = new ClassNode(GroovyObjectSupport.class);
     public static final ClassNode OBJECT_CLASS_NODE = new ClassNode(Object.class);
+    private static final ArgumentListExpression NO_ARGS = new ArgumentListExpression();
+    private static final String VOID = "void";
 
     public void visit(ASTNode[] nodes, SourceUnit source) {
         if (nodes.length != 2 || !(nodes[0] instanceof AnnotationNode) || !(nodes[1] instanceof AnnotatedNode)) {
@@ -64,7 +84,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
             Expression value = annotationNode.getMember("value");
             if (value instanceof ClassExpression) {
                 ClassNode targetApi = value.getType().getPlainNodeReference();
-                ClassNode classNode = (ClassNode)parent;
+                ClassNode classNode = (ClassNode) parent;
 
                 final String fieldName = '$' + Introspector.decapitalize(targetApi.getNameWithoutPackage());
                 FieldNode fieldNode = classNode.getField(fieldName);
@@ -75,9 +95,8 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
                 applyDelegateAsyncTransform(classNode, targetApi, fieldName);
             }
-        }
-        else if(parent instanceof FieldNode) {
-            FieldNode fieldNode = (FieldNode)parent;
+        } else if (parent instanceof FieldNode) {
+            FieldNode fieldNode = (FieldNode) parent;
             ClassNode targetApi = fieldNode.getType().getPlainNodeReference();
             ClassNode classNode = fieldNode.getOwner();
             applyDelegateAsyncTransform(classNode, targetApi, fieldNode.getName());
@@ -90,26 +109,25 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
         ClassNode promisesClass = ClassHelper.make(Promises.class).getPlainNodeReference();
         MethodNode createPromiseMethodTargetWithDecorators = promisesClass.getDeclaredMethod("createPromise", new Parameter[]{new Parameter(new ClassNode(Closure.class), "c"), new Parameter(new ClassNode(List.class), "c")});
-        Map<String,ClassNode> genericsSpec = createGenericsSpec(classNode);
-        for(MethodNode candidate : methods) {
+        Map<String, ClassNode> genericsSpec = createGenericsSpec(classNode);
+        for (MethodNode candidate : methods) {
             if (isCandidateMethod(candidate)) {
                 MethodNode existingMethod = classNode.getMethod(candidate.getName(), candidate.getParameters());
                 if (existingMethod == null) {
                     List<String> currentMethodGenPlaceholders = genericPlaceholderNames(candidate);
                     ClassNode promiseNode = ClassHelper.make(Promise.class).getPlainNodeReference();
                     ClassNode originalReturnType = correctToGenericsSpecRecurse(genericsSpec, candidate.getReturnType(), currentMethodGenPlaceholders);
-                    if(!originalReturnType.getNameWithoutPackage().equals(VOID)) {
+                    if (!originalReturnType.getNameWithoutPackage().equals(VOID)) {
                         ClassNode returnType = originalReturnType;
-                        if(ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
+                        if (ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
                             returnType = ClassHelper.getWrapper(originalReturnType.redirect());
                         }
-                        if(!OBJECT_CLASS_NODE.equals(returnType)) {
+                        if (!OBJECT_CLASS_NODE.equals(returnType)) {
                             promiseNode.setGenericsTypes(new GenericsType[]{new GenericsType(returnType)});
                         }
                     }
                     final BlockStatement methodBody = new BlockStatement();
                     final BlockStatement promiseBody = new BlockStatement();
-
 
                     final ClosureExpression closureExpression = new ClosureExpression(new Parameter[0], promiseBody);
                     VariableScope variableScope = new VariableScope();
@@ -124,8 +142,8 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     MethodCallExpression getDecoratorsMethodCall = new MethodCallExpression(new ClassExpression(delegateAsyncUtilsClassNode), "getPromiseDecorators", getPromiseDecoratorsArguments);
                     getDecoratorsMethodCall.setMethodTarget(getPromiseDecoratorsMethodNode);
 
-                    MethodCallExpression createPromiseWithDecorators = new MethodCallExpression(new ClassExpression(promisesClass), "createPromise",new ArgumentListExpression( closureExpression, getDecoratorsMethodCall));
-                    if(createPromiseMethodTargetWithDecorators != null) {
+                    MethodCallExpression createPromiseWithDecorators = new MethodCallExpression(new ClassExpression(promisesClass), "createPromise", new ArgumentListExpression(closureExpression, getDecoratorsMethodCall));
+                    if (createPromiseMethodTargetWithDecorators != null) {
                         createPromiseWithDecorators.setMethodTarget(createPromiseMethodTargetWithDecorators);
                     }
                     methodBody.addStatement(new ExpressionStatement(createPromiseWithDecorators));
@@ -133,7 +151,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     final ArgumentListExpression arguments = new ArgumentListExpression();
 
                     Parameter[] parameters = copyParameters(genericsSpec, StaticTypeCheckingSupport.parameterizeArguments(classNode, candidate), currentMethodGenPlaceholders);
-                    for(Parameter p : parameters) {
+                    for (Parameter p : parameters) {
                         p.setClosureSharedVariable(true);
                         variableScope.putReferencedLocalVariable(p);
                         VariableExpression ve = new VariableExpression(p);
@@ -142,13 +160,12 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     }
                     MethodCallExpression delegateMethodCall = new MethodCallExpression(new VariableExpression(fieldName), candidate.getName(), arguments);
                     promiseBody.addStatement(new ExpressionStatement(delegateMethodCall));
-                    MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC,promiseNode, parameters,null, methodBody);
+                    MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC, promiseNode, parameters, null, methodBody);
                     classNode.addMethod(newMethodNode);
                 }
             }
         }
     }
-
 
     private List<String> genericPlaceholderNames(MethodNode candidate) {
         GenericsType[] candidateGenericsTypes = candidate.getGenericsTypes();
@@ -166,14 +183,14 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
         ClassNode actualReceiver = receiver;
         List<GenericsType> redirectTypes = new ArrayList<GenericsType>();
-        if (actualReceiver.redirect().getGenericsTypes()!=null) {
-            Collections.addAll(redirectTypes,actualReceiver.redirect().getGenericsTypes());
+        if (actualReceiver.redirect().getGenericsTypes() != null) {
+            Collections.addAll(redirectTypes, actualReceiver.redirect().getGenericsTypes());
         }
         if (!redirectTypes.isEmpty()) {
             GenericsType[] redirectReceiverTypes = redirectTypes.toArray(new GenericsType[redirectTypes.size()]);
 
             GenericsType[] receiverParameterizedTypes = actualReceiver.getGenericsTypes();
-            if (receiverParameterizedTypes==null) {
+            if (receiverParameterizedTypes == null) {
                 receiverParameterizedTypes = redirectReceiverTypes;
             }
 
@@ -186,7 +203,6 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
         return copiedReturnType;
     }
-
 
     private static boolean isCandidateMethod(MethodNode declaredMethod) {
         ClassNode groovyMethods = GROOVY_OBJECT_CLASS_NODE;

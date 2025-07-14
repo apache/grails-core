@@ -32,7 +32,7 @@ public class SimpleBindingError implements BindingError {
     private final Throwable cause;
 
     public SimpleBindingError(Object object, String propertyName,
-            Object rejectedValue, Throwable cause) {
+                              Object rejectedValue, Throwable cause) {
         this.object = object;
         this.propertyName = propertyName;
         this.rejectedValue = rejectedValue;

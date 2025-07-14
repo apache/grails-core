@@ -14,14 +14,14 @@
  */
 package org.grails.datastore.mapping.reflect;
 
+import org.codehaus.groovy.runtime.MetaClassHelper;
+import org.grails.datastore.mapping.model.config.GormProperties;
+
 import java.beans.Introspector;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
-import org.codehaus.groovy.runtime.MetaClassHelper;
-import org.grails.datastore.mapping.model.config.GormProperties;
 
 /**
  * @author Graeme Rocher
@@ -29,15 +29,14 @@ import org.grails.datastore.mapping.model.config.GormProperties;
  */
 public class NameUtils {
 
+    public static final String DOLLAR_SEPARATOR = "$";
     private static final String PROPERTY_SET_PREFIX = "set";
     private static final String PROPERTY_GET_PREFIX = "get";
     private static final String PROPERTY_IS_PREFIX = "is";
-
     private static final Set<String> CONFIGURATIONAL_PROPERTIES;
-    public static final String DOLLAR_SEPARATOR = "$";
 
     static {
-        Set<String> configurational = new HashSet<String>( Arrays.asList(
+        Set<String> configurational = new HashSet<String>(Arrays.asList(
                 GormProperties.META_CLASS,
                 GormProperties.CLASS,
                 GormProperties.TRANSIENT,
@@ -55,7 +54,7 @@ public class NameUtils {
                 "sessionFactory",
                 "messageSource",
                 "applicationContext",
-                "properties") );
+                "properties"));
         CONFIGURATIONAL_PROPERTIES = Collections.unmodifiableSet(configurational);
     }
 
@@ -69,15 +68,17 @@ public class NameUtils {
 
     /**
      * Retrieves the name of a setter for the specified property name
+     *
      * @param propertyName The property name
      * @return The setter equivalent
      */
     public static String getSetterName(String propertyName) {
         return PROPERTY_SET_PREFIX + capitalize(propertyName);
     }
-    
+
     /**
      * Retrieves the name of a setter for the specified property name
+     *
      * @param propertyName The property name
      * @return The getter equivalent
      */
@@ -87,7 +88,8 @@ public class NameUtils {
 
     /**
      * Retrieves the name of a setter for the specified property name
-     * @param propertyName The property name
+     *
+     * @param propertyName     The property name
      * @param useBooleanPrefix true if property is type of boolean
      * @return The getter equivalent
      */
@@ -104,7 +106,7 @@ public class NameUtils {
      */
     public static String getClassName(Class clazz) {
         final String sn = clazz.getSimpleName();
-        if(sn.contains(DOLLAR_SEPARATOR)) {
+        if (sn.contains(DOLLAR_SEPARATOR)) {
             return clazz.getSuperclass().getName();
         }
         return clazz.getName();
@@ -112,11 +114,14 @@ public class NameUtils {
 
     /**
      * Returns the property name for a getter or setter
+     *
      * @param getterOrSetterName The getter or setter name
      * @return The property name
      */
     public static String getPropertyNameForGetterOrSetter(String getterOrSetterName) {
-        if (getterOrSetterName == null || getterOrSetterName.length() == 0) return null;
+        if (getterOrSetterName == null || getterOrSetterName.length() == 0) {
+            return null;
+        }
 
         if (getterOrSetterName.startsWith(PROPERTY_GET_PREFIX) || getterOrSetterName.startsWith(PROPERTY_SET_PREFIX)) {
             return decapitalize(getterOrSetterName.substring(3));
@@ -138,14 +143,15 @@ public class NameUtils {
 
     /**
      * Transforms the first character of a string into a lowercase letter
+     *
      * @param name String to be transformed
      * @return Original string with the first char as a lowercase letter
      */
     public static String decapitalizeFirstChar(String name) {
-        if (name == null || name.length() == 0) {
+        if (name == null || name.isEmpty()) {
             return name;
         }
-        char chars[] = name.toCharArray();
+        char[] chars = name.toCharArray();
         chars[0] = Character.toLowerCase(chars[0]);
         return new String(chars);
     }

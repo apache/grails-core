@@ -19,7 +19,7 @@
 
 package loadsecond
 
-import grails.plugins.*
+import grails.plugins.Plugin
 
 class LoadsecondGrailsPlugin extends Plugin {
 

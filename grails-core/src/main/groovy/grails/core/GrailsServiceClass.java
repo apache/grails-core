@@ -36,12 +36,14 @@ public interface GrailsServiceClass extends InjectableGrailsClass {
 
     /**
      * Get the datasource name that this service class works with.
+     *
      * @return the name
      */
     String getDatasource();
 
     /**
      * Check if the service class can use the named DataSource.
+     *
      * @param name the name
      */
     boolean usesDatasource(String name);

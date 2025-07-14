@@ -22,7 +22,6 @@ package grails.artefact
 import grails.compiler.traits.TraitInjector
 import spock.lang.Specification
 
-
 /**
  * @author graemerocher
  */

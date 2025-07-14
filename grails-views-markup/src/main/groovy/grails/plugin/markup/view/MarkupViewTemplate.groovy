@@ -44,11 +44,11 @@ abstract class MarkupViewTemplate extends BaseTemplate implements WritableScript
 
     @Override
     void setBinding(Binding binding) {
-        ((Script)this).setBinding(binding)
+        ((Script) this).setBinding(binding)
     }
 
     @Override
     Binding getBinding() {
-        return ((Script)this).getBinding()
+        return ((Script) this).getBinding()
     }
 }

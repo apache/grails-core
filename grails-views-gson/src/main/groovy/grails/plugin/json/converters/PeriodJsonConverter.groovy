@@ -39,6 +39,6 @@ class PeriodJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        ((Period)value).toString()
+        ((Period) value).toString()
     }
 }

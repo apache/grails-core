@@ -52,10 +52,9 @@ trait ModelBuilder {
      * @return The {@link Model} instance
      */
     Model model(String className) {
-        if(defaultPackage && !className.contains('.')) {
+        if (defaultPackage && !className.contains('.')) {
             return new ModelImpl("${defaultPackage}.$className")
-        }
-        else {
+        } else {
             return new ModelImpl(className)
         }
     }
@@ -83,6 +82,7 @@ trait ModelBuilder {
 
     @CompileStatic
     private static class ModelImpl implements Model {
+
         final String className
         final String fullName
         final String propertyName
@@ -114,13 +114,13 @@ trait ModelBuilder {
 
         @Override
         Map<String, Object> asMap() {
-            [className: className,
-             fullName: fullName,
+            [className  : className,
+             fullName   : fullName,
              propertyName: propertyName,
-             modelName: propertyName,
+             modelName  : propertyName,
              packageName: packageName,
              packagePath: packagePath,
-             simpleName: simpleName,
+             simpleName : simpleName,
              lowerCaseName: lowerCaseName] as Map<String, Object>
         }
     }

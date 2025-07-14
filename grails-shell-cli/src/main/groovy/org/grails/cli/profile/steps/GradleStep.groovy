@@ -21,9 +21,10 @@ package org.grails.cli.profile.steps
 import groovy.transform.CompileStatic
 import org.gradle.tooling.BuildException
 import org.gradle.tooling.BuildLauncher
-import org.grails.build.parsing.CommandLine
 import org.grails.cli.gradle.GradleUtil
-import org.grails.cli.profile.*
+import org.grails.cli.profile.AbstractStep
+import org.grails.cli.profile.ExecutionContext
+import org.grails.cli.profile.ProfileCommand
 import org.grails.exceptions.ExceptionUtils
 
 /**
@@ -36,9 +37,10 @@ import org.grails.exceptions.ExceptionUtils
  */
 @CompileStatic
 class GradleStep extends AbstractStep {
+
     protected static final Map<String, String> GRADLE_ARGUMENT_ADAPTER = [
-            'plain-output' : '--console plain',
-            'verbose' : '-d'
+            'plain-output': '--console plain',
+            'verbose'     : '-d'
     ]
     protected List<String> tasks = []
     protected String baseArguments = ""
@@ -48,7 +50,6 @@ class GradleStep extends AbstractStep {
         super(command, parameters)
         initialize()
     }
-
 
     @Override
     String getName() { "gradle" }
@@ -69,9 +70,9 @@ class GradleStep extends AbstractStep {
     }
 
     protected void initialize() {
-        tasks = (List<String>)parameters.tasks
+        tasks = (List<String>) parameters.tasks
         baseArguments = parameters.baseArguments ?: ''
-        passArguments = Boolean.valueOf(parameters.passArguments?.toString() ?: 'true' )
+        passArguments = Boolean.valueOf(parameters.passArguments?.toString() ?: 'true')
     }
 
     protected BuildLauncher fillArguments(ExecutionContext context, BuildLauncher buildLauncher) {
@@ -79,27 +80,26 @@ class GradleStep extends AbstractStep {
 
         List<String> argList = baseArguments ? [baseArguments] : new ArrayList<String>()
 
-        for(Map.Entry<String, Object> entry in commandLine.undeclaredOptions) {
+        for (Map.Entry<String, Object> entry in commandLine.undeclaredOptions) {
             def flagName = entry.key
-            if(GRADLE_ARGUMENT_ADAPTER.containsKey(flagName)) {
-                argList.addAll( GRADLE_ARGUMENT_ADAPTER[flagName].split(/\s/) )
+            if (GRADLE_ARGUMENT_ADAPTER.containsKey(flagName)) {
+                argList.addAll(GRADLE_ARGUMENT_ADAPTER[flagName].split(/\s/))
                 continue
             }
 
             def flag = command.description.getFlag(flagName)
-            if(flag) {
+            if (flag) {
                 flagName = flag.target ?: flagName
             }
             argList << "-$flagName".toString()
 
         }
 
-        if(passArguments) {
-            argList.addAll(commandLine.remainingArgs.collect() { String arg -> "-${arg}".toString() } )
+        if (passArguments) {
+            argList.addAll(commandLine.remainingArgs.collect() { String arg -> "-${arg}".toString() })
         }
 
-
-        if(argList) {
+        if (argList) {
 
             buildLauncher.withArguments(argList as String[])
         }

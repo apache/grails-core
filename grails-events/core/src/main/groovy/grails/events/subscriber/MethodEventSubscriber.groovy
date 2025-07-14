@@ -33,11 +33,11 @@ import java.lang.reflect.Method
  */
 @AutoFinal
 @CompileStatic
-class MethodEventSubscriber<T> extends MethodSubscriber<Event,T> implements EventSubscriber<T> {
+class MethodEventSubscriber<T> extends MethodSubscriber<Event, T> implements EventSubscriber<T> {
 
     MethodEventSubscriber(Object target, Method method) {
         super(target, method)
-        if( !(parameterTypes.length == 1 && parameterTypes[0].isAssignableFrom(Event)) ) {
+        if (!(parameterTypes.length == 1 && parameterTypes[0].isAssignableFrom(Event))) {
             throw new IllegalArgumentException('Specified method must accept an Event as an argument')
         }
     }

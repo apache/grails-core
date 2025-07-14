@@ -44,6 +44,7 @@ import org.springframework.validation.FieldError
  */
 @CompileStatic
 trait Validateable {
+
     private BeforeValidateHelper beforeValidateHelper = new BeforeValidateHelper()
     private static Map<String, Constrained> constraintsMapInternal
 
@@ -91,7 +92,7 @@ trait Validateable {
             Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, this.defaultNullable())
 
             Map<String, Constrained> finalConstraints = [:]
-            for(entry in evaluatedConstraints) {
+            for (entry in evaluatedConstraints) {
                 finalConstraints.put(entry.key, new ConstrainedDelegate(entry.value))
             }
 
@@ -202,7 +203,7 @@ trait Validateable {
             Errors originalErrors = getErrors()
             for (originalError in originalErrors.allErrors) {
                 if (originalError instanceof FieldError) {
-                    if (originalErrors.getFieldError(((FieldError)originalError).field)?.bindingFailure) {
+                    if (originalErrors.getFieldError(((FieldError) originalError).field)?.bindingFailure) {
                         localErrors.addError originalError
                     }
                 } else {
@@ -234,7 +235,7 @@ trait Validateable {
         } catch (Throwable ignored) {
             MessageSource messageSource = Holders.findApplicationContext() ?: new StaticMessageSource()
             Map<String, Object> defaultConstraints = Holders.findApplication() ?
-                    ConstraintEvalUtils.getDefaultConstraints(Holders.grailsApplication.config) : Collections.<String, Object>emptyMap()
+                    ConstraintEvalUtils.getDefaultConstraints(Holders.grailsApplication.config) : Collections.<String, Object> emptyMap()
             return new DefaultConstraintEvaluator(
                     new DefaultConstraintRegistry(messageSource),
                     new KeyValueMappingContext(""),

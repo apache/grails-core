@@ -18,26 +18,27 @@
  */
 package org.grails.encoder;
 
+import org.springframework.util.StringUtils;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 
-import org.springframework.util.StringUtils;
-
 public class CombinedCodecIdentifier implements CodecIdentifier {
+
     private CodecIdentifier[] codecIdentifiers;
     private String codecName;
     private String codecAlias;
-    
+
     CombinedCodecIdentifier(CodecIdentifierProvider[] encodersOrDecoders) {
         this(encodersOrDecoders, false);
     }
-    
+
     CombinedCodecIdentifier(CodecIdentifierProvider[] encodersOrDecoders, boolean reverseOrder) {
         int size = encodersOrDecoders.length;
         codecIdentifiers = new CodecIdentifier[size];
         String[] encoderNamesArr = new String[size];
-        for(int i=0;i < size;i++) {
+        for (int i = 0; i < size; i++) {
             int targetIndex = reverseOrder ? (size - 1 - i) : i;
             codecIdentifiers[targetIndex] = encodersOrDecoders[i].getCodecIdentifier();
             encoderNamesArr[targetIndex] = codecIdentifiers[targetIndex].getCodecName();
@@ -58,8 +59,8 @@ public class CombinedCodecIdentifier implements CodecIdentifier {
 
     @Override
     public boolean isEquivalent(CodecIdentifier other) {
-        for(CodecIdentifier codecIdentifier : codecIdentifiers) { 
-            if(codecIdentifier.isEquivalent(other)) {
+        for (CodecIdentifier codecIdentifier : codecIdentifiers) {
+            if (codecIdentifier.isEquivalent(other)) {
                 return true;
             }
         }

@@ -18,10 +18,10 @@
  */
 package org.grails.core.io;
 
+import org.springframework.core.io.ByteArrayResource;
+
 import java.io.IOException;
 import java.net.URL;
-
-import org.springframework.core.io.ByteArrayResource;
 
 /**
  * Hacky version of the ByteArrayResource that implements the {@link

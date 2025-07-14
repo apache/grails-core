@@ -20,14 +20,14 @@
 package org.grails.datastore.gorm.validation.jakarta
 
 import groovy.transform.CompileStatic
+import jakarta.validation.Path
+import jakarta.validation.TraversableResolver
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.proxy.ProxyHandler
 
-import jakarta.validation.Path
-import jakarta.validation.TraversableResolver
 import java.lang.annotation.ElementType
 
 /**
@@ -56,25 +56,23 @@ class MappingContextTraversableResolver implements TraversableResolver {
     boolean isCascadable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
-        if(entity != null) {
+        if (entity != null) {
             PersistentEntity currentEntity = entity
-            for(Path.Node n in pathToTraversableObject) {
-                if(currentEntity == null) break
+            for (Path.Node n in pathToTraversableObject) {
+                if (currentEntity == null) break
                 PersistentProperty prop = currentEntity.getPropertyByName(n.name)
-                if(prop instanceof Association) {
-                    Association association = (Association)prop
-                    if(association.isOwningSide()) {
+                if (prop instanceof Association) {
+                    Association association = (Association) prop
+                    if (association.isOwningSide()) {
                         currentEntity = association.associatedEntity
-                    }
-                    else {
+                    } else {
                         currentEntity = null
                     }
-                }
-                else {
+                } else {
                     currentEntity = null
                 }
             }
-            if(currentEntity != null) {
+            if (currentEntity != null) {
                 return true
             }
         }

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.registry.support;
 
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry;
@@ -34,7 +33,7 @@ import org.springframework.context.support.StaticMessageSource;
  * @author Graeme Rocher
  * @since 6.1
  */
-public class ValidatorRegistries {
+public final class ValidatorRegistries {
 
     private ValidatorRegistries() {
     }
@@ -43,7 +42,7 @@ public class ValidatorRegistries {
      * Creates a validator registry with a static message source
      *
      * @param mappingContext The mapping context
-     * @param settings The settings
+     * @param settings       The settings
      * @return The registry
      */
     public static ValidatorRegistry createValidatorRegistry(MappingContext mappingContext, ConnectionSourceSettings settings) {
@@ -54,16 +53,15 @@ public class ValidatorRegistries {
      * Creates the most appropriate validator registry
      *
      * @param mappingContext The mapping context
-     * @param settings the settings
-     * @param messageSource the message source
+     * @param settings       the settings
+     * @param messageSource  the message source
      * @return The registry
      */
-    public static ValidatorRegistry createValidatorRegistry(MappingContext mappingContext, ConnectionSourceSettings settings, MessageSource messageSource ) {
+    public static ValidatorRegistry createValidatorRegistry(MappingContext mappingContext, ConnectionSourceSettings settings, MessageSource messageSource) {
         ValidatorRegistry validatorRegistry;
-        if(isJakartaValidationAvailable()) {
+        if (isJakartaValidationAvailable()) {
             validatorRegistry = new JakartaValidatorRegistry(mappingContext, settings, messageSource);
-        }
-        else {
+        } else {
             validatorRegistry = new DefaultValidatorRegistry(mappingContext, settings, messageSource);
         }
         return validatorRegistry;

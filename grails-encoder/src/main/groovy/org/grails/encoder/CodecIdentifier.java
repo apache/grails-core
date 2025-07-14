@@ -46,8 +46,7 @@ public interface CodecIdentifier {
     /**
      * Checks if this codec is equivalent to some other codec
      *
-     * @param other
-     *            the CodecIdentifier of the other codec
+     * @param other the CodecIdentifier of the other codec
      * @return true, if is equivalent
      */
     boolean isEquivalent(CodecIdentifier other);

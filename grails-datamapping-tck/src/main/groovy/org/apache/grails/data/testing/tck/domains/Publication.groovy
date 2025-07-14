@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Publication implements Serializable {
+
     Long id
     Long version
     String title
@@ -30,9 +31,9 @@ class Publication implements Serializable {
     Boolean paperback = true
 
     static mapping = {
-        title index:true
-        paperback index:true
-        datePublished index:true
+        title index: true
+        paperback index: true
+        datePublished index: true
     }
 
     static namedQueries = {

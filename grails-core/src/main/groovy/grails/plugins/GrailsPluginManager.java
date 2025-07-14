@@ -18,16 +18,17 @@
  */
 package grails.plugins;
 
+import grails.core.GrailsApplication;
+import grails.plugins.exceptions.PluginException;
+import org.grails.spring.RuntimeSpringConfiguration;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.type.filter.TypeFilter;
+
 import java.io.File;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import grails.core.GrailsApplication;
-import org.grails.spring.RuntimeSpringConfiguration;
-import grails.plugins.exceptions.PluginException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.type.filter.TypeFilter;
 
 /**
  * <p>Handles the loading and management of plug-ins in the Grails system.
@@ -46,7 +47,7 @@ import org.springframework.core.type.filter.TypeFilter;
  * <p>The doWithWebDescriptor uses mark-up building to provide additional functionality to the web.xml
  * file
  *
- *<p> Example:
+ * <p> Example:
  * <pre>
  * class ClassEditorGrailsPlugin {
  *      def version = 1.1
@@ -68,12 +69,14 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Returns an array of all the loaded plug-ins
+     *
      * @return An array of plug-ins
      */
     GrailsPlugin[] getAllPlugins();
 
     /**
      * Gets plugin installed by the user and not provided by the framework
+     *
      * @return A list of user plugins
      */
     GrailsPlugin[] getUserPlugins();
@@ -128,6 +131,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Obtains a GrailsPlugin for the given classname
+     *
      * @param name The name of the plugin
      * @return The instance
      */
@@ -151,7 +155,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     /**
      * Retrieves a plug-in for its name and version
      *
-     * @param name The name of the plugin
+     * @param name    The name of the plugin
      * @param version The version of the plugin
      * @return The GrailsPlugin instance or null if it doesn't exist
      */
@@ -160,13 +164,14 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     /**
      * Executes the runtime configuration for a specific plugin AND all its dependencies
      *
-     * @param pluginName The name of he plugin
+     * @param pluginName   The name of he plugin
      * @param springConfig The runtime spring config instance
      */
     void doRuntimeConfiguration(String pluginName, RuntimeSpringConfiguration springConfig);
 
     /**
      * Sets the GrailsApplication used be this plugin manager
+     *
      * @param application The GrailsApplication instance
      */
     void setApplication(GrailsApplication application);
@@ -197,7 +202,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * inform the specified plugins observers of the event specified by the passed Map instance
      *
      * @param pluginName The name of the plugin
-     * @param event The event
+     * @param event      The event
      */
     @SuppressWarnings("rawtypes")
     void informObservers(String pluginName, Map event);
@@ -224,18 +229,21 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Set whether the core plugins should be loaded
+     *
      * @param shouldLoadCorePlugins True if they should
      */
     void setLoadCorePlugins(boolean shouldLoadCorePlugins);
 
     /**
      * Method for handling changes to a class and triggering on change events etc.
+     *
      * @param aClass The class
      */
     void informOfClassChange(Class<?> aClass);
 
     /**
      * Get all of the TypeFilter definitions defined by the plugins
+     *
      * @return A list of TypeFilter definitions
      */
     List<TypeFilter> getTypeFilters();
@@ -250,10 +258,10 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Returns the pluginContextPath for the given plugin and will force name to camel case instead of '-' lower case
-     *
+     * <p>
      * my-plug-web would resolve to myPlugWeb if forceCamelCase is true.
      *
-     * @param name The plugin name
+     * @param name           The plugin name
      * @param forceCamelCase Force camel case for name
      * @return the context path
      */
@@ -270,6 +278,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Returns the pluginContextPath for the given instance
+     *
      * @param instance The instance
      * @return The pluginContextPath
      */
@@ -277,6 +286,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Returns the plugin path for the given class
+     *
      * @param theClass The class
      * @return The pluginContextPath
      */
@@ -284,6 +294,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Returns the plugin views directory for the given instance
+     *
      * @param instance The instance
      * @return The pluginContextPath
      */
@@ -291,6 +302,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Returns the plugin views directory path for the given class
+     *
      * @param theClass The class
      * @return The pluginContextPath
      */
@@ -321,6 +333,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
 
     /**
      * Indicates whether the manager has been shutdown or not
+     *
      * @return True if it was shutdown
      */
     boolean isShutdown();
@@ -330,5 +343,5 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      *
      * @param pluginFilter The plugin filter
      */
-    public void setPluginFilter(PluginFilter pluginFilter);
+    void setPluginFilter(PluginFilter pluginFilter);
 }

@@ -19,7 +19,7 @@
 package org.grails.cli.profile
 
 /**
- * A {@link Command} applicable only to a certain {@link Profile}
+ * A {@link org.springframework.boot.cli.command.Command;} applicable only to a certain {@link Profile}
  *
  * @author Graeme Rocher
  * @since 3.0

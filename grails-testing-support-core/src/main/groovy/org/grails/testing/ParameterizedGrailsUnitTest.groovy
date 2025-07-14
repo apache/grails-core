@@ -29,9 +29,9 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
     private T _artefactInstance
 
     Class<T> getTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
-              ParameterizedGrailsUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
+                    ParameterizedGrailsUnitTest.isAssignableFrom((Class) ((ParameterizedType) genericInterface).rawType)
         }
 
         if (parameterizedType?.actualTypeArguments != null) {
@@ -48,7 +48,7 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
                 mockArtefact(cutType)
                 final String beanName = getBeanName(cutType)
                 if (beanName != null && applicationContext.containsBean(beanName)) {
-                    _artefactInstance = applicationContext.getBean(beanName, T)
+                    _artefactInstance = applicationContext.getBean(beanName, cutType)
                 } else {
                     _artefactInstance = cutType.newInstance()
                     applicationContext.autowireCapableBeanFactory.autowireBeanProperties _artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false

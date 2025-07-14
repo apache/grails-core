@@ -83,7 +83,7 @@ class RenderTagLib implements TagLibrary {
         if (!(attrs?.exception instanceof Throwable)) {
             return
         }
-        Throwable exception = (Throwable)attrs.exception
+        Throwable exception = (Throwable) attrs.exception
 
         Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
 

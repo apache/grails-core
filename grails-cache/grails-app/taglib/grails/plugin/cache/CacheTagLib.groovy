@@ -31,7 +31,6 @@ import org.springframework.web.context.request.RequestContextHolder
 @Slf4j
 class CacheTagLib {
 
-
 	static namespace = 'cache'
 
 	GrailsCacheManager grailsCacheManager

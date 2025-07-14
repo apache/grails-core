@@ -28,6 +28,7 @@ import org.springframework.transaction.support.SmartTransactionObject;
  * @since 1.0
  */
 public class TransactionObject implements SmartTransactionObject {
+
     private SessionHolder sessionHolder;
     private boolean newSessionHolder;
     private boolean newSession;
@@ -41,8 +42,8 @@ public class TransactionObject implements SmartTransactionObject {
     }
 
     /**
-     * @deprecated Here for binary compatibility, doesn't actually do anything
      * @param transaction
+     * @deprecated Here for binary compatibility, doesn't actually do anything
      */
     @Deprecated
     public void setTransaction(Transaction<?> transaction) {
@@ -73,7 +74,6 @@ public class TransactionObject implements SmartTransactionObject {
     public boolean isNewSession() {
         return newSession;
     }
-
 
     @Override
     public boolean isRollbackOnly() {

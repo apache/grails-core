@@ -83,7 +83,7 @@ trait GrailsView extends HttpView implements WriterProvider, WritableScript {
      * The template engine
      */
     ResolvableGroovyTemplateEngine getTemplateEngine() {
-        (ResolvableGroovyTemplateEngine)viewTemplate.templateEngine
+        (ResolvableGroovyTemplateEngine) viewTemplate.templateEngine
     }
 
     /**

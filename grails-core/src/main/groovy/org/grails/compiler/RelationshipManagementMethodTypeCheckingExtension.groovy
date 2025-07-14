@@ -19,7 +19,6 @@
 package org.grails.compiler
 
 import grails.util.GrailsNameUtils
-
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.MethodCall
@@ -39,11 +38,11 @@ class RelationshipManagementMethodTypeCheckingExtension extends TypeCheckingDSL 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
             def matcher = name =~ /(addTo|removeFrom)([A-Z].*)/
-            if(matcher) {
+            if (matcher) {
                 def sourceUnit = receiver.module?.context
-                if(GrailsASTUtils.isDomainClass(receiver, sourceUnit)) {
+                if (GrailsASTUtils.isDomainClass(receiver, sourceUnit)) {
                     def propertyName = GrailsNameUtils.getPropertyName(matcher.group(2))
-                    if(receiver.getField(propertyName)) {
+                    if (receiver.getField(propertyName)) {
                         dynamicCall = makeDynamic(call, receiver)
                         dynamicCall.declaringClass = receiver
                     }

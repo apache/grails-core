@@ -19,12 +19,11 @@
 package org.grails.web.converters.marshaller.json;
 
 import grails.converters.JSON;
-
-import java.lang.reflect.Array;
-
-import org.grails.web.json.JSONWriter;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JSONWriter;
+
+import java.lang.reflect.Array;
 
 /**
  * @author Siegfried Puchbauer

@@ -113,7 +113,7 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param object The object to render
      * @param customizer The customizer
      */
-    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer )
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Renders the given object inline within the current JSON object instead of creating a new JSON object

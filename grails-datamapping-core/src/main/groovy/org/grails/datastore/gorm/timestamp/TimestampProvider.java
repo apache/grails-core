@@ -23,19 +23,20 @@ package org.grails.datastore.gorm.timestamp;
  *
  */
 public interface TimestampProvider {
+
     /**
      * Whether a timestamp can be created for the given type
      *
      * @param dateTimeClass The date time class
-     *
      * @return True if it can
      */
     boolean supportsCreating(Class<?> dateTimeClass);
 
     /**
      * Creates a timestamp for the given class
+     *
      * @param dateTimeClass The time stamp
-     * @param <T> The type of the timestamp class
+     * @param <T>           The type of the timestamp class
      * @return An instance of the timestamp
      */
     <T> T createTimestamp(Class<T> dateTimeClass);

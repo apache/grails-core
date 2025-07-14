@@ -32,6 +32,7 @@ import org.springframework.core.env.PropertyResolver
  */
 @CompileStatic
 class ConnectionSourceSettingsBuilder extends ConfigurationBuilder<ConnectionSourceSettings, ConnectionSourceSettings> {
+
     ConnectionSourceSettingsBuilder(PropertyResolver propertyResolver, String configurationPrefix = Settings.PREFIX) {
         super(propertyResolver, configurationPrefix)
     }

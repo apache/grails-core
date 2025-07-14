@@ -19,12 +19,12 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.gorm.validation.CascadingValidator
+import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
-import org.grails.datastore.gorm.GormValidationApi
-import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.hibernate.Session
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
@@ -58,14 +58,14 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
         Errors errors = setupErrorsProperty(instance);
 
         Validator validator = getValidator()
-        if(validator == null) return true
+        if (validator == null) return true
 
         Boolean valid = Boolean.TRUE
         // should evict?
         boolean evict = false
         boolean deepValidate = true
         Set validatedFields = null
-        if(validatedFieldsList != null) {
+        if (validatedFieldsList != null) {
             validatedFields = new HashSet(validatedFieldsList)
         }
 
@@ -84,14 +84,14 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
             applyManualFlush(session)
             try {
                 if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator)validator).validate instance, errors, deepValidate
+                    ((CascadingValidator) validator).validate instance, errors, deepValidate
                 } else if (validator instanceof grails.gorm.validation.CascadingValidator) {
                     ((grails.gorm.validation.CascadingValidator) validator).validate instance, errors, deepValidate
                 } else {
                     validator.validate instance, errors
                 }
             } finally {
-                if(!errors.hasErrors()) {
+                if (!errors.hasErrors()) {
                     restoreFlushMode(session, previous)
                 }
             }

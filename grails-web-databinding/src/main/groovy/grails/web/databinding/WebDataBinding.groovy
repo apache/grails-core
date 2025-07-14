@@ -45,9 +45,7 @@ trait WebDataBinding {
     /**
      * Returns a map of the objects properties that can be used to during binding to bind a subset of properties
      *
-     * @return An instance of {
-     @link DataBindingLazyMetaPropertyMap
-     }
+     * @return An instance of {@link DataBindingLazyMetaPropertyMap}
      */
     @Generated
     Map<?, ?> getProperties() {

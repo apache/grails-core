@@ -19,9 +19,6 @@
 package org.grails.web.converters.marshaller.xml;
 
 import grails.converters.XML;
-
-import java.util.Locale;
-
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.NameAwareMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
@@ -31,6 +28,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
+
+import java.util.Locale;
 
 /**
  * @author Siegfried Puchbauer
@@ -59,20 +58,18 @@ public class ValidationErrorsMarshaller implements ObjectMarshaller<XML>, NameAw
                     Locale locale = LocaleContextHolder.getLocale();
                     if (applicationContext != null) {
                         xml.startNode("message").chars(applicationContext.getMessage(fe, locale)).end();
-                    }
-                    else {
+                    } else {
                         String defaultMessage = fe.getDefaultMessage();
-                        if(defaultMessage != null)
+                        if (defaultMessage != null) {
                             xml.startNode("message").chars(defaultMessage).end();
+                        }
                     }
                     xml.end();
                 }
             }
-        }
-        catch (ConverterException ce) {
+        } catch (ConverterException ce) {
             throw ce;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Error converting Bean with class " + object.getClass().getName(), e);
         }
     }

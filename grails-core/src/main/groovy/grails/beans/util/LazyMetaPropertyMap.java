@@ -29,23 +29,31 @@ import org.grails.datastore.mapping.reflect.NameUtils;
 import org.springframework.util.Assert;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A map implementation that reads an objects properties lazily using Groovy's MetaClass.
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 @CompileStatic
 public class LazyMetaPropertyMap implements Map {
 
+    private static final List<String> EXCLUDES = Arrays.asList("class", "constraints", "hasMany", "mapping", "properties", GormProperties.IDENTITY, GormProperties.VERSION, "domainClass", "dirty", GormProperties.ERRORS, "dirtyPropertyNames");
     private MetaClass metaClass;
     private Object instance;
-    private static List<String> EXCLUDES = Arrays.asList("class", "constraints", "hasMany", "mapping", "properties", GormProperties.IDENTITY, GormProperties.VERSION, "domainClass", "dirty", GormProperties.ERRORS, "dirtyPropertyNames");
 
     /**
      * Constructs the map
+     *
      * @param o The object to inspect
      */
     public LazyMetaPropertyMap(Object o) {
@@ -57,6 +65,7 @@ public class LazyMetaPropertyMap implements Map {
 
     /**
      * {@inheritDoc}
+     *
      * @see java.util.Map#size()
      */
     public int size() {
@@ -65,6 +74,7 @@ public class LazyMetaPropertyMap implements Map {
 
     /**
      * {@inheritDoc}
+     *
      * @see java.util.Map#isEmpty()
      */
     public boolean isEmpty() {
@@ -73,10 +83,13 @@ public class LazyMetaPropertyMap implements Map {
 
     /**
      * {@inheritDoc}
+     *
      * @see java.util.Map#containsKey(java.lang.Object)
      */
     public boolean containsKey(Object propertyName) {
-        if (propertyName instanceof CharSequence) propertyName = propertyName.toString();
+        if (propertyName instanceof CharSequence) {
+            propertyName = propertyName.toString();
+        }
         Assert.isInstanceOf(String.class, propertyName, "This map implementation only supports String based keys!");
 
         String pn = propertyName.toString();
@@ -107,7 +120,7 @@ public class LazyMetaPropertyMap implements Map {
 
         if (propertyName instanceof List) {
             Map submap = new HashMap();
-            List propertyNames = (List)propertyName;
+            List propertyNames = (List) propertyName;
             for (Object currentName : propertyNames) {
                 if (currentName != null) {
                     currentName = currentName.toString();
@@ -137,11 +150,11 @@ public class LazyMetaPropertyMap implements Map {
         }
 
         Object old = null;
-        MetaProperty mp = metaClass.getMetaProperty((String)propertyName);
+        MetaProperty mp = metaClass.getMetaProperty((String) propertyName);
         if (mp != null && !isExcluded(mp)) {
             old = mp.getProperty(instance);
             if (propertyValue instanceof Map) {
-                propertyValue = ((Map)propertyValue).get(propertyName);
+                propertyValue = ((Map) propertyValue).get(propertyName);
             }
             mp.setProperty(instance, propertyValue);
         }
@@ -171,7 +184,9 @@ public class LazyMetaPropertyMap implements Map {
     public Set<String> keySet() {
         Set<String> names = new HashSet<>();
         for (MetaProperty mp : metaClass.getProperties()) {
-            if (isExcluded(mp)) continue;
+            if (isExcluded(mp)) {
+                continue;
+            }
             names.add(mp.getName());
         }
         return names;
@@ -180,7 +195,9 @@ public class LazyMetaPropertyMap implements Map {
     public Collection<Object> values() {
         Collection<Object> values = new ArrayList<>();
         for (MetaProperty mp : metaClass.getProperties()) {
-            if (isExcluded(mp)) continue;
+            if (isExcluded(mp)) {
+                continue;
+            }
             values.add(mp.getProperty(instance));
         }
         return values;
@@ -194,7 +211,7 @@ public class LazyMetaPropertyMap implements Map {
     @Override
     public boolean equals(Object o) {
         if (o instanceof LazyMetaPropertyMap) {
-            LazyMetaPropertyMap other = (LazyMetaPropertyMap)o;
+            LazyMetaPropertyMap other = (LazyMetaPropertyMap) o;
             return instance.equals(other.getInstance());
         }
         return false;
@@ -212,7 +229,9 @@ public class LazyMetaPropertyMap implements Map {
     public Set<MapEntry> entrySet() {
         Set<MapEntry> entries = new HashSet<>();
         for (MetaProperty mp : metaClass.getProperties()) {
-            if (isExcluded(mp)) continue;
+            if (isExcluded(mp)) {
+                continue;
+            }
 
             entries.add(new MapEntry(mp.getName(), mp.getProperty(instance)));
         }

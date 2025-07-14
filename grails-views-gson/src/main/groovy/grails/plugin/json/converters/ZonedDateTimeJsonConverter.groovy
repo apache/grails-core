@@ -40,6 +40,6 @@ class ZonedDateTimeJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        DateTimeFormatter.ISO_ZONED_DATE_TIME.format((ZonedDateTime)value)
+        DateTimeFormatter.ISO_ZONED_DATE_TIME.format((ZonedDateTime) value)
     }
 }

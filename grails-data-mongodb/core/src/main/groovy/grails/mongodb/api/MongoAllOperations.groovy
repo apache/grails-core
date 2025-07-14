@@ -26,4 +26,5 @@ package grails.mongodb.api
  * @since 6.0
  */
 interface MongoAllOperations<D> extends MongoInstanceOperations<D>, MongoStaticOperations<D> {
+
 }

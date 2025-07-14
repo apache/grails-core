@@ -16,17 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc;
 
-import org.springframework.beans.*;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.beans.InvalidPropertyException;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyValue;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.DataBinder;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * Binder implementation that allows caller to bind to maps and also allows property names
@@ -51,6 +63,7 @@ class RelaxedDataBinder extends DataBinder {
 
     /**
      * Create a new {@link RelaxedDataBinder} instance.
+     *
      * @param target the target into which properties are bound
      */
     RelaxedDataBinder(Object target) {
@@ -59,7 +72,8 @@ class RelaxedDataBinder extends DataBinder {
 
     /**
      * Add aliases to the {@link DataBinder}.
-     * @param name the property name to alias
+     *
+     * @param name  the property name to alias
      * @param alias aliases for the property names
      * @return this instance
      */
@@ -80,8 +94,9 @@ class RelaxedDataBinder extends DataBinder {
      * map keys. Also creates new maps for properties of map type that are null (assuming
      * all maps are potentially nested). The standard bracket {@code[...]} dereferencing
      * is also accepted.
+     *
      * @param propertyValues the property values
-     * @param target the target object
+     * @param target         the target object
      * @return modified property values
      */
     private MutablePropertyValues modifyProperties(MutablePropertyValues propertyValues,
@@ -122,6 +137,7 @@ class RelaxedDataBinder extends DataBinder {
      * significant for other property names (it shouldn't be but who knows what people
      * might be relying on, e.g. HSQL has a JDBCXADataSource where "databaseName" is a
      * synonym for "url").
+     *
      * @param names the names to sort
      */
     private void sortPropertyNames(List<String> names) {
@@ -156,7 +172,7 @@ class RelaxedDataBinder extends DataBinder {
         for (PropertyValue value : propertyValues.getPropertyValues()) {
             String name = value.getName();
             for (String prefix : new RelaxedNames(stripLastDot(this.namePrefix))) {
-                for (String separator : new String[] { ".", "_" }) {
+                for (String separator : new String[]{".", "_"}) {
                     String candidate = (StringUtils.hasLength(prefix) ? prefix + separator
                             : prefix);
                     if (name.startsWith(candidate)) {
@@ -198,8 +214,9 @@ class RelaxedDataBinder extends DataBinder {
      * <li>Fuzzy matching can be employed for bean property names</li>
      * <li>Period separators can be used instead of indexing ([...]) for map keys</li>
      * </ul>
+     *
      * @param wrapper a bean wrapper for the object to bind
-     * @param path the bean path to bind
+     * @param path    the bean path to bind
      * @return a transformed path with correct bean wrapper syntax
      */
     private String normalizePath(BeanWrapper wrapper, String path) {
@@ -226,19 +243,16 @@ class RelaxedDataBinder extends DataBinder {
             }
             path.mapIndex(index);
             extendMapIfNecessary(wrapper, path, index);
-        }
-        else if (descriptor.isCollection()) {
+        } else if (descriptor.isCollection()) {
             extendCollectionIfNecessary(wrapper, path, index);
-        }
-        else if (descriptor.getType().equals(Object.class)) {
+        } else if (descriptor.getType().equals(Object.class)) {
             if (isBlanked(wrapper, name, path.name(index))) {
                 path.collapseKeys(index);
             }
             path.mapIndex(index);
             if (path.isLastNode(index)) {
                 wrapper.setPropertyValue(path.toString(), BLANK);
-            }
-            else {
+            } else {
                 String next = path.prefix(index + 1);
                 if (wrapper.getPropertyValue(next) == null) {
                     wrapper.setPropertyValue(next, new LinkedHashMap<String, Object>());
@@ -361,8 +375,7 @@ class RelaxedDataBinder extends DataBinder {
                     if (target.getPropertyType(joinString(prefix, candidate)) != null) {
                         return candidate;
                     }
-                }
-                catch (InvalidPropertyException ex) {
+                } catch (InvalidPropertyException ex) {
                     // swallow and continue
                 }
             }
@@ -462,8 +475,7 @@ class RelaxedDataBinder extends DataBinder {
                     String sub = current.substring(startRef + 1, endRef);
                     if (sub.matches("[0-9]+")) {
                         nodes.add(new ArrayIndexNode(sub));
-                    }
-                    else {
+                    } else {
                         nodes.add(new MapIndexNode(sub));
                     }
                 }
@@ -589,6 +601,5 @@ class RelaxedDataBinder extends DataBinder {
             }
 
         }
-
     }
 }

@@ -34,7 +34,8 @@ import javax.sql.DataSource
 @EqualsAndHashCode(includes = ['tenantId'])
 class MultiTenantDataSource implements DataSource {
 
-    final @Delegate DataSource target
+    final @Delegate
+    DataSource target
     final String tenantId
 
     MultiTenantDataSource(DataSource target, String tenantId) {

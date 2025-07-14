@@ -37,9 +37,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 4.1
  */
 public abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
+
     public static final String MONGO_SET_OPERATOR = "$set";
     public static final String MONGO_UNSET_OPERATOR = "$unset";
-    protected static final Map<PersistentEntity, WriteConcern> declaredWriteConcerns = new ConcurrentHashMap<PersistentEntity, WriteConcern>();
+    protected static final Map<PersistentEntity, WriteConcern> DECLARED_WRITE_CONCERNS = new ConcurrentHashMap<PersistentEntity, WriteConcern>();
 
     protected final String defaultDatabase;
     protected MongoDatastore mongoDatastore;
@@ -51,6 +52,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
         this(datastore, mappingContext, publisher, false);
     }
+
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
         super(datastore, mappingContext, publisher, stateless);
         mongoDatastore = datastore;
@@ -88,7 +90,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     public String getDatabase(PersistentEntity entity) {
 
         final String name = mongoDatabases.get(entity);
-        if(name != null) {
+        if (name != null) {
             return name;
         }
         return getDatastore().getDatabaseName(entity);
@@ -105,6 +107,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
 
     /**
      * Obtains the WriteConcern to use for the session
+     *
      * @return the WriteConcern
      */
     public WriteConcern getWriteConcern() {
@@ -116,7 +119,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     }
 
     private WriteConcern getDeclaredWriteConcern(WriteConcern defaultConcern, PersistentEntity entity) {
-        WriteConcern writeConcern = declaredWriteConcerns.get(entity);
+        WriteConcern writeConcern = DECLARED_WRITE_CONCERNS.get(entity);
         if (writeConcern == null) {
             Object mappedForm = entity.getMapping().getMappedForm();
             if (mappedForm instanceof MongoCollection) {
@@ -128,14 +131,14 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
             }
 
             if (writeConcern != null) {
-                declaredWriteConcerns.put(entity, writeConcern);
+                DECLARED_WRITE_CONCERNS.put(entity, writeConcern);
             }
         }
         return writeConcern;
     }
 
     public MongoClient getNativeInterface() {
-        return ((MongoDatastore)getDatastore()).getMongoClient();
+        return ((MongoDatastore) getDatastore()).getMongoClient();
     }
 
     public DocumentMappingContext getDocumentMappingContext() {
@@ -150,7 +153,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     /**
      * Use the given collection for the given entity
      *
-     * @param entity The entity
+     * @param entity         The entity
      * @param collectionName The collection
      * @return The previous collection that was used
      */
@@ -164,29 +167,27 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     /**
      * Use the given database name for the given entity
      *
-     * @param entity The entity name
+     * @param entity       The entity name
      * @param databaseName The database name
      * @return The name of the previous database
      */
     public String useDatabase(PersistentEntity entity, String databaseName) {
-        if(databaseName == null) {
+        if (databaseName == null) {
             return mongoDatabases.put(entity, getDefaultDatabase());
-        }
-        else {
+        } else {
             return mongoDatabases.put(entity, databaseName);
         }
     }
 
     public com.mongodb.client.MongoCollection<Document> getCollection(PersistentEntity entity) {
-        if(entity.isRoot()) {
+        if (entity.isRoot()) {
             final String database = getDatabase(entity);
             final String collectionName = getCollectionName(entity);
             return getNativeInterface()
                     .getDatabase(database)
                     .getCollection(collectionName)
                     .withCodecRegistry(getDatastore().getCodecRegistry());
-        }
-        else {
+        } else {
             final PersistentEntity root = entity.getRootEntity();
             return getCollection(root);
         }
@@ -200,9 +201,9 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     /**
      * Decodes the given entity type from the given native object type
      *
-     * @param type A GORM entity type
+     * @param type         A GORM entity type
      * @param nativeObject A native MongoDB object type (Document, FinderIterable etc.)
-     * @param <T> The concrete type of the entity
+     * @param <T>          The concrete type of the entity
      * @return An instanceof the type or null if it doesn't exist
      */
     public abstract <T> T decode(Class<T> type, Object nativeObject);

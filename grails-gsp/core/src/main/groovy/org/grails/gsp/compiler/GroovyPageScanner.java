@@ -26,15 +26,16 @@ import java.util.regex.Pattern;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
- *
+ * <p>
  * Lexer for GroovyPagesServlet.
  *
  * @author Troy Heninger
  * @author Graeme Rocher
- *
+ * <p>
  * Date: Jan 10, 2004
  */
 class GroovyPageScanner implements Tokens {
+
     private static final int DEFAULT_MAX_HTML_LENGTH = 64000;
     private String text;
     private int end1;
@@ -79,7 +80,8 @@ class GroovyPageScanner implements Tokens {
     private int found(int newState, int skip) {
         begin2 = begin1;
         end2 = --end1;
-        begin1 = end1 += skip;
+        end1 += skip;
+        begin1 = end1;
         int lastState = state;
         state = newState;
         return lastState;
@@ -88,7 +90,8 @@ class GroovyPageScanner implements Tokens {
     private int foundStartOrEndTag(int newState, int skip, String namespace) {
         begin2 = begin1;
         end2 = --end1;
-        begin1 = end1 += skip;
+        end1 += skip;
+        begin1 = end1;
         int lastState = state;
         state = newState;
         lastNamespace = namespace;
@@ -115,7 +118,7 @@ class GroovyPageScanner implements Tokens {
     }
 
     int nextToken() {
-        for (;;) {
+        for (; ; ) {
             int left = len - end1;
             if (left == 0) {
                 end1++; // in order to include the last letter
@@ -140,8 +143,9 @@ class GroovyPageScanner implements Tokens {
                                 return found(JDECLAR, 3);
                             }
                             if (isStartComment(c1, c2, left)) {
-                                if (skipJComment())
+                                if (skipJComment()) {
                                     continue;
+                                }
                             }
                             return found(JSCRIPT, 2);
                         }
@@ -156,15 +160,15 @@ class GroovyPageScanner implements Tokens {
 
                             return foundStartOrEndTag(GEND_TAG, tagNameSpace.length() + 3, tagNameSpace);
                         }
-                    }
-                    else if (isStartOfGExpression(c, c1)) {
+                    } else if (isStartOfGExpression(c, c1)) {
                         return found(GEXPR, 2);
                     }
 
                     if (c == '%' && c1 == '{') {
                         if (c2 == '-' && left > 3 && text.charAt(end1 + 2) == '-') {
-                            if (skipGComment())
+                            if (skipGComment()) {
                                 continue;
+                            }
                         }
                         return found(GSCRIPT, 2);
                     }
@@ -176,7 +180,7 @@ class GroovyPageScanner implements Tokens {
                     if (c == '@' && c1 == '{') {
                         return found(GDIRECT, 2);
                     }
-                    
+
                     if (tokenLength > maxHtmlLength) {
                         return found(HTML, 0);
                     }
@@ -196,8 +200,7 @@ class GroovyPageScanner implements Tokens {
                     }
                     if (c == '>') {
                         return found(HTML, 1);
-                    }
-                    else if (isClosingTag(c) && c1 == '>') {
+                    } else if (isClosingTag(c) && c1 == '>') {
                         return found(GEND_EMPTY_TAG, 1);
                     }
                     break;
@@ -225,6 +228,9 @@ class GroovyPageScanner implements Tokens {
                         return found(HTML, 2);
                     }
                     break;
+                default:
+                    // do nothing
+                    break;
             }
         }
     }
@@ -233,15 +239,15 @@ class GroovyPageScanner implements Tokens {
         char terminationChar = '}';
         char nextTerminationChar = 0;
         boolean startInExpression = true;
-        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, end1-1, terminationChar, nextTerminationChar, startInExpression);
-        int endpos= expressionParser.parse();
+        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, end1 - 1, terminationChar, nextTerminationChar, startInExpression);
+        int endpos = expressionParser.parse();
         if (endpos != -1) {
             end1 = endpos + 1;
             int expressionEndState = HTML;
             if (state == GTAG_EXPR) {
                 expressionEndState = GSTART_TAG;
             }
-            return found(expressionEndState,nextTerminationChar==0?1:2);
+            return found(expressionEndState, nextTerminationChar == 0 ? 1 : 2);
         }
 
         throw new GrailsTagException("Unclosed GSP expression", pageName, getLineNumberForToken());
@@ -279,7 +285,9 @@ class GroovyPageScanner implements Tokens {
     private boolean skipComment(char c3, char c4) {
         int ix = end1 + 3;
         for (int ixz = len - 4; ; ix++) {
-            if (ix > ixz) return false;
+            if (ix > ixz) {
+                return false;
+            }
             if (text.charAt(ix) == '-' && text.charAt(ix + 1) == '-' && text.charAt(ix + 2) == c3 &&
                     text.charAt(ix + 3) == c4) {
                 break;
@@ -299,7 +307,10 @@ class GroovyPageScanner implements Tokens {
     }
 
     void reset() {
-        end1 = begin1 = end2 = begin2 = 0;
+        end1 = 0;
+        begin1 = 0;
+        end2 = 0;
+        begin2 = 0;
         state = HTML;
         lastNamespace = null;
         lastLineNumberIndex = -1;

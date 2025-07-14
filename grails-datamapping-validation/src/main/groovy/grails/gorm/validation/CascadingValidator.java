@@ -31,10 +31,9 @@ public interface CascadingValidator extends Validator {
      * An extended version of the validate(errors,obj) method that takes an additional argument specifying whether
      * the Validator should cascade into associations or not.
      *
-     * @param obj The Object to validate
-     * @param errors The Spring Errors instance
+     * @param obj     The Object to validate
+     * @param errors  The Spring Errors instance
      * @param cascade True if validation should cascade into associations
-     *
      * @see org.springframework.validation.Errors
      * @see org.springframework.validation.Validator
      * @see org.springframework.validation.Validator#validate(Object, org.springframework.validation.Errors)

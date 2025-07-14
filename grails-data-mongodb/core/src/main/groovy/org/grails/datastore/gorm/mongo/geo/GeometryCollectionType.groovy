@@ -14,16 +14,12 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import com.mongodb.BasicDBObject
-import com.mongodb.DBObject
 import grails.mongodb.geo.GeometryCollection
 import groovy.transform.CompileStatic
 import org.bson.Document
-import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 
 /**
@@ -33,7 +29,7 @@ import org.grails.datastore.mapping.mongo.config.MongoMappingContext
  * @since 3.0
  */
 @CompileStatic
-class GeometryCollectionType extends AbstractMappingAwareCustomTypeMarshaller<GeometryCollection, Document, Document>{
+class GeometryCollectionType extends AbstractMappingAwareCustomTypeMarshaller<GeometryCollection, Document, Document> {
 
     public static final String GEOMETRIES = "geometries"
 
@@ -48,7 +44,7 @@ class GeometryCollectionType extends AbstractMappingAwareCustomTypeMarshaller<Ge
 
     @Override
     protected Object writeInternal(PersistentProperty property, String key, GeometryCollection value, Document nativeTarget) {
-        if(value != null) {
+        if (value != null) {
             def col = new Document()
             col.put(GeoJSONType.GEO_TYPE, GeometryCollection.simpleName)
             col.put(GEOMETRIES, value.asList())
@@ -59,11 +55,11 @@ class GeometryCollectionType extends AbstractMappingAwareCustomTypeMarshaller<Ge
 
     @Override
     protected GeometryCollection readInternal(PersistentProperty property, String key, Document nativeSource) {
-        if(nativeSource != null) {
+        if (nativeSource != null) {
             def col = nativeSource.get(key)
-            if(col instanceof Document) {
+            if (col instanceof Document) {
                 def geometries = col.get(GEOMETRIES)
-                if(geometries instanceof List) {
+                if (geometries instanceof List) {
                     def geoCol = GeometryCollection.valueOf((List) geometries)
                     return geoCol
                 }

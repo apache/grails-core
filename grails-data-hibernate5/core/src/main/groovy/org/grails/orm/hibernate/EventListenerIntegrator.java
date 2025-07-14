@@ -18,9 +18,6 @@
  */
 package org.grails.orm.hibernate;
 
-import java.io.Serializable;
-import java.util.*;
-
 import org.hibernate.boot.Metadata;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerGroup;
@@ -29,15 +26,14 @@ import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 public class EventListenerIntegrator implements Integrator {
-
-    protected HibernateEventListeners hibernateEventListeners;
-    protected Map<String, Object> eventListeners;
-
-    public EventListenerIntegrator(HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
-        this.hibernateEventListeners = hibernateEventListeners;
-        this.eventListeners = eventListeners;
-    }
 
     @SuppressWarnings("unchecked")
     protected static final List<EventType<? extends Serializable>> TYPES = Arrays.asList(
@@ -76,8 +72,15 @@ public class EventListenerIntegrator implements Integrator {
             EventType.POST_COLLECTION_REMOVE,
             EventType.POST_COLLECTION_UPDATE);
 
+    protected HibernateEventListeners hibernateEventListeners;
+    protected Map<String, Object> eventListeners;
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public EventListenerIntegrator(HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
+        this.hibernateEventListeners = hibernateEventListeners;
+        this.eventListeners = eventListeners;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
     public void integrate(Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
 
@@ -88,16 +91,15 @@ public class EventListenerIntegrator implements Integrator {
                 EventType type = EventType.resolveEventTypeByName(entry.getKey());
                 Object listenerObject = entry.getValue();
                 if (listenerObject instanceof Collection) {
-                    appendListeners(listenerRegistry, type, (Collection)listenerObject);
-                }
-                else if (listenerObject != null) {
+                    appendListeners(listenerRegistry, type, (Collection) listenerObject);
+                } else if (listenerObject != null) {
                     appendListeners(listenerRegistry, type, Collections.singleton(listenerObject));
                 }
             }
         }
 
         if (hibernateEventListeners != null && hibernateEventListeners.getListenerMap() != null) {
-            Map<String,Object> listenerMap = hibernateEventListeners.getListenerMap();
+            Map<String, Object> listenerMap = hibernateEventListeners.getListenerMap();
             for (EventType<?> type : TYPES) {
                 appendListeners(listenerRegistry, type, listenerMap);
             }
@@ -111,13 +113,12 @@ public class EventListenerIntegrator implements Integrator {
         EventListenerGroup<T> group = listenerRegistry.getEventListenerGroup(eventType);
         for (T listener : listeners) {
             if (listener != null) {
-                if(shouldOverrideListeners(eventType, listener)) {
+                if (shouldOverrideListeners(eventType, listener)) {
                     // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want to override instead of append the listener here
                     // to avoid there being 2 implementations which would impact performance too
                     group.clear();
                     group.appendListener(listener);
-                }
-                else {
+                } else {
                     group.appendListener(listener);
                 }
             }
@@ -135,18 +136,15 @@ public class EventListenerIntegrator implements Integrator {
 
         Object listener = listeners.get(eventType.eventName());
         if (listener != null) {
-            if(shouldOverrideListeners(eventType, listener)) {
+            if (shouldOverrideListeners(eventType, listener)) {
                 // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want to override instead of append the listener here
                 // to avoid there being 2 implementations which would impact performance too
                 listenerRegistry.setListeners(eventType, (T) listener);
-            }
-            else {
-                listenerRegistry.appendListeners(eventType, (T)listener);
+            } else {
+                listenerRegistry.appendListeners(eventType, (T) listener);
             }
         }
     }
-
-
 
     public void disintegrate(SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
         // nothing to do

@@ -21,7 +21,6 @@ package grails.gorm.api
 
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
@@ -90,7 +89,6 @@ interface GormStaticOperations<D> {
      * @return A single entity
      */
     D find(Closure callable)
-
 
     /**
      * Saves a list of objects in one go
@@ -414,7 +412,7 @@ interface GormStaticOperations<D> {
      * @param callable the closure
      * @return The result of the closure
      */
-    public <T> T  withSession(Closure<T> callable)
+    public <T> T withSession(Closure<T> callable)
 
     /**
      * Same as withSession, but present for the case where withSession is overridden to use the Hibernate session
@@ -422,7 +420,7 @@ interface GormStaticOperations<D> {
      * @param callable the closure
      * @return The result of the closure
      */
-    public <T> T  withDatastoreSession(Closure<T> callable)
+    public <T> T withDatastoreSession(Closure<T> callable)
 
     /**
      * Executes the closure within the context of a transaction, creating one if none is present or joining
@@ -434,7 +432,7 @@ interface GormStaticOperations<D> {
      * @see #withNewTransaction(Closure)
      * @see #withNewTransaction(Map, Closure)
      */
-    public <T> T  withTransaction(Closure<T> callable)
+    public <T> T withTransaction(Closure<T> callable)
 
     /**
      * Executes the closure within the context of a new transaction
@@ -445,7 +443,7 @@ interface GormStaticOperations<D> {
      * @see #withTransaction(Map, Closure)
      * @see #withNewTransaction(Map, Closure)
      */
-    public <T> T  withNewTransaction(Closure<T> callable)
+    public <T> T withNewTransaction(Closure<T> callable)
 
     /**
      * Executes the closure within the context of a transaction which is
@@ -465,12 +463,11 @@ interface GormStaticOperations<D> {
      * @param transactionProperties properties to configure the transaction properties
      * @param callable The closure to call
      * @return The result of the closure execution
-     * @see org.springframework.transaction.support.DefaultTransactionDefinition
-     * @see #withNewTransaction(Closure)
+     * @see org.springframework.transaction.support.DefaultTransactionDefinition* @see #withNewTransaction(Closure)
      * @see #withNewTransaction(Map, Closure)
      * @see #withTransaction(Closure)
      */
-    public <T> T  withTransaction(Map transactionProperties, Closure<T> callable)
+    public <T> T withTransaction(Map transactionProperties, Closure<T> callable)
 
     /**
      * Executes the closure within the context of a new transaction which is
@@ -492,12 +489,11 @@ interface GormStaticOperations<D> {
      * @param transactionProperties properties to configure the transaction properties
      * @param callable The closure to call
      * @return The result of the closure execution
-     * @see org.springframework.transaction.support.DefaultTransactionDefinition
-     * @see #withNewTransaction(Closure)
+     * @see org.springframework.transaction.support.DefaultTransactionDefinition* @see #withNewTransaction(Closure)
      * @see #withTransaction(Closure)
      * @see #withTransaction(Map, Closure)
      */
-    public <T> T  withNewTransaction(Map transactionProperties, Closure<T> callable)
+    public <T> T withNewTransaction(Map transactionProperties, Closure<T> callable)
 
     /**
      * Executes the closure within the context of a transaction for the given {@link org.springframework.transaction.TransactionDefinition}
@@ -510,13 +506,12 @@ interface GormStaticOperations<D> {
     /**
      * Creates and binds a new session for the scope of the given closure
      */
-    public <T> T  withNewSession(Closure<T> callable)
+    public <T> T withNewSession(Closure<T> callable)
 
     /**
      * Creates and binds a new session for the scope of the given closure
      */
     public <T> T withStatelessSession(Closure<T> callable)
-
 
     /**
      * Executes a query for the given String
@@ -569,7 +564,7 @@ interface GormStaticOperations<D> {
      * @return A list of results
      *
      */
-    List executeQuery(CharSequence query, Object...params)
+    List executeQuery(CharSequence query, Object... params)
 
     /**
      * Executes a query for the given String
@@ -636,7 +631,7 @@ interface GormStaticOperations<D> {
      * @return The number of entities updated
      *
      */
-    Integer executeUpdate(CharSequence query, Object...params)
+    Integer executeUpdate(CharSequence query, Object... params)
 
     /**
      * Executes an update for the given String
@@ -772,7 +767,6 @@ interface GormStaticOperations<D> {
      */
     List<D> findAll(CharSequence query, Collection params, Map args)
 
-
     /**
      * Execute the closure with the given tenantId
      *
@@ -781,7 +775,6 @@ interface GormStaticOperations<D> {
      * @return The result of the closure
      */
     def <T> T withTenant(Serializable tenantId, Closure<T> callable)
-
 
     /**
      * Execute the closure for each tenant

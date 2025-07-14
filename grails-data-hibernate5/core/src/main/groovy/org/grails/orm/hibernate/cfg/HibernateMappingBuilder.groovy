@@ -19,16 +19,13 @@
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
+import jakarta.persistence.AccessType
 import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.hibernate.FetchMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
-
-import jakarta.persistence.AccessType
 
 /**
  * Implements the ORM mapping DSL constructing a model that can be evaluated by the
@@ -38,7 +35,7 @@ import jakarta.persistence.AccessType
  * @since 1.0
  */
 
-class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, PropertyConfig>{
+class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, PropertyConfig> {
 
     private static final String INCLUDE_PARAM = 'include'
     private static final String EXCLUDE_PARAM = 'exclude'
@@ -87,10 +84,9 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         mappingClosure.resolveStrategy = Closure.DELEGATE_ONLY
         mappingClosure.delegate = this
         try {
-            if(context != null) {
+            if (context != null) {
                 mappingClosure.call(context)
-            }
-            else {
+            } else {
                 mappingClosure.call()
             }
         }
@@ -117,6 +113,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             callable.delegate = null
         }
     }
+
     @CompileStatic
     void hibernateCustomUserType(Map args) {
         if (args.type && (args['class'] instanceof Class)) {
@@ -136,11 +133,11 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     }
 
     /**
-    * <p>Configures the discriminator name. Example:
-    * <code> { discriminator 'foo' }
-    *
-    * @param name The name of the table
-    */
+     * <p>Configures the discriminator name. Example:
+     * <code> { discriminator 'foo' }
+     *
+     * @param name The name of the table
+     */
     @CompileStatic
     void discriminator(String name) {
         mapping.discriminator(name)
@@ -291,20 +288,18 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void cache(Map args) {
-        mapping.cache = new CacheConfig(enabled:true)
+        mapping.cache = new CacheConfig(enabled: true)
         if (args.usage) {
             if (CacheConfig.USAGE_OPTIONS.contains(args.usage)) {
                 mapping.cache.usage = args.usage
-            }
-            else {
+            } else {
                 LOG.warn("ORM Mapping Invalid: Specified [usage] with value [$args.usage] of [cache] in class [$className] is not valid")
             }
         }
         if (args.include) {
             if (CacheConfig.INCLUDE_OPTIONS.contains(args.include)) {
                 mapping.cache.include = args.include
-            }
-            else {
+            } else {
                 LOG.warn("ORM Mapping Invalid: Specified [include] with value [$args.include] of [cache] in class [$className] is not valid")
             }
         }
@@ -318,7 +313,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void cache(String usage) {
-        cache(usage:usage)
+        cache(usage: usage)
     }
 
     /**
@@ -355,12 +350,11 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void tablePerConcreteClass(boolean isTablePerConcreteClass) {
-        if(isTablePerConcreteClass) {
+        if (isTablePerConcreteClass) {
             mapping.tablePerHierarchy = false
             mapping.tablePerConcreteClass = true
         }
     }
-
 
     /**
      * <p>Configures the second-level cache with the default usage of 'read-write' and the default include of 'all' if
@@ -372,7 +366,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void cache(boolean shouldCache) {
-        mapping.cache = new CacheConfig(enabled:shouldCache)
+        mapping.cache = new CacheConfig(enabled: shouldCache)
     }
 
     /**
@@ -387,12 +381,11 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     void id(Map args) {
         if (args.composite) {
-            mapping.identity = new CompositeIdentity(propertyNames:args.composite as String[])
+            mapping.identity = new CompositeIdentity(propertyNames: args.composite as String[])
             if (args.compositeClass) {
                 mapping.identity.compositeClass = args.compositeClass
             }
-        }
-        else {
+        } else {
             if (args?.generator) {
                 mapping.identity.generator = args.remove('generator')
             }
@@ -415,8 +408,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     ni.mutable = (naturalArgs instanceof Map) && naturalArgs.mutable ?: false
                     if (propertyNames instanceof List) {
                         ni.propertyNames = propertyNames
-                    }
-                    else {
+                    } else {
                         ni.propertyNames = [propertyNames.toString()]
                     }
                     mapping.identity.natural = ni
@@ -437,20 +429,18 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             Map namedArgs = args[0] instanceof Map ? args[0] : [:]
 
             def newConfig = new PropertyConfig()
-            if(defaultConstraints != null && namedArgs.containsKey('shared')) {
+            if (defaultConstraints != null && namedArgs.containsKey('shared')) {
                 PropertyConfig sharedConstraints = mapping.columns.get(namedArgs.shared)
-                if(sharedConstraints != null) {
-                    newConfig = (PropertyConfig)sharedConstraints.clone()
+                if (sharedConstraints != null) {
+                    newConfig = (PropertyConfig) sharedConstraints.clone()
                 }
-            }
-            else if(mapping.columns.containsKey('*')) {
+            } else if (mapping.columns.containsKey('*')) {
                 // apply global constraints constraints
                 PropertyConfig globalConstraints = mapping.columns.get('*')
-                if(globalConstraints != null) {
-                    newConfig = (PropertyConfig)globalConstraints.clone()
+                if (globalConstraints != null) {
+                    newConfig = (PropertyConfig) globalConstraints.clone()
                 }
             }
-
 
             PropertyConfig property = mapping.columns[name] ?: newConfig
             property.name = namedArgs.name ?: property.name
@@ -458,7 +448,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             property.formula = namedArgs.formula ?: property.formula
             property.accessType = namedArgs.accessType instanceof AccessType ? namedArgs.accessType : property.accessType
             property.type = namedArgs.type ?: property.type
-            property.setLazy( namedArgs.lazy instanceof Boolean ? namedArgs.lazy : property.getLazy() )
+            property.setLazy(namedArgs.lazy instanceof Boolean ? namedArgs.lazy : property.getLazy())
             property.insertable = namedArgs.insertable != null ? namedArgs.insertable : property.insertable
             property.updatable = namedArgs.updateable != null ? namedArgs.updateable : property.updatable
             property.updatable = namedArgs.updatable != null ? namedArgs.updatable : property.updatable
@@ -469,12 +459,12 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             property.batchSize = namedArgs.batchSize instanceof Integer ? namedArgs.batchSize : property.batchSize
             property.ignoreNotFound = namedArgs.ignoreNotFound instanceof Boolean ? namedArgs.ignoreNotFound : property.ignoreNotFound
             property.typeParams = namedArgs.params ?: property.typeParams
-            property.setUnique( namedArgs.unique ? namedArgs.unique : property.unique)
+            property.setUnique(namedArgs.unique ? namedArgs.unique : property.unique)
             property.nullable = namedArgs.nullable instanceof Boolean ? namedArgs.nullable : property.nullable
             property.maxSize = namedArgs.maxSize instanceof Number ? namedArgs.maxSize : property.maxSize
             property.minSize = namedArgs.minSize instanceof Number ? namedArgs.minSize : property.minSize
-            if(namedArgs.size instanceof IntRange) {
-                property.size = (IntRange)namedArgs.size
+            if (namedArgs.size instanceof IntRange) {
+                property.size = (IntRange) namedArgs.size
             }
             property.max = namedArgs.max instanceof Comparable ? namedArgs.max : property.max
             property.min = namedArgs.min instanceof Comparable ? namedArgs.min : property.min
@@ -483,11 +473,11 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
             // Need to guard around calling getScale() for multi-column properties (issue #1048)
             if (namedArgs.scale instanceof Integer) {
-                property.scale = (Integer)namedArgs.scale
+                property.scale = (Integer) namedArgs.scale
             }
 
             if (namedArgs.fetch) {
-                switch(namedArgs.fetch) {
+                switch (namedArgs.fetch) {
                     case ~/(join|JOIN)/:
                         property.fetch = FetchMode.JOIN; break
                     case ~/(select|SELECT)/:
@@ -504,16 +494,14 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                 c.delegate = new PropertyDefinitionDelegate(property)
                 c.resolveStrategy = Closure.DELEGATE_ONLY
                 c.call()
-            }
-            else {
+            } else {
                 // There is no sub-closure containing multiple column
                 // definitions, so pick up any column settings from
                 // the argument map.
                 ColumnConfig cc
                 if (property.columns) {
                     cc = property.columns[0]
-                }
-                else {
+                } else {
                     cc = new ColumnConfig()
                     property.columns << cc
                 }
@@ -536,28 +524,23 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                 CacheConfig cc = new CacheConfig()
                 if (CacheConfig.USAGE_OPTIONS.contains(namedArgs.cache)) {
                     cc.usage = namedArgs.cache
-                }
-                else {
+                } else {
                     LOG.warn("ORM Mapping Invalid: Specified [usage] of [cache] with value [$args.usage] for association [$name] in class [$className] is not valid")
                 }
                 property.cache = cc
-            }
-            else if (namedArgs.cache == true) {
+            } else if (namedArgs.cache == true) {
                 property.cache = new CacheConfig()
-            }
-            else if (namedArgs.cache instanceof Map) {
+            } else if (namedArgs.cache instanceof Map) {
                 def cacheArgs = namedArgs.cache
                 CacheConfig cc = new CacheConfig()
                 if (CacheConfig.USAGE_OPTIONS.contains(cacheArgs.usage)) {
                     cc.usage = cacheArgs.usage
-                }
-                else {
+                } else {
                     LOG.warn("ORM Mapping Invalid: Specified [usage] of [cache] with value [$args.usage] for association [$name] in class [$className] is not valid")
                 }
                 if (CacheConfig.INCLUDE_OPTIONS.contains(cacheArgs.include)) {
                     cc.include = cacheArgs.include
-                }
-                else {
+                } else {
                     LOG.warn("ORM Mapping Invalid: Specified [include] of [cache] with value [$args.include] for association [$name] in class [$className] is not valid")
                 }
                 property.cache = cc
@@ -574,8 +557,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                         pc.type = indexColArg.remove('type')
                     }
                     bindArgumentsToColumnConfig(indexColArg, cc)
-                }
-                else {
+                } else {
                     cc.name = indexColArg.toString()
                 }
             }
@@ -584,13 +566,12 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                 def joinArgs = namedArgs.joinTable
                 if (joinArgs instanceof String) {
                     join.name = joinArgs
-                }
-                else if (joinArgs instanceof Map) {
+                } else if (joinArgs instanceof Map) {
                     if (joinArgs.schema) join.schema = joinArgs.remove('schema')
                     if (joinArgs.catalog) join.catalog = joinArgs.remove('catalog')
                     if (joinArgs.name) join.name = joinArgs.remove('name')
                     if (joinArgs.key) {
-                        join.key = new ColumnConfig(name:joinArgs.remove('key'))
+                        join.key = new ColumnConfig(name: joinArgs.remove('key'))
                     }
                     if (joinArgs.column) {
                         ColumnConfig cc = new ColumnConfig(name: joinArgs.column)
@@ -599,8 +580,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     }
                 }
                 property.joinTable = join
-            }
-            else if (namedArgs.containsKey('joinTable') && namedArgs.joinTable == false) {
+            } else if (namedArgs.containsKey('joinTable') && namedArgs.joinTable == false) {
                 property.joinTable = null
             }
 
@@ -630,6 +610,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     void columns(Closure callable) {
         callable.resolveStrategy = Closure.DELEGATE_ONLY
         callable.delegate = new Object() {
+
             def invokeMethod(String methodName, Object args) {
                 handleMethodMissing.call(methodName, args)
             }
@@ -653,38 +634,36 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     }
 
     void methodMissing(String name, Object args) {
-        if(methodMissingIncludes != null && !methodMissingIncludes.contains(name)) {
+        if (methodMissingIncludes != null && !methodMissingIncludes.contains(name)) {
             return
-        }
-        else if(methodMissingExcludes.contains(name)) {
+        } else if (methodMissingExcludes.contains(name)) {
             return
         }
 
         boolean hasArgs = args.asBoolean()
         if ('user-type' == name && hasArgs && (args[0] instanceof Map)) {
             hibernateCustomUserType(args[0])
-        }
-        else if('importFrom' == name && hasArgs && (args[0] instanceof Class)) {
+        } else if ('importFrom' == name && hasArgs && (args[0] instanceof Class)) {
             // ignore, handled by constraints
-            List<Closure> constraintsToImports = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy((Class)args[0], GormProperties.CONSTRAINTS, Closure)
-            if(constraintsToImports) {
+            List<Closure> constraintsToImports = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy((Class) args[0], GormProperties.CONSTRAINTS, Closure)
+            if (constraintsToImports) {
 
                 List originalIncludes = this.methodMissingIncludes
                 List originalExludes = this.methodMissingExcludes
                 try {
-                    if(args[-1] instanceof Map) {
+                    if (args[-1] instanceof Map) {
                         Map argMap = (Map) args[-1]
                         def includes = argMap.get(INCLUDE_PARAM)
                         def excludes = argMap.get(EXCLUDE_PARAM)
-                        if(includes instanceof List) {
+                        if (includes instanceof List) {
                             this.methodMissingIncludes = includes
                         }
-                        if(excludes instanceof List) {
+                        if (excludes instanceof List) {
                             this.methodMissingExcludes = excludes
                         }
                     }
 
-                    for(Closure callable in constraintsToImports) {
+                    for (Closure callable in constraintsToImports) {
                         callable.setDelegate(this)
                         callable.setResolveStrategy(Closure.DELEGATE_ONLY)
                         callable.call()
@@ -694,8 +673,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     this.methodMissingExcludes = originalExludes
                 }
             }
-        }
-        else if (args && ((args[0] instanceof Map) || (args[0] instanceof Closure))) {
+        } else if (args && ((args[0] instanceof Map) || (args[0] instanceof Closure))) {
             handleMethodMissing(name, args)
         }
     }

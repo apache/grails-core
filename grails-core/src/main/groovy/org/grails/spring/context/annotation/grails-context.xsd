@@ -25,7 +25,6 @@
 	<xsd:import namespace="http://www.springframework.org/schema/beans"/>
 	<xsd:import namespace="http://www.springframework.org/schema/tool"/>
 
-
 	<xsd:element name="component-scan">
 		<xsd:annotation>
 			<xsd:documentation><![CDATA[

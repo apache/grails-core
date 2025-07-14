@@ -39,7 +39,8 @@ class GenerateServiceCommand implements GrailsApplicationCommand, CommandLineHel
 
     String description = 'Generates a Grails data service for the specified domain-class.'
 
-    @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
+    @Delegate
+    ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
     @Override
     boolean handle() {

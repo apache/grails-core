@@ -18,9 +18,9 @@
  */
 package grails.async.services
 
+import grails.async.decorator.PromiseDecorator
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import grails.async.decorator.PromiseDecorator
 import org.springframework.beans.BeanWrapper
 import org.springframework.beans.PropertyAccessorFactory
 import org.springframework.transaction.PlatformTransactionManager
@@ -45,7 +45,8 @@ import java.lang.reflect.Method
 class TransactionalPromiseDecorator implements PromiseDecorator, TransactionDefinition {
 
     PlatformTransactionManager transactionManager
-    @Delegate DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition()
+    @Delegate
+    DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition()
 
     TransactionalPromiseDecorator(PlatformTransactionManager transactionManager) {
         this.transactionManager = transactionManager
@@ -78,7 +79,7 @@ class TransactionalPromiseDecorator implements PromiseDecorator, TransactionDefi
     @Override
     <D> Closure<D> decorate(Closure<D> original) {
         if (transactionManager != null) {
-            return (Closure<D>){ args ->
+            return (Closure<D>) { args ->
                 def transactionTemplate = transactionDefinition != null ? new TransactionTemplate(transactionManager, transactionDefinition) : new TransactionTemplate(transactionManager)
                 transactionTemplate.execute({
                     original.call(args)

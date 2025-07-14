@@ -32,16 +32,17 @@ import java.nio.charset.CodingErrorAction;
 
 /**
  * Counts chars encoded as bytes up to a certain limit (capacity of byte buffer).
- *
+ * <p>
  * size() returns the number of bytes, it will return -1 if the capacity was
  * reached or an error occurred.
- *
+ * <p>
  * this class is useful for calculating the content length of a
  * HttpServletResponse before the response has been committed
  *
  * @author Lari Hotari, Sagire Software Oy
  */
 public class BoundedCharsAsEncodedBytesCounter {
+
     private String encoding;
     private int capacity;
     private ByteBuffer bb;
@@ -85,11 +86,9 @@ public class BoundedCharsAsEncodedBytesCounter {
                     terminateCalculation();
                     return;
                 }
-            }
-            catch (BufferOverflowException e) {
+            } catch (BufferOverflowException e) {
                 terminateCalculation();
-            }
-            catch (Exception x) {
+            } catch (Exception x) {
                 terminateCalculation();
             }
         }
@@ -125,84 +124,6 @@ public class BoundedCharsAsEncodedBytesCounter {
         return writer;
     }
 
-    class BoundedCharsAsEncodedBytesCounterWriter extends Writer {
-        char[] writeBuffer = new char[8192];
-
-        @Override
-        public void write(char[] b, int off, int len) throws IOException {
-            update(b, off, len);
-        }
-
-        @Override
-        public void close() throws IOException {
-            // do nothing
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            if (!calculationActive) return;
-            writeBuffer[0] = (char) b;
-            update(writeBuffer, 0, 1);
-        }
-
-        @Override
-        public Writer append(CharSequence csq, int start, int end) throws IOException {
-            if (!calculationActive) return this;
-
-            if (csq instanceof StringBuilder || csq instanceof StringBuffer) {
-                int len = end - start;
-                char cbuf[];
-                if (len <= writeBuffer.length) {
-                    cbuf = writeBuffer;
-                }
-                else {
-                    cbuf = new char[len];
-                }
-                if (csq instanceof StringBuilder) {
-                    ((StringBuilder) csq).getChars(start, end, cbuf, 0);
-                }
-                else {
-                    ((StringBuffer) csq).getChars(start, end, cbuf, 0);
-                }
-                write(cbuf, 0, len);
-            }
-            else {
-                write(csq.subSequence(start, end).toString());
-            }
-            return this;
-        }
-
-        @Override
-        public Writer append(CharSequence csq) throws IOException {
-            if (!calculationActive) return this;
-
-            if (csq == null) {
-                write("null");
-            }
-            else {
-                append(csq, 0, csq.length());
-            }
-            return this;
-        }
-
-        @Override
-        public void write(String str, int off, int len) throws IOException {
-            if (!calculationActive) return;
-            StringCharArrayAccessor.writeStringAsCharArray(this, str, off, len);
-        }
-
-        @Override
-        public void write(String str) throws IOException {
-            if (!calculationActive) return;
-            StringCharArrayAccessor.writeStringAsCharArray(this, str);
-        }
-
-        @Override
-        public void flush() throws IOException {
-            // do nothing
-        }
-    }
-
     public String getEncoding() {
         return encoding;
     }
@@ -217,5 +138,90 @@ public class BoundedCharsAsEncodedBytesCounter {
 
     public void setCapacity(int capacity) {
         this.capacity = capacity;
+    }
+
+    class BoundedCharsAsEncodedBytesCounterWriter extends Writer {
+
+        char[] writeBuffer = new char[8192];
+
+        @Override
+        public void write(char[] b, int off, int len) throws IOException {
+            update(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            // do nothing
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            if (!calculationActive) {
+                return;
+            }
+            writeBuffer[0] = (char) b;
+            update(writeBuffer, 0, 1);
+        }
+
+        @Override
+        public Writer append(CharSequence csq, int start, int end) throws IOException {
+            if (!calculationActive) {
+                return this;
+            }
+
+            if (csq instanceof StringBuilder || csq instanceof StringBuffer) {
+                int len = end - start;
+                char[] cbuf;
+                if (len <= writeBuffer.length) {
+                    cbuf = writeBuffer;
+                } else {
+                    cbuf = new char[len];
+                }
+                if (csq instanceof StringBuilder) {
+                    ((StringBuilder) csq).getChars(start, end, cbuf, 0);
+                } else {
+                    ((StringBuffer) csq).getChars(start, end, cbuf, 0);
+                }
+                write(cbuf, 0, len);
+            } else {
+                write(csq.subSequence(start, end).toString());
+            }
+            return this;
+        }
+
+        @Override
+        public Writer append(CharSequence csq) throws IOException {
+            if (!calculationActive) {
+                return this;
+            }
+
+            if (csq == null) {
+                write("null");
+            } else {
+                append(csq, 0, csq.length());
+            }
+            return this;
+        }
+
+        @Override
+        public void write(String str, int off, int len) throws IOException {
+            if (!calculationActive) {
+                return;
+            }
+            StringCharArrayAccessor.writeStringAsCharArray(this, str, off, len);
+        }
+
+        @Override
+        public void write(String str) throws IOException {
+            if (!calculationActive) {
+                return;
+            }
+            StringCharArrayAccessor.writeStringAsCharArray(this, str);
+        }
+
+        @Override
+        public void flush() throws IOException {
+            // do nothing
+        }
     }
 }

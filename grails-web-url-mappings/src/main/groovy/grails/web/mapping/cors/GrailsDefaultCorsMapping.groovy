@@ -32,7 +32,7 @@ import org.springframework.web.cors.CorsConfiguration
 @InheritConstructors
 class GrailsDefaultCorsConfiguration extends CorsConfiguration {
 
-    public CorsConfiguration applyPermitDefaultValues() {
+    CorsConfiguration applyPermitDefaultValues() {
         if (this.allowedMethods == null) {
             this.setAllowedMethods(Arrays.asList(ALL))
         }

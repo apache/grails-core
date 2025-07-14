@@ -37,7 +37,7 @@ import java.util.Iterator;
  * @since 1.0
  * @deprecated Use {@link org.grails.orm.hibernate.query.PagedResultList} instead.
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 @Deprecated
 public class PagedResultList extends grails.gorm.PagedResultList {
 
@@ -84,7 +84,7 @@ public class PagedResultList extends grails.gorm.PagedResultList {
                     }
                     totalCriteria.setProjection(impl.getProjection());
                     totalCriteria.setProjection(Projections.rowCount());
-                    return ((Number)totalCriteria.uniqueResult()).intValue();
+                    return ((Number) totalCriteria.uniqueResult()).intValue();
                 }
             });
         }

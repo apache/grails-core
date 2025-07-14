@@ -30,6 +30,7 @@ import java.util.regex.Pattern
  * @since 2.0
  */
 class RegexCompletor implements Completer {
+
     Pattern pattern
 
     RegexCompletor(String pattern) {
@@ -53,7 +54,6 @@ class RegexCompletor implements Completer {
         if (buffer ==~ pattern) {
             candidates << buffer
             return 0
-        }
-        else return -1
+        } else return -1
     }
 }

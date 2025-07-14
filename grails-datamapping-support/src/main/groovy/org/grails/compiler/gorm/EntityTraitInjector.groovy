@@ -21,7 +21,6 @@ package org.grails.compiler.gorm
 import grails.compiler.traits.TraitInjector
 import grails.gorm.Entity
 import groovy.transform.CompileStatic
-
 import org.grails.core.artefact.DomainClassArtefactHandler
 
 /**

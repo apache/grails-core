@@ -26,7 +26,7 @@ package grails.util
  * @deprecated Mixins are deprecated in Groovy 4.0 and will be removed in a future version of Grails.
  */
 @Deprecated
-public interface MixinTargetAware<T> {
+interface MixinTargetAware<T> {
 
     void setTarget(T targetObject)
 }

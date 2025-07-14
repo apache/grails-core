@@ -48,7 +48,7 @@ trait ApplicationCommand implements Named, Described {
 
     @Override
     String getName() {
-        return GrailsNameUtils.getScriptName( GrailsNameUtils.getLogicalName(getClass().getName(),"Command") )
+        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), "Command"))
     }
 
     @Override

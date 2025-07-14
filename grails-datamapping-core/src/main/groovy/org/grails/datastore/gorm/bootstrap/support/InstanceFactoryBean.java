@@ -22,12 +22,13 @@ import org.springframework.beans.factory.FactoryBean;
 
 /**
  * Simple singleton instance implementation of Spring's FactoryBean interface
- *
+ * <p>
  * mainly useful in unit tests
  *
  */
 
 public class InstanceFactoryBean<T> implements FactoryBean<T> {
+
     T object;
     Class<?> objectType;
 
@@ -54,7 +55,6 @@ public class InstanceFactoryBean<T> implements FactoryBean<T> {
     public T getObject() {
         return object;
     }
-
 
     public void setObject(T object) {
         this.object = object;

@@ -18,15 +18,15 @@
  */
 package org.grails.datastore.mapping.simple;
 
-import java.util.Map;
-
-import org.springframework.context.ApplicationEventPublisher;
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
 import org.grails.datastore.mapping.transactions.Transaction;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.util.Map;
 
 /**
  * A simple implementation of the {@link org.grails.datastore.mapping.core.Session} interface that backs onto an in-memory map.
@@ -37,10 +37,11 @@ import org.grails.datastore.mapping.transactions.Transaction;
  */
 @SuppressWarnings("rawtypes")
 public class SimpleMapSession extends AbstractSession<Map> {
+
     private Map<String, Map> datastore;
 
     public SimpleMapSession(SimpleMapDatastore datastore, MappingContext mappingContext,
-               ApplicationEventPublisher publisher) {
+                            ApplicationEventPublisher publisher) {
         super(datastore, mappingContext, publisher);
         this.datastore = datastore.getBackingMap();
     }
@@ -57,7 +58,7 @@ public class SimpleMapSession extends AbstractSession<Map> {
             return null;
         }
         return new SimpleMapEntityPersister(mappingContext, entity, this,
-            (SimpleMapDatastore) getDatastore(), publisher);
+                (SimpleMapDatastore) getDatastore(), publisher);
     }
 
     public Map<String, Map> getBackingMap() {
@@ -74,6 +75,7 @@ public class SimpleMapSession extends AbstractSession<Map> {
     }
 
     private class MockTransaction implements Transaction {
+
         public MockTransaction(SimpleMapSession simpleMapSession) {
         }
 

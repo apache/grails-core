@@ -21,6 +21,7 @@ package org.grails.compiler.gorm
 
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import jakarta.persistence.Entity
 import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -32,8 +33,6 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.AbstractASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-
-import jakarta.persistence.Entity
 import org.codehaus.groovy.transform.TransformWithPriority
 
 /**
@@ -58,7 +57,7 @@ class GlobalJpaEntityTransform extends AbstractASTTransformation implements ASTT
     }
 
     void visitClass(ClassNode classNode, SourceUnit source) {
-        if(hasAnnotation(classNode, ClassHelper.make(Entity))) {
+        if (hasAnnotation(classNode, ClassHelper.make(Entity))) {
             def jpaEntityTransformation = new JpaGormEntityTransformation()
             jpaEntityTransformation.compilationUnit = compilationUnit
             jpaEntityTransformation.visit(classNode, source)

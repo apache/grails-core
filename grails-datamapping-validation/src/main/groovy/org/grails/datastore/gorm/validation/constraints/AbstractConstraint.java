@@ -16,14 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.validation.constraints;
-
-import java.beans.Introspector;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Set;
 
 import grails.gorm.validation.ConstrainedProperty;
 import grails.gorm.validation.Constraint;
@@ -36,6 +29,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
+
+import java.beans.Introspector;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Abstract class for constraints to extend.
@@ -71,7 +70,6 @@ public abstract class AbstractConstraint implements Constraint {
      * Validate the parameter passed
      *
      * @param constraintParameter The parameter to validate
-     *
      * @return The validated parameter
      */
     protected abstract Object validateParameter(Object constraintParameter);
@@ -118,14 +116,14 @@ public abstract class AbstractConstraint implements Constraint {
     }
 
     public void rejectValue(Object target, Errors errors, String defaultMessageCode, Object[] args) {
-        rejectValue(target, errors, defaultMessageCode, new String[] {}, args);
+        rejectValue(target, errors, defaultMessageCode, new String[]{}, args);
     }
 
-    public void rejectValue(Object target,Errors errors, String defaultMessageCode, String code, Object[] args) {
-        rejectValue(target,errors, defaultMessageCode, new String[] {code}, args);
+    public void rejectValue(Object target, Errors errors, String defaultMessageCode, String code, Object[] args) {
+        rejectValue(target, errors, defaultMessageCode, new String[]{code}, args);
     }
 
-    public void rejectValue(Object target,Errors errors, String defaultMessageCode, String[] codes, Object[] args) {
+    public void rejectValue(Object target, Errors errors, String defaultMessageCode, String[] codes, Object[] args) {
         rejectValueWithDefaultMessage(target, errors, getDefaultMessage(defaultMessageCode), codes, args);
     }
 
@@ -145,7 +143,7 @@ public abstract class AbstractConstraint implements Constraint {
 
                 if (resolvedClassName.equals(fullClassName)) {
                     // try short version
-                    classNameCode = classAsPropertyName+".label";
+                    classNameCode = classAsPropertyName + ".label";
                     resolvedClassName = messageSource.getMessage(classNameCode, null, fullClassName, locale);
                 }
 
@@ -154,7 +152,7 @@ public abstract class AbstractConstraint implements Constraint {
                     args[1] = resolvedClassName;
                 }
 
-                String propertyName = (String)args[0];
+                String propertyName = (String) args[0];
                 String propertyNameCode = fullClassName + '.' + propertyName + ".label";
                 String resolvedPropertyName = messageSource.getMessage(propertyNameCode, null, propertyName, locale);
                 if (resolvedPropertyName.equals(propertyName)) {
@@ -187,20 +185,18 @@ public abstract class AbstractConstraint implements Constraint {
                 newCodes.toArray(new String[newCodes.size()]),
                 args,
                 defaultMessage);
-        ((BindingResult)errors).addError(error);
+        ((BindingResult) errors).addError(error);
     }
 
     private Object getPropertyValue(Errors errors, Object target) {
         try {
             return errors.getFieldValue(constraintPropertyName);
-        }
-        catch (Exception nre) {
+        } catch (Exception nre) {
             int i = constraintPropertyName.lastIndexOf(".");
             String propertyName;
             if (i > -1) {
                 propertyName = constraintPropertyName.substring(i, constraintPropertyName.length());
-            }
-            else {
+            } else {
                 propertyName = constraintPropertyName;
             }
             return new BeanWrapperImpl(target).getPropertyValue(propertyName);
@@ -209,12 +205,12 @@ public abstract class AbstractConstraint implements Constraint {
 
     // For backward compatibility
     public void rejectValue(Object target, Errors errors, String code, String defaultMessage) {
-        rejectValueWithDefaultMessage(target, errors, defaultMessage, new String[] {code}, null);
+        rejectValueWithDefaultMessage(target, errors, defaultMessage, new String[]{code}, null);
     }
 
     // For backward compatibility
     public void rejectValue(Object target, Errors errors, String code, Object[] args, String defaultMessage) {
-        rejectValueWithDefaultMessage(target, errors, defaultMessage, new String[] {code}, args);
+        rejectValueWithDefaultMessage(target, errors, defaultMessage, new String[]{code}, args);
     }
 
     /**
@@ -222,6 +218,7 @@ public abstract class AbstractConstraint implements Constraint {
      * current locale. Note that the string returned includes any
      * placeholders that the required message has - these must be
      * expanded by the caller if required.
+     *
      * @param code The i18n message code to look up.
      * @return The message corresponding to the given code in the
      * current locale.
@@ -233,8 +230,7 @@ public abstract class AbstractConstraint implements Constraint {
             }
 
             return ConstrainedProperty.DEFAULT_MESSAGES.get(code);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ConstrainedProperty.DEFAULT_MESSAGES.get(code);
         }
     }

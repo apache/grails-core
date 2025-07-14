@@ -23,14 +23,14 @@ import org.codehaus.groovy.ast.ClassNode;
 /**
  * Enhances a class to contain an Errors property of type org.springframework.validation.Errors.  Methods added include:
  *
- *  <pre>
+ * <pre>
  *  public void setErrors(Errors errors)
  *  public Errors getErrors()
  *  public void clearErrors()
  *  public Boolean hasErrors()
  *  </pre>
  *
- *  @author Jeff Brown
+ * @author Jeff Brown
  */
 public interface ASTErrorsHelper {
 

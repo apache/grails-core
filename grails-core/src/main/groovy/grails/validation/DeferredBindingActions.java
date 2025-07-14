@@ -31,10 +31,10 @@ import java.util.List;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class DeferredBindingActions {
+public final class DeferredBindingActions {
 
+    private static final Log LOG = LogFactory.getLog(DeferredBindingActions.class);
     private static ThreadLocal<List<Runnable>> deferredBindingActions = new ThreadLocal<List<Runnable>>();
-    private static Log LOG = LogFactory.getLog(DeferredBindingActions.class);
 
     static {
         ShutdownOperations.addOperation(new Runnable() {

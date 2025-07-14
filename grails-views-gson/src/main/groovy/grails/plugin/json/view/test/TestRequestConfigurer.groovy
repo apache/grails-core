@@ -51,8 +51,8 @@ class TestRequestConfigurer implements Request {
 
     TestRequestConfigurer(JsonView jsonView) {
         this.jsonView = jsonView
-        if(jsonView instanceof HttpView) {
-            ((HttpView)jsonView).setRequest(this)
+        if (jsonView instanceof HttpView) {
+            ((HttpView) jsonView).setRequest(this)
         }
     }
 
@@ -109,7 +109,7 @@ class TestRequestConfigurer implements Request {
     }
 
     TestRequestConfigurer params(Map parameters) {
-        this.jsonView.setParams( new DelegatingParameters(new TypeConvertingMap(parameters)))
+        this.jsonView.setParams(new DelegatingParameters(new TypeConvertingMap(parameters)))
         return this
     }
 
@@ -126,7 +126,7 @@ class TestRequestConfigurer implements Request {
     @Override
     String getHeader(String name) {
         def headerValues = headers.get(name)
-        if(headerValues) {
+        if (headerValues) {
             return headerValues.get(0)
         }
         return null

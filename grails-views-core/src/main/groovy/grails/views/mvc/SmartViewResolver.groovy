@@ -30,13 +30,13 @@ import grails.web.http.HttpHeaders
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeType
 import groovy.transform.CompileStatic
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.BeanUtils
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.servlet.LocaleResolver
 import org.springframework.web.servlet.View
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 /**
  * Spring's default view resolving mechanism only accepts the view name and locale, this forces you to code around its limitations when you want to add intelligent features such as
  * version and mime type awareness.
@@ -68,7 +68,7 @@ class SmartViewResolver implements GrailsConfigurationAware {
         templateEngine.linkGenerator = linkGenerator
     }
 
-    private Cache<String, GenericGroovyTemplateView> viewCache  = Caffeine.newBuilder()
+    private Cache<String, GenericGroovyTemplateView> viewCache = Caffeine.newBuilder()
             .maximumSize(150)
             .build()
 
@@ -77,7 +77,6 @@ class SmartViewResolver implements GrailsConfigurationAware {
             viewCacheWithPath(k)
         }
     }
-
 
     private GenericGroovyTemplateView viewCacheWithPath(String path) {
         GenericGroovyTemplateView view = BeanUtils.instantiateClass(viewClass)
@@ -108,9 +107,9 @@ class SmartViewResolver implements GrailsConfigurationAware {
         String url = "${viewName}${suffix}"
 
         View v = viewCache.getIfPresent(url)
-        if(v == null) {
+        if (v == null) {
             def template = resolveTemplate(url, locale)
-            if(template != null) {
+            if (template != null) {
                 return getViewCacheWithDefault(url)
             }
         }
@@ -120,12 +119,12 @@ class SmartViewResolver implements GrailsConfigurationAware {
     View resolveView(String viewName, HttpServletRequest request, HttpServletResponse response) {
         String url = "${viewName}${suffix}"
         View v = viewCache.getIfPresent(url)
-        if(v == null) {
+        if (v == null) {
 
             def locale = localeResolver?.resolveLocale(request) ?: request.locale
             List qualifiers = buildQualifiers(request, response)
             def template = resolveTemplate(url, locale, qualifiers as String[])
-            if(template != null) {
+            if (template != null) {
                 return getViewCacheWithDefault(url)
             }
         }
@@ -134,7 +133,7 @@ class SmartViewResolver implements GrailsConfigurationAware {
 
     View resolveView(Class type, HttpServletRequest request, HttpServletResponse response) {
         View v = resolveView(TemplateResolverUtils.fullTemplateNameForClass(type), request, response)
-        if(v == null) {
+        if (v == null) {
             v = resolveView(TemplateResolverUtils.shortTemplateNameForClass(type), request, response)
         }
         return v != null ? v : objectView
@@ -142,7 +141,7 @@ class SmartViewResolver implements GrailsConfigurationAware {
 
     View resolveView(Class type, Locale locale) {
         View v = resolveView(TemplateResolverUtils.fullTemplateNameForClass(type), locale)
-        if(v == null) {
+        if (v == null) {
             v = resolveView(TemplateResolverUtils.shortTemplateNameForClass(type), locale)
         }
         return v != null ? v : objectView
@@ -161,8 +160,7 @@ class SmartViewResolver implements GrailsConfigurationAware {
         qualifiers
     }
 
-
-    WritableScriptTemplate resolveTemplate(Class type, Locale locale, String...qualifiers) {
+    WritableScriptTemplate resolveTemplate(Class type, Locale locale, String... qualifiers) {
         templateEngine.resolveTemplate(type, locale, qualifiers)
     }
 
@@ -170,7 +168,7 @@ class SmartViewResolver implements GrailsConfigurationAware {
         templateEngine.resolveTemplate(path)
     }
 
-    WritableScriptTemplate resolveTemplate(String path, Locale locale, String...qualifiers) {
+    WritableScriptTemplate resolveTemplate(String path, Locale locale, String... qualifiers) {
         templateEngine.resolveTemplate(path, locale, qualifiers)
     }
 

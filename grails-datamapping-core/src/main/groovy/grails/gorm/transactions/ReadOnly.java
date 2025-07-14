@@ -26,13 +26,18 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Define a read-only transaction
  *
- * @since 6.1
  * @author Graeme Rocher
+ * @since 6.1
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -41,6 +46,7 @@ import java.lang.annotation.*;
 @GroovyASTTransformationClass("org.grails.datastore.gorm.transform.OrderedGormTransformation")
 @GormASTTransformationClass("org.grails.datastore.gorm.transactions.transform.TransactionalTransform")
 public @interface ReadOnly {
+
     /**
      * A qualifier value for the specified transaction.
      * <p>May be used to determine the target transaction manager,
@@ -53,6 +59,7 @@ public @interface ReadOnly {
     /**
      * The transaction propagation type.
      * Defaults to {@link org.springframework.transaction.annotation.Propagation#REQUIRED}.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#getPropagationBehavior()
      */
     Propagation propagation() default Propagation.REQUIRED;
@@ -60,6 +67,7 @@ public @interface ReadOnly {
     /**
      * The transaction isolation level.
      * Defaults to {@link org.springframework.transaction.annotation.Isolation#DEFAULT}.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#getIsolationLevel()
      */
     Isolation isolation() default Isolation.DEFAULT;
@@ -67,6 +75,7 @@ public @interface ReadOnly {
     /**
      * The timeout for this transaction.
      * Defaults to the default timeout of the underlying transaction system.
+     *
      * @see org.springframework.transaction.interceptor.TransactionAttribute#getTimeout()
      */
     int timeout() default TransactionDefinition.TIMEOUT_DEFAULT;
@@ -118,10 +127,9 @@ public @interface ReadOnly {
      */
     String[] noRollbackForClassName() default {};
 
-
     /**
      * In Spring, when there are nested transaction calls, the execution of the outermost callback will throw UnexpectedRollbackException if TransactionStatus.setRollbackOnly() was called in a nested transaction callback.
-     *
+     * <p>
      * This feature will make the setRollbackOnly state get inherited to parent level transaction template calls and therefore prevent UnexpectedRollbackException.
      * The default value is true.
      *

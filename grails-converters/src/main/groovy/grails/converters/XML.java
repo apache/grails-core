@@ -18,18 +18,17 @@
  */
 package grails.converters;
 
-import grails.util.GrailsNameUtils;
-import grails.util.GrailsWebUtil;
-import groovy.lang.Closure;
-import groovy.util.BuilderSupport;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import grails.core.support.proxy.EntityProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
+import grails.util.GrailsNameUtils;
+import grails.util.GrailsWebUtil;
 import grails.web.mime.MimeType;
-
+import groovy.lang.Closure;
+import groovy.util.BuilderSupport;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.grails.buffer.FastStringWriter;
 import org.grails.web.converters.AbstractConverter;
 import org.grails.web.converters.Converter;
@@ -46,9 +45,6 @@ import org.grails.web.xml.PrettyPrintXMLStreamWriter;
 import org.grails.web.xml.StreamingMarkupWriter;
 import org.grails.web.xml.XMLStreamWriter;
 import org.springframework.util.Assert;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,7 +65,7 @@ import static org.grails.io.support.SpringIOUtils.createXmlSlurper;
  */
 public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeExcludeConverter<XMLStreamWriter> {
 
-    public static final Log log = LogFactory.getLog(XML.class);
+    public static final Log LOG = LogFactory.getLog(XML.class);
 
     private static final String CACHED_XML = "org.codehaus.groovy.grails.CACHED_XML_REQUEST_CONTENT";
 
@@ -115,15 +111,14 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
                 out.flush();
                 out.close();
             }
-        }
-        catch (Exception e) {
-            log.warn("Unexpected exception while closing a writer: " + e.getMessage());
+        } catch (Exception e) {
+            LOG.warn("Unexpected exception while closing a writer: " + e.getMessage());
         }
     }
 
     public void render(Writer out) throws ConverterException {
         stream = new StreamingMarkupWriter(out, encoding);
-        writer = config.isPrettyPrint() ? new PrettyPrintXMLStreamWriter(stream): new XMLStreamWriter(stream);
+        writer = config.isPrettyPrint() ? new PrettyPrintXMLStreamWriter(stream) : new XMLStreamWriter(stream);
 
         try {
             isRendering = true;
@@ -132,11 +127,9 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
             convertAnother(target);
             writer.end();
             finalizeRender(out);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException(e);
-        }
-        finally {
+        } finally {
             isRendering = false;
         }
     }
@@ -162,24 +155,22 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
     public void convertAnother(Object o) throws ConverterException {
         o = config.getProxyHandler().unwrapIfProxy(o);
 
-        if (o == null) return;
+        if (o == null) {
+            return;
+        }
 
         try {
             if (o instanceof CharSequence) {
                 writer.characters(o.toString());
-            }
-            else if (o instanceof Class<?>) {
-                writer.characters(((Class<?>)o).getName());
-            }
-            else if ((o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) ||
+            } else if (o instanceof Class<?>) {
+                writer.characters(((Class<?>) o).getName());
+            } else if ((o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) ||
                     o instanceof Number || o instanceof Boolean) {
                 writer.characters(String.valueOf(o));
-            }
-            else {
+            } else {
                 if (referenceStack.contains(o)) {
                     handleCircularRelationship(o);
-                }
-                else {
+                } else {
                     referenceStack.push(o);
                     ObjectMarshaller<XML> marshaller = config.getMarshaller(o);
                     if (marshaller == null) {
@@ -189,8 +180,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
                     referenceStack.pop();
                 }
             }
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             throw ConverterUtil.resolveConverterException(t);
         }
     }
@@ -207,8 +197,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         checkState();
         try {
             writer.startNode(tagName);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
         return this;
@@ -218,8 +207,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         checkState();
         try {
             writer.characters(chars);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
         return this;
@@ -229,8 +217,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         checkState();
         try {
             writer.attribute(name, value);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
         return this;
@@ -240,8 +227,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         checkState();
         try {
             writer.end();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
         return this;
@@ -259,6 +245,9 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
                 throw new ConverterException("Circular Reference detected: class " + o.getClass().getName());
             case INSERT_NULL:
                 convertAnother(null);
+            default:
+                // do nothing
+                break;
         }
     }
 
@@ -266,8 +255,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         response.setContentType(GrailsWebUtil.getContentType(contentType, encoding));
         try {
             render(response.getWriter());
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new ConverterException(e);
         }
     }
@@ -305,8 +293,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
     public static Object parse(String source) throws ConverterException {
         try {
             return createXmlSlurper().parseText(source);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Error parsing XML", e);
         }
     }
@@ -315,7 +302,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
      * Parses the given XML
      *
      * @param inputStream an InputStream to read from
-     * @param encoding the Character Encoding to use
+     * @param encoding    the Character Encoding to use
      * @return a {@link groovy.xml.slurpersupport.GPathResult}
      * @throws ConverterException if an error occurs parsing the XML
      */
@@ -323,8 +310,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         try {
             InputStreamReader reader = new InputStreamReader(inputStream, encoding);
             return createXmlSlurper().parse(reader);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConverterException("Error parsing XML", e);
         }
     }
@@ -347,8 +333,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
                     );
                     request.setAttribute(CACHED_XML, xml);
                 }
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 throw new ConverterException("Error parsing XML", e);
             }
         }
@@ -370,8 +355,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(XML.class, cfg);
         try {
             return callable.call();
-        }
-        finally {
+        } finally {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(XML.class, old);
         }
     }
@@ -379,8 +363,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
     public static void use(String cfgName) throws ConverterException {
         if (cfgName == null || "default".equals(cfgName)) {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(XML.class, null);
-        }
-        else {
+        } else {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(XML.class, getNamedConfig(cfgName));
         }
     }
@@ -422,8 +405,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         try {
             callable.call(cfg);
             ConvertersConfigurationHolder.setNamedConverterConfiguration(XML.class, name, cfg);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
     }
@@ -436,8 +418,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
         try {
             callable.call(cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(XML.class, cfg);
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             throw ConverterUtil.resolveConverterException(t);
         }
     }

@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 
 @CompileStatic
 class ParentInfo {
+
     /**
      * The parent template if any
      */

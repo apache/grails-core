@@ -37,18 +37,18 @@ import org.grails.datastore.gorm.services.transform.ServiceTransformation
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
-import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.args
-import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.ClassHelper.MAP_TYPE
-import static org.grails.datastore.mapping.reflect.AstUtils.hasProperty
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.mapping.reflect.AstUtils.error
-import static org.grails.datastore.mapping.reflect.AstUtils.mapX
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
+import static org.grails.datastore.mapping.reflect.AstUtils.hasProperty
+import static org.grails.datastore.mapping.reflect.AstUtils.mapX
 
 /**
  * Automatically implement services that find objects based an arguments
@@ -58,7 +58,8 @@ import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
  */
 @CompileStatic
 class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer implements Ordered, IterableServiceImplementer<GormEntity> {
-    static final List<String> HANDLED_PREFIXES = ['listBy','findBy', 'findAllBy']
+
+    static final List<String> HANDLED_PREFIXES = ['listBy', 'findBy', 'findAllBy']
     public static final int POSITION = -100
 
     // position before FindAllImplementer
@@ -69,11 +70,11 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if(super.doesImplement(domainClass, methodNode)) {
+        if (super.doesImplement(domainClass, methodNode)) {
             String methodName = methodNode.name
             int parameterCount = methodNode.parameters.length
-            for(String prefix in getHandledPrefixes()) {
-                if(methodName.startsWith(prefix) && buildMatchSpec(prefix, methodName, parameterCount) != null) {
+            for (String prefix in getHandledPrefixes()) {
+                if (methodName.startsWith(prefix) && buildMatchSpec(prefix, methodName, parameterCount) != null) {
                     return true
                 }
             }
@@ -93,26 +94,25 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
 
     @Override
     void doImplement(ClassNode domainClassNode, ClassNode targetClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, boolean isArray) {
-        BlockStatement body = (BlockStatement)newMethodNode.getCode()
+        BlockStatement body = (BlockStatement) newMethodNode.getCode()
         ClassNode returnType = newMethodNode.returnType
         String methodName = newMethodNode.name
         Parameter[] parameters = newMethodNode.parameters
         int parameterCount = parameters.length
         MatchSpec matchSpec = null
-        for(String prefix in getHandledPrefixes()) {
+        for (String prefix in getHandledPrefixes()) {
             matchSpec = buildMatchSpec(prefix, methodName, parameterCount)
-            if(methodName.startsWith(prefix) &&  matchSpec != null) {
+            if (methodName.startsWith(prefix) && matchSpec != null) {
                 break
             }
         }
 
-        if(matchSpec == null) {
+        if (matchSpec == null) {
             AstUtils.error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, ServiceTransformation.NO_IMPLEMENTATIONS_MESSAGE)
-        }
-        else {
+        } else {
             // validate the properties
-            for(String propertyName in matchSpec.propertyNames) {
-                if(!hasProperty(domainClassNode, propertyName)) {
+            for (String propertyName in matchSpec.propertyNames) {
+                if (!hasProperty(domainClassNode, propertyName)) {
                     error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, "Cannot implement finder for non-existent property [$propertyName] of class [$domainClassNode.name]")
                 }
             }
@@ -122,9 +122,9 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
             String finderCallName = "${methodPrefix}${matchSpec.queryExpression}"
             ArgumentListExpression argList = buildArgs(parameters, abstractMethodNode, body)
             Expression findCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), finderCallName, argList)
-            if(isArray || ClassHelper.isNumberType(returnType)) {
+            if (isArray || ClassHelper.isNumberType(returnType)) {
                 // handle array cast
-                findCall = castX( returnType.plainNodeReference, findCall)
+                findCall = castX(returnType.plainNodeReference, findCall)
             }
             body.addStatement(
                     buildReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, findCall)
@@ -143,8 +143,7 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
                     body.addStatement(
                             stmt(callX(varX(parameters[-1]), "put", args(constX("fetch"), joinMap)))
                     )
-                }
-                else {
+                } else {
                     argList.addExpression(mapX(fetch: joinMap))
                 }
             } else {
@@ -157,10 +156,9 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
 
     protected Statement buildReturnStatement(ClassNode domainClass, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression queryExpression) {
         returnS(
-            queryExpression
+                queryExpression
         )
     }
-
 
     protected String getDynamicFinderPrefix() {
         return "findAllBy"

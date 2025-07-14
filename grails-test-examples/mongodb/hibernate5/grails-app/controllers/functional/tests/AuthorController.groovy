@@ -19,11 +19,14 @@
 
 package functional.tests
 
-import grails.mongodb.*
+import grails.gorm.transactions.Transactional
+import grails.mongodb.MongoEntity
 import org.grails.datastore.gorm.GormEntity
 
-import static org.springframework.http.HttpStatus.*
-import grails.gorm.transactions.Transactional
+import static org.springframework.http.HttpStatus.CREATED
+import static org.springframework.http.HttpStatus.NOT_FOUND
+import static org.springframework.http.HttpStatus.NO_CONTENT
+import static org.springframework.http.HttpStatus.OK
 
 @Transactional(readOnly = true)
 class AuthorController {
@@ -34,7 +37,6 @@ class AuthorController {
         params.max = Math.min(max ?: 10, 100)
         respond Author.list(params), model:[authorCount: Author.count()]
     }
-
 
     def show(Author author) {
         assert !(author instanceof MongoEntity)

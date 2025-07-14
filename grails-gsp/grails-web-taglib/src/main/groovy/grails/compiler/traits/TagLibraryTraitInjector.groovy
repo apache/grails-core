@@ -21,13 +21,13 @@ package grails.compiler.traits
 import grails.artefact.TagLibrary
 
 /**
- * 
+ *
  * @since 3.0
  * @author Jeff Brown
  *
  */
 class TagLibraryTraitInjector implements TraitInjector {
-    
+
     @Override
     Class getTrait() {
         TagLibrary

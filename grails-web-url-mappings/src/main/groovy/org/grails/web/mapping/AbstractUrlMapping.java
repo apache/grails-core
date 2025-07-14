@@ -22,14 +22,13 @@ import grails.core.GrailsApplication;
 import grails.gorm.validation.Constrained;
 import grails.gorm.validation.ConstrainedProperty;
 import grails.web.mapping.UrlMapping;
+import jakarta.servlet.ServletContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
-
-import jakarta.servlet.ServletContext;
 
 /**
  * Abstract UrlMapping implementation that provides common basic functionality.
@@ -49,19 +48,33 @@ public abstract class AbstractUrlMapping implements UrlMapping {
     protected Object redirectInfo;
     protected ServletContext servletContext;
     protected GrailsApplication grailsApplication;
-    protected Map<String,Object> parameterValues = Collections.emptyMap();
+    protected Map<String, Object> parameterValues = Collections.emptyMap();
     protected boolean parseRequest;
     protected String mappingName;
     protected String httpMethod = ANY_HTTP_METHOD;
     protected String version = ANY_VERSION;
     protected Integer pluginIndex;
 
+    protected AbstractUrlMapping(Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
+        this.viewName = viewName;
+        this.constraints = constraints;
+        this.grailsApplication = grailsApplication;
+        setGrailsApplication(grailsApplication);
+    }
+
+    protected AbstractUrlMapping(URI uri, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
+        this.forwardURI = uri;
+        this.constraints = constraints;
+        this.grailsApplication = grailsApplication;
+        setGrailsApplication(grailsApplication);
+    }
+
     /**
      * Base constructor required to construct a UrlMapping instance
      *
-     * @param controllerName The name of the controller
-     * @param actionName The name of the action
-     * @param constraints Any constraints that apply to the mapping
+     * @param controllerName    The name of the controller
+     * @param actionName        The name of the action
+     * @param constraints       Any constraints that apply to the mapping
      * @param grailsApplication The GrailsApplication instance
      */
     public AbstractUrlMapping(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
@@ -77,27 +90,13 @@ public abstract class AbstractUrlMapping implements UrlMapping {
 
     private void setGrailsApplication(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
 
             final ApplicationContext applicationContext = grailsApplication.getMainContext();
-            if(applicationContext instanceof WebApplicationContext) {
-                this.servletContext = ((WebApplicationContext)applicationContext).getServletContext();
+            if (applicationContext instanceof WebApplicationContext) {
+                this.servletContext = ((WebApplicationContext) applicationContext).getServletContext();
             }
         }
-    }
-
-    protected AbstractUrlMapping(Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
-        this.viewName = viewName;
-        this.constraints = constraints;
-        this.grailsApplication = grailsApplication;
-        setGrailsApplication(grailsApplication);
-    }
-
-    protected AbstractUrlMapping(URI uri, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
-        this.forwardURI = uri;
-        this.constraints = constraints;
-        this.grailsApplication = grailsApplication;
-        setGrailsApplication(grailsApplication);
     }
 
     @Override
@@ -146,7 +145,7 @@ public abstract class AbstractUrlMapping implements UrlMapping {
         return viewName;
     }
 
-    public void setParameterValues(Map<String,Object> parameterValues) {
+    public void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = Collections.unmodifiableMap(parameterValues);
     }
 
@@ -166,7 +165,9 @@ public abstract class AbstractUrlMapping implements UrlMapping {
         if (constraints != null) {
             for (int i = 0; i < constraints.length; i++) {
                 ConstrainedProperty cp = constraints[i];
-                if (cp.getPropertyName().equals(name)) return true;
+                if (cp.getPropertyName().equals(name)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -175,7 +176,6 @@ public abstract class AbstractUrlMapping implements UrlMapping {
     public Object getRedirectInfo() {
         return redirectInfo;
     }
-
 
     public void setPluginIndex(int pluginIndex) {
         this.pluginIndex = pluginIndex;

@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 import org.grails.datastore.mapping.query.Query
 
 /**
- * Abstract class for persisting {@link Shape} instances in GeoJSON format. See http://geojson.org/geojson-spec.html
+ * Abstract class for persisting {@link Shape} instances in GeoJSON format. See https://geojson.org/geojson-spec.html
  *
  * @author Graeme Rocher
  * @since 2.0
@@ -54,8 +54,8 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
 
     @Override
     protected Object writeInternal(PersistentProperty property, String key, T value, Document nativeTarget) {
-        if(value != null) {
-            Document pointData = convertToGeoDocument((Shape)value)
+        if (value != null) {
+            Document pointData = convertToGeoDocument((Shape) value)
             nativeTarget.put(key, pointData)
             return pointData
         }
@@ -71,11 +71,11 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
     @Override
     protected T readInternal(PersistentProperty property, String key, Document nativeSource) {
         def obj = nativeSource.get(key)
-        if(obj instanceof Document) {
-            Document pointData = (Document)obj
+        if (obj instanceof Document) {
+            Document pointData = (Document) obj
             def coords = pointData.get(COORDINATES)
 
-            if(coords instanceof List) {
+            if (coords instanceof List) {
                 return createFromCoords(coords)
             }
         }
@@ -86,22 +86,19 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
 
     @Override
     protected void queryInternal(PersistentProperty property, String key, Query.PropertyCriterion value, Document nativeQuery) {
-        if(value instanceof Query.Equals) {
+        if (value instanceof Query.Equals) {
             def v = value.getValue()
-            if(v instanceof GeoJSON) {
+            if (v instanceof GeoJSON) {
                 Shape shape = (Shape) v
 
                 def geoJson = convertToGeoDocument(shape)
                 nativeQuery.put(key, geoJson)
-            }
-            else if( v instanceof Shape) {
+            } else if (v instanceof Shape) {
                 nativeQuery.put(key, v.asList())
-            }
-            else {
+            } else {
                 super.queryInternal(property, key, value, nativeQuery)
             }
-        }
-        else {
+        } else {
             super.queryInternal(property, key, value, nativeQuery)
         }
     }

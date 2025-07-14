@@ -53,7 +53,6 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
         this.resourcePatternResolver = new PathMatchingResourcePatternResolver(resourceLoader)
     }
 
-
     /**
      * Makes a directory
      *
@@ -87,11 +86,10 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
         FileSystemInteraction.CopySpec spec = new FileSystemInteraction.CopySpec()
         callable.delegate = spec
         callable.call()
-        if(spec.from && spec.into) {
-            if(spec.from instanceof Iterable) {
-                copyAll((Iterable)spec.from, spec.into)
-            }
-            else {
+        if (spec.from && spec.into) {
+            if (spec.from instanceof Iterable) {
+                copyAll((Iterable) spec.from, spec.into)
+            } else {
                 copy(spec.from, spec.into)
             }
         }
@@ -120,7 +118,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
     @Override
     FileSystemInteractionImpl copyAll(Iterable resources, destination) {
         mkdir(destination)
-        for(path in resources) {
+        for (path in resources) {
             def from = resource(path)
             def to = file(destination)
             copy(from, to)
@@ -137,7 +135,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
      */
     @Override
     FileSystemInteractionImpl copy(Resource from, File to) {
-        if(!to?.exists()) mkdir(to)
+        if (!to?.exists()) mkdir(to)
         if (from && to) {
             if (to.isDirectory()) {
                 mkdir(to)
@@ -157,8 +155,8 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
      */
     @Override
     File file(Object path) {
-        if(path instanceof File) return (File)path
-        else if(path instanceof Resource) return ((Resource)path).file
+        if (path instanceof File) return (File) path
+        else if (path instanceof Resource) return ((Resource) path).file
         else {
             def baseDir = executionContext.baseDir
             new File(baseDir ?: new File("."), path.toString())
@@ -216,24 +214,21 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
      */
     @Override
     Resource resource(Object path) {
-        if(!path) return null
-        if(path instanceof Resource) return (Resource)path
+        if (!path) return null
+        if (path instanceof Resource) return (Resource) path
         def f = file(path)
-        if(f?.exists() && f.isFile()) {
+        if (f?.exists() && f.isFile()) {
             return new FileSystemResource(f)
-        }
-        else {
+        } else {
             def pathStr = path.toString()
             def resource = resourceLoader.getResource(pathStr)
-            if(resource.exists()) {
+            if (resource.exists()) {
                 return resource
-            }
-            else {
+            } else {
                 def allResources = resources(pathStr)
-                if(allResources) {
+                if (allResources) {
                     return allResources[0]
-                }
-                else {
+                } else {
                     return resource
                 }
             }
@@ -264,7 +259,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
     @Override
     String projectPath(Object path) {
         def file = file(path)
-        if(file) {
+        if (file) {
             def basePath = executionContext.baseDir.canonicalPath
             return (file.canonicalPath - basePath).substring(1)
         }
@@ -281,6 +276,5 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
     Collection<File> files(String pattern) {
         resources(pattern).collect() { Resource res -> res.file }
     }
-
 
 }

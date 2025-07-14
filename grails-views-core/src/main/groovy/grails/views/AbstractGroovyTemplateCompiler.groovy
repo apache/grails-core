@@ -29,13 +29,15 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.codehaus.groovy.control.io.FileReaderSource
+
 import java.util.concurrent.Callable
-import java.util.concurrent.Executors
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.CompletionService
+import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+
 /**
  * A generic compiler for Groovy templates that are compiled into classes in production
  *
@@ -45,7 +47,8 @@ import java.util.concurrent.Future
 @CompileStatic
 abstract class AbstractGroovyTemplateCompiler {
 
-    @Delegate CompilerConfiguration configuration = new CompilerConfiguration()
+    @Delegate
+    CompilerConfiguration configuration = new CompilerConfiguration()
 
     String packageName = ""
     File sourceDir
@@ -65,8 +68,8 @@ abstract class AbstractGroovyTemplateCompiler {
         configuration.compilationCustomizers.clear()
 
         ImportCustomizer importCustomizer = new ImportCustomizer()
-        importCustomizer.addStarImports( viewConfiguration.packageImports )
-        importCustomizer.addStaticStars( viewConfiguration.staticImports )
+        importCustomizer.addStarImports(viewConfiguration.packageImports)
+        importCustomizer.addStaticStars(viewConfiguration.staticImports)
 
         configuration.addCompilationCustomizers(importCustomizer)
         configuration.addCompilationCustomizers(new ASTTransformationCustomizer(newViewsTransform()))
@@ -78,24 +81,24 @@ abstract class AbstractGroovyTemplateCompiler {
     }
 
     void compile(List<File> sources) {
-        
-        ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2)
+
+        ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
         CompletionService completionService = new ExecutorCompletionService(threadPool);
-        
+
         try {
-            Integer collationLevel = Runtime.getRuntime().availableProcessors()*2
-            if(sources.size() < collationLevel) {
+            Integer collationLevel = Runtime.getRuntime().availableProcessors() * 2
+            if (sources.size() < collationLevel) {
                 collationLevel = 1
             }
             configuration.setClasspathList(classpath)
             String pathToSourceDir = sourceDir.canonicalPath
             def collatedSources = sources.collate(collationLevel)
             List<Future<Boolean>> futures = []
-            for(int index=0;index < collatedSources.size();index++) {
+            for (int index = 0; index < collatedSources.size(); index++) {
                 def sourceFiles = collatedSources[index]
                 futures.add(completionService.submit({ ->
                     CompilerConfiguration configuration = new CompilerConfiguration(this.configuration)
-                    for(int viewIndex=0;viewIndex < sourceFiles.size();viewIndex++) {
+                    for (int viewIndex = 0; viewIndex < sourceFiles.size(); viewIndex++) {
                         File source = sourceFiles[viewIndex]
                         configureCompiler(configuration)
                         CompilationUnit unit = new CompilationUnit(configuration)
@@ -118,7 +121,7 @@ abstract class AbstractGroovyTemplateCompiler {
             }
 
             int pending = futures.size()
-                
+
             while (pending > 0) {
                 // Wait for up to 100ms to see if anything has completed.
                 // The completed future is returned if one is found; otherwise null.
@@ -128,22 +131,21 @@ abstract class AbstractGroovyTemplateCompiler {
                     Boolean response = completed.get() as Boolean//need this to throw exceptions on main thread it seems
                     --pending;
                 }
-            } 
-        }     
-        finally {
-                threadPool.shutdown()
+            }
         }
-                
-        
+        finally {
+            threadPool.shutdown()
+        }
+
 
     }
 
-    void compile(File...sources) {
+    void compile(File... sources) {
         compile Arrays.asList(sources)
     }
 
     static void run(String[] args, Class<? extends GenericViewConfiguration> configurationClass, Class<? extends AbstractGroovyTemplateCompiler> compilerClass) {
-        if(args.length != 7) {
+        if (args.length != 7) {
             System.err.println("Invalid arguments: [${args.join(',')}]")
             System.err.println("""
 Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompatibility] [packageImports] [packageName] [configFile] [encoding]
@@ -166,10 +168,10 @@ Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompat
         configuration.readConfiguration(configFile)
 
         AbstractGroovyTemplateCompiler compiler = compilerClass.getDeclaredConstructor(ViewConfiguration, File).newInstance(configuration, srcDir)
-        compiler.setTargetDirectory( destinationDir )
-        compiler.setSourceEncoding( configuration.encoding )
-        if(targetCompatibility != null) {
-            compiler.setTargetBytecode( targetCompatibility )
+        compiler.setTargetDirectory(destinationDir)
+        compiler.setSourceEncoding(configuration.encoding)
+        if (targetCompatibility != null) {
+            compiler.setTargetBytecode(targetCompatibility)
         }
 
         String fileExtension = configuration.extension
@@ -177,7 +179,7 @@ Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompat
 
         List<File> allFiles = []
         srcDir.eachFileRecurse(FileType.FILES) { File f ->
-            if(f.name.endsWith(fileExtension)) {
+            if (f.name.endsWith(fileExtension)) {
                 allFiles.add(f)
             }
         }

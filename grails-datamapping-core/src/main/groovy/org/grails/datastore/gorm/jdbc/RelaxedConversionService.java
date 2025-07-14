@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.jdbc;
 
 import org.springframework.core.convert.ConversionFailedException;
@@ -47,6 +46,7 @@ class RelaxedConversionService implements ConversionService {
 
     /**
      * Create a new {@link RelaxedConversionService} instance.
+     *
      * @param conversionService and option root conversion service
      */
     RelaxedConversionService(ConversionService conversionService) {
@@ -86,8 +86,7 @@ class RelaxedConversionService implements ConversionService {
         if (this.conversionService != null) {
             try {
                 return this.conversionService.convert(source, sourceType, targetType);
-            }
-            catch (ConversionFailedException ex) {
+            } catch (ConversionFailedException ex) {
                 // Ignore and try the additional converters
             }
         }
@@ -98,7 +97,7 @@ class RelaxedConversionService implements ConversionService {
      * Clone of Spring's package private StringToEnumConverterFactory, but ignoring the
      * case of the source.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static class StringToEnumIgnoringCaseConverterFactory
             implements ConverterFactory<String, Enum> {
 
@@ -128,7 +127,7 @@ class RelaxedConversionService implements ConversionService {
                     return null;
                 }
                 source = source.trim();
-                for (T candidate : (Set<T>)EnumSet.allOf(this.enumType)) {
+                for (T candidate : (Set<T>) EnumSet.allOf(this.enumType)) {
                     RelaxedNames names = new RelaxedNames(
                             candidate.name().replace("_", "-").toLowerCase());
                     for (String name : names) {
@@ -149,6 +148,7 @@ class RelaxedConversionService implements ConversionService {
     }
 
     private class StringToCharArrayConverter implements Converter<String, char[]> {
+
         @Override
         public char[] convert(String source) {
             return source.toCharArray();

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.transaction;
 
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,6 +30,7 @@ import org.springframework.transaction.TransactionStatus;
  * @author Burt Beckwith
  */
 public class PlatformTransactionManagerProxy implements PlatformTransactionManager {
+
     private PlatformTransactionManager targetTransactionManager;
 
     public PlatformTransactionManagerProxy() {

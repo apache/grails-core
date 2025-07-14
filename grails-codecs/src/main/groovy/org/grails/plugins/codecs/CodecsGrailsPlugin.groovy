@@ -32,6 +32,7 @@ import org.grails.encoder.impl.RawCodec
  * @since 0.4
  */
 class CodecsGrailsPlugin extends Plugin {
+
     def version = GrailsUtil.getGrailsVersion()
     def dependsOn = [core: version]
     def watchedResources = "file:./grails-app/utils/**/*Codec.groovy"

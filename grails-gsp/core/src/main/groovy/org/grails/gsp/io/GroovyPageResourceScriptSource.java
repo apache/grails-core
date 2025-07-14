@@ -33,7 +33,7 @@ public class GroovyPageResourceScriptSource extends ResourceScriptSource impleme
     /**
      * Create a new ResourceScriptSource for the given resource.
      *
-     * @param uri The URI of the resource
+     * @param uri      The URI of the resource
      * @param resource the Resource to load the script from
      */
     public GroovyPageResourceScriptSource(String uri, Resource resource) {
@@ -43,8 +43,7 @@ public class GroovyPageResourceScriptSource extends ResourceScriptSource impleme
             URL u = getResource().getURL();
             if (u == null) {
                 isPublic = isPublicPath(uri);
-            }
-            else {
+            } else {
                 isPublic = isPublicPath(u.getPath());
             }
         } catch (IOException e) {

@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.core.connections;
 
 import org.grails.datastore.mapping.config.Settings;
@@ -35,10 +34,9 @@ public interface ConnectionSourceFactory<T, S extends ConnectionSourceSettings> 
     /**
      * Creates a new {@link ConnectionSource} for the given name and configuration
      *
-     * @param name The name
+     * @param name          The name
      * @param configuration The configuration
      * @return The {@link ConnectionSource}
-     *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException If there is an issue with the configuration
      */
     ConnectionSource<T, S> create(String name, PropertyResolver configuration);
@@ -46,10 +44,9 @@ public interface ConnectionSourceFactory<T, S extends ConnectionSourceSettings> 
     /**
      * Creates a new {@link ConnectionSource} for the given name and settings
      *
-     * @param name The name
+     * @param name     The name
      * @param settings The settings
      * @return The {@link ConnectionSource}
-     *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException If there is an issue with the configuration
      */
     ConnectionSource<T, S> create(String name, S settings);
@@ -57,12 +54,10 @@ public interface ConnectionSourceFactory<T, S extends ConnectionSourceSettings> 
     /**
      * Creates a new {@link ConnectionSource} for the given name and configuration
      *
-     * @param name The name
-     * @param configuration The configuration
+     * @param name                     The name
+     * @param configuration            The configuration
      * @param fallbackConnectionSource The fallback connection source
-     *
      * @return The {@link ConnectionSource}
-     *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException If there is an issue with the configuration
      */
     ConnectionSource<T, S> create(String name, PropertyResolver configuration, ConnectionSource<T, S> fallbackConnectionSource);
@@ -70,12 +65,10 @@ public interface ConnectionSourceFactory<T, S extends ConnectionSourceSettings> 
     /**
      * Creates a new {@link ConnectionSource} for the given name and configuration
      *
-     * @param name The name
-     * @param configuration The configuration
+     * @param name             The name
+     * @param configuration    The configuration
      * @param fallbackSettings The settings to fallback to if none are specified
-     *
      * @return The {@link ConnectionSource}
-     *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException If there is an issue with the configuration
      */
     <F extends ConnectionSourceSettings> ConnectionSource<T, S> create(String name, PropertyResolver configuration, F fallbackSettings);
@@ -87,10 +80,11 @@ public interface ConnectionSourceFactory<T, S extends ConnectionSourceSettings> 
 
     /**
      * Creates a connection at runtime. This method differs from the `create` method is that it handles the runtime creation (as oppose to boot time) creation of connection sources
-     * @param name The name of the connection source
-     * @param configuration The configuration
+     *
+     * @param name             The name of the connection source
+     * @param configuration    The configuration
      * @param fallbackSettings The fallback settings
      * @return The new connection source
      */
-    ConnectionSource<T,S> createRuntime(String name, PropertyResolver configuration, S fallbackSettings);
+    ConnectionSource<T, S> createRuntime(String name, PropertyResolver configuration, S fallbackSettings);
 }

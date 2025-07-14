@@ -19,9 +19,6 @@
 package org.grails.datastore.gorm.finders;
 
 import groovy.lang.Range;
-
-import java.util.*;
-
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.query.Query;
@@ -31,8 +28,14 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.util.Assert;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
 /**
- *  Method expression used to evaluate a dynamic finder.
+ * Method expression used to evaluate a dynamic finder.
  */
 public abstract class MethodExpression {
 
@@ -40,12 +43,10 @@ public abstract class MethodExpression {
     protected Object[] arguments;
     protected int argumentsRequired = 1;
     /**
-     * @deprecated  Do not use
+     * @deprecated Do not use
      */
     @Deprecated
     protected Class<?> targetClass;
-
-    public abstract Query.Criterion createCriterion();
 
     protected MethodExpression(Class<?> targetClass, String propertyName) {
         this.propertyName = propertyName;
@@ -54,6 +55,8 @@ public abstract class MethodExpression {
     protected MethodExpression(String propertyName) {
         this.propertyName = propertyName;
     }
+
+    public abstract Query.Criterion createCriterion();
 
     public int getArgumentsRequired() {
         return argumentsRequired;
@@ -75,10 +78,10 @@ public abstract class MethodExpression {
                 Object arg = arguments[i];
                 if (arg != null && !type.isAssignableFrom(arg.getClass())) {
                     // Add special handling for GStringImpl
-                    if(arg instanceof CharSequence && arg.getClass() != String.class) {
+                    if (arg instanceof CharSequence && arg.getClass() != String.class) {
                         arg = arg.toString();
                         arguments[i] = arg;
-                        if(type.isAssignableFrom(arg.getClass())) {
+                        if (type.isAssignableFrom(arg.getClass())) {
                             break;
                         }
                     }
@@ -87,7 +90,7 @@ public abstract class MethodExpression {
                         // skip converting argument to collection/array type if argument is correct instance of element type
                         break;
                     }
-                    if(conversionService.canConvert(arg.getClass(), type)) {
+                    if (conversionService.canConvert(arg.getClass(), type)) {
                         arguments[i] = conversionService.convert(arg, type);
                     }
                 }
@@ -107,7 +110,33 @@ public abstract class MethodExpression {
         return propertyName;
     }
 
+    private static void convertArgumentsForProp(PersistentEntity persistentEntity, PersistentProperty<?> prop, String propertyName, Object[] arguments, ConversionService conversionService) {
+        if (prop == null) {
+            if (propertyName.equals(persistentEntity.getIdentity().getName())) {
+                prop = persistentEntity.getIdentity();
+            }
+        }
+        if (prop != null) {
+            Class<?> type = prop.getType();
+            Collection<?> collection = (Collection<?>) arguments[0];
+            List<Object> converted;
+            if (collection == null) {
+                converted = Collections.emptyList();
+            } else {
+                converted = new ArrayList<>(collection.size());
+                for (Object o : collection) {
+                    if (o != null && !type.isAssignableFrom(o.getClass())) {
+                        o = conversionService.convert(o, type);
+                    }
+                    converted.add(o);
+                }
+            }
+            arguments[0] = converted;
+        }
+    }
+
     public static class GreaterThan extends MethodExpression {
+
         public GreaterThan(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -123,6 +152,7 @@ public abstract class MethodExpression {
     }
 
     public static class GreaterThanEquals extends MethodExpression {
+
         public GreaterThanEquals(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -138,6 +168,7 @@ public abstract class MethodExpression {
     }
 
     public static class LessThan extends MethodExpression {
+
         public LessThan(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -153,6 +184,7 @@ public abstract class MethodExpression {
     }
 
     public static class LessThanEquals extends MethodExpression {
+
         public LessThanEquals(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -168,6 +200,7 @@ public abstract class MethodExpression {
     }
 
     public static class Like extends MethodExpression {
+
         public Like(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -183,6 +216,7 @@ public abstract class MethodExpression {
     }
 
     public static class Ilike extends MethodExpression {
+
         public Ilike(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -198,6 +232,7 @@ public abstract class MethodExpression {
     }
 
     public static class Rlike extends MethodExpression {
+
         public Rlike(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -213,6 +248,7 @@ public abstract class MethodExpression {
     }
 
     public static class NotInList extends MethodExpression {
+
         public NotInList(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -234,7 +270,7 @@ public abstract class MethodExpression {
                     "Only a collection of elements is supported in an 'in' query");
 
             Object arg = arguments[0];
-            Assert.isTrue( (arg instanceof Collection) || arg == null, "Only a collection of elements is supported in an 'in' query");
+            Assert.isTrue((arg instanceof Collection) || arg == null, "Only a collection of elements is supported in an 'in' query");
 
             super.setArguments(arguments);
         }
@@ -256,6 +292,7 @@ public abstract class MethodExpression {
         public InList(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
+
         public InList(String propertyName) {
             super(propertyName);
         }
@@ -268,10 +305,10 @@ public abstract class MethodExpression {
         @Override
         public void setArguments(Object[] arguments) {
             Assert.isTrue(arguments.length > 0,
-                "Only a collection of elements is supported in an 'in' query");
+                    "Only a collection of elements is supported in an 'in' query");
 
             Object arg = arguments[0];
-            Assert.isTrue( (arg instanceof Collection) || arg == null, "Only a collection of elements is supported in an 'in' query");
+            Assert.isTrue((arg instanceof Collection) || arg == null, "Only a collection of elements is supported in an 'in' query");
 
             super.setArguments(arguments);
         }
@@ -286,12 +323,14 @@ public abstract class MethodExpression {
         }
 
     }
+
     public static class Between extends MethodExpression {
 
         public Between(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 2;
         }
+
         public Between(String propertyName) {
             super(propertyName);
             argumentsRequired = 2;
@@ -306,18 +345,20 @@ public abstract class MethodExpression {
         public void setArguments(Object[] arguments) {
             Assert.isTrue(arguments.length > 1, "A 'between' query requires at least two arguments");
             Assert.isTrue(arguments[0] instanceof Comparable && arguments[1] instanceof Comparable,
-                "A 'between' query requires that both arguments are comparable");
+                    "A 'between' query requires that both arguments are comparable");
 
             super.setArguments(arguments);
         }
 
     }
+
     public static class InRange extends MethodExpression {
 
         public InRange(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 1;
         }
+
         public InRange(String propertyName) {
             super(propertyName);
             argumentsRequired = 1;
@@ -344,12 +385,14 @@ public abstract class MethodExpression {
         }
 
     }
+
     public static class IsNull extends MethodExpression {
 
         public IsNull(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 0;
         }
+
         public IsNull(String propertyName) {
             super(propertyName);
             argumentsRequired = 0;
@@ -361,6 +404,7 @@ public abstract class MethodExpression {
         }
 
     }
+
     public static class IsNotNull extends MethodExpression {
 
         public IsNotNull(Class<?> targetClass, String propertyName) {
@@ -379,12 +423,14 @@ public abstract class MethodExpression {
         }
 
     }
+
     public static class IsEmpty extends MethodExpression {
 
         public IsEmpty(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 0;
         }
+
         public IsEmpty(String propertyName) {
             super(propertyName);
             argumentsRequired = 0;
@@ -396,6 +442,7 @@ public abstract class MethodExpression {
         }
 
     }
+
     public static class IsNotEmpty extends MethodExpression {
 
         public IsNotEmpty(Class<?> targetClass, String propertyName) {
@@ -413,13 +460,14 @@ public abstract class MethodExpression {
             return Restrictions.isNotEmpty(propertyName);
         }
 
-
     }
+
     public static class Equal extends MethodExpression {
 
         public Equal(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
+
         public Equal(String propertyName) {
             super(propertyName);
         }
@@ -435,11 +483,13 @@ public abstract class MethodExpression {
         }
 
     }
+
     public static class NotEqual extends MethodExpression {
 
         public NotEqual(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
+
         public NotEqual(String propertyName) {
             super(propertyName);
         }
@@ -454,30 +504,5 @@ public abstract class MethodExpression {
             }
         }
 
-    }
-    private static void convertArgumentsForProp(PersistentEntity persistentEntity, PersistentProperty<?> prop, String propertyName, Object[] arguments, ConversionService conversionService) {
-        if (prop == null) {
-            if (propertyName.equals(persistentEntity.getIdentity().getName())) {
-                prop = persistentEntity.getIdentity();
-            }
-        }
-        if (prop != null) {
-            Class<?> type = prop.getType();
-            Collection<?> collection = (Collection<?>) arguments[0];
-            List<Object> converted;
-            if(collection == null) {
-                converted = Collections.emptyList();
-            }
-            else {
-                converted = new ArrayList<>(collection.size());
-                for (Object o : collection) {
-                    if (o != null && !type.isAssignableFrom(o.getClass())) {
-                        o = conversionService.convert(o, type);
-                    }
-                    converted.add(o);
-                }
-            }
-            arguments[0] = converted;
-        }
     }
 }

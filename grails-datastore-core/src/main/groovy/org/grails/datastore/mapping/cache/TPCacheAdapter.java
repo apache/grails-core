@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.cache;
 
 import org.grails.datastore.mapping.cache.exception.CacheException;
@@ -40,9 +39,11 @@ import java.io.Serializable;
  * <p>
  * Concurrency: each <code>TPCacheAdapter</code> must be thread-safe.
  * </p>
+ *
  * @author Roman Stepanenko
  */
 public interface TPCacheAdapter<T> {
+
     /**
      * Stores a cached entry in a <b>synchronous</b> manner.
      * <p>
@@ -55,7 +56,8 @@ public interface TPCacheAdapter<T> {
      * storing the entry the caller is notified about it via exception in the calling thread; also, if this method returns
      * successfully it means that the logistics of putting the specified value in the cache are fully done.
      * </p>
-     * @param key the entry key
+     *
+     * @param key   the entry key
      * @param entry the entry
      * @throws CacheException runtime exception indicating any cache-related problems
      */
@@ -63,6 +65,7 @@ public interface TPCacheAdapter<T> {
 
     /**
      * Returns the stored value for the specified key.
+     *
      * @param key the entry key
      * @return the entry
      * @throws CacheException runtime exception indicating any cache-related problems

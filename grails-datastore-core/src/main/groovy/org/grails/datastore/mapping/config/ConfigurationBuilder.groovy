@@ -35,14 +35,15 @@ import java.lang.reflect.Modifier
 /**
  * A generic configuration builder that implementers can implement to construct the configuration from the source {@link PropertyResolver}
  *
- * @param <B> The builder type (examples are MongoClientSettings.Builder or Neo4j Bolt's Config.ConfigBuilder
- * @param <C> The finalized configuration constructions from the builder (examples are MongoClientSettings or Neo4j Bolt's Config)
+ * @param <B>   The builder type (examples are MongoClientSettings.Builder or Neo4j Bolt's Config.ConfigBuilder
+ * @param <C>   The finalized configuration constructions from the builder (examples are MongoClientSettings or Neo4j Bolt's Config)
  *
  * @author Graeme Rocher
  */
 @CompileStatic
 @Slf4j
 abstract class ConfigurationBuilder<B, C> {
+
     private static final Set<String> IGNORE_METHODS = ['seProperty', 'propertyMissing'] as Set
     final PropertyResolver propertyResolver
     final String configurationPrefix
@@ -75,7 +76,7 @@ abstract class ConfigurationBuilder<B, C> {
         this.propertyResolver = propertyResolver
         this.configurationPrefix = configurationPrefix
         this.builderMethodPrefix = builderMethodPrefix
-        if(fallBackConfiguration != null) {
+        if (fallBackConfiguration != null) {
             def cloned
             try {
                 cloned = fallBackConfiguration.clone()
@@ -83,13 +84,10 @@ abstract class ConfigurationBuilder<B, C> {
                 cloned = fallBackConfiguration
             }
             this.fallBackConfiguration = cloned
-        }
-        else {
+        } else {
             this.fallBackConfiguration = null
         }
     }
-
-
 
     C build() {
         rootBuilder = createBuilder()
@@ -119,9 +117,9 @@ abstract class ConfigurationBuilder<B, C> {
 
     private List<Class> toHierarchy(Class cls) {
         List<Class> classes = [cls]
-        while(cls != Object) {
+        while (cls != Object) {
             def superClass = cls.getSuperclass()
-            if(superClass == Object || superClass == LinkedHashMap) break
+            if (superClass == Object || superClass == LinkedHashMap) break
 
             classes.add(superClass)
             cls = superClass
@@ -133,7 +131,7 @@ abstract class ConfigurationBuilder<B, C> {
      * @deprecated use {@link ConfigurationBuilder#buildRecurse(Object, List, Object, String)} instead
      */
     protected void buildRecurse(Object builder, Object fallBackConfig, String startingPrefix) {
-       buildRecurse(builder, new ArrayList<Class>(), fallBackConfig, startingPrefix)
+        buildRecurse(builder, new ArrayList<Class>(), fallBackConfig, startingPrefix)
     }
 
     protected void buildRecurse(Object builder, List<Class> builderQueue, Object fallBackConfig, String startingPrefix) {
@@ -142,7 +140,7 @@ abstract class ConfigurationBuilder<B, C> {
 
         startBuild(builder, startingPrefix)
 
-        for(Class builderClass in hierarchy) {
+        for (Class builderClass in hierarchy) {
 
             def methods = builderClass.declaredMethods
             for (method in methods) {
@@ -161,17 +159,14 @@ abstract class ConfigurationBuilder<B, C> {
 
                 if (hasBuilderPrefix && methodName.startsWith(builderMethodPrefix)) {
                     settingName = methodName.substring(builderMethodPrefix.size()).uncapitalize()
-                }
-                else if (hasBuilderPrefix) {
+                } else if (hasBuilderPrefix) {
                     continue
-                }
-                else if (!hasBuilderPrefix &&
+                } else if (!hasBuilderPrefix &&
                         ((org.grails.datastore.mapping.reflect.ReflectionUtils.isGetter(methodName, parameterTypes) && method.returnType.getAnnotation(Builder) == null) ||
                                 org.grails.datastore.mapping.reflect.ReflectionUtils.isSetter(methodName, parameterTypes))) {
                     // don't process getters or setters, unless the getter returns a builder
                     continue
-                }
-                else {
+                } else {
                     settingName = methodName
                 }
 
@@ -291,7 +286,6 @@ abstract class ConfigurationBuilder<B, C> {
                                     newBuilder = (ConfigurationBuilder) argType.newInstance(this.propertyResolver, propertyPath)
                                 }
 
-
                             }
                             newChildBuilder(newBuilder, propertyPath)
                             method.invoke(builder, newBuilder)
@@ -338,7 +332,7 @@ abstract class ConfigurationBuilder<B, C> {
                 boolean appendArgName = parameterTypes.length > 1
                 int argIndex = 0
 
-                for (Class argType: parameterTypes) {
+                for (Class argType : parameterTypes) {
                     String propertyPathForArg = propertyPath
                     if (appendArgName) {
                         propertyPathForArg += ".arg${argIndex}"
@@ -355,29 +349,26 @@ abstract class ConfigurationBuilder<B, C> {
                         } catch (Throwable e) {
                             throw new ConfigurationException("Cannot read configuration for path $propertyPathForArg: $e.message", e)
                         }
-                    }
-                    else {
+                    } else {
                         Object fallBackValue = getFallBackValue(fallBackConfig, settingName)
 
                         def value
                         try {
                             value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
-                            if(argType.isEnum()) {
+                            if (argType.isEnum()) {
                                 value = propertyResolver.getProperty(propertyPathForArg, String)
                                 if (value != null) {
                                     try {
-                                        value = Enum.valueOf((Class)argType, value.toUpperCase())
+                                        value = Enum.valueOf((Class) argType, value.toUpperCase())
                                     } catch (Throwable e2) {
                                         // ignore e2 and throw original
                                         throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
                                     }
-                                }
-                                else {
+                                } else {
                                     throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
                                 }
-                            }
-                            else {
+                            } else {
                                 throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
                             }
                         }

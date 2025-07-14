@@ -33,7 +33,7 @@ import java.net.URL;
  * @since 2.0
  */
 @AstTransformer
-public class ConvertersDomainTransformer extends AbstractGrailsArtefactTransformer{
+public class ConvertersDomainTransformer extends AbstractGrailsArtefactTransformer {
 
     @Override
     public String getArtefactType() {

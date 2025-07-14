@@ -33,12 +33,11 @@ import java.nio.charset.CodingErrorAction;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-
 /**
  * An in-memory buffer that provides OutputStream and InputStream interfaces.
- *
+ * <p>
  * This is more efficient than using ByteArrayOutputStream/ByteArrayInputStream
- *
+ * <p>
  * This is not thread-safe, it is intended to be used by a single Thread.
  *
  * @author Lari Hotari, Sagire Software Oy
@@ -135,11 +134,10 @@ public class StreamByteBuffer {
                 int len = charbuffer.remaining();
                 char[] ch = charbuffer.array();
                 if (len != ch.length) {
-                    ch = (char[])GrailsArrayUtils.subarray(ch, 0, len);
+                    ch = (char[]) GrailsArrayUtils.subarray(ch, 0, len);
                 }
                 str = StringCharArrayAccessor.createString(ch);
-            }
-            else {
+            } else {
                 str = charbuffer.toString();
             }
             return str;
@@ -151,8 +149,7 @@ public class StreamByteBuffer {
         int total = 0;
         if (readMode == ReadMode.REMOVE_AFTER_READING) {
             total = totalBytesUnreadInList;
-        }
-        else if (readMode == ReadMode.RETAIN_AFTER_READING) {
+        } else if (readMode == ReadMode.RETAIN_AFTER_READING) {
             prepareRetainAfterReading();
             total = totalBytesUnreadInIterator;
         }
@@ -162,8 +159,7 @@ public class StreamByteBuffer {
         if (currentWriteChunk != currentReadChunk && currentWriteChunk != null) {
             if (readMode == ReadMode.REMOVE_AFTER_READING) {
                 total += currentWriteChunk.bytesUnread();
-            }
-            else if (readMode == ReadMode.RETAIN_AFTER_READING) {
+            } else if (readMode == ReadMode.RETAIN_AFTER_READING) {
                 total += currentWriteChunk.bytesUsed();
             }
         }
@@ -189,18 +185,15 @@ public class StreamByteBuffer {
                 currentReadChunk = chunks.removeFirst();
                 bytesUnread = currentReadChunk.bytesUnread();
                 totalBytesUnreadInList -= bytesUnread;
-            }
-            else if (readMode == ReadMode.RETAIN_AFTER_READING && readIterator.hasNext()) {
+            } else if (readMode == ReadMode.RETAIN_AFTER_READING && readIterator.hasNext()) {
                 currentReadChunk = readIterator.next();
                 currentReadChunk.reset();
                 bytesUnread = currentReadChunk.bytesUnread();
                 totalBytesUnreadInIterator -= bytesUnread;
-            }
-            else if (currentReadChunk != currentWriteChunk) {
+            } else if (currentReadChunk != currentWriteChunk) {
                 currentReadChunk = currentWriteChunk;
                 bytesUnread = currentReadChunk.bytesUnread();
-            }
-            else {
+            } else {
                 bytesUnread = -1;
             }
         }
@@ -237,7 +230,17 @@ public class StreamByteBuffer {
         setReadMode(ReadMode.RETAIN_AFTER_READING);
     }
 
+    public void clear() {
+        chunks.clear();
+        currentReadChunk = null;
+        totalBytesUnreadInList = 0;
+        totalBytesUnreadInIterator = 0;
+        currentWriteChunk = new StreamByteBufferChunk(chunkSize);
+        readIterator = null;
+    }
+
     class StreamByteBufferChunk {
+
         private int pointer = 0;
         private byte[] buffer;
         private int size;
@@ -253,8 +256,7 @@ public class StreamByteBuffer {
                 ByteBuffer result;
                 if (pointer > 0 || used < size) {
                     result = ByteBuffer.wrap(buffer, pointer, used - pointer);
-                }
-                else {
+                } else {
                     result = ByteBuffer.wrap(buffer);
                 }
                 pointer = used;
@@ -316,6 +318,7 @@ public class StreamByteBuffer {
     }
 
     class StreamByteBufferOutputStream extends OutputStream {
+
         private boolean closed = false;
 
         @Override
@@ -365,6 +368,7 @@ public class StreamByteBuffer {
     }
 
     class StreamByteBufferInputStream extends InputStream {
+
         @Override
         public int read() throws IOException {
             prepareRead();
@@ -411,10 +415,9 @@ public class StreamByteBuffer {
 
         @Override
         public synchronized void reset() throws IOException {
-            if (readMode==ReadMode.RETAIN_AFTER_READING) {
+            if (readMode == ReadMode.RETAIN_AFTER_READING) {
                 StreamByteBuffer.this.reset();
-            }
-            else {
+            } else {
                 // reset isn't supported in ReadMode.REMOVE_AFTER_READING
                 super.reset();
             }
@@ -428,14 +431,5 @@ public class StreamByteBuffer {
         public StreamByteBuffer getBuffer() {
             return StreamByteBuffer.this;
         }
-    }
-
-    public void clear() {
-        chunks.clear();
-        currentReadChunk = null;
-        totalBytesUnreadInList = 0;
-        totalBytesUnreadInIterator = 0;
-        currentWriteChunk = new StreamByteBufferChunk(chunkSize);
-        readIterator = null;
     }
 }

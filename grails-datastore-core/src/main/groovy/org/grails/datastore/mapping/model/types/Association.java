@@ -18,16 +18,24 @@
  */
 package org.grails.datastore.mapping.model.types;
 
-import java.beans.PropertyDescriptor;
-import java.util.*;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.FetchType;
-
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.AbstractPersistentProperty;
+import org.grails.datastore.mapping.model.IllegalMappingException;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.validation.CascadeValidateType;
+
+import java.beans.PropertyDescriptor;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Models an association between one class and another
@@ -39,7 +47,7 @@ import org.grails.datastore.mapping.validation.CascadeValidateType;
 public abstract class Association<T extends Property> extends AbstractPersistentProperty<T> {
 
     private static final Set<CascadeType> DEFAULT_OWNER_CASCADE = Collections.unmodifiableSet(new HashSet<>(Collections.singletonList(CascadeType.ALL)));
-
+    private static final Map<String, CascadeType> CASCADE_TYPE_CONVERSIONS = new LinkedHashMap<>();
     private static final Set<CascadeType> DEFAULT_CHILD_CASCADE = Collections.unmodifiableSet(new HashSet<>(Collections.singletonList(CascadeType.PERSIST)));
 
     private PersistentEntity associatedEntity;
@@ -50,17 +58,15 @@ public abstract class Association<T extends Property> extends AbstractPersistent
     private Set<CascadeType> cascadeOperations;
     private CascadeValidateType cascadeValidateType;
 
-    private static final Map<String, CascadeType> cascadeTypeConversions = new LinkedHashMap<>();
-
     static {
-        cascadeTypeConversions.put("all", CascadeType.ALL);
-        cascadeTypeConversions.put("all-delete-orphan", CascadeType.ALL);
-        cascadeTypeConversions.put("merge", CascadeType.MERGE);
-        cascadeTypeConversions.put("save-update", CascadeType.PERSIST);
-        cascadeTypeConversions.put("delete", CascadeType.REMOVE);
-        cascadeTypeConversions.put("remove", CascadeType.REMOVE);
-        cascadeTypeConversions.put("refresh", CascadeType.REFRESH);
-        cascadeTypeConversions.put("persist", CascadeType.PERSIST);
+        CASCADE_TYPE_CONVERSIONS.put("all", CascadeType.ALL);
+        CASCADE_TYPE_CONVERSIONS.put("all-delete-orphan", CascadeType.ALL);
+        CASCADE_TYPE_CONVERSIONS.put("merge", CascadeType.MERGE);
+        CASCADE_TYPE_CONVERSIONS.put("save-update", CascadeType.PERSIST);
+        CASCADE_TYPE_CONVERSIONS.put("delete", CascadeType.REMOVE);
+        CASCADE_TYPE_CONVERSIONS.put("remove", CascadeType.REMOVE);
+        CASCADE_TYPE_CONVERSIONS.put("refresh", CascadeType.REFRESH);
+        CASCADE_TYPE_CONVERSIONS.put("persist", CascadeType.PERSIST);
         // Unsupported Types
         // "all-delete-orphan", "lock", "replicate", "evict", "delete-orphan"
     }
@@ -99,7 +105,9 @@ public abstract class Association<T extends Property> extends AbstractPersistent
      */
     public Association getInverseSide() {
         final PersistentProperty associatedProperty = associatedEntity.getPropertyByName(referencedPropertyName);
-        if (associatedProperty == null) return null;
+        if (associatedProperty == null) {
+            return null;
+        }
         if (associatedProperty instanceof Association) {
             return (Association) associatedProperty;
         }
@@ -126,12 +134,11 @@ public abstract class Association<T extends Property> extends AbstractPersistent
      */
     public boolean doesCascade(CascadeType... cascadeOperations) {
         Set<CascadeType> cascades = getCascadeOperations();
-        if( cascades.contains(CascadeType.ALL) ) {
+        if (cascades.contains(CascadeType.ALL)) {
             return true;
-        }
-        else if(cascadeOperations != null) {
+        } else if (cascadeOperations != null) {
             for (CascadeType cascadeOperation : cascadeOperations) {
-                if(cascades.contains(cascadeOperation)) {
+                if (cascades.contains(cascadeOperation)) {
                     return true;
                 }
             }
@@ -164,7 +171,7 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         // Only cascade if the associated object is flagged as dirty. This presumes the object wasn't loaded
         // from persistence in an invalid state, which is probably a reasonable assumption.
         if (cascadeValidateType == CascadeValidateType.DIRTY && associatedObject instanceof DirtyCheckable) {
-            return defaultCascade && ((DirtyCheckable)associatedObject).hasChanged();
+            return defaultCascade && ((DirtyCheckable) associatedObject).hasChanged();
         }
 
         // Default
@@ -222,6 +229,7 @@ public abstract class Association<T extends Property> extends AbstractPersistent
 
     /**
      * Sets the name of the inverse property
+     *
      * @param referencedPropertyName The referenced property name
      */
     public void setReferencedPropertyName(String referencedPropertyName) {
@@ -280,30 +288,27 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         if (cascade != null) {
             final String[] specifiedOperations = cascade.toLowerCase().split(",");
             Set<CascadeType> cascadeOperations = new HashSet<>();
-            for(final String operation: specifiedOperations) {
+            for (final String operation : specifiedOperations) {
                 final String key = operation.trim();
-                if (cascadeTypeConversions.containsKey(key)) {
-                    cascadeOperations.add(cascadeTypeConversions.get(key));
+                if (CASCADE_TYPE_CONVERSIONS.containsKey(key)) {
+                    cascadeOperations.add(CASCADE_TYPE_CONVERSIONS.get(key));
                 }
-                if(key.contains("delete-orphan")) {
+                if (key.contains("delete-orphan")) {
                     this.orphanRemoval = true;
                 }
             }
             this.cascadeOperations = Collections.unmodifiableSet(cascadeOperations);
         } else {
             List<CascadeType> cascades = mappedForm.getCascades();
-            if(cascades != null) {
+            if (cascades != null) {
                 this.cascadeOperations = Collections.unmodifiableSet(new HashSet<>(cascades));
-            }
-            else if (isOwningSide()) {
+            } else if (isOwningSide()) {
                 this.cascadeOperations = DEFAULT_OWNER_CASCADE;
-            }
-            else {
-                if((this instanceof ManyToOne) && isBidirectional()) {
+            } else {
+                if ((this instanceof ManyToOne) && isBidirectional()) {
                     // don't cascade by default to many-to-one that is not owned
                     this.cascadeOperations = Collections.emptySet();
-                }
-                else {
+                } else {
                     this.cascadeOperations = DEFAULT_CHILD_CASCADE;
                 }
             }

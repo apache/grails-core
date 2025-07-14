@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.mapping.model;
 
-import java.beans.PropertyDescriptor;
-
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.reflect.NameUtils;
+
+import java.beans.PropertyDescriptor;
 
 /**
  * Abstract implementation of the PersistentProperty interface that uses the
@@ -33,6 +33,7 @@ import org.grails.datastore.mapping.reflect.NameUtils;
  */
 @SuppressWarnings("rawtypes")
 public abstract class AbstractPersistentProperty<T extends Property> implements PersistentProperty<T> {
+
     protected final PersistentEntity owner;
     protected final MappingContext context;
     protected final String name;

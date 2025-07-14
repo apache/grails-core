@@ -33,6 +33,7 @@ import java.util.function.Supplier;
  */
 @Internal
 class DefaultServiceDefinition<S> implements ServiceDefinition<S> {
+
     private final String name;
     private final Optional<Class<S>> loadedClass;
 
@@ -51,7 +52,9 @@ class DefaultServiceDefinition<S> implements ServiceDefinition<S> {
     }
 
     @Override
-    public Class<S> getType() { return loadedClass.orElseThrow(() -> new ServiceConfigurationError("Call to load() when class '" + name + "' is not present")); }
+    public Class<S> getType() {
+        return loadedClass.orElseThrow(() -> new ServiceConfigurationError("Call to load() when class '" + name + "' is not present"));
+    }
 
     @Override
     public boolean isPresent() {

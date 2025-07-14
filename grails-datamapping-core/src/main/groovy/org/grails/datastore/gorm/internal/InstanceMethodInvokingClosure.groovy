@@ -16,13 +16,13 @@ package org.grails.datastore.gorm.internal
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Not public API. Used by GormEnhancer
  */
 @SuppressWarnings("rawtypes")
 @CompileStatic
 class InstanceMethodInvokingClosure extends MethodInvokingClosure {
+
     InstanceMethodInvokingClosure(apiDelegate, Class<?> persistentClass, String methodName, Class[] parameterTypes) {
         super(apiDelegate, methodName, parameterTypes)
         List<Class> params = parameterTypes.toList()
@@ -36,13 +36,12 @@ class InstanceMethodInvokingClosure extends MethodInvokingClosure {
     Object call(Object[] args) {
         def delegateArg = Collections.singletonList(delegate).toArray()
         Object[] arguments
-        if(args) {
+        if (args) {
             def argList = []
             argList.add(delegate)
             argList.addAll(Arrays.asList(args))
             arguments = argList.toArray()
-        }
-        else {
+        } else {
             arguments = delegateArg
         }
         metaMethod.invoke(apiDelegate, arguments)

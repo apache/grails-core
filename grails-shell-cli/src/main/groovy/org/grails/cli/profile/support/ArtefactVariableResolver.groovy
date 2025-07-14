@@ -51,12 +51,12 @@ class ArtefactVariableResolver {
     }
 
     Map createVariables() {
-        if(artifactPackage) {
+        if (artifactPackage) {
             variables['artifact.package.name'] = artifactPackage
-            variables['artifact.package.path'] = artifactPackage?.replace('.','/')
+            variables['artifact.package.path'] = artifactPackage?.replace('.', '/')
             variables['artifact.package'] = "package $artifactPackage\n".toString()
         }
-        if(convention && artifactName.endsWith(convention)) {
+        if (convention && artifactName.endsWith(convention)) {
             artifactName = artifactName.substring(0, artifactName.length() - convention.length())
         }
         variables['artifact.name'] = artifactName
@@ -68,7 +68,7 @@ class ArtefactVariableResolver {
         String destinationName = new SimpleTemplate(pathToResolve).render(variables)
         File destination = new File(context.baseDir, destinationName).absoluteFile
 
-        if(!destination.getParentFile().exists()) {
+        if (!destination.getParentFile().exists()) {
             destination.getParentFile().mkdirs()
         }
         return destination

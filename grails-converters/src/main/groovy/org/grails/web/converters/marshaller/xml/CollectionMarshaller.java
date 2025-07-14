@@ -19,13 +19,12 @@
 package org.grails.web.converters.marshaller.xml;
 
 import grails.converters.XML;
-
-import java.util.Collection;
-import java.util.Set;
-
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.NameAwareMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+
+import java.util.Collection;
+import java.util.Set;
 
 /**
  * @author Siegfried Puchbauer
@@ -45,8 +44,7 @@ public class CollectionMarshaller implements ObjectMarshaller<XML>, NameAwareMar
                 xml.startNode(xml.getElementName(o));
                 xml.convertAnother(o);
                 xml.end();
-            }
-            else {
+            } else {
                 xml.startNode("null");
                 xml.end();
             }

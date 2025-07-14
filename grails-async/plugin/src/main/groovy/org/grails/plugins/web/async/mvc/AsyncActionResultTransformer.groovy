@@ -22,18 +22,17 @@ import grails.async.Promise
 import grails.async.PromiseList
 import grails.async.web.AsyncGrailsWebRequest
 import groovy.transform.CompileStatic
-import org.grails.plugins.web.async.GrailsAsyncContext
-import org.grails.web.errors.GrailsExceptionResolver
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.servlet.mvc.ActionResultTransformer
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.web.context.request.async.WebAsyncManager
-import org.springframework.web.context.request.async.WebAsyncUtils
-import org.springframework.web.servlet.ModelAndView
-
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.grails.plugins.web.async.GrailsAsyncContext
+import org.grails.web.errors.GrailsExceptionResolver
+import org.grails.web.servlet.mvc.ActionResultTransformer
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
+import org.springframework.web.servlet.ModelAndView
 
 /**
  * Handles an Async response from a controller
@@ -55,13 +54,12 @@ class AsyncActionResultTransformer implements ActionResultTransformer {
             final response = webRequest.getResponse()
 
             AsyncGrailsWebRequest asyncWebRequest
-            if(asyncManager.isConcurrentHandlingStarted()) {
+            if (asyncManager.isConcurrentHandlingStarted()) {
                 asyncWebRequest = AsyncGrailsWebRequest.lookup(request)
-                if(asyncWebRequest == null) {
+                if (asyncWebRequest == null) {
                     throw new IllegalStateException("Concurrency handling already started by another process")
                 }
-            }
-            else {
+            } else {
                 asyncWebRequest = new AsyncGrailsWebRequest(request, response, webRequest.servletContext)
                 asyncManager.setAsyncWebRequest(asyncWebRequest)
                 asyncWebRequest.startAsync()
@@ -101,8 +99,7 @@ class AsyncActionResultTransformer implements ActionResultTransformer {
                         def modelAndView = exceptionResolver.resolveException(request, response, this, (Exception) t)
                         asyncContext.getRequest().setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView)
                         asyncContext.dispatch()
-                    }
-                    else {
+                    } else {
                         asyncContext.complete()
                     }
                 }

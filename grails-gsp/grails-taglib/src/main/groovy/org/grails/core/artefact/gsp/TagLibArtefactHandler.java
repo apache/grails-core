@@ -18,9 +18,6 @@
  */
 package org.grails.core.artefact.gsp;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import grails.core.ArtefactHandlerAdapter;
 import grails.core.ArtefactInfo;
 import grails.core.GrailsClass;
@@ -28,13 +25,15 @@ import grails.core.gsp.GrailsTagLibClass;
 import org.apache.commons.logging.LogFactory;
 import org.grails.core.gsp.DefaultGrailsTagLibClass;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Configures tag libraries within namespaces in Grails.
  *
  * @author Marc Palmer (marc@anyware.co.uk)
  * @author Graeme Rocher
  * @author a.shneyderman
- *
  * @since 3.3
  */
 public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
@@ -68,8 +67,7 @@ public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
                 String tagName = namespace + ":" + o;
                 if (!tag2libMap.containsKey(tagName)) {
                     tag2libMap.put(tagName, taglibClass);
-                }
-                else {
+                } else {
                     GrailsTagLibClass current = tag2libMap.get(tagName);
                     if (!taglibClass.equals(current)) {
                         LogFactory.getLog(TagLibArtefactHandler.class).info("There are conflicting tags: " + taglibClass.getFullName() + "." +
@@ -92,7 +90,7 @@ public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
     @Override
     public GrailsClass getArtefactForFeature(Object feature) {
         final Object tagLib = tag2libMap.get(feature);
-        if (tagLib!= null) {
+        if (tagLib != null) {
             return (GrailsClass) tagLib;
         }
 

@@ -18,15 +18,15 @@
  */
 package org.apache.grails.web.layout;
 
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Collections;
-
-import jakarta.servlet.FilterConfig;
-import jakarta.servlet.ServletContext;
-
+import com.opensymphony.module.sitemesh.Config;
+import com.opensymphony.module.sitemesh.Factory;
+import com.opensymphony.module.sitemesh.factory.DefaultFactory;
+import com.opensymphony.sitemesh.ContentProcessor;
+import com.opensymphony.sitemesh.compatability.PageParser2ContentProcessor;
 import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletContext;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -34,16 +34,14 @@ import org.springframework.core.Ordered;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
-import com.opensymphony.module.sitemesh.Config;
-import com.opensymphony.module.sitemesh.Factory;
-import com.opensymphony.module.sitemesh.factory.DefaultFactory;
-import com.opensymphony.sitemesh.ContentProcessor;
-import com.opensymphony.sitemesh.compatability.PageParser2ContentProcessor;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Map;
 
 public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver implements GrailsApplicationAware, DisposableBean, Ordered, ApplicationListener<ContextRefreshedEvent> {
     private static final String FACTORY_SERVLET_CONTEXT_ATTRIBUTE = "grails.layout.factory";
-    private ContentProcessor contentProcessor;
     protected GrailsApplication grailsApplication;
+    private ContentProcessor contentProcessor;
     private boolean grailsLayoutConfigLoaded = false;
     private int order = Ordered.LOWEST_PRECEDENCE - 50;
 
@@ -61,7 +59,9 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
     }
 
     public void init() {
-        if (servletContext == null) return;
+        if (servletContext == null) {
+            return;
+        }
 
         Factory grailsLayoutFactory = (Factory) servletContext.getAttribute(FACTORY_SERVLET_CONTEXT_ATTRIBUTE);
         if (grailsLayoutFactory == null) {
@@ -119,7 +119,9 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
     }
 
     protected void clearGrailsLayoutConfig() {
-        if (servletContext == null) return;
+        if (servletContext == null) {
+            return;
+        }
         if (grailsLayoutConfigLoaded) {
             FactoryHolder.setFactory(null);
             if (servletContext != null) {

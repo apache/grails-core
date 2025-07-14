@@ -23,7 +23,6 @@ import org.springframework.boot.origin.OriginTrackedValue
 import org.springframework.core.env.MapPropertySource
 import org.springframework.util.StringUtils
 
-
 /**
  * A {@link org.springframework.core.env.PropertySource} that doesn't return values for navigable submaps
  *
@@ -43,7 +42,7 @@ class NavigableMapPropertySource extends MapPropertySource {
         this.propertyNames = source.keySet().findAll() { key ->
             !(source.get(key) instanceof NavigableMap)
         } as String[]
-        navigablePropertyNames =  StringUtils.toStringArray(source.keySet());
+        navigablePropertyNames = StringUtils.toStringArray(source.keySet());
     }
 
     @Override
@@ -55,8 +54,8 @@ class NavigableMapPropertySource extends MapPropertySource {
     Object getProperty(String name) {
         def value = super.getProperty(name)
         if (value instanceof OriginTrackedValue) {
-            return ((OriginTrackedValue)value).value
-        } else if(value instanceof NavigableMap || value instanceof NavigableMap.NullSafeNavigator) {
+            return ((OriginTrackedValue) value).value
+        } else if (value instanceof NavigableMap || value instanceof NavigableMap.NullSafeNavigator) {
             return null
         }
         return value

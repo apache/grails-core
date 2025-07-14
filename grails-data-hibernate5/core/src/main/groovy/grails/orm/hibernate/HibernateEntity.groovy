@@ -82,6 +82,6 @@ trait HibernateEntity<D> extends GormEntity<D> {
 
     @Generated
     private static AbstractHibernateGormStaticApi currentHibernateStaticApi() {
-        (AbstractHibernateGormStaticApi)GormEnhancer.findStaticApi(this)
+        (AbstractHibernateGormStaticApi) GormEnhancer.findStaticApi(this)
     }
 }

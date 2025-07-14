@@ -32,14 +32,14 @@ import java.util.concurrent.TimeUnit
  */
 @AutoFinal
 @CompileStatic
-class PromiseMap<K,V> implements Promise<Map<K,V>> {
+class PromiseMap<K, V> implements Promise<Map<K, V>> {
 
     protected LinkedHashMap<K, Promise<V>> promises = [:]
     protected LinkedHashMap<Promise<V>, K> promisesKeys = [:]
 
     PromiseMap() {}
 
-    PromiseMap(Map<K,V> values) {
+    PromiseMap(Map<K, V> values) {
         accept(values)
     }
 
@@ -55,11 +55,11 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
 
     @Override
     boolean isDone() {
-        return promisesKeys.keySet().every {it.isDone() }
+        return promisesKeys.keySet().every { it.isDone() }
     }
 
     @Override
-    Promise<Map<K,V>> accept(Map<K,V> values) {
+    Promise<Map<K, V>> accept(Map<K, V> values) {
         values.each { K key, Object value ->
             if (value instanceof Promise) {
                 put(key, value as Promise<V>)
@@ -210,10 +210,10 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
      *
      * @return A map where the values are obtained from the promises
      */
-    Map<K,V> get() throws Throwable {
+    Map<K, V> get() throws Throwable {
         def promises = promises.values()
-        Map<K,V> resultMap = [:]
-        for(Promise<V> promise : promises) {
+        Map<K, V> resultMap = [:]
+        for (Promise<V> promise : promises) {
             V value = promise.get()
             resultMap.put(promisesKeys.get(promise), value)
         }
@@ -224,15 +224,15 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
      * Synchronously return the populated map with all values obtained from promises used
      * inside the populated map
      *
-     * @param  timeout The timeout period
+     * @param timeout The timeout period
      * @param units The timeout units
      * @return A map where the values are obtained from the promises
      */
-    Map<K,V> get(long timeout, TimeUnit units) throws Throwable {
+    Map<K, V> get(long timeout, TimeUnit units) throws Throwable {
         List<Promise<V>> promises = new ArrayList<Promise<V>>(promises.values())
         Promises.waitAll(promises, timeout, units)
-        Map<K,V> resultMap = [:]
-        for(Promise<V> promise : promises) {
+        Map<K, V> resultMap = [:]
+        for (Promise<V> promise : promises) {
             V value = promise.get()
             resultMap.put(promisesKeys.get(promise), value)
         }
@@ -240,12 +240,12 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
     }
 
     @Override
-    Promise<Map<K,V>> onComplete(Closure<Map<K,V>> callable) {
+    Promise<Map<K, V>> onComplete(Closure<Map<K, V>> callable) {
         List<Promise<V>> promises = new ArrayList<Promise<V>>(promises.values())
         Promises.onComplete(promises) { List<V> values ->
-            Map<K,V> resultMap = [:]
+            Map<K, V> resultMap = [:]
             int i = 0
-            for(V value in values) {
+            for (V value in values) {
                 Promise<V> promise = promises[i]
                 K key = promisesKeys.get(promise)
                 resultMap.put(key, value)
@@ -258,13 +258,13 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
     }
 
     @Override
-    Promise<Map<K,V>> onError(Closure<Map<K,V>> callable) {
+    Promise<Map<K, V>> onError(Closure<Map<K, V>> callable) {
         Promises.onError(new ArrayList<Promise<V>>(promises.values()), callable)
         return this
     }
 
     @Override
-    Promise<Map<K, V>> then(Closure<Map<K,V>> callable) {
+    Promise<Map<K, V>> then(Closure<Map<K, V>> callable) {
         return onComplete(callable)
     }
 

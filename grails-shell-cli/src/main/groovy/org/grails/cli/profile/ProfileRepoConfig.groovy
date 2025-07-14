@@ -23,6 +23,7 @@ import org.grails.cli.GrailsCli
 import java.nio.file.Paths
 
 class ProfileRepoConfig {
+
     String name
     String url
     boolean snapshots
