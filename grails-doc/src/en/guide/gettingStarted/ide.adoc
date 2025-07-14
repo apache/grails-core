@@ -23,6 +23,8 @@ Because Grails is built upon the https://spring.io[Spring Framework] (Spring Boo
 
 IntelliJ IDEA is a widely used IDE for Grails development. It offers comprehensive support for Groovy and Grails, including features like code-completion, intelligent code analysis, and seamless integration with Grails artefacts.
 
+The new Apache Grails Maven Coordinates will be supported in IntelliJ IDEA 2025.2 and later releases via the https://plugins.jetbrains.com/plugin/18504-grails[Grails Plugin].  Prior to the release of 2025.2, you can use 2025.2 EAP.  
+
 IntelliJ IDEA also provides powerful database tools that work with Grails' GORM (Grails Object Relational Mapping) seamlessly. It offers both a Community (free) and Ultimate (paid) edition, with the latter offering more advanced Grails support via the regularly updated https://plugins.jetbrains.com/plugin/18504-grails/versions[Grails Plugin], including an embedded version of the https://start.grails.org[Grails Forge], and view resolution for both GSPs and JSON views.
 
 https://www.jetbrains.com/idea/[IntelliJ IDEA Website]
