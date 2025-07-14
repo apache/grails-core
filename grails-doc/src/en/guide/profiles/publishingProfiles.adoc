@@ -27,7 +27,7 @@ To mark a profile project for publishing, you need to apply the `grails-profile-
 apply plugin: "org.apache.grails.gradle.grails-publish-profile"
 ----
 
-To publish a profile using this plugin to the Grails central repository first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on http://bintray.com[Bintray] and configure your keys as follows in the profile's `build.gradle` file:
+To publish a profile using this plugin to Maven Central first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on https://central.sonatype.com[Maven Cnetral] and configure your keys as follows in the profile's `build.gradle` file:
 
 [source,groovy]
 ----

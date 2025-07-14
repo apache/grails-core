@@ -374,7 +374,7 @@ seleniumSafariDriverVersion=3.14.0
 <4> Includes the https://github.com/apache/grails-geb[Grails Geb Plugin dependency] which has a transitive dependency to `geb-spock`. This is the dependency necessary to work with https://www.gebish.org[Geb] and Spock.
 <5> Selenium and different driver dependencies.
 
-Create also a http://www.gebish.org/manual/current/#configuration[Geb Configuration] file at `src/integration-test/resources/GebConfig.groovy`.
+Create also a https://www.gebish.org/manual/current/#configuration[Geb Configuration] file at `src/integration-test/resources/GebConfig.groovy`.
 
 [source, groovy]
 .src/integration-test/resources/GebConfig.groovy

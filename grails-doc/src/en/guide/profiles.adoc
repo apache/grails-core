@@ -62,7 +62,7 @@ grails {
   profiles {
     repositories {
       myRepo {
-        url = "http://foo.com/repo"
+        url = "https://foo.com/repo"
         snapshotsEnabled = true
       }
       mavenCentral()
@@ -81,7 +81,7 @@ grails {
   profiles {
     repositories {
       myRepo {
-        url = "http://foo.com/repo"
+        url = "https://foo.com/repo"
         snapshotsEnabled = true
         username = "user"
         password = "pass"

@@ -211,7 +211,7 @@ For example if the `Book` class is in the default datasource, you would register
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE hibernate-configuration PUBLIC
           '-//Hibernate/Hibernate Configuration DTD 3.0//EN'
-          'http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
+          'https://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
 <hibernate-configuration>
    <session-factory>
       <mapping class='org.example.Book'/>
@@ -226,7 +226,7 @@ and if the `Library` class is in the "ds2" datasource, you would register that i
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE hibernate-configuration PUBLIC
           '-//Hibernate/Hibernate Configuration DTD 3.0//EN'
-          'http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
+          'https://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
 <hibernate-configuration>
    <session-factory>
       <mapping class='org.example.Library'/>

@@ -19,9 +19,9 @@ under the License.
 
 image::logo.svg[GraphQL,100,100,float="left"]
 
-The GORM GraphQL library provides functionality to generate a GraphQL schema based on your GORM entities. If you aren't sure what GraphQL is, please take a look at their link:http://graphql.org/[homepage].
+The GORM GraphQL library provides functionality to generate a GraphQL schema based on your GORM entities. If you aren't sure what GraphQL is, please take a look at their link:https://graphql.org/[homepage].
 
-The underlying implementation of the GraphQL specification used by this library is link:http://graphql-java.readthedocs.io/en/stable/[graphql-java].
+The underlying implementation of the GraphQL specification used by this library is link:https://graphql-java.readthedocs.io/en/stable/[graphql-java].
 
 There are two different binaries available for use. The first is the core library which contains all of the logic for building the schema. The second is a Grails plugin which, on top of core, provides several features.
 
@@ -35,7 +35,7 @@ CAUTION: Requires Java 8. Effort has been made to support GORM 6.0.x, however th
 
 == Grails Plugin
 
-- A controller to receive and respond to GraphQL requests through HTTP, based on their link:http://graphql.org/learn/serving-over-http/[guidelines].
+- A controller to receive and respond to GraphQL requests through HTTP, based on their link:https://graphql.org/learn/serving-over-http/[guidelines].
 
 - Generates the schema at startup with spring bean configuration to make it easy to extend.
 

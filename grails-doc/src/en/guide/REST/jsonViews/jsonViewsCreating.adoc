@@ -37,7 +37,7 @@ The above JSON view produces:
 {"person":{"name":"bob"}}
 ----
 
-There is an implicit `json` variable which is an instance of http://docs.groovy-lang.org/latest/html/api/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder].
+There is an implicit `json` variable which is an instance of https://docs.groovy-lang.org/latest/html/api/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder].
 
 Example usages:
 
@@ -48,4 +48,4 @@ json { name "Bob" } == '{"name":"Bob"}'
 json([1,2,3]) { n it } == '[{"n":1},{"n":2},{"n":3}]'
 ----
 
-Refer to the API documentation on http://docs.groovy-lang.org/latest/html/api/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder] for more information about what is possible.
+Refer to the API documentation on https://docs.groovy-lang.org/latest/html/api/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder] for more information about what is possible.

@@ -26,7 +26,7 @@ qualified name of the artifact.
 
 Grails 3.3.x simplifies logger names. The next examples illustrate the changes:
 
-`BookController.groovy` located at `grails-app/controllers/com/company` NOT annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+`BookController.groovy` located at `grails-app/controllers/com/company` NOT annotated with `https://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
 
 [cols="2*"]
 |===
@@ -37,7 +37,7 @@ Grails 3.3.x simplifies logger names. The next examples illustrate the changes:
 |===
 
 
-`BookController.groovy` located at `grails-app/controllers/com/company` annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+`BookController.groovy` located at `grails-app/controllers/com/company` annotated with `https://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
 
 [cols="2*"]
 |===
@@ -48,7 +48,7 @@ Grails 3.3.x simplifies logger names. The next examples illustrate the changes:
 |===
 
 
-`BookService.groovy` located at `grails-app/services/com/company` NOT annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+`BookService.groovy` located at `grails-app/services/com/company` NOT annotated with `https://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
 
 [cols="2*"]
 |===
@@ -58,7 +58,7 @@ Grails 3.3.x simplifies logger names. The next examples illustrate the changes:
 |`grails.app.services.com.company.BookService`
 |===
 
-`BookService.groovy` located at `grails-app/services/com/company` annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+`BookService.groovy` located at `grails-app/services/com/company` annotated with `https://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
 
 [cols="2*"]
 |===
@@ -68,7 +68,7 @@ Grails 3.3.x simplifies logger names. The next examples illustrate the changes:
 |`com.company.BookService`
 |===
 
-`BookDetail.groovy` located at `src/main/groovy/com/company` annotated with `http://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
+`BookDetail.groovy` located at `src/main/groovy/com/company` annotated with `https://docs.groovy-lang.org/latest/html/gapi/groovy/util/logging/Slf4j.html[@Slf4j]`
 
 [cols="2*"]
 |===

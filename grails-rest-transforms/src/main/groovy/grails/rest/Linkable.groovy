@@ -37,7 +37,7 @@ import java.lang.annotation.Target
  *          }
  *
  *          def b = new Book()
- *          b.link(rel:"publisher", href="http://foo.com/books")
+ *          b.link(rel:"publisher", href="https://foo.com/books")
  *          println b.links()
  *
  *     </code>

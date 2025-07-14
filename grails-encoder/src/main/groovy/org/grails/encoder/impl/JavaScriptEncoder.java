@@ -75,7 +75,7 @@ public class JavaScriptEncoder extends AbstractCharReplacementEncoder {
                 return "\\f";
             case '\b':
                 return "\\b";
-            case '\u000B': // vertical tab: http://bclary.com/2004/11/07/#a-7.8.4
+            case '\u000B': // vertical tab: https://bclary.com/2004/11/07/#a-7.8.4
                 return "\\v";
             case '&':
                 return "\\u0026";

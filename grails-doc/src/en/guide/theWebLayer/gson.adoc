@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-JSON views are written in Groovy, end with the file extension `gson` and reside in the `grails-app/views` directory.  They allow rendering of JSON responses using Groovy's http://docs.groovy-lang.org/latest/html/gapi/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder] by providing a DSL for producing output in the JSON format. A hello world example can be seen below:
+JSON views are written in Groovy, end with the file extension `gson` and reside in the `grails-app/views` directory.  They allow rendering of JSON responses using Groovy's https://docs.groovy-lang.org/latest/html/gapi/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder] by providing a DSL for producing output in the JSON format. A hello world example can be seen below:
 
 [source,groovy]
 .`grails-app/views/hello.gson`
@@ -30,7 +30,7 @@ The above JSON view results in the output:
 [source,javascript]
 {"message":{ "hello":"world"}}
 
-The `json` variable is an instance of {groovyapi}/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder]. See the http://docs.groovy-lang.org/latest/html/documentation/core-domain-specific-languages.html#_streamingjsonbuilder[documentation] in the Groovy user guide for more information on `StreamingJsonBuilder`.
+The `json` variable is an instance of {groovyapi}/groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder]. See the https://docs.groovy-lang.org/latest/html/documentation/core-domain-specific-languages.html#_streamingjsonbuilder[documentation] in the Groovy user guide for more information on `StreamingJsonBuilder`.
 
 More example usages:
 

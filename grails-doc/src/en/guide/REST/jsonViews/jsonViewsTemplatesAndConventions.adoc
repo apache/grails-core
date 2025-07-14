@@ -46,4 +46,4 @@ def save(Book book) {
 
 If a validation error occurs in the above example the `grails-app/views/book/_errors.gson` template will be rendered.
 
-For more information on JSON views (and Markup views), see the http://views.grails.org/latest/[JSON Views user guide].
+For more information on JSON views (and Markup views), see the https://views.grails.org/latest/[JSON Views user guide].

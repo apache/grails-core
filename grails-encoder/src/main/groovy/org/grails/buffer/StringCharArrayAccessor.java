@@ -34,7 +34,7 @@ import java.lang.reflect.Field;
  * -Dstringchararrayaccessor.disabled=true
  * <p>
  * Read JSR-133, "9.1.1 Post-Construction Modification of Final Fields"
- * http://www.cs.umd.edu/~pugh/java/memoryModel/jsr133.pdf
+ * https://www.cs.umd.edu/~pugh/java/memoryModel/jsr133.pdf
  *
  * @author Lari Hotari, Sagire Software Oy
  *

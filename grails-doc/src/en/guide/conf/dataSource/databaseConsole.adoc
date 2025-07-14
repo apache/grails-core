@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The http://h2database.com/html/quickstart.html#h2_console[H2 database console] is a convenient feature of H2 that provides a web-based interface to any database that you have a JDBC driver for, and it's very useful to view the database you're developing against. It's especially useful when running against an in-memory database.
+The https://h2database.com/html/quickstart.html#h2_console[H2 database console] is a convenient feature of H2 that provides a web-based interface to any database that you have a JDBC driver for, and it's very useful to view the database you're developing against. It's especially useful when running against an in-memory database.
 
 You can access the console by navigating to http://localhost:8080/h2-console in a browser. See the {springBootReference}/htmlsingle/#data.sql.h2-web-console[Spring Boot H2 Console Documentation] for more information on the options available.
 

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Dependencies for your project are defined in the `dependencies` block. In general, you can follow the http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
+Dependencies for your project are defined in the `dependencies` block. In general, you can follow the https://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
 
 The default dependencies for the Grails Web application can be seen below:
 

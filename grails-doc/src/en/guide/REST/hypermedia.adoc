@@ -17,6 +17,6 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-http://en.wikipedia.org/wiki/HATEOAS[HATEOAS], an abbreviation for Hypermedia as the Engine of Application State, is a common pattern applied to REST architectures that uses hypermedia and linking to define the REST API.
+https://en.wikipedia.org/wiki/HATEOAS[HATEOAS], an abbreviation for Hypermedia as the Engine of Application State, is a common pattern applied to REST architectures that uses hypermedia and linking to define the REST API.
 
-Hypermedia (also called Mime or Media Types) are used to describe the state of a REST resource, and links tell clients how to transition to the next state. The format of the response is typically JSON or XML, although standard formats such as http://tools.ietf.org/html/rfc4287[Atom] and/or http://stateless.co/hal_specification.html[HAL] are frequently used.
+Hypermedia (also called Mime or Media Types) are used to describe the state of a REST resource, and links tell clients how to transition to the next state. The format of the response is typically JSON or XML, although standard formats such as https://tools.ietf.org/html/rfc4287[Atom] and/or http://stateless.co/hal_specification.html[HAL] are frequently used.

@@ -38,7 +38,7 @@ import java.util.zip.ZipInputStream
 /**
  * Resolves all of the available tag libraries from web.xml and all available JAR files.
  *
- * Kudos to the Freemarker (http://freemarker.sourceforge.net/) library for providing the inspiration for this code.
+ * Kudos to the Freemarker (https://freemarker.sourceforge.net/) library for providing the inspiration for this code.
  *
  * @author Graeme Rocher
  */

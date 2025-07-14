@@ -30,7 +30,7 @@ We recommend https://bell-sw.com/pages/downloads/#jdk-17-lts[Liberica JDK 17 LTS
 | 5 | 8
 |===
 
-To automate the installation of Grails we recommend http://sdkman.io[SDKMAN] which greatly simplifies installing and managing multiple Grails versions.
+To automate the installation of Grails we recommend https://sdkman.io[SDKMAN] which greatly simplifies installing and managing multiple Grails versions.
 
 On some platforms (for example macOS) the Java installation is automatically detected. However in many cases you will want to manually configure the location of Java. For example, if you're using bash or another variant of the Bourne Shell:
 

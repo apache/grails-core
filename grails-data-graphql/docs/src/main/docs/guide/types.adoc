@@ -70,7 +70,7 @@ TIP: If you need to customize more than 1 manager, only a single bean needs to b
 
 Once you have access to the manager, registration of your own type is easy. In this example a type is being registered to handle a Mongo `ObjectId`. The type will be used to do conversion of arguments in GraphQL.
 
-NOTE: This process only handles how an ObjectId will be created from either Java arguments, or arguments passed inline in the GraphQL query or mutation. For Grails applications, the process of rendering the ObjectID as json is handled by link:http://views.grails.org[JSON views]. To supply behavior for how an ObjectId is rendered, see the documentation for json views. For standalone projects, you are responsible for any conversions that may need to happen.
+NOTE: This process only handles how an ObjectId will be created from either Java arguments, or arguments passed inline in the GraphQL query or mutation. For Grails applications, the process of rendering the ObjectID as json is handled by link:https://views.grails.org[JSON views]. To supply behavior for how an ObjectId is rendered, see the documentation for json views. For standalone projects, you are responsible for any conversions that may need to happen.
 
 [source,groovy]
 ----

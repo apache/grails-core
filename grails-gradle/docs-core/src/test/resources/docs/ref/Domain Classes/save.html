@@ -179,7 +179,7 @@ b.save()</code></pre>
 <p><code>validate</code> (optional) - Set to <code>false</code> if validation should be skipped</p>
 </li>
 <li>
-<p><code>flush</code> (optional) - When set to <code>true</code> flushes the persistence context, persisting the object immediately and updating the <code>version</code> column for <a href="http://gorm.grails.org/6.0.x/hibernate/manual/index.html#locking">optimistic locking</a></p>
+<p><code>flush</code> (optional) - When set to <code>true</code> flushes the persistence context, persisting the object immediately and updating the <code>version</code> column for <a href="https://gorm.grails.org/6.0.x/hibernate/manual/index.html#locking">optimistic locking</a></p>
 </li>
 <li>
 <p><code>insert</code> (optional) - When set to <code>true</code> will force Hibernate to do a SQL INSERT; this is useful in certain situations (for example when using assigned ids) and Hibernate cannot detect whether to do an INSERT or an UPDATE</p>
@@ -199,7 +199,7 @@ b.save()</code></pre>
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-By default GORM classes are configured for <a href="http://gorm.grails.org/6.0.x/hibernate/manual/index.html#locking">optimistic locking</a>, which is a feature of Hibernate that involves storing an incrementing version in the table. This value is only updated in the database when the Hibernate session is flushed.
+By default GORM classes are configured for <a href="https://gorm.grails.org/6.0.x/hibernate/manual/index.html#locking">optimistic locking</a>, which is a feature of Hibernate that involves storing an incrementing version in the table. This value is only updated in the database when the Hibernate session is flushed.
 </td>
 </tr>
 </table>

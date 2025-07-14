@@ -44,7 +44,7 @@ Once you have the JAR resolved you need to get familiar with how Grails manages 
 * `readOnly` - If `true` makes the DataSource read-only, which results in the connection pool calling `setReadOnly(true)` on each `Connection`
 * `transactional` - If `false` leaves the DataSource's transactionManager bean outside the chained BE1PC transaction manager implementation. This only applies to additional datasources.
 * `persistenceInterceptor` - The default datasource is automatically wired up to the persistence interceptor, other datasources are not wired up automatically unless this is set to `true`
-* `properties` - Extra properties to set on the DataSource bean. See the http://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes[Tomcat Pool] documentation. There is also a Javadoc format https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html[documentation of the properties].
+* `properties` - Extra properties to set on the DataSource bean. See the https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes[Tomcat Pool] documentation. There is also a Javadoc format https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html[documentation of the properties].
 * `jmxExport` - If `false`, will disable registration of JMX MBeans for all DataSources. By default JMX MBeans are added for DataSources with `jmxEnabled = true` in properties.
 * `type` - The connection pool class if you want to force Grails to use it when there are more than one available.
 
@@ -107,7 +107,7 @@ dataSource {
     type = "com.zaxxer.hikari.HikariDataSource"
     properties {
        // Documentation for Tomcat JDBC Pool
-       // http://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes
+       // https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes
        // https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html
        jmxEnabled = true
        initialSize = 5
@@ -125,7 +125,7 @@ dataSource {
        testWhileIdle = true
        testOnReturn = false
        ignoreExceptionOnPreLoad = true
-       // http://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#JDBC_interceptors
+       // https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#JDBC_interceptors
        jdbcInterceptors = "ConnectionState;StatementCache(max=200)"
        defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED // safe default
        // controls for leaked connections 
@@ -138,7 +138,7 @@ dataSource {
        // Mysql as example
        dbProperties {
            // Mysql specific driver properties
-           // http://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html
+           // https://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html
            // let Tomcat JDBC Pool handle reconnecting
            autoReconnect=false
            // truncation behaviour 
@@ -183,4 +183,4 @@ Hibernate can automatically create the database tables required for your domain 
 * *validate* - Makes no changes to your database. Compares the configuration with the existing database schema and reports warnings.
 * any other value - does nothing
 
-Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://flywaydb.org/[Flyway] or http://www.liquibase.org/[Liquibase]. The  link:{hibernate5Guide}/manual/index.html#databaseMigration[Database Migration] plugin uses Liquibase.
+Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://flywaydb.org/[Flyway] or https://www.liquibase.org/[Liquibase]. The  link:{hibernate5Guide}/manual/index.html#databaseMigration[Database Migration] plugin uses Liquibase.

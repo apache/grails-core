@@ -19,7 +19,7 @@ under the License.
 
 Functional tests involve making HTTP requests against the running application and verifying the resultant behaviour. This is useful for end-to-end testing scenarios, such as making REST calls against a JSON API.
 
-Grails by default ships with support for writing functional tests using the http://www.gebish.org[Geb framework]. To create a functional test you can use the `create-functional-test` command which will create a new functional test:
+Grails by default ships with support for writing functional tests using the https://www.gebish.org[Geb framework]. To create a functional test you can use the `create-functional-test` command which will create a new functional test:
 
 [source,groovy]
 ----

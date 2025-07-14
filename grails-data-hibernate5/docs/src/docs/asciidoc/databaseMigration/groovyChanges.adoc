@@ -19,7 +19,7 @@ under the License.
 
 === Groovy Changes
 
-In addition to the built-in Liquibase changes (see http://www.liquibase.org/manual/home[the documentation] for what's available) you can also make database changes using Groovy code (as long as you're using the Groovy DSL file format). These changes use the `grailsChange` tag name and are contained in a `changeSet` tag like standard built-in tags.
+In addition to the built-in Liquibase changes (see https://www.liquibase.org/manual/home[the documentation] for what's available) you can also make database changes using Groovy code (as long as you're using the Groovy DSL file format). These changes use the `grailsChange` tag name and are contained in a `changeSet` tag like standard built-in tags.
 
 There are four supported inner tags and two callable methods (to override the default confirmation message and checksum value).
 

@@ -39,4 +39,4 @@ The best way to understand how both the handler and wrapper classes work is to l
 * https://github.com/apache/grails-quartz/blob/master/src/main/groovy/grails/plugins/quartz/DefaultGrailsJobClass.java[DefaultGrailsJobClass]
 * https://github.com/apache/grails-quartz/blob/master/src/main/groovy/grails/plugins/quartz/JobArtefactHandler.groovy[JobArtefactHandler]
 
-Another example is the http://github.com/pledbrook/grails-shiro[Shiro plugin] which adds a realm artefact.
+Another example is the https://github.com/pledbrook/grails-shiro[Shiro plugin] which adds a realm artefact.

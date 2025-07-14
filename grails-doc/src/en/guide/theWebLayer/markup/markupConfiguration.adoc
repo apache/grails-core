@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Markup views configuration can be altered with `grails-app/conf/application.yml`. Any of the properties within the link:{api}/grails/plugin/markup/view/MarkupViewConfiguration.html[MarkupViewConfiguration] class and Groovy's http://docs.groovy-lang.org/latest/html/api/groovy/text/markup/TemplateConfiguration.html[TemplateConfiguration] class can be set.
+Markup views configuration can be altered with `grails-app/conf/application.yml`. Any of the properties within the link:{api}/grails/plugin/markup/view/MarkupViewConfiguration.html[MarkupViewConfiguration] class and Groovy's https://docs.groovy-lang.org/latest/html/api/groovy/text/markup/TemplateConfiguration.html[TemplateConfiguration] class can be set.
 
 For example:
 

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The previous section on XML and JSON responses covered simplistic examples of rendering XML and JSON responses. Whilst the XML builder used by Grails is the standard http://groovy-lang.org/processing-xml.html#_xmlparser_and_xmlslurper[XmlSlurper] found in Groovy.
+The previous section on XML and JSON responses covered simplistic examples of rendering XML and JSON responses. Whilst the XML builder used by Grails is the standard https://groovy-lang.org/processing-xml.html#_xmlparser_and_xmlslurper[XmlSlurper] found in Groovy.
 
-For JSON, since Grails 3.1, Grails uses Groovy's http://docs.groovy-lang.org/latest/html/documentation/core-domain-specific-languages.html#_streamingjsonbuilder[StreamingJsonBuilder] by default and you can refer to the http://docs.groovy-lang.org/latest/html/documentation/core-domain-specific-languages.html#_streamingjsonbuilder[Groovy documentation] and {groovyapi}groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder] API documentation on how to use it.
+For JSON, since Grails 3.1, Grails uses Groovy's https://docs.groovy-lang.org/latest/html/documentation/core-domain-specific-languages.html#_streamingjsonbuilder[StreamingJsonBuilder] by default and you can refer to the https://docs.groovy-lang.org/latest/html/documentation/core-domain-specific-languages.html#_streamingjsonbuilder[Groovy documentation] and {groovyapi}groovy/json/StreamingJsonBuilder.html[StreamingJsonBuilder] API documentation on how to use it.
 

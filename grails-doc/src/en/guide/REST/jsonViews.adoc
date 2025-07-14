@@ -23,4 +23,4 @@ You can continue to separate your application in terms of MVC, with the logic of
 
 JSON views also provide the flexibility to easily customize the JSON presented to clients without having to resort to relatively complex marshalling libraries like Jackson or Grails' marshaller API.
 
-NOTE: Since Grails 3.1, JSON views are considered by the Grails team the best way to present JSON output for the client, the section on writing custom marshallers has been removed from the user guide. If you are looking for information on that topic, see http://grails.github.io/grails-doc/3.0.x/guide/webServices.html#objectMarshallers[the Grails 3.0.x guide].
+NOTE: Since Grails 3.1, JSON views are considered by the Grails team the best way to present JSON output for the client, the section on writing custom marshallers has been removed from the user guide. If you are looking for information on that topic, see https://grails.github.io/grails-doc/3.0.x/guide/webServices.html#objectMarshallers[the Grails 3.0.x guide].

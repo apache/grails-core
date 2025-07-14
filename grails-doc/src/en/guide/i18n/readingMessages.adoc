@@ -69,7 +69,7 @@ class MyappController {
 
 ==== Reading Messages in Controllers and Tag Libraries with the Message Tag
 
-Additionally, you can read a message inside Controllers and Tag Libraries with the link:http://gsp.grails.org/latest/ref/Tags/message.html[Message Tag]. However, using the message tag relies on GSP support which a Grails application may not necessarily have; e.g. a rest application.
+Additionally, you can read a message inside Controllers and Tag Libraries with the link:https://gsp.grails.org/latest/ref/Tags/message.html[Message Tag]. However, using the message tag relies on GSP support which a Grails application may not necessarily have; e.g. a rest application.
 
 In a controller, you can invoke tags as methods.
 

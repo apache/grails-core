@@ -19,7 +19,7 @@ under the License.
 
 == Standalone Projects
 
-For standalone projects, it is up to the developer how and when the schema gets created. A mapping context is required to create a schema. The mapping context is available on all link:{gormapi}/org/grails/datastore/mapping/core/Datastore.html#getMappingContext()[datastore implementations]. See the link:http://gorm.grails.org/latest/hibernate/manual/index.html#outsideGrails[GORM documentation] for information on creating a datastore.
+For standalone projects, it is up to the developer how and when the schema gets created. A mapping context is required to create a schema. The mapping context is available on all link:{gormapi}/org/grails/datastore/mapping/core/Datastore.html#getMappingContext()[datastore implementations]. See the link:https://gorm.grails.org/latest/hibernate/manual/index.html#outsideGrails[GORM documentation] for information on creating a datastore.
 
 The example below is the simplest way possible to generate a schema.
 
@@ -66,7 +66,7 @@ Just by adding the `graphql = true` property on your domain, full CRUD capabilit
 
 Imagine you are building an API for a Conference. A talk can be presented
 by a single speaker. A speaker can have many talks within the conference.
-A typical one-to-many relationship which in http://gorm.grails.org[GORM]
+A typical one-to-many relationship which in https://gorm.grails.org[GORM]
 could be expressed with:
 
 [source, groovy]
@@ -84,4 +84,4 @@ include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Talk.groovy
 ----
 
 
-TIP: GORM GraphQL plugin supports http://gorm.grails.org/latest/hibernate/manual/index.html#derivedProperties[Derived Properties] as illustrated in the previous example; `name` is derived property which concatenates `firstName` and `lastName`
+TIP: GORM GraphQL plugin supports https://gorm.grails.org/latest/hibernate/manual/index.html#derivedProperties[Derived Properties] as illustrated in the previous example; `name` is derived property which concatenates `firstName` and `lastName`

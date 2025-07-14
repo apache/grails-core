@@ -221,7 +221,7 @@ class JspTagImpl implements JspTag {
     }
 
 //----------------------------------------------------------------------------
-// Workarounds for http://jira.codehaus.org/browse/GROOVY-2897
+// Workarounds for GROOVY-2897
 //
     boolean isBodyTag() {
         checkInitialized()

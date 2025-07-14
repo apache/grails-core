@@ -22,13 +22,13 @@ If you're interested in contributing fixes and features to any part of grails, y
 * A JDK (17 or above)
 * A git client
 
-Once you have all the pre-requisite packages installed, the next step is to download the Grails source code, which is hosted at http://github.com/apache/grails-core[GitHub].
+Once you have all the pre-requisite packages installed, the next step is to download the Grails source code, which is hosted at https://github.com/apache/grails-core[GitHub].
 This is a simple case of cloning the repository you're interested in.
 For example, to get the core framework run:
 
 [source,groovy]
 ----
-git clone http://github.com/apache/grails-core.git
+git clone https://github.com/apache/grails-core.git
 ----
 
 This will create a "grails-core" directory in your current working directory containing all the project source files. The next step is to get a Grails installation from the source.
@@ -49,7 +49,7 @@ Under the extracted location is a `bin` directory.
 Add it to your path.
 When you next type `grails-shell-cli` command to run, you'll be using the version you just built.
 
-If you are using http://sdkman.io[SDKMAN] then that can also be used to work with this local installation via the following:
+If you are using https://sdkman.io[SDKMAN] then that can also be used to work with this local installation via the following:
 
 [source,groovy]
 ----

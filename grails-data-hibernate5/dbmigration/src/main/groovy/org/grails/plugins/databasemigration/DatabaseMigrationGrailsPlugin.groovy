@@ -40,11 +40,10 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
 
     def title = "Grails Database Migration Plugin" // Headline display name of the plugin
     def author = "Kazuki YAMAMOTO"
-    def authorEmail = ""
     def description = 'Grails Database Migration Plugin'
-    def documentation = "http://grails.org/plugin/database-migration"
+    def documentation = "https://docs.grails.org"
     def license = "APACHE"
-    def scm = [url: "https://github.com/grails-plugins/grails-database-migration"]
+    def scm = [url: "https://github.com/apache/grails-core"]
 
     @Override
     Closure doWithSpring() {

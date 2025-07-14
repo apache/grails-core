@@ -34,6 +34,7 @@ import static java.util.Map.entry;
  */
 public class LocalEntityResolver implements EntityResolver {
 
+    // CHECKSTYLE:OFF
     private static final Map<String, String> ENTITIES = Map.ofEntries(
             // JSP taglib 3.0
             entry("https://jakarta.ee/xml/ns/jakartaee/web-jsptaglibrary_3_0.xsd", "web-jsptaglibrary_3_0.xsd"),
@@ -80,6 +81,7 @@ public class LocalEntityResolver implements EntityResolver {
             entry("http://java.sun.com/j2ee/dtds/web-app_2_2.dtd", "web-app_2_2.dtd"),
             entry("https://java.sun.com/j2ee/dtds/web-app_2_2.dtd", "web-app_2_2.dtd")
     );
+    // CHECKSTYLE:ON
 
     public InputSource resolveEntity(String publicId, String systemId) {
         String name = ENTITIES.get(publicId);

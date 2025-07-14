@@ -21,7 +21,7 @@ package org.grails.web.json.parser;
 /**
  * @author Siegfried Puchbauer
  * <p>
- * Adapted from the Google GSON Parser http://google-gson.googlecode.com/
+ * Adapted from the Google GSON Parser https://google-gson.googlecode.com/
  */
 final class StringUnmarshaller {
 

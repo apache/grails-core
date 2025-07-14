@@ -179,7 +179,7 @@ You also need to add a `GebConfig.groovy` file in the `src/integration-test/reso
 /*
     This is the Geb configuration file.
 
-    See: http://www.gebish.org/manual/current/#configuration
+    See: https://www.gebish.org/manual/current/#configuration
 */
 
 /* ... */

@@ -33,7 +33,7 @@ import java.text.SimpleDateFormat
 
 /**
  *
- * Renders output in Atom format (http://tools.ietf.org/html/rfc4287)
+ * Renders output in Atom format (https://tools.ietf.org/html/rfc4287)
  *
  * @author Graeme Rocher
  * @since 2.3

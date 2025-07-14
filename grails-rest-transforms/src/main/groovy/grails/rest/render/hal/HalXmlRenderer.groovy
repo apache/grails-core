@@ -33,7 +33,7 @@ import org.springframework.beans.PropertyAccessorFactory
 import org.springframework.http.HttpMethod
 
 /**
- * Renders domain instances in HAL XML format (see http://stateless.co/hal_specification.html)
+ * Renders domain instances in HAL XML format (see https://stateless.co/hal_specification.html)
  *
  * @author Graeme Rocher
  * @since 2.3

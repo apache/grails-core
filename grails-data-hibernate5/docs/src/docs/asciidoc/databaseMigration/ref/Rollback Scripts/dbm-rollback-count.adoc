@@ -38,7 +38,7 @@ Required arguments:
 
 Optional arguments:
 
-* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
+* `contexts` - A comma-delimited list of https://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
 * `defaultSchema` - The default schema name to use
 * `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
 

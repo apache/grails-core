@@ -19,7 +19,7 @@ under the License.
 
 === Introduction
 
-The Database Migration plugin helps you manage database changes while developing Grails applications. The plugin uses the http://www.liquibase.org/[Liquibase] library.
+The Database Migration plugin helps you manage database changes while developing Grails applications. The plugin uses the https://www.liquibase.org/[Liquibase] library.
 
 Using this plugin (and Liquibase in general) adds some structure and process to managing database changes. It will help avoid inconsistencies, communication issues, and other problems with ad-hoc approaches.
 

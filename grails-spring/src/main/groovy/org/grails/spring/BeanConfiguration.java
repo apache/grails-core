@@ -25,7 +25,7 @@ import org.springframework.beans.factory.support.AbstractBeanDefinition;
  * Represents a runtime bean configuration.
  * <p>
  * Credit must go to Solomon Duskis and the
- * article: http://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
+ * article: https://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
  *
  * @author Graeme
  * @since 0.3

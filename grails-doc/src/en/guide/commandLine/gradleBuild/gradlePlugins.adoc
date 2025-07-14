@@ -44,8 +44,8 @@ The default plugins are as follows:
 
 * `groovy` - The Groovy plugin adds support for Groovy projects. It can handle Groovy code mixed with Java. Read More: https://docs.gradle.org/{gradleVersion}/userguide/groovy_plugin.html[The Groovy Plugin]
 * `war` - The https://docs.gradle.org/{gradleVersion}/userguide/war_plugin.html[WAR plugin] changes the packaging so that Gradle creates a WAR file. You can comment out this plugin to build a runnable JAR file for standalone deployment.
-* `idea` - The IDEA plugin generates files used by http://www.jetbrains.com/idea/[IntelliJ IDEA], allowing the project to be opened from IDEA. Read More: https://docs.gradle.org/{gradleVersion}/userguide/idea_plugin.html[The IDEA Plugin]
-* `eclipse` - The Eclipse plugins generate files for the http://eclipse.org/[Eclipse IDE], enabling project import (File - Import... - Existing Projects into Workspace). Read More: https://docs.gradle.org/{gradleVersion}/userguide/eclipse_plugin.html[The Eclipse Plugin]
+* `idea` - The IDEA plugin generates files used by https://www.jetbrains.com/idea/[IntelliJ IDEA], allowing the project to be opened from IDEA. Read More: https://docs.gradle.org/{gradleVersion}/userguide/idea_plugin.html[The IDEA Plugin]
+* `eclipse` - The Eclipse plugins generate files for the https://eclipse.org/[Eclipse IDE], enabling project import (File - Import... - Existing Projects into Workspace). Read More: https://docs.gradle.org/{gradleVersion}/userguide/eclipse_plugin.html[The Eclipse Plugin]
 * `asset-pipeline` - The https://github.com/wondrify/asset-pipeline[Asset Pipeline] plugin enables compilation of static assets (JavaScript, CSS, etc.)
 
 Many of these are built-in plugins provided by Gradle or third-party plugins. The Gradle plugins that Grails provides are as follows:

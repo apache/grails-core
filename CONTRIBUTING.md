@@ -136,7 +136,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/apache
 #### Environment Setup
 
 ##### 1. Forking the Code
-One of the benefits of [GitHub](http://github.com) is the way that you can easily contribute to a project by [forking the repository](https://help.github.com/articles/fork-a-repo/) and [sending pull requests](https://help.github.com/articles/creating-a-pull-request/) with your changes.  Please see GitHub's guides on how to create a fork and submit that fork.  For easier illustration, the remainder of this document will use the `grails` repositories, but when working locally you should use your own fork.
+One of the benefits of [GitHub](https://github.com) is the way that you can easily contribute to a project by [forking the repository](https://help.github.com/articles/fork-a-repo/) and [sending pull requests](https://help.github.com/articles/creating-a-pull-request/) with your changes.  Please see GitHub's guides on how to create a fork and submit that fork.  For easier illustration, the remainder of this document will use the `grails` repositories, but when working locally you should use your own fork.
 
 ##### 2. Tool Setup
 
@@ -148,7 +148,7 @@ If you're interested in contributing fixes and features to any part of grails, y
 * A container runtime
 
 Once you have the pre-requisite packages installed, the next step is to download the Apache Grails source code, which is
-hosted at [GitHub](http://github.com/apache/grails-core). This is a simple case of cloning the repository you're
+hosted at [GitHub](https://github.com/apache/grails-core). This is a simple case of cloning the repository you're
 interested in. For example, to get the core framework run:
 
     git clone http://github.com/apache/grails-core.git
@@ -202,7 +202,7 @@ There are many aspects to [Grail's documentation](https://docs.grails.org/)
 
 <!-- omit in toc -->
 #### <u>Improving the User Guide</u>
-The user guide is written using [Asciidoctor](http://asciidoctor.org/docs/user-manual/). The simplest way to contribute fixes is to simply click on the "Improve this doc" link that is to the right of each section of the documentation.
+The user guide is written using [Asciidoctor](https://asciidoctor.org/docs/user-manual/). The simplest way to contribute fixes is to simply click on the "Improve this doc" link that is to the right of each section of the documentation.
 
 This will link to the GitHub edit screen where you can make changes, preview them and create a pull request.
 

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-http://jsonapi.org/[JSON API] is a standard format for representing JSON.
+https://jsonapi.org/[JSON API] is a standard format for representing JSON.
 
 The JSON views plugin for Grails provides JSON API support out-of-the-box. All JSON views have access to the `jsonapi` instance which implements link:{api}/grails/plugin/json/view/api/JsonApiViewHelper.html[JsonApiViewHelper].
 
@@ -74,7 +74,7 @@ This is what an example `Book` instance rendered with JSON API might look like.
 
 == JSON API Object
 
-To include the link:http://jsonapi.org/format/#document-jsonapi-object[JSON API Object] in the response, include a `jsonApiObject` argument to the `render` method.
+To include the link:https://jsonapi.org/format/#document-jsonapi-object[JSON API Object] in the response, include a `jsonApiObject` argument to the `render` method.
 
 [source,groovy]
 model {
@@ -86,7 +86,7 @@ The response will contain `"jsonapi":{"version":"1.0"}` as the first key in the 
 
 == Meta Object
 
-To add link:http://jsonapi.org/format/#document-meta[metadata] to your response, the `meta` argument can be passed to render with the value being the object that should be rendered. If this functionality is used in addition to `jsonApiObject: true`, the metadata will be rendered as the "meta" property of the "jsonapi" object.
+To add link:https://jsonapi.org/format/#document-meta[metadata] to your response, the `meta` argument can be passed to render with the value being the object that should be rendered. If this functionality is used in addition to `jsonApiObject: true`, the metadata will be rendered as the "meta" property of the "jsonapi" object.
 
 [source,groovy]
 model {
@@ -98,7 +98,7 @@ The response will contain `"meta":{"name":"Metadata Information"}` as the first 
 
 == Rendering Errors
 
-The JSON API specification has link:http://jsonapi.org/format/#errors[instructions on how to render errors]. In the case of the Grails implementation, this applies to both exceptions and validation errors.
+The JSON API specification has link:https://jsonapi.org/format/#errors[instructions on how to render errors]. In the case of the Grails implementation, this applies to both exceptions and validation errors.
 
 === Exceptions
 
@@ -170,7 +170,7 @@ Currently links are not supported in the case of to many relationships.
 
 == Pagination
 
-The JSON API specification has a section which explains http://jsonapi.org/format/#fetching-pagination[pagination]. The Grails implementation follows that specification as it is written.
+The JSON API specification has a section which explains https://jsonapi.org/format/#fetching-pagination[pagination]. The Grails implementation follows that specification as it is written.
 
 To enable pagination links in your output you must be rendering a collection and also include some arguments in addition to the collection being rendered. There are two required arguments: total and resource. The default offset is 0 and max is 10.
 
@@ -202,7 +202,7 @@ json jsonapi.render(books, [pagination: [total: bookTotal, resource: Book, max: 
 
 == Associations
 
-The JSON API specification details how relationships should be rendered. The first way is through a relationships object described http://jsonapi.org/format/#document-resource-object-relationships[here]. By default that is now relationships will be rendered in json views.
+The JSON API specification details how relationships should be rendered. The first way is through a relationships object described https://jsonapi.org/format/#document-resource-object-relationships[here]. By default that is now relationships will be rendered in json views.
 
 If you do not wish to render the relationships at all, the `associations` argument can be passed to `render` with the value of false.
 
@@ -212,7 +212,7 @@ model {
 }
 json jsonapi.render(book, [associations: false])
 
-The specification also has a section that describes http://jsonapi.org/format/#document-compound-documents[compound documents]. If you want one or more of your relationships to be rendered in that manner, you can include the `expand` argument.
+The specification also has a section that describes https://jsonapi.org/format/#document-compound-documents[compound documents]. If you want one or more of your relationships to be rendered in that manner, you can include the `expand` argument.
 
 [source,groovy]
 model {

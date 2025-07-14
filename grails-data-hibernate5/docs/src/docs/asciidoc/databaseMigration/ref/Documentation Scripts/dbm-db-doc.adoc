@@ -38,7 +38,7 @@ Required arguments: _none_ .
 Optional arguments:
 
 * `destination` - The path to write to
-* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
+* `contexts` - A comma-delimited list of https://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
 * `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
 
 NOTE: Note that the `contexts` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.

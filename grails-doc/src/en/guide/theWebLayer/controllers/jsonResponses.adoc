@@ -19,7 +19,7 @@ under the License.
 
 ==== Using the respond method to output JSON
 
-The `respond` method is the preferred way to return JSON and integrates with link:theWebLayer.html#contentNegotiation[Content Negotiation] and http://views.grails.org[JSON Views].
+The `respond` method is the preferred way to return JSON and integrates with link:theWebLayer.html#contentNegotiation[Content Negotiation] and https://views.grails.org[JSON Views].
 
 The `respond` method provides content negotiation strategies to intelligently produce an appropriate response for the given client.
 
@@ -79,7 +79,7 @@ In the above example Grails will respond by default with `json` if the media typ
 
 ==== Using Views to Output JSON Responses
 
-If you define a view (either a GSP or a http://views.grails.org[JSON View]) then Grails will render the view when using the `respond` method by calculating a model from the argument passed to `respond`.
+If you define a view (either a GSP or a https://views.grails.org[JSON View]) then Grails will render the view when using the `respond` method by calculating a model from the argument passed to `respond`.
 
 For example, in the previous listing, if you were to define `grails-app/views/index.gson` and `grails-app/views/index.gsp` views, these would be used if the client requested `application/json` or `text/html` media types respectively. Thus allowing you to define a single backend capable of serving responses to a web browser or representing your application's API.
 

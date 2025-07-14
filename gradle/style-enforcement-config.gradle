@@ -48,7 +48,14 @@ checkstyle {
 }
 
 nohttp {
-    source.exclude('src/test/**', 'build/**')
+    // TODO: xsd, xml, & doc files need looked at; this will at least make sure our POMs are correct
+    source.exclude('src/test/**', 'build/**',
+            'LICENSE', '**/LICENSE', 'NOTICE', '**/NOTICE', 'licenses/**', 'INSTALL',
+            '**/*.xsd', '**/*.xml', '**/*.dtd',
+            '**/test/**',
+            '**/@grails.codegen.projectClassName@GrailsPlugin.groovy',
+            '**/grails-doc/**' // TODO: the grails doc still has a lot of work to do to remove httpsm mmmmm
+    )
 }
 
 if (tasks.names.contains('checkstyleTest')) {

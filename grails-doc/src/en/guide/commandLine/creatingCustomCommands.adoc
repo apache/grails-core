@@ -31,14 +31,14 @@ Since Grails 3.2.0, commands have similar abilities as scripts in regards to ret
 
 If you created a command in a previous version of grails, you can update your command to have those abilities by changing which trait you are implementing.
 
-Commands created in Grails 3.1.x or lower implement the http://docs.grails.org/latest/api/grails/dev/commands/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
+Commands created in Grails 3.1.x or lower implement the https://docs.grails.org/latest/api/grails/dev/commands/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
 
 [source,groovy]
 ----
 boolean handle(ExecutionContext executionContext)
 ----
 
-Commands created in Grails 3.2.0 or higher implement the http://docs.grails.org/latest/api/grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
+Commands created in Grails 3.2.0 or higher implement the https://docs.grails.org/latest/api/grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
 
 [source,groovy]
 ----

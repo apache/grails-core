@@ -39,7 +39,7 @@ To use the engine you need to follow a few conventions. First, you need to creat
 
 Note that you can have all your gdoc files in the top-level directory if you want, but you can also put sub-sections in sub-directories named after the parent section - as the above example shows.
 
-Once you have your source files, you still need to tell the documentation engine what the structure of your user guide is going to be. To do that, you add a `src/docs/guide/toc.yml` file that contains the structure and titles for each section. This file is in http://www.yaml.org/[YAML] format and basically represents the structure of the user guide in tree form. For example, the above files could be represented as:
+Once you have your source files, you still need to tell the documentation engine what the structure of your user guide is going to be. To do that, you add a `src/docs/guide/toc.yml` file that contains the structure and titles for each section. This file is in https://www.yaml.org/[YAML] format and basically represents the structure of the user guide in tree form. For example, the above files could be represented as:
 
 [source,yaml]
 ----
@@ -142,11 +142,11 @@ Bold: *bold*
 ----
 
 Image:
-image::http://grails.org/images/new/grailslogo_topNav.png[]
+image::https://grails.org/images/new/grailslogo_topNav.png[]
 
 [source,xml]
 ----
-\!http://grails.org/images/new/grailslogo_topNav.png\!
+\!https://grails.org/images/new/grailslogo_topNav.png\!
 ----
 
 You can also link to internal images like so:
@@ -173,14 +173,14 @@ There are several ways to create links with the documentation generator. A basic
 
 [source,groovy]
 ----
-http://www.pivotal.io/oss[Pivotal]
+https://www.pivotal.io/oss[Pivotal]
 ----
 
 or
 
 [source,groovy]
 ----
-http://www.pivotal.io/oss[Pivotal] ----
+https://www.pivotal.io/oss[Pivotal] ----
 
 For links to other sections inside the user guide you can use the `guide:` prefix with the name of the section you want to link to:
 
@@ -212,7 +212,7 @@ The documentation engine will automatically create the appropriate javadoc link 
 [source,groovy]
 ----
 grails.doc.api.org.hibernate=
-            "http://docs.jboss.org/hibernate/stable/core/javadocs"
+            "https://docs.jboss.org/hibernate/stable/core/javadocs"
 ----
 
 The above example configures classes within the `org.hibernate` package to link to the Hibernate website's API docs.

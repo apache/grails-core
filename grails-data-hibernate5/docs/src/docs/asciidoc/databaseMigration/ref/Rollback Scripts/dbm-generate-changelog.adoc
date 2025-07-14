@@ -42,7 +42,7 @@ Required arguments: _none_ .
 Optional arguments:
 
 * `filename` - The path to the output file to write to. If not specified output is written to the console
-* `diffTypes` - A comma-delimited list of change types to include - see http://www.liquibase.org/manual/diff#controlling_checks_since_1.8[the documentation] for what types are available
+* `diffTypes` - A comma-delimited list of change types to include - see https://www.liquibase.org/manual/diff#controlling_checks_since_1.8[the documentation] for what types are available
 * `defaultSchema` - The default schema name to use
 * `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
 * `add` - if specified add an include in the root changelog file referencing the new file

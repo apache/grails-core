@@ -17,8 +17,8 @@
  *  under the License.
  */
 
-import grails.doc.git.FetchTagsTask
 import grails.doc.dropdown.CreateReleaseDropDownTask
+import grails.doc.git.FetchTagsTask
 import grails.doc.gradle.PublishGuideTask
 
 plugins {

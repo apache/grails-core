@@ -34,7 +34,7 @@ import java.util.List;
  * to be constructed at runtime.
  * <p>
  * Credit must go to Solomon Duskis and the
- * article: http://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
+ * article: https://jroller.com/page/Solomon?entry=programmatic_configuration_in_spring
  *
  * @author Graeme
  * @since 0.3

@@ -16,7 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
-The best way to install Grails on Unix systems is with http://sdkman.io/[SDKMAN] which greatly simplifies installing
+The best way to install Grails on Unix systems is with https://sdkman.io/[SDKMAN] which greatly simplifies installing
 and managing multiple Grails versions.
 
 Before updating make sure you have latest version of SDKMAN installed. If not, run
@@ -40,7 +40,7 @@ You can also specify the version to the `sdk install` command.
 $ sdk install grails {project-version}
 ----
 
-You can find more information about SDKMAN usage on the http://sdkman.io/usage[SDKMAN Docs]
+You can find more information about SDKMAN usage on the https://sdkman.io/usage[SDKMAN Docs]
 
 You should now be able to run the Grails Forge CLI.
 

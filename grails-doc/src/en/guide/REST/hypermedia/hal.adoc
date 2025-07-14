@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-http://stateless.co/hal_specification.html[HAL] is a standard exchange format commonly used when developing REST APIs that follow HATEOAS principals. An example HAL document representing a list of orders can be seen below:
+https://stateless.co/hal_specification.html[HAL] is a standard exchange format commonly used when developing REST APIs that follow HATEOAS principals. An example HAL document representing a list of orders can be seen below:
 
 [source,javascript]
 ----

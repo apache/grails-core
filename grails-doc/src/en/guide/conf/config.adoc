@@ -21,7 +21,7 @@ Configuration in Grails is generally split across 2 areas: build configuration a
 
 Build configuration is generally done via Gradle and the `build.gradle` file. Runtime configuration is by default specified in YAML in the `grails-app/conf/application.yml` file.
 
-If you prefer to use Grails 2.0-style Groovy configuration then it is possible to specify configuration using Groovy's http://docs.groovy-lang.org/latest/html/documentation/#_configslurper[ConfigSlurper] syntax. Two Groovy configuration files are available: `grails-app/conf/application.groovy` and `grails-app/conf/runtime.groovy`:
+If you prefer to use Grails 2.0-style Groovy configuration then it is possible to specify configuration using Groovy's https://docs.groovy-lang.org/latest/html/documentation/#_configslurper[ConfigSlurper] syntax. Two Groovy configuration files are available: `grails-app/conf/application.groovy` and `grails-app/conf/runtime.groovy`:
 
 . Use `application.groovy` for configuration that doesn't depend on application classes
 . Use `runtime.groovy` for configuration that does depend on application classes

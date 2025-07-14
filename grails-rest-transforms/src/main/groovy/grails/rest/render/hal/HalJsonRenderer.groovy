@@ -39,7 +39,7 @@ import org.springframework.core.convert.converter.Converter
 import org.springframework.http.HttpMethod
 
 /**
- * Renders domain instances in HAL JSON format (see http://tools.ietf.org/html/draft-kelly-json-hal-05)
+ * Renders domain instances in HAL JSON format (see https://tools.ietf.org/html/draft-kelly-json-hal-05)
  *
  * @author Graeme Rocher
  * @since 2.3

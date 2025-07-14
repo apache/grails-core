@@ -48,7 +48,7 @@ For configuration you can either pass a map or an instance of the `org.springfra
 
 [source,groovy]
 ----
-def initializer = new MongoDatastore(['grails.mongodb.url':'http://myserver'], Person)
+def initializer = new MongoDatastore(['grails.mongodb.url':'https://myserver'], Person)
 
 println Person.count()
 ----
