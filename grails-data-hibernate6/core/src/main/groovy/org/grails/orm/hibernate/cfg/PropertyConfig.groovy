@@ -198,6 +198,10 @@ class PropertyConfig extends Property {
      */
     JoinTable joinTable = new JoinTable()
 
+    ColumnConfig getJoinTableColumnConfig() {
+        return this.joinTable?.column
+    }
+
     /**
      * The join table configuration
      */

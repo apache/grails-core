@@ -20,6 +20,8 @@
 package org.grails.datastore.mapping.model;
 
 import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.OneToMany;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 
 import java.util.Optional;
@@ -90,4 +92,8 @@ public interface PersistentProperty<T extends Property> {
      * @return The writer for this property
      */
     EntityReflector.PropertyWriter getWriter();
+
+    default boolean isUnidirectionalOneToMany() {
+        return ((this instanceof OneToMany) && !((Association)this).isBidirectional());
+    }
 }

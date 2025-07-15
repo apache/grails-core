@@ -4,6 +4,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.type.descriptor.java.BasicJavaType
 import org.hibernate.type.descriptor.jdbc.JdbcType
 import org.hibernate.usertype.BaseUserTypeSupport
@@ -22,7 +23,7 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
         mapping.setUserTypes(["foo.Bar": persistentEntity.getJavaClass()])
-        def config = grailsDomainBinder.getPropertyConfig(property)
+        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property)
         def name = new TypeNameProvider().getTypeName(property,config , mapping)
 
         then:
@@ -39,7 +40,7 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def persistentEntity = createPersistentEntity(grailsDomainBinder, simpleName, fieldProperties, mappingProperties)
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
-        def config = grailsDomainBinder.getPropertyConfig(property)
+        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property)
         def name = new TypeNameProvider().getTypeName(property,config , mapping)
 
         then:
@@ -55,7 +56,7 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
         mapping.setUserTypes([(Salary): SalaryType])
-        def config = grailsDomainBinder.getPropertyConfig(property)
+        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property)
         def name = new TypeNameProvider().getTypeName(property,config , mapping)
 
         then:

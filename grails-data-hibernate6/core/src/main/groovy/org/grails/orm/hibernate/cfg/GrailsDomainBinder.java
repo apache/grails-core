@@ -118,7 +118,6 @@ import java.util.StringTokenizer;
 import static java.util.Optional.ofNullable;
 import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
 
-;
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.
@@ -496,7 +495,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if(referenced != null && !isManyToMany && referenced.isMultiTenant()) {
             String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, referenced);
             if(filterCondition != null) {
-                if (isUnidirectionalOneToMany(property)) {
+                if (property.isUnidirectionalOneToMany()) {
                     collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
                 } else {
                     collection.addFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
@@ -557,7 +556,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         } else if (shouldCollectionBindWithJoinColumn(property)) {
             bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
 
-        } else if (isUnidirectionalOneToMany(property)) {
+        } else if (ofNullable(property).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false)) {
             // for non-inverse one-to-many, with a not-null fk, add a backref!
             // there are problems with list and map mappings and join columns relating to duplicate key constraints
             // TODO change this when HHH-1268 is resolved
@@ -740,13 +739,13 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         String columnName;
 
-        final boolean hasJoinColumnMapping = hasJoinColumnMapping(config);
+        var joinColumnMappingOptional = Optional.ofNullable(config).map(PropertyConfig::getJoinTableColumnConfig);
         if (isBasicCollectionType) {
             final Class<?> referencedType = ((Basic)property).getComponentType();
             String className = referencedType.getName();
             final boolean isEnum = referencedType.isEnum();
-            if (hasJoinColumnMapping) {
-                columnName = config.getJoinTable().getColumn().getName();
+            if (joinColumnMappingOptional.isPresent()) {
+                columnName = joinColumnMappingOptional.get().getName();
             }
             else {
                 var clazz = namingStrategy.toPhysicalColumnName(toIdentifier(className),getJdbcEnvironment());
@@ -773,9 +772,9 @@ public class GrailsDomainBinder implements MetadataContributor {
                 }
 
                 new SimpleValueBinder().bindSimpleValue(element, typeName, columnName, true);
-                if (hasJoinColumnMapping) {
+                if (joinColumnMappingOptional.isPresent()) {
                     Column column = getColumnForSimpleValue(element);
-                    ColumnConfig columnConfig = config.getJoinTable().getColumn();
+                    ColumnConfig columnConfig = joinColumnMappingOptional.get();
                     final PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().apply(property);
                     new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
                 }
@@ -790,8 +789,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                         EMPTY_PATH, sessionFactoryBeanName);
             }
             else {
-                if (hasJoinColumnMapping) {
-                    columnName = config.getJoinTable().getColumn().getName();
+                if (joinColumnMappingOptional.isPresent()) {
+                    columnName = joinColumnMappingOptional.get().getName();
                 }
                 else {
                     Identifier decapitalize = toIdentifier(NameUtils.decapitalize(domainClass.getName()));
@@ -819,15 +818,11 @@ public class GrailsDomainBinder implements MetadataContributor {
         return element.getColumns().iterator().next();
     }
 
-    private boolean hasJoinColumnMapping(PropertyConfig config) {
-        return config != null && config.getJoinTable() != null && config.getJoinTable().getColumn() != null;
-    }
-
     private boolean shouldCollectionBindWithJoinColumn(ToMany property) {
         PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
         JoinTable jt = config != null ? config.getJoinTable() : new JoinTable();
 
-        return (isUnidirectionalOneToMany(property) || (property instanceof Basic)) && jt != null;
+        return (ofNullable(property).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false) || (property instanceof Basic)) && jt != null;
     }
 
     /**
@@ -869,16 +864,6 @@ public class GrailsDomainBinder implements MetadataContributor {
                 collection.setExtraLazy(lazy);
             }
         }
-    }
-
-    /**
-     * Checks whether a property is a unidirectional non-circular one-to-many
-     *
-     * @param property The property to check
-     * @return true if it is unidirectional and a one-to-many
-     */
-    private boolean isUnidirectionalOneToMany(PersistentProperty property) {
-        return ((property instanceof org.grails.datastore.mapping.model.types.OneToMany) && !((Association)property).isBidirectional());
     }
 
     /**
@@ -3008,7 +2993,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private boolean supportsJoinColumnMapping(PersistentProperty grailsProp) {
-        return grailsProp instanceof ManyToMany || isUnidirectionalOneToMany(grailsProp) || grailsProp instanceof Basic;
+        return grailsProp instanceof ManyToMany || ofNullable(grailsProp).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false) || grailsProp instanceof Basic;
     }
 
     private String getDefaultColumnName(PersistentProperty property, String sessionFactoryBeanName) {
