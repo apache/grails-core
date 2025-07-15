@@ -35,6 +35,8 @@ jobs:
       - name: "🔨 Build"
         working-directory: grails-forge
         run: ./gradlew build
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false' // temporary workaround
   deploy:
     name: "Deploy to Google Cloud Run"
     runs-on: ubuntu-24.04
@@ -70,6 +72,8 @@ jobs:
           ./gradlew
           grails-forge-api:test
           grails-forge-web-netty:test
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false' // temporary workaround
       - name: "🔨 Build Docker image"
         working-directory: grails-forge
         # To deploy native executables built with GraalVM, replace dockerBuild with dockerBuildNative and dockerPush
@@ -78,6 +82,8 @@ jobs:
           ./gradlew
           grails-forge-web-netty:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false' // temporary workaround
       - name: "📤 Push Container to Google Cloud Artifact Registry"
         run: |
           docker push ${{ env.IMAGE_NAME }}
@@ -122,6 +128,8 @@ jobs:
       - name: "🏃 Run tests"
         working-directory: grails-forge
         run: ./gradlew grails-forge-analytics-postgres:test
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false' // temporary workaround
       - name: "🔨 Build Docker image"
         working-directory: grails-forge
         # To deploy native executables built with GraalVM, replace dockerBuild with dockerBuildNative and dockerPush
@@ -130,6 +138,8 @@ jobs:
           ./gradlew
           grails-forge-analytics-postgres:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false' // temporary workaround
       - name: "📤 Push Container to Google Cloud Artifact Registry"
         run: |
           docker push ${{ env.IMAGE_NAME }}
