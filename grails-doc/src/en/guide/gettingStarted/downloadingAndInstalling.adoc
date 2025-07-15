@@ -50,22 +50,19 @@ Partial list, for illustration purposes:
 
 [options="header,autowidth"]
 |===
-| grails shell CLI  | Gradle
+| grails shell CLI  | Gradle | Integration
 
-| `./grails run-app` | `./gradlew bootRun`
-| `./grails test run-app` | `./gradlew bootRun -Dgrails.env=test`
-| `./grails package` | `./gradlew assemble -Dgrails.env=prod`
-| `./grails generate-all org.bookstore.Author` | `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"`
-| `./grails dbm-update` | `./gradlew dbmUpdate`
-| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs=" person-domain.groovy"`
-| `./grails s2-quickstart com.yourapp User Role` | `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"`
-
-
-
+| `./grails run-app` | `./gradlew bootRun` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
+| `./grails test run-app` | `./gradlew bootRun -Dgrails.env=test` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
+| `./grails package` | `./gradlew assemble -Dgrails.env=prod` | package is a YAML file from the Base Grails Profile commands directory which is converted by YamlCommandFactory, when Grails CLI starts, into a Grails Command which ultimately calls the Gradle assemble task
+| `./grails generate-all org.bookstore.Author` | `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"` | None. The Grails Script GenerateAll.groovy and the Grails Command GenerateAllCommand.groovy both come from the Scaffolding Plugin and have duplicate functionality
+| `./grails dbm-update` | `./gradlew dbmUpdate` | None.  Separate script and command in Database Migration Plugin
+| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs=" person-domain.groovy"` | None.  Separate script and command in Database Migration Plugin
+| `./grails s2-quickstart com.yourapp User Role` | `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` | None. The Grails Script s2-quickstart.groovy and the Grails Command S2QuickstartCommand.groovy both come from the Grails Spring Security Core Plugin and have duplicate functionality
 
 |===
 
-Additional details on these commands are covered in other sections of this documentation.
+Additional details on these commands are covered in other sections of Grails documentation.
 
 ==== Grails Forge CLI
 In Grails 6, `grails forge` was introduced to replace the application generation features of `grails shell` CLI, while forcing the transition of all other historical CLI functionality directly to Gradle tasks.
