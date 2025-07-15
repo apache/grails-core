@@ -273,7 +273,7 @@ The last step in the `grails-core` release workflow is to run the `Close Release
 
 On the `grails-static-website` repository:
 
-Create a release (https://github.com/apache/grails-static-website/releases), which runs https://github.com/apache/grails-static-website/actions/workflows/release.yml and updates https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml.  This will trigger publishing to the `asf-site-production` branch and https://grails.apache.org
+Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml.  This will trigger publishing to the `asf-site-production` branch and https://grails.apache.org
 
 Create a new `.md` file in the `/posts` directory announcing the release.  The PR will stage this change on https://grails.staged.apache.org/ and when the PR is merged it will deploy to https://grails.apache.org
 
