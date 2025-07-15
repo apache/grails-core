@@ -42,9 +42,28 @@ In Grails 6.0.0, `grails shell` CLI was removed and replaced with `grails forge`
 However, in Grails 6.2.1, the grails shell CLI, along with Grails Profiles and the Wrapper were restored, empowering users to choose their preferred CLI and reclaiming functionalities that had not yet been fully transitioned to the `grails forge` CLI combined with Gradle tasks.
 
 ==== Grails Shell CLI and Gradle
-Certain CLI features overlap between `grails shell` CLI and Gradle.
+Certain `grails shell` CLI commands overlap with Gradle tasks.
 
-For Gradle these use the `runCommand` task, IE. `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"` or custom Gradle tasks, such as `./gradlew dbmGormDiff` for the database migration plugin.
+For Gradle these use a variety of Gradle tasks provided by Gradle, Spring Boot, Grails or a Grails Plugin.
+
+Partial list, for illustration purposes:
+
+[options="header,autowidth"]
+|===
+| grails shell CLI  | Gradle
+
+| `./grails run-app` | `./gradlew bootRun`
+| `./grails test run-app` | `./gradlew bootRun -Dgrails.env=test`
+| `./grails package` | `./gradlew assemble -Dgrails.env=prod`
+| `./grails generate-all org.bookstore.Author` | `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"`
+| `./grails dbm-update` | `./gradlew dbmUpdate`
+| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs=" person-domain.groovy"`
+| `./grails s2-quickstart com.yourapp User Role` | `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"`
+
+
+
+
+|===
 
 Additional details on these commands are covered in other sections of this documentation.
 
