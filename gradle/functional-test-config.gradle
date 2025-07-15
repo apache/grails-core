@@ -57,7 +57,7 @@ configurations.configureEach {
 // work around for parallel builds due to https://github.com/wondrify/asset-pipeline/issues/177
 if ('assetCompile' in tasks.names) {
     tasks.named('assetCompile').configure { Task task ->
-        task.outputs.dir rootProject.layout.buildDirectory.dir("asset-serialize/${project.name}")
+        task.outputs.dir rootProject.layout.buildDirectory.dir('asset-serialize')
     }
 }
 
