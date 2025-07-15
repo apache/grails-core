@@ -56,7 +56,7 @@ Unfortunately, in Grails 6, but corrected for 7, the grails forge CLI was invoke
 The `grails forge` CLI is dedicated solely to initial application generation and the subsequent creation of components such as domains, controllers, services, interceptors, and tag libraries, which is all it can do.
 This CLI is entirely offline with precompiled templates and does not run or use Gradle or your Grails Application.
 With the `grails forge` CLI, the goal was to transition all other historical capabilities provided by the `grails shell` CLI to Gradle tasks.
-Although some advancements have been made in this transition, substantial work is still oustanding.
+Although some advancements have been made in this transition, substantial work is still outstanding.
 The `grails forge` can be extended by forking the repository and hosting your own Grails Application Forge internally, which is generally more complex than extending `grails shell` with a custom profile.
 
 ==== Both CLIs exist in Grails 7
