@@ -569,12 +569,14 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🚀 Grails SDK Minor Release"
         if: contains(needs.publish.outputs.release_version, 'M')
+        working-directory: 'grails-forge'
         run: ./gradlew sdkMinorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
       - name: "🚀 Grails SDK Major Release"
         if: startsWith(needs.publish.outputs.release_version, '7.') && !contains(needs.publish.outputs.release_version, 'M')
+        working-directory: 'grails-forge'
         run: ./gradlew sdkMajorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
