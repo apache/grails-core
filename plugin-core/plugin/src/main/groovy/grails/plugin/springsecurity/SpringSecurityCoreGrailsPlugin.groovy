@@ -215,6 +215,13 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 			log.trace sb.toString()
 		}
 
+		def strategyName = conf.sch.strategyName
+		if (strategyName instanceof CharSequence) {
+			SCH.strategyName = strategyName.toString()
+		}
+		log.trace 'Using SecurityContextHolder strategy {}', SCH.strategyName
+
+
 		Class beanTypeResolverClass = conf.beanTypeResolverClass ?: BeanTypeResolver
 		beanTypeResolver = beanTypeResolverClass.newInstance(conf, grailsApplication)
 
@@ -659,11 +666,6 @@ to default to 'Annotation'; setting value to 'Annotation'
 
 		applicationContext.roleHierarchy.hierarchy = roleHierarchy
 
-		def strategyName = conf.sch.strategyName
-		if (strategyName instanceof CharSequence) {
-			SCH.strategyName = strategyName.toString()
-		}
-		log.trace 'Using SecurityContextHolder strategy {}', SCH.strategyName
 
 		// build filters here to give dependent plugins a chance to register some
 		SortedMap<Integer, String> filterNames = ReflectionUtils.findFilterChainNames(conf)
