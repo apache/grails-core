@@ -23,14 +23,24 @@ import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.core.annotation.TypeHint;
 import io.micronaut.inject.BeanDefinition;
-import org.grails.forge.cli.command.*;
+import org.grails.forge.cli.command.BaseCommand;
+import org.grails.forge.cli.command.CodeGenCommand;
+import org.grails.forge.cli.command.CreateAppCommand;
+import org.grails.forge.cli.command.CreatePluginCommand;
+import org.grails.forge.cli.command.CreateRestApiCommand;
+import org.grails.forge.cli.command.CreateWebPluginCommand;
+import org.grails.forge.cli.command.CreateWebappCommand;
+import org.grails.forge.cli.command.GormImplCandidates;
+import org.grails.forge.cli.command.GormImplConverter;
+import org.grails.forge.cli.command.ServletImplCandidates;
+import org.grails.forge.cli.command.ServletImplConverter;
+import org.grails.forge.cli.command.TestFrameworkCandidates;
+import org.grails.forge.cli.command.TestFrameworkConverter;
 import org.grails.forge.io.ConsoleOutput;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
-
-
 
 @CommandLine.Command(name = "grails-forge-cli", description = {
         "Grails Forge CLI command line interface for generating projects and services.",

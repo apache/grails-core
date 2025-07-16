@@ -24,7 +24,11 @@ import io.micronaut.core.convert.value.ConvertibleValuesMap;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.util.VersionInfo;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class Options implements ConvertibleValues<Object> {
 

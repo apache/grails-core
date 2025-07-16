@@ -27,7 +27,12 @@ import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.Options;
 import org.grails.forge.options.TestFramework;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Set;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toSet;

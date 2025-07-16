@@ -20,10 +20,14 @@ package org.grails.forge.api.diff;
 
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.grails.forge.api.RequestInfo;
 import org.grails.forge.application.ApplicationType;
-import org.grails.forge.options.*;
-import io.swagger.v3.oas.annotations.Parameter;
+import org.grails.forge.options.BuildTool;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.TestFramework;
 import org.reactivestreams.Publisher;
 
 import javax.validation.constraints.NotBlank;

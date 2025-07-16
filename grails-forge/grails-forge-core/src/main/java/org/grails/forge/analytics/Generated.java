@@ -22,7 +22,10 @@ import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.NonNull;
 import org.grails.forge.application.ApplicationType;
-import org.grails.forge.options.*;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.TestFramework;
 import org.grails.forge.util.VersionInfo;
 
 import java.util.ArrayList;

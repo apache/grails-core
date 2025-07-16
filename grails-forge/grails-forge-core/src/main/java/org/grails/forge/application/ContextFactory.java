@@ -28,7 +28,12 @@ import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.validation.FeatureValidator;
 import org.grails.forge.io.ConsoleOutput;
-import org.grails.forge.options.*;
+import org.grails.forge.options.BuildTool;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.Language;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.TestFramework;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;

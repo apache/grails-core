@@ -26,7 +26,12 @@ import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
 import org.grails.forge.build.BuildPlugin;
 import org.grails.forge.build.BuildProperties;
-import org.grails.forge.build.dependencies.*;
+import org.grails.forge.build.dependencies.Coordinate;
+import org.grails.forge.build.dependencies.CoordinateResolver;
+import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.build.dependencies.DependencyContext;
+import org.grails.forge.build.dependencies.LookupFailedException;
+import org.grails.forge.build.dependencies.Scope;
 import org.grails.forge.build.gradle.GradleRepository;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.Features;
@@ -35,14 +40,28 @@ import org.grails.forge.feature.config.ApplicationConfiguration;
 import org.grails.forge.feature.config.BootstrapConfiguration;
 import org.grails.forge.feature.config.Configuration;
 import org.grails.forge.feature.other.template.markdownLink;
-import org.grails.forge.options.*;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.Language;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.TestFramework;
+import org.grails.forge.options.TestRockerModelProvider;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.Template;
 import org.grails.forge.template.Writable;
 import org.grails.forge.util.VersionInfo;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * A context object used when generating projects.

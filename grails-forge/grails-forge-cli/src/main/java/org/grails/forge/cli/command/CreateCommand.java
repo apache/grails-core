@@ -28,7 +28,11 @@ import org.grails.forge.application.generator.ProjectGenerator;
 import org.grails.forge.feature.AvailableFeatures;
 import org.grails.forge.io.FileSystemOutputHandler;
 import org.grails.forge.io.OutputHandler;
-import org.grails.forge.options.*;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.TestFramework;
 import org.grails.forge.util.NameUtils;
 import picocli.CommandLine;
 

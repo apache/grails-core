@@ -21,7 +21,10 @@ package org.grails.forge.build.gradle;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import org.grails.forge.build.BuildPlugin;
-import org.grails.forge.build.dependencies.*;
+import org.grails.forge.build.dependencies.Coordinate;
+import org.grails.forge.build.dependencies.CoordinateResolver;
+import org.grails.forge.build.dependencies.LookupFailedException;
+import org.grails.forge.build.dependencies.Scope;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.template.Writable;
 
