@@ -56,7 +56,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import javax.persistence.CascadeType;
+import jakarta.persistence.CascadeType;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;

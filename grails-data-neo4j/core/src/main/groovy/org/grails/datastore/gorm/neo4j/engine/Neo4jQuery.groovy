@@ -42,7 +42,7 @@ import org.neo4j.driver.QueryRunner
 import org.neo4j.driver.Value
 import org.neo4j.driver.types.Node
 
-import javax.persistence.FetchType
+import jakarta.persistence.FetchType
 
 /**
  * perform criteria queries on a Neo4j backend

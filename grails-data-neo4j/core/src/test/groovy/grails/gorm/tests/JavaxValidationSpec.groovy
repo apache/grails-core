@@ -21,14 +21,14 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 
-import javax.validation.constraints.Digits
+import jakarta.validation.constraints.Digits
 
 /**
  * Created by graemerocher on 30/12/2016.
  */
 class JavaxValidationSpec extends GormDatastoreSpec {
 
-    void "test javax.validator validation"() {
+    void "test jakarta.validator validation"() {
         when:"An invalid entity is created"
         JavaxProduct p = new JavaxProduct(name:"MacBook", price: "bad")
         p.save()

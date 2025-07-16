@@ -56,8 +56,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.util.Assert;
 
-import javax.persistence.FetchType;
-import javax.persistence.LockModeType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.LockModeType;
 import java.io.Serializable;
 import java.util.*;
 

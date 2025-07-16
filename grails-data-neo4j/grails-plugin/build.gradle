@@ -17,25 +17,6 @@
  *  under the License.
  */
 
-sourceCompatibility = "1.11"
-targetCompatibility = "1.11"
-
-// TODO: Use bom
-//configurations.configureEach {
-//    exclude group: 'org.apache.grails.data', module: 'grails-data-simple'
-//    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-//        if (details.requested.group == 'org.apache.grails.data'
-//                && details.requested.name.startsWith('grails-datastore')
-//                && !details.requested.name.contains('neo4j')) {
-//
-//            details.useVersion(datastoreVersion)
-//        } else if (details.requested.group == 'org.apache.groovy' && details.requested.name.startsWith('groovy')) {
-//            details.useVersion(groovyVersion)
-//        } else if (details.requested.group == 'org.springframework') {
-//            details.useVersion(springVersion)
-//        }
-//    }
-//}
 
 dependencies {
     compileOnly "org.apache.grails:grails-core"
@@ -56,7 +37,7 @@ dependencies {
         exclude group:'org.apache.grails.bootstrap', module:'grails-bootstrap'
         exclude group:'org.codehaus.groovy', module:'groovy-all'
         exclude group:'org.apache.grails', module:'grails-core'
-        exclude group:'javax.transaction', module:'jta'
+        exclude group:'.transaction', module:'jta'
     }
     api project(":grails-datastore-gorm-neo4j"), {
         exclude group:'org.springframework', module:'spring-context'

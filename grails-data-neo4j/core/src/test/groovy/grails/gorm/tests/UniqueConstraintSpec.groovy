@@ -35,7 +35,7 @@ import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 import spock.lang.Issue
 
-import javax.persistence.FlushModeType
+import jakarta.persistence.FlushModeType
 
 /**
  * Tests the unique constraint

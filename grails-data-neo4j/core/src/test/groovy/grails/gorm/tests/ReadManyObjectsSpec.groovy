@@ -24,7 +24,7 @@ import grails.neo4j.Neo4jEntity
 import org.neo4j.driver.types.Node
 import spock.lang.Ignore
 
-import javax.persistence.FlushModeType
+import jakarta.persistence.FlushModeType
 
 /**
  * @author Graeme Rocher

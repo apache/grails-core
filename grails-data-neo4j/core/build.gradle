@@ -1,0 +1,66 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for Neo4j'
+    pomDescription = 'Provides a GORM Object Mapping implementations for the Neo4j Graph Database'
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+    api 'org.neo4j.driver:neo4j-java-driver'
+    api project(':grails-datamapping-validation')
+    api project(':grails-datamapping-core')
+
+    // only needed for web dependencies
+    compileOnly project(':grails-datastore-web')
+//    compileOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+
+    implementation "org.javassist:javassist:$javassistVersion"
+    testImplementation 'org.neo4j.test:neo4j-harness:2025.06.2'
+    testImplementation project(':grails-testing-support-datamapping')
+
+    testImplementation 'jakarta.validation:jakarta.validation-api'
+    testImplementation 'junit:junit' // JUnit 4
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    testImplementation 'org.spockframework:spock-core'
+
+    testImplementation 'org.hibernate.validator:hibernate-validator', {
+        exclude group:'commons-logging', module:'commons-logging'
+        exclude group:'commons-collections', module:'commons-collections'
+        exclude group:'org.slf4j', module:'slf4j-api'
+    }
+
+    testImplementation "org.codehaus.gpars:gpars:$gparsVersion", {
+        exclude group: 'org.multiverse', module: 'multiverse-core' // Multiverse Software Transactional Memory (STM) Engine not used
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all' // Gpars 1.2.1 pulls in groovy-all:2.1.9
+    }
+    testImplementation  'net.bytebuddy:byte-buddy' // TODO: used to be cglib which is no longer maintained
+    testImplementation 'org.objenesis:objenesis'
+
+}

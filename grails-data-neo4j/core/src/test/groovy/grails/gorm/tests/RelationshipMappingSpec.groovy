@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.proxy.EntityProxy
 import spock.lang.Ignore
 
-import javax.persistence.FetchType
+import jakarta.persistence.FetchType
 import static grails.neo4j.mapping.MappingBuilder.*
 /**
  * Created by graemerocher on 08/12/16.

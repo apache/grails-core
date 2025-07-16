@@ -267,6 +267,32 @@ project(':grails-test-examples-hibernate5-grails-hibernate-groovy-proxy').projec
 include 'grails-test-examples-hibernate5-issue450'
 project(':grails-test-examples-hibernate5-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/issue450')
 
+// Neo4j
+include 'grails-data-neo4j-core'
+project(':grails-data-neo4j-core').projectDir = new File(settingsDir, 'grails-data-neo4j/core')
+//
+//include 'grails-data-neo4j-docs'
+//project(':grails-data-neo4j-docs').projectDir = new File(settingsDir, 'grails-data-neo4j/docs')
+//
+//include 'grails-data-neo4j-spring-boot'
+//project(':grails-data-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
+//
+//include 'grails-data-neo4j'
+//project(':grails-data-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-plugin')
+
+// functional tests - neo4j
+//include 'grails-test-examples-neo4j-base'
+//project(':grails-test-examples-neo4j-base').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/base')
+//
+//include 'grails-test-examples-neo4j-hibernate5'
+//project(':grails-test-examples-neo4j-hibernate5').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/hibernate5')
+//
+//include 'grails-test-examples-neo4j-spring-boot'
+//project(':grails-test-examples-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/spring-boot')
+//
+//include 'grails-test-examples-neo4j-test-data-service'
+//project(':grails-test-examples-neo4j-test-data-service').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/test-data-service')
+
 // Mongodb
 // core
 include 'grails-data-mongodb-core'

@@ -39,7 +39,7 @@ import org.neo4j.driver.Session
 import org.neo4j.driver.Result
 import org.neo4j.driver.QueryRunner
 
-import javax.persistence.FetchType
+import jakarta.persistence.FetchType
 
 
 /**
