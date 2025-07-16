@@ -78,9 +78,9 @@ ext {
 
     bomDependencyVersions = [
             'asset-pipeline-grails.version': '5.0.12',
-            'bootstrap-icons.version'      : '1.11.3',
-            'bootstrap.version'            : '5.3.3',
             'commons-codec.version'        : '1.17.1',
+            'bootstrap-icons.version'      : '1.13.1',
+            'bootstrap.version'            : '5.3.7',
             'geb-spock.version'            : '7.0',
             'groovy.version'               : '4.0.27',
             'h2.version'                   : '2.3.232',
