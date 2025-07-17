@@ -19,13 +19,18 @@
 package org.grails.forge.feature.reloading;
 
 import jakarta.inject.Singleton;
+import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.Scope;
+import org.grails.forge.feature.DefaultFeature;
+import org.grails.forge.feature.Feature;
+import org.grails.forge.options.Options;
 
+import java.util.Set;
 
 @Singleton
-public class SpringBootDevTools implements ReloadingFeature {
+public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
     @Override
     public String getName() {
         return "spring-boot-devtools";
@@ -55,7 +60,17 @@ public class SpringBootDevTools implements ReloadingFeature {
     }
 
     @Override
+    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        return true;
+    }
+
+    @Override
+    public boolean supports(ApplicationType applicationType) {
+        return true;
+    }
+
+    @Override
     public String getDocumentation() {
-        return "https://docs.spring.io/spring-boot/docs/2.7.12/reference/htmlsingle/#using.devtools";
+        return "https://docs.spring.io/spring-boot/reference/using/devtools.html";
     }
 }
