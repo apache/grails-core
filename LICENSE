@@ -203,20 +203,6 @@
 
 --------------------------------------------------------------------------
 
-BSD License
-
-The following classes within this product:
-
-    org.apache.grails.common.compiler.asm.Attribute
-    org.apache.grails.common.compiler.asm.ByteVector
-    org.apache.grails.common.compiler.asm.ClassReader
-    org.apache.grails.common.compiler.asm.Context
-    org.apache.grails.common.compiler.asm.TypePath
-
-See the LICENSE/licenses-asm.txt file for the ASM license terms.
-
---------------------------------------------------------------------------
-
 Public Domain
 
 The following classes within this product:
@@ -247,21 +233,6 @@ The following files are licensed under the CDDL 1.0:
     grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_6_0.xsd
 
 See licenses/LICENSE-CDDL.txt for the full license terms.
-
---------------------------------------------------------------------------
-
-This product includes the following files from Spring Framework 5.3, developed by Pivotal Software, Inc., licensed under the Apache License 2.0:
-
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/AbstractRecursiveAnnotationVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/AnnotationAttributesReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/AnnotationMetadataReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/AnnotationReadingVisitorUtils.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/ClassMetadataReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/MethodMetadataReadingVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/RecursiveAnnotationArrayVisitor.java
-    grails-common/src/main/groovy/org/apache/grails/common/annotation/RecursiveAnnotationAttributesVisitor.java
-
-See the above Apache License 2.0 for the terms governing these files.
 
 --------------------------------------------------------------------------
 
