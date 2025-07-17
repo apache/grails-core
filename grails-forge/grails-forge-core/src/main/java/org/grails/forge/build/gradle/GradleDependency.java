@@ -117,7 +117,7 @@ public class GradleDependency extends DependencyCoordinate {
             snippet += ")";
         }
         if (getArtifactId() == "spring-boot-devtools") {
-            snippet += " // Spring Boot DevTools may cause performance slowdowns on larger applications";
+            snippet += " // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications";
         }
 
         return snippet;
