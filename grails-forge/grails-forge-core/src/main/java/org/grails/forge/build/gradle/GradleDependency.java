@@ -116,6 +116,10 @@ public class GradleDependency extends DependencyCoordinate {
         if (isPom() || gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES) {
             snippet += ")";
         }
+        if (getArtifactId() == "spring-boot-devtools") {
+            snippet += " // Spring Boot DevTools may cause performance slowdowns on larger applications";
+        }
+
         return snippet;
     }
 }
