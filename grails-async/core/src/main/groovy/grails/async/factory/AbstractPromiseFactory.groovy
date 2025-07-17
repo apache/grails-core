@@ -135,7 +135,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     /**
-     * @see PromiseFactory#waitAll(grails.async.Promise [ ])
+     * @see PromiseFactory#waitAll(grails.async.Promise[])
      */
     <T> List<T> waitAll(Promise<T>... promises) {
         return waitAll(Arrays.asList(promises))

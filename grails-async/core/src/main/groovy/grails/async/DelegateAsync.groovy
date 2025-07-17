@@ -39,7 +39,7 @@ import java.lang.annotation.Target
  * If the annotation is applied to a new class:
  *
  * <pre><code>
- * @DelegateAsync (BookApi)
+ * @DelegateAsync(BookApi)
  * class AsyncBookApi {}
  * </code></pre>
  *

@@ -51,7 +51,7 @@ class Promises {
     }
 
     /**
-     * @see PromiseFactory#waitAll(grails.async.Promise [ ])
+     * @see PromiseFactory#waitAll(grails.async.Promise[])
      */
     static <T> List<T> waitAll(Promise<T>... promises) {
         return getPromiseFactory().waitAll(promises)
