@@ -1,3 +1,5 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -21,18 +23,26 @@ apply plugin: 'checkstyle'
 apply plugin: 'com.diffplug.spotless'
 apply plugin: 'io.spring.nohttp' // enforce https everywhere
 
-spotless {
-    java {
-        licenseHeaderFile(rootProject.file("../etc/config/spotless/license.java"))
-        target('src/main/java/**/*.java')
+extensions.configure(SpotlessExtension) {
+    // Explicit `it` required in extension configuration
+    it.java {
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('../etc/config/spotless/license.java'))
+        target(
+                'src/main/java/**/*.java'
+        )
     }
-    groovy {
-        licenseHeaderFile(rootProject.file("../etc/config/spotless/license.java"))
-        target('src/main/groovy/**')
+    it.groovy {
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('../etc/config/spotless/license.java'))
+        target(
+                'src/main/groovy/**'
+        )
     }
-    format 'javaMisc', {
-        target('src/main/**/package-info.java', 'src/main/**/module-info.java')
-        licenseHeaderFile(rootProject.file('../etc/config/spotless/license.java'), '\\/\\*\\*')
+    it.format('javaMisc') {
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('../etc/config/spotless/license.java'), '\\/\\*\\*')
+        target(
+                'src/main/**/module-info.java',
+                'src/main/**/package-info.java'
+        )
     }
 }
 

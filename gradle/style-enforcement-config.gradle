@@ -1,3 +1,6 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+import io.spring.nohttp.gradle.NoHttpExtension
+
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -21,40 +24,52 @@ apply plugin: 'checkstyle'
 apply plugin: 'com.diffplug.spotless'
 apply plugin: 'io.spring.nohttp' // enforce https everywhere
 
-spotless {
-    java {
-        licenseHeaderFile(rootProject.file("etc/config/spotless/license.java"))
-        target('src/main/java/**/*.java', 'src/main/groovy/**.java', 'grails-app/**.java')
+extensions.configure(SpotlessExtension) {
+    // Explicit `it` required in extension configuration
+    it.java {
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('etc/config/spotless/license.java'))
+        target(
+                'grails-app/**/*.java',
+                'src/main/groovy/**/*.java',
+                'src/main/java/**/*.java'
+        )
     }
-    groovy {
-        licenseHeaderFile(rootProject.file("etc/config/spotless/license.java"))
-        target('src/main/groovy/**.groovy', 'grails-app/**.groovy')
+    it.groovy {
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('etc/config/spotless/license.java'))
+        target(
+                'grails-app/**/*.groovy',
+                'src/main/groovy/**/*.groovy'
+        )
     }
-    format 'javaMisc', {
-        target('src/main/**/package-info.java', 'src/main/**/module-info.java')
-        licenseHeaderFile(rootProject.file('etc/config/spotless/license.java'), '\\/\\*\\*')
+    it.format('javaMisc') {
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('etc/config/spotless/license.java'), '\\/\\*\\*')
+        target(
+                'src/main/**/module-info.java',
+                'src/main/**/package-info.java'
+        )
     }
 }
 
-checkstyle {
-    configFile = project.rootProject.layout.projectDirectory.file('etc/config/checkstyle/checkstyle.xml').asFile
-    configDirectory = project.rootProject.layout.projectDirectory.dir('etc/config/checkstyle').asFile
-
-    // Per submodule
-    maxErrors = 1
-    maxWarnings = 10
-
-    showViolations = true
+extensions.configure(CheckstyleExtension) {
+    // Explicit `it` required in extension configuration
+    it.configFile = rootProject.layout.projectDirectory.file('etc/config/checkstyle/checkstyle.xml').asFile
+    it.configDirectory = project.rootProject.layout.projectDirectory.dir('etc/config/checkstyle').asFile
+    it.maxErrors = 1
+    it.maxWarnings = 10
+    it.showViolations = true
 }
 
-nohttp {
+extensions.configure(NoHttpExtension) {
+    // Explicit `it` required in extension configuration
     // TODO: xsd, xml, & doc files need looked at; this will at least make sure our POMs are correct
-    source.exclude('src/test/**', 'build/**',
+    it.source.exclude(
+            'build/**',
+            'src/test/**',
             'LICENSE', '**/LICENSE', 'NOTICE', '**/NOTICE', 'licenses/**', 'INSTALL',
             '**/*.xsd', '**/*.xml', '**/*.dtd',
             '**/test/**',
             '**/@grails.codegen.projectClassName@GrailsPlugin.groovy',
-            '**/grails-doc/**' // TODO: the grails doc still has a lot of work to do to remove httpsm mmmmm
+            '**/grails-doc/**' // TODO: the grails doc still has a lot of work to do to remove https
     )
 }
 
