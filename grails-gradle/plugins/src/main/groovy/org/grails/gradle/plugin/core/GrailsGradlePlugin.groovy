@@ -842,6 +842,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+
+                    // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
+                    // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
+                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
+
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
                     if (otherArgs) {
@@ -868,6 +873,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+
+                    // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
+                    // with Grails' plugin management and bean wiring when running CLI commands via Gradle
+                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
