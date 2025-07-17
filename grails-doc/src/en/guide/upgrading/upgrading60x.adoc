@@ -25,9 +25,9 @@ This guide outlines the necessary steps & warnings to upgrade your Grails projec
 ==== 1. Java 17 as baseline:
 
 Starting from Grails 7, Java 17 serves as the baseline requirement for the framework, matching Spring Framework and Spring Boot's minimum Java version.
-When upgrading to Grails {version}, ensure that your project is configured to use Java 17. Updating to Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
+When upgrading to Grails 7, ensure that your project is configured to use Java 17. Updating to Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
 
-Please make sure to update your project's Java version to 17 before proceeding with the Grails {version} upgrade.
+Please make sure to update your project's Java version to 17 before proceeding with the Grails 7 upgrade.
 Doing so will ensure a seamless transition to the latest version of Grails and enable you to enjoy all the benefits that Java 17 has to offer.
 
 ==== 2. Groovy {groovyVersion} as a baseline:
@@ -100,7 +100,7 @@ Please see xref:../ref/Versions/Grails BOM.adoc[Grails BOM Dependencies] for a q
 Grails has transitioned to the Apache Software Foundation (ASF).
 As a result, the group ID for Grails artifacts has changed to `org.apache.grails`.
 This change applies to all Grails packages, including core plugins and core dependencies, maintained by the Grails team.
-When upgrading to Grails {version}, ensure that you update your build configuration to use the new group ID.
+When upgrading to Grails 7, ensure that you update your build configuration to use the new group ID.
 
 There is a https://github.com/apache/grails-core/blob/7.0.x/RENAME.md[RENAME.md] in the grails-core repository that maps previous coordinate names to new names.
 Additionally, there is a script to aid in the updating of Grails projects to the new coordinates.
