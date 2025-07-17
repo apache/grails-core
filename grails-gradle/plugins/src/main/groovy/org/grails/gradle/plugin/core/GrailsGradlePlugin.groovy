@@ -72,6 +72,8 @@ import org.springframework.boot.gradle.tasks.run.BootRun
 
 import javax.inject.Inject
 import java.nio.charset.StandardCharsets
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.regex.Pattern
 
 /**
@@ -173,7 +175,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
     static void makePropertiesFileReproducible(File factoriesFile) {
         String sourceDateEpoch = System.getenv('SOURCE_DATE_EPOCH')
         if (!sourceDateEpoch) {
-            return
+            sourceDateEpoch = LocalDate.now(ZoneOffset.UTC)
+                    .atStartOfDay(ZoneOffset.UTC)
+                    .toEpochSecond().toString()
         }
 
         Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\\\s).*$')
