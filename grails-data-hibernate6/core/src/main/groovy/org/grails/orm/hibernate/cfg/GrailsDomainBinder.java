@@ -36,6 +36,7 @@ import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
+import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.IndexBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.NumericColumnConstraintsBinder;
@@ -89,7 +90,6 @@ import org.hibernate.mapping.UniqueKey;
 import org.hibernate.mapping.Value;
 import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.persister.entity.UnionSubclassEntityPersister;
-import org.hibernate.type.EnumType;
 import org.hibernate.type.ForeignKeyDirection;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
@@ -100,7 +100,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -139,10 +138,10 @@ public class GrailsDomainBinder implements MetadataContributor {
     private static final String CASCADE_NONE = "none";
     private static final String BACKTICK = "`";
 
-    private static final String ENUM_TYPE_CLASS = "org.hibernate.type.EnumType";
-    private static final String ENUM_CLASS_PROP = "enumClass";
+    public static final String ENUM_TYPE_CLASS = "org.hibernate.type.EnumType";
+    public static final String ENUM_CLASS_PROP = "enumClass";
     private static final String ENUM_TYPE_PROP = "type";
-    private static final String DEFAULT_ENUM_TYPE = "default";
+    public static final String DEFAULT_ENUM_TYPE = "default";
     private static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
     public static final String SEQUENCE_KEY = "sequence";
 
@@ -300,9 +299,9 @@ public class GrailsDomainBinder implements MetadataContributor {
             SimpleValue elt = new BasicValue(metadataBuildingContext, map.getCollectionTable());
             map.setElement(elt);
 
-            PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
-            Mapping mapping = getMapping(property.getOwner());
-            String typeName = new TypeNameProvider().getTypeName(property, config, mapping);
+            PersistentEntity owner = property.getOwner();
+            Mapping mapping = getMapping(owner);
+            String typeName = new TypeNameProvider().getTypeName(property, mapping);
             if (typeName == null ) {
 
                 if(property instanceof Basic) {
@@ -754,12 +753,12 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
 
             if (isEnum) {
-                bindEnumType(property, referencedType,element,columnName);
+                new EnumTypeBinder().bindEnumType(property, referencedType, element, columnName);
             }
             else {
 
                 Mapping mapping = getMapping(property.getOwner());
-                String typeName = new TypeNameProvider().getTypeName(property,config, mapping);
+                String typeName = new TypeNameProvider().getTypeName(property, mapping);
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
                     if (type != null) {
@@ -1850,8 +1849,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH, mappings, sessionFactoryBeanName);
             }
             else if (collectionType != null) {
-                PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(currentGrailsProp);
-                String typeName = new TypeNameProvider().getTypeName(currentGrailsProp,config, gormMapping);
+                String typeName = new TypeNameProvider().getTypeName(currentGrailsProp, gormMapping);
                 if ("serializable".equals(typeName)) {
                     value = new BasicValue(metadataBuildingContext, table);
                     boolean nullable = currentGrailsProp.isNullable();
@@ -2000,70 +1998,9 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private void bindEnumType(PersistentProperty property, SimpleValue simpleValue,
                                 String path, String sessionFactoryBeanName) {
-        bindEnumType(property, property.getType(), simpleValue,
-                getColumnNameForPropertyAndPath(property, path, null, sessionFactoryBeanName));
-    }
-
-    private void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
-
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(property);
-        final PersistentEntity owner = property.getOwner();
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
-        Mapping mapping1 = getMapping(owner);
-        String typeName = new TypeNameProvider().getTypeName(property,config, mapping1);
-        if (typeName == null) {
-            Properties enumProperties = new Properties();
-            enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
-
-            String enumType = pc == null ? DEFAULT_ENUM_TYPE : pc.getEnumType();
-            boolean isDefaultEnumType = enumType.equals(DEFAULT_ENUM_TYPE);
-            simpleValue.setTypeName(ENUM_TYPE_CLASS);
-            if (isDefaultEnumType || "string".equalsIgnoreCase(enumType)) {
-                enumProperties.put(EnumType.TYPE, String.valueOf(Types.VARCHAR));
-                enumProperties.put(EnumType.NAMED, Boolean.TRUE.toString());
-            }
-            else if("identity".equals(enumType)) {
-                simpleValue.setTypeName(IdentityEnumType.class.getName());
-            }
-            else if (!"ordinal".equalsIgnoreCase(enumType)) {
-                simpleValue.setTypeName(enumType);
-            }
-            simpleValue.setTypeParameters(enumProperties);
-        }
-        else {
-            simpleValue.setTypeName(typeName);
-        }
-
-        Table t = simpleValue.getTable();
-        Column column = new Column();
-
-        if (owner.isRoot()) {
-            column.setNullable(property.isNullable());
-        } else {
-            Mapping mapping = getMapping(owner);
-            if (mapping == null || mapping.getTablePerHierarchy()) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() +
-                            "] for column name [" + column.getName() + "] set to nullable");
-                }
-                column.setNullable(true);
-            } else {
-                column.setNullable(property.isNullable());
-            }
-        }
-        column.setValue(simpleValue);
-        column.setName(columnName);
-        if (t != null) t.addColumn(column);
-
-        simpleValue.addColumn(column);
-
-        PropertyConfig propertyConfig = new PersistentPropertyToPropertyConfig().apply(property);
-        if (propertyConfig != null && !propertyConfig.getColumns().isEmpty()) {
-            ColumnConfig columnConfig = propertyConfig.getColumns().get(0);
-            new IndexBinder().bindIndex(columnName, column, columnConfig, t);
-            final PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().apply(property);
-            new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
-        }
+        Class<?> propertyType = property.getType();
+        String columnName = getColumnNameForPropertyAndPath(property, path, null, sessionFactoryBeanName);
+        new EnumTypeBinder().bindEnumType(property, propertyType, simpleValue, columnName);
     }
 
     private Class<?> getUserType(PersistentProperty currentGrailsProp) {
@@ -2813,7 +2750,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private void setTypeForPropertyConfig(PersistentProperty grailsProp, SimpleValue simpleValue, PropertyConfig config) {
         Mapping mapping = getMapping(grailsProp.getOwner());
-        final String typeName = new TypeNameProvider().getTypeName(grailsProp, new PersistentPropertyToPropertyConfig().apply(grailsProp), mapping);
+        final String typeName = new TypeNameProvider().getTypeName(grailsProp, mapping);
         if (typeName == null) {
             simpleValue.setTypeName(grailsProp.getType().getName());
         }
@@ -3053,7 +2990,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (pc != null && pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
             PropertyConfig config = pc.getIndexColumn();
             Mapping mapping = getMapping(property.getOwner());
-            return new TypeNameProvider().getTypeName(property,config, mapping);
+            return new TypeNameProvider().getTypeName(property, mapping);
         }
         return defaultType;
     }
@@ -3310,9 +3247,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         public String getTypeName(ToMany property) {
-            PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
             Mapping mapping = getMapping(property.getOwner());
-            return new TypeNameProvider().getTypeName(property,config, mapping);
+            return new TypeNameProvider().getTypeName(property, mapping);
         }
 
     }

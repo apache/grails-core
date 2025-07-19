@@ -10,14 +10,15 @@ import static java.util.Optional.ofNullable;
 public class TypeNameProvider {
 
     public String getTypeName( PersistentProperty property
-                                , PropertyConfig propertyConfig
-                                , @NotNull Mapping mapping) {
-       return ofNullable(propertyConfig)
+            , @NotNull Mapping mapping) {
+        return ofNullable(property)
+                .map(PersistentProperty::getMappedForm)
+                .map(PropertyConfig.class::cast)
                 .map(PropertyConfig::getType)
                 .map(typeObj -> typeObj instanceof Class<?> clazz ?
                         clazz.getName() : typeObj.toString()
                 )
-               .orElse(mapping.getTypeName(property.getType()));
+                .orElse(mapping.getTypeName(property.getType()));
     }
 
 
