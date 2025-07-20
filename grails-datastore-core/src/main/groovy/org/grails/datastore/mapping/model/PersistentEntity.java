@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.mapping.model;
 
-import java.util.List;
-
 import org.grails.datastore.mapping.model.lifecycle.Initializable;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.reflect.EntityReflector;
+
+import java.util.List;
 
 /**
  * Represents a persistent entity.
@@ -226,4 +226,6 @@ public interface PersistentEntity extends Initializable {
      * @return True if the operation was successful
      */
     boolean addOwner(Class type);
+
+
 }

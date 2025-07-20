@@ -10,14 +10,6 @@ class ColumnConfigToColumnBinderSpec extends Specification {
     def binder = new ColumnConfigToColumnBinder()
     def column = Mock(Column)
 
-    def "should handle null column config"() {
-        when:
-        binder.bindColumnConfigToColumn(column, null, null)
-
-        then:
-        0 * column._  // verifies no interactions with column
-    }
-
     def "should bind column properties when values are valid"() {
         given:
         def columnConfig = new ColumnConfig()

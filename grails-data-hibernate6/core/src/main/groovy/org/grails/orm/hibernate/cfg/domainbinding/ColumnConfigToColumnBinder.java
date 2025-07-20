@@ -1,12 +1,17 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
+import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.mapping.Column;
 
 public class ColumnConfigToColumnBinder {
 
-    public void bindColumnConfigToColumn(Column column, ColumnConfig columnConfig, PropertyConfig mappedForm) {
+    public void bindColumnConfigToColumn(
+             Column column,
+             ColumnConfig columnConfig,
+            PropertyConfig mappedForm
+        ) {
         if (columnConfig == null) {
             return;
         }

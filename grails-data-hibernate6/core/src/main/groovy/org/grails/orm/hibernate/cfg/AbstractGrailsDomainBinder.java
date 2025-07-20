@@ -61,6 +61,7 @@ public abstract class AbstractGrailsDomainBinder {
         return domainClass == null ? null : MAPPING_CACHE.get(domainClass.getJavaClass());
     }
 
+
     public static void clearMappingCache() {
         MAPPING_CACHE.clear();
     }

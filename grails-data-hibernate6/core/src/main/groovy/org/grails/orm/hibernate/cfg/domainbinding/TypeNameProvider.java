@@ -18,7 +18,10 @@ public class TypeNameProvider {
                 .map(typeObj -> typeObj instanceof Class<?> clazz ?
                         clazz.getName() : typeObj.toString()
                 )
-                .orElse(mapping.getTypeName(property.getType()));
+                .orElseGet(() -> property != null && mapping != null
+                        ? mapping.getTypeName(property.getType()) : null
+                );
+
     }
 
 

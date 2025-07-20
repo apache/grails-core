@@ -17,6 +17,8 @@ package org.grails.orm.hibernate.cfg;
 
 import org.grails.datastore.mapping.model.*;
 
+import java.util.Optional;
+
 /**
  * Persistent entity implementation for Hibernate
  *
@@ -56,5 +58,9 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     @Override
     public ClassMapping<Mapping> getMapping() {
         return this.classMapping;
+    }
+
+    public Mapping getMappedForm() {
+        return Optional.ofNullable(getMapping()).map(ClassMapping::getMappedForm).orElse(null);
     }
 }

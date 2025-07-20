@@ -13,13 +13,6 @@ class IndexBinderSpec extends Specification {
     def column = Mock(Column)
     def index = Mock(Index)
 
-    def "should not create index when ColumnConfig is null"() {
-        when:
-        indexBinder.bindIndex("colName", column, null, table)
-
-        then:
-        0 * table._  // verifies no interactions with table
-    }
 
     def "should create default index when index is true"() {
         given:

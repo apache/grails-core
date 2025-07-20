@@ -63,6 +63,10 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
     """
 
         def clazz = classLoader.parseClass(classText)
+        createPersistentEntity(clazz, binder)
+    }
+
+    public HibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
         def entity = getMappingContext().addPersistentEntity(clazz) as HibernatePersistentEntity
         binder.evaluateMapping(entity)
         entity

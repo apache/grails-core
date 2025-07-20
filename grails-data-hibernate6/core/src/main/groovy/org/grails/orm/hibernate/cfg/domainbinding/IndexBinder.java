@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
+import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
@@ -7,7 +8,12 @@ import static java.lang.String.format;
 import static java.util.Optional.*;
 
 public class IndexBinder {
-    public void bindIndex(String columnName, Column column, ColumnConfig cc, Table table) {
+    public void bindIndex(
+           @Nonnull String columnName,
+           @Nonnull Column column,
+           ColumnConfig cc,
+           @Nonnull Table table
+    ) {
        ofNullable(cc)
                 .map(ColumnConfig::getIndex)
                 .flatMap(indexObj -> {
