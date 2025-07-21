@@ -40,7 +40,6 @@ public class EnumTypeBinder {
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
     public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
-        // Create config and mapping objects ONCE and reuse them.
         PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(property);
         final HibernatePersistentEntity owner = (HibernatePersistentEntity) property.getOwner();
         Mapping ownerMapping = owner.getMappedForm();

@@ -44,7 +44,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.PersistentPropertyToPropertyCo
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.StringColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
-import org.grails.orm.hibernate.cfg.domainbinding.UniqueNameGenerator;
+import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
@@ -487,7 +487,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 collection.setCollectionTable(associatedClass.getTable());
             }
 
-            bindCollectionForPropertyConfig(collection, propConfig);
+            new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
         }
 
         final boolean isManyToMany = property instanceof ManyToMany;
@@ -545,7 +545,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 ManyToOne element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
                 bindManyToMany((Association)otherSide, element, mappings, sessionFactoryBeanName);
                 collection.setElement(element);
-                bindCollectionForPropertyConfig(collection, propConfig);
+                new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
                 if (property.isCircular()) {
                     collection.setInverse(false);
                 }
@@ -799,7 +799,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         collection.setElement(element);
 
-        bindCollectionForPropertyConfig(collection, config);
+        new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, config);
     }
 
     private String addUnderscore(String s1, String s2) {
@@ -844,22 +844,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         // set referenced entity
         manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
-    }
-
-    private void bindCollectionForPropertyConfig(Collection collection, PropertyConfig config) {
-        if (config == null) {
-            collection.setLazy(true);
-            collection.setExtraLazy(false);
-        } else {
-            final FetchMode fetch = config.getFetchMode();
-            if(!fetch.equals(FetchMode.JOIN)) {
-                collection.setLazy(true);
-            }
-            final Boolean lazy = config.getLazy();
-            if(lazy != null) {
-                collection.setExtraLazy(lazy);
-            }
-        }
     }
 
     /**
