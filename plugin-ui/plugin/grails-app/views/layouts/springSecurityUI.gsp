@@ -19,7 +19,6 @@
 <!doctype html>
 <html class="no-js" lang="">
 <head>
-        <title><g:layoutTitle/></title>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta http-equiv="x-ua-compatible" content="ie=edge">

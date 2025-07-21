@@ -31,6 +31,8 @@ dependencies {
     implementation project(':core-plugin')
     implementation project(':ui-plugin')
     implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-gsp'
+    implementation "org.apache.grails.views:grails-layout:$grailsVersion"
     implementation 'org.apache.grails:grails-interceptors'
     implementation 'org.apache.grails:grails-databinding'
     implementation 'org.apache.grails:grails-data-hibernate5'

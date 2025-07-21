@@ -46,9 +46,6 @@ dependencies {
     integrationTestImplementation 'org.apache.grails:grails-testing-support-web', {
         // @Integration
     }
-    integrationTestImplementation 'org.sitemesh:sitemesh', {
-        // SiteMeshFilter
-    }
     integrationTestImplementation 'org.springframework:spring-test', {
         // MockFilterChain, MockHttpServletRequest, MockHttpServletResponse
     }
