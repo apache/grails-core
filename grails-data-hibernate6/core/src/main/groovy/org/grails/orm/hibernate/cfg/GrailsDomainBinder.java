@@ -165,6 +165,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
+    private NamingStrategyWrapper namingStrategyWrapper;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -719,7 +720,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private void bindCollectionWithJoinTable(ToMany property,
                                                InFlightMetadataCollector mappings, Collection collection, PropertyConfig config, String sessionFactoryBeanName) {
 
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
+//        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
 
         SimpleValue element;
         final boolean isBasicCollectionType = property instanceof Basic;
@@ -744,9 +745,9 @@ public class GrailsDomainBinder implements MetadataContributor {
                 columnName = joinColumnMappingOptional.get().getName();
             }
             else {
-                var clazz = namingStrategy.toPhysicalColumnName(toIdentifier(className),getJdbcEnvironment());
-                var prop = namingStrategy.toPhysicalTableName(toIdentifier(property.getName()),getJdbcEnvironment());
-                columnName = isEnum ? clazz.toString() : addUnderscore(prop.toString(), clazz.toString());
+                var clazz = namingStrategyWrapper.getColumnName(className);
+                var prop = namingStrategyWrapper.getTableName(property.getName());
+                columnName = isEnum ? clazz : addUnderscore(prop, clazz);
             }
 
             if (isEnum) {
@@ -789,8 +790,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                     columnName = joinColumnMappingOptional.get().getName();
                 }
                 else {
-                    Identifier decapitalize = toIdentifier(NameUtils.decapitalize(domainClass.getName()));
-                    columnName = namingStrategy.toPhysicalColumnName(decapitalize,getJdbcEnvironment()).toString() + FOREIGN_KEY_SUFFIX;
+                    var decapitalize = domainClass.getName();
+                    columnName = namingStrategyWrapper.getColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
                 }
 
                 new SimpleValueBinder().bindSimpleValue(element, "long", columnName, true);
@@ -1103,9 +1104,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
         JoinTable jt = config != null ? config.getJoinTable() : null;
 
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
         String s = calculateTableForMany(property, sessionFactoryBeanName);
-        String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.toPhysicalTableName(toIdentifier(s),getJdbcEnvironment()).toString());
+        String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategyWrapper.getTableName(s));
         String schemaName = getSchemaName(mappings);
         String catalogName = getCatalogName(mappings);
         if(jt != null) {
@@ -1132,9 +1132,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * where you have two mapping tables for left_right and right_left
      */
     private String calculateTableForMany(ToMany property, String sessionFactoryBeanName) {
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-
-        String propertyColumnName = namingStrategy.toPhysicalColumnName(toIdentifier(property.getName()), getJdbcEnvironment()).toString();
+        String propertyColumnName = namingStrategyWrapper.getColumnName(property.getName());
         //fix for GRAILS-5895
         PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
         JoinTable jt = config != null ? config.getJoinTable() : null;
@@ -1168,8 +1166,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (property.isOwningSide()) {
                 return addUnderscore(left, propertyColumnName);
             }
-            Identifier inversePropertyName = toIdentifier(property1.getInversePropertyName());
-            return addUnderscore(right, namingStrategy.toPhysicalColumnName(inversePropertyName,getJdbcEnvironment()).toString());
+            return addUnderscore(right, namingStrategyWrapper.getColumnName(property1.getInversePropertyName()));
         }
 
         if (shouldCollectionBindWithJoinColumn(property)) {
@@ -1214,7 +1211,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 tableName = namingStrategy.resolveTableName(domainClass);
             }
             if(tableName == null) {
-                tableName = getPhysicalNamingStrategy(sessionFactoryBeanName).toPhysicalTableName(toIdentifier(shortName),getJdbcEnvironment()).toString();
+                tableName = namingStrategyWrapper.getTableName(shortName);
             }
         }
         return tableName;
@@ -1325,6 +1322,9 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @param sessionFactoryBeanName  the session factory bean name
      */
     protected void bindRoot(HibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+        this.namingStrategyWrapper = new NamingStrategyWrapper(
+                getPhysicalNamingStrategy(sessionFactoryBeanName)
+                ,getJdbcEnvironment());
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
@@ -2164,10 +2164,6 @@ public class GrailsDomainBinder implements MetadataContributor {
     @SuppressWarnings("unchecked")
     private void bindManyToOne(Association property, ManyToOne manyToOne,
                                  String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-
-
         bindManyToOneValues(property, manyToOne);
         PersistentEntity refDomainClass = property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity();
         Mapping mapping = ((HibernatePersistentEntity)refDomainClass).getMappedForm();
@@ -2186,7 +2182,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (!hasJoinKeyMapping(pc) ) {
                     JoinTable jt = new JoinTable();
                     final ColumnConfig columnConfig = new ColumnConfig();
-                    columnConfig.setName(namingStrategy.toPhysicalColumnName(toIdentifier(property.getName()), getJdbcEnvironment()).toString() + UNDERSCORE + FOREIGN_KEY_SUFFIX);
+                    columnConfig.setName(namingStrategyWrapper.getColumnName(property.getName()) + UNDERSCORE + FOREIGN_KEY_SUFFIX);
                     jt.setKey(columnConfig);
                     pc.setJoinTable(jt);
                 }
@@ -2214,9 +2210,6 @@ public class GrailsDomainBinder implements MetadataContributor {
     private void bindCompositeIdentifierToManyToOne(Association property,
                                                       SimpleValue value, CompositeIdentity compositeId, PersistentEntity refDomainClass,
                                                       String path, String sessionFactoryBeanName) {
-
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-
         String[] propertyNames = compositeId.getPropertyNames();
         PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
 
@@ -2249,7 +2242,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                         if(compositeIdentity != null) {
                             for (PersistentProperty cip : compositeIdentity) {
                                 // for each property of a composite id by default we use the table name and the property name as a prefix
-                                String compositeIdPrefix = addUnderscore(prefix, namingStrategy.toPhysicalColumnName(toIdentifier(referencedProperty.getName()), getJdbcEnvironment()).toString());
+                                String string = namingStrategyWrapper.getColumnName(referencedProperty.getName());
+                                String compositeIdPrefix = addUnderscore(prefix, string);
                                 String suffix = getDefaultColumnName(cip, sessionFactoryBeanName);
                                 String finalColumnName = addUnderscore(compositeIdPrefix, suffix);
                                 cc = new ColumnConfig();
@@ -2860,9 +2854,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private String getColumnNameForPropertyAndPath(PersistentProperty grailsProp,
                                                      String path, ColumnConfig cc, String sessionFactoryBeanName) {
-
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-
         // First try the column config.
         String columnName = null;
         if (cc == null) {
@@ -2897,7 +2888,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         if (columnName == null) {
             if (isNotEmpty(path)) {
-                columnName = addUnderscore(namingStrategy.toPhysicalColumnName(toIdentifier(path), getJdbcEnvironment()).toString(),
+                columnName = addUnderscore(namingStrategyWrapper.getColumnName(path),
                         getDefaultColumnName(grailsProp, sessionFactoryBeanName));
             } else {
                 columnName = getDefaultColumnName(grailsProp, sessionFactoryBeanName);
@@ -2916,9 +2907,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private String getDefaultColumnName(PersistentProperty property, String sessionFactoryBeanName) {
 
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-
-        String columnName = namingStrategy.toPhysicalColumnName(toIdentifier(property.getName()), getJdbcEnvironment()).toString();
+        String columnName = namingStrategyWrapper.getColumnName(property.getName());
         if (property instanceof Association) {
             Association association = (Association) property;
             boolean isBasic = property instanceof Basic;
@@ -2935,12 +2924,12 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
 
             if (!association.isBidirectional() && association instanceof org.grails.datastore.mapping.model.types.OneToMany) {
-                String prefix = namingStrategy.toPhysicalTableName(toIdentifier(property.getOwner().getName()), getJdbcEnvironment()).toString();
+                String prefix = namingStrategyWrapper.getTableName(property.getOwner().getName());
                 return addUnderscore(prefix, columnName) + FOREIGN_KEY_SUFFIX;
             }
 
             if (property.isInherited() && isBidirectionalManyToOne(property)) {
-                return namingStrategy.toPhysicalColumnName(toIdentifier(property.getOwner().getName()), getJdbcEnvironment()).toString() + '_'+ columnName + FOREIGN_KEY_SUFFIX;
+                return namingStrategyWrapper.getColumnName(property.getOwner().getName()) + '_'+ columnName + FOREIGN_KEY_SUFFIX;
             }
 
             return columnName + FOREIGN_KEY_SUFFIX;
@@ -2953,8 +2942,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private String getForeignKeyForPropertyDomainClass(PersistentProperty property,
                                                          String sessionFactoryBeanName) {
         final String propertyName = NameUtils.decapitalize( property.getOwner().getName() );
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-        return namingStrategy.toPhysicalColumnName(toIdentifier(propertyName), getJdbcEnvironment()).toString() + FOREIGN_KEY_SUFFIX;
+        return namingStrategyWrapper.getColumnName(propertyName) + FOREIGN_KEY_SUFFIX;
     }
 
     private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
@@ -2962,8 +2950,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (pc != null && pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
             return pc.getIndexColumn().getColumn();
         }
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-        return namingStrategy.toPhysicalColumnName(toIdentifier(property.getName()), getJdbcEnvironment()).toString() + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+        return namingStrategyWrapper.getColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
 
     private String getIndexColumnType(PersistentProperty property, String defaultType) {
@@ -2981,9 +2968,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (hasJoinTableColumnNameMapping(pc)) {
             return pc.getJoinTable().getColumn().getName();
         }
-
-        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
-        return namingStrategy.toPhysicalColumnName(toIdentifier(property.getName()), getJdbcEnvironment()).toString() + UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME;
+        return namingStrategyWrapper.getColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME;
     }
 
     private boolean hasJoinTableColumnNameMapping(PropertyConfig pc) {
