@@ -57,184 +57,184 @@ import org.springframework.util.Assert;
  */
 public class ChainedTransactionManager implements PlatformTransactionManager {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(ChainedTransactionManager.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(ChainedTransactionManager.class);
 
-	private final List<PlatformTransactionManager> transactionManagers;
-	private final SynchronizationManager synchronizationManager;
+    private final List<PlatformTransactionManager> transactionManagers;
+    private final SynchronizationManager synchronizationManager;
 
-	/**
-	 * Creates a new {@link ChainedTransactionManager} delegating to the given {@link PlatformTransactionManager}s.
-	 * 
-	 * @param transactionManagers must not be {@literal null} or empty.
-	 */
-	public ChainedTransactionManager(PlatformTransactionManager... transactionManagers) {
-		this(SpringTransactionSynchronizationManager.INSTANCE, transactionManagers);
-	}
+    /**
+     * Creates a new {@link ChainedTransactionManager} delegating to the given {@link PlatformTransactionManager}s.
+     * 
+     * @param transactionManagers must not be {@literal null} or empty.
+     */
+    public ChainedTransactionManager(PlatformTransactionManager... transactionManagers) {
+        this(SpringTransactionSynchronizationManager.INSTANCE, transactionManagers);
+    }
 
-	/**
-	 * Creates a new {@link ChainedTransactionManager} using the given {@link SynchronizationManager} and
-	 * {@link PlatformTransactionManager}s.
-	 * 
-	 * @param synchronizationManager must not be {@literal null}.
-	 * @param transactionManagers must not be {@literal null} or empty.
-	 */
-	ChainedTransactionManager(SynchronizationManager synchronizationManager,
-			PlatformTransactionManager... transactionManagers) {
+    /**
+     * Creates a new {@link ChainedTransactionManager} using the given {@link SynchronizationManager} and
+     * {@link PlatformTransactionManager}s.
+     * 
+     * @param synchronizationManager must not be {@literal null}.
+     * @param transactionManagers must not be {@literal null} or empty.
+     */
+    ChainedTransactionManager(SynchronizationManager synchronizationManager,
+            PlatformTransactionManager... transactionManagers) {
 
-		Assert.notNull(synchronizationManager, "SynchronizationManager must not be null!");
-		Assert.notNull(transactionManagers, "Transaction managers must not be null!");
-		Assert.isTrue(transactionManagers.length > 0, "At least one PlatformTransactionManager must be given!");
+        Assert.notNull(synchronizationManager, "SynchronizationManager must not be null!");
+        Assert.notNull(transactionManagers, "Transaction managers must not be null!");
+        Assert.isTrue(transactionManagers.length > 0, "At least one PlatformTransactionManager must be given!");
 
-		this.synchronizationManager = synchronizationManager;
-		this.transactionManagers = new ArrayList<PlatformTransactionManager>();
-		this.transactionManagers.addAll(Arrays.asList(transactionManagers));
-	}
+        this.synchronizationManager = synchronizationManager;
+        this.transactionManagers = new ArrayList<PlatformTransactionManager>();
+        this.transactionManagers.addAll(Arrays.asList(transactionManagers));
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.springframework.transaction.PlatformTransactionManager#getTransaction(org.springframework.transaction.TransactionDefinition)
-	 */
-	public MultiTransactionStatus getTransaction(TransactionDefinition definition) throws TransactionException {
+    /*
+     * (non-Javadoc)
+     * @see org.springframework.transaction.PlatformTransactionManager#getTransaction(org.springframework.transaction.TransactionDefinition)
+     */
+    public MultiTransactionStatus getTransaction(TransactionDefinition definition) throws TransactionException {
 
-		MultiTransactionStatus mts = new MultiTransactionStatus(transactionManagers.get(0));
+        MultiTransactionStatus mts = new MultiTransactionStatus(transactionManagers.get(0));
 
-		if (!synchronizationManager.isSynchronizationActive() && canCreateTransaction(definition)) {
-			synchronizationManager.initSynchronization();
-			mts.setNewSynchronization();
-		}
+        if (!synchronizationManager.isSynchronizationActive() && canCreateTransaction(definition)) {
+            synchronizationManager.initSynchronization();
+            mts.setNewSynchronization();
+        }
 
-		try {
+        try {
 
-			for (PlatformTransactionManager transactionManager : transactionManagers) {
-				mts.registerTransactionManager(definition, transactionManager);
-			}
+            for (PlatformTransactionManager transactionManager : transactionManagers) {
+                mts.registerTransactionManager(definition, transactionManager);
+            }
 
-		} catch (Exception ex) {
+        } catch (Exception ex) {
 
-			Map<PlatformTransactionManager, TransactionStatus> transactionStatuses = mts.getTransactionStatuses();
+            Map<PlatformTransactionManager, TransactionStatus> transactionStatuses = mts.getTransactionStatuses();
 
-			for (PlatformTransactionManager transactionManager : transactionManagers) {
-				try {
-					if (transactionStatuses.get(transactionManager) != null) {
-						transactionManager.rollback(transactionStatuses.get(transactionManager));
-					}
-				} catch (Exception ex2) {
-					LOGGER.warn("Rollback exception (" + transactionManager + ") " + ex2.getMessage(), ex2);
-				}
-			}
+            for (PlatformTransactionManager transactionManager : transactionManagers) {
+                try {
+                    if (transactionStatuses.get(transactionManager) != null) {
+                        transactionManager.rollback(transactionStatuses.get(transactionManager));
+                    }
+                } catch (Exception ex2) {
+                    LOGGER.warn("Rollback exception (" + transactionManager + ") " + ex2.getMessage(), ex2);
+                }
+            }
 
-			if (mts.isNewSynchronization()) {
-				synchronizationManager.clearSynchronization();
-			}
+            if (mts.isNewSynchronization()) {
+                synchronizationManager.clearSynchronization();
+            }
 
-			throw new CannotCreateTransactionException(ex.getMessage(), ex);
-		}
+            throw new CannotCreateTransactionException(ex.getMessage(), ex);
+        }
 
-		return mts;
-	}
+        return mts;
+    }
 
-	protected boolean canCreateTransaction(TransactionDefinition definition) {
-		return definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||
-				definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||
-				definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED;
-	}
+    protected boolean canCreateTransaction(TransactionDefinition definition) {
+        return definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||
+                definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||
+                definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED;
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.springframework.transaction.PlatformTransactionManager#commit(org.springframework.transaction.TransactionStatus)
-	 */
-	public void commit(TransactionStatus status) throws TransactionException {
+    /*
+     * (non-Javadoc)
+     * @see org.springframework.transaction.PlatformTransactionManager#commit(org.springframework.transaction.TransactionStatus)
+     */
+    public void commit(TransactionStatus status) throws TransactionException {
 
-		MultiTransactionStatus multiTransactionStatus = (MultiTransactionStatus) status;
+        MultiTransactionStatus multiTransactionStatus = (MultiTransactionStatus) status;
 
-		boolean commit = true;
-		Exception commitException = null;
-		PlatformTransactionManager commitExceptionTransactionManager = null;
+        boolean commit = true;
+        Exception commitException = null;
+        PlatformTransactionManager commitExceptionTransactionManager = null;
 
-		for (PlatformTransactionManager transactionManager : reverse(transactionManagers)) {
+        for (PlatformTransactionManager transactionManager : reverse(transactionManagers)) {
 
-			if (commit) {
+            if (commit) {
 
-				try {
-					multiTransactionStatus.commit(transactionManager);
-				} catch (Exception ex) {
-					commit = false;
-					commitException = ex;
-					commitExceptionTransactionManager = transactionManager;
-				}
+                try {
+                    multiTransactionStatus.commit(transactionManager);
+                } catch (Exception ex) {
+                    commit = false;
+                    commitException = ex;
+                    commitExceptionTransactionManager = transactionManager;
+                }
 
-			} else {
+            } else {
 
-				// after unsucessfull commit we must try to rollback remaining transaction managers
+                // after unsucessfull commit we must try to rollback remaining transaction managers
 
-				try {
-					multiTransactionStatus.rollback(transactionManager);
-				} catch (Exception ex) {
-					LOGGER.warn("Rollback exception (after commit) (" + transactionManager + ") " + ex.getMessage(), ex);
-				}
-			}
-		}
+                try {
+                    multiTransactionStatus.rollback(transactionManager);
+                } catch (Exception ex) {
+                    LOGGER.warn("Rollback exception (after commit) (" + transactionManager + ") " + ex.getMessage(), ex);
+                }
+            }
+        }
 
-		if (multiTransactionStatus.isNewSynchronization()) {
-			synchronizationManager.clearSynchronization();
-		}
+        if (multiTransactionStatus.isNewSynchronization()) {
+            synchronizationManager.clearSynchronization();
+        }
 
-		if (commitException != null) {
-			boolean firstTransactionManagerFailed = commitExceptionTransactionManager == getLastTransactionManager();
-			int transactionState = firstTransactionManagerFailed ? HeuristicCompletionException.STATE_ROLLED_BACK
-					: HeuristicCompletionException.STATE_MIXED;
-			throw new HeuristicCompletionException(transactionState, commitException);
-		}
-	}
+        if (commitException != null) {
+            boolean firstTransactionManagerFailed = commitExceptionTransactionManager == getLastTransactionManager();
+            int transactionState = firstTransactionManagerFailed ? HeuristicCompletionException.STATE_ROLLED_BACK
+                    : HeuristicCompletionException.STATE_MIXED;
+            throw new HeuristicCompletionException(transactionState, commitException);
+        }
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.springframework.transaction.PlatformTransactionManager#rollback(org.springframework.transaction.TransactionStatus)
-	 */
-	public void rollback(TransactionStatus status) throws TransactionException {
+    /*
+     * (non-Javadoc)
+     * @see org.springframework.transaction.PlatformTransactionManager#rollback(org.springframework.transaction.TransactionStatus)
+     */
+    public void rollback(TransactionStatus status) throws TransactionException {
 
-		Exception rollbackException = null;
-		PlatformTransactionManager rollbackExceptionTransactionManager = null;
+        Exception rollbackException = null;
+        PlatformTransactionManager rollbackExceptionTransactionManager = null;
 
-		MultiTransactionStatus multiTransactionStatus = (MultiTransactionStatus) status;
+        MultiTransactionStatus multiTransactionStatus = (MultiTransactionStatus) status;
 
-		for (PlatformTransactionManager transactionManager : reverse(transactionManagers)) {
-			try {
-				multiTransactionStatus.rollback(transactionManager);
-			} catch (Exception ex) {
-				if (rollbackException == null) {
-					rollbackException = ex;
-					rollbackExceptionTransactionManager = transactionManager;
-				} else {
-					LOGGER.warn("Rollback exception (" + transactionManager + ") " + ex.getMessage(), ex);
-				}
-			}
-		}
+        for (PlatformTransactionManager transactionManager : reverse(transactionManagers)) {
+            try {
+                multiTransactionStatus.rollback(transactionManager);
+            } catch (Exception ex) {
+                if (rollbackException == null) {
+                    rollbackException = ex;
+                    rollbackExceptionTransactionManager = transactionManager;
+                } else {
+                    LOGGER.warn("Rollback exception (" + transactionManager + ") " + ex.getMessage(), ex);
+                }
+            }
+        }
 
-		if (multiTransactionStatus.isNewSynchronization()) {
-			synchronizationManager.clearSynchronization();
-		}
+        if (multiTransactionStatus.isNewSynchronization()) {
+            synchronizationManager.clearSynchronization();
+        }
 
-		if (rollbackException != null) {
-			throw new UnexpectedRollbackException("Rollback exception, originated at (" + rollbackExceptionTransactionManager
-					+ ") " + rollbackException.getMessage(), rollbackException);
-		}
-	}
+        if (rollbackException != null) {
+            throw new UnexpectedRollbackException("Rollback exception, originated at (" + rollbackExceptionTransactionManager
+                    + ") " + rollbackException.getMessage(), rollbackException);
+        }
+    }
 
-	private <T> Iterable<T> reverse(Collection<T> collection) {
+    private <T> Iterable<T> reverse(Collection<T> collection) {
 
-		List<T> list = new ArrayList<T>(collection);
-		Collections.reverse(list);
-		return list;
-	}
+        List<T> list = new ArrayList<T>(collection);
+        Collections.reverse(list);
+        return list;
+    }
 
-	private PlatformTransactionManager getLastTransactionManager() {
-		return transactionManagers.get(lastTransactionManagerIndex());
-	}
+    private PlatformTransactionManager getLastTransactionManager() {
+        return transactionManagers.get(lastTransactionManagerIndex());
+    }
 
-	private int lastTransactionManagerIndex() {
-		return transactionManagers.size() - 1;
-	}
+    private int lastTransactionManagerIndex() {
+        return transactionManagers.size() - 1;
+    }
 
     public List<PlatformTransactionManager> getTransactionManagers() {
         return transactionManagers;

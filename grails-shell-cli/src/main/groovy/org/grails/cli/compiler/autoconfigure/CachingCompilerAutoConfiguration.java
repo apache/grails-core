@@ -34,20 +34,20 @@ import org.grails.cli.compiler.DependencyCustomizer;
  */
 public class CachingCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-	@Override
-	public boolean matches(ClassNode classNode) {
-		return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableCaching");
-	}
+    @Override
+    public boolean matches(ClassNode classNode) {
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableCaching");
+    }
 
-	@Override
-	public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
-		dependencies.add("spring-context-support");
-	}
+    @Override
+    public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
+        dependencies.add("spring-context-support");
+    }
 
-	@Override
-	public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
-		imports.addStarImports("org.springframework.cache", "org.springframework.cache.annotation",
-				"org.springframework.cache.concurrent");
-	}
+    @Override
+    public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
+        imports.addStarImports("org.springframework.cache", "org.springframework.cache.annotation",
+                "org.springframework.cache.concurrent");
+    }
 
 }

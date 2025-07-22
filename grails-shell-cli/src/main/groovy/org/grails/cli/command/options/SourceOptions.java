@@ -40,107 +40,107 @@ import org.springframework.util.StringUtils;
  */
 public class SourceOptions {
 
-	private final List<String> sources;
+    private final List<String> sources;
 
-	private final List<?> args;
+    private final List<?> args;
 
-	/**
-	 * Create a new {@link SourceOptions} instance.
-	 * @param options the source option set
-	 */
-	public SourceOptions(OptionSet options) {
-		this(options, null);
-	}
+    /**
+     * Create a new {@link SourceOptions} instance.
+     * @param options the source option set
+     */
+    public SourceOptions(OptionSet options) {
+        this(options, null);
+    }
 
-	/**
-	 * Create a new {@link SourceOptions} instance.
-	 * @param arguments the source arguments
-	 */
-	public SourceOptions(List<?> arguments) {
-		this(arguments, null);
-	}
+    /**
+     * Create a new {@link SourceOptions} instance.
+     * @param arguments the source arguments
+     */
+    public SourceOptions(List<?> arguments) {
+        this(arguments, null);
+    }
 
-	/**
-	 * Create a new {@link SourceOptions} instance. If it is an error to pass options that
-	 * specify non-existent sources, but the default paths are allowed not to exist (the
-	 * paths are tested before use). If default paths are provided and the option set
-	 * contains no source file arguments it is not an error even if none of the default
-	 * paths exist.
-	 * @param optionSet the source option set
-	 * @param classLoader an optional classloader used to try and load files that are not
-	 * found in the local filesystem
-	 */
-	public SourceOptions(OptionSet optionSet, ClassLoader classLoader) {
-		this(optionSet.nonOptionArguments(), classLoader);
-	}
+    /**
+     * Create a new {@link SourceOptions} instance. If it is an error to pass options that
+     * specify non-existent sources, but the default paths are allowed not to exist (the
+     * paths are tested before use). If default paths are provided and the option set
+     * contains no source file arguments it is not an error even if none of the default
+     * paths exist.
+     * @param optionSet the source option set
+     * @param classLoader an optional classloader used to try and load files that are not
+     * found in the local filesystem
+     */
+    public SourceOptions(OptionSet optionSet, ClassLoader classLoader) {
+        this(optionSet.nonOptionArguments(), classLoader);
+    }
 
-	private SourceOptions(List<?> nonOptionArguments, ClassLoader classLoader) {
-		List<String> sources = new ArrayList<>();
-		int sourceArgCount = 0;
-		for (Object option : nonOptionArguments) {
-			if (option instanceof String) {
-				String filename = (String) option;
-				if ("--".equals(filename)) {
-					break;
-				}
-				List<String> urls = new ArrayList<>();
-				File fileCandidate = new File(filename);
-				if (fileCandidate.isFile()) {
-					urls.add(fileCandidate.getAbsoluteFile().toURI().toString());
-				}
-				else if (!isAbsoluteWindowsFile(fileCandidate)) {
-					urls.addAll(ResourceUtils.getUrls(filename, classLoader));
-				}
-				for (String url : urls) {
-					if (isSource(url)) {
-						sources.add(url);
-					}
-				}
-				if (isSource(filename)) {
-					if (urls.isEmpty()) {
-						throw new IllegalArgumentException("Can't find " + filename);
-					}
-					else {
-						sourceArgCount++;
-					}
-				}
-			}
-		}
-		this.args = Collections.unmodifiableList(nonOptionArguments.subList(sourceArgCount, nonOptionArguments.size()));
-		Assert.isTrue(!sources.isEmpty(), "Please specify at least one file");
-		this.sources = Collections.unmodifiableList(sources);
-	}
+    private SourceOptions(List<?> nonOptionArguments, ClassLoader classLoader) {
+        List<String> sources = new ArrayList<>();
+        int sourceArgCount = 0;
+        for (Object option : nonOptionArguments) {
+            if (option instanceof String) {
+                String filename = (String) option;
+                if ("--".equals(filename)) {
+                    break;
+                }
+                List<String> urls = new ArrayList<>();
+                File fileCandidate = new File(filename);
+                if (fileCandidate.isFile()) {
+                    urls.add(fileCandidate.getAbsoluteFile().toURI().toString());
+                }
+                else if (!isAbsoluteWindowsFile(fileCandidate)) {
+                    urls.addAll(ResourceUtils.getUrls(filename, classLoader));
+                }
+                for (String url : urls) {
+                    if (isSource(url)) {
+                        sources.add(url);
+                    }
+                }
+                if (isSource(filename)) {
+                    if (urls.isEmpty()) {
+                        throw new IllegalArgumentException("Can't find " + filename);
+                    }
+                    else {
+                        sourceArgCount++;
+                    }
+                }
+            }
+        }
+        this.args = Collections.unmodifiableList(nonOptionArguments.subList(sourceArgCount, nonOptionArguments.size()));
+        Assert.isTrue(!sources.isEmpty(), "Please specify at least one file");
+        this.sources = Collections.unmodifiableList(sources);
+    }
 
-	private boolean isAbsoluteWindowsFile(File file) {
-		return isWindows() && file.isAbsolute();
-	}
+    private boolean isAbsoluteWindowsFile(File file) {
+        return isWindows() && file.isAbsolute();
+    }
 
-	private boolean isWindows() {
-		return File.separatorChar == '\\';
-	}
+    private boolean isWindows() {
+        return File.separatorChar == '\\';
+    }
 
-	private boolean isSource(String name) {
-		return name.endsWith(".java") || name.endsWith(".groovy");
-	}
+    private boolean isSource(String name) {
+        return name.endsWith(".java") || name.endsWith(".groovy");
+    }
 
-	public List<?> getArgs() {
-		return this.args;
-	}
+    public List<?> getArgs() {
+        return this.args;
+    }
 
-	public String[] getArgsArray() {
-		return this.args.stream().map(this::asString).toArray(String[]::new);
-	}
+    public String[] getArgsArray() {
+        return this.args.stream().map(this::asString).toArray(String[]::new);
+    }
 
-	private String asString(Object arg) {
-		return (arg != null) ? String.valueOf(arg) : null;
-	}
+    private String asString(Object arg) {
+        return (arg != null) ? String.valueOf(arg) : null;
+    }
 
-	public List<String> getSources() {
-		return this.sources;
-	}
+    public List<String> getSources() {
+        return this.sources;
+    }
 
-	public String[] getSourcesArray() {
-		return StringUtils.toStringArray(this.sources);
-	}
+    public String[] getSourcesArray() {
+        return StringUtils.toStringArray(this.sources);
+    }
 
 }

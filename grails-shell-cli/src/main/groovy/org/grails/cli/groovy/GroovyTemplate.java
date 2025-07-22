@@ -39,38 +39,38 @@ import org.codehaus.groovy.control.CompilationFailedException;
  */
 public abstract class GroovyTemplate {
 
-	public static String template(String name) throws IOException, CompilationFailedException, ClassNotFoundException {
-		return template(name, Collections.emptyMap());
-	}
+    public static String template(String name) throws IOException, CompilationFailedException, ClassNotFoundException {
+        return template(name, Collections.emptyMap());
+    }
 
-	public static String template(String name, Map<String, ?> model)
-			throws IOException, CompilationFailedException, ClassNotFoundException {
-		return template(new GStringTemplateEngine(), name, model);
-	}
+    public static String template(String name, Map<String, ?> model)
+            throws IOException, CompilationFailedException, ClassNotFoundException {
+        return template(new GStringTemplateEngine(), name, model);
+    }
 
-	public static String template(TemplateEngine engine, String name, Map<String, ?> model)
-			throws IOException, CompilationFailedException, ClassNotFoundException {
-		Writable writable = getTemplate(engine, name).make(model);
-		StringWriter result = new StringWriter();
-		writable.writeTo(result);
-		return result.toString();
-	}
+    public static String template(TemplateEngine engine, String name, Map<String, ?> model)
+            throws IOException, CompilationFailedException, ClassNotFoundException {
+        Writable writable = getTemplate(engine, name).make(model);
+        StringWriter result = new StringWriter();
+        writable.writeTo(result);
+        return result.toString();
+    }
 
-	private static Template getTemplate(TemplateEngine engine, String name)
-			throws CompilationFailedException, ClassNotFoundException, IOException {
+    private static Template getTemplate(TemplateEngine engine, String name)
+            throws CompilationFailedException, ClassNotFoundException, IOException {
 
-		File file = new File("templates", name);
-		if (file.exists()) {
-			return engine.createTemplate(file);
-		}
+        File file = new File("templates", name);
+        if (file.exists()) {
+            return engine.createTemplate(file);
+        }
 
-		ClassLoader classLoader = GroovyTemplate.class.getClassLoader();
-		URL resource = classLoader.getResource("templates/" + name);
-		if (resource != null) {
-			return engine.createTemplate(resource);
-		}
+        ClassLoader classLoader = GroovyTemplate.class.getClassLoader();
+        URL resource = classLoader.getResource("templates/" + name);
+        if (resource != null) {
+            return engine.createTemplate(resource);
+        }
 
-		return engine.createTemplate(name);
-	}
+        return engine.createTemplate(name);
+    }
 
 }

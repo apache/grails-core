@@ -151,7 +151,7 @@ public class GrailsConventionGroovyPageLocator extends DefaultGroovyPageLocator 
             }
         }
         if(scriptSource == null) {
-			scriptSource = findPage(uriService.getViewURI(controllerName, viewNameWithFormat));
+            scriptSource = findPage(uriService.getViewURI(controllerName, viewNameWithFormat));
         }
         if (scriptSource == null) {
             scriptSource = findPage(uriService.getViewURI(controllerName, viewName));
@@ -344,8 +344,8 @@ public class GrailsConventionGroovyPageLocator extends DefaultGroovyPageLocator 
         return GrailsNameUtils.getLogicalPropertyName(GrailsNameUtils.getFullClassName(cls), ControllerArtefactHandler.TYPE);
     }
 
-	@Override
-	public void setGrailsApplication(GrailsApplication grailsApplication) {
-		this.grailsApplication = grailsApplication;
-	}
+    @Override
+    public void setGrailsApplication(GrailsApplication grailsApplication) {
+        this.grailsApplication = grailsApplication;
+    }
 }

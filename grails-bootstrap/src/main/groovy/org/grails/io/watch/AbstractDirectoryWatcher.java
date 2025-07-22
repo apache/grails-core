@@ -44,7 +44,7 @@ abstract class AbstractDirectoryWatcher implements Runnable {
      * @param active False if you want to stop watching
      */
     public void setActive(boolean active) {
-    	this.active = active;
+        this.active = active;
     }
 
     /**
@@ -103,7 +103,7 @@ abstract class AbstractDirectoryWatcher implements Runnable {
     }
 
     protected boolean isValidDirectoryToMonitor(File file){
-    	return file.isDirectory() && ! file.isHidden() && !file.getName().startsWith(".");
+        return file.isDirectory() && ! file.isHidden() && !file.getName().startsWith(".");
     }
 
     protected boolean isValidFileToMonitor(File file, Collection<String> fileExtensions) {
@@ -111,7 +111,7 @@ abstract class AbstractDirectoryWatcher implements Runnable {
         String path = file.getAbsolutePath();
         boolean isSvnFile = path.indexOf(File.separator + DirectoryWatcher.SVN_DIR_NAME + File.separator) > 0;
         return !isSvnFile &&
-        		!file.isDirectory() &&
+                !file.isDirectory() &&
                 !file.isHidden() &&
                 !file.getName().startsWith(".") &&
                 (fileExtensions.contains("*") || fileExtensions.contains(getFilenameExtension(name)));

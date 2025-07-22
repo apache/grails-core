@@ -38,33 +38,33 @@ import org.springframework.util.Assert;
  */
 public class InstallCommand extends OptionParsingCommand {
 
-	public InstallCommand() {
-		super("install", "Install dependencies to the lib/ext directory", new InstallOptionHandler());
-	}
+    public InstallCommand() {
+        super("install", "Install dependencies to the lib/ext directory", new InstallOptionHandler());
+    }
 
-	@Override
-	public String getUsageHelp() {
-		return "[options] <coordinates>";
-	}
+    @Override
+    public String getUsageHelp() {
+        return "[options] <coordinates>";
+    }
 
-	private static final class InstallOptionHandler extends CompilerOptionHandler {
+    private static final class InstallOptionHandler extends CompilerOptionHandler {
 
-		@Override
-		@SuppressWarnings("unchecked")
-		protected ExitStatus run(OptionSet options) throws Exception {
-			List<String> args = (List<String>) options.nonOptionArguments();
-			Assert.notEmpty(args,
-					"Please specify at least one dependency, in the form group:artifact:version, to install");
-			try {
-				new Installer(options, this).install(args);
-			}
-			catch (Exception ex) {
-				String message = ex.getMessage();
-				Log.error((message != null) ? message : ex.getClass().toString());
-			}
-			return ExitStatus.OK;
-		}
+        @Override
+        @SuppressWarnings("unchecked")
+        protected ExitStatus run(OptionSet options) throws Exception {
+            List<String> args = (List<String>) options.nonOptionArguments();
+            Assert.notEmpty(args,
+                    "Please specify at least one dependency, in the form group:artifact:version, to install");
+            try {
+                new Installer(options, this).install(args);
+            }
+            catch (Exception ex) {
+                String message = ex.getMessage();
+                Log.error((message != null) ? message : ex.getClass().toString());
+            }
+            return ExitStatus.OK;
+        }
 
-	}
+    }
 
 }

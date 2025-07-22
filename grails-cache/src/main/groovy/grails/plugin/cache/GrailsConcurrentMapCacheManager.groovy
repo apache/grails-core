@@ -34,39 +34,39 @@ import org.springframework.cache.Cache
 @CompileStatic
 class GrailsConcurrentMapCacheManager implements GrailsCacheManager {
 
-	protected final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<String, Cache>()
+    protected final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<String, Cache>()
 
-	Collection<String> getCacheNames() {
-		Collections.unmodifiableSet(cacheMap.keySet())
-	}
+    Collection<String> getCacheNames() {
+        Collections.unmodifiableSet(cacheMap.keySet())
+    }
 
-	Cache getCache(String name) {
-		Cache cache = cacheMap.get(name)
-		if (cache == null) {
-			cache = createConcurrentMapCache(name)
-			Cache existing = cacheMap.putIfAbsent(name, cache)
-			if (existing != null) {
-				cache = existing
-			}
-		}
-		cache
-	}
+    Cache getCache(String name) {
+        Cache cache = cacheMap.get(name)
+        if (cache == null) {
+            cache = createConcurrentMapCache(name)
+            Cache existing = cacheMap.putIfAbsent(name, cache)
+            if (existing != null) {
+                cache = existing
+            }
+        }
+        cache
+    }
 
-	boolean cacheExists(String name) {
-		getCacheNames().contains(name)
-	}
+    boolean cacheExists(String name) {
+        getCacheNames().contains(name)
+    }
 
-	boolean destroyCache(String name) {
-		cacheMap.remove(name) != null
-	}
+    boolean destroyCache(String name) {
+        cacheMap.remove(name) != null
+    }
 
-	protected GrailsConcurrentMapCache createConcurrentMapCache(String name) {
-		new GrailsConcurrentMapCache(name)
-	}
+    protected GrailsConcurrentMapCache createConcurrentMapCache(String name) {
+        new GrailsConcurrentMapCache(name)
+    }
 
-	void setConfiguration(CachePluginConfiguration configuration) {
-		configuration.caches.each { String key, CachePluginConfiguration.CacheConfig value ->
-			getCache(key)
-		}
-	}
+    void setConfiguration(CachePluginConfiguration configuration) {
+        configuration.caches.each { String key, CachePluginConfiguration.CacheConfig value ->
+            getCache(key)
+        }
+    }
 }

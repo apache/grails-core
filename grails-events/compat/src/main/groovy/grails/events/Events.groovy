@@ -90,11 +90,11 @@ trait Events {
      * Selector}.
      *
      * @param sel
-     * 		The {@literal Selector} to be used for matching
+     *         The {@literal Selector} to be used for matching
      * @param consumer
-     * 		The {@literal Consumer} to be triggered
+     *         The {@literal Consumer} to be triggered
      * @param <E>
-     * 		The type of the {@link Event}
+     *         The type of the {@link Event}
      *
      * @return A {@link Subscription} object that allows the caller to interact with the given mapping
      */

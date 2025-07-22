@@ -28,10 +28,10 @@ import org.springframework.boot.cli.command.CommandException;
  */
 public class NoSuchCommandException extends CommandException {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	public NoSuchCommandException(String name) {
-		super(String.format("'%1$s' is not a valid command. See 'help'.", name));
-	}
+    public NoSuchCommandException(String name) {
+        super(String.format("'%1$s' is not a valid command. See 'help'.", name));
+    }
 
 }

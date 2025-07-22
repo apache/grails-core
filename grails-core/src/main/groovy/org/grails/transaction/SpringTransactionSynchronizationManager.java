@@ -29,29 +29,29 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 enum SpringTransactionSynchronizationManager implements SynchronizationManager {
 
-	INSTANCE;
+    INSTANCE;
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.grails.transaction.SynchronizationManager#initSynchronization()
-	 */
-	public void initSynchronization() {
-		TransactionSynchronizationManager.initSynchronization();
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.grails.transaction.SynchronizationManager#initSynchronization()
+     */
+    public void initSynchronization() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.grails.transaction.SynchronizationManager#isSynchronizationActive()
-	 */
-	public boolean isSynchronizationActive() {
-		return TransactionSynchronizationManager.isSynchronizationActive();
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.grails.transaction.SynchronizationManager#isSynchronizationActive()
+     */
+    public boolean isSynchronizationActive() {
+        return TransactionSynchronizationManager.isSynchronizationActive();
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.grails.transaction.SynchronizationManager#clearSynchronization()
-	 */
-	public void clearSynchronization() {
-		TransactionSynchronizationManager.clear();
-	}
+    /*
+     * (non-Javadoc)
+     * @see org.grails.transaction.SynchronizationManager#clearSynchronization()
+     */
+    public void clearSynchronization() {
+        TransactionSynchronizationManager.clear();
+    }
 }

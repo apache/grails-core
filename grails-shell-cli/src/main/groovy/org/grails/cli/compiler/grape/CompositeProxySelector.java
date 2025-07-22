@@ -32,21 +32,21 @@ import org.eclipse.aether.repository.RemoteRepository;
  */
 public class CompositeProxySelector implements ProxySelector {
 
-	private final List<ProxySelector> selectors;
+    private final List<ProxySelector> selectors;
 
-	public CompositeProxySelector(List<ProxySelector> selectors) {
-		this.selectors = selectors;
-	}
+    public CompositeProxySelector(List<ProxySelector> selectors) {
+        this.selectors = selectors;
+    }
 
-	@Override
-	public Proxy getProxy(RemoteRepository repository) {
-		for (ProxySelector selector : this.selectors) {
-			Proxy proxy = selector.getProxy(repository);
-			if (proxy != null) {
-				return proxy;
-			}
-		}
-		return null;
-	}
+    @Override
+    public Proxy getProxy(RemoteRepository repository) {
+        for (ProxySelector selector : this.selectors) {
+            Proxy proxy = selector.getProxy(repository);
+            if (proxy != null) {
+                return proxy;
+            }
+        }
+        return null;
+    }
 
 }

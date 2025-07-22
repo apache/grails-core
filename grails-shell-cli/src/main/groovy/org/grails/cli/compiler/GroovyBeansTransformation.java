@@ -46,76 +46,76 @@ import org.springframework.core.annotation.Order;
 @Order(GroovyBeansTransformation.ORDER)
 public class GroovyBeansTransformation implements ASTTransformation {
 
-	/**
-	 * The order of the transformation.
-	 */
-	public static final int ORDER = DependencyManagementBomTransformation.ORDER + 200;
+    /**
+     * The order of the transformation.
+     */
+    public static final int ORDER = DependencyManagementBomTransformation.ORDER + 200;
 
-	@Override
-	public void visit(ASTNode[] nodes, SourceUnit source) {
-		for (ASTNode node : nodes) {
-			if (node instanceof ModuleNode) {
-				ModuleNode module = (ModuleNode) node;
-				for (ClassNode classNode : new ArrayList<>(module.getClasses())) {
-					if (classNode.isScript()) {
-						classNode.visitContents(new ClassVisitor(source, classNode));
-					}
-				}
-			}
-		}
-	}
+    @Override
+    public void visit(ASTNode[] nodes, SourceUnit source) {
+        for (ASTNode node : nodes) {
+            if (node instanceof ModuleNode) {
+                ModuleNode module = (ModuleNode) node;
+                for (ClassNode classNode : new ArrayList<>(module.getClasses())) {
+                    if (classNode.isScript()) {
+                        classNode.visitContents(new ClassVisitor(source, classNode));
+                    }
+                }
+            }
+        }
+    }
 
-	private class ClassVisitor extends ClassCodeVisitorSupport {
+    private class ClassVisitor extends ClassCodeVisitorSupport {
 
-		private static final String SOURCE_INTERFACE = "org.springframework.boot.BeanDefinitionLoader.GroovyBeanDefinitionSource";
+        private static final String SOURCE_INTERFACE = "org.springframework.boot.BeanDefinitionLoader.GroovyBeanDefinitionSource";
 
-		private static final String BEANS = "beans";
+        private static final String BEANS = "beans";
 
-		private final SourceUnit source;
+        private final SourceUnit source;
 
-		private final ClassNode classNode;
+        private final ClassNode classNode;
 
-		private boolean xformed = false;
+        private boolean xformed = false;
 
-		ClassVisitor(SourceUnit source, ClassNode classNode) {
-			this.source = source;
-			this.classNode = classNode;
-		}
+        ClassVisitor(SourceUnit source, ClassNode classNode) {
+            this.source = source;
+            this.classNode = classNode;
+        }
 
-		@Override
-		protected SourceUnit getSourceUnit() {
-			return this.source;
-		}
+        @Override
+        protected SourceUnit getSourceUnit() {
+            return this.source;
+        }
 
-		@Override
-		public void visitBlockStatement(BlockStatement block) {
-			if (block.isEmpty() || this.xformed) {
-				return;
-			}
-			ClosureExpression closure = beans(block);
-			if (closure != null) {
-				// Add a marker interface to the current script
-				this.classNode.addInterface(ClassHelper.make(SOURCE_INTERFACE));
-				// Implement the interface by adding a public read-only property with the
-				// same name as the method in the interface (getBeans). Make it return the
-				// closure.
-				this.classNode.addProperty(new PropertyNode(BEANS, Modifier.PUBLIC | Modifier.FINAL,
-						ClassHelper.CLOSURE_TYPE.getPlainNodeReference(), this.classNode, closure, null, null));
-				// Only do this once per class
-				this.xformed = true;
-			}
-		}
+        @Override
+        public void visitBlockStatement(BlockStatement block) {
+            if (block.isEmpty() || this.xformed) {
+                return;
+            }
+            ClosureExpression closure = beans(block);
+            if (closure != null) {
+                // Add a marker interface to the current script
+                this.classNode.addInterface(ClassHelper.make(SOURCE_INTERFACE));
+                // Implement the interface by adding a public read-only property with the
+                // same name as the method in the interface (getBeans). Make it return the
+                // closure.
+                this.classNode.addProperty(new PropertyNode(BEANS, Modifier.PUBLIC | Modifier.FINAL,
+                        ClassHelper.CLOSURE_TYPE.getPlainNodeReference(), this.classNode, closure, null, null));
+                // Only do this once per class
+                this.xformed = true;
+            }
+        }
 
-		/**
-		 * Extract a top-level <code>beans{}</code> closure from inside this block if
-		 * there is one. Removes it from the block at the same time.
-		 * @param block a block statement (class definition)
-		 * @return a beans Closure if one can be found, null otherwise
-		 */
-		private ClosureExpression beans(BlockStatement block) {
-			return AstUtils.getClosure(block, BEANS, true);
-		}
+        /**
+         * Extract a top-level <code>beans{}</code> closure from inside this block if
+         * there is one. Removes it from the block at the same time.
+         * @param block a block statement (class definition)
+         * @return a beans Closure if one can be found, null otherwise
+         */
+        private ClosureExpression beans(BlockStatement block) {
+            return AstUtils.getClosure(block, BEANS, true);
+        }
 
-	}
+    }
 
 }

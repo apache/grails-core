@@ -27,5 +27,6 @@
 
     <!-- Root Checks -->
     <module name="NewlineAtEndOfFile"/>
+    <module name="FileTabCharacter"/>
 
 </module>

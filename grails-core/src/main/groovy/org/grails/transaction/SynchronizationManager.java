@@ -29,9 +29,9 @@ package org.grails.transaction;
  */
 interface SynchronizationManager {
 
-	void initSynchronization();
+    void initSynchronization();
 
-	boolean isSynchronizationActive();
+    boolean isSynchronizationActive();
 
-	void clearSynchronization();
+    void clearSynchronization();
 }

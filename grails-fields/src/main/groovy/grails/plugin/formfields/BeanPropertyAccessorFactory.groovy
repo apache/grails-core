@@ -84,10 +84,10 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
     }
 
     private boolean getAddPathFromRoot() {
-		grailsApplication.config.getProperty('grails.plugin.fields.i18n.addPathFromRoot', Boolean)
-	}
-	
-	private DomainProperty resolvePropertyFromPathComponents(BeanWrapper beanWrapper, List<String> pathElements, Map params) {
+        grailsApplication.config.getProperty('grails.plugin.fields.i18n.addPathFromRoot', Boolean)
+    }
+    
+    private DomainProperty resolvePropertyFromPathComponents(BeanWrapper beanWrapper, List<String> pathElements, Map params) {
         String propertyName = pathElements.remove(0)
         PersistentEntity beanClass = resolveDomainClass(beanWrapper.wrappedClass)
         Class propertyType = resolvePropertyType(beanWrapper, beanClass, propertyName)
@@ -165,25 +165,25 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
 
     private static Class<?> resolveNonDomainPropertyType(BeanWrapper beanWrapper, String propertyName) {
         Class<?> type = beanWrapper.getPropertyType(propertyName)
-		if (type == null) {
-			String match = getPropertyMatch(propertyName)
-			if (match) {
+        if (type == null) {
+            String match = getPropertyMatch(propertyName)
+            if (match) {
                 Type genericType = beanWrapper.getPropertyDescriptor(match).readMethod.genericReturnType 
-				if (genericType instanceof ParameterizedType) {
+                if (genericType instanceof ParameterizedType) {
                     ParameterizedType parameterizedType = genericType as ParameterizedType
-					switch (parameterizedType.rawType) {
-						case Collection:
-							return parameterizedType.actualTypeArguments[0] as Class
-						case Map:
-							return parameterizedType.actualTypeArguments[1] as Class
-					}
-				} else {
-					return Object
-				}
-			}
-		}
-		return type
-	}
+                    switch (parameterizedType.rawType) {
+                        case Collection:
+                            return parameterizedType.actualTypeArguments[0] as Class
+                        case Map:
+                            return parameterizedType.actualTypeArguments[1] as Class
+                    }
+                } else {
+                    return Object
+                }
+            }
+        }
+        return type
+    }
 
     private BeanWrapper beanWrapperFor(Class type, value) {
         value ? PropertyAccessorFactory.forBeanPropertyAccess(unwrapIfProxy(value)) : new BeanWrapperImpl(type)

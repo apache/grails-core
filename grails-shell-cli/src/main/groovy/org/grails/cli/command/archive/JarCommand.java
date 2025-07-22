@@ -33,21 +33,21 @@ import org.springframework.boot.loader.tools.LibraryScope;
  */
 public class JarCommand extends ArchiveCommand {
 
-	public JarCommand() {
-		super("jar", "Create a self-contained executable jar file from a Spring Groovy script", new JarOptionHandler());
-	}
+    public JarCommand() {
+        super("jar", "Create a self-contained executable jar file from a Spring Groovy script", new JarOptionHandler());
+    }
 
-	private static final class JarOptionHandler extends ArchiveOptionHandler {
+    private static final class JarOptionHandler extends ArchiveOptionHandler {
 
-		JarOptionHandler() {
-			super("jar", new Layouts.Jar());
-		}
+        JarOptionHandler() {
+            super("jar", new Layouts.Jar());
+        }
 
-		@Override
-		protected LibraryScope getLibraryScope(File file) {
-			return LibraryScope.COMPILE;
-		}
+        @Override
+        protected LibraryScope getLibraryScope(File file) {
+            return LibraryScope.COMPILE;
+        }
 
-	}
+    }
 
 }

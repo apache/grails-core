@@ -41,27 +41,27 @@ import org.grails.cli.compiler.grape.RepositoryConfiguration;
  */
 public class GrabCommand extends OptionParsingCommand {
 
-	public GrabCommand() {
-		super("grab", "Download a spring groovy script's dependencies to ./repository", new GrabOptionHandler());
-	}
+    public GrabCommand() {
+        super("grab", "Download a spring groovy script's dependencies to ./repository", new GrabOptionHandler());
+    }
 
-	private static final class GrabOptionHandler extends CompilerOptionHandler {
+    private static final class GrabOptionHandler extends CompilerOptionHandler {
 
-		@Override
-		protected ExitStatus run(OptionSet options) throws Exception {
-			SourceOptions sourceOptions = new SourceOptions(options);
-			List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
-				.createDefaultRepositoryConfiguration();
-			GroovyCompilerConfiguration configuration = new OptionSetGroovyCompilerConfiguration(options, this,
-					repositoryConfiguration);
-			if (System.getProperty("grape.root") == null) {
-				System.setProperty("grape.root", ".");
-			}
-			GroovyCompiler groovyCompiler = new GroovyCompiler(configuration);
-			groovyCompiler.compile(sourceOptions.getSourcesArray());
-			return ExitStatus.OK;
-		}
+        @Override
+        protected ExitStatus run(OptionSet options) throws Exception {
+            SourceOptions sourceOptions = new SourceOptions(options);
+            List<RepositoryConfiguration> repositoryConfiguration = RepositoryConfigurationFactory
+                .createDefaultRepositoryConfiguration();
+            GroovyCompilerConfiguration configuration = new OptionSetGroovyCompilerConfiguration(options, this,
+                    repositoryConfiguration);
+            if (System.getProperty("grape.root") == null) {
+                System.setProperty("grape.root", ".");
+            }
+            GroovyCompiler groovyCompiler = new GroovyCompiler(configuration);
+            groovyCompiler.compile(sourceOptions.getSourcesArray());
+            return ExitStatus.OK;
+        }
 
-	}
+    }
 
 }

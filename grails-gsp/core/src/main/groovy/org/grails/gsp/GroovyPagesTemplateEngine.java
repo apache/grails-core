@@ -116,14 +116,14 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         }
     }
 
-	private class GroovyPagesTemplateEngineCacheEntry extends CacheEntry<GroovyPageMetaInfo>{
-		private final String pageName;
+    private class GroovyPagesTemplateEngineCacheEntry extends CacheEntry<GroovyPageMetaInfo>{
+        private final String pageName;
 
-		public GroovyPagesTemplateEngineCacheEntry(String pageName){
-			this.pageName = pageName;
-		}
+        public GroovyPagesTemplateEngineCacheEntry(String pageName){
+            this.pageName = pageName;
+        }
 
-		 @Override
+         @Override
          protected boolean hasExpired(long timeout, Object cacheRequestObject) {
              GroovyPageMetaInfo meta = getValue();
              Resource resource = (Resource)cacheRequestObject;
@@ -139,33 +139,33 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
              Resource resource = (Resource)cacheRequestObject;
              return buildPageMetaInfo(resource, pageName);
          }
-	}
+    }
 
-	private static class GroovyPagesTemplateEngineCallable implements Callable<CacheEntry<GroovyPageMetaInfo>> {
+    private static class GroovyPagesTemplateEngineCallable implements Callable<CacheEntry<GroovyPageMetaInfo>> {
 
-		private final CacheEntry<GroovyPageMetaInfo> cacheEntry;
+        private final CacheEntry<GroovyPageMetaInfo> cacheEntry;
 
-		public GroovyPagesTemplateEngineCallable(CacheEntry<GroovyPageMetaInfo> cacheEntry){
-			this.cacheEntry = cacheEntry;
-		}
+        public GroovyPagesTemplateEngineCallable(CacheEntry<GroovyPageMetaInfo> cacheEntry){
+            this.cacheEntry = cacheEntry;
+        }
 
-		@Override
-		public CacheEntry<GroovyPageMetaInfo> call() throws Exception {
-			return cacheEntry;
-		}
+        @Override
+        public CacheEntry<GroovyPageMetaInfo> call() throws Exception {
+            return cacheEntry;
+        }
 
-	}
+    }
 
     public GroovyPagesTemplateEngine() {
         // default
     }
 
     public void setGroovyPageSourceDecorators(List<GroovyPageSourceDecorator> groovyPageSourceDecorators){
-    	this.groovyPageSourceDecorators = groovyPageSourceDecorators;
+        this.groovyPageSourceDecorators = groovyPageSourceDecorators;
     }
 
     public List<GroovyPageSourceDecorator> getGroovyPageSourceDecorators(){
-    	return groovyPageSourceDecorators;
+        return groovyPageSourceDecorators;
     }
 
     public void setGroovyPageLocator(GroovyPageLocator groovyPageLocator) {
@@ -455,10 +455,10 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     }
 
     private StringBuilder decorateGroovyPageSource(StringBuilder source) throws IOException {
-    	for(GroovyPageSourceDecorator groovyPageSourceDecorator : groovyPageSourceDecorators){
-    		source = groovyPageSourceDecorator.decorate(source);
-    	}
-    	return source;
+        for(GroovyPageSourceDecorator groovyPageSourceDecorator : groovyPageSourceDecorators){
+            source = groovyPageSourceDecorator.decorate(source);
+        }
+        return source;
     }
 
     /**
@@ -531,7 +531,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         GroovyPageParser parser;
         String path = getPathForResource(res);
         try {
-        	String gspSource = IOUtils.toString(inputStream, getGspEncoding());
+            String gspSource = IOUtils.toString(inputStream, getGspEncoding());
             parser = new GroovyPageParser(name, path, path, decorateGroovyPageSource(new StringBuilder(gspSource)).toString(),
                     grailsApplication != null? grailsApplication.getConfig() : null);
         }

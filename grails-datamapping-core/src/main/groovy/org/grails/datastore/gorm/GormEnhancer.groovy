@@ -232,7 +232,7 @@ class GormEnhancer implements Closeable {
                         return null
                     }
                 }
-	    }
+        }
         }        
         return buildNamedCriteriaProxy(entity, namedQueries, queryName, args)
     }

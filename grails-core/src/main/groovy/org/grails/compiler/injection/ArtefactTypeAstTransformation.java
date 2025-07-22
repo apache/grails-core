@@ -223,10 +223,10 @@ public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransf
         return false;
     }
 
-	@Override
-	public void setCompilationUnit(CompilationUnit unit) {
-		compilationUnit = unit;
-	}
+    @Override
+    public void setCompilationUnit(CompilationUnit unit) {
+        compilationUnit = unit;
+    }
 
     @Override
     public int priority() {

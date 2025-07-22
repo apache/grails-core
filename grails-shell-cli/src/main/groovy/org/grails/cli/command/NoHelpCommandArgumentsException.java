@@ -28,10 +28,10 @@ import org.springframework.boot.cli.command.CommandException;
  */
 public class NoHelpCommandArgumentsException extends CommandException {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	public NoHelpCommandArgumentsException() {
-		super(Option.SHOW_USAGE, Option.HIDE_MESSAGE);
-	}
+    public NoHelpCommandArgumentsException() {
+        super(Option.SHOW_USAGE, Option.HIDE_MESSAGE);
+    }
 
 }

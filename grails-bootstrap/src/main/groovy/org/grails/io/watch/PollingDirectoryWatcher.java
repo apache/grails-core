@@ -44,8 +44,8 @@ class PollingDirectoryWatcher extends AbstractDirectoryWatcher {
     private Map<File, Collection<String>> directoryToExtensionsMap = new ConcurrentHashMap<File, Collection<String>>();
     private Map<File, Long> directoryWatch = new ConcurrentHashMap<File, Long>();
 
-	@Override
-	public void run() {
+    @Override
+    public void run() {
         int count = 0;
         while (active) {
             Set<File> files = lastModifiedMap.keySet();
@@ -68,21 +68,21 @@ class PollingDirectoryWatcher extends AbstractDirectoryWatcher {
                 // ignore
             }
         }
-	}
+    }
 
-	@Override
-	public void addWatchFile(File fileToWatch) {
+    @Override
+    public void addWatchFile(File fileToWatch) {
         lastModifiedMap.put(fileToWatch, fileToWatch.lastModified());
-	}
+    }
 
-	@Override
-	public void addWatchDirectory(File dir, List<String> fileExtensions) {
-		if(!isValidDirectoryToMonitor(dir)){
-			return;
-		}
+    @Override
+    public void addWatchDirectory(File dir, List<String> fileExtensions) {
+        if(!isValidDirectoryToMonitor(dir)){
+            return;
+        }
         trackDirectoryExtensions(dir, fileExtensions);
         cacheFilesForDirectory(dir, fileExtensions, false);
-	}
+    }
 
     private void trackDirectoryExtensions(File dir, List<String> fileExtensions) {
         Collection<String> existingExtensions = directoryToExtensionsMap.get(dir);
@@ -118,9 +118,9 @@ class PollingDirectoryWatcher extends AbstractDirectoryWatcher {
         }
 
         for (File file : files) {
-        	if(isValidDirectoryToMonitor(file)) {
+            if(isValidDirectoryToMonitor(file)) {
                 cacheFilesForDirectory(file, fileExtensions, fireEvent);
-        	}
+            }
             else if (isValidFileToMonitor(file, fileExtensions)) {
                 if (!lastModifiedMap.containsKey(file) && fireEvent) {
                     fireOnNew(file);

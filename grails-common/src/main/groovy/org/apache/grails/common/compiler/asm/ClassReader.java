@@ -202,11 +202,11 @@ class ClassReader {
     public ClassReader(final byte[] b, final int off, final int len) {
         this.b = b;
         // checks the class version
-		/* SPRING PATCH: REMOVED FOR FORWARD COMPATIBILITY WITH JDK 9
+        /* SPRING PATCH: REMOVED FOR FORWARD COMPATIBILITY WITH JDK 9
         if (readShort(off + 6) > Opcodes.V1_8) {
             throw new IllegalArgumentException();
         }
-		*/
+        */
         // parses the constant pool
         items = new int[readUnsignedShort(off + 8)];
         int n = items.length;

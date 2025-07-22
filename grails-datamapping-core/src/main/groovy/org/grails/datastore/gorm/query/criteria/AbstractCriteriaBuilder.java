@@ -1053,12 +1053,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     protected void ensureQueryIsInitialized() {
-    	if(query == null) {
-    		query = queryCreator.createQuery(targetClass);
-    	}
-    	if(queryMetaClass == null) {
-    		queryMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(query.getClass());
-    	}
+        if(query == null) {
+            query = queryCreator.createQuery(targetClass);
+        }
+        if(queryMetaClass == null) {
+            queryMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(query.getClass());
+        }
     }
 
     private boolean isCriteriaConstructionMethod(String name, Object[] args) {

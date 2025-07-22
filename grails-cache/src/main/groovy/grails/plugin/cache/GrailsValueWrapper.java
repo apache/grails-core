@@ -27,14 +27,14 @@ import org.springframework.cache.support.SimpleValueWrapper;
  */
 public class GrailsValueWrapper extends SimpleValueWrapper {
 
-	protected Object nativeWrapper;
+    protected Object nativeWrapper;
 
-	public GrailsValueWrapper(Object value, Object nativeWrapper) {
-		super(value);
-		this.nativeWrapper = nativeWrapper;
-	}
+    public GrailsValueWrapper(Object value, Object nativeWrapper) {
+        super(value);
+        this.nativeWrapper = nativeWrapper;
+    }
 
-	public Object getNativeWrapper() {
-		return nativeWrapper;
-	}
+    public Object getNativeWrapper() {
+        return nativeWrapper;
+    }
 }

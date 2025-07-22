@@ -237,7 +237,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     }
 
     public String getNoSuffixViewURI(GroovyObject controller, String viewName) {
-   		return getGroovyPagesUriService().getNoSuffixViewURI(controller, viewName);
+        return getGroovyPagesUriService().getNoSuffixViewURI(controller, viewName);
     }
 
     public String getTemplateURI(GroovyObject controller, String templateName) {
