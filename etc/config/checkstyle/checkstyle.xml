@@ -25,4 +25,7 @@
         <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
     </module>
 
+    <!-- Root Checks -->
+    <module name="NewlineAtEndOfFile"/>
+
 </module>
