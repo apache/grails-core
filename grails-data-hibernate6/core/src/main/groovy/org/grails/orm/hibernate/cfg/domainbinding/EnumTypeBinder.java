@@ -41,8 +41,7 @@ public class EnumTypeBinder {
 
     public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
         PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(property);
-        final HibernatePersistentEntity owner = (HibernatePersistentEntity) property.getOwner();
-        Mapping ownerMapping = owner.getMappedForm();
+        Mapping ownerMapping = new HibernateEntityWrapper(property.getOwner()).getMappedForm();
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
@@ -68,7 +67,7 @@ public class EnumTypeBinder {
         simpleValue.setTypeParameters(enumProperties);
 
         Column column = new Column();
-        boolean isTablePerHierarchySubclass = !owner.isRoot() && (ownerMapping == null || ownerMapping.getTablePerHierarchy());
+        boolean isTablePerHierarchySubclass = !property.getOwner().isRoot() && (ownerMapping == null || ownerMapping.getTablePerHierarchy());
         if (isTablePerHierarchySubclass) {
             // Properties on subclasses in a table-per-hierarchy strategy must be nullable.
             if (LOG.isDebugEnabled()) {

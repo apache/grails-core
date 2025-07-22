@@ -199,8 +199,13 @@ public class HibernateMappingContext extends AbstractMappingContext {
                 .toList();
     }
 
-    static class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity {
+    public static class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity {
         private final ClassMapping<Mapping> classMapping;
+
+        public Mapping getMappedForm() {
+            return classMapping.getMappedForm();
+        }
+
         public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {
             super(type, ctx);
             this.classMapping = new ClassMapping<Mapping>() {
@@ -219,7 +224,11 @@ public class HibernateMappingContext extends AbstractMappingContext {
                 public IdentityMapping getIdentifier() {
                     return null;
                 }
+
+
             };
+
+
         }
 
         @Override

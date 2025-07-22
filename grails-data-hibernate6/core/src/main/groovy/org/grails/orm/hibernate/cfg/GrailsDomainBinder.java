@@ -300,8 +300,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             SimpleValue elt = new BasicValue(metadataBuildingContext, map.getCollectionTable());
             map.setElement(elt);
 
-            HibernatePersistentEntity owner = (HibernatePersistentEntity) property.getOwner();
-            Mapping mapping =owner.getMappedForm();
+            Mapping mapping = new HibernateEntityWrapper(property.getOwner()).getMappedForm();
             String typeName = new TypeNameProvider().getTypeName(property, mapping);
             if (typeName == null ) {
 
@@ -332,6 +331,14 @@ public class GrailsDomainBinder implements MetadataContributor {
         return null;
     }
 
+    /**
+     * @TODO NOT TESTED
+     * @param property
+     * @param mappings
+     * @param persistentClasses
+     * @param list
+     * @param sessionFactoryBeanName
+     */
     private void bindListSecondPass(ToMany property, InFlightMetadataCollector mappings,
                                       Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
 
@@ -755,7 +762,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
             else {
 
-                Mapping mapping = getMapping(property.getOwner());
+                Mapping mapping =  new HibernateEntityWrapper(property.getOwner()).getMappedForm();;
                 String typeName = new TypeNameProvider().getTypeName(property, mapping);
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
@@ -779,7 +786,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         } else {
             final PersistentEntity domainClass = property.getAssociatedEntity();
 
-            Mapping m = getMapping(domainClass);
+            Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
             if (hasCompositeIdentifier(m)) {
                 CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
                 bindCompositeIdentifierToManyToOne(property, element, ci, domainClass,
@@ -863,7 +870,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         PersistentEntity refDomainClass = property.getOwner();
-        final Mapping mapping = getMapping(refDomainClass.getJavaClass());
+        final Mapping mapping = new HibernateEntityWrapper(refDomainClass).getMappedForm();
         boolean hasCompositeIdentifier = hasCompositeIdentifier(mapping);
         if ((shouldCollectionBindWithJoinColumn((ToMany) property) && hasCompositeIdentifier) ||
                 (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
@@ -1198,7 +1205,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @return The table name
      */
     private String getTableName(PersistentEntity domainClass, String sessionFactoryBeanName) {
-        Mapping m = getMapping(domainClass);
+        Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
         String tableName = null;
         if (m != null && m.getTableName() != null) {
             tableName = m.getTableName();
@@ -1242,7 +1249,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     public void evaluateMapping(PersistentEntity domainClass) {
         try {
-            final Mapping m = (Mapping) domainClass.getMapping().getMappedForm();
+            final Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
             trackCustomCascadingSaves(m, domainClass.getPersistentProperties());
             AbstractGrailsDomainBinder.cacheMapping(domainClass.getJavaClass(), m);
         } catch (Exception e) {
@@ -1295,15 +1302,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         return Optional.ofNullable(AbstractGrailsDomainBinder.getMapping(theClass)).orElseThrow();
     }
 
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param domainClass The domain class in question
-     * @return A Mapping object or null
-     */
-    private static Mapping getMapping(PersistentEntity domainClass) {
-        return getMapping(domainClass.getJavaClass());
-    }
 
     public static void clearMappingCache() {
         AbstractGrailsDomainBinder.clearMappingCache();
@@ -1341,14 +1339,15 @@ public class GrailsDomainBinder implements MetadataContributor {
             root.setPolymorphic(false);
         } else {
             root.setPolymorphic(true);
-            Mapping m =entity.getMappedForm();
+            Mapping m = new HibernateEntityWrapper(entity).getMappedForm();
             boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
             if (!tablePerSubclass) {
                 // if the root class has children create a discriminator property
-                bindDiscriminatorProperty(root.getTable(), root, mappings);
+
+                bindDiscriminatorProperty(root.getTable(), root, m);
             }
             // bind the sub classes
-            bindSubClasses(entity, root, mappings, sessionFactoryBeanName);
+            bindSubClasses(entity, root, mappings, sessionFactoryBeanName, m);
         }
 
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
@@ -1400,13 +1399,14 @@ public class GrailsDomainBinder implements MetadataContributor {
     /**
      * Binds the sub classes of a root class using table-per-heirarchy inheritance mapping
      *
-     * @param domainClass The root domain class to bind
-     * @param parent      The parent class instance
-     * @param mappings    The mappings instance
-     * @param sessionFactoryBeanName  the session factory bean name
+     * @param domainClass            The root domain class to bind
+     * @param parent                 The parent class instance
+     * @param mappings               The mappings instance
+     * @param sessionFactoryBeanName the session factory bean name
+     * @param m
      */
     private void bindSubClasses(HibernatePersistentEntity domainClass, PersistentClass parent,
-                                  InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                InFlightMetadataCollector mappings, String sessionFactoryBeanName, Mapping m) {
         domainClass.getMappingContext()
                 .getDirectChildEntities(domainClass)
                 .stream()
@@ -1414,7 +1414,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 .map(HibernatePersistentEntity.class::cast)
                 .filter(this::usesConnectionSource)
                 .filter(sub -> isChildEntity(sub, domainClass))
-                .forEach( sub -> bindSubClass(sub, parent, mappings, sessionFactoryBeanName));
+                .forEach( sub -> bindSubClass(sub, parent, mappings, sessionFactoryBeanName, m));
 
     }
 
@@ -1431,9 +1431,8 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @param sessionFactoryBeanName  the session factory bean name
      */
     private void bindSubClass(HibernatePersistentEntity sub, PersistentClass parent,
-                                InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                InFlightMetadataCollector mappings, String sessionFactoryBeanName,Mapping m) {
         evaluateMapping(sub);
-        Mapping m = getMapping(parent.getMappedClass());
         Subclass subClass;
         boolean tablePerSubclass = m != null && !m.getTablePerHierarchy() && !m.isTablePerConcreteClass();
         boolean tablePerConcreteClass = m != null && m.isTablePerConcreteClass();
@@ -1449,7 +1448,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             // set the descriminator value as the name of the class. This is the
             // value used by Hibernate to decide what the type of the class is
             // to perform polymorphic queries
-            Mapping subMapping = getMapping(sub);
+            Mapping subMapping = new HibernateEntityWrapper(sub).getMappedForm();
             DiscriminatorConfig discriminatorConfig = subMapping != null ? subMapping.getDiscriminator() : null;
 
             subClass.setDiscriminatorValue(discriminatorConfig != null && discriminatorConfig.getValue() != null ? discriminatorConfig.getValue() : fullName);
@@ -1492,7 +1491,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         final java.util.Collection<PersistentEntity> childEntities = sub.getMappingContext().getDirectChildEntities(sub);
         if (!childEntities.isEmpty()) {
             // bind the sub classes
-            bindSubClasses(sub, subClass, mappings, sessionFactoryBeanName);
+            bindSubClasses(sub, subClass, mappings, sessionFactoryBeanName, m);
         }
     }
 
@@ -1501,7 +1500,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                                   InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
         classBinding.bindClass(subClass, unionSubclass, mappings);
 
-        Mapping subMapping = getMapping(subClass.getJavaClass());
+        Mapping subMapping = new HibernateEntityWrapper(subClass).getMappedForm();
 
         if ( unionSubclass.getEntityPersisterClass() == null ) {
             unionSubclass.getRootClass().setEntityPersisterClass(
@@ -1609,15 +1608,14 @@ public class GrailsDomainBinder implements MetadataContributor {
      * Creates and binds the discriminator property used in table-per-hierarchy inheritance to
      * discriminate between sub class instances
      *
-     * @param table    The table to bind onto
-     * @param entity   The root class entity
-     * @param mappings The mappings instance
+     * @param table       The table to bind onto
+     * @param entity      The root class entity
+     * @param someMapping The mappings instance
      */
-    private void bindDiscriminatorProperty(Table table, RootClass entity, InFlightMetadataCollector mappings) {
-        Mapping m = getMapping(entity.getMappedClass());
+    private void bindDiscriminatorProperty(Table table, RootClass entity, Mapping someMapping) {
         SimpleValue d = new BasicValue(metadataBuildingContext, table);
         entity.setDiscriminator(d);
-        DiscriminatorConfig discriminatorConfig = m != null ? m.getDiscriminator() : null;
+        DiscriminatorConfig discriminatorConfig = someMapping != null ? someMapping.getDiscriminator() : null;
 
         boolean hasDiscriminatorConfig = discriminatorConfig != null;
         entity.setDiscriminatorValue(hasDiscriminatorConfig ? discriminatorConfig.getValue() : entity.getClassName());
@@ -1670,7 +1668,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                                                        RootClass root, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         // get the schema and catalog names from the configuration
-        Mapping m = domainClass.getMappedForm();
+        Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
 
         configureDerivedProperties(domainClass, m);
         CacheConfig cc = m.getCache();
@@ -1793,7 +1791,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties();
         Table table = persistentClass.getTable();
 
-        Mapping gormMapping = domainClass.getMappedForm();
+        Mapping gormMapping = new HibernateEntityWrapper(domainClass).getMappedForm();
 
         if (gormMapping != null) {
             table.setComment(gormMapping.getComment());
@@ -2131,7 +2129,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private boolean isComponentPropertyNullable(PersistentProperty componentProperty) {
         if (componentProperty == null) return false;
         final HibernatePersistentEntity domainClass = (HibernatePersistentEntity) componentProperty.getOwner();
-        final Mapping mapping = domainClass.getMappedForm();
+        final Mapping mapping = new HibernateEntityWrapper(domainClass).getMappedForm();
         return !domainClass.isRoot() && (mapping == null || mapping.isTablePerHierarchy()) || componentProperty.isNullable();
     }
 
@@ -2166,7 +2164,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                                  String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         bindManyToOneValues(property, manyToOne);
         PersistentEntity refDomainClass = property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity();
-        Mapping mapping = ((HibernatePersistentEntity)refDomainClass).getMappedForm();
+        Mapping mapping = new HibernateEntityWrapper(refDomainClass).getMappedForm();
         boolean isComposite = hasCompositeIdentifier(mapping);
         if (isComposite) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
@@ -2391,7 +2389,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private void bindSimpleId(PersistentProperty identifier, RootClass entity,
                                 InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName) {
 
-        Mapping mapping = ((HibernatePersistentEntity)identifier.getOwner()).getMappedForm();
+        Mapping mapping = new HibernateEntityWrapper(identifier.getOwner()).getMappedForm();
         boolean useSequence = mapping != null && mapping.isTablePerConcreteClass();
 
         // create the id value
@@ -2595,7 +2593,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (referenced != null && referenced.isOwningEntity(domainClass) && !isCircularAssociation(grailsProperty)) {
                     cascadeStrategy = CASCADE_ALL;
                 }
-                else if(isCompositeIdProperty(getMapping(domainClass), grailsProperty)) {
+                else if(isCompositeIdProperty(new HibernateEntityWrapper(domainClass).getMappedForm(), grailsProperty)) {
                     cascadeStrategy = CASCADE_ALL;
                 }
                 else {
@@ -2724,7 +2722,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private void setTypeForPropertyConfig(PersistentProperty grailsProp, SimpleValue simpleValue, PropertyConfig config) {
-        Mapping mapping = getMapping(grailsProp.getOwner());
+        Mapping mapping = new HibernateEntityWrapper(grailsProp.getOwner()).getMappedForm();
         final String typeName = new TypeNameProvider().getTypeName(grailsProp, mapping);
         if (typeName == null) {
             simpleValue.setTypeName(grailsProp.getType().getName());
@@ -2805,7 +2803,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         final PersistentEntity owner = property.getOwner();
         if (!owner.isRoot()) {
-            Mapping mapping = getMapping(owner);
+            Mapping mapping = new HibernateEntityWrapper(owner).getMappedForm();
             if (mapping == null || mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name ["+column.getName()+"] set to nullable");
@@ -2859,7 +2857,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (cc == null) {
             // No column config given, so try to fetch it from the mapping
             PersistentEntity domainClass =  grailsProp.getOwner();
-            Mapping m = getMapping(domainClass);
+            Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
             if (m != null) {
                 PropertyConfig c = m.getPropertyConfig(grailsProp.getName());
 
@@ -2956,7 +2954,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private String getIndexColumnType(PersistentProperty property, String defaultType) {
         PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(property);
         if (pc != null && pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
-            Mapping mapping = ((HibernatePersistentEntity)property.getOwner()).getMappedForm();
+            Mapping mapping =new HibernateEntityWrapper(property.getOwner()).getMappedForm();
             return new TypeNameProvider().getTypeName(property, mapping);
         }
         return defaultType;
@@ -3068,6 +3066,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             createCollectionKeys();
         }
     }
+
 
     class ListSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3024674993774205193L;
@@ -3212,7 +3211,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         public String getTypeName(ToMany property) {
-            Mapping mapping = getMapping(property.getOwner());
+            Mapping mapping = new HibernateEntityWrapper(property.getOwner()).getMappedForm();
             return new TypeNameProvider().getTypeName(property, mapping);
         }
 
