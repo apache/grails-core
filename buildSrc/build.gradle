@@ -44,8 +44,8 @@ repositories {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:${versions.get('grailsVersion')}")
     implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    implementation platform("org.apache.grails:grails-gradle-bom:${versions.get('grailsVersion')}")
     implementation 'org.apache.grails:grails-gradle-plugins'
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:${versions.get('ratVersion')}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${versions.get('gradleCryptoChecksumVersion')}"
