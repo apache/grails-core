@@ -61,6 +61,9 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails Plugin
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.springframework.boot:spring-boot-test', {
+        // impl: @SpringBootTest(runtime)
+    }
     testImplementation 'org.spockframework:spock-core'
 }
 

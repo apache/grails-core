@@ -23,6 +23,7 @@ import grails.core.GrailsApplication
 import grails.spring.BeanBuilder
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.Transaction
 import redis.clients.jedis.exceptions.JedisConnectionException
@@ -33,6 +34,7 @@ import java.util.concurrent.*
 import static grails.plugins.redis.RedisService.NO_EXPIRATION_TTL
 
 @Integration
+@SpringBootTest
 class RedisServiceSpec extends Specification {
     @Autowired RedisService redisService
     @Autowired GrailsApplication grailsApplication
