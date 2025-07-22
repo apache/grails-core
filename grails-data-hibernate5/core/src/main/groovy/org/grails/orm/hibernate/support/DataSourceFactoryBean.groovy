@@ -22,8 +22,6 @@ package org.grails.orm.hibernate.support
 import org.grails.orm.hibernate.AbstractHibernateDatastore
 import org.grails.orm.hibernate.connections.HibernateConnectionSource
 import org.springframework.beans.factory.FactoryBean
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 
 import javax.sql.DataSource
 

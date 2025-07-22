@@ -32,13 +32,12 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession;
 import org.grails.datastore.mapping.transactions.Transaction;
 import org.hibernate.LockMode;
-import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
- * Session implementation that wraps a Hibernate {@link Session}.
+ * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.
  *
  * @author Graeme Rocher
  * @since 1.0

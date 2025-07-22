@@ -19,7 +19,6 @@
 package grails.core;
 
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.validation.Validator;
 

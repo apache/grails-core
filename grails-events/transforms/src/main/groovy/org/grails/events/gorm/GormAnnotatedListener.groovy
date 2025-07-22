@@ -22,7 +22,6 @@ package org.grails.events.gorm
 import grails.events.annotation.gorm.Listener
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

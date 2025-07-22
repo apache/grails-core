@@ -20,11 +20,9 @@
 package org.grails.datastore.gorm.services.implementers
 
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
-import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.grails.datastore.mapping.reflect.AstUtils

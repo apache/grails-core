@@ -26,13 +26,11 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.query.*;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.sql.JoinType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
@@ -136,7 +134,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @param alias           The alias to assign to the joined association (for later reference).
      * @param joinType        The type of join to use.
      * @return this (for method chaining)
-     * @throws HibernateException Indicates a problem creating the sub criteria
+     * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      * @see #createAlias(String, String)
      */
     public Criteria createAlias(String associationPath, String alias, int joinType) {

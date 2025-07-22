@@ -20,9 +20,7 @@
 package org.grails.datastore.gorm.query
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.reflect.NameUtils
+
 /**
  * Handles creation of named queries
  *

@@ -22,7 +22,6 @@ import java.util.List;
 
 import joptsimple.OptionSet;
 
-import org.springframework.boot.cli.command.Command;
 import org.springframework.boot.cli.command.OptionParsingCommand;
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
@@ -34,7 +33,7 @@ import org.grails.cli.compiler.RepositoryConfigurationFactory;
 import org.grails.cli.compiler.grape.RepositoryConfiguration;
 
 /**
- * {@link Command} to grab the dependencies of one or more Groovy scripts.
+ * {@link org.springframework.boot.cli.command.Command} to grab the dependencies of one or more Groovy scripts.
  *
  * @author Andy Wilkinson
  * @since 1.0.0

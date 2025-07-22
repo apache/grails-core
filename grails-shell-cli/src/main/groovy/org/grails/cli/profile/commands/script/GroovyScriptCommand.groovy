@@ -29,7 +29,6 @@ import org.grails.build.logging.GrailsConsoleAntBuilder
 import org.grails.cli.GrailsCli
 import org.grails.cli.boot.SpringInvoker
 import org.grails.cli.gradle.GradleInvoker
-import org.grails.cli.profile.CommandArgument
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile

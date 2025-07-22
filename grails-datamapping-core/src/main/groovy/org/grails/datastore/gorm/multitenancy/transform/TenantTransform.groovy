@@ -34,7 +34,6 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.AstUtils

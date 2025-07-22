@@ -21,7 +21,6 @@ package grails.gorm.api
 
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria

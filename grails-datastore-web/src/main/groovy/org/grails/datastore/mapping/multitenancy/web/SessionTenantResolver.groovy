@@ -20,12 +20,10 @@
 package org.grails.datastore.mapping.multitenancy.web
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.RequestContextHolder
-import org.springframework.web.context.request.ServletWebRequest
 
 /**
  * Resolves the tenant id from the user HTTP session

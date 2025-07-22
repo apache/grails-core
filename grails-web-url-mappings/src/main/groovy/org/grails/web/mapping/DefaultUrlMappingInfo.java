@@ -18,7 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.boot.GrailsApp;
 import grails.util.GrailsNameUtils;
 import grails.web.CamelCaseUrlConverter;
 import grails.web.UrlConverter;
@@ -27,7 +26,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Map;
 
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 
 import grails.web.mapping.UrlMapping;

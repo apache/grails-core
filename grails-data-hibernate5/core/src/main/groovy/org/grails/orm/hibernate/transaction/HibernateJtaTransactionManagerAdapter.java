@@ -22,7 +22,6 @@ package org.grails.orm.hibernate.transaction;
 import jakarta.transaction.*;
 import javax.transaction.xa.XAResource;
 
-import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -35,7 +34,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * Hibernate's org.hibernate.engine.transaction.Isolater class's interaction with transactions
  * 
  * This is required when there is no real JTA transaction manager in use and Spring's
- * {@link TransactionAwareDataSourceProxy} is used.
+ * {@link org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy} is used.
  * 
  * Without this solution, using Hibernate's TableGenerator identity strategies will fail to support transactions.
  * The id generator will commit the current transaction and break transactional behaviour.

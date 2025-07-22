@@ -21,7 +21,6 @@ package org.grails.scaffolding.markup
 
 import org.grails.scaffolding.model.DomainModelService
 import org.grails.scaffolding.model.property.DomainProperty
-import groovy.transform.CompileStatic
 import groovy.xml.MarkupBuilder
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.PersistentEntity

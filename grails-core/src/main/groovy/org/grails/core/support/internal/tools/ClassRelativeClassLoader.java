@@ -22,8 +22,6 @@ package org.grails.core.support.internal.tools;
 import grails.io.IOUtils;
 import grails.util.BuildSettings;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 
 import java.io.IOException;
 import java.net.URL;

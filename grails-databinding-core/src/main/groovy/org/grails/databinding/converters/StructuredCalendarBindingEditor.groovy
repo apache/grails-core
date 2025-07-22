@@ -18,8 +18,6 @@
  */
 package org.grails.databinding.converters
 
-import java.util.Calendar;
-
 /**
  * @author Jeff Brown
  * @since 2.3

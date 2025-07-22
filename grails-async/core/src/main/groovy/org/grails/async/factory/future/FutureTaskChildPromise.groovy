@@ -30,7 +30,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.locks.ReentrantLock
 
 /**
  * A child promise of a {@link FutureTaskPromise}

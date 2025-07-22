@@ -19,12 +19,7 @@
 package org.grails.orm.hibernate.support;
 
 import org.grails.datastore.mapping.core.grailsversion.GrailsVersion;
-import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.hibernate.*;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
-
-import java.lang.reflect.Method;
 
 /**
  *

@@ -15,13 +15,12 @@
  */
 package org.apache.grails.common.annotation;
 
-import org.springframework.asm.AnnotationVisitor;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 
 /**
- * {@link AnnotationVisitor} to recursively visit annotation attributes.
+ * {@link org.springframework.asm.AnnotationVisitor} to recursively visit annotation attributes.
  *
  * <p>Note: This class was ported to Grails 7 from Spring Framework 5.3 as it was
  * removed in Spring 6 without a public replacement.

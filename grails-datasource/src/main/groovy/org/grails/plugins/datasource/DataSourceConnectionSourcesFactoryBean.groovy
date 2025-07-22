@@ -26,7 +26,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.context.ApplicationContext

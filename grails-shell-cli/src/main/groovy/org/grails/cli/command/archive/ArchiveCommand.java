@@ -46,7 +46,6 @@ import org.codehaus.groovy.transform.ASTTransformation;
 import org.grails.cli.boot.SpringApplicationLauncher;
 import org.grails.cli.archive.PackagedSpringApplicationLauncher;
 import org.grails.cli.command.OptionParsingCommand;
-import org.springframework.boot.cli.command.Command;
 import org.grails.cli.command.archive.ResourceMatcher.MatchedResource;
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
@@ -67,7 +66,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.Assert;
 
 /**
- * Abstract {@link Command} to create a self-contained executable archive file from a CLI
+ * Abstract {@link org.springframework.boot.cli.command.Command} to create a self-contained executable archive file from a CLI
  * application.
  *
  * @author Andy Wilkinson

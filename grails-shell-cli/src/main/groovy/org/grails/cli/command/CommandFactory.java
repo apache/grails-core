@@ -21,11 +21,10 @@ package org.grails.cli.command;
 import org.springframework.boot.cli.command.Command;
 
 import java.util.Collection;
-import java.util.ServiceLoader;
 
 /**
  * Factory used to create CLI {@link org.springframework.boot.cli.command.Command}s. Intended for use with a Java
- * {@link ServiceLoader}.
+ * {@link java.util.ServiceLoader}.
  *
  * @author Dave Syer
  * @since 1.0.0

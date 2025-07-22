@@ -20,12 +20,11 @@ package org.grails.cli.command.archive;
 
 import java.io.File;
 
-import org.springframework.boot.cli.command.Command;
 import org.springframework.boot.loader.tools.Layouts;
 import org.springframework.boot.loader.tools.LibraryScope;
 
 /**
- * {@link Command} to create a self-contained executable jar file from a CLI application.
+ * {@link org.springframework.boot.cli.command.Command} to create a self-contained executable jar file from a CLI application.
  *
  * @author Andy Wilkinson
  * @author Phillip Webb

@@ -21,8 +21,6 @@ package grails.core;
 import grails.config.Config;
 import grails.util.Metadata;
 
-import java.util.Map;
-
 import org.grails.datastore.mapping.model.MappingContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;

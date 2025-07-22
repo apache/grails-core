@@ -21,7 +21,6 @@ package org.grails.cli.gradle.cache
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.gradle.tooling.ProjectConnection
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml

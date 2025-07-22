@@ -31,7 +31,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
-import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute

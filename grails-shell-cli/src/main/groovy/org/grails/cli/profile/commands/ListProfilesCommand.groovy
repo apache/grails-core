@@ -18,7 +18,6 @@
  */
 package org.grails.cli.profile.commands
 
-import grails.build.logging.GrailsConsole
 import groovy.transform.CompileStatic
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription

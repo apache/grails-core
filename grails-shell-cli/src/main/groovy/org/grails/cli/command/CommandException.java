@@ -18,8 +18,6 @@
  */
 package org.grails.cli.command;
 
-import org.springframework.boot.cli.command.CommandRunner;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;

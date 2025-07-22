@@ -4,4 +4,6 @@ ruleset {
 
     FileEndsWithoutNewline
     NoTabCharacter
+    UnnecessaryGroovyImport
+    UnusedImport
 }

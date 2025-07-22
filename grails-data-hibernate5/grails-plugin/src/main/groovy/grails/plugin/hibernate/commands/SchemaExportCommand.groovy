@@ -25,14 +25,7 @@ import groovy.transform.CompileStatic
 import org.grails.build.parsing.CommandLine
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.HibernateMappingContextSessionFactoryBean
-import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
-import org.hibernate.boot.MetadataBuilder
-import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.spi.MetadataImplementor
 import org.hibernate.engine.spi.SessionFactoryImplementor
-import org.hibernate.service.ServiceRegistry
-import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
 import org.hibernate.tool.schema.TargetType
 /**

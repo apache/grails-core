@@ -25,7 +25,6 @@ import grails.web.mapping.UrlMappingInfo;
 import java.net.URI;
 import org.springframework.util.Assert;
 
-import java.util.Collections;
 import java.util.Map;
 
 /**

@@ -20,8 +20,6 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.transform.TypeChecked
-import groovy.transform.TypeCheckingMode
 import org.grails.datastore.mapping.model.MappingContext
 
 import java.lang.reflect.Method

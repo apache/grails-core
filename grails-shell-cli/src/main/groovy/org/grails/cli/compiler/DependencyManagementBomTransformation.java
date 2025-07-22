@@ -48,7 +48,6 @@ import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.control.messages.Message;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
-import org.codehaus.groovy.transform.ASTTransformation;
 
 import org.grails.cli.compiler.dependencies.MavenModelDependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
@@ -57,7 +56,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 /**
- * {@link ASTTransformation} for processing
+ * {@link org.codehaus.groovy.transform.ASTTransformation} for processing
  * {@link DependencyManagementBom @DependencyManagementBom} annotations.
  *
  * @author Andy Wilkinson

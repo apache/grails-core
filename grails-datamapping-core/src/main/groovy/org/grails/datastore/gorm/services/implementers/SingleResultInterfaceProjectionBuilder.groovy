@@ -21,19 +21,11 @@ package org.grails.datastore.gorm.services.implementers
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.*
-import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
-import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.Statement
-import org.codehaus.groovy.transform.DelegateASTTransformation
 import org.grails.datastore.gorm.services.ServiceImplementer
-import org.grails.datastore.gorm.transform.AstPropertyResolveUtils
-import org.grails.datastore.mapping.reflect.AstUtils
-import org.grails.datastore.mapping.reflect.NameUtils
-
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 

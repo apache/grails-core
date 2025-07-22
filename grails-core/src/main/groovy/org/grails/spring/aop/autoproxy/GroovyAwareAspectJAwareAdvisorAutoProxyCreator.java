@@ -20,10 +20,6 @@ package org.grails.spring.aop.autoproxy;
 
 import groovy.lang.GroovyObject;
 import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
-import org.springframework.aop.config.AopConfigUtils;
-
-import java.lang.reflect.Field;
-import java.util.List;
 
 /**
  * Enables AspectJ weaving from the application context.

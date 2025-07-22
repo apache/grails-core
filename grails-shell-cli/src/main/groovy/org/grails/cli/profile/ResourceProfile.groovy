@@ -19,9 +19,8 @@
 package org.grails.cli.profile
 
 import groovy.transform.CompileStatic
-import org.grails.config.NavigableMap
 import org.grails.io.support.Resource
-import org.yaml.snakeyaml.Yaml
+
 /**
  * A profile that operates against abstract {@link Resource} references
  *

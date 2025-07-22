@@ -20,12 +20,10 @@ package org.grails.cli.profile.commands
 
 import grails.build.logging.GrailsConsole
 import grails.config.ConfigMap
-import grails.util.BuildSettings
 import groovy.transform.CompileStatic
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
-import org.grails.cli.profile.Feature
 import org.grails.cli.profile.Profile
 import org.grails.cli.profile.ProfileRepository
 import org.grails.cli.profile.ProfileRepositoryAware

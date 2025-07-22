@@ -23,13 +23,6 @@ import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.query.api.BuildableCriteria
-import org.grails.datastore.mapping.reflect.NameUtils
-import org.springframework.util.ReflectionUtils
-
-import java.lang.reflect.Modifier
-
-
 
 /**
  * Handles named queries

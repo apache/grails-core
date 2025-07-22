@@ -32,7 +32,6 @@ import java.util.Set;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
@@ -132,7 +131,7 @@ class ResourceMatcher {
     }
 
     /**
-     * {@link ResourceLoader} to get load resource from a directory.
+     * {@link org.springframework.core.io.ResourceLoader} to get load resource from a directory.
      */
     private static class DirectoryResourceLoader extends DefaultResourceLoader {
 

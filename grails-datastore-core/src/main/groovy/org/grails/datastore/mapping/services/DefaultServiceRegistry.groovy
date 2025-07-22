@@ -23,13 +23,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.lifecycle.Initializable
-import org.grails.datastore.mapping.reflect.NameUtils
-import org.springframework.beans.factory.BeanFactory
-import org.springframework.beans.factory.BeanFactoryAware
-import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.util.ClassUtils
 
-import java.beans.Introspector
 import java.lang.reflect.Modifier
 
 /**

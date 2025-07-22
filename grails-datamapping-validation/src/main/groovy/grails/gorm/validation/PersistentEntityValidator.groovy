@@ -32,7 +32,6 @@ import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.datastore.mapping.reflect.ReflectionUtils
 import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError

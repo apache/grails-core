@@ -20,7 +20,6 @@
 package grails.gorm
 
 import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -28,7 +27,6 @@ import org.grails.datastore.gorm.query.GormOperations
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware

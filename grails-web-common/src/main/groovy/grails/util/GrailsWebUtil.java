@@ -22,7 +22,6 @@ import grails.core.ApplicationAttributes;
 import grails.core.GrailsApplication;
 import org.grails.web.util.GrailsApplicationAttributes;
 import groovy.lang.GroovyObject;
-import groovy.util.ConfigObject;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;

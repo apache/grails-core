@@ -31,7 +31,6 @@ import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.internal.RuntimeSupport
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
-import org.grails.datastore.mapping.reflect.AstUtils
 import org.springframework.beans.factory.annotation.Autowired
 
 import java.lang.reflect.Modifier

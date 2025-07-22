@@ -25,7 +25,6 @@ import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.handler.MappedInterceptor
 
 

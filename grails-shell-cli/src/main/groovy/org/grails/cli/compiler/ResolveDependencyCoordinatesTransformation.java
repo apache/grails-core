@@ -28,13 +28,12 @@ import groovy.lang.Grab;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.transform.ASTTransformation;
 
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
 import org.springframework.core.annotation.Order;
 
 /**
- * {@link ASTTransformation} to resolve {@link Grab @Grab} artifact coordinates.
+ * {@link import org.codehaus.groovy.transform.ASTTransformation} to resolve {@link Grab @Grab} artifact coordinates.
  *
  * @author Andy Wilkinson
  * @author Phillip Webb

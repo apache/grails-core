@@ -25,7 +25,6 @@ import org.grails.datastore.mapping.core.SessionCreationEvent
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.event.SmartApplicationListener
 import spock.lang.IgnoreIf
-import spock.lang.PendingFeature
 
 /**
  * Test case that session creation events are fired.

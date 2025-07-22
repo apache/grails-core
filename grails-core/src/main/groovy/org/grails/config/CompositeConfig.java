@@ -22,7 +22,6 @@ import grails.config.Config;
 import grails.util.GrailsStringUtils;
 import groovy.transform.CompileStatic;
 import org.grails.core.exceptions.GrailsConfigurationException;
-import org.springframework.util.ClassUtils;
 
 import java.util.*;
 

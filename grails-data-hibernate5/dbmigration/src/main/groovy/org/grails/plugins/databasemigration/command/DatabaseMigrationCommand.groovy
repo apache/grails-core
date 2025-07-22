@@ -39,7 +39,6 @@ import liquibase.command.core.DiffCommandStep
 import liquibase.command.core.GenerateChangelogCommandStep
 import liquibase.command.core.helpers.AbstractChangelogCommandStep
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep
 import liquibase.command.core.helpers.DiffOutputControlCommandStep
 import liquibase.command.core.helpers.PreCompareCommandStep
 import liquibase.command.core.helpers.ReferenceDbUrlConnectionCommandStep

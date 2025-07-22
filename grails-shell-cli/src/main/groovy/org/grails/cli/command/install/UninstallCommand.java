@@ -23,14 +23,13 @@ import java.util.List;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import org.springframework.boot.cli.command.Command;
 import org.springframework.boot.cli.command.OptionParsingCommand;
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.springframework.boot.cli.command.status.ExitStatus;
 import org.springframework.boot.cli.util.Log;
 
 /**
- * {@link Command} to uninstall dependencies from the CLI's lib/ext directory.
+ * {@link org.springframework.boot.cli.command.Command} to uninstall dependencies from the CLI's lib/ext directory.
  *
  * @author Dave Syer
  * @author Andy Wilkinson

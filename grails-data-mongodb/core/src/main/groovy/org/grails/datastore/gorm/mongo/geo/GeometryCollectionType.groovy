@@ -14,16 +14,12 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import com.mongodb.BasicDBObject
-import com.mongodb.DBObject
 import grails.mongodb.geo.GeometryCollection
 import groovy.transform.CompileStatic
 import org.bson.Document
-import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 
 /**

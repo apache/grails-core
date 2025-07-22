@@ -29,9 +29,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 
 import groovy.grape.GrapeEngine;
-import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyClassLoader.ClassCollector;
-import groovy.lang.GroovyCodeSource;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
@@ -56,7 +54,7 @@ import org.springframework.util.ClassUtils;
 
 /**
  * Compiler for Groovy sources. Primarily a simple Facade for
- * {@link GroovyClassLoader#parseClass(GroovyCodeSource)} with the following additional
+ * {@link groovy.lang.GroovyClassLoader#parseClass(groovy.lang.GroovyCodeSource)} with the following additional
  * features:
  * <ul>
  * <li>{@link CompilerAutoConfiguration} strategies will be read from

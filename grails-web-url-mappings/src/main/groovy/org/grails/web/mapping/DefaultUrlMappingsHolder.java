@@ -31,7 +31,6 @@ import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingEvaluator;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.UrlMappings;
-import grails.web.mapping.UrlMappingsHolder;
 import groovy.lang.Closure;
 
 import java.io.PrintWriter;
@@ -268,7 +267,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
     }
 
     /**
-     * @see UrlMappingsHolder#getReverseMapping(String, String, java.util.Map)
+     * @see grails.web.mapping.UrlMappingsHolder#getReverseMapping(String, String, java.util.Map)
      */
     public UrlCreator getReverseMapping(final String controller, final String action, final String namespace, final String pluginName, Map params) {
         return getReverseMapping(controller, action, namespace, pluginName, null, params);

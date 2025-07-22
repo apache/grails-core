@@ -52,7 +52,6 @@ import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.PropertyMapping
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.*
 import org.grails.datastore.mapping.mongo.MongoCodecSession

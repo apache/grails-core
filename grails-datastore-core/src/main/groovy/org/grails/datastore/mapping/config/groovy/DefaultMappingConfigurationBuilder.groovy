@@ -25,8 +25,6 @@ import org.grails.datastore.mapping.reflect.NameUtils
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
-import java.lang.reflect.Constructor
-
 /**
  * @author Graeme Rocher
  * @since 1.0

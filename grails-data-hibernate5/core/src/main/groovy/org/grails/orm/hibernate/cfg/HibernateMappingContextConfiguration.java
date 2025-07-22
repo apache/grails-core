@@ -21,10 +21,8 @@ package org.grails.orm.hibernate.cfg;
 
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;

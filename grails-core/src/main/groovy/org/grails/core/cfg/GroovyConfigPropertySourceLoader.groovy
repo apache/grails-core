@@ -16,7 +16,6 @@
  */
 package org.grails.core.cfg
 
-import grails.util.BuildSettings
 import grails.util.Environment
 import grails.util.Metadata
 import groovy.transform.CompileStatic

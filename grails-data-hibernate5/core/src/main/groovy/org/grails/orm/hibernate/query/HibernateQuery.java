@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.query;
 import grails.orm.HibernateCriteriaBuilder;
 import grails.orm.RlikeExpression;
 
-import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -31,8 +30,6 @@ import org.grails.orm.hibernate.HibernateSession;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.dialect.Dialect;

@@ -14,7 +14,6 @@
  */
 package grails.mongodb.geo
 
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.mongo.geo.GeoJSONType
 
 /**

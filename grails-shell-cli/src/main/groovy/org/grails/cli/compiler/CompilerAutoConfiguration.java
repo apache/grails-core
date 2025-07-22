@@ -22,13 +22,12 @@ import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.CompilationFailedException;
-import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 
 /**
  * Strategy that can be used to apply some auto-configuration during the
- * {@link CompilePhase#CONVERSION} Groovy compile phase.
+ * {@link org.codehaus.groovy.control.CompilePhase#CONVERSION} Groovy compile phase.
  *
  * @author Phillip Webb
  * @since 1.0.0

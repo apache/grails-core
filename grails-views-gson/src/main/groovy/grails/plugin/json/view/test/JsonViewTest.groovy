@@ -36,7 +36,6 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.http.HttpStatus

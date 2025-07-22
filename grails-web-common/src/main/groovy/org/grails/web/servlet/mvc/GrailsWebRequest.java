@@ -18,7 +18,6 @@
  */
 package org.grails.web.servlet.mvc;
 
-import grails.util.Holders;
 import grails.validation.DeferredBindingActions;
 
 import java.io.IOException;

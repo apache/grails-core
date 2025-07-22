@@ -20,7 +20,6 @@ package org.grails.cli.gradle.cache
 
 import grails.util.BuildSettings
 import groovy.transform.CompileStatic
-import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import org.gradle.tooling.internal.consumer.ConnectorServices
 import org.gradle.tooling.internal.consumer.DefaultGradleConnector

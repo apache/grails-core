@@ -20,8 +20,6 @@ package org.grails.plugins.converters
 
 import grails.converters.JSON
 import grails.converters.XML
-import grails.core.GrailsApplication
-import grails.core.support.GrailsApplicationAware
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.plugins.codecs.JSONCodec

@@ -19,19 +19,16 @@
 
 package org.grails.compiler.gorm
 
-import grails.gorm.annotation.Entity
 import grails.gorm.annotation.JpaEntity
 import groovy.transform.CompileStatic
 import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
-import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.grails.datastore.mapping.reflect.AstUtils
 
 /**
  * Enhanced GORM entity annotated with JPA annotations

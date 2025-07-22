@@ -21,7 +21,6 @@ package org.grails.plugins.web.rest.plugin
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
-import grails.core.support.GrailsApplicationAware
 import grails.plugins.Plugin
 import grails.rest.Resource
 import grails.util.GrailsUtil

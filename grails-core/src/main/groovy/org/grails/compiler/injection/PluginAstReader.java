@@ -26,7 +26,6 @@ import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.expr.*;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.io.support.Resource;
 
 import java.util.*;

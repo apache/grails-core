@@ -21,7 +21,6 @@ package scaffolding
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.dev.commands.GrailsApplicationCommand
-import grails.dev.commands.io.FileSystemInteraction
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
 import groovy.transform.CompileStatic

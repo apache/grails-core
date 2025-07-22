@@ -35,7 +35,6 @@ import org.codehaus.groovy.ast.PropertyNode
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
-import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
@@ -53,14 +52,12 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.trait.Traits
 import org.springframework.util.StringUtils
-import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse
 
 import jakarta.persistence.Entity
 import java.lang.annotation.Annotation
 import java.lang.reflect.Modifier
 import java.util.regex.Pattern
 
-import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse
 

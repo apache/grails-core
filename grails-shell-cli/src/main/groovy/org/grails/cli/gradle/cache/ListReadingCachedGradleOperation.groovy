@@ -21,8 +21,6 @@ package org.grails.cli.gradle.cache
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.grails.cli.profile.ProjectContext
-
 
 /**
  * A {@link CachedGradleOperation} that reads and writes a list of values

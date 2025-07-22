@@ -19,7 +19,6 @@ import grails.mongodb.geo.LineString
 import grails.mongodb.geo.Point
 import grails.mongodb.geo.Polygon
 import grails.mongodb.geo.Shape
-import groovy.transform.CompileStatic
 import org.bson.Document
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.springframework.dao.DataAccessResourceFailureException

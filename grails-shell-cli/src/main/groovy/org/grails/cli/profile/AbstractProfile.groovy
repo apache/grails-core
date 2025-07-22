@@ -17,7 +17,6 @@
 package org.grails.cli.profile
 
 import grails.io.IOUtils
-import grails.util.BuildSettings
 import grails.util.CosineSimilarity
 import grails.util.Environment
 import groovy.transform.CompileStatic

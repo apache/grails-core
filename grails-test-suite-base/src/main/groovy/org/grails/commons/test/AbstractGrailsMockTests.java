@@ -18,7 +18,6 @@
  */
 package org.grails.commons.test;
 
-import grails.util.Metadata;
 import groovy.lang.ExpandoMetaClass;
 import groovy.lang.GroovyClassLoader;
 import groovy.util.ConfigObject;

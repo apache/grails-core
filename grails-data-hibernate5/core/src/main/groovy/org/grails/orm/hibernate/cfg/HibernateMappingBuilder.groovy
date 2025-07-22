@@ -25,8 +25,6 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.hibernate.FetchMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
 
 import jakarta.persistence.AccessType
 

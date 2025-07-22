@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 import jakarta.servlet.http.HttpServletRequest
 
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.context.ApplicationContext
 
 
 /**

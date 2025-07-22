@@ -33,6 +33,9 @@
     <!-- TreeWalker Checks -->
     <module name="TreeWalker">
         <module name="SuppressWarningsHolder"/>
+        <module name="UnusedImports">
+            <property name="processJavadoc" value="false"/>
+        </module>
     </module>
 
 </module>

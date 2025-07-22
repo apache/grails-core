@@ -18,8 +18,6 @@
  */
 package grails.web.servlet.bootstrap;
 
-import jakarta.servlet.ServletContext;
-
 import groovy.lang.Closure;
 import grails.core.GrailsClass;
 

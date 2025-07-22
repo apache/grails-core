@@ -20,7 +20,6 @@
 package grails.gorm.validation.exceptions
 
 import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 
 /**
  * An exception thrown when there is an error configuration validation

@@ -19,7 +19,6 @@
 package org.grails.datastore.mapping.dirty.checking
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import org.grails.datastore.mapping.collection.PersistentCollection
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.MappingContext
@@ -27,7 +26,6 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ToOne
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**

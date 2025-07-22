@@ -29,8 +29,6 @@ import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputContextLookup;
 
 import java.io.*;
-import java.text.DateFormat;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

@@ -27,7 +27,6 @@ import org.grails.datastore.mapping.proxy.JavassistProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.hibernate.Hibernate;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;

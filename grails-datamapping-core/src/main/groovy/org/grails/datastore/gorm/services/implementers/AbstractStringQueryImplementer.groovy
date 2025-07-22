@@ -30,7 +30,6 @@ import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
-import org.grails.datastore.gorm.services.ServiceImplementer
 import org.grails.datastore.gorm.services.transform.QueryStringTransformer
 import org.grails.datastore.mapping.reflect.AstUtils
 

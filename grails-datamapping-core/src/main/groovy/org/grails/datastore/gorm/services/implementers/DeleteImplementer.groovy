@@ -29,7 +29,6 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
-import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.mapping.reflect.AstUtils
 

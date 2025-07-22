@@ -19,7 +19,6 @@
 
 package org.grails.events.gorm
 
-import grails.events.annotation.Subscriber
 import grails.events.bus.EventBus
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic

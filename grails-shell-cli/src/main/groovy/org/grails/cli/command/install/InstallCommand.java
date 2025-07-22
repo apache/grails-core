@@ -22,7 +22,6 @@ import java.util.List;
 
 import joptsimple.OptionSet;
 
-import org.springframework.boot.cli.command.Command;
 import org.springframework.boot.cli.command.OptionParsingCommand;
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.springframework.boot.cli.command.status.ExitStatus;
@@ -30,7 +29,7 @@ import org.springframework.boot.cli.util.Log;
 import org.springframework.util.Assert;
 
 /**
- * {@link Command} to install additional dependencies into the CLI.
+ * {@link org.springframework.boot.cli.command.Command} to install additional dependencies into the CLI.
  *
  * @author Dave Syer
  * @author Andy Wilkinson

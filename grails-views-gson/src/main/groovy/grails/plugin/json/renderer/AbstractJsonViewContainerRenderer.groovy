@@ -20,7 +20,6 @@
 package grails.plugin.json.renderer
 
 import grails.plugin.json.view.mvc.JsonViewResolver
-import grails.rest.render.ContainerRenderer
 import grails.rest.render.RenderContext
 import grails.util.GrailsNameUtils
 import grails.views.Views

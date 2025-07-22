@@ -19,7 +19,6 @@
 
 package org.grails.datastore.bson.codecs.decoders
 
-import groovy.transform.PackageScope
 import org.bson.BsonReader
 import org.bson.Document
 import org.bson.codecs.Codec

@@ -14,7 +14,6 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import com.mongodb.DBObject
 import grails.mongodb.geo.Box
 import groovy.transform.CompileStatic
 import org.bson.Document

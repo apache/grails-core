@@ -22,7 +22,6 @@ package org.grails.datastore.gorm.validation.constraints.factory
 import grails.gorm.validation.Constraint
 import grails.gorm.validation.exceptions.ValidationConfigurationException
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.validation.constraints.AbstractConstraint
 import org.grails.datastore.gorm.validation.constraints.NullableConstraint
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.springframework.context.MessageSource

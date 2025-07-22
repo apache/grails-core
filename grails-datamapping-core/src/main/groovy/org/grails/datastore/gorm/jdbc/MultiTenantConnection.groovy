@@ -22,7 +22,6 @@ package org.grails.datastore.gorm.jdbc
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler
 
-import javax.sql.DataSource
 import java.sql.Connection
 import java.sql.SQLException
 

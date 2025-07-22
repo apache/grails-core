@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg;
 
 import groovy.lang.Closure;
-import groovy.transform.Trait;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.transform.trait.Traits;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -58,7 +57,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import jakarta.persistence.Entity;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;

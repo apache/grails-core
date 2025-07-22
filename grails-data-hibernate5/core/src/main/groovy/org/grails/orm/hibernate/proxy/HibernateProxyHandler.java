@@ -19,10 +19,8 @@
 package org.grails.orm.hibernate.proxy;
 
 import java.io.Serializable;
-import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;

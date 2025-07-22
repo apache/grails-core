@@ -27,15 +27,11 @@ import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEv
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.ClosureToMapPopulator
 import org.grails.datastore.mapping.validation.ValidatorRegistry
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
-import org.springframework.core.env.PropertyResolver
-import org.springframework.core.env.StandardEnvironment
 import org.springframework.validation.Validator
-import org.springframework.validation.annotation.Validated
 
 import java.util.concurrent.ConcurrentHashMap
 

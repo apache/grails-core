@@ -32,7 +32,6 @@ import org.grails.core.util.IncludeExcludeSupport;
 import org.grails.web.converters.marshaller.IncludeExcludePropertyMarshaller;
 import org.grails.web.json.JSONWriter;
 import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.springframework.beans.BeanUtils;
 
 /**

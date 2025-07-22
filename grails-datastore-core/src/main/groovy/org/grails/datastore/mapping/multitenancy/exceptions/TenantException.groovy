@@ -20,7 +20,6 @@
 package org.grails.datastore.mapping.multitenancy.exceptions
 
 import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.datastore.mapping.core.DatastoreException
 
 /**

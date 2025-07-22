@@ -22,13 +22,9 @@ package grails.views
 import grails.util.GrailsNameUtils
 import grails.views.api.GrailsView
 import groovy.text.Template
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.springframework.cglib.reflect.FastMethod
 import org.springframework.util.ReflectionUtils
 
-import java.beans.Introspector
-import java.beans.PropertyDescriptor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 

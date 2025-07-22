@@ -20,7 +20,6 @@
 package grails.views.mvc
 
 import grails.config.Config
-import grails.core.support.GrailsConfigurationAware
 import grails.views.ResolvableGroovyTemplateEngine
 import grails.views.api.GrailsView
 import grails.views.api.HttpView
