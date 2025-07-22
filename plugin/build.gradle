@@ -66,6 +66,10 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 }
 
+grails {
+    springDependencyManagement = false
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
