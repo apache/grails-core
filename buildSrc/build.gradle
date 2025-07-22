@@ -32,13 +32,13 @@ repositories {
     maven {
         url = 'https://repository.apache.org/content/groups/snapshots'
         content {
-            includeVersionByRegex  'org[.]apache[.]grails.*', '.*','.*SNAPSHOT'
+            includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
         }
     }
     maven {
         url = 'https://repository.apache.org/content/groups/staging'
         content {
-            includeGroupByRegex 'org[.]apache[.]grails.*'
+            includeGroupByRegex('org[.]apache[.]grails.*')
         }
     }
 }
