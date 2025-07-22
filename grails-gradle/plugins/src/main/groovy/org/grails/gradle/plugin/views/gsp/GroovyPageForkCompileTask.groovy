@@ -75,6 +75,9 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     private ExecOperations execOperations
 
+    @OutputDirectory
+    final DirectoryProperty destinationDirectory
+
     @Inject
     GroovyPageForkCompileTask(ExecOperations execOperations, ObjectFactory objectFactory) {
         this.execOperations = execOperations
@@ -87,6 +90,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                 project.layout.projectDirectory.file('grails-app/conf/application.yml'),
                 project.layout.projectDirectory.file('grails-app/conf/application.groovy')
         )
+        destinationDirectory = objectFactory.directoryProperty().convention(project.layout.buildDirectory.dir('gsp-classes/main'))
     }
 
 

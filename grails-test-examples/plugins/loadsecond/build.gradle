@@ -32,6 +32,12 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-tomcat'
 
     api 'org.apache.grails:grails-web-boot'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        api 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        api 'org.apache.grails:grails-layout'
+    }
     api 'org.apache.grails:grails-dependencies'
     api 'jakarta.servlet:jakarta.servlet-api'
 

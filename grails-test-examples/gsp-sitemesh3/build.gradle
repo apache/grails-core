@@ -18,7 +18,7 @@
  */
 
 version = '0.0.1'
-group = 'org.sitemesh.grails.plugins.sitemesh3'
+group = 'org.example.grails.layout'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
@@ -32,10 +32,10 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    implementation 'org.apache.grails:grails-sitemesh3'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-sitemesh3'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'

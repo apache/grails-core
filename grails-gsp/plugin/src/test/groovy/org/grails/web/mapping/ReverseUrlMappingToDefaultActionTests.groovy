@@ -46,7 +46,7 @@ class ReverseUrlMappingToDefaultActionTests extends Specification implements Url
     }
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 class ReverseUrlMappingToDefaultActionUrlMappings {
     static mappings = {
         "/$id?"{

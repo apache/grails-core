@@ -1,0 +1,236 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheLicenseResourceTransformer
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheNoticeResourceTransformer
+import org.grails.forge.internal.tasks.GenerateManpageAsciidoc
+import org.grails.forge.internal.tasks.PicocliBuildCompletionTask
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'distribution'
+    id 'com.gradleup.shadow'
+    id 'org.grails.forge.rocker'
+}
+
+version = projectVersion
+group = 'org.apache.grails.forge'
+
+sourceSets {
+    main {
+        rocker {
+            srcDir('src/main/java')
+        }
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        // prevent fatJar result containing multiple versions of picocli
+        force("info.picocli:picocli:$picocliVersion")
+    }
+}
+
+def processManPages = tasks.register('processManPages', Sync)
+configurations {
+    generateConfig
+
+    asciidocPages {
+        canBeConsumed = true
+        canBeResolved = false
+        outgoing.artifact(processManPages.map {
+            it.project.layout.buildDirectory.dir('processed-manpages').get().asFile
+        })
+    }
+}
+
+ext {
+    cliProject = true
+    startMainClass = 'org.grails.forge.cli.Application'
+}
+
+dependencies {
+    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
+
+    generateConfig "info.picocli:picocli-codegen:$picocliVersion"
+
+    annotationProcessor 'io.micronaut:micronaut-graal'
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+
+    implementation project(':grails-forge-core')
+    implementation "com.fizzed:rocker-runtime:$rockerVersion"
+    implementation "info.picocli:picocli:$picocliVersion"
+    implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
+    implementation "jakarta.inject:jakarta.inject-api:$jakartaInjectVersion"
+    implementation "org.fusesource.jansi:jansi:$jansiVersion"
+    implementation "org.slf4j:slf4j-nop:$slf4jVersion"
+    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
+
+    compileOnly 'com.google.code.findbugs:jsr305'
+
+    testImplementation 'io.micronaut.picocli:micronaut-picocli'
+    testImplementation "org.reflections:reflections:$reflectionsVersion"
+    testImplementation 'org.testcontainers:spock'
+    if (project.hasProperty('micronautVersion')) {
+        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+    }
+
+    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation "org.spockframework:spock-core:$spockVersion", {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+
+    testImplementation "cglib:cglib-nodep:$cglibVersion"
+    testImplementation "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+}
+
+rocker {
+    postProcessing = ['org.grails.forge.rocker.plugin.WhitespaceProcessor']
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/style-enforcement-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+}
+
+def generateManpageAsciiDoc = tasks.register('generateManpageAsciiDoc', GenerateManpageAsciidoc) {
+    mainClass = findProperty('startMainClass') as String
+    classpath.from(configurations.generateConfig, sourceSets.main.runtimeClasspath)
+    outputDirectory = layout.buildDirectory.dir('generated-picocli-docs')
+}
+
+processManPages.configure { Sync it ->
+    it.group = 'documentation'
+    it.from generateManpageAsciiDoc
+    it.include '**/*.adoc'
+    it.into layout.buildDirectory.dir('processed-manpages')
+    it.filter { String line ->
+        if (line == ':doctype: manpage' || line.startsWith('= ')) {
+            return ''
+        } else if (line.startsWith('==')) {
+            return '=' + line
+        } else {
+            return line
+        }
+    }
+}
+
+def buildCompletion = tasks.register('buildCompletion', PicocliBuildCompletionTask)
+buildCompletion.configure { PicocliBuildCompletionTask it ->
+    it.outputDirectory.set(layout.buildDirectory.dir('build-completion'))
+    it.classpath.from(sourceSets.main.runtimeClasspath)
+    it.mainClass.set(findProperty('startMainClass'))
+}
+
+TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
+jarTask.configure { Jar it ->
+    it.manifest {
+        attributes 'Main-Class': project.property('startMainClass')
+    }
+}
+
+TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
+shadowJarTask.configure { ShadowJar it ->
+    it.archiveClassifier.set('all')
+
+    // TODO: This needs reworked so we have one consistent license view, for now the disclaimer is shipped so this should suffice until this is fixed.
+    it.transform(ApacheLicenseResourceTransformer)
+    it.transform(ApacheNoticeResourceTransformer)
+    it.exclude('DISCLAIMER', 'license.header', 'licenses/**', 'META-INF/NOTICE.md', 'META-INF/NOTICE', 'META-INF/NOTICE.md', 'META-INF/licenses/**', 'META-INF/LICENSE.md')
+
+    it.mergeServiceFiles()
+}
+// publish shadow jar separately from the regular library
+artifacts           { archives shadowJarTask }
+
+TaskProvider<CreateStartScripts> forgeCliStartScripts = tasks.register('createForgeCliStartScripts', CreateStartScripts)
+forgeCliStartScripts.configure { CreateStartScripts t ->
+    t.dependsOn jarTask, shadowJarTask
+    t.outputDir = layout.buildDirectory.dir('generated-forge-cli-scripts').get().asFile
+    t.applicationName = 'grails-forge-cli'
+    t.mainClass = findProperty('startMainClass') as String
+    t.classpath = files(shadowJarTask)
+}
+
+project.extensions.getByType(DistributionContainer).configureEach {
+    it.distributionBaseName.set('apache-grails-forge-cli')
+    it.distributionClassifier.set('incubating-bin')
+    it.contents {
+        from(shadowJarTask) {
+            into "lib"
+        }
+
+        from(layout.buildDirectory.dir('build-completion')) {
+            into 'bin'
+            it.filePermissions { permissions ->
+                permissions.unix(0755)
+            }
+        }
+
+        from(forgeCliStartScripts) {
+            into 'bin'
+            it.filePermissions { permissions ->
+                permissions.unix(0755)
+            }
+        }
+
+        from(rootProject.layout.projectDirectory.file('../LICENSE')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('../NOTICE')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('../INSTALL')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('../DISCLAIMER')) { it.into '' }
+    }
+}
+
+def distZipTask = tasks.named('distZip')
+distZipTask.configure {
+    dependsOn(forgeCliStartScripts, jarTask, shadowJarTask, buildCompletion)
+}
+tasks.named('distTar').configure {
+    dependsOn(forgeCliStartScripts, jarTask, shadowJarTask, buildCompletion)
+}
+tasks.named('assemble').configure {
+    dependsOn(distZipTask)
+}
+tasks.named('installDist').configure {
+    it.dependsOn forgeCliStartScripts, buildCompletion
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.codehaus.groovy') {
+                details.useVersion(groovyVersion)
+            }
+            if (details.requested.name == 'spock-core') {
+                details.useVersion(spockVersion)
+            }
+        }
+    }
+}

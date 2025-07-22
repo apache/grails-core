@@ -30,6 +30,12 @@ dependencies {
     implementation 'org.apache.grails:grails-logging'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
 
     compileOnly 'io.micronaut:micronaut-inject-groovy'
 

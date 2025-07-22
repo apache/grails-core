@@ -31,7 +31,7 @@ import org.springframework.core.env.PropertySource
 
 class Sitemesh3GrailsPlugin extends Plugin {
 
-    def grailsVersion = "7.0.0-SNAPSHOT > *"
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
 
     def title = "SiteMesh 3"
     def author = "Scott Murphy"

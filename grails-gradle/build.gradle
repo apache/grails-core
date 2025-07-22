@@ -16,6 +16,7 @@
  */
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
@@ -27,20 +28,14 @@ file('../gradle.properties').withInputStream {
 allprojects {
     repositories {
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        mavenCentral()
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
-                includeVersionByRegex  'org[.]apache[.]((grails)|(groovy)).*', '.*','.*SNAPSHOT'
+                includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
             }
         }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
-            }
-        }
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        mavenCentral()
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }
@@ -54,7 +49,9 @@ ext {
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
-    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    formattedBuildDate = System.getenv("SOURCE_DATE_EPOCH") ?
+            DateTimeFormatter.ISO_INSTANT.format(buildInstant) :
+            DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
 
     isReleaseVersion = Boolean.parseBoolean(System.getenv('GRAILS_PUBLISH_RELEASE'))

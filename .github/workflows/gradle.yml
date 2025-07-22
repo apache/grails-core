@@ -24,10 +24,6 @@ on:
       - '[4-9]+.[0-9]+.x'
       - '[3-9]+.[3-9]+.x'
   workflow_dispatch:
-env:
-  # To prevent throttling of GitHub API usage, include the GitHub token as an environment variable
-  # as the build will use it when fetching git tags in CreateReleaseDropDown.groovy
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,6 +37,8 @@ jobs:
         java: [ 17, 21 ]
     runs-on: ubuntu-24.04
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -75,6 +73,8 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -91,6 +91,63 @@ jobs:
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue --stacktrace -PonlyCoreTests
           --rerun-tasks
+  buildForge:
+    name: "Build Grails Forge"
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21 ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'liberica'
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔨 Build project without tests"
+        if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
+        working-directory: 'grails-forge'
+        run: >
+          ./gradlew build
+          --continue --stacktrace -PskipTests
+      - name: "🔨 Build project with tests"
+        if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+        working-directory: 'grails-forge'
+        run: >
+          ./gradlew build
+          --continue --stacktrace
+          --rerun-tasks
+      - name: "✅ Verify Forge CLI"
+        run: |
+          cd grails-forge
+          cp grails-forge-cli/build/distributions/apache-grails-forge-cli-*.zip forge-cli.zip
+          unzip forge-cli -d tmp
+          mv tmp/apache-grails-forge-cli-* tmp/forge-cli
+          ./tmp/forge-cli/bin/grails-forge-cli --version
+      - name: "✅ Verify combined CLI"
+        run: |
+          cd grails-forge
+          cp grails-cli/build/distributions/apache-grails-*.zip cli.zip
+          unzip cli -d tmp1
+          mv tmp1/apache-grails-* tmp1/cli
+          ./tmp1/cli/bin/grails --version
+          ./tmp1/cli/bin/grails-forge-cli --version
+      - name: "📤 Upload CLI Zip to Workflow Summary Page"
+        if: ${{ matrix.java == '17' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'apache-grails-SNAPSHOT-incubating-bin.zip'
+          include-hidden-files: true
+          path: grails-forge/tmp1/cli/**/*
+          if-no-files-found: 'error'
   functional:
     name: "Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -100,6 +157,8 @@ jobs:
         java: [ 17, 21, 24 ]
     runs-on: ubuntu-24.04
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -129,6 +188,8 @@ jobs:
         java: [ 17, 21 ]
         mongodb-version: [ '7.0', '8.0' ] # test with supported versions https://www.mongodb.com/legal/support-policy/lifecycles
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -158,6 +219,8 @@ jobs:
       matrix:
         java: [ 17, 21 ]
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -178,10 +241,12 @@ jobs:
           -PonlyHibernate5Tests
           --rerun-tasks
   publishGradle:
-    if: github.repository_owner == 'apache' && github.event_name == 'push'
+    if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]
     runs-on: ubuntu-24.04
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -215,9 +280,20 @@ jobs:
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
-    if: ${{ always() && github.repository_owner == 'apache' && github.event_name == 'push' && needs.publishGradle.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.functional.result == 'success' || needs.functional.result == 'skipped') && (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') }}
+    if: >-
+      ${{ always() && 
+          github.repository_owner == 'apache' && 
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 
+          needs.publishGradle.result == 'success' && 
+          (needs.build.result == 'success' || needs.build.result == 'skipped') && 
+          (needs.functional.result == 'success' || needs.functional.result == 'skipped') && 
+          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && 
+          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') 
+      }}
     runs-on: ubuntu-24.04
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
       - name: "☕️ Setup JDK"
@@ -237,7 +313,7 @@ jobs:
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         with: 
-          timeout_seconds: 900 # normal range 360-720s
+          timeout_seconds: 1200 # normal range 14min if build is not cached (no tests running)
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
@@ -257,6 +333,7 @@ jobs:
       - name: "✅ Verify grails-wrapper"
         if: success()
         run: |
+          export GRAILS_WRAPPER_ALLOWED_TYPES='SNAPSHOT'
           cp grails-wrapper/build/distributions/apache-grails-wrapper-*.zip build/wrapper.zip
           cd build
           unzip wrapper -d tmp
@@ -267,13 +344,55 @@ jobs:
         with:
           name: apache-grails-wrapper-SNAPSHOT-incubating-bin
           path: tmp/wrapper
+  publishForge:
+    if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [ buildForge, publishGradle, publish ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "📤 Publish Gradle Snapshot Artifacts"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
+        working-directory: 'grails-forge'
+        run: >
+          ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
+          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun-tasks
+      - name: "📤 Upload grails-forge checksums"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-forge-checksums
+          path: grails-forge/build/grails-forge-checksums.txt
+      - name: "📤 Upload grails-gradle published artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grails-forge-artifacts.txt
+          path: grails-forge/build/grails-forge-artifacts.txt
   docs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publish ]
     runs-on: ubuntu-24.04
     steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
       - name: "🔀 Store current branch name"
         run: |
           TARGET_BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}"

@@ -40,6 +40,7 @@ import org.grails.gsp.GroovyPage
 import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.GroovyPageTemplate
 import org.grails.gsp.GroovyPagesTemplateEngine
+import org.grails.gsp.compiler.GrailsLayoutPreprocessor
 import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.MockGrailsPluginManager
 import org.grails.taglib.GroovyPageAttributes
@@ -143,7 +144,7 @@ abstract class AbstractGrailsTagTests {
         for (i in 0..100) {
             callable.call()
         }
-        println "$name took ${System.currentTimeMillis()-now}ms"
+        println("$name took ${System.currentTimeMillis() - now}ms")
     }
 
     def withTag(String tagName, Writer out, String tagNamespace = 'g', Closure callable) {
@@ -165,7 +166,7 @@ abstract class AbstractGrailsTagTests {
             appCtx.autowireCapableBeanFactory.autowireBeanProperties(go, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
             def gspTagLibraryLookup = appCtx.gspTagLibraryLookup
 
-            OutputEncodingStack stack=OutputEncodingStack.currentStack(OutputContextLookupHelper.lookupOutputContext(), true)
+            OutputEncodingStack stack = OutputEncodingStack.currentStack(OutputContextLookupHelper.lookupOutputContext(), true)
 
             stack.push(out)
             try {
@@ -177,7 +178,7 @@ abstract class AbstractGrailsTagTests {
                     if (!(attrs instanceof GroovyPageAttributes)) {
                         attrs = new GroovyPageAttributes(attrs)
                     }
-                    ((GroovyPageAttributes)attrs).setGspTagSyntaxCall(true)
+                    ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(true)
                     def body = args?.size() > 1 ? args[1] : null
                     if (body && !(body instanceof Closure)) {
                         body = new TagOutput.ConstantClosure(body)
@@ -185,10 +186,10 @@ abstract class AbstractGrailsTagTests {
 
                     def tagresult = null
 
-                    boolean encodeAsPushedToStack=false
+                    boolean encodeAsPushedToStack = false
                     try {
-                        boolean returnsObject=gspTagLibraryLookup.doesTagReturnObject(tagNamespace, tagName)
-                        Object codecInfo=gspTagLibraryLookup.getEncodeAsForTag(tagNamespace, tagName)
+                        boolean returnsObject = gspTagLibraryLookup.doesTagReturnObject(tagNamespace, tagName)
+                        Object codecInfo = gspTagLibraryLookup.getEncodeAsForTag(tagNamespace, tagName)
                         if (attrs.containsKey(GroovyPage.ENCODE_AS_ATTRIBUTE_NAME)) {
                             codecInfo = attrs.get(GroovyPage.ENCODE_AS_ATTRIBUTE_NAME)
                         } else if (GroovyPage.DEFAULT_NAMESPACE.equals(tagNamespace) && GroovyPage.APPLY_CODEC_TAG_NAME.equals(tagName)) {
@@ -196,7 +197,7 @@ abstract class AbstractGrailsTagTests {
                         }
                         if (codecInfo != null) {
                             stack.push(WithCodecHelper.createOutputStackAttributesBuilder(codecInfo, webRequest.getAttributes().getGrailsApplication()).build())
-                            encodeAsPushedToStack=true
+                            encodeAsPushedToStack = true
                         }
                         switch (tag.getParameterTypes().length) {
                             case 1:
@@ -214,7 +215,7 @@ abstract class AbstractGrailsTagTests {
 
                         Encoder taglibEncoder = stack.taglibEncoder
                         if (returnsObject && tagresult && !(tagresult instanceof Writer) && taglibEncoder) {
-                            tagresult=taglibEncoder.encode(tagresult)
+                            tagresult = taglibEncoder.encode(tagresult)
                         }
                         tagresult
                     } finally {
@@ -240,7 +241,6 @@ abstract class AbstractGrailsTagTests {
 
     @BeforeEach
     protected void setUp() throws Exception {
-
         GroovySystem.metaClassRegistry.addMetaClassRegistryChangeEventListener(registryCleaner)
         GroovyPageMetaInfo.DEFAULT_PLUGIN_PATH = null
         domBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
@@ -253,25 +253,25 @@ abstract class AbstractGrailsTagTests {
         grailsApplication = new DefaultGrailsApplication(gcl.loadedClasses, gcl)
         ga = grailsApplication
         ga.config.merge(
-            ['grails':
-                 ['resources':
-                      ['pattern': '/**']
+                ['grails':
+                         ['resources':
+                                  ['pattern': '/**']
+                         ]
                 ]
-            ]
         )
         ga.config.merge(
-            ['grails':
-                 ['gsp':
-                      ['tldScanPattern':
-                           [
-                              'classpath*:/META-INF/spring*.tld',
-                              'classpath*:/META-INF/fmt.tld',
-                              'classpath*:/META-INF/c.tld',
-                              'classpath*:/META-INF/core.tld'
-                           ].join(',')
-                      ]
+                ['grails':
+                         ['gsp':
+                                  ['tldScanPattern':
+                                           [
+                                                   'classpath*:/META-INF/spring*.tld',
+                                                   'classpath*:/META-INF/fmt.tld',
+                                                   'classpath*:/META-INF/c.tld',
+                                                   'classpath*:/META-INF/core.tld'
+                                           ].join(',')
+                                  ]
+                         ]
                 ]
-            ]
         )
         grailsApplication.initialise()
         mockManager = new MockGrailsPluginManager(grailsApplication)
@@ -310,7 +310,7 @@ abstract class AbstractGrailsTagTests {
         dependantPluginClasses << gcl.loadClass('org.grails.plugins.web.controllers.ControllersGrailsPlugin')
         dependantPluginClasses << gcl.loadClass('org.grails.plugins.web.GroovyPagesGrailsPlugin')
 
-        def dependentPlugins = dependantPluginClasses.collect { new DefaultGrailsPlugin(it as Class<?>, grailsApplication)}
+        def dependentPlugins = dependantPluginClasses.collect { new DefaultGrailsPlugin(it as Class<?>, grailsApplication) }
 
         dependentPlugins.each {
             (mockManager as MockGrailsPluginManager).registerMockPlugin(it);
@@ -324,7 +324,7 @@ abstract class AbstractGrailsTagTests {
         try {
             JstlUtils.exposeLocalizationContext(webRequest.getRequest(), null)
         } catch (Throwable ignore) {
-
+            // ignore
         }
 
         servletContext = webRequest.servletContext
@@ -384,8 +384,10 @@ abstract class AbstractGrailsTagTests {
 
     protected void onInit() {
     }
+
     protected void onDestroy() {
     }
+
     protected void onInitMockBeans() {
     }
 
@@ -399,7 +401,7 @@ abstract class AbstractGrailsTagTests {
 
     void printCompiledSource(template, params = [:]) {
         //        def text =  getCompiledSource(template, params)
-        //        println "----- GSP SOURCE -----"
+        //        println '----- GSP SOURCE -----'
         //        println text
     }
 
@@ -421,20 +423,20 @@ abstract class AbstractGrailsTagTests {
     }
 
     def assertCompiledSourceContains(expected, template, params = [:]) {
-        def text =  getCompiledSource(template, params)
+        def text = getCompiledSource(template, params)
         return text.indexOf(expected) > -1
     }
 
     void assertOutputContains(expected, template, params = [:]) {
         def result = applyTemplate(template, params)
-        assertTrue result.indexOf(expected) > -1,
-                "Output does not contain expected string [$expected]. Output was: [${result}]"
+        assertTrue(result.indexOf(expected) > -1,
+                "Output does not contain expected string [$expected]. Output was: [${result}]")
     }
 
     void assertOutputNotContains(expected, template, params = [:]) {
         def result = applyTemplate(template, params)
-        assertFalse result.indexOf(expected) > -1,
-                "Output should not contain the expected string [$expected]. Output was: [${result}]"
+        assertFalse(result.indexOf(expected) > -1,
+                "Output should not contain the expected string [$expected]. Output was: [${result}]")
     }
 
     /**
@@ -455,7 +457,7 @@ abstract class AbstractGrailsTagTests {
         GroovyPageTemplate t = createTemplate(template)
 
         /*
-         println "------------HTMLPARTS----------------------"
+         println '------------HTMLPARTS----------------------'
          t.metaInfo.htmlParts.eachWithIndex {it, i -> print "htmlpart[${i}]:\n>${it}<\n--------\n" }
          */
 
@@ -509,6 +511,14 @@ abstract class AbstractGrailsTagTests {
     }
 
     /**
+     * Applies grails layout preprocessing to a template
+     */
+    String grailsLayoutPreprocess(String template) {
+        def preprocessor = new GrailsLayoutPreprocessor()
+        preprocessor.addGspGrailsLayoutCapturing(template)
+    }
+
+    /**
      * Parses the given XML text and creates a DOM document from it.
      */
     protected final Document parseText(String xml) {
@@ -533,9 +543,12 @@ abstract class AbstractGrailsTagTests {
 }
 
 class MockThemeSource implements ThemeSource {
+
     private messageSource
+
     MockThemeSource(MessageSource messageSource) {
         this.messageSource = messageSource
     }
+
     Theme getTheme(String themeName) { new SimpleTheme(themeName, messageSource) }
 }

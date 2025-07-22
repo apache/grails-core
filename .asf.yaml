@@ -18,7 +18,14 @@
 github:
   # deployment environments to delay releasing until the necessary steps have completed
   environments:
-    source:
+    docs:
+      required_reviewers:
+        - id: grails-committers
+          type: Team
+        - id: jdaugherty
+          type: User
+      wait_timer: 0
+    sdkman:
       required_reviewers:
         - id: grails-committers
           type: Team
@@ -32,13 +39,8 @@ github:
         - id: jdaugherty
           type: User
       wait_timer: 0
-    docs:
-      required_reviewers:
-        - id: grails-committers
-          type: Team
-        - id: jdaugherty
-          type: User
-      wait_timer: 0
+  description: "Grails - the Web Application Framework"
+  homepage: https://grails.apache.org/
 notifications:
   # GitHub related
   commits: commits@grails.apache.org

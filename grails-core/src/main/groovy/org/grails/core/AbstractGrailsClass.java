@@ -35,7 +35,6 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.beans.PropertyDescriptor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -165,14 +164,6 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         return obj;
     }
 
-
-    /**
-     * @deprecated Use {@link #getMetaProperties()} instead
-     */
-    @Deprecated
-    public PropertyDescriptor[] getPropertyDescriptors() {
-        return resolvePropertyFetcher().getPropertyDescriptors();
-    }
 
     private ClassPropertyFetcher resolvePropertyFetcher() {
         if(classPropertyFetcher == null) {

@@ -26,3 +26,6 @@ http://www.oracle.com/webfolder/technetwork/jsc/xml/ns/javaee/index.html
 This product includes software from Spring Framework 5.3, developed by Pivotal Software, Inc.
 Copyright 2002-2020 the original author or authors.
 See the LICENSE file for the Apache License 2.0 terms.
+
+This product includes software developed by the OpenSymphony Group (http://www.opensymphony.com/). It uses Sitemesh2,
+licensed under the OpenSymphony Software License, Version 1.1. See licenses/LICENSE-opensymphony.txt for the full license terms.

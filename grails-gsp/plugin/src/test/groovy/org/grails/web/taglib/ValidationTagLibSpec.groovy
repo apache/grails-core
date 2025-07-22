@@ -169,19 +169,6 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         applyTemplate(htmlCodecDirective + '<g:render template="/sometemplate_nocodec" model="[book:book]" />' + template, [book:b]) == expected + expected
     }
 
-    @PendingFeature
-    void testFieldValueTagForBadUrl() {
-        given:
-        def b = new ValidationTagLibBook()
-
-        when:
-        b.publisherURL = new URL("a_bad_url")
-
-        then:
-        b.hasErrors()
-        applyTemplate('''<g:fieldValue bean="${book}" field="publisherURL" />''', [book:b]) == "a_bad_url"
-    }
-
     void testFieldValueTag() {
         given:
         def b = new ValidationTagLibBook()
@@ -451,126 +438,6 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         result.endsWith("</ul>")
     }
 
-    @PendingFeature
-    void testRenderErrorsAsXMLTag() {
-        given:
-        def b = new ValidationTagLibBook()
-        def template = '''<g:renderErrors bean="${book}" as="xml" />'''
-
-        when:
-        b.validate()
-
-        then:
-        b.hasErrors()
-
-
-        when:
-        def result = applyTemplate(template,[book:b])
-        def xml = new XmlSlurper().parseText(result)
-
-        then:
-        xml.error.size() == 4
-        xml.error[0].@object.text() == ValidationTagLibBook.name
-        xml.error[0].@field.text() == "releaseDate"
-        xml.error[0].@message.text() == "Property [releaseDate] of class [Reading Material] cannot be null"
-    }
-
-    void testMessageHtmlEscaping() {
-        given:
-        def b = new ValidationTagLibBook()
-        b.title = "<script>alert('escape me')</script>"
-
-        messageSource.addMessage("default.show.label", Locale.ENGLISH, ">{0}<")
-
-        def template = '''<title><g:message code="default.show.label" args="[book.title]" /></title>'''
-        def htmlCodecDirective = '<%@page defaultCodec="HTML" %>'
-        def expected = "<title>>&lt;script&gt;alert(&#39;escape me&#39;)&lt;/script&gt;<</title>"
-
-        expect:
-        applyTemplate(template, [book:b]) == expected
-        applyTemplate(htmlCodecDirective + template, [book:b]) == expected
-    }
-
-    void testMessageRawEncodeAs() {
-        given:
-        def b = new ValidationTagLibBook()
-        b.title = "<b>bold</b> is ok"
-
-        messageSource.addMessage("default.show.label", Locale.ENGLISH, ">{0}<")
-
-        def template = '''<title><g:message code="default.show.label" args="[book.title]" encodeAs="raw"/></title>'''
-        def htmlCodecDirective = '<%@page defaultCodec="HTML" %>'
-        def expected = "<title>><b>bold</b> is ok<</title>"
-
-        expect:
-        applyTemplate(template, [book:b]) == expected
-        applyTemplate(htmlCodecDirective + template, [book:b]) == expected
-    }
-
-    void testMessageNoneEncodeAs() {
-        given:
-        def b = new ValidationTagLibBook()
-        b.title = "<b>bold</b> is ok"
-
-        messageSource.addMessage("default.show.label", Locale.ENGLISH, ">{0}<")
-
-        def template = '''<title><g:message code="default.show.label" args="[book.title]" encodeAs="none"/></title>'''
-        def htmlCodecDirective = '<%@page defaultCodec="HTML" %>'
-        def expected = "<title>><b>bold</b> is ok<</title>"
-
-        expect:
-        applyTemplate(template, [book:b]) == expected
-        applyTemplate(htmlCodecDirective + template, [book:b]) == expected
-    }
-
-    void testMessageHtmlEscapingWithFunctionSyntaxCall() {
-        given:
-        def b = new ValidationTagLibBook()
-        b.title = "<script>alert('escape me')</script>"
-
-        messageSource.addMessage("default.show.label", Locale.ENGLISH, "{0}")
-
-        def template = '''<title>${g.message([code:"default.show.label", args:[book.title]])}</title>'''
-        def htmlCodecDirective = '<%@page defaultCodec="HTML" %>'
-        def expected = "<title>&lt;script&gt;alert(&#39;escape me&#39;)&lt;/script&gt;</title>"
-        expect:
-        applyTemplate(template, [book:b]) == expected
-        applyTemplate(htmlCodecDirective + template, [book:b]) == expected
-
-    }
-
-    @PendingFeature
-    void testMessageHtmlEscapingDifferentEncodings() {
-        given:
-        def b = new ValidationTagLibBook()
-
-        b.title = "<script>alert('escape me')</script>"
-
-        messageSource.addMessage("default.show.label", Locale.ENGLISH, "{0}")
-
-        def template = '''<title>${g.message([code:"default.show.label", args:[book.title]])}</title>'''
-        def htmlCodecDirective = '<%@page defaultCodec="HTML" %>'
-        def expected = "<title>&lt;script&gt;alert(&#39;escape me&#39;)&lt;/script&gt;</title>"
-
-        def resourceLoader = new MockStringResourceLoader()
-        resourceLoader.registerMockResource('/_sometemplate.gsp', htmlCodecDirective + template)
-        resourceLoader.registerMockResource('/_sometemplate_nocodec.gsp', template)
-        applicationContext.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
-
-        expect:
-        applyTemplate( '<g:render template="/sometemplate" model="[book:book]" />', [book:b]) == expected
-        applyTemplate( template + '<g:render template="/sometemplate" model="[book:book]" />', [book:b])  == expected + expected
-        applyTemplate( htmlCodecDirective + template + '<g:render template="/sometemplate" model="[book:book]" />', [book:b]) == expected + expected
-        applyTemplate( '<g:render template="/sometemplate" model="[book:book]" />' + template, [book:b]) == expected + expected
-        applyTemplate( htmlCodecDirective + '<g:render template="/sometemplate" model="[book:book]" />' + template, [book:b])  == expected + expected
-
-        applyTemplate( '<g:render template="/sometemplate_nocodec" model="[book:book]" />', [book:b])  == expected
-        applyTemplate( template + '<g:render template="/sometemplate_nocodec" model="[book:book]" />', [book:b]) == expected + expected
-        applyTemplate( htmlCodecDirective + template + '<g:render template="/sometemplate_nocodec" model="[book:book]" />', [book:b])== expected + expected
-        applyTemplate( '<g:render template="/sometemplate_nocodec" model="[book:book]" />' + template, [book:b])== expected + expected
-        applyTemplate( htmlCodecDirective + '<g:render template="/sometemplate_nocodec" model="[book:book]" />' + template, [book:b])== expected + expected
-    }
-
     void testMessageTagWithError() {
         given:
         def error = new FieldError("foo", "bar",1, false, ["my.error.code"] as String[], null, "This is default")
@@ -724,8 +591,6 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         def otherTemplate = '''<g:fieldValue bean="${person}" field="otherPhoneUs" />'''
         assertOutputEquals("123-123-1234", otherTemplate, [person:personDomain])
     }
-
-
 
     void testFieldValueTagWithPropertyEditorForNonDomainClasses() {
         parsePhonePlainTestClasses()

@@ -29,7 +29,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
@@ -47,7 +50,7 @@ public class GrailsUpdater {
      * @param preferredVersion the preferred version to update to
      * @throws IOException if canonicalizing the grails home fails
      */
-    public GrailsUpdater(List<GrailsReleaseType> allowedTypes, GrailsVersion preferredVersion) throws IOException {
+    public GrailsUpdater(LinkedHashSet<GrailsReleaseType> allowedTypes, GrailsVersion preferredVersion) throws IOException {
         this(allowedTypes, preferredVersion, null);
     }
 
@@ -57,7 +60,7 @@ public class GrailsUpdater {
      * @param possibleGrailsHome a possible directory for the grails home
      * @throws IOException if canonicalizing the grails home fails
      */
-    public GrailsUpdater(List<GrailsReleaseType> allowedTypes, GrailsVersion preferredVersion, String possibleGrailsHome) throws IOException {
+    public GrailsUpdater(LinkedHashSet<GrailsReleaseType> allowedTypes, GrailsVersion preferredVersion, String possibleGrailsHome) throws IOException {
         grailsWrapperHome = new GrailsWrapperHome(allowedTypes, possibleGrailsHome);
         this.preferredVersion = preferredVersion;
     }
@@ -114,12 +117,12 @@ public class GrailsUpdater {
     public boolean update() {
         GrailsWrapperRepo repo = GrailsWrapperRepo.getSelectedRepo();
 
-        GrailsVersion latestVersion = null;
+        GrailsVersion selectedVersion = null;
         if (preferredVersion != null) {
-            latestVersion = preferredVersion;
+            selectedVersion = preferredVersion;
         } else {
             try {
-                latestVersion = getLastVersion(repo);
+                selectedVersion = getRootVersion(repo);
             } catch (Exception e) {
                 System.err.println("Unable to fetch latest Grails CLI.");
                 e.printStackTrace();
@@ -128,9 +131,9 @@ public class GrailsUpdater {
         }
 
         String detailedVersion = null;
-        if (latestVersion.releaseType.isSnapshot()) {
+        if (selectedVersion.releaseType.isSnapshot()) {
             try {
-                detailedVersion = fetchSnapshotForVersion(repo, latestVersion);
+                detailedVersion = fetchSnapshotForVersion(repo, selectedVersion);
             } catch (Exception e) {
                 System.err.println("Could not parse snapshot version from maven metadata.");
                 e.printStackTrace();
@@ -138,9 +141,9 @@ public class GrailsUpdater {
             }
         }
 
-        boolean theResult = updateJar(repo, latestVersion, detailedVersion);
+        boolean theResult = updateJar(repo, selectedVersion, detailedVersion);
         if (theResult) {
-            updatedVersion = latestVersion;
+            updatedVersion = selectedVersion;
         }
 
         return theResult;
@@ -149,8 +152,9 @@ public class GrailsUpdater {
     private boolean updateJar(GrailsWrapperRepo repo, GrailsVersion version, String snapshotVersion) {
         boolean success = false;
 
-        final String localJarFilename = GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version;
-        final String remoteJarFilename = snapshotVersion != null ? GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + snapshotVersion : GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version;
+        final String localJarFilename = GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version + "-all";
+        // shadowjars will always have the 'all' classifier
+        final String remoteJarFilename = snapshotVersion != null ? GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + snapshotVersion + "-all" : GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version + "-all";
         final String jarFileExtension = ".jar";
 
         try {
@@ -256,7 +260,7 @@ public class GrailsUpdater {
         if (!directory.exists()) {
             directory.mkdirs();
         }
-        Path jarFile = new File(directory, GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version + ".jar").toPath();
+        Path jarFile = new File(directory, GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + version.version + "-all.jar").toPath();
         System.out.println("...Moving " + (isLocal ? "local" : "remotely") + " downloaded jar to: " + jarFile.toAbsolutePath());
         Files.move(downloadJarLocation.getAbsoluteFile().toPath(), jarFile, REPLACE_EXISTING);
 
@@ -280,19 +284,22 @@ public class GrailsUpdater {
         }
     }
 
-    private GrailsVersion getLastVersion(GrailsWrapperRepo repo) throws IOException, SAXException, ParserConfigurationException {
+    private GrailsVersion getRootVersion(GrailsWrapperRepo repo) throws IOException, SAXException, ParserConfigurationException {
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser saxParser = factory.newSAXParser();
-        FindLastReleaseHandler findLastReleaseHandler = new FindLastReleaseHandler();
+        RootMetadataHandler findLastReleaseHandler = new RootMetadataHandler(grailsWrapperHome.allowedReleaseTypes);
 
         try (InputStream stream = retrieveMavenMetadata(repo, repo.getRootMetadataUrl())) {
             saxParser.parse(stream, findLastReleaseHandler);
-            String parsedVersion = findLastReleaseHandler.getVersion();
-            try {
-                return new GrailsVersion(parsedVersion);
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to parse version '" + parsedVersion + "' from maven repository.", e);
+            List<GrailsVersion> foundVersions = findLastReleaseHandler.getVersions();
+            if (foundVersions.isEmpty()) {
+                throw new IllegalStateException("No Grails Releases were found for the allowed types: " + grailsWrapperHome.allowedReleaseTypes.stream().map(Enum::name).collect(Collectors.joining(", ")));
             }
+
+            Collections.sort(foundVersions);
+
+            return foundVersions.get(0);
+
         }
     }
 

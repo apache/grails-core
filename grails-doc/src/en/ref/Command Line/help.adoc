@@ -107,7 +107,7 @@ Application generation commands are:
 *  create-webapp NAME
 *  create-restapi NAME
 *  create-plugin NAME
-*  create-webplugin NAME
+*  create-web-plugin NAME
 
 Options:
   -h, --help         Show this help message and exit.

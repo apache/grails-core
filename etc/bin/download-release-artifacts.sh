@@ -43,6 +43,6 @@ curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-wrapper-$VERSION-incubating-bin.z
 curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-wrapper-$VERSION-incubating-bin.zip.sha512" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.sha512"
 
 # sdkman delegating cli
-curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip" "https://github.com/apache/grails-forge/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip"
-curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip.asc" "https://github.com/apache/grails-forge/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip.asc"
-curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip.sha512" "https://github.com/apache/grails-forge/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip.sha512"
+curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip"
+curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip.asc" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip.asc"
+curl -L -o "${DOWNLOAD_LOCATION}/apache-grails-$VERSION-incubating-bin.zip.sha512" "https://github.com/apache/grails-core/releases/download/$RELEASE_TAG/apache-grails-$VERSION-incubating-bin.zip.sha512"

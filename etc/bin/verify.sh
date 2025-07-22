@@ -99,10 +99,11 @@ set -e
 echo "✅ Reproducible Build Verified"
 
 echo "Be sure to do the following:"
+echo "☑️   Set the override repo: 'export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging' "
 echo "☑️   Run the wrapper ShellApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
 echo "☑️   Run the wrapper ForgeApp:  cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-incubating-bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
-echo "☑️   Run the cli ShellApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
-echo "☑️   Run the cli ForgeApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
-echo "☑️   Run the shell cli from one of the applications and ensure all commands show as expected - pay attention to the scaffolding ones since they are dynamically loaded"
+echo "☑️   Run the cli ShellApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/bin/ShellApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
+echo "☑️   Run the cli ForgeApp: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-incubating-bin/bin/ForgeApp && ./gradlew bootRun --init-script ~/grails-verify/custom-repos.gradle"
+echo "☑️   Add the local repos to the application and then run the shell cli from one of the applications and ensure all commands show as expected - pay attention to the scaffolding ones since they are dynamically loaded"
 
 echo "✅✅✅ Verification finished, see above instructions for remaining manual testing."

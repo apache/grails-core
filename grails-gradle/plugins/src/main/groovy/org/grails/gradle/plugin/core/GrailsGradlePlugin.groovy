@@ -71,6 +71,10 @@ import org.springframework.boot.gradle.tasks.bundling.BootArchive
 import org.springframework.boot.gradle.tasks.run.BootRun
 
 import javax.inject.Inject
+import java.nio.charset.StandardCharsets
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.util.regex.Pattern
 
 /**
  * The main Grails gradle plugin implementation
@@ -80,6 +84,7 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsGradlePlugin extends GroovyPlugin {
+
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
 
     protected static final List<String> CORE_GORM_LIBRARIES = ['async', 'core', 'simple', 'web', 'rest-client', 'gorm', 'gorm-validation', 'gorm-plugin-support', 'gorm-support', 'test-support', 'hibernate-core', 'gorm-test', 'rx', 'rx-plugin-support']
@@ -162,6 +167,34 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     }
                 }
             """.stripIndent(16)
+        }
+    }
+
+    // TODO: this is copied from grails-common, but we should consider moving grails-common up to grails-gradle once
+    // the publish plugin is moved out of grails-core
+    static void makePropertiesFileReproducible(File factoriesFile) {
+        String sourceDateEpoch = System.getenv('SOURCE_DATE_EPOCH')
+        if (!sourceDateEpoch) {
+            sourceDateEpoch = LocalDate.now(ZoneOffset.UTC)
+                    .atStartOfDay(ZoneOffset.UTC)
+                    .toEpochSecond().toString()
+        }
+
+        Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\\\s).*$')
+
+        List<String> lines = factoriesFile.readLines(StandardCharsets.ISO_8859_1.name())
+
+        boolean dateReplaced = false
+        factoriesFile.withWriter { BufferedWriter writer ->
+            lines.each { String line ->
+                if (!dateReplaced && timeRegex.matcher(line).matches()) {
+                    dateReplaced = true
+                    writer.writeLine("# SOURCE_DATE_EPOCH = ${sourceDateEpoch}" as String)
+                    return
+                }
+
+                writer.writeLine(line)
+            }
         }
     }
 
@@ -370,6 +403,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         entry key: me.key, value: me.value
                     }
                 }
+                makePropertiesFileReproducible(buildInfoFile)
             }
 
             TaskContainer tasks = project.tasks
@@ -812,6 +846,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+
+                    // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
+                    // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
+                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
+
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
                     if (otherArgs) {
@@ -838,6 +877,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
+
+                    // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
+                    // with Grails' plugin management and bean wiring when running CLI commands via Gradle
+                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')

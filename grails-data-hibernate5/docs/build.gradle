@@ -58,7 +58,7 @@ dependencies {
 }
 
 tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    it.inputs.dir layout.projectDirectory.dir('src/docs/asciidoc')
+    it.inputs.dir(layout.projectDirectory.dir('src/docs/asciidoc')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
     it.outputs.dir layout.buildDirectory.dir('asciidoc/manual')
 
     it.jvm {
@@ -83,8 +83,7 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'pluginVersion': projectVersion,
             'groupId': project.group,
             'artifactId': project.name,
-            'sourcedir': "$project.rootDir",
-            'migrationPluginExamplesDir': rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.dir('src/integration-test/resources').asFile.absolutePath,
+            'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.asFile),
             'migrationPluginGroupId': rootProject.findProject(':grails-data-hibernate5-dbmigration').group,
             'migrationPluginArtifactId': rootProject.findProject(':grails-data-hibernate5-dbmigration').name,
             'liquibaseHibernate5Version': liquibaseHibernate5Version
@@ -142,5 +141,5 @@ tasks.register('assembleDocsDist', Zip).configure { Zip it ->
 // the groovy plugin is applied to this project, but we do not build a jar file since
 // the dependencies are only used for resolving versions from the bom
 tasks.withType(Jar).configureEach {
-    it.enabled = false
+    enabled = false
 }

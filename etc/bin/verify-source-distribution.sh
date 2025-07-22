@@ -61,11 +61,11 @@ SRC_DIR="grails"
 if [ -d "${SRC_DIR}" ]; then
   echo "Previous grails directory found, purging"
   cd grails
-  find . -mindepth 1 -path ./etc -prune -o -exec rm -rf {} +
+  find . -mindepth 1 -path ./etc -prune -o -exec rm -rf {} + || true
   cd etc
-  find . -mindepth 1 -path ./bin -prune -o -exec rm -rf {} +
+  find . -mindepth 1 -path ./bin -prune -o -exec rm -rf {} + || true
   cd bin
-  find . -mindepth 1 -path ./results -prune -o -exec rm -rf {} +
+  find . -mindepth 1 -path ./results -prune -o -exec rm -rf {} +|| true
   cd "${DOWNLOAD_LOCATION}"
 fi
 echo "Extracting zip file..."

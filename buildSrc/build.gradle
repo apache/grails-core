@@ -34,13 +34,7 @@ repositories {
     maven {
         url = 'https://repository.apache.org/content/groups/snapshots'
         content {
-            includeVersionByRegex  'org[.]apache[.]((grails)|(groovy)).*', '.*','.*SNAPSHOT'
-        }
-    }
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
         }
     }
     maven { url = 'https://repo.grails.org/grails/restricted' }
@@ -60,6 +54,6 @@ dependencies {
     implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
-    implementation 'org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:0.8.1'
+    implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:${gradleProperties.apacheRatVersion}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
 }

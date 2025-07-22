@@ -1,0 +1,71 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+Clone the repository as follows:
+
+[source,bash]
+----
+$ git clone https://github.com/apache/grails-core.git
+----
+
+
+`cd` into the `grails-core/grails-forge` directory and run the following command:
+
+[source,bash]
+----
+$ ./gradlew grails-forge-cli:assembleDist
+----
+
+This will create a zip distribution of the CLI (named with the current version) in the `grails-forge-cli/build/distributions/` folder.
+
+You'll need to unzip this somewhere convenient. For example, to unzip it to a dot directory in your user home, you could do:
+
+[source,bash]
+----
+$ mkdir ~/.grails
+$ unzip grails-forge-cli/build/distributions/apache-grails-forge-cli-VERSION-incubating-bin.zip -d ~/.grails
+----
+
+In your shell profile (`~/.bash_profile` if you are using the Bash shell), export the `GRAILS_HOME` directory (wherever you unzipped it to) and add the CLI path to your `PATH`:
+
+.bash_profile/.bashrc
+[source,bash]
+----
+export GRAILS_HOME=~/path/to/unzipped/cli
+export PATH="$PATH:$GRAILS_HOME/bin"
+----
+
+TIP: If you're using SDKMAN and don't want to mess with your $GRAILS_HOME, you can also point SDKMAN to your
+local installation for dev purposes by using `sdk install grails dev path/to/unzipped/cli`
+
+Reload your terminal or `source` your shell profile with `source`:
+
+[source,bash]
+----
+$ source ~/.bash_profile
+----
+
+You will now be able to run the Grails Forge CLI.
+
+[source,bash]
+----
+$ grails
+| Starting interactive mode...
+| Enter a command name to run. Use TAB for completion:
+grails>
+----

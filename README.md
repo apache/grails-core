@@ -33,6 +33,9 @@ Software Foundation. The core framework is very extensible and there are numerou
 available that provide easy integration of add-on features. To assist in getting started, various Application generators
 exist and are provided by the Apache Grails team.
 
+## Using the source distribution
+Please see the [INSTALL](INSTALL) document for instructions on how to build, use, and run Apache Grails CLIs from the source distribution. 
+
 ## Getting help
 
 - Check the [Documentation](https://docs.grails.org/) for your preferred Apache Grails version.
@@ -55,7 +58,8 @@ CLI applications exist to assist in Application generation. Instructions for the
 
 The Apache Grails Wrapper is a tiny distribution (25KB) that can manage larger sized CLIs for Grails. It consists of a
 `grailsw` shell script, a `grailsw.bat` batch script, and the jar file `grails-wrapper.jar`. It can be downloaded from
-the latest [Github Release](https://github.com/apache/grails-core/releases) page starting with 7.0.0-M4 & it is included
+the latest [GitHub Release](https://github.com/apache/grails-core/releases) page starting with version 7.0.0-M4 & it is
+included
 in any created project. The wrapper is used to either create an Apache Grails Application or to run commands in an
 existing Grails Application directory. The wrapper is generally meant to be forward compatible and downloads the Apache
 Grails CLIs to the directory `$HOME/.grails/wrapper`.
@@ -81,18 +85,18 @@ about it, see the [documentation](https://docs.grails.org/snapshot/index.html).
 
 The legacy Apache Grails CLI is the command line interface that IntelliJ uses to interact with existing Apache Grails
 Applications. It can be used to generate applications or it can be used to interact with existing ones. To use it,
-download it to your preferred location from the [grails-forge](https://github.com/apache/grails-forge/releases) release
+download it to your preferred location from the [grails-forge](https://github.com/apache/grails-core/releases) release
 page. You can use the command `./grails-shell-cli help` to see what's possible.
 
 ### grails-forge-cli
 
-The newer Apache Grails CLI is available from the [grails-forge](https://github.com/apache/grails-forge/releases)
+The newer Apache Grails CLI is available from the [grails-forge](https://github.com/apache/grails-core/releases)
 release page. You can use the command `./grails-forge-cli --help` to see what's possible.
 
 ### SDKMAN
 
 If managing multiple, local copies of the Grails CLI, it is recommended to use [SDKMAN!](https://sdkman.io/). Assuming
-SDKMAN is installed, this command would install the 7.0.0-M4 version:
+SDKMAN is installed, this command would install the `7.0.0-M4` version:
 
      sdk install grails 7.0.0-M4
 
@@ -107,15 +111,6 @@ Once your Apache Grails Application is created, you can start it with the comman
     ./gradlew bootRun
 
 For further information, please consult the [documentation](https://docs.grails.org).
-
-## Building Grails
-
-For detailed building Grails, please consult the [CONTRIBUTING.md](CONTRIBUTING.md) file. To bootstrap the project from a source distribution, you can execute: 
-
-    cd gradle-bootstrap
-    gradle wrapper
-
-Then you can proceed with running any valid gradle command from [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licensing
 

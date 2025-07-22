@@ -19,20 +19,20 @@ under the License.
 
 === Upgrade Instructions for Grails and Related Dependencies
 
-To ensure compatibility with Grails 7.0.0, please review the following upgrade instructions carefully.
+To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
 This guide outlines the necessary steps & warnings to upgrade your Grails project.
 
 ==== 1. Java 17 as baseline:
 
-Starting from Grails 7.0.0, Java 17 serves as the baseline requirement for the framework.
-When upgrading to Grails 7.0.0, ensure that your project is configured to use Java 17. Updating to Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
+Starting from Grails 7, Java 17 serves as the baseline requirement for the framework, matching Spring Framework and Spring Boot's minimum Java version.
+When upgrading to Grails 7, ensure that your project is configured to use Java 17. Updating to Java 17 allows you to take advantage of the latest features, security enhancements, and performance improvements provided by Java 17.
 
-Please make sure to update your project's Java version to 17 before proceeding with the Grails 7.0.0 upgrade.
+Please make sure to update your project's Java version to 17 before proceeding with the Grails 7 upgrade.
 Doing so will ensure a seamless transition to the latest version of Grails and enable you to enjoy all the benefits that Java 17 has to offer.
 
-==== 2. Groovy 4.0.27 as a baseline:
+==== 2. Groovy {groovyVersion} as a baseline:
 
-Grails 7.0.0 adopts Groovy 4.0.27 as it's baseline requirement.
+Grails {version} adopts Groovy {groovyVersion} as it's baseline requirement.
 Several changes in Groovy 4 can affect your application.
 Notable changes include:
 
@@ -51,7 +51,7 @@ In your gradle file, you can force a dependency upgrade via this code:
   configurations.configureEach {
       resolutionStrategy.eachDependency { DependencyResolveDetails details ->
           if (details.requested.group == 'org.codehaus.groovy') {
-              details.useTarget(group: 'org.apache.groovy', name: details.requested.name, version: '4.0.27')
+              details.useTarget(group: 'org.apache.groovy', name: details.requested.name, version: '{groovyVersion}')
           }
       }
   }
@@ -59,7 +59,7 @@ In your gradle file, you can force a dependency upgrade via this code:
 
 ==== 3. Unified Project Version
 
-Grails 7.0.0 moved to a mono repository.
+Grails 7 moved to a mono repository.
 As part of this move, all projects that make up a grails release now have a common version.
 Setting `grailsVersion` in `gradle.properties` is the proper way to specify a set of dependencies that are compatible with each other for a given Grails release.
 Please remove older properties such as `gormVersion` & `grailsGradlePluginVersion` and exclusively use this property going forward.
@@ -67,7 +67,7 @@ Please remove older properties such as `gormVersion` & `grailsGradlePluginVersio
 .gradle.properties
 [,,subs="attributes"]
 ----
-grailsVersion=7.0.0
+grailsVersion={version}
 ----
 
 ==== 4. Unified Bill of Materials
@@ -77,7 +77,7 @@ Instead it had a `micronaut-bom` and a `spring-bom`.
 With the removal of Micronaut from the Grails, the `micronaut-bom` is no longer needed.
 Instead, we can have a single bom that inherits from the `spring-bom`.
 
-Grails 7.0.0 introduces a BOM that includes all the dependencies required for a Grails application.
+Grails 7 introduces a BOM that includes all the dependencies required for a Grails application.
 This BOM is available in the `org.apache.grails:grails-bom` artifact.
 The BOM is automatically applied when a Grails Gradle plugin is applied via the Spring Dependency Management plugin.
 For projects that do not use a Grails Gradle plugin, you can apply the BOM via a https://docs.gradle.org/current/userguide/java_platform_plugin.html#sec:java_platform_consumption[Gradle Platform]:
@@ -100,7 +100,7 @@ Please see xref:../ref/Versions/Grails BOM.adoc[Grails BOM Dependencies] for a q
 Grails has transitioned to the Apache Software Foundation (ASF).
 As a result, the group ID for Grails artifacts has changed to `org.apache.grails`.
 This change applies to all Grails packages, including core plugins and core dependencies, maintained by the Grails team.
-When upgrading to Grails 7.0.0, ensure that you update your build configuration to use the new group ID.
+When upgrading to Grails 7, ensure that you update your build configuration to use the new group ID.
 
 There is a https://github.com/apache/grails-core/blob/7.0.x/RENAME.md[RENAME.md] in the grails-core repository that maps previous coordinate names to new names.
 Additionally, there is a script to aid in the updating of Grails projects to the new coordinates.
@@ -114,30 +114,41 @@ This script will scan any gradle file and attempt to update both exclusions & de
 
 ==== 6. Gradle Changes:
 
-One of the major changes in Grails 7.0.0 is the modernization of it's build system.
-As a side effect of this modernization, the Grails build is fully parallel & https://docs.gradle.org/current/userguide/task_configuration_avoidance.html[lazy].
-When updating to Grails 7.0.0, there may be required updates to various tasks we distribute since the inputs of those tasks have changed to support lazy configuration.
+One of the major changes in Grails 7 is the modernization of it's build system. As a side effect of this modernization, the Grails build is fully parallel & https://docs.gradle.org/current/userguide/task_configuration_avoidance.html[lazy]. Moreover, most tasks have been enhanced to be cacheable. When updating to Grails {version}, there may be required updates to various tasks we distribute since the inputs of those tasks have changed to support lazy configuration.
 
-===== 6.1. Upgrading Gradle:
+===== 6.1. Gradle Plugin Changes
+As part of the cacheable task changes, some tasks have slightly new behaviors:
 
-It is recommended to set your gradle version to a version of 8.14 or higher:
+- FindMainTask can now fail for non-plugins: If an Application class is not found & the project has a Grails gradle plugin applied, the FindMainTask will now fail.
+- FindMainTask is now cacheable - restarting with bootRun should not force a recompile of the application if no changes have been made.
+- Configuration tasks have been added to customize compileGroovy tasks. These tasks allow for proper metadata being passed to the Groovy compiler to ensure the AST transformations know if code is a Grails Plugin or a Grails Application. In the event these tasks do not run or are caching incorrectly, you may observe incorrect UrlMapping resolution. Please report any instances of this happening so it can be addressed.
+- `groovyVersion` is now `groovy.version` to match upstream Spring BOM property names. If you still define groovyVersion to override the groovy version & use the Spring Dependency Management plugin, you will need to change this property to `groovy.version` in your `gradle.properties` file.
+- While the Spring Dependency Management plugin is still used by default, it can now be disabled by setting the property `springDependencyManagement` on the `grails` extension.
+
+===== 6.2. Upgrading Gradle:
+
+It is recommended to set your gradle version to a version of {gradleVersion} or higher:
 
 [,console,subs="attributes"]
 ----
-./gradlew wrapper --gradle-version 8.14
+./gradlew wrapper --gradle-version {gradleVersion}
 ----
 
 This command will download the specified Gradle version and update the Gradle wrapper settings in your project.
 
-===== 6.2. Check Gradle Version:
+===== 6.3. Check Gradle Version:
 
 After the command finishes, you can verify that the Gradle version has been updated by checking the `gradle-wrapper.properties` file located in the `gradle/wrapper` directory.
 The `distributionUrl` in the file should now point to the specified Gradle version's distribution:
 
 [,,subs="attributes"]
 ----
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-{gradleVersion}-bin.zip
 ----
+
+===== 6.4. Removed Gradle Plugins
+
+The `grails-doc` plugin has been removed. If you wish to continue to generate the guide documentation, you can use the PublishGuideTask offered by `grails-docs-core`.
 
 ==== 7. Reproducible Builds:
 
@@ -155,15 +166,15 @@ The benefits of reproducible builds are well documented, but for Grails applicat
 To make your local build reproducible, you'll want to set the environment variable `SOURCE_DATE_EPOCH` to a fixed date.
 For Grails, we set this value to the last commit in git via the bash command: `SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)`
 
-==== 8. Spring 6.2.6:
+==== 8. Spring {springVersion}:
 
-Grails 7.0.0 is built on the Spring Framework, version 6.2.6. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
+Grails {version} is built on the Spring Framework, version {springVersion}. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
 
 This update introduces enhancements and fixes to the Spring Framework, providing you with the latest improvements in dependency injection, web frameworks, and other Spring-related functionalities.
 
-==== 9. Spring Boot 3.5.0:
+==== 9. Spring Boot {springBootVersion}:
 
-Grails 6 used Spring Boot 2.7. Grails 7.0.0 updates this to Spring Boot 3.5.0. For more information, consult the release notes for previous Spring Boot releases:
+Grails 6 used Spring Boot 2.7.x. Grails {version} updates this to Spring Boot {springBootVersion}. For more information, consult the release notes for previous Spring Boot releases:
 1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.5-Release-Notes[Spring Boot 3.5 Release Notes]
 2. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.4 Release Notes]
 3. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.3 Release Notes]
@@ -194,14 +205,14 @@ Both the legacy `grails-shell-cli` and `grails-forge-cli` are now included with 
 
 ==== 12. Breaking changes
 
-Grails 7.0.0 introduces several breaking changes that may require updates to your application.
+Grails 7 introduces several breaking changes that may require updates to your application.
 
-===== 12.0
+===== 12.1
 
-Due to the significant changes in Grails 7, all prior Grails Plugin will need updated to work with Grails 7. For plugins in the https://github.com/grails-plugins/[Grails Plugins] GitHub organization, the Grails Core team is updating them as time permits and when requested.
+Due to the significant changes in Grails 7, all prior Grails Plugins will need updated to work with Grails 7. For plugins in the https://github.com/grails-plugins/[Grails Plugins] GitHub organization, the Grails Core team is updating them as time permits and when requested.
 If there is a plugin that you require updating, please reach out via https://github.com/apache/grails-core/issues[ticket] to see if we can help.
 
-===== 12.1 javax -> Jakarta
+===== 12.2 javax -> Jakarta
 
 Spring has switched from javax to https://jakarta.ee/[jakarta] packages.
 Please consult the Spring upgrade guides for the impacts of this change.
@@ -222,17 +233,30 @@ jakartaeeMigration {
 }
 ----
 
-===== 12.2 Removed libraries/classes
+===== 12.3 Removed libraries/classes
 - The `grails-web-fileupload` library, including its sole class `ContentLengthAwareCommonsMultipartResolver`, has been removed. This change was necessitated by the removal of the superclass `CommonsMultipartResolver` in Spring 6. The `ContentLengthAwareCommonsMultipartResolver` was originally introduced to address a bug in Safari back in 2007, but it is likely no longer needed. Spring has transitioned away from `CommonsMultipartResolver` and now recommends using the built-in support for multipart uploads provided by servlet containers. For more information on handling file uploads in Spring Boot, please refer to the relevant sections of the https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.multipart-file-uploads[Spring Boot documentation] and the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x#web-applications-1[Spring Framework 6 upgrade guide].
-- `org.grails.spring.beans.factory.OptimizedAutowireCapableBeanFactory` was previously deprecated and is now removed.
+- Removed deprecations:
+
+1. `org.grails.spring.beans.factory.OptimizedAutowireCapableBeanFactory`
+2. `GrailsPlugin#checkForChangesExpected`
+3. `GrailsClassUtils#isGetter(String, Class[])` - use `isGetter(String, Class, Class[])` instead.
+4. `GrailsClassUtils#getPropertyForGetter(String)` - use `getPropertyForGetter(String, Class)` instead.
+5. `AbstractGrailsClass#getPropertyDescriptors` - use `getMetaProperties` instead.
+6. `org.grails.core.metaclass.BaseApiProvider` - use traits instead.
+7. Several static variables on `ClosureEventTriggeringInterceptor` - use the variables on `AbstractPersistentEvent` instead.
+8. `grails.testing.gorm.DataTest#dataSource` - use `DataTest#datasource` instead.
+
 - The following deprecated classes were removed, please use the suggested replacement:
 
 1. `grails.core.GrailsTagLibClass` -> `grails.core.gsp.GrailsTagLibClass`
 2. `org.grails.core.artefact.TagLibArtefactHandler` -> `org.grails.core.artefact.gsp.TagLibArtefactHandler`
 3. `org.grails.core.DefaultGrailsTagLibClass` -> `org.grails.core.gsp.DefaultGrailsTagLibClass`
 4. `org.grails.plugins.CodecsGrailsPlugin` -> `org.grails.plugins.codecs.CodecsGrailsPlugin`
+5. `grails.artefact.AsyncController` -> `grails.async.web.AsyncController`
+6. `grails.beans.util.LazyBeanMap` -> `grails.beans.util.LazyMetaPropertyMap`
+7. `org.grails.plugins.databinding.DataBindingGrailsPlugin` -> `DataBindingConfiguration`
 
-===== 12.3 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
+===== 12.4 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
 - This change was made based on community input: https://github.com/orgs/grails/discussions/13517
 - The removal of Micronaut enabled simplification of the Grails codebase and the return of Live Reload via https://github.com/HotswapProjects/HotswapAgent
 - The Micronaut Parent Context is no longer in Grails by default.
@@ -241,7 +265,7 @@ jakartaeeMigration {
 - Using Micronaut Parent Context: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springParentContext
 - Using a Bean Post Processor: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#beanPostProcessor
 
-===== 12.4 hibernate-ehcache
+===== 12.5 hibernate-ehcache
 
 The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.apache.grails:grails-hibernate5` plugin. If
 your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
@@ -263,26 +287,26 @@ dependencies {
 }
 ----
 
-===== 12.5 H2
+===== 12.6 H2
 
 The test database H2 is stricter about reserved keywords.
 If you use H2 in your application, please take a look at this https://github.com/grails/grails-data-hibernate5/pull/910/commits/c8de45df204966ccc228b46b94beeb2142ae0f59[pull request] for examples of these new restrictions.
 
-===== 12.6 Removal of Test Dependencies from Production Classpath
+===== 12.7 Removal of Test Dependencies from Production Classpath
 
 Prior versions of Grails included test dependencies on the production classpath.
 These are now removed in Grails 7. If you still need them, you can add them to your `implementation` configuration in your build.gradle file.
 
-===== 12.7 Jar Artifact name changes
+===== 12.8 Jar Artifact name changes
 
 Jar artifacts produced by Grails Plugins will no longer have the suffix `-plain`.
 Please see ticket https://github.com/apache/grails-gradle-plugin/pull/347[#347] for details.
 
-===== 12.8 Java 20+ Date Formatting Changes
+===== 12.9 Java 20+ Date Formatting Changes
 
 In Java 20+, https://cldr.unicode.org/downloads/cldr-42[Unicode CLDR42] was implemented which changed the space character preceding the period (AM or PM) in formatted date/time text from a standard space (" ") to a narrow non-breaking space (NNBSP: "\u202F"). Additionally, when using the LONG or FULL timeStyle with dateStyle, the date and time separator has changed from ' at ' to ', '. IE. January 5, 1941, 8:00:00 AM UTC vs. January 5, 1941 at 8:00:00 AM UTC
 
-===== 12.9 Container runtime environment is now required for standard Geb functional and integration tests
+===== 12.10 Container runtime environment is now required for standard Geb functional and integration tests
 
 The https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme[Grails Geb Plugin] has received a significant update, introducing test fixtures that enable ubiquitous containerized browser testing.
 
@@ -313,7 +337,70 @@ Once a compatible container runtime is installed, no additional configuration is
 
 With this setup, you gain the benefits of containerized testing, such as isolation, reproducibility, and reduced setup complexity.
 
-===== 12.10 Tomcat 10.1.42 introduced limits for part count and header size in multipart/form-data requests
+===== 12.11 Asset Pipeline
+
+The asset pipeline has a new https://github.com/wondrify/asset-pipeline[home]. Version 5.0.12 and forward is compatible with Grails 7.x.
+
+Updated maven coordinates:
+
+```console
+cloud.wondrify:asset-pipeline-gradle
+cloud.wondrify:asset-pipeline-grails
+```
+
+Gradle plugin:
+```console
+plugins {
+    id "cloud.wondrify.asset-pipeline"
+}
+
+or
+
+apply plugin: "cloud.wondrify.asset-pipeline"
+```
+
+===== 12.12 API Changes
+
+As part of any major release, APIs can change.  For Grails 7.0, the list of renamed APIs follows:
+
+* GrailsClassUtils#isMatchBetweenPrimativeAndWrapperTypes -> GrailsClassUtils#isMatchBetweenPrimitiveAndWrapperTypes
+
+===== 12.13 Layout Plugins
+
+Grails 7 has two different layout engines: Sitemesh 2.6.x & Sitemesh 3.x. The Sitemesh2 plugin is named `grails-layout` and the Sitemesh 3 plugin is `grails-sitemesh3`. The `grails-layout` plugin is what has traditionally shipped with Grails. The `grails-sitemesh3` plugin is functional, but has some known issues. Please see the thread https://lists.apache.org/thread/8lynrl0yd6ykn749md1g2wjb8jph3s5l[Grails 7 & Reverting Sitemesh 3] for the history of why we did not exclusively use `grails-sitemesh3` for Grails 7.
+
+===== 12.14 grails-layout Configuration
+
+If you decide to use the `grails-layout` plugin, several changes have occurred:
+
+Add the following dependency to your project:
+
+```console
+implementation "org.apache.grails:grails-layout"
+```
+
+Package Changes:
+
+* grails.web.sitemesh -> org.apache.grails.web.layout
+* org.grails.web.sitemesh -> org.apache.grails.views.gsp.layout
+
+Notable Class Moves:
+
+* org.grails.web.servlet.view.GrailsLayoutViewResolver -> org.apache.grails.web.layout.EmbeddedGrailsLayoutViewResolver
+* org.grails.web.servlet.view.SitemeshLayoutViewResolver -> org.apache.grails.web.layout.GrailsLayoutViewResolver
+* org.grails.web.sitemesh.GrailsLayoutView -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView
+* org.grails.web.sitemesh.SitemeshLayoutView -> org.apache.grails.web.layout.GrailsLayoutView
+
+Property Changes:
+
+* grails.sitemesh.default.layout -> grails.views.layout.default
+* grails.sitemesh.enable.nongsp -> grails.views.layout.enable.nongsp
+
+Tag namespace changes:
+
+* sitemesh -> grailsLayout
+
+===== 12.15 Tomcat 10.1.42 introduced limits for part count and header size in multipart/form-data requests
 
 These limits can be customized using `server.tomcat.max-part-count` and `server.tomcat.max-part-header-size` respectively.
 

@@ -1,0 +1,67 @@
+@*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*@
+
+@import org.grails.forge.application.ApplicationType
+@import java.util.List
+
+@args (
+    String grailsVersion,
+    String serverURL
+)
+
+=== Grails Forge @grailsVersion (@serverURL)
+
+Grails Forge generates example project for the Grails® framework (https://grails.org).
+
+The API is defined by the OpenAPI 3 specification @serverURL/swagger/views/swagger-ui/index.html
+
+The primary API for generating application is @serverURL/create/{type}/{name}.
+
+The application type can be one of the following:
+
++-----------------+------------------------------------------+
+| ID              | Description                              |
++-----------------+------------------------------------------+
+@for (ApplicationType type : ApplicationType.values()) {
+| @String.format("%-" + 15 + "s",type.name()) | @String.format("%-" + 40 + "s",type.getDescription()) |
+}
++-----------------+------------------------------------------+
+
+The "name" can be whatever you choose.
+
+Available query parameters include:
+
++-----------------+------------------------------------------+------------------------------+
+| Parameter       | Description                              | Default value                |
++-----------------+------------------------------------------+------------------------------+
+| build           | The build system                         | gradle                       |
+| gorm            | The GORM Implementation                  | HIBERNATE                    |
+| test            | The test framework                       | spock                        |
+| features        | The features you wish to include         | defaults                     |
++-----------------+------------------------------------------+------------------------------+
+
+To view the possible features and their descriptions visit:
+
+@serverURL/application-types/{type}/features
+
+=== Examples
+
+To create a default application:
+
+    $ curl @serverURL/create/WEB/example -o example.zip

@@ -1,0 +1,5 @@
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  deserialization:
+    READ_UNKNOWN_ENUM_VALUES_AS_NULL: true

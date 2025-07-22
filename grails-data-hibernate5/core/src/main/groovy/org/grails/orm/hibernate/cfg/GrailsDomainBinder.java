@@ -61,6 +61,7 @@ import jakarta.persistence.Entity;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Types;
@@ -2043,12 +2044,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-        try {
-            md.update(sb.toString().getBytes("UTF-8"));
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+
+        md.update(sb.toString().getBytes(StandardCharsets.UTF_8));
 
         String name = "UK" + new BigInteger(1, md.digest()).toString(16);
         if (name.length() > 30) {

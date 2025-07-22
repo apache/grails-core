@@ -49,7 +49,7 @@ tasks.withType(Test).configureEach {
     jvmArgs += java17moduleReflectionCompatibilityArguments
     develocity {
         testRetry {
-            maxRetries = 2
+            maxRetries = configuredTestParallel == 1 ? 1 : 2
             maxFailures = 20
             failOnPassedAfterRetry = true
         }
@@ -64,7 +64,7 @@ tasks.withType(Test).configureEach {
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = configuredTestParallel
     maxHeapSize = isCiBuild ? '768m' : '1024m'
-    forkEvery = isCiBuild ? 20 : 100
+    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 20 : 100)
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
     }
@@ -74,3 +74,32 @@ tasks.withType(Test).configureEach {
     }
 }
 
+if (hasProperty('testBisect')) {
+    tasks.withType(Test).configureEach {
+        maxParallelForks = 1
+        forkEvery = 0
+
+        develocity {
+            testDistribution {
+                enabled = false
+                retryInSameJvm = true
+            }
+            testRetry {
+                maxRetries = 1
+                maxFailures = 1
+                failOnPassedAfterRetry = true
+            }
+        }
+
+        beforeTest { testDescriptor ->
+            logger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
+        }
+
+        afterSuite { desc, result ->
+            if (!desc.parent) {
+                def testStatus = result.failedTestCount == 0 && result.testCount > 1 ? 'PASSED' : 'FAILED'
+                logger.info('FINISHED - {} - {} tests executed, {} failed', testStatus, result.testCount, result.failedTestCount)
+            }
+        }
+    }
+}

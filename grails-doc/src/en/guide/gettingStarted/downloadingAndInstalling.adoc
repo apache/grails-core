@@ -21,16 +21,64 @@ There are many ways to create a Grails application.
 The best way is to use either https://start.grails.org[start.grails.org] or use the Grails CLI via https://sdkman.io[SDKMAN].
 SDKMAN greatly simplifies installing and managing multiple Grails versions.
 
-=== Types of CLI
+=== Types of command-line interface (CLI)
 
-Historically, Grails had one CLI - `grails shell`.
-In Grails 6, a new CLI was introduced `grails forge` that was meant to replace `grails shell`.
-Unfortunately, IntelliJ's Grails plugin relies on the legacy shell to provide functions for the IDE.
-For this reason, the decision was made to restore publishing of the `grails-shell` in later versions of Grails 6. The other problem is to customize application generation, `grails forge` would need to be forked, customized, published, and hosted somewhere.
-The process of building and hosting a custom version of `grails-forge` was found to be cumbersome for some people because the previous shell allowed for customization by providing a directory that laid out a skeleton of what to create.
-Worse, some critical plugins, such as the database migration plugin had custom commands that cannot be easily imported into the forge cli.
+Historically, Grails had one CLI - `grails shell`, until `grails forge` was introduced in Grails 6.
 
-For this reason, Grails 7 adds the following commands to any Grails install:
+==== Grails Shell CLI
+The historical `grails shell` CLI has been a core part of the Grails Framework since its inception, providing command-line tools for project creation, code generation, and application management.
+Nearly all historical references to the `grails` or `grailsw` commands pertain to `grails shell` functionality.
+The `grails shell` CLI relies on Profiles, consisting of skeleton directories and YAML-based configurations for application generation.
+However, this approach is less flexible than the feature-rich application generation capabilities of `grails forge`.
+The Grails Wrapper is a lightweight script (`grailsw`) and the accompanying JAR file is designed to bootstrap and load the CLI within a Grails Application.
+The `grails shell` CLI provides most of the same application generation functionality provided by `grails forge`.
+Importantly, it can also run scripts, such as `run-app` that call Gradle and/or your Grails Application.
+Most Grails plugins still include Grails Scripts that execute within `grails shell` CLI and have not yet been migrated to Gradle tasks.
+IntelliJ IDEA's Grails plugin depends on `grails shell` for code generation and Grails command execution.
+Extending application generation in the grails shell CLI is straightforward: developers can create a Custom Profile and reference it as a Maven dependency, which is generally simpler than customizing `grails forge`.
+
+==== Restoration of Grails Shell CLI
+In Grails 6.0.0, `grails shell` CLI was removed and replaced with `grails forge` CLI.
+However, in Grails 6.2.1, the grails shell CLI, along with Grails Profiles and the Wrapper were restored, empowering users to choose their preferred CLI and reclaiming functionalities that had not yet been fully transitioned to the `grails forge` CLI combined with Gradle tasks.
+
+==== Grails Shell CLI and Gradle
+Certain `grails shell` CLI commands overlap with Gradle tasks.
+
+For Gradle these use a variety of Gradle tasks provided by Gradle, Spring Boot, Grails or a Grails Plugin.
+
+Partial list, for illustration purposes:
+
+[options="header,autowidth"]
+|===
+| grails shell CLI  | Gradle | Integration
+
+| `./grails run-app` | `./gradlew bootRun` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
+| `./grails test run-app` | `./gradlew bootRun -Dgrails.env=test` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
+| `./grails package` | `./gradlew assemble -Dgrails.env=prod` | package is a YAML file from the Base Grails Profile commands directory which is converted by YamlCommandFactory, when Grails CLI starts, into a Grails Command which ultimately calls the Gradle assemble task
+| `./grails generate-all org.bookstore.Author` | `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"` | None. The Grails Script GenerateAll.groovy and the Grails Command GenerateAllCommand.groovy both come from the Scaffolding Plugin and have duplicate functionality
+| `./grails dbm-update` | `./gradlew dbmUpdate` | None.  Separate script and command in Database Migration Plugin
+| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs=" person-domain.groovy"` | None.  Separate script and command in Database Migration Plugin
+| `./grails s2-quickstart com.yourapp User Role` | `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` | None. The Grails Script s2-quickstart.groovy and the Grails Command S2QuickstartCommand.groovy both come from the Grails Spring Security Core Plugin and have duplicate functionality
+
+|===
+
+Additional details on these commands are covered in other sections of Grails documentation.
+
+==== Grails Forge CLI
+In Grails 6, `grails forge` was introduced to replace the application generation features of `grails shell` CLI, while forcing the transition of all other historical CLI functionality directly to Gradle tasks.
+This new CLI offers a superior architecture for application generation, particularly when incorporating multiple features, and starts and generates applications faster than the `grails shell` CLI.
+`grails forge` also powers https://start.grails.org[start.grails.org] and the "New Grails Project" feature in JetBrains' IntelliJ IDEA via the Grails Plugin.
+Unfortunately, in Grails 6, but corrected for 7, the grails forge CLI was invoked using the historical `grails` command, which confused users due to its markedly different feature set and architecture.
+The `grails forge` CLI is dedicated solely to initial application generation and the subsequent creation of components such as domains, controllers, services, interceptors, and tag libraries, which is all it can do.
+This CLI is entirely offline with precompiled templates and does not run or use Gradle or your Grails Application.
+With the `grails forge` CLI, the goal was to transition all other historical capabilities provided by the `grails shell` CLI to Gradle tasks.
+Although some advancements have been made in this transition, substantial work is still outstanding.
+The `grails forge` can be extended by forking the repository and hosting your own Grails Application Forge internally, which is generally more complex than extending `grails shell` with a custom profile.
+
+==== Both CLIs exist in Grails 7
+For the reasons listed above, Grails 7 now includes both CLIs and a combined delegating CLI that can invoke either CLI.  `grails-shell`, `grails-profiles`, `grails-wrapper` and `grails-forge` projects are now all part of the grails-core project and are released together.
+
+Grails 7 adds the following commands to any Grails install:
 
 1. `grails-forge-cli` - the forge cli that was shipped as `grails` initially in Grails 6. This CLI has both interactive completion & bash autocompletion.
 Long term, we intend to fold the legacy shell functions into it - including the ability to create custom commands & supporting a custom layout.
@@ -63,7 +111,7 @@ After installing, all three CLI commands: `grails`, `grails-shell-cli`, and `gra
 
 For manual installation follow these steps:
 
-* https://github.com/apache/grails-forge/releases[Download] a binary distribution of Grails and extract the resulting zip file to a location of your choice.
+* https://github.com/apache/grails-core/releases[Download] a binary distribution of Grails and extract the resulting zip file to a location of your choice.
 Then add the bin directory to your system path.
 
 ==== Unix/Linux

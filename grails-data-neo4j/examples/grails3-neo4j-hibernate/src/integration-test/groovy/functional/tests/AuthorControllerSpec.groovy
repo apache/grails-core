@@ -27,7 +27,7 @@ class AuthorControllerSpec extends GebSpec {
 
     void "Test list authors"() {
         when:"The home page is visited"
-        go '/author/index'
+        go('/author/index')
 
         then:"The name is correct"
         title == "Author List"

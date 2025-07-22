@@ -16,6 +16,7 @@
  */
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
@@ -26,7 +27,9 @@ ext {
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
             .orElseGet(Instant::now)
-    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    formattedBuildDate = System.getenv("SOURCE_DATE_EPOCH") ?
+            DateTimeFormatter.ISO_INSTANT.format(buildInstant) :
+            DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
 
     grailsVersion = projectVersion
@@ -46,26 +49,14 @@ ext {
 
 allprojects {
     repositories {
-        // workaround for https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/164
-        maven {
-            name = 'localGrailsBom'
-            url = file("$rootDir/grails-bom/build/repo")
-            content { includeModule 'org.apache.grails', 'grails-bom' }
-        }
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        maven { url = 'https://repo.grails.org/grails/restricted' }
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
-                includeVersionByRegex 'org[.]apache[.]((grails)|(groovy)).*', '.*', '.*-SNAPSHOT'
+                includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
             }
         }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex 'cloud[.]wondrify', '.*', '.*-SNAPSHOT'
-            }
-        }
-        maven { url = 'https://repo.grails.org/grails/restricted' }
     }
 }
 

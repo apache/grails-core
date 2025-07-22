@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileTree
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
@@ -80,6 +81,12 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
 
     @Input
     final SetProperty<String> projectPackageNames
+
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @Override
+    FileTree getSource() {
+        return super.getSource();
+    }
 
     private ExecOperations execOperations
 

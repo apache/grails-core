@@ -20,7 +20,9 @@ import org.apache.tools.ant.DirectoryScanner
  */
 
 pluginManagement {
-    includeBuild('./grails-gradle')
+    includeBuild('./grails-gradle') {
+        name = 'grails-gradle'
+    }
 }
 plugins {
     id 'com.gradle.develocity' version '4.0.1'
@@ -136,6 +138,7 @@ include(
         'grails-gsp-core',
         'grails-gsp',
         'grails-sitemesh3',
+        'grails-layout',
         'grails-taglib',
         'grails-web-gsp',
         'grails-web-gsp-taglib',
@@ -191,6 +194,7 @@ project(':grails-async').projectDir = file('grails-async/plugin')
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')
 project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
+project(':grails-layout').projectDir = file('grails-gsp/grails-layout')
 project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
 project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
 project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
@@ -390,7 +394,8 @@ include(
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
         'grails-test-examples-gorm',
-        'grails-test-examples-gsp-sitemesh3',
+        'grails-test-examples-gsp-layout',
+        //TODO: 'grails-test-examples-gsp-sitemesh3',
         'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-hyphenated',
@@ -417,7 +422,8 @@ project(':grails-test-examples-datasources').projectDir = file('grails-test-exam
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
-project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
+project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
+//TODO: project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
 project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
@@ -435,7 +441,9 @@ project(':grails-test-examples-cache').projectDir = file('grails-test-examples/c
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 
-includeBuild('./grails-gradle')
+includeBuild('./grails-gradle') {
+    name = 'grails-gradle'
+}
 
 // Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
 for (String pattern in DirectoryScanner.defaultExcludes) {

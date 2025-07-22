@@ -38,6 +38,12 @@ dependencies {
     implementation 'org.apache.grails:grails-dependencies'
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-core'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
 
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-cache'
@@ -77,6 +83,10 @@ test {
 //compileTestGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 //compileGroovy.groovyOptions.fork = true
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
+
+//bootRun {
+//    jvmArgs("-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005")
+//}
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')

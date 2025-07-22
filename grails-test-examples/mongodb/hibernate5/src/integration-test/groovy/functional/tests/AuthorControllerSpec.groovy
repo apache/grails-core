@@ -27,7 +27,7 @@ class AuthorControllerSpec extends ContainerGebSpec {
 
     void "Test list authors"() {
         when:"The home page is visited"
-        go '/author/index'
+        go('/author/index')
 
         then:"The name is correct"
         title == "Author List"
@@ -35,7 +35,7 @@ class AuthorControllerSpec extends ContainerGebSpec {
 
     void "Test save author"() {
         when:
-        go "/author/create"
+        go("/author/create")
         $('form').name = "Stephen King"
         $('input.save').click()
 
