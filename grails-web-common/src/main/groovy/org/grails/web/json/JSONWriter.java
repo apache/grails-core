@@ -4,7 +4,11 @@ Public Domain.
 
 package org.grails.web.json;
 
-import static org.grails.web.json.JSONWriter.Mode.*;
+import static org.grails.web.json.JSONWriter.Mode.ARRAY;
+import static org.grails.web.json.JSONWriter.Mode.DONE;
+import static org.grails.web.json.JSONWriter.Mode.INIT;
+import static org.grails.web.json.JSONWriter.Mode.KEY;
+import static org.grails.web.json.JSONWriter.Mode.OBJECT;
 
 import groovy.lang.Writable;
 

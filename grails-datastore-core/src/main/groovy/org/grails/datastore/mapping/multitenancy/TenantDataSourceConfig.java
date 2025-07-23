@@ -18,7 +18,11 @@
  */
 package org.grails.datastore.mapping.multitenancy;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * <p>An annotation that adds possibility to configure whether a domain should be excluded from particular

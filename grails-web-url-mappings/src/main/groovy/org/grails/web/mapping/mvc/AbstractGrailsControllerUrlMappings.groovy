@@ -23,7 +23,11 @@ import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
 import grails.util.GrailsNameUtils
 import grails.web.UrlConverter
-import grails.web.mapping.*
+import grails.web.mapping.UrlCreator
+import grails.web.mapping.UrlMapping
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappings
+import grails.web.mapping.UrlMappingsHolder
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import org.grails.core.artefact.ControllerArtefactHandler

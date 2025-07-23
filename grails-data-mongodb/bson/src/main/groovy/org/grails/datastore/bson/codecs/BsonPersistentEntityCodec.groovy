@@ -20,15 +20,32 @@
 package org.grails.datastore.bson.codecs
 
 import groovy.transform.CompileStatic
-import org.bson.*
+import org.bson.BsonDocument
+import org.bson.BsonDocumentWriter
+import org.bson.BsonReader
+import org.bson.BsonType
+import org.bson.BsonValue
+import org.bson.BsonWriter
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.Codec
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
-import org.grails.datastore.bson.codecs.decoders.*
-import org.grails.datastore.bson.codecs.encoders.*
+import org.grails.datastore.bson.codecs.decoders.BasicCollectionTypeDecoder
+import org.grails.datastore.bson.codecs.decoders.CustomTypeDecoder
+import org.grails.datastore.bson.codecs.decoders.EmbeddedCollectionDecoder
+import org.grails.datastore.bson.codecs.decoders.EmbeddedDecoder
+import org.grails.datastore.bson.codecs.decoders.IdentityDecoder
+import org.grails.datastore.bson.codecs.decoders.SimpleDecoder
+import org.grails.datastore.bson.codecs.decoders.TenantIdDecoder
+import org.grails.datastore.bson.codecs.encoders.BasicCollectionTypeEncoder
+import org.grails.datastore.bson.codecs.encoders.CustomTypeEncoder
+import org.grails.datastore.bson.codecs.encoders.EmbeddedCollectionEncoder
+import org.grails.datastore.bson.codecs.encoders.EmbeddedEncoder
+import org.grails.datastore.bson.codecs.encoders.IdentityEncoder
+import org.grails.datastore.bson.codecs.encoders.SimpleEncoder
+import org.grails.datastore.bson.codecs.encoders.TenantIdEncoder
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.engine.EntityAccess
@@ -37,7 +54,14 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.model.types.*
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.Custom
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.EmbeddedCollection
+import org.grails.datastore.mapping.model.types.Identity
+import org.grails.datastore.mapping.model.types.Simple
+import org.grails.datastore.mapping.model.types.TenantId
+
 /**
  * Encodes and decodes {@link org.grails.datastore.mapping.model.PersistentEntity} objects from a BSON stream
  *

@@ -21,13 +21,21 @@ package org.grails.datastore.mapping.mongo;
 import com.mongodb.client.MongoClient;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.FindIterable;
-import com.mongodb.client.model.*;
+import com.mongodb.client.model.DeleteManyModel;
+import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.grails.datastore.bson.query.BsonQuery;
 import org.grails.datastore.mapping.core.OptimisticLockingException;
-import org.grails.datastore.mapping.core.impl.*;
+import org.grails.datastore.mapping.core.impl.PendingDelete;
+import org.grails.datastore.mapping.core.impl.PendingDeleteAdapter;
+import org.grails.datastore.mapping.core.impl.PendingInsert;
+import org.grails.datastore.mapping.core.impl.PendingOperation;
+import org.grails.datastore.mapping.core.impl.PendingUpdate;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.engine.Persister;
@@ -46,7 +54,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import jakarta.persistence.FlushModeType;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A {@link org.grails.datastore.mapping.core.Session} implementation for the Mongo document store.

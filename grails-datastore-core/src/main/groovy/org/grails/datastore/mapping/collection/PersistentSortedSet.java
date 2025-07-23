@@ -24,7 +24,10 @@ import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.model.types.Association;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * A lazy loaded sorted set.

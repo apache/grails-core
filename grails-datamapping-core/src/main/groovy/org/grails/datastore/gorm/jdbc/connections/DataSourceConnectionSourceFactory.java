@@ -20,8 +20,11 @@
 package org.grails.datastore.gorm.jdbc.connections;
 
 import org.grails.datastore.mapping.config.Settings;
-import org.grails.datastore.mapping.core.connections.*;
 import org.grails.datastore.gorm.jdbc.DataSourceBuilder;
+import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
@@ -35,7 +38,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * A {@link ConnectionSourceFactory} for creating JDBC {@link DataSource} connections
+ * A {@link org.grails.datastore.mapping.core.connections.ConnectionSourceFactory} for creating JDBC {@link DataSource} connections
  *
  * @author Graeme Rocher
  * @since 6.0

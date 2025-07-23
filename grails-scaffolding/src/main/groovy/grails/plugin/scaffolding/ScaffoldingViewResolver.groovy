@@ -32,7 +32,11 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.view.GroovyPageView
 import org.grails.web.servlet.view.GroovyPageViewResolver
 import org.springframework.context.ResourceLoaderAware
-import org.springframework.core.io.*
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+import org.springframework.core.io.ResourceLoader
+import org.springframework.core.io.UrlResource
 import org.springframework.web.servlet.View
 
 import java.util.concurrent.ConcurrentHashMap

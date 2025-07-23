@@ -19,8 +19,19 @@
 package org.grails.datastore.gorm.transform
 
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.ast.*
-import org.codehaus.groovy.ast.expr.*
+import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.VariableScope
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.ast.tools.GenericsUtils
@@ -31,14 +42,31 @@ import org.codehaus.groovy.transform.sc.StaticCompileTransformation
 import org.codehaus.groovy.transform.trait.Traits
 import org.grails.datastore.mapping.reflect.NameUtils
 
-import jakarta.annotation.PostConstruct
-import jakarta.annotation.PreDestroy
 import java.beans.Introspector
 import java.lang.reflect.Modifier
 
-import static org.codehaus.groovy.ast.ClassHelper.*
-import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.*
-import static org.grails.datastore.mapping.reflect.AstUtils.*
+import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.paramsForArgs
+import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
+import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY
+import static org.grails.datastore.mapping.reflect.AstUtils.TYPE_CHECKED_TYPE
+import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
+import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
+import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
+import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
+import static org.grails.datastore.mapping.reflect.AstUtils.hasJunitAnnotation
+import static org.grails.datastore.mapping.reflect.AstUtils.isGetter
+import static org.grails.datastore.mapping.reflect.AstUtils.isSetter
+import static org.grails.datastore.mapping.reflect.AstUtils.isSpockTest
+import static org.grails.datastore.mapping.reflect.AstUtils.processVariableScopes
 
 /**
  * An abstract implementation for transformations that decorate a method invocation such that

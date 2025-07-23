@@ -19,12 +19,27 @@
 
 package org.grails.scaffolding.registry
 
-import org.grails.scaffolding.registry.input.*
-import org.grails.scaffolding.registry.output.DefaultOutputRenderer
 import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileStatic
-import org.springframework.beans.factory.annotation.Autowired
 import jakarta.annotation.PostConstruct
+import org.grails.scaffolding.registry.input.AssociationInputRenderer
+import org.grails.scaffolding.registry.input.BidirectionalToManyInputRenderer
+import org.grails.scaffolding.registry.input.BooleanInputRenderer
+import org.grails.scaffolding.registry.input.CurrencyInputRenderer
+import org.grails.scaffolding.registry.input.DateInputRenderer
+import org.grails.scaffolding.registry.input.DefaultInputRenderer
+import org.grails.scaffolding.registry.input.EnumInputRenderer
+import org.grails.scaffolding.registry.input.FileInputRenderer
+import org.grails.scaffolding.registry.input.InListInputRenderer
+import org.grails.scaffolding.registry.input.LocaleInputRenderer
+import org.grails.scaffolding.registry.input.NumberInputRenderer
+import org.grails.scaffolding.registry.input.StringInputRenderer
+import org.grails.scaffolding.registry.input.TextareaInputRenderer
+import org.grails.scaffolding.registry.input.TimeInputRenderer
+import org.grails.scaffolding.registry.input.TimeZoneInputRenderer
+import org.grails.scaffolding.registry.input.UrlInputRenderer
+import org.grails.scaffolding.registry.output.DefaultOutputRenderer
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * Bean for registering the default domain renderers

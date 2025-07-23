@@ -22,7 +22,15 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.PersistentProperty;

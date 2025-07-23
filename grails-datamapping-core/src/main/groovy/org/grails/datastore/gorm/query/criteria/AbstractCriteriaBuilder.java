@@ -21,7 +21,12 @@ package org.grails.datastore.gorm.query.criteria;
 
 import grails.gorm.CriteriaBuilder;
 import grails.gorm.DetachedCriteria;
-import groovy.lang.*;
+import groovy.lang.Closure;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaMethod;
+import groovy.lang.MetaObjectProtocol;
+import groovy.lang.MissingMethodException;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -35,7 +40,11 @@ import org.grails.datastore.mapping.query.api.ProjectionList;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.springframework.util.Assert;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract criteria builder implementation

@@ -26,7 +26,11 @@ import org.grails.taglib.TagLibraryLookup;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * GSP TagLibraryLookup class that's used for standalone GSP 

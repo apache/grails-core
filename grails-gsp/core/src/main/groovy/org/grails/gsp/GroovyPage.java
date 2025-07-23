@@ -33,7 +33,12 @@ import org.grails.exceptions.ExceptionUtils;
 import org.grails.gsp.jsp.JspTag;
 import org.grails.gsp.jsp.JspTagLib;
 import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.taglib.*;
+import org.grails.taglib.AbstractTemplateVariableBinding;
+import org.grails.taglib.GrailsTagException;
+import org.grails.taglib.GroovyPageAttributes;
+import org.grails.taglib.TagBodyClosure;
+import org.grails.taglib.TagLibraryLookup;
+import org.grails.taglib.TagOutput;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputEncodingStack;
 import org.grails.taglib.encoder.OutputEncodingStackAttributes;
@@ -41,7 +46,13 @@ import org.grails.taglib.encoder.WithCodecHelper;
 
 import java.io.Writer;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)

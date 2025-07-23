@@ -26,7 +26,12 @@ import org.grails.core.AbstractInjectableGrailsClass;
 import org.grails.core.artefact.gsp.TagLibArtefactHandler;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Default implementation of a tag lib class.

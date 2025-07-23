@@ -20,7 +20,14 @@
 package org.grails.orm.hibernate.support;
 
 import org.hibernate.event.internal.DefaultSaveOrUpdateEventListener;
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.PostDeleteEventListener;
+import org.hibernate.event.spi.PostInsertEventListener;
+import org.hibernate.event.spi.PostLoadEventListener;
+import org.hibernate.event.spi.PostUpdateEventListener;
+import org.hibernate.event.spi.PreDeleteEventListener;
+import org.hibernate.event.spi.PreInsertEventListener;
+import org.hibernate.event.spi.PreLoadEventListener;
+import org.hibernate.event.spi.PreUpdateEventListener;
 import org.springframework.context.ApplicationContextAware;
 
 /**

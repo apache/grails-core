@@ -21,7 +21,11 @@ package org.grails.datastore.gorm.validation.constraints.builder;
 
 import grails.gorm.validation.ConstrainedProperty;
 import grails.gorm.validation.Constraint;
-import groovy.lang.*;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaProperty;
+import groovy.lang.MissingMethodException;
+import groovy.lang.MissingPropertyException;
 import groovy.util.BuilderSupport;
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import grails.gorm.validation.DefaultConstrainedProperty;
@@ -36,7 +40,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.InvalidPropertyException;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Builder used as a delegate within the "constraints" closure of GrailsDomainClass instances .

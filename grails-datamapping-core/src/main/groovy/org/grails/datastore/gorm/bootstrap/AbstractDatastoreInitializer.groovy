@@ -38,7 +38,11 @@ import org.grails.datastore.mapping.services.ServiceDefinition
 import org.grails.datastore.mapping.services.SoftServiceLoader
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.springframework.context.*
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.MessageSource
+import org.springframework.context.ResourceLoaderAware
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.env.ConfigurableEnvironment

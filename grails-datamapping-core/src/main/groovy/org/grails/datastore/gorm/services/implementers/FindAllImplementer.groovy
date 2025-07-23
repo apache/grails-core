@@ -28,7 +28,9 @@ import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 
 /**
  * Automatically implements {@link grails.gorm.services.Service} interface methods that start with "list" and

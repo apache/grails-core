@@ -32,7 +32,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.ClassUtils;
 import org.springframework.validation.Validator;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Default implementation of the {@link GrailsDomainClass} interface

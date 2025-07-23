@@ -22,9 +22,19 @@ package org.grails.orm.hibernate.compiler
 import grails.gorm.dirty.checking.DirtyCheckedProperty
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import jakarta.persistence.Transient
 import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
-import org.codehaus.groovy.ast.*
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassCodeVisitorSupport
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.InnerClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.IfStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
@@ -45,10 +55,22 @@ import org.hibernate.engine.spi.ManagedEntity
 import org.hibernate.engine.spi.PersistentAttributeInterceptable
 import org.hibernate.engine.spi.PersistentAttributeInterceptor
 
-import jakarta.persistence.Transient
 import java.lang.reflect.Modifier
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.equalsNullX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.fieldX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.neX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.param
+import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ternaryX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * A transformation that transforms entities that implement the {@link grails.gorm.hibernate.annotation.ManagedEntity} trait,

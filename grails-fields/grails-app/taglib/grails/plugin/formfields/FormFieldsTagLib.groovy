@@ -23,11 +23,18 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovy.xml.MarkupBuilder
 import groovy.xml.MarkupBuilderHelper
+import jakarta.servlet.http.HttpServletRequest
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.*
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ManyToMany
+import org.grails.datastore.mapping.model.types.ManyToOne
+import org.grails.datastore.mapping.model.types.OneToMany
+import org.grails.datastore.mapping.model.types.OneToOne
 import org.grails.encoder.CodecLookup
 import org.grails.gsp.GroovyPage
 import org.grails.scaffolding.model.DomainModelService
@@ -41,7 +48,6 @@ import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.NoSuchMessageException
 import org.springframework.web.servlet.LocaleResolver
 
-import jakarta.servlet.http.HttpServletRequest
 import java.sql.Blob
 import java.text.NumberFormat
 import java.time.LocalDate

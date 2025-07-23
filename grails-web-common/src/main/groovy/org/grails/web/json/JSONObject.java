@@ -13,7 +13,12 @@ import org.springframework.util.ClassUtils;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A JSONObject is an unordered collection of name/value pairs. Its

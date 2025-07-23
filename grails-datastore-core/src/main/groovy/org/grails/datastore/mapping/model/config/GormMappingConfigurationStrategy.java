@@ -47,12 +47,24 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.MappingFactory;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.*;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-import static org.grails.datastore.mapping.model.config.GormProperties.*;
+import static org.grails.datastore.mapping.model.config.GormProperties.BELONGS_TO;
+import static org.grails.datastore.mapping.model.config.GormProperties.EMBEDDED;
+import static org.grails.datastore.mapping.model.config.GormProperties.HAS_MANY;
+import static org.grails.datastore.mapping.model.config.GormProperties.HAS_ONE;
+import static org.grails.datastore.mapping.model.config.GormProperties.IDENTITY;
+import static org.grails.datastore.mapping.model.config.GormProperties.MAPPED_BY;
+import static org.grails.datastore.mapping.model.config.GormProperties.TRANSIENT;
+import static org.grails.datastore.mapping.model.config.GormProperties.VERSION;
 
 /**
  * <p>This implementation of the MappingConfigurationStrategy interface

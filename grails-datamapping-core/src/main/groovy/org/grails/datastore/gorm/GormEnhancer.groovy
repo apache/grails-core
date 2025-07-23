@@ -22,7 +22,15 @@ import groovy.util.logging.Slf4j
 import org.codehaus.groovy.reflection.CachedMethod
 import org.codehaus.groovy.runtime.metaclass.ClosureStaticMetaMethod
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
-import org.grails.datastore.gorm.finders.*
+import org.grails.datastore.gorm.finders.CountByFinder
+import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
+import org.grails.datastore.gorm.finders.FindAllByFinder
+import org.grails.datastore.gorm.finders.FindByBooleanFinder
+import org.grails.datastore.gorm.finders.FindByFinder
+import org.grails.datastore.gorm.finders.FindOrCreateByFinder
+import org.grails.datastore.gorm.finders.FindOrSaveByFinder
+import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.finders.ListOrderByFinder
 import org.grails.datastore.gorm.internal.InstanceMethodInvokingClosure
 import org.grails.datastore.gorm.internal.StaticMethodInvokingClosure
 import org.grails.datastore.gorm.query.GormQueryOperations

@@ -30,7 +30,14 @@ import org.codehaus.groovy.ast.stmt.Statement
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.mapping.reflect.AstUtils
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+
 /**
  * An implementer that handles delete methods
  *

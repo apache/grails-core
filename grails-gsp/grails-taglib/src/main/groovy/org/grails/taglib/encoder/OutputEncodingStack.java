@@ -24,7 +24,14 @@ import org.grails.buffer.CodecPrintWriter;
 import org.grails.buffer.GrailsLazyProxyPrintWriter;
 import org.grails.buffer.GrailsLazyProxyPrintWriter.DestinationFactory;
 import org.grails.buffer.GrailsWrappedWriter;
-import org.grails.encoder.*;
+import org.grails.encoder.EncodedAppender;
+import org.grails.encoder.EncodedAppenderFactory;
+import org.grails.encoder.EncodedAppenderWriterFactory;
+import org.grails.encoder.Encoder;
+import org.grails.encoder.EncoderAware;
+import org.grails.encoder.EncodingStateRegistry;
+import org.grails.encoder.StreamingEncoder;
+import org.grails.encoder.StreamingEncoderWriter;
 
 import java.io.IOException;
 import java.io.Writer;

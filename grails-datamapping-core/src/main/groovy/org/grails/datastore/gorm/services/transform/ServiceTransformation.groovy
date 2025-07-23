@@ -57,13 +57,14 @@ import org.grails.datastore.gorm.services.implementers.CountImplementer
 import org.grails.datastore.gorm.services.implementers.CountWhereImplementer
 import org.grails.datastore.gorm.services.implementers.DeleteImplementer
 import org.grails.datastore.gorm.services.implementers.DeleteWhereImplementer
+import org.grails.datastore.gorm.services.implementers.FindAllByImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllByInterfaceProjectionImplementer
+import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllInterfaceProjectionImplementer
+import org.grails.datastore.gorm.services.implementers.FindAllPropertyProjectionImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllStringQueryImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllWhereImplementer
 import org.grails.datastore.gorm.services.implementers.FindAndDeleteImplementer
-import org.grails.datastore.gorm.services.implementers.FindAllImplementer
-import org.grails.datastore.gorm.services.implementers.FindAllByImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneByImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneByInterfaceProjectionImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
@@ -71,11 +72,10 @@ import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectio
 import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectionStringQueryImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectionWhereImplementer
 import org.grails.datastore.gorm.services.implementers.FindOnePropertyProjectionImplementer
-import org.grails.datastore.gorm.services.implementers.FindAllPropertyProjectionImplementer
-import org.grails.datastore.gorm.services.implementers.SaveImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneStringQueryImplementer
-import org.grails.datastore.gorm.services.implementers.UpdateOneImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneWhereImplementer
+import org.grails.datastore.gorm.services.implementers.SaveImplementer
+import org.grails.datastore.gorm.services.implementers.UpdateOneImplementer
 import org.grails.datastore.gorm.services.implementers.UpdateStringQueryImplementer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
@@ -86,8 +86,27 @@ import org.grails.datastore.mapping.core.order.OrderedComparator
 import java.beans.Introspector
 import java.lang.reflect.Modifier
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
-import static org.grails.datastore.mapping.reflect.AstUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.equalsNullX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.param
+import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
+import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
+import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
+import static org.grails.datastore.mapping.reflect.AstUtils.copyAnnotations
+import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
+import static org.grails.datastore.mapping.reflect.AstUtils.error
+import static org.grails.datastore.mapping.reflect.AstUtils.findAllUnimplementedAbstractMethods
+import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
+import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
+import static org.grails.datastore.mapping.reflect.AstUtils.warning
 
 /**
  * Makes a class implement the {@link org.grails.datastore.mapping.services.Service} trait and generates the necessary

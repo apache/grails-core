@@ -19,7 +19,11 @@
 package grails.web.databinding
 
 import grails.core.GrailsApplication
-import grails.databinding.*
+import grails.databinding.BindingFormat
+import grails.databinding.DataBindingSource
+import grails.databinding.SimpleDataBinder
+import grails.databinding.SimpleMapDataBindingSource
+import grails.databinding.TypedStructuredBindingEditor
 import grails.databinding.converters.FormattedValueConverter
 import grails.databinding.converters.ValueConverter
 import grails.databinding.events.DataBindingListener
@@ -42,7 +46,12 @@ import org.grails.databinding.IndexedPropertyReferenceDescriptor
 import org.grails.databinding.xml.GPathResultMap
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.*
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.ManyToOne
+import org.grails.datastore.mapping.model.types.OneToMany
+import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.datastore.mapping.model.types.Simple
 import org.grails.web.databinding.DataBindingEventMulticastListener
 import org.grails.web.databinding.GrailsWebDataBindingListener
 import org.grails.web.databinding.SpringConversionServiceAdapter

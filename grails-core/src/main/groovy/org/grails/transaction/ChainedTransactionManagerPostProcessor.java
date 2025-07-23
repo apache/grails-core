@@ -21,7 +21,9 @@ package org.grails.transaction;
 
 import grails.config.Config;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

@@ -16,7 +16,13 @@
 
 package org.grails.datastore.bson.json;
 
-import org.bson.*;
+import org.bson.AbstractBsonWriter;
+import org.bson.BSONException;
+import org.bson.BsonBinary;
+import org.bson.BsonContextType;
+import org.bson.BsonDbPointer;
+import org.bson.BsonRegularExpression;
+import org.bson.BsonTimestamp;
 import org.bson.json.JsonWriterSettings;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;

@@ -18,7 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.AbstractClassMapping;
+import org.grails.datastore.mapping.model.AbstractPersistentEntity;
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * Persistent entity implementation for Hibernate

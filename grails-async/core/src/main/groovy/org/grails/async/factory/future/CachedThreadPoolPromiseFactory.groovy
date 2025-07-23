@@ -27,7 +27,13 @@ import groovy.transform.CompileStatic
 import org.grails.async.factory.BoundPromise
 
 import jakarta.annotation.PreDestroy
-import java.util.concurrent.*
+
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.RunnableFuture
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * A promise factory that uses an ExecutorService by default

@@ -28,7 +28,11 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.Method
-import java.util.concurrent.*
+import java.util.concurrent.RejectedExecutionHandler
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * A pool factory that logs error instead of printing them to standard err as is the default in GPars

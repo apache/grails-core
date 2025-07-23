@@ -18,18 +18,21 @@
  */
 package org.grails.web.mapping.reporting
 
-import grails.gorm.validation.ConstrainedProperty
-import grails.web.mapping.reporting.UrlMappingsRenderer
-
-import static org.fusesource.jansi.Ansi.ansi
-import static org.fusesource.jansi.Ansi.Color.*
 import grails.build.logging.GrailsConsole
+import grails.gorm.validation.ConstrainedProperty
+import grails.web.mapping.UrlMapping
+import grails.web.mapping.reporting.UrlMappingsRenderer
 import groovy.transform.CompileStatic
-
+import org.fusesource.jansi.Ansi
 import org.grails.web.mapping.ResponseCodeMappingData
 import org.grails.web.mapping.ResponseCodeUrlMapping
-import grails.web.mapping.UrlMapping
-import org.fusesource.jansi.Ansi
+
+import static org.fusesource.jansi.Ansi.Color.CYAN
+import static org.fusesource.jansi.Ansi.Color.DEFAULT
+import static org.fusesource.jansi.Ansi.Color.GREEN
+import static org.fusesource.jansi.Ansi.Color.RED
+import static org.fusesource.jansi.Ansi.Color.YELLOW
+import static org.fusesource.jansi.Ansi.ansi
 
 /**
  * Renders URL mappings to the console

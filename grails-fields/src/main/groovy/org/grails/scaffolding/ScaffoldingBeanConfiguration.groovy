@@ -19,7 +19,13 @@
 
 package org.grails.scaffolding
 
-import org.grails.scaffolding.markup.*
+
+import org.grails.scaffolding.markup.ContextMarkupRenderer
+import org.grails.scaffolding.markup.ContextMarkupRendererImpl
+import org.grails.scaffolding.markup.DomainMarkupRenderer
+import org.grails.scaffolding.markup.DomainMarkupRendererImpl
+import org.grails.scaffolding.markup.PropertyMarkupRenderer
+import org.grails.scaffolding.markup.PropertyMarkupRendererImpl
 import org.grails.scaffolding.model.DomainModelService
 import org.grails.scaffolding.model.DomainModelServiceImpl
 import org.grails.scaffolding.model.property.DomainPropertyFactory

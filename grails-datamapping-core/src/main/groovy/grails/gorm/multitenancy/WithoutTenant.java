@@ -22,7 +22,12 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 
 /**

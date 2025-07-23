@@ -29,7 +29,14 @@ import org.grails.datastore.mapping.reflect.NameUtils;
 import org.springframework.util.Assert;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A map implementation that reads an objects properties lazily using Groovy's MetaClass.

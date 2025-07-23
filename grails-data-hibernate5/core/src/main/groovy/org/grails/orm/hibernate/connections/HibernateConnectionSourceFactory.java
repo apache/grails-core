@@ -19,6 +19,8 @@
 
 package org.grails.orm.hibernate.connections;
 
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
+import org.grails.datastore.gorm.jdbc.connections.SpringDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -28,7 +30,6 @@ import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
-import org.grails.datastore.gorm.jdbc.connections.*;
 import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 import org.hibernate.Interceptor;

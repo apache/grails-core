@@ -29,7 +29,13 @@
  */
 package org.apache.grails.common.compiler.asm;
 
-import org.springframework.asm.*;
+import org.springframework.asm.AnnotationVisitor;
+import org.springframework.asm.ClassVisitor;
+import org.springframework.asm.Handle;
+import org.springframework.asm.Label;
+import org.springframework.asm.Opcodes;
+import org.springframework.asm.Type;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -134,8 +140,8 @@ class ClassReader {
     /**
      * Flag to skip the debug information in the class. If this flag is set the
      * debug information of the class is not visited, i.e. the
-     * {@link MethodVisitor#visitLocalVariable visitLocalVariable} and
-     * {@link MethodVisitor#visitLineNumber visitLineNumber} methods will not be
+     * {@link org.springframework.asm.MethodVisitor#visitLocalVariable visitLocalVariable} and
+     * {@link org.springframework.asm.MethodVisitor#visitLineNumber visitLineNumber} methods will not be
      * called.
      */
     public static final int SKIP_DEBUG = 2;

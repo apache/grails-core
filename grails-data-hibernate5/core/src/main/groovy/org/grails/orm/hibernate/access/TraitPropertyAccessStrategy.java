@@ -21,7 +21,14 @@ package org.grails.orm.hibernate.access;
 
 import org.codehaus.groovy.transform.trait.Traits;
 import org.grails.datastore.mapping.reflect.NameUtils;
-import org.hibernate.property.access.spi.*;
+import org.hibernate.property.access.spi.Getter;
+import org.hibernate.property.access.spi.GetterFieldImpl;
+import org.hibernate.property.access.spi.GetterMethodImpl;
+import org.hibernate.property.access.spi.PropertyAccess;
+import org.hibernate.property.access.spi.PropertyAccessStrategy;
+import org.hibernate.property.access.spi.Setter;
+import org.hibernate.property.access.spi.SetterFieldImpl;
+import org.hibernate.property.access.spi.SetterMethodImpl;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;

@@ -25,7 +25,10 @@ import grails.util.GrailsNameUtils
 import grails.web.http.HttpHeaders
 import org.springframework.http.HttpStatus
 
-import static org.springframework.http.HttpStatus.*
+import static org.springframework.http.HttpStatus.CREATED
+import static org.springframework.http.HttpStatus.NOT_FOUND
+import static org.springframework.http.HttpStatus.NO_CONTENT
+import static org.springframework.http.HttpStatus.OK
 
 /**
  * Base class that can be extended to get the basic CRUD operations needed for a RESTful API.

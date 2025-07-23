@@ -23,9 +23,17 @@ import grails.core.support.ClassLoaderAware;
 import grails.gorm.validation.ConstrainedProperty;
 import grails.gorm.validation.DefaultConstrainedProperty;
 import grails.util.GrailsUtil;
-import grails.web.mapping.*;
+import grails.web.mapping.UrlMapping;
+import grails.web.mapping.UrlMappingData;
+import grails.web.mapping.UrlMappingEvaluator;
+import grails.web.mapping.UrlMappingParser;
 import grails.web.mapping.exceptions.UrlMappingException;
-import groovy.lang.*;
+import groovy.lang.Binding;
+import groovy.lang.Closure;
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovyObject;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.Script;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator;
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
@@ -49,9 +57,21 @@ import java.io.InputStream;
 import java.io.Serial;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-import static grails.web.mapping.UrlMapping.*;
+import static grails.web.mapping.UrlMapping.ACTION;
+import static grails.web.mapping.UrlMapping.CONTROLLER;
+import static grails.web.mapping.UrlMapping.HTTP_METHOD;
+import static grails.web.mapping.UrlMapping.NAMESPACE;
+import static grails.web.mapping.UrlMapping.PLUGIN;
+import static grails.web.mapping.UrlMapping.VIEW;
 
 /**
  * <p>A UrlMapping evaluator that evaluates Groovy scripts that are in the form:</p>

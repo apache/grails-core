@@ -29,7 +29,9 @@ import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+
 /**
  * Handles implementation for a finder that returns a single result
  *

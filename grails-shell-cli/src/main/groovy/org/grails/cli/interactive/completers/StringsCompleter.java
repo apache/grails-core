@@ -20,7 +20,11 @@ package org.grails.cli.interactive.completers;
 
 import jline.console.completer.Completer;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import static jline.internal.Preconditions.checkNotNull;
 

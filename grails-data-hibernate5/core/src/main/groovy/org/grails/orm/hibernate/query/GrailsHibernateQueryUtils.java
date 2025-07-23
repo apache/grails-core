@@ -19,6 +19,12 @@
 
 package org.grails.orm.hibernate.query;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
@@ -37,7 +43,7 @@ import org.hibernate.query.Query;
 import org.springframework.core.convert.ConversionService;
 
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.criteria.*;
+
 import java.util.Map;
 
 

@@ -19,7 +19,14 @@ import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoIterable;
-import grails.mongodb.geo.*;
+import grails.mongodb.geo.Box;
+import grails.mongodb.geo.Circle;
+import grails.mongodb.geo.Distance;
+import grails.mongodb.geo.GeoJSON;
+import grails.mongodb.geo.Point;
+import grails.mongodb.geo.Polygon;
+import grails.mongodb.geo.Shape;
+import grails.mongodb.geo.Sphere;
 import groovy.lang.Closure;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentReader;
@@ -40,7 +47,12 @@ import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.*;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Custom;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.mongo.AbstractMongoSession;
 import org.grails.datastore.mapping.mongo.MongoCodecSession;
 import org.grails.datastore.mapping.mongo.MongoDatastore;
@@ -58,7 +70,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 
 /**
  * A {@link org.grails.datastore.mapping.query.Query} implementation for the Mongo document store.

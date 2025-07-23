@@ -20,7 +20,16 @@ package org.grails.datastore.mapping.mongo.engine.codecs
 
 import com.mongodb.DBRef
 import groovy.transform.CompileStatic
-import org.bson.*
+import jakarta.persistence.FetchType
+import org.bson.BsonArray
+import org.bson.BsonDocument
+import org.bson.BsonDocumentWriter
+import org.bson.BsonReader
+import org.bson.BsonString
+import org.bson.BsonType
+import org.bson.BsonValue
+import org.bson.BsonWriter
+import org.bson.Document
 import org.bson.codecs.Codec
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.EncoderContext
@@ -53,7 +62,15 @@ import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.model.types.*
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.EmbeddedCollection
+import org.grails.datastore.mapping.model.types.Identity
+import org.grails.datastore.mapping.model.types.ManyToMany
+import org.grails.datastore.mapping.model.types.ManyToOne
+import org.grails.datastore.mapping.model.types.OneToMany
+import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoConstants
 import org.grails.datastore.mapping.mongo.MongoDatastore
@@ -62,7 +79,6 @@ import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
 
-import jakarta.persistence.FetchType
 /**
  * A MongoDB codec for persisting {@link PersistentEntity} instances
  *

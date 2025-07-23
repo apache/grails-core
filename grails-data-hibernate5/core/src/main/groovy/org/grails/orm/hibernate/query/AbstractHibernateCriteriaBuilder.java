@@ -20,18 +20,40 @@
 package org.grails.orm.hibernate.query;
 
 import grails.gorm.MultiTenant;
-import groovy.lang.*;
+import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaMethod;
+import groovy.lang.MissingMethodException;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.*;
+import org.grails.datastore.mapping.query.api.BuildableCriteria;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
-import org.hibernate.*;
 import org.hibernate.Criteria;
-import org.hibernate.criterion.*;
+import org.hibernate.FetchMode;
+import org.hibernate.LockMode;
+import org.hibernate.Metamodel;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.TypeHelper;
+import org.hibernate.criterion.AggregateProjection;
+import org.hibernate.criterion.CountProjection;
+import org.hibernate.criterion.CriteriaSpecification;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.IdentifierProjection;
+import org.hibernate.criterion.Junction;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Property;
+import org.hibernate.criterion.PropertyProjection;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.SimpleExpression;
+import org.hibernate.criterion.Subqueries;
 import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.Type;
 import org.springframework.beans.BeanUtils;
@@ -41,7 +63,12 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import java.beans.PropertyDescriptor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract super class for sharing code between Hibernate 3 and 4 implementations of HibernateCriteriaBuilder
@@ -587,7 +614,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      *
      * @return this (for method chaining)
      * #see {@link #createAlias(String, String, int)}
-     * @throws HibernateException Indicates a problem creating the sub criteria
+     * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      */
     public Criteria createAlias(String associationPath, String alias) {
         return criteria.createAlias(associationPath, alias);

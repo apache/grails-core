@@ -18,16 +18,9 @@
  */
 package org.grails.plugins.web.rest.transform
 
-import grails.io.IOUtils
-import org.apache.groovy.ast.tools.AnnotatedNodeUtils
-import org.codehaus.groovy.transform.TransformWithPriority
-import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
-
-import static java.lang.reflect.Modifier.*
-import static org.grails.compiler.injection.GrailsASTUtils.*
 import grails.artefact.Artefact
 import grails.compiler.ast.ClassInjector
+import grails.io.IOUtils
 import grails.rest.Resource
 import grails.rest.RestfulController
 import grails.util.GrailsNameUtils
@@ -35,11 +28,9 @@ import grails.web.controllers.ControllerMethod
 import grails.web.mapping.UrlMappings
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-
-import java.lang.reflect.Modifier
-
 import jakarta.annotation.PostConstruct
-
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -72,13 +63,28 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 import org.grails.compiler.injection.ArtefactTypeAstTransformation
 import org.grails.compiler.injection.GrailsAwareInjectionOperation
 import org.grails.compiler.injection.TraitInjectionUtils
 import org.grails.compiler.web.ControllerActionTransformer
 import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
+
+import java.lang.reflect.Modifier
+
+import static java.lang.reflect.Modifier.FINAL
+import static java.lang.reflect.Modifier.PRIVATE
+import static java.lang.reflect.Modifier.PUBLIC
+import static java.lang.reflect.Modifier.STATIC
+import static org.grails.compiler.injection.GrailsASTUtils.VOID_CLASS_NODE
+import static org.grails.compiler.injection.GrailsASTUtils.ZERO_PARAMETERS
+import static org.grails.compiler.injection.GrailsASTUtils.applyDefaultMethodTarget
+import static org.grails.compiler.injection.GrailsASTUtils.buildThisExpression
+import static org.grails.compiler.injection.GrailsASTUtils.nonGeneric
+import static org.grails.compiler.injection.GrailsASTUtils.processVariableScopes
 
 /**
  * The Resource transform automatically exposes a domain class as a RESTful resource. In effect the transform adds a controller to a Grails application

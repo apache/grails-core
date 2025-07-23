@@ -29,7 +29,12 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.trait.TraitComposer;
 import org.grails.core.io.support.GrailsFactoriesLoader;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  *

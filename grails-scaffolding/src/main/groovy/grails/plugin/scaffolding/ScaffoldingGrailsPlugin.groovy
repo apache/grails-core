@@ -19,7 +19,7 @@
 
 package grails.plugin.scaffolding
 
-import grails.plugins.*
+import grails.plugins.Plugin
 import grails.util.Environment
 import grails.util.Metadata
 

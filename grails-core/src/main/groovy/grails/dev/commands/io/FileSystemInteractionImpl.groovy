@@ -20,7 +20,14 @@ package grails.dev.commands.io
 
 import grails.util.BuildSettings
 import groovy.transform.CompileStatic
-import org.grails.io.support.*
+import org.grails.io.support.DefaultResourceLoader
+import org.grails.io.support.FileSystemResource
+import org.grails.io.support.GrailsResourceUtils
+import org.grails.io.support.PathMatchingResourcePatternResolver
+import org.grails.io.support.Resource
+import org.grails.io.support.ResourceLoader
+import org.grails.io.support.ResourceLocator
+import org.grails.io.support.SpringIOUtils
 
 /**
  * Utility methods exposed to scripts for interacting with resources (found on the file system or jars) and the file system

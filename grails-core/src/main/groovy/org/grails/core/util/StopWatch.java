@@ -20,7 +20,10 @@
 package org.grails.core.util;
 
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.LinkedList;
 
 /**
  * Based on the Spring StopWatch class, but supporting nested tasks

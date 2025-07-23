@@ -19,7 +19,11 @@
 package org.grails.datastore.gorm.query;
 
 import java.io.Closeable;
-import java.util.*;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * An abstract result list for initializing objects lazily from a cursor

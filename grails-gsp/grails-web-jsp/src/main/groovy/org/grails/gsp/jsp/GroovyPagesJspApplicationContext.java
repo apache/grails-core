@@ -18,7 +18,20 @@
  */
 package org.grails.gsp.jsp;
 
-import jakarta.el.*;
+import jakarta.el.ArrayELResolver;
+import jakarta.el.BeanELResolver;
+import jakarta.el.CompositeELResolver;
+import jakarta.el.ELContext;
+import jakarta.el.ELContextEvent;
+import jakarta.el.ELContextListener;
+import jakarta.el.ELResolver;
+import jakarta.el.ExpressionFactory;
+import jakarta.el.FunctionMapper;
+import jakarta.el.ListELResolver;
+import jakarta.el.MapELResolver;
+import jakarta.el.ResourceBundleELResolver;
+import jakarta.el.ValueExpression;
+import jakarta.el.VariableMapper;
 import jakarta.servlet.jsp.JspApplicationContext;
 import jakarta.servlet.jsp.el.ImplicitObjectELResolver;
 import jakarta.servlet.jsp.el.ScopedAttributeELResolver;

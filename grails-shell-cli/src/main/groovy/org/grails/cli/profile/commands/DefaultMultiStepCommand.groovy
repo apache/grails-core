@@ -21,8 +21,13 @@ package org.grails.cli.profile.commands
 import grails.build.logging.GrailsConsole
 import groovy.transform.CompileDynamic
 import jline.console.completer.Completer
-import org.grails.cli.profile.*
+import org.grails.cli.profile.AbstractStep
+import org.grails.cli.profile.CommandDescription
+import org.grails.cli.profile.MultiStepCommand
+import org.grails.cli.profile.Profile
+import org.grails.cli.profile.Step
 import org.grails.cli.profile.steps.StepRegistry
+
 /**
  * Simple implementation of the {@link MultiStepCommand} abstract class that parses commands defined in YAML or JSON
  *

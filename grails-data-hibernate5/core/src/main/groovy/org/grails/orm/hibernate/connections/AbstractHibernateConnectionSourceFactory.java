@@ -20,7 +20,9 @@
 package org.grails.orm.hibernate.connections;
 
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory;
-import org.grails.datastore.mapping.core.connections.*;
+import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;

@@ -19,9 +19,14 @@
 
 package org.grails.orm.hibernate.transaction;
 
-import jakarta.transaction.*;
 import javax.transaction.xa.XAResource;
 
+import jakarta.transaction.RollbackException;
+import jakarta.transaction.Status;
+import jakarta.transaction.Synchronization;
+import jakarta.transaction.SystemException;
+import jakarta.transaction.Transaction;
+import jakarta.transaction.TransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;

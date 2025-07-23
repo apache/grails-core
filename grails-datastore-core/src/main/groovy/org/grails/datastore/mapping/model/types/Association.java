@@ -19,14 +19,23 @@
 package org.grails.datastore.mapping.model.types;
 
 import java.beans.PropertyDescriptor;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.FetchType;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.AbstractPersistentProperty;
+import org.grails.datastore.mapping.model.IllegalMappingException;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.validation.CascadeValidateType;
 
 /**

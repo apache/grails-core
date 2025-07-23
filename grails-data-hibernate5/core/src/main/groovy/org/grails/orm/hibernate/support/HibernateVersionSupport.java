@@ -19,7 +19,10 @@
 package org.grails.orm.hibernate.support;
 
 import org.grails.datastore.mapping.core.grailsversion.GrailsVersion;
-import org.hibernate.*;
+import org.hibernate.FlushMode;
+import org.hibernate.Hibernate;
+import org.hibernate.Query;
+import org.hibernate.Session;
 
 /**
  *
