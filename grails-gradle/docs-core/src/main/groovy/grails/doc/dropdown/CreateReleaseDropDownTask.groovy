@@ -88,7 +88,7 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
         gitTags = objects.fileProperty().convention(project.layout.buildDirectory.file('git-tags.txt'))
         minimumVersion = objects.property(SoftwareVersion).convention(new SoftwareVersion(major: 5))
         docBaseUrl = objects.property(String).convention("https://docs.grails.org")
-        versionHtml = objects.property(String).convention("<p><strong>Version:</strong> " + projectVersion.get() + "</p>")
+        versionHtml = objects.property(String).convention(project.provider{ "<p><strong>Version:</strong> " + projectVersion.get() + "</p>" })
         additionalPath = objects.property(String).convention("")
     }
 
