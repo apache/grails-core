@@ -25,11 +25,7 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     onlyIf {
-        ![
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
+        !project.hasProperty('skipTests')
     }
 
     useJUnitPlatform()
@@ -42,11 +38,7 @@ tasks.withType(Test).configureEach {
 
 tasks.named('integrationTest', Test) {
     onlyIf {
-        ![
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
+        !project.hasProperty('skipTests')
     }
 
     systemProperty 'geb.build.reportsDir', reporting.file("$project.projectDir/build/geb-reports")
