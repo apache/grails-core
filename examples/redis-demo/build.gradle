@@ -18,7 +18,7 @@
  */
 
 plugins {
-    id 'com.bertramlabs.asset-pipeline'
+    id 'cloud.wondrify.asset-pipeline'
     id 'org.apache.grails.gradle.grails-web'
     id 'org.apache.grails.gradle.grails-gsp'
 }
@@ -42,7 +42,7 @@ dependencies {
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.webjars.npm:jquery'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
     runtimeOnly 'org.fusesource.jansi:jansi'

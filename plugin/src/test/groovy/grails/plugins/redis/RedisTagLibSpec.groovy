@@ -23,11 +23,13 @@ import grails.core.GrailsApplication
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
 import spock.lang.Ignore
 import spock.lang.Specification
 
 @Integration
 @Rollback
+@SpringBootTest
 class RedisTagLibSpec extends Specification {
 
     @Autowired GrailsApplication grailsApplication

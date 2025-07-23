@@ -37,31 +37,37 @@ dependencies {
     api 'com.google.code.gson:gson', {
         // api: Gson(transform)
     }
-    api 'org.springframework:spring-beans', {
-        // api: @Autowired(transform)
-    }
-    api 'org.springframework:spring-core', {
-        // api: Opcodes(transform)
-    }
 
-    implementation 'org.apache.grails.data:grails-datamapping-core', {
+    compileOnly 'org.apache.grails.data:grails-datamapping-core', { // Provided
         // impl: @Transactional(runtime)
     }
-    implementation 'org.apache.grails.views:grails-web-taglib', {
+    compileOnly 'org.apache.grails.views:grails-web-taglib', { // Provided
         // Project has a taglib
     }
-
-    compileOnly 'org.apache.grails.bootstrap:grails-bootstrap', {
+    compileOnly 'org.apache.grails.bootstrap:grails-bootstrap', { // Provided
         // comp: @PluginSource(source)
     }
-    compileOnly 'org.apache.grails:grails-core', { // Provided as this is a Grails Plugin
+    compileOnly 'org.apache.grails:grails-core', { // Provided
         // api GrailsApplication, Holders(transform)
         // impl: GrailsApp, GrailsAutoConfiguration, Plugin
     }
-    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails Plugin
+    compileOnly 'org.apache.groovy:groovy' // Provided
+    compileOnly 'org.springframework:spring-beans', { // Provided
+        // api: @Autowired(transform)
+    }
+    compileOnly 'org.springframework:spring-core', { // Provided
+        // api: Opcodes(transform)
+    }
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.springframework.boot:spring-boot-test', {
+        // impl: @SpringBootTest(runtime)
+    }
     testImplementation 'org.spockframework:spock-core'
+}
+
+grails {
+    springDependencyManagement = false
 }
 
 apply {
