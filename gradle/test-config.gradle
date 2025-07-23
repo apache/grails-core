@@ -17,6 +17,8 @@
  *  under the License.
  */
 
+import org.grails.gradle.plugin.core.GrailsExtension
+
 dependencies {
     // In Gradle 9, this needs to be declared
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
@@ -50,4 +52,12 @@ tasks.named('integrationTest', Test) {
                 grailsVersion
         )
     }
+}
+
+extensions.configure(GrailsExtension) {
+    // Explicit `it` is required in extension configuration blocks
+
+    // turn off dependency management so we *know* we're testing with the right
+    // versions and not from a remote repository
+    it.springDependencyManagement = false
 }
