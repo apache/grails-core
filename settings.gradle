@@ -18,17 +18,17 @@
  */
 
 plugins {
-    id 'com.gradle.develocity' version '4.0'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
+    id 'com.gradle.develocity' version '4.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
 }
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
-def isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
-if(isReproducibleBuild) {
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+if (isReproducibleBuild) {
     gradle.settingsEvaluated {
-        logger.warn("*************** Remote Build Cache Disabled due to Reproducible Build ********************")
-        logger.warn("Build date will be set to (SOURCE_DATE_EPOCH=${System.getenv("SOURCE_DATE_EPOCH")})")
+        logger.warn('*************** Remote Build Cache Disabled due to Reproducible Build ********************')
+        logger.warn('Build date will be set to (SOURCE_DATE_EPOCH={})', System.getenv('SOURCE_DATE_EPOCH'))
     }
 }
 
