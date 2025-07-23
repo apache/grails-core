@@ -18,10 +18,6 @@
  */
 package grails.core;
 
-import grails.core.ArtefactInfo;
-import grails.core.GrailsClass;
-import grails.core.InjectableGrailsClass;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;

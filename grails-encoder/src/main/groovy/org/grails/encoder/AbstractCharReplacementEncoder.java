@@ -23,13 +23,6 @@ import java.io.Writer;
 import java.util.List;
 
 import org.grails.charsequences.CharSequences;
-import org.grails.encoder.CodecIdentifier;
-import org.grails.encoder.EncodedAppender;
-import org.grails.encoder.Encoder;
-import org.grails.encoder.EncodesToWriter;
-import org.grails.encoder.EncodesToWriterAdapter;
-import org.grails.encoder.EncodingState;
-import org.grails.encoder.StreamingEncoder;
 
 /**
  * Abstract base class for implementing encoders that do character replacements

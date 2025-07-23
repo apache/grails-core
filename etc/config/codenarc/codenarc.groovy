@@ -4,6 +4,8 @@ ruleset {
 
     FileEndsWithoutNewline
     NoTabCharacter
+    DuplicateImport
+    ImportFromSamePackage
     NoWildcardImports
     UnnecessaryGroovyImport
     UnusedImport
