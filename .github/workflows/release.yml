@@ -118,56 +118,48 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    outputs:
-      extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
     steps:
-      - name: "Extract repository name"
-        id: extract_repository_name
-        run: |
-          echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref_name }}
-          path: ${{ steps.extract_repository_name.outputs.repository_name }}
+          ref: v${{ needs.publish.outputs.release_version }}
+          path: ${{ needs.publish.outputs.extract_repository_name }}
       - name: "🗑️ Remove unnecessary files"
         run: |
-          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradle/wrapper/gradle-wrapper.jar
-          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradle/wrapper/gradle-wrapper.properties
-          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradlew
-          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/gradlew.bat
-          rm -f ${{ steps.extract_repository_name.outputs.repository_name }}/.asf.yaml
+          rm -f ${{ needs.publish.outputs.extract_repository_name }}/gradle/wrapper/gradle-wrapper.jar
+          rm -f ${{ needs.publish.outputs.extract_repository_name }}/gradle/wrapper/gradle-wrapper.properties
+          rm -f ${{ needs.publish.outputs.extract_repository_name }}/gradlew
+          rm -f ${{ needs.publish.outputs.extract_repository_name }}/gradlew.bat
+          rm -f ${{ needs.publish.outputs.extract_repository_name }}/.asf.yaml
       - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ${{ steps.extract_repository_name.outputs.repository_name }}
-          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
+          cd ${{ needs.publish.outputs.extract_repository_name }}
+          release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
       - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ${{ steps.extract_repository_name.outputs.repository_name }}
-          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
+          cd ${{ needs.publish.outputs.extract_repository_name }}
+          release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
       - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ${{ steps.extract_repository_name.outputs.repository_name }}
-          release_url=$(gh release view ${{ github.ref_name }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
+          cd ${{ needs.publish.outputs.extract_repository_name }}
+          release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
           curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
       - name: "Ensure source files use common date"
         run: |
-          SOURCE_DATE_EPOCH=$(cat ${{ steps.extract_repository_name.outputs.repository_name }}/BUILD_DATE)
+          SOURCE_DATE_EPOCH=$(cat ${{ needs.publish.outputs.extract_repository_name }}/BUILD_DATE)
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: |
-          version="${{ github.ref_name }}"
-          version="${version#v}"  # Strip 'v' prefix
-          zip -r "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip" ${{ steps.extract_repository_name.outputs.repository_name }} -x '${{ steps.extract_repository_name.outputs.repository_name }}/.git/*' -x '${{ steps.extract_repository_name.outputs.repository_name }}/.github/*'
+          zip -r "apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip" ${{ needs.publish.outputs.extract_repository_name }} -x '${{ needs.publish.outputs.extract_repository_name }}/.git/*' -x '${{ needs.publish.outputs.extract_repository_name }}/.github/*'
       - name: '🔐 Set up GPG'
         run: |
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
@@ -178,69 +170,40 @@ jobs:
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
-          version="${{ github.ref_name }}"
-          version="${version#v}"  # Strip 'v' prefix
-          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip
       - name: "📦 Create source distribution checksum"
         run: |
-          version="${{ github.ref_name }}"
-          version="${version#v}"  # Strip 'v' prefix
-          sha512sum apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip > "apache-${{ steps.extract_repository_name.outputs.repository_name }}-${version}-incubating-src.zip.sha512"
+          sha512sum ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip > "apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512"
+          cat ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: v${{ needs.publish.outputs.release_version }}
           files: |
-            apache-${{ steps.extract_repository_name.outputs.repository_name }}-*-incubating-src.zip
-            apache-${{ steps.extract_repository_name.outputs.repository_name }}-*-incubating-src.zip.sha512
-            apache-${{ steps.extract_repository_name.outputs.repository_name }}-*-incubating-src.zip.asc
+            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip
+            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512
+            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.asc
       - name: "Remove CHECKSUMS.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd ${{ steps.extract_repository_name.outputs.repository_name }}
-          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} CHECKSUMS.txt --yes
+          cd ${{ needs.publish.outputs.extract_repository_name }}
+          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} CHECKSUMS.txt --yes
       - name: "Remove BUILD_DATE.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd ${{ steps.extract_repository_name.outputs.repository_name }}
-          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} BUILD_DATE.txt --yes
+          cd ${{ needs.publish.outputs.extract_repository_name }}
+          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} BUILD_DATE.txt --yes
       - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd ${{ steps.extract_repository_name.outputs.repository_name }}
-          gh release --repo ${{ github.repository }} delete-asset ${{ github.ref_name }} PUBLISHED_ARTIFACTS.txt --yes
-  release:
-    name: "Close Release"
-    environment: release
-    needs: [publish, source, docs]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    steps:
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: v${{ needs.publish.outputs.release_version }}
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
-        with:
-          distribution: liberica
-          java-version: '17.0.15'
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "⚙️ Run post-release"
-        uses: apache/grails-github-actions/post-release@asf
+          cd ${{ needs.publish.outputs.extract_repository_name }}
+          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} PUBLISHED_ARTIFACTS.txt --yes
   docs:
     environment: docs
     name: "Publish Documentation"
@@ -275,3 +238,29 @@ jobs:
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: build/docs
           VERSION: ${{ needs.publish.outputs.release_version }}
+  release:
+    name: "Close Release"
+    environment: release
+    needs: [ publish, source, docs ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required for gradle.properties revert
+      issues: write # required for milestone closing
+      pull-requests: write # to open PR
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: '17.0.15'
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "⚙️ Run post-release"
+        uses: apache/grails-github-actions/post-release@asf
