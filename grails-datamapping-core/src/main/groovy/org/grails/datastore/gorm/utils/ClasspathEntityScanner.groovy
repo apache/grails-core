@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider
+import org.springframework.core.type.classreading.SimpleMetadataReaderFactory
 import org.springframework.core.type.filter.AnnotationTypeFilter
 
 import grails.gorm.annotation.Entity
@@ -72,7 +73,7 @@ class ClasspathEntityScanner {
      */
     Class[] scan(Package... packages) {
         ClassPathScanningCandidateComponentProvider componentProvider = new ClassPathScanningCandidateComponentProvider(false)
-        componentProvider.setMetadataReaderFactory(new AnnotationMetadataReaderFactory(classLoader))
+        componentProvider.setMetadataReaderFactory(new SimpleMetadataReaderFactory(classLoader))
         for(ann in annotations) {
             componentProvider.addIncludeFilter(new AnnotationTypeFilter(ann))
         }

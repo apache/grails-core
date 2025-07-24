@@ -43,14 +43,14 @@ class CommandRegistry {
     private List<CommandFactory> registeredCommandFactories = []
 
     CommandRegistry() {
-        Iterator<Command> commands = ServiceLoader.load(Command, CommandRegistry.classLoader).iterator()
+        Iterator<Command> commands = ServiceLoader.load(Command, Thread.currentThread().contextClassLoader).iterator()
 
         while(commands.hasNext()) {
             Command command = commands.next()
             registeredCommands[command.name] = command
         }
 
-        Iterator<CommandFactory> commandFactories = ServiceLoader.load(CommandFactory, CommandFactory.classLoader).iterator()
+        Iterator<CommandFactory> commandFactories = ServiceLoader.load(CommandFactory, Thread.currentThread().contextClassLoader).iterator()
         while(commandFactories.hasNext()) {
             CommandFactory commandFactory = commandFactories.next()
             registeredCommandFactories << commandFactory

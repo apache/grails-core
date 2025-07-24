@@ -33,12 +33,17 @@ class ApplicationContextCommandRegistry {
     private final Map<String, ApplicationCommand> commands = [:]
 
     ApplicationContextCommandRegistry() {
-        def registeredCommands = GrailsFactoriesLoader.loadFactories(ApplicationCommand)
+        for (ApplicationCommand cmd  : GrailsFactoriesLoader.loadFactories(ApplicationCommand)) {
+            if(!commands.containsKey(cmd.name)) {
+                commands[cmd.name] = cmd
+            }
+        }
 
-        def iterator = registeredCommands.iterator()
-        while(iterator.hasNext()) {
-            def cmd = iterator.next()
-            commands[cmd.name] = cmd
+        // If this is reflectively loaded from the delegating cli, we need to make sure the context class loader is also used to pull any commands that are loaded from the gradle classpath
+        for (ApplicationCommand cmd : GrailsFactoriesLoader.loadFactories(ApplicationCommand, Thread.currentThread().contextClassLoader)) {
+            if(!commands.containsKey(cmd.name)) {
+                commands[cmd.name] = cmd
+            }
         }
     }
 

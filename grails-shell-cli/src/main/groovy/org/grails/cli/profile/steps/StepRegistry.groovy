@@ -35,7 +35,7 @@ class StepRegistry {
     private static Collection<StepFactory> registeredStepFactories = []
 
     static {
-        def stepFactories = ServiceLoader.load(StepFactory, StepRegistry.classLoader).iterator()
+        def stepFactories = ServiceLoader.load(StepFactory, Thread.currentThread().contextClassLoader).iterator()
 
         while(stepFactories.hasNext()) {
             StepFactory stepFactory = stepFactories.next()

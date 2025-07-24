@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
+    developmentOnly("org.springframework.boot:spring-boot-devtools") // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 @dependencies@
 }

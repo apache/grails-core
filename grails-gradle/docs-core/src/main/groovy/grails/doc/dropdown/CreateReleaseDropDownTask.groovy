@@ -56,7 +56,8 @@ import org.gradle.api.tasks.TaskAction
 @CacheableTask
 abstract class CreateReleaseDropDownTask extends DefaultTask {
 
-    private static final String GRAILS_DOC_BASE_URL = "https://docs.grails.org"
+    @Input
+    final Property<String> docBaseUrl
 
     @Input
     final Property<String> githubSlug
@@ -82,6 +83,12 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
     @OutputDirectory
     final DirectoryProperty modifiedPagesDirectory
 
+    @Input
+    final Property<String> versionHtml
+
+    @Input
+    final Property<String> additionalPath
+
     @Inject
     CreateReleaseDropDownTask(ObjectFactory objects, Project project) {
         group = 'documentation'
@@ -94,6 +101,9 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
         modifiedPagesDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir("modified-pages"))
         gitTags = objects.fileProperty().convention(project.layout.buildDirectory.file('git-tags.txt'))
         minimumVersion = objects.property(SoftwareVersion).convention(new SoftwareVersion(major: 5))
+        docBaseUrl = objects.property(String).convention("https://docs.grails.org")
+        versionHtml = objects.property(String).convention(project.provider{ "<p><strong>Version:</strong> " + projectVersion.get() + "</p>" })
+        additionalPath = objects.property(String).convention("")
     }
 
     /**
@@ -112,7 +122,6 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
         List<SoftwareVersion> softwareVersions = parseSoftwareVersions(projectVersion, result)
         logger.lifecycle("Detected Project Version: ${projectVersion} and Software Versions: ${softwareVersions*.versionText.join(',')}")
 
-        final String versionHtml = "<p><strong>Version:</strong> ${projectVersion}</p>"
         Path guideDirectory = sourceDocsDirectory.get().asFile.toPath()
 
         Map<String, Path> filesToAddDropdown = filesToAddDropdowns.collectEntries { [it.absolutePath, it.toPath()] }
@@ -135,8 +144,8 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
                     String pageRelativePath = guideDirectory.toFile().relativePath(file.toFile())
                     String selectHtml = select(options(projectVersion, pageRelativePath, softwareVersions))
 
-                    final String versionWithSelectHtml = "<p><strong>Version:</strong>&nbsp;<span style='width:100px;display:inline-block;'>${selectHtml}</span></p>"
-                    targetFile.toFile().text = file.text.replace(versionHtml, versionWithSelectHtml)
+                    final String versionWithSelectHtml = "<p><strong>Version:</strong>&nbsp;<span style='display:inline-block;'>${selectHtml}</span></p>"
+                    targetFile.toFile().text = file.text.replace(versionHtml.get(), versionWithSelectHtml)
 
                     filesToAddDropdown.remove(absolutePath)
                 } else {
@@ -162,13 +171,14 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
      */
     private List<String> options(String version, String pageRelativePath, List<SoftwareVersion> softwareVersions) {
         List<String> options = []
-        final String snapshotHref = GRAILS_DOC_BASE_URL + "/snapshot/" + pageRelativePath
+
+        final String snapshotHref = docBaseUrl.get() + "/snapshot/" + additionalPath.get() + pageRelativePath
         options << option(snapshotHref, "SNAPSHOT", version.endsWith("-SNAPSHOT"))
 
         softwareVersions
                 .forEach { softwareVersion ->
                     final String versionName = softwareVersion?.versionText
-                    final String href = GRAILS_DOC_BASE_URL + "/" + (versionName?.endsWith("-SNAPSHOT") ? 'snapshot' : versionName) + "/" + pageRelativePath
+                    final String href = docBaseUrl.get() + "/" + (versionName?.endsWith("-SNAPSHOT") ? "snapshot" : versionName) + "/" + additionalPath.get() + pageRelativePath
                     options << option(href, versionName, version == versionName)
                 }
 
