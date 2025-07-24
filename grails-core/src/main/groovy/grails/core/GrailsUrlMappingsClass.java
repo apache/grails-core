@@ -18,9 +18,9 @@
  */
 package grails.core;
 
-import groovy.lang.Closure;
-
 import java.util.List;
+
+import groovy.lang.Closure;
 
 /**
  * Loads the UrlMappings.

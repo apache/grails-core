@@ -19,11 +19,12 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.validation.ValidationErrors
-import org.springframework.validation.Errors
 
 import jakarta.persistence.Transient
 
+import org.springframework.validation.Errors
+
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * A trait that adds GORM validation behavior to any class

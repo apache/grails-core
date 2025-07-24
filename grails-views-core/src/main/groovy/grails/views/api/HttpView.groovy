@@ -19,11 +19,12 @@
 
 package grails.views.api
 
+import groovy.transform.CompileStatic
+
 import grails.views.api.http.Parameters
 import grails.views.api.http.Request
 import grails.views.api.http.Response
 import grails.views.api.internal.EmptyParameters
-import groovy.transform.CompileStatic
 
 /**
  * A view that is rendered in the context of an HTTP request

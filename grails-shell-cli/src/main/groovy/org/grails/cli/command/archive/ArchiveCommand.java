@@ -32,8 +32,6 @@ import java.util.Locale;
 import java.util.jar.Manifest;
 
 import groovy.lang.Grab;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -43,19 +41,11 @@ import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 
-import org.grails.cli.boot.SpringApplicationLauncher;
-import org.grails.cli.archive.PackagedSpringApplicationLauncher;
-import org.grails.cli.command.OptionParsingCommand;
-import org.grails.cli.command.archive.ResourceMatcher.MatchedResource;
-import org.grails.cli.command.options.CompilerOptionHandler;
-import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
-import org.grails.cli.command.options.SourceOptions;
+import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
+
 import org.springframework.boot.cli.command.options.OptionHandler;
 import org.springframework.boot.cli.command.status.ExitStatus;
-import org.grails.cli.compiler.GroovyCompiler;
-import org.grails.cli.compiler.GroovyCompilerConfiguration;
-import org.grails.cli.compiler.RepositoryConfigurationFactory;
-import org.grails.cli.compiler.grape.RepositoryConfiguration;
 import org.springframework.boot.loader.tools.JarWriter;
 import org.springframework.boot.loader.tools.Layout;
 import org.springframework.boot.loader.tools.Library;
@@ -64,6 +54,18 @@ import org.springframework.boot.loader.tools.Repackager;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.Assert;
+
+import org.grails.cli.archive.PackagedSpringApplicationLauncher;
+import org.grails.cli.boot.SpringApplicationLauncher;
+import org.grails.cli.command.OptionParsingCommand;
+import org.grails.cli.command.archive.ResourceMatcher.MatchedResource;
+import org.grails.cli.command.options.CompilerOptionHandler;
+import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
+import org.grails.cli.command.options.SourceOptions;
+import org.grails.cli.compiler.GroovyCompiler;
+import org.grails.cli.compiler.GroovyCompilerConfiguration;
+import org.grails.cli.compiler.RepositoryConfigurationFactory;
+import org.grails.cli.compiler.grape.RepositoryConfiguration;
 
 /**
  * Abstract {@link org.springframework.boot.cli.command.Command} to create a self-contained executable archive file from a CLI

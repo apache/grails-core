@@ -19,8 +19,14 @@
 
 package org.grails.datastore.gorm.validation.constraints.registry
 
-import grails.gorm.validation.Constraint
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.MessageSource
+
+import grails.gorm.validation.Constraint
 import org.grails.datastore.gorm.validation.constraints.BlankConstraint
 import org.grails.datastore.gorm.validation.constraints.CreditCardConstraint
 import org.grails.datastore.gorm.validation.constraints.EmailConstraint
@@ -39,11 +45,6 @@ import org.grails.datastore.gorm.validation.constraints.UrlConstraint
 import org.grails.datastore.gorm.validation.constraints.ValidatorConstraint
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.gorm.validation.constraints.factory.DefaultConstraintFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.MessageSource
-
-import java.util.concurrent.ConcurrentHashMap
-
 
 /**
  * Default implementation of the {@link ConstraintRegistry} interface. Provides lookup and registration of constraints

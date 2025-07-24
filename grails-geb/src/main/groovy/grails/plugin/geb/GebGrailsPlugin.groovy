@@ -19,9 +19,10 @@
 
 package grails.plugin.geb
 
+import groovy.transform.CompileStatic
+
 import grails.plugins.Plugin
 import grails.plugins.metadata.PluginSource
-import groovy.transform.CompileStatic
 
 @PluginSource
 @CompileStatic

@@ -19,14 +19,16 @@
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
+
+import jakarta.persistence.AccessType
+
 import org.hibernate.FetchMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-import jakarta.persistence.AccessType
+import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
  * Implements the ORM mapping DSL constructing a model that can be evaluated by the

@@ -20,6 +20,7 @@
 package grails.doc
 
 import groovy.transform.CompileStatic
+
 import org.w3c.dom.Document
 
 @CompileStatic

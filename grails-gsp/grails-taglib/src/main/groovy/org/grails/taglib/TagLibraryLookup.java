@@ -18,25 +18,27 @@
  */
 package org.grails.taglib;
 
-import grails.core.GrailsApplication;
-import grails.core.GrailsClass;
-import grails.core.gsp.GrailsTagLibClass;
-import grails.core.support.GrailsApplicationAware;
-import groovy.lang.GroovyObject;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.grails.taglib.encoder.WithCodecHelper;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.GroovyObject;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+import grails.core.GrailsApplication;
+import grails.core.GrailsClass;
+import grails.core.gsp.GrailsTagLibClass;
+import grails.core.support.GrailsApplicationAware;
+import org.grails.core.artefact.gsp.TagLibArtefactHandler;
+import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.taglib.encoder.WithCodecHelper;
 
 /**
  * Looks up tag library instances.
@@ -198,13 +200,13 @@ public class TagLibraryLookup implements ApplicationContextAware, GrailsApplicat
     public Set<String> getAvailableNamespaces() {
         return namespaceDispatchers.keySet();
     }
-    
+
     public Set<String> getAvailableTags(String namespace) {
         Map<String, Object>tags = tagNamespaces.get(namespace);
         if (tags == null) {
             return Collections.emptySet();
         }
-        return tags.keySet();        
+        return tags.keySet();
     }
 
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

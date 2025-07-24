@@ -14,8 +14,6 @@
  */
 package org.grails.datastore.mapping.core;
 
-import groovy.lang.Closure;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,12 +25,14 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import groovy.lang.Closure;
 import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.grails.datastore.mapping.config.DatastoreEnvironment;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.convert.ConversionException;
 import org.springframework.core.convert.converter.Converter;
@@ -45,11 +45,13 @@ import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.grails.datastore.mapping.transactions.SessionHolder;
-import org.grails.datastore.mapping.transactions.support.SpringSessionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import org.grails.datastore.mapping.config.DatastoreEnvironment;
+import org.grails.datastore.mapping.transactions.SessionHolder;
+import org.grails.datastore.mapping.transactions.support.SpringSessionSynchronization;
 
 /**
  * Helper class for obtaining Datastore sessions. Based on similar work

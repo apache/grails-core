@@ -26,9 +26,10 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 
-import grails.util.GrailsStringUtils;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.util.Assert;
+
+import grails.util.GrailsStringUtils;
 
 /**
  * Structured editor for editing dates that takes 5 fields that represent the year, month, day, hour

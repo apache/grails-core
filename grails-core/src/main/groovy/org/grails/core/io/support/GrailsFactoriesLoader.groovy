@@ -20,10 +20,12 @@
 package org.grails.core.io.support
 
 import groovy.transform.CompileStatic
-import org.grails.io.support.FactoriesLoaderSupport
+
 import org.springframework.core.OrderComparator
 import org.springframework.util.Assert
 import org.springframework.util.ClassUtils
+
+import org.grails.io.support.FactoriesLoaderSupport
 
 /**
  * General purpose factory loading mechanism for internal use within the framework.
@@ -38,8 +40,8 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
 
     private static final Object[] NO_ARGUMENTS = [] as Object[]
-    
-    
+
+
     /**
      * Load the factory implementations of the given type from the default location,
      * using the given class loader.
@@ -63,7 +65,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
     static <T> List<T> loadFactoriesWithArguments(Class<T> factoryClass, ClassLoader classLoader, Object[] arguments) {
         boolean hasArguments = !(arguments != null && arguments.length==0)
-        List<T> results = new ArrayList<T>() 
+        List<T> results = new ArrayList<T>()
         for(Class<? extends T> clazz : loadFactoryClasses(factoryClass, classLoader)) {
             results.add(hasArguments ? clazz.newInstance(arguments) : clazz.getDeclaredConstructor().newInstance())
         }
@@ -76,10 +78,10 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         OrderComparator.sort((List<T>) results)
         results
     }
-    
+
     static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.class.classLoader) {
         Assert.notNull factoryClass, "'factoryClass' must not be null"
-        
+
         def factoryNames = loadFactoryNames(factoryClass, classLoader)
 
         List<Class<T>> result = []

@@ -16,20 +16,22 @@
  */
 package grails.util
 
-import grails.io.IOUtils
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
-import org.codehaus.groovy.runtime.DefaultGroovyMethods
-import org.grails.io.support.Resource
-import org.grails.io.support.UrlResource
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
 import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.util.function.Supplier
 import java.util.jar.Attributes
 import java.util.jar.Manifest
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import grails.io.IOUtils
+import org.grails.io.support.Resource
+import org.grails.io.support.UrlResource
 
 /**
  * Represents the current environment.

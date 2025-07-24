@@ -22,12 +22,15 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.config.Property
+
+import jakarta.persistence.FetchType
+
 import org.hibernate.FetchMode
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
-import jakarta.persistence.FetchType
+import org.grails.datastore.mapping.config.Property
 
 /**
  * Custom mapping for a single domain property. Note that a property

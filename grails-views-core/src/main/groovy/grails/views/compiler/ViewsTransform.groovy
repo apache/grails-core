@@ -19,8 +19,8 @@
 
 package grails.views.compiler
 
-import grails.compiler.traits.TraitInjector
-import grails.views.Views
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -42,17 +42,18 @@ import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.Statement
-import org.codehaus.groovy.transform.TransformWithPriority
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
+
+import grails.compiler.traits.TraitInjector
+import grails.views.Views
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.compiler.injection.GrailsASTUtils
 import org.grails.core.io.support.GrailsFactoriesLoader
-
-import java.lang.reflect.Modifier
 
 /**
  * Enhances view scripts with Trait behavior

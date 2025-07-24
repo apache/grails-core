@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.mapping.engine.types;
 
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.query.Query;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
 /**
  * Abstract implementation of CustomTypeMarshaller interface that handles the details of getting the correct mapped key for a property

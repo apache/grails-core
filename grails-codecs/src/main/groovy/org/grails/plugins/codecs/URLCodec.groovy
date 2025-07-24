@@ -18,8 +18,9 @@
  */
 package org.grails.plugins.codecs
 
-import org.grails.encoder.impl.URLCodecFactory
 import org.springframework.web.context.request.RequestContextHolder
+
+import org.grails.encoder.impl.URLCodecFactory
 
 /**
  * A codec that encodes and decodes Objects to and from URL encoded strings.

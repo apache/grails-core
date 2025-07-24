@@ -19,11 +19,13 @@
 
 package org.grails.testing.spock
 
-import grails.testing.spring.AutowiredTest
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
+
+import grails.testing.spring.AutowiredTest
 
 @Slf4j
 @CompileStatic

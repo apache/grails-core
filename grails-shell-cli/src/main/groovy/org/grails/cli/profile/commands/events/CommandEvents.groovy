@@ -20,8 +20,8 @@ package org.grails.cli.profile.commands.events
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import org.grails.cli.profile.commands.script.GroovyScriptCommand
 
+import org.grails.cli.profile.commands.script.GroovyScriptCommand
 
 /**
  * Allows for listening and reacting to events triggered by other commands

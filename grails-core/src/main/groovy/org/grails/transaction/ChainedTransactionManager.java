@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.HeuristicCompletionException;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -45,9 +46,9 @@ import org.springframework.util.Assert;
  * which means the {@link PlatformTransactionManager} most likely to break the transaction should be the <em>last</em>
  * in the list configured. A {@link PlatformTransactionManager} throwing an exception during commit will automatically
  * cause the remaining transaction managers to roll back instead of committing.
- * 
+ *
  * original source: https://github.com/spring-projects/spring-data-commons/blob/master/src/main/java/org/springframework/data/transaction/ChainedTransactionManager.java
- * 
+ *
  * @author Michael Hunger
  * @author Oliver Gierke
  * @author Lari Hotari
@@ -64,7 +65,7 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
 
     /**
      * Creates a new {@link ChainedTransactionManager} delegating to the given {@link PlatformTransactionManager}s.
-     * 
+     *
      * @param transactionManagers must not be {@literal null} or empty.
      */
     public ChainedTransactionManager(PlatformTransactionManager... transactionManagers) {
@@ -74,7 +75,7 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
     /**
      * Creates a new {@link ChainedTransactionManager} using the given {@link SynchronizationManager} and
      * {@link PlatformTransactionManager}s.
-     * 
+     *
      * @param synchronizationManager must not be {@literal null}.
      * @param transactionManagers must not be {@literal null} or empty.
      */

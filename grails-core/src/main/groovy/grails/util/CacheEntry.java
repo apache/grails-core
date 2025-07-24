@@ -18,15 +18,15 @@
  */
 package grails.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Wrapper for a value inside a cache that adds timestamp information
@@ -51,11 +51,11 @@ public class CacheEntry<V> {
     public CacheEntry() {
         expire();
     }
-    
+
     public CacheEntry(V value) {
         setValue(value);
     }
-    
+
     /**
      * Gets a value from cache. If the key doesn't exist, it will create the value using the updater callback
      * Prevents cache storms with a lock.
@@ -100,7 +100,7 @@ public class CacheEntry<V> {
             return null;
         }
     }
-    
+
     @SuppressWarnings("rawtypes")
     private static final Callable<CacheEntry> DEFAULT_CACHE_ENTRY_FACTORY = new Callable<CacheEntry>() {
         @Override
@@ -108,7 +108,7 @@ public class CacheEntry<V> {
             return new CacheEntry();
         }
     };
-    
+
     public static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map, K key, long timeoutMillis, Callable<V> updater) {
         return getValue(map, key, timeoutMillis, updater, DEFAULT_CACHE_ENTRY_FACTORY, true, null);
     }
@@ -116,11 +116,11 @@ public class CacheEntry<V> {
     public static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map, K key, long timeoutMillis, Callable<V> updater, boolean returnExpiredWhileUpdating) {
         return getValue(map, key, timeoutMillis, updater, DEFAULT_CACHE_ENTRY_FACTORY, returnExpiredWhileUpdating, null);
     }
-    
+
     public V getValue(long timeout, Callable<V> updater) {
         return getValue(timeout, updater, true, null);
     }
-    
+
     /**
      * gets the current value from the entry and updates it if it's older than timeout
      *
@@ -182,7 +182,7 @@ public class CacheEntry<V> {
             return getValue();
         }
     }
-    
+
     protected V getValueWhileUpdating(Object cacheRequestObject) {
         return valueRef.get();
     }
@@ -199,7 +199,7 @@ public class CacheEntry<V> {
             readLock.unlock();
         }
     }
-    
+
     public void setValue(V val) {
         try{
             writeLock.lock();
@@ -232,7 +232,7 @@ public class CacheEntry<V> {
     public void expire() {
         createdMillis = 0L;
     }
-    
+
     public boolean isInitialized() {
         return initialized;
     }
@@ -259,13 +259,13 @@ public class CacheEntry<V> {
 
             throw this;
         }
-        
+
         public void rethrowRuntimeException() {
             if (getCause() instanceof RuntimeException) {
                 throw (RuntimeException)getCause();
             }
             throw this;
         }
-        
+
     }
 }

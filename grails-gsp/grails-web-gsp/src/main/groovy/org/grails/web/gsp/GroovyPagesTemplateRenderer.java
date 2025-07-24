@@ -18,13 +18,31 @@
  */
 package org.grails.web.gsp;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import groovy.text.Template;
+import org.codehaus.groovy.runtime.InvokerHelper;
+
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
+
 import grails.core.GrailsDomainClass;
 import grails.util.CacheEntry;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import grails.util.GrailsStringUtils;
-import groovy.text.Template;
-import org.codehaus.groovy.runtime.InvokerHelper;
 import org.grails.buffer.CodecPrintWriter;
 import org.grails.buffer.FastStringWriter;
 import org.grails.encoder.EncodedAppenderWriterFactory;
@@ -44,22 +62,6 @@ import org.grails.taglib.encoder.WithCodecHelper;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.GrailsApplicationAttributes;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Service that provides the actual implementation to RenderTagLib's render tag.
@@ -167,12 +169,12 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                             protected boolean hasExpired(long timeout, Object cacheRequestObject) {
                                 return neverExpire ? false : (allowCaching ? super.hasExpired(timeout, cacheRequestObject) : true);
                             }
-                            
+
                             @Override
                             public boolean isInitialized() {
                                 return allowCaching ? super.isInitialized() : false;
                             }
-                            
+
                             @Override
                             public void setValue(Template val) {
                                 if(allowCaching) {

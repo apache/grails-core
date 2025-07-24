@@ -15,19 +15,39 @@
 
 package org.grails.datastore.mapping.mongo;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import groovy.lang.Closure;
+
+import jakarta.annotation.PreDestroy;
+import jakarta.persistence.FlushModeType;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.IndexOptions;
-import grails.gorm.multitenancy.Tenants;
-import grails.util.GrailsMessageSourceUtils;
-import groovy.lang.Closure;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import grails.gorm.multitenancy.Tenants;
+import grails.util.GrailsMessageSourceUtils;
 import org.grails.datastore.bson.codecs.CodecExtensions;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
@@ -83,23 +103,6 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
 import org.grails.datastore.mapping.validation.ValidatorRegistry;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.transaction.PlatformTransactionManager;
-
-import jakarta.annotation.PreDestroy;
-import jakarta.persistence.FlushModeType;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A Datastore implementation for the Mongo document store.

@@ -19,12 +19,12 @@
 
 package org.grails.plugins.web.taglib
 
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
 import org.grails.buffer.GrailsPrintWriter
 import org.grails.buffer.StreamCharBuffer
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
 
 @TagLib
 class SitemeshTagLib implements TagLibrary {

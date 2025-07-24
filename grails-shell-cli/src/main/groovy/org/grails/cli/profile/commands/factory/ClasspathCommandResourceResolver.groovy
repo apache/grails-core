@@ -19,10 +19,10 @@
 package org.grails.cli.profile.commands.factory
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.Profile
 import org.grails.io.support.PathMatchingResourcePatternResolver
 import org.grails.io.support.Resource
-
 
 /**
  * A {@link CommandResourceResolver} that resolves commands from the classpath under the directory META-INF/commands

@@ -18,25 +18,6 @@
  */
 package org.grails.gsp.compiler;
 
-import grails.config.ConfigMap;
-import grails.io.IOUtils;
-import grails.util.Environment;
-import grails.util.GrailsStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.grails.buffer.FastStringWriter;
-import org.grails.buffer.StreamByteBuffer;
-import org.grails.buffer.StreamCharBuffer;
-import org.grails.gsp.CompileStaticGroovyPage;
-import org.grails.gsp.GroovyPage;
-import org.grails.gsp.ModelRecordingGroovyPage;
-import org.grails.gsp.compiler.tags.GrailsTagRegistry;
-import org.grails.gsp.compiler.tags.GroovySyntaxTag;
-import org.grails.io.support.SpringIOUtils;
-import org.grails.taglib.GrailsTagException;
-import org.grails.taglib.encoder.OutputEncodingSettings;
-
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -60,6 +41,27 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import grails.config.ConfigMap;
+import grails.io.IOUtils;
+import grails.util.Environment;
+import grails.util.GrailsStringUtils;
+import org.grails.buffer.FastStringWriter;
+import org.grails.buffer.StreamByteBuffer;
+import org.grails.buffer.StreamCharBuffer;
+import org.grails.gsp.CompileStaticGroovyPage;
+import org.grails.gsp.GroovyPage;
+import org.grails.gsp.ModelRecordingGroovyPage;
+import org.grails.gsp.compiler.tags.GrailsTagRegistry;
+import org.grails.gsp.compiler.tags.GroovySyntaxTag;
+import org.grails.io.support.SpringIOUtils;
+import org.grails.taglib.GrailsTagException;
+import org.grails.taglib.encoder.OutputEncodingSettings;
 
 /**
  * NOTE: Based on work done by the GSP standalone project (https://gsp.dev.java.net/).

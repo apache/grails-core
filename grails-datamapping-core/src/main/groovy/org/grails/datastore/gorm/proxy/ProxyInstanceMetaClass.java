@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm.proxy;
 
+import java.io.Serializable;
+
 import groovy.lang.DelegatingMetaClass;
 import groovy.lang.MetaClass;
 
-import java.io.Serializable;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import org.grails.datastore.mapping.core.Session;
-import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * Per-instance metaclass to use for proxied GORM domain objects. It auto-retrieves the associated entity when
@@ -140,7 +141,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
         boolean resolveTarget = true;
         if(property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
             resolveTarget = false;
-        }        
+        }
         delegate.setProperty(resolveTarget ? getProxyTarget() : object, property, newValue);
     }
 

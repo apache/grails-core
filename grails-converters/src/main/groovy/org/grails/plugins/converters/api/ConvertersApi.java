@@ -18,11 +18,12 @@
  */
 package org.grails.plugins.converters.api;
 
-import org.grails.web.converters.ConverterUtil;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+
+import org.grails.web.converters.ConverterUtil;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * The API for converting objects to target types such as XML.

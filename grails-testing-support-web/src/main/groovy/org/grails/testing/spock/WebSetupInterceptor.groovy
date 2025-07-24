@@ -19,17 +19,20 @@
 
 package org.grails.testing.spock
 
+import groovy.transform.CompileStatic
+
+import jakarta.servlet.ServletContext
+
+import org.spockframework.runtime.extension.IMethodInterceptor
+import org.spockframework.runtime.extension.IMethodInvocation
+
+import org.springframework.web.servlet.DispatcherServlet
+
 import grails.testing.web.GrailsWebUnitTest
 import grails.util.GrailsWebMockUtil
-import groovy.transform.CompileStatic
 import org.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
-import org.springframework.web.servlet.DispatcherServlet
-
-import jakarta.servlet.ServletContext
 
 @CompileStatic
 class WebSetupInterceptor implements IMethodInterceptor {

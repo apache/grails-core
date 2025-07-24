@@ -20,6 +20,7 @@ package org.grails.compiler.injection
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.SourceUnit
+
 import org.springframework.expression.spel.standard.SpelExpressionParser
 import org.springframework.expression.spel.support.StandardEvaluationContext
 import org.springframework.expression.spel.support.StandardTypeLocator
@@ -42,18 +43,18 @@ class GroovyEclipseCompilationHelper {
             try {
                 // Honour the targetDirectory within the source configuration directory.
                 File targetDirectory = sourceUnit.configuration.targetDirectory
-                
+
                 if (targetDirectory == null) {
-                    
+
                     // Resolve as before.
                     targetDirectory = ((File) new SpelExpressionParser().parseExpression("eclipseFile.project.getFolder(T(org.eclipse.jdt.core.JavaCore).create(eclipseFile.project).outputLocation).rawLocation.makeAbsolute().toFile().absoluteFile").getValue(context))
-                    
+
                 } else if (!targetDirectory.isAbsolute()) {
                     // Target directory is set and is not absolute.
                     // We should assume that this is a path relative to the current eclipse project,
                     // and needs resolving appropriately.
                     targetDirectory = ((File) new SpelExpressionParser().parseExpression("eclipseFile.project.getFolder('${targetDirectory.path}').rawLocation.makeAbsolute().toFile().absoluteFile").getValue(context))
-                    
+
                 }
                 // Else absolute file location. We should return as-is.
                 return targetDirectory

@@ -20,6 +20,9 @@ package org.grails.datastore.mapping.simple.query
 
 import java.util.regex.Pattern
 
+import org.springframework.dao.InvalidDataAccessResourceUsageException
+import org.springframework.util.Assert
+
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValue
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -34,8 +37,6 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
 import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
-import org.springframework.dao.InvalidDataAccessResourceUsageException
-import org.springframework.util.Assert
 
 /**
  * Simple query implementation that queries a map of objects.

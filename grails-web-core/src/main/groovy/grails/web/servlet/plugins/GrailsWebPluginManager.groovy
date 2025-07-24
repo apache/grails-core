@@ -19,13 +19,15 @@
 package grails.web.servlet.plugins
 
 import groovy.transform.CompileStatic
-import grails.core.GrailsApplication
-import grails.plugins.DefaultGrailsPluginManager
-import grails.plugins.GrailsPlugin
+
+import jakarta.servlet.ServletContext
+
 import org.springframework.boot.web.servlet.ServletContextInitializer
 import org.springframework.core.io.Resource
 
-import jakarta.servlet.ServletContext
+import grails.core.GrailsApplication
+import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPlugin
 
 /**
  * @author Graeme Rocher

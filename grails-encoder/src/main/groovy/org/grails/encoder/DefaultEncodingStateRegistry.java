@@ -18,17 +18,18 @@
  */
 package org.grails.encoder;
 
-import org.grails.encoder.impl.BasicCodecLookup;
-import org.grails.encoder.impl.NoneEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.grails.encoder.impl.BasicCodecLookup;
+import org.grails.encoder.impl.NoneEncoder;
 
 /**
  * default implementation of {@link EncodingStateRegistry}

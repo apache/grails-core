@@ -20,6 +20,7 @@
 package org.apache.grails.data.testing.tck.base
 
 import groovy.util.logging.Slf4j
+
 import spock.lang.Shared
 import spock.lang.Specification
 

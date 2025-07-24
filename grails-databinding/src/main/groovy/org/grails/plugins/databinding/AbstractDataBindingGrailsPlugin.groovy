@@ -23,8 +23,13 @@ import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import grails.web.databinding.DataBindingUtils
 import grails.web.databinding.GrailsWebDataBinder
+import org.grails.databinding.converters.CurrencyValueConverter
+import org.grails.databinding.converters.DateConversionHelper
 import org.grails.databinding.converters.Jsr310ConvertersConfiguration
+import org.grails.databinding.converters.TimeZoneConverter
 import org.grails.databinding.converters.UUIDConverter
+import org.grails.databinding.converters.web.LocaleAwareBigDecimalConverter
+import org.grails.databinding.converters.web.LocaleAwareNumberConverter
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
@@ -32,11 +37,6 @@ import org.grails.web.databinding.bindingsource.HalXmlDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator
-import org.grails.databinding.converters.CurrencyValueConverter
-import org.grails.databinding.converters.DateConversionHelper
-import org.grails.databinding.converters.TimeZoneConverter
-import org.grails.databinding.converters.web.LocaleAwareBigDecimalConverter
-import org.grails.databinding.converters.web.LocaleAwareNumberConverter
 
 /**
  * Plugin for configuring the data binding features of Grails

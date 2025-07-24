@@ -19,10 +19,6 @@
 
 package grails.plugin.json.view.internal
 
-import grails.plugin.json.builder.StreamingJsonBuilder
-import grails.plugin.json.view.api.internal.TemplateRenderer
-import grails.views.api.http.Parameters
-import grails.views.compiler.BuilderTypeCheckingExtension
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
@@ -32,6 +28,11 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.control.SourceUnit
+
+import grails.plugin.json.builder.StreamingJsonBuilder
+import grails.plugin.json.view.api.internal.TemplateRenderer
+import grails.views.api.http.Parameters
+import grails.views.compiler.BuilderTypeCheckingExtension
 
 /**
  * A type checking extension for JSON builder

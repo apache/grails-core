@@ -14,15 +14,17 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
+import org.bson.Document
+
+import org.springframework.dao.DataAccessResourceFailureException
+import org.springframework.dao.InvalidDataAccessResourceUsageException
+
 import grails.mongodb.geo.GeoJSON
 import grails.mongodb.geo.LineString
 import grails.mongodb.geo.Point
 import grails.mongodb.geo.Polygon
 import grails.mongodb.geo.Shape
-import org.bson.Document
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.springframework.dao.DataAccessResourceFailureException
-import org.springframework.dao.InvalidDataAccessResourceUsageException
 
 /**
  *

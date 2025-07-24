@@ -18,16 +18,18 @@
  */
 package org.grails.datastore.mapping.proxy;
 
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.util.ReflectionUtils;
-
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.util.ReflectionUtils;
+
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 
 /**
 * An {@link EntityProxyMethodHandler} that uses the session to initialize a target for the given id

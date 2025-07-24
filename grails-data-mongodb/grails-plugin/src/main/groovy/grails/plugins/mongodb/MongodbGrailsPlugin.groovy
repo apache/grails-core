@@ -19,19 +19,21 @@
 
 package grails.plugins.mongodb
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.env.PropertyResolver
+import org.springframework.transaction.PlatformTransactionManager
+
 import grails.core.GrailsClass
 import grails.mongodb.bootstrap.MongoDbDataStoreSpringInitializer
 import grails.plugins.GrailsPlugin
 import grails.plugins.Plugin
 import grails.util.Metadata
-import groovy.transform.CompileStatic
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.plugin.support.ConfigSupport
 import org.grails.datastore.mapping.mongo.MongoDatastore
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.core.env.PropertyResolver
-import org.springframework.transaction.PlatformTransactionManager
 
 class MongodbGrailsPlugin extends Plugin {
     def license = 'Apache 2.0 License'

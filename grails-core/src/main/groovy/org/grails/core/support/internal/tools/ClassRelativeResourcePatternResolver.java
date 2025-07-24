@@ -19,10 +19,10 @@
 
 package org.grails.core.support.internal.tools;
 
+import java.util.Set;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-
-import java.util.Set;
 
 /**
  * Attempts to limit classpath searching to only locations relative to the given class

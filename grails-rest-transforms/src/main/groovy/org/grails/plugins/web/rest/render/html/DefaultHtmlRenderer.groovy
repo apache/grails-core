@@ -18,16 +18,17 @@
  */
 package org.grails.plugins.web.rest.render.html
 
-import grails.rest.render.RenderContext
-import grails.rest.render.Renderer
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 
-import grails.core.support.proxy.ProxyHandler
-import grails.web.mime.MimeType
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
+
+import grails.core.support.proxy.ProxyHandler
+import grails.rest.render.RenderContext
+import grails.rest.render.Renderer
+import grails.util.GrailsNameUtils
+import grails.web.mime.MimeType
 
 /**
  * A default renderer for HTML that returns an appropriate model

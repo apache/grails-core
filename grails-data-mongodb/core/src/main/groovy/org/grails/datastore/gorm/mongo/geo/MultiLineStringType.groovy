@@ -14,8 +14,9 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.MultiLineString
 import groovy.transform.CompileStatic
+
+import grails.mongodb.geo.MultiLineString
 
 /**
  * Adds support for the {@link grails.mongodb.geo.MultiLineString} type to GORM for MongoDB

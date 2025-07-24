@@ -19,10 +19,11 @@
 
 package grails.plugin.json.view.test
 
-import grails.util.GrailsNameUtils
-import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.util.GrailsNameUtils
+import grails.web.mapping.LinkGenerator
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.web.util.WebUtils
 

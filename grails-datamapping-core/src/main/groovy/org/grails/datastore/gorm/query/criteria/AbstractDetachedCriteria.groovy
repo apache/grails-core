@@ -22,6 +22,10 @@ package org.grails.datastore.gorm.query.criteria
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
+import jakarta.persistence.FetchType
+import jakarta.persistence.criteria.JoinType
+
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -34,9 +38,6 @@ import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryableCriteria
-
-import jakarta.persistence.FetchType
-import jakarta.persistence.criteria.JoinType
 
 /**
  * Abstract super class for DetachedCriteria implementations

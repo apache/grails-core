@@ -22,6 +22,7 @@ package org.grails.datastore.bson.codecs
 import org.bson.BsonReader
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.configuration.CodecRegistry
+
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.PersistentProperty
 

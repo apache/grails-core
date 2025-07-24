@@ -19,8 +19,8 @@
 
 package org.grails.compiler.gorm
 
-import grails.gorm.dirty.checking.DirtyCheck
-import grails.gorm.dirty.checking.DirtyCheckedProperty
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
@@ -41,15 +41,17 @@ import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.sc.StaticCompilationVisitor
+
+import org.springframework.validation.annotation.Validated
+
+import grails.gorm.dirty.checking.DirtyCheck
+import grails.gorm.dirty.checking.DirtyCheckedProperty
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.reflect.ReflectionUtils
-import org.springframework.validation.annotation.Validated
-
-import java.lang.reflect.Modifier
 
 import static java.lang.reflect.Modifier.PUBLIC
 import static java.lang.reflect.Modifier.isFinal
@@ -129,7 +131,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         if (traitToInject != DirtyCheckable) {
             dirtyCheckableTrait.setSuperClass(new ClassNode(DirtyCheckable).getPlainNodeReference())
         }
-        
+
         while(!shouldWeave) {
             if(isDomainClass(superClass) || !superClass.getAnnotations(DIRTY_CHECK_CLASS_NODE).isEmpty()) {
                 break

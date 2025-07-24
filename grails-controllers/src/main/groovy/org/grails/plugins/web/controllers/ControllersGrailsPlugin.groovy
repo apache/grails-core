@@ -18,20 +18,22 @@
  */
 package org.grails.plugins.web.controllers
 
+import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.context.ApplicationContext
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+
 import grails.config.Settings
 import grails.core.GrailsControllerClass
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
-import groovy.util.logging.Slf4j
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.plugins.web.servlet.context.BootStrapClassRunner
 import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.servlet.mvc.TokenResponseActionResultTransformer
 import org.grails.web.servlet.view.CompositeViewResolver
-import org.springframework.beans.factory.support.AbstractBeanDefinition
-import org.springframework.context.ApplicationContext
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
 
 /**
  * Handles the configuration of controllers for Grails.

@@ -18,8 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.util.GrailsWebUtil;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Collection;
@@ -28,15 +26,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import grails.web.mapping.UrlCreator;
+import org.springframework.web.context.request.RequestContextHolder;
+
 import grails.core.GrailsControllerClass;
 import grails.util.GrailsStringUtils;
+import grails.util.GrailsWebUtil;
+import grails.web.mapping.UrlCreator;
 import org.grails.buffer.FastStringWriter;
 import org.grails.web.servlet.mvc.DefaultRequestStateLookupStrategy;
 import org.grails.web.servlet.mvc.GrailsRequestStateLookupStrategy;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
-import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * The default implementation of the UrlCreator interface that constructs URLs in Grails

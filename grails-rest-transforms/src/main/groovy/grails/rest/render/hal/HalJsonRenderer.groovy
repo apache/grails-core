@@ -18,26 +18,29 @@
  */
 package grails.rest.render.hal
 
-import grails.rest.Link
-import grails.rest.render.RenderContext
-import grails.rest.render.util.AbstractLinkingRenderer
 import groovy.json.JsonOutput
 import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
-import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
-import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
-import grails.web.mime.MimeType
-import org.grails.datastore.mapping.model.MappingFactory
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.ToOne
+
+import jakarta.annotation.PostConstruct
+import jakarta.xml.bind.DatatypeConverter
+
 import org.springframework.beans.PropertyAccessorFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.convert.converter.Converter
 import org.springframework.http.HttpMethod
 
-import jakarta.annotation.PostConstruct
-import jakarta.xml.bind.DatatypeConverter
+import grails.rest.Link
+import grails.rest.render.RenderContext
+import grails.rest.render.util.AbstractLinkingRenderer
+import grails.web.mime.MimeType
+import org.grails.datastore.mapping.model.MappingFactory
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
+import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
+
 /**
  * Renders domain instances in HAL JSON format (see http://tools.ietf.org/html/draft-kelly-json-hal-05)
  *
@@ -190,7 +193,7 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
 
         writeSimpleObject(o, context, writer)
     }
-    
+
     protected void writeSimpleObject(Object object, RenderContext context, StreamingJsonBuilder.StreamingJsonDelegate writer) {
         final bean = PropertyAccessorFactory.forBeanPropertyAccess(object)
         final propertyDescriptors = bean.propertyDescriptors

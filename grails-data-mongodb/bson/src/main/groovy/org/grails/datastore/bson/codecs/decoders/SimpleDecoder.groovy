@@ -19,20 +19,6 @@
 
 package org.grails.datastore.bson.codecs.decoders
 
-import groovy.transform.CompileStatic
-import org.bson.BsonReader
-import org.bson.BsonRegularExpression
-import org.bson.BsonType
-import org.bson.codecs.DecoderContext
-import org.bson.codecs.configuration.CodecRegistry
-import org.bson.types.Binary
-import org.bson.types.Decimal128
-import org.bson.types.ObjectId
-import org.grails.datastore.bson.codecs.PropertyDecoder
-import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Simple
-
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -41,6 +27,22 @@ import java.time.OffsetDateTime
 import java.time.OffsetTime
 import java.time.Period
 import java.time.ZonedDateTime
+
+import groovy.transform.CompileStatic
+
+import org.bson.BsonReader
+import org.bson.BsonRegularExpression
+import org.bson.BsonType
+import org.bson.codecs.DecoderContext
+import org.bson.codecs.configuration.CodecRegistry
+import org.bson.types.Binary
+import org.bson.types.Decimal128
+import org.bson.types.ObjectId
+
+import org.grails.datastore.bson.codecs.PropertyDecoder
+import org.grails.datastore.mapping.engine.EntityAccess
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.Simple
 
 /**
  * A {@PropertyDecoder} capable of decoding {@link org.grails.datastore.mapping.model.types.Simple} properties

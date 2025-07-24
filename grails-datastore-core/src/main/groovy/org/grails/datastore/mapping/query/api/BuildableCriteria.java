@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.mapping.query.api;
 
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
 
 import jakarta.persistence.criteria.JoinType;
-import java.util.Map;
 
 /**
- * 
+ *
  * @author Jeff Brown
  * @since 3.1.2
  *
@@ -88,31 +89,31 @@ public interface BuildableCriteria extends Criteria {
 
     /**
      * Defines and executes a list query in a single call. Example: Foo.createCriteria().list { }
-     * 
+     *
      * @param params pagination parameters (max, offset, etc...)
      * @param closure The closure to execute
      *
      * @return The result
      */
     Object list(Map params, @DelegatesTo(Criteria.class) Closure closure);
-    
+
     /**
      * Defines and executes a list distinct query in a single call. Example: Foo.createCriteria().listDistinct { }
      * @param closure The closure to execute
      *
-     * @return The result 
+     * @return The result
      */
     Object listDistinct(@DelegatesTo(Criteria.class) Closure closure);
-    
+
     /**
      * Defines and executes a scroll query in a single call. Example: Foo.createCriteria().scroll { }
-     * 
+     *
      * @param closure The closure to execute
      *
      * @return A scrollable result set
      */
     Object scroll(@DelegatesTo(Criteria.class) Closure closure);
-    
+
     /**
      * Defines and executes a get query ( a single result) in a single call. Example: Foo.createCriteria().get { }
      *

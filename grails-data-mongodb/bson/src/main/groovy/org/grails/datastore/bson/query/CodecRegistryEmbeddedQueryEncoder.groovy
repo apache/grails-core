@@ -23,6 +23,7 @@ import org.bson.BsonDocument
 import org.bson.BsonDocumentWriter
 import org.bson.codecs.Codec
 import org.bson.codecs.configuration.CodecRegistry
+
 import org.grails.datastore.bson.codecs.BsonPersistentEntityCodec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Embedded

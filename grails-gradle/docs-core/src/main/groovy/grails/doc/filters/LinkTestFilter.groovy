@@ -18,13 +18,12 @@
  */
 package grails.doc.filters
 
+import org.radeox.api.engine.WikiRenderEngine
+import org.radeox.filter.context.FilterContext
 import org.radeox.filter.regex.RegexTokenFilter
 import org.radeox.regex.MatchResult
-import org.radeox.filter.context.FilterContext
-import org.radeox.api.engine.WikiRenderEngine
-import org.radeox.util.StringBufferWriter
-import org.radeox.filter.interwiki.InterWiki
 import org.radeox.util.Encoder
+import org.radeox.util.StringBufferWriter
 
 /**
  * @author Graeme Rocher

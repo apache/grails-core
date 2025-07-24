@@ -19,10 +19,11 @@
 
 package org.apache.grails.web.layout
 
-import grails.web.pages.GrailsRenderViewMutator
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.servlet.View
+
+import grails.web.pages.GrailsRenderViewMutator
 
 class GrailsLayoutRenderViewMutator implements GrailsRenderViewMutator {
 

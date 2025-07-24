@@ -18,13 +18,11 @@
  */
 package org.grails.cli.gradle
 
-import grails.build.logging.GrailsConsole
-import grails.io.support.SystemOutErrCapturer
-import grails.io.support.SystemStreamsRedirector
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.FromString
 import groovy.transform.stc.SimpleType
+
 import org.gradle.tooling.BuildAction
 import org.gradle.tooling.BuildActionExecuter
 import org.gradle.tooling.BuildLauncher
@@ -32,6 +30,10 @@ import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.LongRunningOperation
 import org.gradle.tooling.ProjectConnection
 import org.gradle.tooling.internal.consumer.DefaultCancellationTokenSource
+
+import grails.build.logging.GrailsConsole
+import grails.io.support.SystemOutErrCapturer
+import grails.io.support.SystemStreamsRedirector
 import org.grails.build.logging.GrailsConsoleErrorPrintStream
 import org.grails.build.logging.GrailsConsolePrintStream
 import org.grails.cli.profile.ExecutionContext
@@ -132,7 +134,7 @@ class GradleUtil {
         buildActionExecuterCustomizationClosure?.call(buildActionExecuter)
         return buildActionExecuter.run()
     }
-    
+
     public static wireCancellationSupport(ExecutionContext context, BuildLauncher buildLauncher) {
         DefaultCancellationTokenSource cancellationTokenSource = new DefaultCancellationTokenSource()
         buildLauncher.withCancellationToken(cancellationTokenSource.token())

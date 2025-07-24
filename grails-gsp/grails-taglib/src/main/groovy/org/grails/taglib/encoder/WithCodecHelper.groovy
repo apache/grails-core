@@ -19,8 +19,9 @@
 package org.grails.taglib.encoder
 
 import groovy.transform.CompileStatic
-import grails.core.GrailsApplication
 import groovy.util.logging.Commons
+
+import grails.core.GrailsApplication
 import org.grails.encoder.CodecLookupHelper
 import org.grails.encoder.Encoder
 import org.grails.taglib.encoder.OutputEncodingStackAttributes.Builder
@@ -63,7 +64,7 @@ class WithCodecHelper {
      * In addition there is
      * <ul>
      * <li>inherit (boolean) - defaults to true. Controls whether codecs should be inherited to deeper level (taglib calls)</li>
-     * <li>replaceonly (boolean) - defaults to false. Codecs will be only replaced if the previous inherited codec is safe.</li> 
+     * <li>replaceonly (boolean) - defaults to false. Codecs will be only replaced if the previous inherited codec is safe.</li>
      * </ul>
      *
      * @param grailsApplication the grailsApplication instance

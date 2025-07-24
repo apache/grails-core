@@ -18,35 +18,6 @@
  */
 package grails.converters;
 
-import grails.io.IOUtils;
-import grails.util.GrailsWebUtil;
-import grails.web.mime.MimeType;
-import groovy.lang.Closure;
-import groovy.util.BuilderSupport;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.grails.web.converters.AbstractConverter;
-import org.grails.web.converters.Converter;
-import org.grails.web.converters.ConverterUtil;
-import org.grails.web.converters.IncludeExcludeConverter;
-import org.grails.web.converters.configuration.ConverterConfiguration;
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
-import org.grails.web.converters.configuration.DefaultConverterConfiguration;
-import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.grails.web.json.JSONArray;
-import org.grails.web.json.JSONElement;
-import org.grails.web.json.JSONException;
-import org.grails.web.json.JSONObject;
-import org.grails.web.json.JSONTokener;
-import org.grails.web.json.JSONWriter;
-import org.grails.web.json.PathCapturingJSONWriterWrapper;
-import org.grails.web.json.PrettyPrintJSONWriter;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
@@ -57,6 +28,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+
+import groovy.lang.Closure;
+import groovy.util.BuilderSupport;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import grails.io.IOUtils;
+import grails.util.GrailsWebUtil;
+import grails.web.mime.MimeType;
+import org.grails.web.converters.AbstractConverter;
+import org.grails.web.converters.Converter;
+import org.grails.web.converters.ConverterUtil;
+import org.grails.web.converters.IncludeExcludeConverter;
+import org.grails.web.converters.configuration.ConverterConfiguration;
+import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
+import org.grails.web.converters.configuration.DefaultConverterConfiguration;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JSONArray;
+import org.grails.web.json.JSONElement;
+import org.grails.web.json.JSONException;
+import org.grails.web.json.JSONObject;
+import org.grails.web.json.JSONTokener;
+import org.grails.web.json.JSONWriter;
+import org.grails.web.json.PathCapturingJSONWriterWrapper;
+import org.grails.web.json.PrettyPrintJSONWriter;
 
 /**
  * A converter that converts domain classes, Maps, Lists, Arrays, POJOs and POGOs to JSON.

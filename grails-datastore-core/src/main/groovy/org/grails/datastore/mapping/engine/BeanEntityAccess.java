@@ -18,15 +18,16 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.util.Set;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.PropertyAccessorFactory;
 import org.springframework.core.convert.ConversionService;
+import org.springframework.util.ReflectionUtils;
+
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.IdentityMapping;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.springframework.util.ReflectionUtils;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
  * Class used to access properties of an entity. Also responsible for

@@ -18,9 +18,7 @@
  */
 package org.grails.plugin.cache.compiler
 
-import grails.plugin.cache.CacheEvict
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
@@ -33,6 +31,9 @@ import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
+
+import grails.plugin.cache.CacheEvict
+import org.apache.grails.common.compiler.GroovyTransformOrder
 
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block

@@ -19,14 +19,15 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.ConstrainedProperty;
-import org.grails.datastore.mapping.reflect.ClassUtils;
+import java.math.BigDecimal;
+
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
 
-import java.math.BigDecimal;
+import grails.gorm.validation.ConstrainedProperty;
+import org.grails.datastore.mapping.reflect.ClassUtils;
 
 /**
  * Manages the scale for floating point numbers (i.e., the

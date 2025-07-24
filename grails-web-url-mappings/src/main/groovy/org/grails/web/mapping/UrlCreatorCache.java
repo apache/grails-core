@@ -23,13 +23,14 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Weigher;
+
 import grails.web.mapping.UrlCreator;
 import grails.web.mapping.UrlMapping;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 /**
  * Implements caching layer for UrlCreator

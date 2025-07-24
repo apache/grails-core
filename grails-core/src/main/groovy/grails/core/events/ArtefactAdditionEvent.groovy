@@ -20,8 +20,10 @@
 package grails.core.events
 
 import groovy.transform.CompileStatic
-import grails.core.GrailsClass
+
 import org.springframework.context.ApplicationEvent
+
+import grails.core.GrailsClass
 
 /**
  * An event triggered for the addition of a new artefact

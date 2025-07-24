@@ -14,8 +14,19 @@
  */
 package grails.orm.bootstrap
 
+import javax.sql.DataSource
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.PropertyResolver
+import org.springframework.transaction.PlatformTransactionManager
+
 import org.grails.datastore.gorm.bootstrap.AbstractDatastoreInitializer
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory
 import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInterceptor
@@ -28,15 +39,6 @@ import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegistrar
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.core.env.PropertyResolver
-import org.springframework.transaction.PlatformTransactionManager
-
-import javax.sql.DataSource
 
 /**
  * Class that handles the details of initializing GORM for Hibernate

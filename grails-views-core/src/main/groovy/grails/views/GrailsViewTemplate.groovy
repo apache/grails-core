@@ -18,17 +18,18 @@
  */
 package grails.views
 
+import groovy.text.TemplateEngine
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
+import org.springframework.context.MessageSource
+
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.ProxyHandler
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeUtility
-import groovy.text.TemplateEngine
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.datastore.gorm.proxy.ProxyHandlerAdapter
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.context.MessageSource
-
 
 /**
  * @author Graeme Rocher

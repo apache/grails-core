@@ -19,16 +19,18 @@
 
 package org.grails.datastore.gorm.multitenancy
 
+import groovy.transform.CompileStatic
+
+import org.springframework.transaction.TransactionDefinition
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
-import org.springframework.transaction.TransactionDefinition
 
 /**
  * Wraps each method call in the the given tenant id

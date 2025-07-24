@@ -18,25 +18,26 @@
  */
 package org.apache.grails.web.layout;
 
-import groovy.text.Template;
-
 import java.io.PrintWriter;
 import java.util.Map;
 
+import groovy.text.Template;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import com.opensymphony.module.sitemesh.RequestConstants;
+import com.opensymphony.sitemesh.Content;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.View;
 
 import org.grails.web.servlet.WrappedResponseHolder;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.OutputAwareHttpServletResponse;
 import org.grails.web.servlet.view.AbstractGrailsView;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
-import org.springframework.web.servlet.View;
-
-import com.opensymphony.module.sitemesh.RequestConstants;
-import com.opensymphony.sitemesh.Content;
 
 public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
 

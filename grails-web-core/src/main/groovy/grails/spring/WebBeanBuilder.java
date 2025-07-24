@@ -18,9 +18,10 @@
  */
 package grails.spring;
 
+import org.springframework.context.ApplicationContext;
+
 import org.grails.spring.RuntimeSpringConfiguration;
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration;
-import org.springframework.context.ApplicationContext;
 
 /**
  * Extended version of the BeanBuilder class that provides support for constructing WebApplicationContext instances

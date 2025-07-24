@@ -18,9 +18,9 @@
  */
 package org.grails.taglib.encoder;
 
-import org.grails.encoder.Encoder;
-
 import java.io.Writer;
+
+import org.grails.encoder.Encoder;
 
 public class OutputEncodingStackAttributes {
     private final Writer topWriter;
@@ -39,7 +39,7 @@ public class OutputEncodingStackAttributes {
     public boolean isInheritPreviousEncoders() {
         return inheritPreviousEncoders;
     }
-    
+
     public boolean isReplaceOnly() {
         return replaceOnly;
     }
@@ -165,7 +165,7 @@ public class OutputEncodingStackAttributes {
             this.inheritPreviousEncoders = inheritPreviousEncoders;
             return this;
         }
-        
+
         public Builder replaceOnly(boolean replaceOnly) {
             this.replaceOnly = replaceOnly;
             return this;

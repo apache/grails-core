@@ -20,13 +20,7 @@ package org.grails.orm.hibernate.dirty
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.model.types.Embedded
+
 import org.hibernate.CustomEntityDirtinessStrategy
 import org.hibernate.Hibernate
 import org.hibernate.Session
@@ -35,6 +29,14 @@ import org.hibernate.engine.spi.Status
 import org.hibernate.persister.entity.EntityPersister
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Embedded
 
 /**
  * A class to customize Hibernate dirtiness based on Grails {@link DirtyCheckable} interface

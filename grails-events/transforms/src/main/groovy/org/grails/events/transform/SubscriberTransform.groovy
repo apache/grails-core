@@ -19,11 +19,11 @@
 
 package org.grails.events.transform
 
-import grails.events.annotation.Subscriber
-import grails.events.annotation.gorm.Listener
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -39,14 +39,15 @@ import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.trait.Traits
+
+import grails.events.annotation.Subscriber
+import grails.events.annotation.gorm.Listener
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.events.gorm.GormAnnotatedListener
 import org.grails.events.gorm.GormAnnotatedSubscriber
-
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX

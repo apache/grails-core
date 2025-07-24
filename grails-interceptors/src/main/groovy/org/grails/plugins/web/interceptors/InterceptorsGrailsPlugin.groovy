@@ -18,15 +18,16 @@
  */
 package org.grails.plugins.web.interceptors
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
+import org.springframework.web.servlet.handler.MappedInterceptor
+
 import grails.artefact.Interceptor
 import grails.config.Settings
 import grails.core.GrailsClass
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import org.springframework.web.servlet.handler.MappedInterceptor
-
 
 /**
  * A plugin for interceptors

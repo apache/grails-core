@@ -18,11 +18,12 @@
  */
 package org.grails.spring.beans;
 
-import grails.plugins.GrailsPluginManager;
-import grails.plugins.PluginManagerAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
+
+import grails.plugins.GrailsPluginManager;
+import grails.plugins.PluginManagerAware;
 
 /**
  * Auto-injects beans that implement PluginManagerAware.
@@ -34,9 +35,9 @@ public class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapte
 
     private GrailsPluginManager pluginManager;
     private BeanFactory beanFactory;
-    
+
     public PluginManagerAwareBeanPostProcessor() {
-        
+
     }
 
     public PluginManagerAwareBeanPostProcessor(GrailsPluginManager pluginManager) {
@@ -64,6 +65,6 @@ public class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapte
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         this.beanFactory = beanFactory;
     }
-    
-    
+
+
 }

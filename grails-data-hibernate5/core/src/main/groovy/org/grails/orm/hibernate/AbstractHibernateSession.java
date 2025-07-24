@@ -25,16 +25,19 @@ import java.util.Collection;
 import java.util.List;
 
 import jakarta.persistence.FlushModeType;
+
+import org.hibernate.LockMode;
+import org.hibernate.SessionFactory;
+
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession;
 import org.grails.datastore.mapping.transactions.Transaction;
-import org.hibernate.LockMode;
-import org.hibernate.SessionFactory;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.

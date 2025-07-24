@@ -18,8 +18,10 @@
  */
 package org.grails.spring.context.support;
 
-import grails.config.Config;
-import grails.core.support.GrailsConfigurationAware;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Properties;
+
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -28,9 +30,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.util.StringValueResolver;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.Properties;
+import grails.config.Config;
+import grails.core.support.GrailsConfigurationAware;
 
 /**
  * Uses Grails' ConfigObject for place holder values.

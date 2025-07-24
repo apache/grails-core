@@ -19,19 +19,25 @@
 
 package org.grails.orm.hibernate.query;
 
-import grails.gorm.MultiTenant;
+import java.beans.PropertyDescriptor;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
 import groovy.lang.GroovyObjectSupport;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
 import groovy.lang.MissingMethodException;
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.BuildableCriteria;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.reflect.NameUtils;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.EntityType;
+
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.LockMode;
@@ -56,19 +62,17 @@ import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.criterion.Subqueries;
 import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.Type;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.ConversionService;
 
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.EntityType;
-import java.beans.PropertyDescriptor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import grails.gorm.MultiTenant;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.api.BuildableCriteria;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.reflect.NameUtils;
+import org.grails.orm.hibernate.AbstractHibernateDatastore;
 
 /**
  * Abstract super class for sharing code between Hibernate 3 and 4 implementations of HibernateCriteriaBuilder
@@ -1619,7 +1623,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public Object list(Map params, @DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(LIST_CALL, new Object[]{params, c});
     }
-    
+
     @Override
     public Object listDistinct(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(LIST_DISTINCT_CALL, new Object[]{c});
@@ -1629,12 +1633,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public Object get(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(GET_CALL, new Object[]{c});
     }
-    
+
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(SCROLL_CALL, new Object[]{c});
     }
-    
+
     @SuppressWarnings("rawtypes")
     @Override
     public Object invokeMethod(String name, Object obj) {

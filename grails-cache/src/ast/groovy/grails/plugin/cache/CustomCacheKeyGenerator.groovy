@@ -18,19 +18,20 @@
  */
 package grails.plugin.cache
 
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
 import org.springframework.aop.framework.AopProxyUtils
 import org.springframework.cache.interceptor.KeyGenerator
 import org.springframework.cache.interceptor.SimpleKeyGenerator
-
-import java.lang.reflect.Method
 
 /**
  * Includes the hashcode, method signature, and class name of the target (caller) in the cache key
  */
 @CompileStatic
 class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
-	
+
 	private final KeyGenerator innerKeyGenerator
 
 	CustomCacheKeyGenerator(KeyGenerator innerKeyGenerator){

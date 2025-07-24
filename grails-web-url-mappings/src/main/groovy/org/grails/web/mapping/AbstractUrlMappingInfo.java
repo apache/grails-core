@@ -18,13 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.util.GrailsStringUtils;
-import grails.web.mapping.UrlMappingInfo;
-import groovy.lang.Closure;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.util.UriUtils;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,6 +25,15 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.Closure;
+
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.util.UriUtils;
+
+import grails.util.GrailsStringUtils;
+import grails.web.mapping.UrlMappingInfo;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * Abstract super class providing pass functionality for configuring a UrlMappingInfo.

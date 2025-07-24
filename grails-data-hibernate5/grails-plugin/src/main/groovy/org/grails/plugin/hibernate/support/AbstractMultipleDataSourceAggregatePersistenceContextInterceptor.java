@@ -18,15 +18,16 @@
  */
 package org.grails.plugin.hibernate.support;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.hibernate.SessionFactory;
+
 import grails.persistence.support.PersistenceContextInterceptor;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.hibernate.SessionFactory;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Abstract implementation of the {@link grails.persistence.support.PersistenceContextInterceptor} interface that supports multiple data sources

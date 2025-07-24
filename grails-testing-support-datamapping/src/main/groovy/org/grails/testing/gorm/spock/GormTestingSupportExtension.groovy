@@ -19,10 +19,12 @@
 
 package org.grails.testing.gorm.spock
 
-import grails.testing.gorm.DataTest
 import groovy.transform.CompileStatic
+
 import org.spockframework.runtime.extension.IGlobalExtension
 import org.spockframework.runtime.model.SpecInfo
+
+import grails.testing.gorm.DataTest
 
 @CompileStatic
 class GormTestingSupportExtension implements IGlobalExtension {

@@ -19,8 +19,8 @@
 package org.grails.plugins.web.servlet.mvc
 
 import groovy.transform.CompileStatic
-import org.grails.web.servlet.mvc.AbstractTokenResponseHandler
 
+import org.grails.web.servlet.mvc.AbstractTokenResponseHandler
 
 /**
  * Handles a valid token response. See {@link org.grails.web.servlet.mvc.TokenResponseHandler}

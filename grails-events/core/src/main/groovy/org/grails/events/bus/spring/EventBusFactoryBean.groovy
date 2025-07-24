@@ -19,17 +19,19 @@
 
 package org.grails.events.bus.spring
 
-import grails.events.bus.EventBus
-import grails.events.bus.EventBusBuilder
+import java.util.concurrent.ExecutorService
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.events.bus.ExecutorEventBus
+
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 
-import java.util.concurrent.ExecutorService
+import grails.events.bus.EventBus
+import grails.events.bus.EventBusBuilder
+import org.grails.events.bus.ExecutorEventBus
 
 /**
  * Factory bean for usage within Spring

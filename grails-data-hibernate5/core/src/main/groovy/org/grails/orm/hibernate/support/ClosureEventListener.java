@@ -18,21 +18,15 @@
  */
 package org.grails.orm.hibernate.support;
 
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
-import org.grails.datastore.gorm.GormValidateable;
-import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEventTriggerCaller;
-import org.grails.datastore.gorm.support.EventTriggerCaller;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.ValidationEvent;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.datastore.mapping.validation.ValidationException;
-import org.grails.orm.hibernate.AbstractHibernateGormValidationApi;
+
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -62,13 +56,22 @@ import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.Errors;
 
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.grails.datastore.gorm.GormValidateable;
+import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEventTriggerCaller;
+import org.grails.datastore.gorm.support.EventTriggerCaller;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.engine.event.ValidationEvent;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.reflect.ClassUtils;
+import org.grails.datastore.mapping.reflect.EntityReflector;
+import org.grails.datastore.mapping.validation.ValidationException;
+import org.grails.orm.hibernate.AbstractHibernateGormValidationApi;
 
 /**
  * <p>Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.
@@ -330,7 +333,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
             String p = propertyNames[i];
             Integer index = entityMetamodel.getPropertyIndexOrNull(p);
             if(index == null) continue;
-            
+
             PersistentProperty property = persistentEntity.getPropertyByName(p);
             if (property == null) {
                 continue;

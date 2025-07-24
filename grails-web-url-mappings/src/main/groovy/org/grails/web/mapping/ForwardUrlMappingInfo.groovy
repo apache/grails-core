@@ -18,8 +18,9 @@
  */
 package org.grails.web.mapping
 
-import grails.web.mapping.UrlMappingData
 import groovy.transform.CompileStatic
+
+import grails.web.mapping.UrlMappingData
 
 /**
  * A customizable UrlMappingInfo instance used for forwards and includes.
@@ -52,7 +53,7 @@ class ForwardUrlMappingInfo extends AbstractUrlMappingInfo {
     void setParams(Map params) {
         if (params) {
             parameters = params
-        } 
+        }
     }
     public Map<String, Object> getParams() {
         return parameters;

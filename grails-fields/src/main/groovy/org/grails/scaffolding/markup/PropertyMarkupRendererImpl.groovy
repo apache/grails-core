@@ -19,11 +19,13 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.property.DomainProperty
-import org.grails.scaffolding.registry.DomainOutputRendererRegistry
-import org.grails.scaffolding.registry.DomainInputRendererRegistry
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.annotation.Autowired
+
+import org.grails.scaffolding.model.property.DomainProperty
+import org.grails.scaffolding.registry.DomainInputRendererRegistry
+import org.grails.scaffolding.registry.DomainOutputRendererRegistry
 
 /**
  * @see {@link PropertyMarkupRenderer}

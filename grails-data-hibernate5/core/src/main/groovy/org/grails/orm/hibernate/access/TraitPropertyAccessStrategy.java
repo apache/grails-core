@@ -19,8 +19,11 @@
 
 package org.grails.orm.hibernate.access;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
 import org.codehaus.groovy.transform.trait.Traits;
-import org.grails.datastore.mapping.reflect.NameUtils;
+
 import org.hibernate.property.access.spi.Getter;
 import org.hibernate.property.access.spi.GetterFieldImpl;
 import org.hibernate.property.access.spi.GetterMethodImpl;
@@ -29,10 +32,10 @@ import org.hibernate.property.access.spi.PropertyAccessStrategy;
 import org.hibernate.property.access.spi.Setter;
 import org.hibernate.property.access.spi.SetterFieldImpl;
 import org.hibernate.property.access.spi.SetterMethodImpl;
+
 import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
  * Support reading and writing trait fields with Hibernate 5+

@@ -19,17 +19,6 @@
 
 package org.grails.datastore.mapping.reflect;
 
-import org.codehaus.groovy.transform.trait.Traits;
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
-import org.grails.datastore.mapping.engine.EntityAccess;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.springframework.cglib.reflect.FastClass;
-import org.springframework.core.convert.ConversionException;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.util.ReflectionUtils;
-
 import java.beans.PropertyDescriptor;
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -38,6 +27,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.codehaus.groovy.transform.trait.Traits;
+
+import org.springframework.cglib.reflect.FastClass;
+import org.springframework.core.convert.ConversionException;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.util.ReflectionUtils;
+
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
+import org.grails.datastore.mapping.engine.EntityAccess;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
 
 /**
  * Uses field reflection or CGlib to improve performance

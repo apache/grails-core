@@ -18,17 +18,18 @@
  */
 package org.grails.spring.context.support
 
-import grails.core.support.GrailsApplicationAware
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import grails.core.GrailsApplication
+
+import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
-import org.springframework.beans.factory.config.BeanDefinition
-
 import org.springframework.transaction.interceptor.TransactionProxyFactoryBean
-import org.springframework.beans.factory.FactoryBean
+
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
 
 /**
  * Applies property configuration from a Map with bean names as keys and bean properties as name/value Maps

@@ -19,20 +19,22 @@
 package org.grails.orm.hibernate.proxy;
 
 
+import java.io.Serializable;
+
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
+
+import org.hibernate.collection.spi.PersistentCollection;
+import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.proxy.HibernateProxyHelper;
+import org.hibernate.proxy.LazyInitializer;
+
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.proxy.JavassistProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.hibernate.collection.spi.PersistentCollection;
-import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.proxy.HibernateProxyHelper;
-import org.hibernate.proxy.LazyInitializer;
-
-import java.io.Serializable;
 
 /**
  * Implementation of the ProxyHandler interface for Hibernate.

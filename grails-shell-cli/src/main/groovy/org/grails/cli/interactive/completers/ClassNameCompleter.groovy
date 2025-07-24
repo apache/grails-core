@@ -18,13 +18,13 @@
  */
 package org.grails.cli.interactive.completers
 
-import groovy.transform.CompileStatic
-import org.grails.io.support.PathMatchingResourcePatternResolver
-import org.grails.io.support.Resource
-
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ConcurrentSkipListSet
 
+import groovy.transform.CompileStatic
+
+import org.grails.io.support.PathMatchingResourcePatternResolver
+import org.grails.io.support.Resource
 
 /**
  * A completer that completes class names

@@ -18,10 +18,11 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.PendingFeature
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.PlantCategory
 import org.apache.grails.data.testing.tck.domains.Publication
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.PendingFeature
 
 /**
  * @author graemerocher

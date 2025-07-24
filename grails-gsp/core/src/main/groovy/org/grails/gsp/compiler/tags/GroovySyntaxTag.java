@@ -18,17 +18,18 @@
  */
 package org.grails.gsp.compiler.tags;
 
-import grails.util.GrailsStringUtils;
-import org.grails.gsp.GroovyPage;
-import org.grails.gsp.compiler.GroovyPageParser;
-import org.grails.taglib.GrailsTagException;
-import org.springframework.util.Assert;
-
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.springframework.util.Assert;
+
+import grails.util.GrailsStringUtils;
+import org.grails.gsp.GroovyPage;
+import org.grails.gsp.compiler.GroovyPageParser;
+import org.grails.taglib.GrailsTagException;
 
 /**
  * <p>A tag type that gets translated directly into Groovy syntax by the GSP parser.</p>

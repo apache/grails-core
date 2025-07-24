@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils

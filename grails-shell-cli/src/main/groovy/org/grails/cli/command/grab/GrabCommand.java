@@ -23,10 +23,11 @@ import java.util.List;
 import joptsimple.OptionSet;
 
 import org.springframework.boot.cli.command.OptionParsingCommand;
+import org.springframework.boot.cli.command.status.ExitStatus;
+
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
 import org.grails.cli.command.options.SourceOptions;
-import org.springframework.boot.cli.command.status.ExitStatus;
 import org.grails.cli.compiler.GroovyCompiler;
 import org.grails.cli.compiler.GroovyCompilerConfiguration;
 import org.grails.cli.compiler.RepositoryConfigurationFactory;

@@ -19,26 +19,6 @@
 
 package org.grails.datastore.gorm.validation.constraints.builder;
 
-import grails.gorm.validation.ConstrainedProperty;
-import grails.gorm.validation.Constraint;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import groovy.lang.MetaProperty;
-import groovy.lang.MissingMethodException;
-import groovy.lang.MissingPropertyException;
-import groovy.util.BuilderSupport;
-import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
-import grails.gorm.validation.DefaultConstrainedProperty;
-import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.InvalidPropertyException;
-
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,6 +26,29 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaProperty;
+import groovy.lang.MissingMethodException;
+import groovy.lang.MissingPropertyException;
+import groovy.util.BuilderSupport;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.InvalidPropertyException;
+
+import grails.gorm.validation.ConstrainedProperty;
+import grails.gorm.validation.Constraint;
+import grails.gorm.validation.DefaultConstrainedProperty;
+import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
+import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
  * Builder used as a delegate within the "constraints" closure of GrailsDomainClass instances .
@@ -255,7 +258,7 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
                 }
                 //add any metaContraints
                 importFromConstrainedPropertyAttributes.putAll(importFromConstrainedProperty.getMetaConstraints());
-                
+
                 createNode(targetPropertyName, importFromConstrainedPropertyAttributes);
             }
         }

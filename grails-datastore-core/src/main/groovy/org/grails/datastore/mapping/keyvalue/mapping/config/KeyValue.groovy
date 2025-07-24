@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.keyvalue.mapping.config
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.Property
 
 /**

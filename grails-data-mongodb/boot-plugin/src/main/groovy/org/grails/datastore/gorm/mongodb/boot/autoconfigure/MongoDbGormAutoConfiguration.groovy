@@ -15,13 +15,14 @@
 
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
+import java.beans.Introspector
+
+import groovy.transform.CompileStatic
+
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
-import org.grails.datastore.mapping.mongo.MongoDatastore
-import org.grails.datastore.mapping.services.Service
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
@@ -38,7 +39,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.transaction.PlatformTransactionManager
 
-import java.beans.Introspector
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
+import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.services.Service
 
 /**
  *

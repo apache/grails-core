@@ -18,12 +18,13 @@
  */
 package grails.validation;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.grails.core.lifecycle.ShutdownOperations;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.grails.core.lifecycle.ShutdownOperations;
 
 /**
  * Binding operations that are deferred until either validate() or save() are called.

@@ -18,10 +18,13 @@
  */
 package org.grails.cli.profile.steps
 
-import grails.build.logging.GrailsConsole
-import grails.util.GrailsNameUtils
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
+import grails.build.logging.GrailsConsole
+import grails.util.GrailsNameUtils
 import org.grails.cli.interactive.completers.ClassNameCompleter
 import org.grails.cli.profile.AbstractStep
 import org.grails.cli.profile.ExecutionContext
@@ -29,8 +32,6 @@ import org.grails.cli.profile.Profile
 import org.grails.cli.profile.commands.templates.SimpleTemplate
 import org.grails.cli.profile.support.ArtefactVariableResolver
 import org.grails.io.support.Resource
-
-import java.nio.charset.StandardCharsets
 
 /**
  * A {@link org.grails.cli.profile.Step} that renders a template
@@ -125,7 +126,7 @@ class RenderStep extends AbstractStep {
 
         [GrailsNameUtils.getClassName(artifactName), artifactPackage]
     }
-    
+
     protected String relativePath(File relbase, File file) {
         def pathParts = []
         def currentFile = file
@@ -135,6 +136,6 @@ class RenderStep extends AbstractStep {
         }
         pathParts.reverse().join('/')
     }
-    
+
 
 }

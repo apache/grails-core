@@ -18,25 +18,28 @@
  */
 package org.grails.gsp.compiler
 
-import grails.config.ConfigMap
-import org.apache.commons.logging.LogFactory
-import org.apache.commons.logging.Log
-import org.apache.grails.common.properties.PropertyFileUtils
+import java.util.concurrent.Callable
+import java.util.concurrent.CompletionService
+import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+
+import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
+
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+
+import grails.config.ConfigMap
+import org.apache.grails.common.properties.PropertyFileUtils
 import org.grails.config.CodeGenConfig
 import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation
 import org.grails.taglib.encoder.OutputEncodingSettings
-import groovy.transform.CompileStatic
-import java.util.concurrent.Callable
-import java.util.concurrent.Executors
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.ExecutorCompletionService
-import java.util.concurrent.CompletionService
-import java.util.concurrent.Future
 
 /**
  * Used to compile GSP files into a specified target directory.
@@ -113,26 +116,26 @@ class GroovyPageCompiler {
                     collationLevel = 1
                 }
                 def collatedSrcFiles = srcFiles.collate(collationLevel)
-                for(int index = 0; index < collatedSrcFiles.size(); index++) {        
+                for(int index = 0; index < collatedSrcFiles.size(); index++) {
                     def gspFiles = collatedSrcFiles[index]
-                    
+
                     futures.add(completionService.submit({ ->
                         def results = [:]
                         for(int gspIndex = 0; gspIndex < gspFiles.size(); gspIndex++) {
                             File gsp = gspFiles[gspIndex]
                             try {
-                                compileGSP(viewsDir, gsp, viewPrefix, packagePrefix, results)    
+                                compileGSP(viewsDir, gsp, viewPrefix, packagePrefix, results)
                             } catch(Exception ex) {
                                 LOG.error("Error Compiling GSP File: ${gsp.name} - ${ex.message}")
                                 throw ex
                             }
                         }
-                        return results 
+                        return results
                     } as Callable) as Future<Map>)
                 }
 
                 int pending = futures.size()
-                
+
                 while (pending > 0) {
                     // Wait for up to 100ms to see if anything has completed.
                     // The completed future is returned if one is found; otherwise null.
@@ -241,7 +244,7 @@ class GroovyPageCompiler {
         }
 
         return compileGSPResults
-        
+
     }
 
     // find out the relative path from relbase to file

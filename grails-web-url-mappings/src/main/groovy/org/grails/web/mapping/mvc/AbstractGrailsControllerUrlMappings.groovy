@@ -18,6 +18,13 @@
  */
 package org.grails.web.mapping.mvc
 
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpMethod
+
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -28,13 +35,8 @@ import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappings
 import grails.web.mapping.UrlMappingsHolder
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.http.HttpMethod
-
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A {@link UrlMappingsHolder} implementation that matches URLs directly onto controller instances

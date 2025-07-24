@@ -18,13 +18,14 @@
  */
 package org.grails.encoder
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
-
-import grails.util.GrailsMetaClassUtils
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.NullObject
+
 import org.springframework.util.Assert
+
+import grails.util.Environment
+import grails.util.GrailsMetaClassUtils
 
 /**
  * Helper methods for Codec metaclass operations.
@@ -36,7 +37,7 @@ class CodecMetaClassSupport {
     static final Object[] EMPTY_ARGS = []
     static final String ENCODE_AS_PREFIX="encodeAs"
     static final String DECODE_PREFIX="decode"
-    
+
     /**
      * Adds "encodeAs*" and "decode*" metamethods for given codecClass
      *
@@ -49,7 +50,7 @@ class CodecMetaClassSupport {
 
         String codecName = resolveCodecName(codecFactory)
         Assert.hasText(codecName, "No resolvable codec name")
-        
+
         String encodeMethodName = encodeMethodNameClosure(codecName)
         String decodeMethodName = decodeMethodNameClosure(codecName)
 
@@ -112,12 +113,12 @@ class CodecMetaClassSupport {
 
     /**
      * returns given parameter if it's not a Groovy NullObject (and is not null)
-     * 
+     *
      * The check is made by looking at the Object's class, since NullObject.is & equals give wrong results (Groovy bug?).
-     * 
+     *
      * A NullObject get's passed to the closure in delegate perhaps because of a Groovy bug or feature
      * This happens when a NullObject's MetaMethod is called.
-     * 
+     *
      * @param delegate
      * @return
      */
@@ -132,7 +133,7 @@ class CodecMetaClassSupport {
             addMetaMethod(targetMetaClasses, methodNameClosure(aliasName), methodClosure)
         }
     }
-    
+
     private String resolveCodecName(CodecFactory codecFactory) {
         codecFactory.encoder?.codecIdentifier?.codecName ?: codecFactory.decoder?.codecIdentifier?.codecName
     }
@@ -148,10 +149,10 @@ class CodecMetaClassSupport {
             GrailsMetaClassUtils.getExpandoMetaClass(clazz)
         }
     }
-    
+
     protected void addMetaMethod(List<ExpandoMetaClass> targetMetaClasses, String methodName, Closure closure) {
-        targetMetaClasses.each { ExpandoMetaClass emc -> 
-            emc."${methodName}" << closure 
+        targetMetaClasses.each { ExpandoMetaClass emc ->
+            emc."${methodName}" << closure
         }
     }
 }

@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.core
 
 import groovy.transform.CompileStatic
+
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 

@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.MethodNode
+
 import org.grails.datastore.gorm.transform.AstPropertyResolveUtils
 
 import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface

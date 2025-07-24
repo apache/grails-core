@@ -18,11 +18,11 @@
  */
 package org.grails.web.converters;
 
-import groovy.lang.Closure;
-
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+
+import groovy.lang.Closure;
 
 import jakarta.servlet.http.HttpServletResponse;
 

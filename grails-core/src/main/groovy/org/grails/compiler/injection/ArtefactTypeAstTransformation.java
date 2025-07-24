@@ -18,14 +18,12 @@
  */
 package org.grails.compiler.injection;
 
-import grails.artefact.Artefact;
-import grails.build.logging.GrailsConsole;
-import grails.compiler.ast.AllArtefactClassInjector;
-import grails.compiler.ast.ClassInjector;
-import grails.compiler.ast.GlobalClassInjector;
-import grails.compiler.ast.GrailsArtefactClassInjector;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 import groovy.transform.CompilationUnitAware;
-import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -39,10 +37,13 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import grails.artefact.Artefact;
+import grails.build.logging.GrailsConsole;
+import grails.compiler.ast.AllArtefactClassInjector;
+import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.GlobalClassInjector;
+import grails.compiler.ast.GrailsArtefactClassInjector;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * A transformation used to apply transformers to classes not located in Grails
@@ -55,13 +56,13 @@ import java.util.List;
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransformation implements CompilationUnitAware {
     private static final ClassNode MY_TYPE = new ClassNode(Artefact.class);
-    
+
     protected CompilationUnit compilationUnit;
 
     public void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
         AnnotatedNode parent = (AnnotatedNode) astNodes[1];
         AnnotationNode node = (AnnotationNode) astNodes[0];
-        
+
         if (!(node instanceof AnnotationNode) || !(parent instanceof AnnotatedNode)) {
             throw new RuntimeException("Internal error: wrong types: $node.class / $parent.class");
         }
@@ -79,18 +80,18 @@ public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransf
         if(isApplied(cNode)) {
             return;
         }
-        
+
         String artefactType = resolveArtefactType(sourceUnit, node, cNode);
         if(artefactType != null) {
             AbstractGrailsArtefactTransformer.addToTransformedClasses(cNode.getName());
         }
         performInjectionOnArtefactType(sourceUnit, cNode, artefactType);
-        
+
         performTraitInjectionOnArtefactType(sourceUnit, cNode, artefactType);
-        
+
         postProcess(sourceUnit, node, cNode, artefactType);
-        
-        markApplied(cNode);        
+
+        markApplied(cNode);
     }
 
     protected void performTraitInjectionOnArtefactType(SourceUnit sourceUnit,
@@ -114,7 +115,7 @@ public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransf
 
     protected void postProcess(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, String artefactType) {
         if(!getAnnotationType().equals(annotationNode.getClassNode())) {
-            // add @Artefact annotation to resulting class so that "short cut" annotations like @TagLib 
+            // add @Artefact annotation to resulting class so that "short cut" annotations like @TagLib
             // also produce an @Artefact annotation in the resulting class file
             AnnotationNode annotation=new AnnotationNode(getAnnotationType());
             annotation.addMember("value", new ConstantExpression(artefactType));

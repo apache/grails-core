@@ -19,10 +19,8 @@
 
 package org.grails.compiler.gorm
 
-import grails.gorm.dirty.checking.DirtyCheck
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -33,6 +31,9 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import grails.gorm.dirty.checking.DirtyCheck
+import org.apache.grails.common.compiler.GroovyTransformOrder
 
 /**
  * Applies the DirtyCheck transformation

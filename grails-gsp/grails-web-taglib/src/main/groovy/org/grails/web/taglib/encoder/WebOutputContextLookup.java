@@ -19,6 +19,13 @@
 
 package org.grails.web.taglib.encoder;
 
+import java.io.Writer;
+
+import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.core.Ordered;
+import org.springframework.web.context.request.RequestAttributes;
+
 import grails.core.GrailsApplication;
 import org.grails.encoder.EncodingStateRegistry;
 import org.grails.taglib.AbstractTemplateVariableBinding;
@@ -31,11 +38,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.taglib.WebRequestTemplateVariableBinding;
 import org.grails.web.util.GrailsApplicationAttributes;
 import org.grails.web.util.WebUtils;
-import org.springframework.core.Ordered;
-import org.springframework.web.context.request.RequestAttributes;
-
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.Writer;
 
 public class WebOutputContextLookup implements OutputContextLookup, Ordered {
     private static final WebOutputContext webOutputContext = new WebOutputContext();

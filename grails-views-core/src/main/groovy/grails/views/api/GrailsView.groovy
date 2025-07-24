@@ -19,6 +19,10 @@
 
 package grails.views.api
 
+import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+
 import grails.config.Config
 import grails.core.support.proxy.ProxyHandler
 import grails.views.GrailsViewTemplate
@@ -28,9 +32,7 @@ import grails.views.WriterProvider
 import grails.views.api.internal.DefaultGrailsViewHelper
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeUtility
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.context.MessageSource
 
 /**
  * A trait for all view types to extend to add methods to generate links, render other templates and so on

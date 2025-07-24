@@ -19,14 +19,16 @@
 
 package grails.views
 
-import grails.util.GrailsNameUtils
-import grails.views.api.GrailsView
-import groovy.text.Template
-import groovy.transform.CompileStatic
-import org.springframework.util.ReflectionUtils
-
 import java.lang.reflect.Field
 import java.lang.reflect.Method
+
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import org.springframework.util.ReflectionUtils
+
+import grails.util.GrailsNameUtils
+import grails.views.api.GrailsView
 
 /**
  * A base template class that all Grails view templates should extend from

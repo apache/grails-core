@@ -18,6 +18,11 @@
  */
 package org.grails.web.servlet.context;
 
+import jakarta.servlet.ServletContext;
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.web.context.WebApplicationContext;
+
 import grails.core.ApplicationAttributes;
 import grails.core.GrailsApplication;
 import grails.core.GrailsClass;
@@ -25,10 +30,6 @@ import grails.persistence.support.PersistenceContextInterceptor;
 import grails.plugins.GrailsPluginManager;
 import grails.web.servlet.bootstrap.GrailsBootstrapClass;
 import org.grails.web.servlet.boostrap.BootstrapArtefactHandler;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.web.context.WebApplicationContext;
-
-import jakarta.servlet.ServletContext;
 
 /**
  * A common class where shared configurational methods can reside.

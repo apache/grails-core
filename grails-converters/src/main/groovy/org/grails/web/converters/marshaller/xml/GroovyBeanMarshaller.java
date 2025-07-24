@@ -18,23 +18,24 @@
  */
 package org.grails.web.converters.marshaller.xml;
 
-import grails.converters.XML;
-import grails.persistence.Entity;
-import grails.persistence.PersistenceMethod;
-import grails.web.controllers.ControllerMethod;
-import groovy.lang.GroovyObject;
-
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
+import groovy.lang.GroovyObject;
+
+import org.springframework.beans.BeanUtils;
+
+import grails.converters.XML;
+import grails.persistence.Entity;
+import grails.persistence.PersistenceMethod;
+import grails.web.controllers.ControllerMethod;
 import org.grails.core.util.IncludeExcludeSupport;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.IncludeExcludePropertyMarshaller;
-import org.springframework.beans.BeanUtils;
 
 /**
  * @author Siegfried Puchbauer

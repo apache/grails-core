@@ -22,10 +22,6 @@ import jakarta.persistence.FlushModeType;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.grails.datastore.mapping.core.ConnectionNotFoundException;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.core.DatastoreUtils;
-import org.grails.datastore.mapping.core.Session;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
@@ -34,6 +30,11 @@ import org.springframework.transaction.support.AbstractPlatformTransactionManage
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
+
+import org.grails.datastore.mapping.core.ConnectionNotFoundException;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.DatastoreUtils;
+import org.grails.datastore.mapping.core.Session;
 
 /**
  * A {@link org.springframework.transaction.PlatformTransactionManager} instance that

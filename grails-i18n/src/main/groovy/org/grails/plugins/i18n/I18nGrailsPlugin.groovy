@@ -18,14 +18,16 @@
  */
 package org.grails.plugins.i18n
 
-import grails.plugins.Plugin
-import grails.util.BuildSettings
-import grails.util.GrailsUtil
+import java.nio.file.Files
+
 import groovy.util.logging.Slf4j
+
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.core.io.FileSystemResource
 
-import java.nio.file.Files
+import grails.plugins.Plugin
+import grails.util.BuildSettings
+import grails.util.GrailsUtil
 
 /**
  * Configures Grails' internationalisation support.

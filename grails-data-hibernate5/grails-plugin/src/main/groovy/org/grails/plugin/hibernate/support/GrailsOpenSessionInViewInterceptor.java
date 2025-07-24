@@ -18,9 +18,9 @@
  */
 package org.grails.plugin.hibernate.support;
 
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
+
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.orm.hibernate5.SessionHolder;
@@ -29,6 +29,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.WebRequest;
 
+import org.grails.orm.hibernate.AbstractHibernateDatastore;
 
 /**
  * Extends the default spring OSIV and doesn't flush the session if it has been set

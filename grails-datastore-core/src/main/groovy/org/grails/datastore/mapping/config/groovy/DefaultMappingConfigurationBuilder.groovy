@@ -19,11 +19,13 @@
 package org.grails.datastore.mapping.config.groovy
 
 import groovy.transform.CompileStatic
+
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.validation.DataBinder
+
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.reflect.NameUtils
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
 
 /**
  * @author Graeme Rocher

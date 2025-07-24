@@ -19,10 +19,10 @@
 
 package org.grails.scaffolding.registry.input
 
+import java.sql.Blob
+
 import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.scaffolding.registry.DomainInputRenderer
-
-import java.sql.Blob
 
 /**
  * The default renderer for rendering byte[] or Blob properties

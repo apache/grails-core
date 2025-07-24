@@ -21,9 +21,11 @@ package org.grails.gsp;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.core.io.StaticResourceLoader;
+
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
+
+import org.grails.core.io.StaticResourceLoader;
 
 /**
  * A StaticResourceLoader that loads GSPs from a local grails-app folder instead of from WEB-INF in

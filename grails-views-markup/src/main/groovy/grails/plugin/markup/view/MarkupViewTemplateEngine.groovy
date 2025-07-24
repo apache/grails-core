@@ -19,12 +19,6 @@
 
 package grails.plugin.markup.view
 
-import grails.plugin.markup.view.internal.MarkupViewsTransform
-import grails.views.ResolvableGroovyTemplateEngine
-import grails.views.ViewCompilationException
-import grails.views.WritableScriptTemplate
-import grails.views.api.GrailsView
-import grails.views.compiler.ViewsTransform
 import groovy.text.Template
 import groovy.text.markup.MarkupTemplateEngine
 import groovy.text.markup.TemplateConfiguration
@@ -35,6 +29,13 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.CompilationCustomizer
+
+import grails.plugin.markup.view.internal.MarkupViewsTransform
+import grails.views.ResolvableGroovyTemplateEngine
+import grails.views.ViewCompilationException
+import grails.views.WritableScriptTemplate
+import grails.views.api.GrailsView
+import grails.views.compiler.ViewsTransform
 
 /**
  * A {@link ResolvableGroovyTemplateEngine} that uses Groovy's {@link MarkupTemplateEngine} internally

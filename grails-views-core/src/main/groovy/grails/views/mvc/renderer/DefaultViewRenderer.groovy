@@ -19,6 +19,12 @@
 
 package grails.views.mvc.renderer
 
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
+import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.servlet.view.AbstractUrlBasedView
+
 import grails.core.support.proxy.ProxyHandler
 import grails.rest.render.RenderContext
 import grails.rest.render.Renderer
@@ -26,13 +32,9 @@ import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.views.resolve.TemplateResolverUtils
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.web.servlet.ModelAndView
-import org.springframework.web.servlet.view.AbstractUrlBasedView
 
 /**
  * A renderer implementation that looks up a view from the ViewResolver
@@ -101,7 +103,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         if (namespace) {
             view = (AbstractUrlBasedView)viewResolver.resolveView("/${namespace}${viewUri}", request, response)
         }
-        
+
         if (view == null) {
             view = (AbstractUrlBasedView)viewResolver.resolveView(viewUri, request, response)
         }

@@ -18,13 +18,14 @@
  */
 package org.grails.test.support
 
-import grails.util.GrailsClassUtils
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
+
+import grails.util.GrailsClassUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 /**
  * Establishes a rollback only transaction for running a test in.

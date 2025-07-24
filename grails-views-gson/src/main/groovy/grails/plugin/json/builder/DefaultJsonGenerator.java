@@ -18,14 +18,6 @@
  */
 package grails.plugin.json.builder;
 
-import groovy.json.JsonDelegate;
-import groovy.json.JsonException;
-import groovy.lang.Closure;
-import groovy.util.Expando;
-import org.apache.groovy.json.internal.CharBuf;
-import org.apache.groovy.json.internal.Chr;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -45,6 +37,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import groovy.json.JsonDelegate;
+import groovy.json.JsonException;
+import groovy.lang.Closure;
+import groovy.util.Expando;
+import org.apache.groovy.json.internal.CharBuf;
+import org.apache.groovy.json.internal.Chr;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import static grails.plugin.json.builder.JsonOutput.CLOSE_BRACE;
 import static grails.plugin.json.builder.JsonOutput.CLOSE_BRACKET;

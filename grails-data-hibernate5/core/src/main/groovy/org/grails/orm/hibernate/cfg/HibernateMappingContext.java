@@ -18,10 +18,15 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import grails.gorm.annotation.Entity;
-import grails.gorm.hibernate.HibernateEntity;
+import java.lang.annotation.Annotation;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
+
+import org.springframework.validation.Errors;
+
+import grails.gorm.annotation.Entity;
+import grails.gorm.hibernate.HibernateEntity;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory;
 import org.grails.datastore.mapping.config.Property;
@@ -41,9 +46,6 @@ import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.springframework.validation.Errors;
-
-import java.lang.annotation.Annotation;
 
 /**
  * A Mapping context for Hibernate

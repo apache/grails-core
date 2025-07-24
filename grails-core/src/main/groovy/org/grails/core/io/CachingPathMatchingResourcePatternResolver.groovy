@@ -21,6 +21,7 @@ package org.grails.core.io
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+
 import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver

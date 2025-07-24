@@ -19,6 +19,7 @@
 package org.grails.spring.context
 
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContext
 
 /**

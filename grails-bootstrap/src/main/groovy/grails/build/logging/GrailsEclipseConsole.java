@@ -18,10 +18,10 @@
  */
 package grails.build.logging;
 
+import java.io.IOException;
+
 import jline.Terminal;
 import jline.UnsupportedTerminal;
-
-import java.io.IOException;
 
 /**
  * This class is meant to keep changes made in support of Eclipse separate from

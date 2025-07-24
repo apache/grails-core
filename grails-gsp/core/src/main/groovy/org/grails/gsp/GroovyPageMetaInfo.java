@@ -16,25 +16,6 @@
  */
 package org.grails.gsp;
 
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsApplicationAware;
-import grails.io.IOUtils;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.util.CacheEntry;
-import groovy.lang.GroovySystem;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.grails.encoder.Encoder;
-import org.grails.gsp.compiler.GroovyPageParser;
-import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.taglib.TagLibraryLookup;
-import org.grails.taglib.encoder.WithCodecHelper;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.util.ReflectionUtils;
-
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -51,6 +32,28 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
+import groovy.lang.GroovySystem;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.util.ReflectionUtils;
+
+import grails.core.GrailsApplication;
+import grails.core.support.GrailsApplicationAware;
+import grails.io.IOUtils;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.util.CacheEntry;
+import org.grails.encoder.Encoder;
+import org.grails.gsp.compiler.GroovyPageParser;
+import org.grails.gsp.jsp.TagLibraryResolver;
+import org.grails.taglib.TagLibraryLookup;
+import org.grails.taglib.encoder.WithCodecHelper;
 
 /**
  * Encapsulates the information necessary to describe a GSP.
@@ -100,7 +103,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
     private CacheEntry<Resource> shouldReloadCacheEntry = new CacheEntry<Resource>();
     public static String DEFAULT_PLUGIN_PATH = "";
-    
+
     volatile boolean metaClassShouldBeRemoved=false;
 
     public GroovyPageMetaInfo() {
@@ -526,7 +529,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
     public void removePageMetaClass() {
         metaClassShouldBeRemoved = true;
-        if(pageClass!=null) { 
+        if(pageClass!=null) {
             GroovySystem.getMetaClassRegistry().removeMetaClass(pageClass);
         }
     }

@@ -20,6 +20,7 @@
 package org.grails.gsp
 
 import groovy.transform.CompileStatic
+
 import org.grails.taglib.TagLibNamespaceMethodDispatcher
 import org.grails.taglib.encoder.OutputContext
 

@@ -21,8 +21,9 @@ package org.grails.datastore.mapping.transactions;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import org.grails.datastore.mapping.core.Session;
 import org.springframework.transaction.support.ResourceHolderSupport;
+
+import org.grails.datastore.mapping.core.Session;
 
 /**
  * Holds a reference to one or more sessions.

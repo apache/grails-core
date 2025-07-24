@@ -18,19 +18,21 @@
  */
 package org.grails.datastore.mapping.config
 
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import groovy.util.logging.Slf4j
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException
-import org.grails.datastore.mapping.reflect.NameUtils
+
 import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.reflect.NameUtils
 
 /**
  * A generic configuration builder that implementers can implement to construct the configuration from the source {@link PropertyResolver}

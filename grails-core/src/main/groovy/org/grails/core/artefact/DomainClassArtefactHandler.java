@@ -18,25 +18,27 @@
  */
 package org.grails.core.artefact;
 
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.net.URL;
+
+import groovy.lang.Closure;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.InnerClassNode;
+
+import org.springframework.core.Ordered;
+
 import grails.artefact.Artefact;
 import grails.core.ArtefactHandlerAdapter;
 import grails.core.GrailsApplication;
 import grails.core.GrailsClass;
 import grails.core.GrailsDomainClass;
 import grails.core.support.GrailsApplicationAware;
-import groovy.lang.Closure;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.InnerClassNode;
 import org.grails.compiler.injection.GrailsASTUtils;
 import org.grails.core.DefaultGrailsDomainClass;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.io.support.Resource;
-import org.springframework.core.Ordered;
-
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.net.URL;
 
 /**
  * Evaluates the conventions that define a domain class in Grails.
@@ -114,7 +116,7 @@ public class DomainClassArtefactHandler extends ArtefactHandlerAdapter implement
         }
         return retval;
     }
-    
+
     public static boolean isDomainClass(Class<?> clazz) {
         return clazz != null && doIsDomainClassCheck(clazz);
 

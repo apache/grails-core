@@ -18,22 +18,24 @@
  */
 package org.grails.testing
 
-import grails.config.Config
-import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplication
-import grails.spring.BeanBuilder
-import grails.util.Holders
-import grails.validation.DeferredBindingActions
+import java.lang.reflect.Method
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.core.lifecycle.ShutdownOperations
+
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.util.ClassUtils
 
-import java.lang.reflect.Method
+import grails.config.Config
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
+import grails.spring.BeanBuilder
+import grails.util.Holders
+import grails.validation.DeferredBindingActions
+import org.grails.core.lifecycle.ShutdownOperations
 
 @CompileStatic
 trait GrailsUnitTest {

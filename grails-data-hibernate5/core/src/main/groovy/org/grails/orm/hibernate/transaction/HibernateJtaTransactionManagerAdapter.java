@@ -27,6 +27,7 @@ import jakarta.transaction.Synchronization;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
+
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -37,25 +38,25 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * Adapter for adding transaction controlling hooks for supporting
  * Hibernate's org.hibernate.engine.transaction.Isolater class's interaction with transactions
- * 
+ *
  * This is required when there is no real JTA transaction manager in use and Spring's
  * {@link org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy} is used.
- * 
+ *
  * Without this solution, using Hibernate's TableGenerator identity strategies will fail to support transactions.
  * The id generator will commit the current transaction and break transactional behaviour.
- * 
+ *
  * The javadoc of Hibernate's {@code TableHiLoGenerator} states this. However this isn't mentioned in the javadocs of other TableGenerators.
- * 
+ *
  * @author Lari Hotari
  */
 public class HibernateJtaTransactionManagerAdapter implements TransactionManager {
     PlatformTransactionManager springTransactionManager;
     ThreadLocal<TransactionStatus> currentTransactionHolder= new ThreadLocal<>();
-    
+
     public HibernateJtaTransactionManagerAdapter(PlatformTransactionManager springTransactionManager) {
         this.springTransactionManager = springTransactionManager;
     }
-    
+
     @Override
     public void begin() {
         TransactionDefinition definition=new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -72,12 +73,12 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
     public void rollback() throws IllegalStateException, SecurityException {
         springTransactionManager.rollback(getAndRemoveStatus());
     }
-    
+
     @Override
     public void setRollbackOnly() throws IllegalStateException {
         currentTransactionHolder.get().setRollbackOnly();
     }
-    
+
     protected TransactionStatus getAndRemoveStatus() {
         TransactionStatus status=currentTransactionHolder.get();
         currentTransactionHolder.remove();
@@ -99,7 +100,7 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
             } else {
                 return Status.STATUS_ACTIVE;
             }
-        } else { 
+        } else {
             return Status.STATUS_NO_TRANSACTION;
         }
     }
@@ -121,23 +122,23 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
         currentTransactionHolder.set(springTransactionManager.getTransaction(new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_NOT_SUPPORTED)));
         return new TransactionAdapter(springTransactionManager, currentTransactionHolder);
     }
-    
+
     @Override
     public void setTransactionTimeout(int seconds) {
-        
+
     }
 
     private static class TransactionAdapter implements Transaction {
         PlatformTransactionManager springTransactionManager;
         TransactionStatus transactionStatus;
         ThreadLocal<TransactionStatus> currentTransactionHolder;
-        
+
         TransactionAdapter(PlatformTransactionManager springTransactionManager, ThreadLocal<TransactionStatus> currentTransactionHolder) {
             this.springTransactionManager = springTransactionManager;
             this.currentTransactionHolder = currentTransactionHolder;
             this.transactionStatus = currentTransactionHolder.get();
         }
-        
+
         @Override
         public void commit() throws
                 SecurityException, IllegalStateException {
@@ -169,7 +170,7 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
                 public void beforeCompletion() {
                     sync.beforeCompletion();
                 }
-                
+
                 @Override
                 public void afterCompletion(int status) {
                     int jtaStatus;
@@ -182,7 +183,7 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
                     }
                     sync.afterCompletion(jtaStatus);
                 }
-                
+
                 public void suspend() { }
                 public void resume() { }
                 public void flush() { }
@@ -194,14 +195,14 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
         @Override
         public void rollback() throws IllegalStateException, SystemException {
             springTransactionManager.rollback(transactionStatus);
-            currentTransactionHolder.remove();            
+            currentTransactionHolder.remove();
         }
 
         @Override
         public void setRollbackOnly() throws IllegalStateException, SystemException {
             transactionStatus.setRollbackOnly();
         }
-        
+
         @Override
         public boolean equals(Object obj) {
             if(obj == this) {
@@ -221,7 +222,7 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
                 return false;
             }
         }
-        
+
         @Override
         public int hashCode() {
             return transactionStatus != null ? transactionStatus.hashCode() : System.identityHashCode(this);

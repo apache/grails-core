@@ -20,16 +20,18 @@
 package org.grails.datastore.bson.codecs.decoders
 
 import groovy.transform.CompileStatic
+
 import org.bson.BsonReader
 import org.bson.BsonType
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.types.ObjectId
+
+import org.springframework.dao.DataIntegrityViolationException
+
 import org.grails.datastore.bson.codecs.PropertyDecoder
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Identity
-import org.springframework.dao.DataIntegrityViolationException
-
 
 /**
  * A {@PropertyDecoder} capable of decoding the {@link org.grails.datastore.mapping.model.types.Identity}

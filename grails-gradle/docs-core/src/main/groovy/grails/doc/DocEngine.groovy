@@ -18,26 +18,31 @@
  */
 package grails.doc
 
-import grails.doc.filters.HeaderFilter
-import grails.doc.filters.LinkTestFilter
-import grails.doc.filters.ListFilter
-
-import java.util.regex.Pattern
-
 import org.radeox.api.engine.WikiRenderEngine
 import org.radeox.api.engine.context.InitialRenderContext
 import org.radeox.engine.BaseRenderEngine
+import org.radeox.filter.EscapeFilter
+import org.radeox.filter.FilterPipe
+import org.radeox.filter.KeyFilter
+import org.radeox.filter.LineFilter
+import org.radeox.filter.MacroFilter
+import org.radeox.filter.MarkFilter
+import org.radeox.filter.NewlineFilter
+import org.radeox.filter.ParagraphFilter
+import org.radeox.filter.ParamFilter
+import org.radeox.filter.StrikeThroughFilter
+import org.radeox.filter.TypographyFilter
 import org.radeox.filter.context.FilterContext
 import org.radeox.filter.regex.RegexFilter
 import org.radeox.filter.regex.RegexTokenFilter
 import org.radeox.macro.BaseMacro
-import org.radeox.macro.CodeMacro
 import org.radeox.macro.MacroLoader
-import org.radeox.macro.parameter.BaseMacroParameter
 import org.radeox.macro.parameter.MacroParameter
 import org.radeox.regex.MatchResult
-import org.radeox.filter.*
-import org.radeox.util.Encoder
+
+import grails.doc.filters.HeaderFilter
+import grails.doc.filters.LinkTestFilter
+import grails.doc.filters.ListFilter
 
 /**
  * A Radeox Wiki engine for generating documentation using a confluence style syntax.

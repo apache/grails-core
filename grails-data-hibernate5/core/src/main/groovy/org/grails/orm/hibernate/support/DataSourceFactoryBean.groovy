@@ -19,11 +19,12 @@
 
 package org.grails.orm.hibernate.support
 
-import org.grails.orm.hibernate.AbstractHibernateDatastore
-import org.grails.orm.hibernate.connections.HibernateConnectionSource
+import javax.sql.DataSource
+
 import org.springframework.beans.factory.FactoryBean
 
-import javax.sql.DataSource
+import org.grails.orm.hibernate.AbstractHibernateDatastore
+import org.grails.orm.hibernate.connections.HibernateConnectionSource
 
 /**
  * A factory class to retrieve a {@link javax.sql.DataSource} from the Hibernate datastore

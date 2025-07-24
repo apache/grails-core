@@ -18,16 +18,6 @@
  */
 package grails.beans.util;
 
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaBeanProperty;
-import groovy.lang.MetaClass;
-import groovy.lang.MetaProperty;
-import groovy.transform.CompileStatic;
-import groovy.util.MapEntry;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.reflect.NameUtils;
-import org.springframework.util.Assert;
-
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +27,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaBeanProperty;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaProperty;
+import groovy.transform.CompileStatic;
+import groovy.util.MapEntry;
+
+import org.springframework.util.Assert;
+
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
  * A map implementation that reads an objects properties lazily using Groovy's MetaClass.

@@ -19,15 +19,23 @@
 
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.gorm.GormEntity;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.EventListenerIntegrator;
-import org.grails.orm.hibernate.GrailsSessionContext;
-import org.grails.orm.hibernate.HibernateEventListeners;
-import org.grails.orm.hibernate.MetadataIntegrator;
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import javax.sql.DataSource;
+
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.MappedSuperclass;
+
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
@@ -48,6 +56,7 @@ import org.hibernate.internal.util.config.ConfigurationHelper;
 import org.hibernate.property.access.spi.PropertyAccessStrategy;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -62,20 +71,15 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.MappedSuperclass;
-import javax.sql.DataSource;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import org.grails.datastore.gorm.GormEntity;
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.EventListenerIntegrator;
+import org.grails.orm.hibernate.GrailsSessionContext;
+import org.grails.orm.hibernate.HibernateEventListeners;
+import org.grails.orm.hibernate.MetadataIntegrator;
+import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate

@@ -19,10 +19,11 @@
 
 package org.grails.scaffolding.registry
 
-import org.grails.scaffolding.model.property.DomainProperty
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.transform.CompileStatic
 
-import java.util.concurrent.atomic.AtomicInteger
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * A registry of domain property renderers sorted by priority and order of addition

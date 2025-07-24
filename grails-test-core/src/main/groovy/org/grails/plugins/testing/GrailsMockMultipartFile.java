@@ -18,11 +18,11 @@
  */
 package org.grails.plugins.testing;
 
-import org.springframework.mock.web.MockMultipartFile;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+
+import org.springframework.mock.web.MockMultipartFile;
 
 /**
  * Extends the default Spring MockMultipartFile to provide an implementation of transferTo that

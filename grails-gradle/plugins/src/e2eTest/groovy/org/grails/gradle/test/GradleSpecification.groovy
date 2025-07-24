@@ -19,15 +19,15 @@
 
 package org.grails.gradle.test
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import org.apache.commons.io.FileUtils
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
-
-import java.nio.file.Files
-import java.nio.file.Path
 
 abstract class GradleSpecification extends Specification {
     private static Path basePath

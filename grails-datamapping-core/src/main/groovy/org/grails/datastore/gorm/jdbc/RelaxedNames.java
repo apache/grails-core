@@ -19,15 +19,13 @@
 
 package org.grails.datastore.gorm.jdbc;
 
-import org.springframework.util.StringUtils;
-
-
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.util.StringUtils;
 
 /**
  * Generates relaxed name variations from a given source.

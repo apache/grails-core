@@ -18,8 +18,8 @@
  */
 package org.grails.compiler.injection;
 
-import grails.compiler.ast.GrailsArtefactClassInjector;
-import grails.validation.ValidationErrors;
+import java.lang.reflect.Modifier;
+
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -44,9 +44,11 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
+
 import org.springframework.validation.Errors;
 
-import java.lang.reflect.Modifier;
+import grails.compiler.ast.GrailsArtefactClassInjector;
+import grails.validation.ValidationErrors;
 
 /**
  * @author Jeff Brown

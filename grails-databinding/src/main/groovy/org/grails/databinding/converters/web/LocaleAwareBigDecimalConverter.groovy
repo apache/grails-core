@@ -18,10 +18,10 @@
  */
 package org.grails.databinding.converters.web
 
-import groovy.transform.CompileStatic
-
 import java.text.DecimalFormat
 import java.text.NumberFormat
+
+import groovy.transform.CompileStatic
 
 /**
  * A ValueConverter that knows how to convert a String to a BigDecimal or a BigInteger and is Locale aware.  The

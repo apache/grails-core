@@ -16,20 +16,22 @@
  */
 package grails.boot.config.tools
 
-import grails.config.Settings
-import grails.io.IOUtils
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import org.apache.grails.common.compiler.asm.AnnotationMetadataReader
+
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.Resource
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.io.support.ResourcePatternResolver
 import org.springframework.util.ClassUtils
 
-import java.lang.annotation.Annotation
+import grails.config.Settings
+import grails.io.IOUtils
+import org.apache.grails.common.compiler.asm.AnnotationMetadataReader
 
 /**
  * Used to scan for classes on the classpath in the most efficient manner possible.

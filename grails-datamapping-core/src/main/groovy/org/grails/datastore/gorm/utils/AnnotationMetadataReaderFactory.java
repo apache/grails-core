@@ -17,12 +17,13 @@
 
 package org.grails.datastore.gorm.utils;
 
-import org.apache.grails.common.compiler.asm.AnnotationMetadataReader;
+import java.io.IOException;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 
-import java.io.IOException;
+import org.apache.grails.common.compiler.asm.AnnotationMetadataReader;
 
 /**
  * A {@link CachingMetadataReaderFactory} that only reads annotations and not the whole class body

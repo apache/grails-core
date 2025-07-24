@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.gorm.support;
 
-import groovy.lang.MetaClass;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -27,23 +25,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import groovy.lang.MetaClass;
+
 public class BeforeValidateHelper implements Serializable {
     public static final String BEFORE_VALIDATE = "beforeValidate";
     private transient Map<Class<?>, BeforeValidateEventTriggerCaller> eventTriggerCallerCache = new ConcurrentHashMap<Class<?>, BeforeValidateEventTriggerCaller>();
-    
+
     public static final class BeforeValidateEventTriggerCaller {
         EventTriggerCaller eventTriggerCaller;
         EventTriggerCaller eventTriggerCallerNoArgs;
-        
+
         public BeforeValidateEventTriggerCaller(Class<?> domainClass, MetaClass metaClass) {
             eventTriggerCaller = build(domainClass, metaClass, new Class<?>[]{List.class});
             eventTriggerCallerNoArgs = build(domainClass, metaClass, new Class<?>[]{});
         }
-        
+
         protected EventTriggerCaller build(Class<?> domainClass, MetaClass metaClass, Class<?>[] argumentTypes) {
             return EventTriggerCaller.buildCaller(BEFORE_VALIDATE, domainClass, metaClass, argumentTypes);
         }
-        
+
         public void call(final Object target, final List<?> validatedFieldsList) {
             if(validatedFieldsList != null && eventTriggerCaller != null) {
                 eventTriggerCaller.call(target, new Object[]{validatedFieldsList});
@@ -52,7 +52,7 @@ public class BeforeValidateHelper implements Serializable {
             }
         }
     }
-    
+
     public void invokeBeforeValidate(final Object target, final List<?> validatedFieldsList) {
         Class<?> domainClass = target.getClass();
         BeforeValidateEventTriggerCaller eventTriggerCaller = eventTriggerCallerCache.get(domainClass);

@@ -18,21 +18,23 @@
  */
 package grails.boot.config
 
-import grails.config.Config
-import grails.core.GrailsApplication
-import grails.boot.config.tools.ClassPathScanner
-import grails.core.GrailsApplicationClass
+import java.lang.reflect.Field
+
 import groovy.transform.CompileStatic
-import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
-import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
-import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
+
 import org.springframework.aop.config.AopConfigUtils
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.annotation.Bean
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 
-import java.lang.reflect.Field
+import grails.boot.config.tools.ClassPathScanner
+import grails.config.Config
+import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
+import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
+import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 
 /**
  * A base class for configurations that bootstrap a Grails application

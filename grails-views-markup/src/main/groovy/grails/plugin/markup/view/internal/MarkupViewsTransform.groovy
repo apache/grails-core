@@ -19,14 +19,15 @@
 
 package grails.plugin.markup.view.internal
 
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.transform.GroovyASTTransformation
+
 import grails.compiler.traits.TraitInjector
 import grails.plugin.markup.view.MarkupViewTemplate
 import grails.views.compiler.ViewsTransform
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.codehaus.groovy.control.CompilePhase
-import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**

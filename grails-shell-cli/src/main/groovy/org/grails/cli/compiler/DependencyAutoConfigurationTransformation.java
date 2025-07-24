@@ -25,8 +25,9 @@ import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 
-import org.grails.cli.compiler.grape.DependencyResolutionContext;
 import org.springframework.core.annotation.Order;
+
+import org.grails.cli.compiler.grape.DependencyResolutionContext;
 
 /**
  * {@link ASTTransformation} to apply

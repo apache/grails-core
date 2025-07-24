@@ -18,11 +18,11 @@
  */
 package org.grails.core.io;
 
-import org.springframework.core.io.Resource;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.core.io.Resource;
 
 /**
  *

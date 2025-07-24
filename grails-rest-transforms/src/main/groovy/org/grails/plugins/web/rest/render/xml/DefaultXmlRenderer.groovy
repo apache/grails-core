@@ -18,18 +18,20 @@
  */
 package org.grails.plugins.web.rest.render.xml
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.validation.Errors
+
 import grails.converters.XML
 import grails.rest.render.RenderContext
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
 import grails.util.GrailsWebUtil
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
-import org.springframework.validation.Errors
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 
 /**
  * Default renderer for XML responses

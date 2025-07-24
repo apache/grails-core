@@ -18,13 +18,13 @@
  */
 package org.grails.compiler.web.converters;
 
+import java.net.URL;
+
 import grails.compiler.ast.AstTransformer;
 import org.grails.compiler.injection.AbstractGrailsArtefactTransformer;
 import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.plugins.converters.api.ConvertersApi;
-
-import java.net.URL;
 
 /**
  * Adds the asType method to domain classes.

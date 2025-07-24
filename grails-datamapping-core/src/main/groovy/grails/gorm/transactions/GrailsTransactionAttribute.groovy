@@ -21,12 +21,11 @@ package grails.gorm.transactions
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
 import org.springframework.transaction.interceptor.RollbackRuleAttribute
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
-
-
 
 /**
  * Used to configure a {@link GrailsTransactionTemplate}

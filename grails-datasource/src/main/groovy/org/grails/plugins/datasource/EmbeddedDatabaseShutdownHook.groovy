@@ -19,20 +19,22 @@
 
 package org.grails.plugins.datasource
 
-import groovy.sql.Sql
-import groovy.transform.CompileStatic
-
 import java.sql.Connection
 
 import javax.sql.DataSource
 
+import groovy.sql.Sql
+import groovy.transform.CompileStatic
+
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
-import org.grails.core.lifecycle.ShutdownOperations
+
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.SmartLifecycle
+
+import org.grails.core.lifecycle.ShutdownOperations
 
 @CompileStatic
 class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContextAware {
@@ -81,14 +83,14 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
         stop()
         callback.run()
     }
-    
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext
     }
-    
+
     protected boolean isEmbeddedH2orHsqldb(DataSource dataSource) {
-        MetaProperty urlProperty = dataSource.hasProperty("url") 
+        MetaProperty urlProperty = dataSource.hasProperty("url")
         if (urlProperty) {
             String url = urlProperty.getProperty(dataSource)
             if(url && (url.startsWith('jdbc:h2:') || url.startsWith('jdbc:hsqldb:'))) {

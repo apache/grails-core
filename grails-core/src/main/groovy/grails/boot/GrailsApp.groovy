@@ -19,27 +19,15 @@
 
 package grails.boot
 
-import grails.compiler.ast.ClassInjector
-import grails.core.GrailsApplication
-import grails.io.IOUtils
-import grails.plugins.GrailsPlugin
-import grails.plugins.GrailsPluginManager
-import grails.util.BuildSettings
-import grails.util.Environment
+import java.util.concurrent.ConcurrentLinkedQueue
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
-import org.grails.boot.internal.JavaCompiler
-import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
-import org.grails.compiler.injection.GrailsAwareInjectionOperation
-import org.grails.core.util.BeanCreationProfilingPostProcessor
-import org.grails.io.watch.DirectoryWatcher
-import org.grails.io.watch.FileExtensionFileChangeListener
-import org.grails.plugins.BinaryGrailsPlugin
-import org.grails.plugins.support.WatchPattern
+
 import org.springframework.boot.ResourceBanner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.web.context.WebServerApplicationContext
@@ -48,7 +36,21 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.io.ClassPathResource
 import org.springframework.core.io.ResourceLoader
 
-import java.util.concurrent.ConcurrentLinkedQueue
+import grails.compiler.ast.ClassInjector
+import grails.core.GrailsApplication
+import grails.io.IOUtils
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import grails.util.BuildSettings
+import grails.util.Environment
+import org.grails.boot.internal.JavaCompiler
+import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
+import org.grails.compiler.injection.GrailsAwareInjectionOperation
+import org.grails.core.util.BeanCreationProfilingPostProcessor
+import org.grails.io.watch.DirectoryWatcher
+import org.grails.io.watch.FileExtensionFileChangeListener
+import org.grails.plugins.BinaryGrailsPlugin
+import org.grails.plugins.support.WatchPattern
 
 /**
  * Extends the {@link SpringApplication} with reloading behavior and other Grails features

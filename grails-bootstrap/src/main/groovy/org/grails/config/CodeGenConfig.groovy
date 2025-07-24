@@ -18,16 +18,18 @@
  */
 package org.grails.config
 
-import grails.config.ConfigMap
-import grails.util.Environment
 import groovy.transform.Canonical
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
+
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
+
+import grails.config.ConfigMap
+import grails.util.Environment
 
 /**
  * A {@link ConfigMap} implementation used at codegen time
@@ -164,11 +166,11 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             }
         }
     }
-    
+
     void mergeMap(Map sourceMap, boolean parseFlatKeys =false) {
         configMap.merge(sourceMap, parseFlatKeys)
     }
-    
+
     public <T> T navigate(Class<T> requiredType, String... path) {
         Object result = configMap.navigate(path)
         if(result == null) {
@@ -176,7 +178,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
         }
         return convertToType(result, requiredType)
     }
-    
+
     protected <T> T convertToType(Object value, Class<T> requiredType) {
         if(value == null || value instanceof NavigableMap.NullSafeNavigator) {
             return null
@@ -216,7 +218,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             return convertToOtherTypes(value, requiredType)
         }
     }
-    
+
     protected <T> T convertToOtherTypes(Object value, Class<T> requiredType) {
         throw new RuntimeException("conversion of $value to $requiredType.name not implemented")
     }
@@ -224,7 +226,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     public Object navigate(String... path) {
         return navigate(Object, path)
     }
-    
+
     public boolean asBoolean() {
         return !configMap.isEmpty()
     }
@@ -242,15 +244,15 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             throw new GroovyCastException(this, type)
         }
     }
-    
+
     public Object getAt(Object key) {
         getProperty(String.valueOf(key))
     }
-    
+
     public void setAt(Object key, Object value) {
         setProperty(String.valueOf(key), value)
     }
-    
+
     public Object getProperty(String name) {
         if ("configMap".equals(name))
             return this.configMap
@@ -284,8 +286,8 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     public void setProperty(String name, Object value) {
         configMap.setProperty(name, value)
     }
-    
-    
+
+
     /**
      * toBooleanObject method ported from org.apache.commons.lang.BooleanUtils.toBooleanObject to Groovy code
      * @param str

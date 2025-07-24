@@ -19,9 +19,10 @@
 
 package org.grails.events.rxjava2
 
-import grails.events.Event
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
+import grails.events.Event
 
 /**
  * An event with a reply

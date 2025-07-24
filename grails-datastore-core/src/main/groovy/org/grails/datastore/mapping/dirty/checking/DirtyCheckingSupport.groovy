@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.dirty.checking
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.collection.PersistentCollection
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.MappingContext

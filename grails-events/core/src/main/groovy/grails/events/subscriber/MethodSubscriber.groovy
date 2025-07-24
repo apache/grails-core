@@ -19,17 +19,17 @@
 
 package grails.events.subscriber
 
-import grails.events.Event
+import java.lang.reflect.Method
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+
 import org.springframework.core.convert.ConversionService
 import org.springframework.core.convert.support.DefaultConversionService
 import org.springframework.util.ReflectionUtils
-
-import java.lang.reflect.Method
 
 /**
  * Invokes a method to trigger an event

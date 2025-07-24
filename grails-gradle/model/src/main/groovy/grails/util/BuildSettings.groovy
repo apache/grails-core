@@ -16,10 +16,11 @@
  */
 package grails.util
 
-import grails.io.IOUtils
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
-import java.util.regex.Pattern
+import grails.io.IOUtils
 
 /**
  * Build time settings and configuration

@@ -21,6 +21,7 @@ package grails.gorm.multitenancy
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource

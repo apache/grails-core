@@ -18,15 +18,17 @@
  */
 package org.grails.datastore.gorm.utils
 
-import grails.gorm.annotation.Entity
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.datastore.mapping.reflect.ClassUtils
+
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider
 import org.springframework.core.type.filter.AnnotationTypeFilter
 
-import java.lang.annotation.Annotation
+import grails.gorm.annotation.Entity
+import org.grails.datastore.mapping.reflect.ClassUtils
 
 /**
  * Utility class for scanning the classpath for entities

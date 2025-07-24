@@ -18,19 +18,20 @@
  */
 package org.grails.compiler.gorm;
 
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.GrailsArtefactClassInjector;
+import java.net.URL;
+import java.util.Collection;
+
 import groovy.transform.Canonical;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
+
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.GrailsArtefactClassInjector;
 import org.grails.compiler.injection.GrailsASTUtils;
 import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.datastore.mapping.reflect.AstUtils;
 import org.grails.io.support.GrailsResourceUtils;
-
-import java.net.URL;
-import java.util.Collection;
 
 /**
  * Transforms GORM entities making the GORM API available to Java.

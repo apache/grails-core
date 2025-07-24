@@ -18,24 +18,25 @@
  */
 package grails.util;
 
-import grails.core.ApplicationAttributes;
-import grails.core.GrailsApplication;
-import org.grails.web.util.GrailsApplicationAttributes;
-import groovy.lang.GroovyObject;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import groovy.lang.GroovyObject;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import grails.core.ApplicationAttributes;
+import grails.core.GrailsApplication;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Utility methods for clients using the web framework.

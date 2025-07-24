@@ -18,19 +18,22 @@
  */
 package org.grails.plugins.datasource
 
+import javax.sql.DataSource
+
+import groovy.transform.CompileStatic
+
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+
+import org.springframework.jmx.support.JmxUtils
+import org.springframework.util.ClassUtils
+
 import grails.core.GrailsApplication
 import grails.plugins.Plugin
 import grails.util.Environment
 import grails.util.GrailsUtil
-import groovy.transform.CompileStatic
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
 import org.grails.spring.beans.factory.InstanceFactoryBean
 import org.grails.transaction.ChainedTransactionManagerPostProcessor
-import org.springframework.jmx.support.JmxUtils
-import org.springframework.util.ClassUtils
-
-import javax.sql.DataSource
 
 /**
  * Handles the configuration of a DataSource within Grails.

@@ -19,12 +19,12 @@
 
 package org.grails.scaffolding.registry.input
 
-import org.grails.scaffolding.model.property.DomainProperty
-import org.grails.scaffolding.registry.DomainInputRenderer
 import grails.util.GrailsNameUtils
 import grails.web.mapping.LinkGenerator
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.ToMany
+import org.grails.scaffolding.model.property.DomainProperty
+import org.grails.scaffolding.registry.DomainInputRenderer
 
 /**
  * The default renderer for rendering bidirectional to many associations

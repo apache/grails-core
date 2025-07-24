@@ -19,6 +19,16 @@
 
 package org.grails.plugins.databinding;
 
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+
 import grails.core.GrailsApplication;
 import grails.databinding.TypedStructuredBindingEditor;
 import grails.databinding.converters.FormattedValueConverter;
@@ -35,15 +45,6 @@ import org.grails.web.databinding.bindingsource.HalXmlDataBindingSourceCreator;
 import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator;
 import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator;
 import org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.MessageSource;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
 @AutoConfiguration
 @AutoConfigureOrder

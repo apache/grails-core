@@ -18,22 +18,24 @@
  */
 package grails.core;
 
-import grails.util.GrailsNameUtils;
-import groovy.lang.Closure;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.InnerClassNode;
-import org.grails.compiler.injection.GrailsASTUtils;
-import org.grails.core.exceptions.GrailsRuntimeException;
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.io.support.Resource;
-import org.grails.io.support.UrlResource;
-import org.springframework.core.Ordered;
-
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+
+import groovy.lang.Closure;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.InnerClassNode;
+
+import org.springframework.core.Ordered;
+
+import grails.util.GrailsNameUtils;
+import org.grails.compiler.injection.GrailsASTUtils;
+import org.grails.core.exceptions.GrailsRuntimeException;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.io.support.Resource;
+import org.grails.io.support.UrlResource;
 
 /**
  * Adapter for the {@link grails.core.ArtefactHandler} interface

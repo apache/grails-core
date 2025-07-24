@@ -19,11 +19,12 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-import grails.gorm.async.AsyncEntity
+import groovy.transform.EqualsAndHashCode
+
 import grails.gorm.DetachedCriteria
+import grails.gorm.async.AsyncEntity
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
-import groovy.transform.EqualsAndHashCode
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
 @DirtyCheck

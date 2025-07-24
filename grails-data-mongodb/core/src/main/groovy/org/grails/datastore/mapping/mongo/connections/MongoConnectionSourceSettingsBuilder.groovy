@@ -19,15 +19,18 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import groovy.transform.CompileStatic
+
 import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.MongoCredential
-import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+import org.springframework.util.ReflectionUtils
+
 import org.grails.datastore.mapping.config.ConfigurationBuilder
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.springframework.core.env.PropertyResolver
-import org.springframework.util.ReflectionUtils
 
 /**
  * Creates MongoDB configuration

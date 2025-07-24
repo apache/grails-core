@@ -18,11 +18,13 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Location
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.grails.datastore.gorm.proxy.GroovyProxyFactory
-import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.IgnoreIf
+
+import org.springframework.dao.DataIntegrityViolationException
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Location
+import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 
 /**
  * @author graemerocher
@@ -30,7 +32,7 @@ import spock.lang.IgnoreIf
 @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite') })
 // this test is ignored because Groovy proxies are not used with Hibernate
 class GroovyProxySpec extends GrailsDataTckSpec {
-    
+
     void "Test proxying of non-existent instance throws an exception"() {
         setup:
         if (useGroovyProxyFactory) {

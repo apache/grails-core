@@ -20,6 +20,7 @@
 package org.grails.testing.gorm.spock
 
 import groovy.transform.CompileStatic
+
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 

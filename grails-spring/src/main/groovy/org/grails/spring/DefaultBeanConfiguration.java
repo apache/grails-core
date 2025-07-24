@@ -18,12 +18,12 @@
  */
 package org.grails.spring;
 
-import groovy.lang.GroovyObjectSupport;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import groovy.lang.GroovyObjectSupport;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;

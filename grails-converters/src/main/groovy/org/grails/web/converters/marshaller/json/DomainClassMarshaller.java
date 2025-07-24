@@ -18,9 +18,6 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import grails.converters.JSON;
-import groovy.lang.GroovyObject;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -33,9 +30,17 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.grails.core.artefact.DomainClassArtefactHandler;
+import groovy.lang.GroovyObject;
 
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+
+import grails.converters.JSON;
 import grails.core.GrailsApplication;
+import grails.core.support.proxy.DefaultProxyHandler;
+import grails.core.support.proxy.EntityProxyHandler;
+import grails.core.support.proxy.ProxyHandler;
+import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.core.util.IncludeExcludeSupport;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -51,14 +56,7 @@ import org.grails.web.converters.marshaller.ByDatasourceDomainClassFetcher;
 import org.grails.web.converters.marshaller.ByGrailsApplicationDomainClassFetcher;
 import org.grails.web.converters.marshaller.DomainClassFetcher;
 import org.grails.web.converters.marshaller.IncludeExcludePropertyMarshaller;
-
-import grails.core.support.proxy.DefaultProxyHandler;
-import grails.core.support.proxy.EntityProxyHandler;
-import grails.core.support.proxy.ProxyHandler;
-
 import org.grails.web.json.JSONWriter;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
 
 /**
  *
@@ -151,16 +149,16 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
 
         PersistentProperty id = domainClass.getIdentity();
         if(id != null) {
-            //Composite keys dont return an identity. They also do not render in the JSON. 
+            //Composite keys dont return an identity. They also do not render in the JSON.
             //If using Composite keys, it may be advisable to use a customer Marshaller.
             if(shouldInclude(includeExcludeSupport, includes, excludes, value, id.getName())) {
                 Object idValue = extractValue(value, id);
                 if(idValue != null) {
                     json.property(id.getName(), idValue);
                 }
-            }    
+            }
         }
-        
+
 
         if (shouldInclude(includeExcludeSupport, includes, excludes, value, GormProperties.VERSION) && isIncludeVersion()) {
             PersistentProperty versionProperty = domainClass.getVersion();

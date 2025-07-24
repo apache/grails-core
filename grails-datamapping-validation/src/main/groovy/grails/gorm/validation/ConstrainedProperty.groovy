@@ -20,6 +20,7 @@
 package grails.gorm.validation
 
 import groovy.transform.CompileStatic
+
 import org.springframework.validation.Errors
 
 /**

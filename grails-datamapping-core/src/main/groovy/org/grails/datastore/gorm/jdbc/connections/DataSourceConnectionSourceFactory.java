@@ -19,23 +19,25 @@
 
 package org.grails.datastore.gorm.jdbc.connections;
 
-import org.grails.datastore.mapping.config.Settings;
-import org.grails.datastore.gorm.jdbc.DataSourceBuilder;
-import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Map;
+
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.jndi.JndiObjectFactoryBean;
 
-import javax.naming.NamingException;
-import javax.sql.DataSource;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Map;
+import org.grails.datastore.gorm.jdbc.DataSourceBuilder;
+import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 
 /**
  * A {@link org.grails.datastore.mapping.core.connections.ConnectionSourceFactory} for creating JDBC {@link DataSource} connections

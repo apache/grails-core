@@ -18,8 +18,6 @@
  */
 package org.grails.web.converters.configuration;
 
-import grails.util.Environment;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import grails.core.support.proxy.DefaultProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
-
+import grails.util.Environment;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;

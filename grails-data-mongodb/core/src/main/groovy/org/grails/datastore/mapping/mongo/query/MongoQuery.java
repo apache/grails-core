@@ -14,11 +14,36 @@
  */
 package org.grails.datastore.mapping.mongo.query;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+
+import groovy.lang.Closure;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import com.mongodb.ReadConcern;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoIterable;
+import org.bson.BsonDocument;
+import org.bson.BsonDocumentReader;
+import org.bson.BsonDocumentWriter;
+import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistry;
+
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import grails.mongodb.geo.Box;
 import grails.mongodb.geo.Circle;
 import grails.mongodb.geo.Distance;
@@ -27,13 +52,6 @@ import grails.mongodb.geo.Point;
 import grails.mongodb.geo.Polygon;
 import grails.mongodb.geo.Shape;
 import grails.mongodb.geo.Sphere;
-import groovy.lang.Closure;
-import org.bson.BsonDocument;
-import org.bson.BsonDocumentReader;
-import org.bson.BsonDocumentWriter;
-import org.bson.Document;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.datastore.bson.codecs.CodecCustomTypeMarshaller;
 import org.grails.datastore.bson.query.BsonQuery;
 import org.grails.datastore.bson.query.EmbeddedQueryEncoder;
@@ -64,21 +82,6 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
 import org.grails.datastore.mapping.query.projections.ManualProjections;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 
 /**
  * A {@link org.grails.datastore.mapping.query.Query} implementation for the Mongo document store.

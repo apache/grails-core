@@ -18,11 +18,12 @@
  */
 package org.grails.cli.boot
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import grails.util.Environment
 import org.grails.cli.compiler.AstUtils
 import org.grails.cli.compiler.CompilerAutoConfiguration
 import org.grails.cli.compiler.DependencyCustomizer

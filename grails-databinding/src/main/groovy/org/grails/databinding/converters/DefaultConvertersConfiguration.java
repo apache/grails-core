@@ -18,6 +18,14 @@
  */
 package org.grails.databinding.converters;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.LocaleResolver;
+
 import grails.core.GrailsApplication;
 import grails.databinding.TypedStructuredBindingEditor;
 import grails.databinding.converters.FormattedValueConverter;
@@ -25,13 +33,6 @@ import grails.databinding.converters.ValueConverter;
 import org.grails.databinding.converters.web.LocaleAwareBigDecimalConverter;
 import org.grails.databinding.converters.web.LocaleAwareNumberConverter;
 import org.grails.plugins.databinding.DataBindingConfigurationProperties;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.LocaleResolver;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
 
 /**
  * Default converters configuration.

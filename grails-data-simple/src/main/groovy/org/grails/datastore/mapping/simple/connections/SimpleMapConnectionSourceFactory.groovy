@@ -19,15 +19,17 @@
 
 package org.grails.datastore.mapping.simple.connections
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettingsBuilder
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
-import org.springframework.core.env.PropertyResolver
-
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Simple implementation that just builds {@link ConnectionSource} instances from Maps

@@ -14,12 +14,14 @@
  */
 package org.grails.datastore.gorm.boot.autoconfigure
 
+import java.beans.Introspector
+
+import javax.sql.DataSource
+
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
-import org.grails.datastore.mapping.services.Service
-import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
+
 import org.hibernate.SessionFactory
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryAware
@@ -40,8 +42,10 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.PlatformTransactionManager
 
-import javax.sql.DataSource
-import java.beans.Introspector
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
+import org.grails.datastore.mapping.services.Service
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
 
 /**
  * Auto configuration for GORM for Hibernate

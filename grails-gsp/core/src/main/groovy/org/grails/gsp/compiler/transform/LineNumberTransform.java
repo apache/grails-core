@@ -18,7 +18,10 @@
  */
 package org.grails.gsp.compiler.transform;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
@@ -64,11 +67,10 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
 import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * Convert line number information to that based on the line number array passed

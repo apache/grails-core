@@ -19,12 +19,14 @@
 
 package org.grails.testing.spock
 
-import grails.testing.web.GrailsWebUnitTest
 import groovy.transform.CompileStatic
-import org.grails.testing.runtime.support.LazyTagLibraryLookup
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder
+
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
+
+import grails.testing.web.GrailsWebUnitTest
+import org.grails.testing.runtime.support.LazyTagLibraryLookup
+import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 
 @CompileStatic
 class WebCleanupSpecInterceptor implements IMethodInterceptor {

@@ -19,12 +19,14 @@
 
 package org.grails.datastore.gorm.jdbc.connections;
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.springframework.core.env.PropertyResolver;
-
-import javax.sql.DataSource;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.springframework.core.env.PropertyResolver;
+
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 
 /**
  * Extends {@link DataSourceConnectionSourceFactory} and caches the created {@link DataSourceConnectionSource} instances ensuring they are singletons

@@ -18,27 +18,29 @@
  */
 package org.grails.web.servlet.view;
 
-import grails.util.Environment;
-import grails.util.GrailsUtil;
-import grails.web.pages.GroovyPagesUriService;
-import groovy.text.Template;
-
 import java.io.IOException;
 import java.util.Map;
+
+import groovy.text.Template;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.gsp.GroovyPageWritable;
-import org.grails.web.pages.GSPResponseWriter;
-import org.grails.gsp.GroovyPageTemplate;
-import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.gsp.GroovyPagesException;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+
 import org.springframework.core.io.Resource;
 import org.springframework.scripting.ScriptSource;
+
+import grails.util.Environment;
+import grails.util.GrailsUtil;
+import grails.web.pages.GroovyPagesUriService;
+import org.grails.gsp.GroovyPageTemplate;
+import org.grails.gsp.GroovyPageWritable;
+import org.grails.gsp.GroovyPagesException;
+import org.grails.gsp.GroovyPagesTemplateEngine;
+import org.grails.web.pages.GSPResponseWriter;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * A Spring View that renders Groovy Server Pages to the response. It requires an instance
@@ -65,7 +67,7 @@ public class GroovyPageView extends AbstractGrailsView {
     protected GroovyPageTemplate template;
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
-    
+
     @Override
     protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
             HttpServletResponse response) {
@@ -184,7 +186,7 @@ public class GroovyPageView extends AbstractGrailsView {
             template.setAllowSettingContentType(true);
         }
     }
-    
+
     public void rethrowRenderException(Throwable ex, String message) {
         throw new GroovyPagesException(message, ex);
     }

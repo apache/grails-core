@@ -19,10 +19,13 @@
 
 package grails.gorm.validation
 
-import grails.gorm.validation.exceptions.ValidationConfigurationException
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+
+import org.springframework.validation.Errors
+
+import grails.gorm.validation.exceptions.ValidationConfigurationException
 import org.grails.datastore.gorm.validation.constraints.BlankConstraint
 import org.grails.datastore.gorm.validation.constraints.InListConstraint
 import org.grails.datastore.gorm.validation.constraints.MatchesConstraint
@@ -38,7 +41,6 @@ import org.grails.datastore.gorm.validation.constraints.SizeConstraint
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
-import org.springframework.validation.Errors
 
 /**
  * Default implementation of the {@link ConstrainedProperty} interface

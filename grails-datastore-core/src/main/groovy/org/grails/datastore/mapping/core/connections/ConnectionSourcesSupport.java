@@ -19,14 +19,15 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-import org.grails.datastore.mapping.config.Entity;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.multitenancy.TenantDataSourceConfig;
-import org.springframework.util.ClassUtils;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import org.springframework.util.ClassUtils;
+
+import org.grails.datastore.mapping.config.Entity;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.TenantDataSourceConfig;
 
 /**
  * Utility methods for {@link ConnectionSource} handling

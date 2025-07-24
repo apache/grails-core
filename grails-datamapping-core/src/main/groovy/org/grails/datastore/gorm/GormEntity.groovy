@@ -18,9 +18,14 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.DetachedCriteria
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import jakarta.persistence.Transient
+
+import org.springframework.transaction.TransactionDefinition
+
+import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -34,9 +39,6 @@ import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.springframework.transaction.TransactionDefinition
-
-import jakarta.persistence.Transient
 
 /**
  *

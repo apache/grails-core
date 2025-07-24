@@ -14,8 +14,9 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.MultiPoint
 import groovy.transform.CompileStatic
+
+import grails.mongodb.geo.MultiPoint
 
 /**
  * Adds support for the {@link grails.mongodb.geo.MultiPoint} type to GORM for MongoDB

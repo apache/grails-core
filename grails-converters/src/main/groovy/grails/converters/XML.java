@@ -18,18 +18,31 @@
  */
 package grails.converters;
 
-import grails.util.GrailsNameUtils;
-import grails.util.GrailsWebUtil;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Stack;
+
 import groovy.lang.Closure;
 import groovy.util.BuilderSupport;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.util.Assert;
+
 import grails.core.support.proxy.EntityProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
+import grails.util.GrailsNameUtils;
+import grails.util.GrailsWebUtil;
 import grails.web.mime.MimeType;
-
 import org.grails.buffer.FastStringWriter;
 import org.grails.web.converters.AbstractConverter;
 import org.grails.web.converters.Converter;
@@ -45,19 +58,6 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.xml.PrettyPrintXMLStreamWriter;
 import org.grails.web.xml.StreamingMarkupWriter;
 import org.grails.web.xml.XMLStreamWriter;
-import org.springframework.util.Assert;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Writer;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Stack;
 
 import static org.grails.io.support.SpringIOUtils.createXmlSlurper;
 

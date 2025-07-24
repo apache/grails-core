@@ -27,9 +27,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import junit.framework.Test;
-
 import org.apache.tools.ant.taskdefs.optional.junit.JUnitTest;
 import org.apache.tools.ant.taskdefs.optional.junit.PlainJUnitResultFormatter;
+
 import org.grails.test.support.TestStacktraceSanitizer;
 
 /**

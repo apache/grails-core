@@ -19,19 +19,21 @@
 
 package org.grails.plugins.web.taglib
 
-import org.grails.web.util.WebUtils
+import java.nio.CharBuffer
+
 import org.sitemesh.content.Content
 import org.sitemesh.content.ContentProperty
 import org.sitemesh.webapp.SiteMeshFilter
 import org.sitemesh.webapp.WebAppContext
 import org.sitemesh.webapp.contentfilter.ResponseMetaData
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.web.servlet.FilterRegistrationBean
+
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
-
-import java.nio.CharBuffer
+import org.grails.web.util.WebUtils
 
 @TagLib
 class RenderSitemeshTagLib implements TagLibrary {

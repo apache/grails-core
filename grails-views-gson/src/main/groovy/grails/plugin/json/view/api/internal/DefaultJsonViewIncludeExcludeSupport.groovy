@@ -20,6 +20,7 @@
 package grails.plugin.json.view.api.internal
 
 import groovy.transform.CompileStatic
+
 import org.grails.core.util.IncludeExcludeSupport
 
 @CompileStatic

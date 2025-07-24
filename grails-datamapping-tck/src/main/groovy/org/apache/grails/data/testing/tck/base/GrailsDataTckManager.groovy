@@ -18,6 +18,8 @@
  */
 package org.apache.grails.data.testing.tck.base
 
+import spock.lang.Specification
+
 import org.apache.grails.data.testing.tck.domains.Book
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.City
@@ -45,7 +47,6 @@ import org.apache.grails.data.testing.tck.domains.Task
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
-import spock.lang.Specification
 
 abstract class GrailsDataTckManager {
     static final CURRENT_TEST_NAME = 'current.gorm.test'

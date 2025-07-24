@@ -18,8 +18,6 @@
  */
 package org.grails.buffer;
 
-import grails.util.GrailsArrayUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,6 +31,7 @@ import java.nio.charset.CodingErrorAction;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import grails.util.GrailsArrayUtils;
 
 /**
  * An in-memory buffer that provides OutputStream and InputStream interfaces.

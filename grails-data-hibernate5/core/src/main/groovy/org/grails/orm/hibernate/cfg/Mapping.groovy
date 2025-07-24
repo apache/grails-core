@@ -22,11 +22,13 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.validation.DataBinder
+
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
 
 /**
  * Models the mapping from GORM classes to the db.

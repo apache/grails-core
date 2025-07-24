@@ -19,11 +19,10 @@
 
 package org.grails.datastore.gorm.bootstrap.support
 
-import grails.gorm.services.Service
+import java.beans.Introspector
+
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.reflect.NameUtils
-import org.grails.datastore.mapping.services.ServiceRegistry
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryAware
@@ -31,7 +30,10 @@ import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 
-import java.beans.Introspector
+import grails.gorm.services.Service
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.reflect.NameUtils
+import org.grails.datastore.mapping.services.ServiceRegistry
 
 /**
  * @author Graeme Rocher

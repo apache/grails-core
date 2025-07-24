@@ -18,9 +18,10 @@
  */
 package org.grails.web.mime
 
+import groovy.transform.CompileStatic
+
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeResolver
-import groovy.transform.CompileStatic
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**

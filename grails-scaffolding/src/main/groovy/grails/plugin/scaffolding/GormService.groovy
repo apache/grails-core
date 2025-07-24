@@ -19,12 +19,13 @@
 
 package grails.plugin.scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Artefact
 import grails.gorm.api.GormAllOperations
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormEntityApi
 

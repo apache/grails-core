@@ -20,6 +20,7 @@
 package grails.plugin.cache
 
 import groovy.transform.CompileStatic
+
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 /**

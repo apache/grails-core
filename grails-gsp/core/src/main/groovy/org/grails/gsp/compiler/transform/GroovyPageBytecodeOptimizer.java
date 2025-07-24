@@ -18,8 +18,8 @@
  */
 package org.grails.gsp.compiler.transform;
 
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.GroovyPageInjector;
+import java.net.URL;
+
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
@@ -27,7 +27,8 @@ import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
 
-import java.net.URL;
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.GroovyPageInjector;
 
 @AstTransformer
 public class GroovyPageBytecodeOptimizer implements GroovyPageInjector {

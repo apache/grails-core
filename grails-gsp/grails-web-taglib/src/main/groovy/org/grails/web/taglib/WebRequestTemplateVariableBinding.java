@@ -18,17 +18,19 @@
  */
 package org.grails.web.taglib;
 
-import grails.util.Environment;
-import groovy.lang.Binding;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.grails.taglib.AbstractTemplateVariableBinding;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.Binding;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import grails.util.Environment;
+import org.grails.taglib.AbstractTemplateVariableBinding;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * Script binding to be used as the top-level binding in GSP evaluation.

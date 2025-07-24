@@ -19,13 +19,14 @@
 
 package grails.plugin.json.view
 
-import grails.plugin.json.view.internal.JsonViewsTransform
-import grails.views.AbstractGroovyTemplateCompiler
-import grails.views.compiler.ViewsTransform
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+
+import grails.plugin.json.view.internal.JsonViewsTransform
+import grails.views.AbstractGroovyTemplateCompiler
+import grails.views.compiler.ViewsTransform
 
 /**
  * A compiler for JSON views

@@ -19,6 +19,7 @@
 package grails.persistence.support
 
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContext
 
 /**

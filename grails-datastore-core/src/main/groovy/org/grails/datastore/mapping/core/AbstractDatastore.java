@@ -14,9 +14,24 @@
  */
 package org.grails.datastore.mapping.core;
 
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
+
+import jakarta.annotation.PreDestroy;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.convert.converter.ConverterRegistry;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -30,17 +45,6 @@ import org.grails.datastore.mapping.services.Service;
 import org.grails.datastore.mapping.services.ServiceNotFoundException;
 import org.grails.datastore.mapping.services.ServiceRegistry;
 import org.grails.datastore.mapping.transactions.SessionHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.convert.converter.ConverterRegistry;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import jakarta.annotation.PreDestroy;
-import java.util.Map;
 
 /**
  * Abstract Datastore implementation that deals with binding the Session to thread locale upon creation.

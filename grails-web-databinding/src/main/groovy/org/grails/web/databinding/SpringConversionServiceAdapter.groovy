@@ -18,9 +18,10 @@
  */
 package org.grails.web.databinding
 
-import org.grails.databinding.converters.ConversionService
-import org.springframework.core.convert.support.DefaultConversionService
 import org.springframework.core.convert.ConversionService as SpringConversionService
+import org.springframework.core.convert.support.DefaultConversionService
+
+import org.grails.databinding.converters.ConversionService
 
 /**
  * This class implements org.grails.databinding.converters.ConversionService

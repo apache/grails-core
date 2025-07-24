@@ -21,13 +21,15 @@ package grails.gorm.transactions
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
-import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionException
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.interceptor.TransactionAttribute
 import org.springframework.transaction.support.TransactionCallback
+
+import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 
 /**
  * Template class that simplifies programmatic transaction demarcation and

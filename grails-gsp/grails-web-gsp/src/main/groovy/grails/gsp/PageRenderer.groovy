@@ -18,24 +18,26 @@
  */
 package grails.gsp
 
-import org.grails.buffer.FastStringWriter
-import org.grails.gsp.GroovyPagesTemplateEngine
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
-import org.grails.gsp.io.GroovyPageScriptSource
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationContextAware
-import org.springframework.web.context.ServletContextAware
-import org.springframework.web.context.request.RequestContextHolder
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
+import java.util.concurrent.ConcurrentHashMap
 
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.lang.reflect.InvocationHandler
-import java.lang.reflect.Method
-import java.lang.reflect.Proxy
-import java.util.concurrent.ConcurrentHashMap
+
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.web.context.ServletContextAware
+import org.springframework.web.context.request.RequestContextHolder
+
+import org.grails.buffer.FastStringWriter
+import org.grails.gsp.GroovyPagesTemplateEngine
+import org.grails.gsp.io.GroovyPageScriptSource
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Simplified API for rendering GSP pages from services, jobs and other non-request classes.
@@ -306,7 +308,7 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                 }
             })
         }
-        
+
         private static Enumeration iteratorAsEnumeration(Iterator iterator) {
             new Enumeration() {
                 @Override

@@ -18,11 +18,12 @@
  */
 package org.grails.cli.gradle.commands
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
 import grails.util.Described
 import grails.util.GrailsNameUtils
 import grails.util.Named
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
 import org.grails.cli.gradle.GradleInvoker
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext

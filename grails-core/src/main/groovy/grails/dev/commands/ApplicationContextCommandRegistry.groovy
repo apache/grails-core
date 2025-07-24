@@ -17,6 +17,7 @@
 package grails.dev.commands
 
 import groovy.transform.CompileStatic
+
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**

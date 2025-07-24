@@ -20,6 +20,7 @@
 package org.grails.datastore.mapping.core.connections
 
 import groovy.transform.CompileStatic
+
 import org.springframework.core.env.PropertyResolver
 
 /**

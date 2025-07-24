@@ -19,9 +19,10 @@
 
 package grails.plugin.json.view.api.internal
 
+import groovy.transform.CompileStatic
+
 import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
 
 /**
  * Handles the template namespace

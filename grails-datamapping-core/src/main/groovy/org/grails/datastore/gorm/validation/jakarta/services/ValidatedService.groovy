@@ -19,12 +19,9 @@
 
 package org.grails.datastore.gorm.validation.jakarta.services
 
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.validation.jakarta.ConstraintViolationUtils
-import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
-import org.grails.datastore.mapping.services.Service
-import org.grails.datastore.mapping.validation.ValidationException
-import org.springframework.validation.Errors
 
 import jakarta.validation.Configuration
 import jakarta.validation.ConstraintViolation
@@ -33,7 +30,13 @@ import jakarta.validation.ParameterNameProvider
 import jakarta.validation.Validation
 import jakarta.validation.ValidatorFactory
 import jakarta.validation.executable.ExecutableValidator
-import java.lang.reflect.Method
+
+import org.springframework.validation.Errors
+
+import org.grails.datastore.gorm.validation.jakarta.ConstraintViolationUtils
+import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
+import org.grails.datastore.mapping.services.Service
+import org.grails.datastore.mapping.validation.ValidationException
 
 /**
  * A service that is validated by jakarta.validation

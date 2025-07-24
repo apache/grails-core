@@ -18,8 +18,15 @@
  */
 package org.grails.gradle.plugin.views.gsp
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
@@ -42,12 +49,8 @@ import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.process.ExecOperations
 import org.gradle.process.ExecResult
 import org.gradle.process.JavaExecSpec
-import org.grails.gradle.plugin.views.ViewCompileOptions
 
-import javax.inject.Inject
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
+import org.grails.gradle.plugin.views.ViewCompileOptions
 
 /**
  * Abstract Gradle task for compiling templates, using GroovyPageForkedCompiler

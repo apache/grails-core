@@ -19,15 +19,17 @@
 
 package grails.plugin.markup.view
 
-import grails.views.GenericViewConfiguration
-import grails.views.ViewsEnvironment
-import grails.web.mime.MimeType
+import java.beans.PropertyDescriptor
+
 import groovy.text.markup.TemplateConfiguration
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeanUtils
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-import java.beans.PropertyDescriptor
+import grails.views.GenericViewConfiguration
+import grails.views.ViewsEnvironment
+import grails.web.mime.MimeType
 
 /**
  * @author Graeme Rocher

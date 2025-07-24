@@ -19,13 +19,15 @@
 
 package org.grails.datastore.bson.codecs.temporal
 
-import grails.gorm.time.PeriodConverter
+import java.time.Period
+
 import groovy.transform.CompileStatic
+
 import org.bson.BsonReader
 import org.bson.BsonType
 import org.bson.BsonWriter
 
-import java.time.Period
+import grails.gorm.time.PeriodConverter
 
 /**
  * A trait to read and write a {@link java.time.Period} to MongoDB

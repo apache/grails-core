@@ -18,15 +18,22 @@
  */
 package org.grails.datastore.mapping.mongo.engine
 
+import groovy.transform.CompileStatic
+
+import jakarta.persistence.CascadeType
+
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.ReturnDocument
-import grails.gorm.DetachedCriteria
-import groovy.transform.CompileStatic
-import jakarta.persistence.CascadeType
 import org.bson.Document
 import org.bson.types.ObjectId
+
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.dao.CannotAcquireLockException
+import org.springframework.dao.DataIntegrityViolationException
+
+import grails.gorm.DetachedCriteria
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.IdentityGenerationException
@@ -60,9 +67,6 @@ import org.grails.datastore.mapping.proxy.ProxyFactory
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.dao.CannotAcquireLockException
-import org.springframework.dao.DataIntegrityViolationException
 
 /**
  * An {@org.grails.datastore.mapping.engine.EntityPersister} that uses the MongoDB 3.0 {@link org.bson.codecs.configuration.CodecRegistry} infrastructure

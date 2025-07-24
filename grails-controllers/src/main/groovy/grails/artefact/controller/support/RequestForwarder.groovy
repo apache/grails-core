@@ -18,23 +18,25 @@
  */
 package grails.artefact.controller.support
 
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+
+import jakarta.servlet.RequestDispatcher
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.context.request.WebRequest
+import org.springframework.web.filter.OncePerRequestFilter
+
 import grails.web.UrlConverter
 import grails.web.api.WebAttributes
 import grails.web.mapping.LinkGenerator
-import groovy.transform.CompileStatic
-import groovy.transform.Generated
 import org.grails.web.mapping.UrlMappingUtils
 import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.context.request.WebRequest
-import org.springframework.web.filter.OncePerRequestFilter
-
-import jakarta.servlet.RequestDispatcher
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 
 /**
  * A Trait for classes that forward the request

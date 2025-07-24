@@ -19,15 +19,18 @@
 
 package org.grails.datastore.gorm.jdbc.connections;
 
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
+import java.io.IOException;
+import java.lang.reflect.Method;
+
+import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.jdbc.datasource.DelegatingDataSource;
 import org.springframework.util.ReflectionUtils;
 
-import javax.sql.DataSource;
-import java.io.IOException;
-import java.lang.reflect.Method;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 
 /**
  * A {@link org.grails.datastore.mapping.core.connections.ConnectionSource} for JDBC {@link DataSource} objects. Attempts to close the pool if a "close" method is provided.

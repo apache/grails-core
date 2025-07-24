@@ -20,6 +20,7 @@
 package org.grails.plugins.web.servlet.mvc
 
 import groovy.transform.CompileStatic
+
 import org.grails.web.servlet.mvc.AbstractTokenResponseHandler
 
 /**

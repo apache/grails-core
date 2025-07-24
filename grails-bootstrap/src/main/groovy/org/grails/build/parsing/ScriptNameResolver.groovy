@@ -18,8 +18,9 @@
  */
 package org.grails.build.parsing
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
+
+import grails.util.GrailsNameUtils
 
 /**
  * @author Andres Almiray

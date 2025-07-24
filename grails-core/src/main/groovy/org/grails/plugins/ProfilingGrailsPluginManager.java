@@ -18,16 +18,18 @@
  */
 package org.grails.plugins;
 
-import grails.plugins.DefaultGrailsPluginManager;
-import grails.plugins.GrailsPlugin;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
-import grails.core.GrailsApplication;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.grails.spring.RuntimeSpringConfiguration;
-import grails.plugins.exceptions.PluginException;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
+
+import grails.core.GrailsApplication;
+import grails.plugins.DefaultGrailsPluginManager;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.exceptions.PluginException;
+import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * A GrailsPluginManager implementation that outputs profile data to a logger.

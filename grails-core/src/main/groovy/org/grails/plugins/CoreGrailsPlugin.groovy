@@ -18,25 +18,8 @@
  */
 package org.grails.plugins
 
-import grails.config.Settings
-import grails.plugins.Plugin
-import grails.util.BuildSettings
-import grails.util.Environment
-import grails.util.GrailsUtil
 import groovy.transform.CompileStatic
-import org.grails.spring.DefaultRuntimeSpringConfiguration
-import org.grails.spring.RuntimeSpringConfiguration
-import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
-import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
-import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
-import org.grails.spring.RuntimeSpringConfigUtilities
-import org.grails.core.io.DefaultResourceLocator
-import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor
-import org.grails.spring.beans.PluginManagerAwareBeanPostProcessor
-import org.grails.core.support.ClassEditor
-import org.grails.dev.support.DevelopmentShutdownHook
-import org.grails.beans.support.PropertiesEditor
-import grails.core.support.proxy.DefaultProxyHandler
+
 import org.springframework.beans.factory.config.CustomEditorConfigurer
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader
@@ -44,6 +27,25 @@ import org.springframework.context.annotation.ConfigurationClassPostProcessor
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.io.Resource
 import org.springframework.util.ClassUtils
+
+import grails.config.Settings
+import grails.core.support.proxy.DefaultProxyHandler
+import grails.plugins.Plugin
+import grails.util.BuildSettings
+import grails.util.Environment
+import grails.util.GrailsUtil
+import org.grails.beans.support.PropertiesEditor
+import org.grails.core.io.DefaultResourceLocator
+import org.grails.core.support.ClassEditor
+import org.grails.dev.support.DevelopmentShutdownHook
+import org.grails.spring.DefaultRuntimeSpringConfiguration
+import org.grails.spring.RuntimeSpringConfigUtilities
+import org.grails.spring.RuntimeSpringConfiguration
+import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
+import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor
+import org.grails.spring.beans.PluginManagerAwareBeanPostProcessor
+import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 
 /**
  * Configures the core shared beans within the Grails application context.

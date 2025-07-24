@@ -18,11 +18,10 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.DataBindingSource;
 import groovy.transform.CompileStatic
 
+import grails.databinding.DataBindingSource
 import grails.web.mime.MimeType
-
 
 /**
  * Creates DataBindingSource objects from HAL JSON in the request body

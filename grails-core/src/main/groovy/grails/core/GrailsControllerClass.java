@@ -18,9 +18,9 @@
  */
 package grails.core;
 
-import grails.web.UrlConverter;
-
 import java.util.Set;
+
+import grails.web.UrlConverter;
 
 /**
  * Represents a controller class in Grails.

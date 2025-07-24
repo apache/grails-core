@@ -18,10 +18,6 @@
  */
 package org.grails.web.errors;
 
-import grails.config.Config;
-import grails.config.Settings;
-import grails.util.Environment;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -29,36 +25,42 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.codehaus.groovy.control.CompilationFailedException;
+import org.codehaus.groovy.runtime.InvokerInvocationException;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import grails.web.mapping.exceptions.UrlMappingException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.control.CompilationFailedException;
-import grails.core.GrailsApplication;
-import grails.web.mvc.GrailsResponseMutator;
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
-import org.grails.core.exceptions.GrailsRuntimeException;
-import org.grails.exceptions.reporting.StackTraceFilterer;
-import grails.core.support.GrailsApplicationAware;
-import grails.web.mapping.UrlMappingInfo;
-import org.grails.exceptions.ExceptionUtils;
-import org.grails.web.mapping.DefaultUrlMappingInfo;
-import org.grails.web.mapping.UrlMappingUtils;
-import grails.web.mapping.UrlMappingsHolder;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.mvc.exceptions.GrailsMVCException;
-import org.grails.web.util.WebUtils;
-import org.codehaus.groovy.runtime.InvokerInvocationException;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver;
+
+import grails.config.Config;
+import grails.config.Settings;
+import grails.core.GrailsApplication;
+import grails.core.support.GrailsApplicationAware;
+import grails.util.Environment;
+import grails.web.mapping.UrlMappingInfo;
+import grails.web.mapping.UrlMappingsHolder;
+import grails.web.mapping.exceptions.UrlMappingException;
+import grails.web.mvc.GrailsResponseMutator;
+import org.grails.core.exceptions.GrailsRuntimeException;
+import org.grails.exceptions.ExceptionUtils;
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
+import org.grails.exceptions.reporting.StackTraceFilterer;
+import org.grails.web.mapping.DefaultUrlMappingInfo;
+import org.grails.web.mapping.UrlMappingUtils;
+import org.grails.web.servlet.mvc.exceptions.GrailsMVCException;
+import org.grails.web.util.GrailsApplicationAttributes;
+import org.grails.web.util.WebUtils;
 
 /**
  * Wraps any runtime exceptions with a GrailsWrappedException instance.
@@ -82,9 +84,9 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     @Override
     public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response,
                                          Object handler, Exception ex) {
-        // don't reuse cached controller attribute 
-        request.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE);        
-        
+        // don't reuse cached controller attribute
+        request.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE);
+
         ex = findWrappedException(ex);
 
         filterStackTrace(ex);

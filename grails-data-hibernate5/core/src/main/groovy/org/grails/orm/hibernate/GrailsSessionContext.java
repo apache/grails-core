@@ -18,6 +18,10 @@
  */
 package org.grails.orm.hibernate;
 
+import jakarta.transaction.Status;
+import jakarta.transaction.Transaction;
+import jakarta.transaction.TransactionManager;
+
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -28,6 +32,7 @@ import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
 import org.hibernate.service.spi.ServiceBinding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.orm.hibernate5.SpringFlushSynchronization;
@@ -36,10 +41,6 @@ import org.springframework.orm.hibernate5.SpringSessionSynchronization;
 import org.springframework.transaction.jta.SpringJtaSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import jakarta.transaction.Status;
-import jakarta.transaction.Transaction;
-import jakarta.transaction.TransactionManager;
 
 /**
  * Based on org.springframework.orm.hibernate4.SpringSessionContext.

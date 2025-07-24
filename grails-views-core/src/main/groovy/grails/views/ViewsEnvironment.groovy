@@ -19,9 +19,10 @@
 
 package grails.views
 
+import groovy.transform.CompileStatic
+
 import grails.util.BuildSettings
 import grails.util.Environment
-import groovy.transform.CompileStatic
 
 /**
  * Environment helper methods

@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.simple.engine
 
+import org.springframework.context.ApplicationEventPublisher
+
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.IdentityGenerationException
 import org.grails.datastore.mapping.core.OptimisticLockingException
@@ -35,7 +37,6 @@ import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.query.SimpleMapQuery
-import org.springframework.context.ApplicationEventPublisher
 
 /**
  * A simple implementation of the {@link org.grails.datastore.mapping.engine.EntityPersister} abstract class that backs onto an in-memory map.

@@ -19,11 +19,11 @@
 
 package org.grails.datastore.mapping.cache.impl;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.grails.datastore.mapping.cache.TPCacheAdapter;
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.model.PersistentEntity;
-
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Simple implementation of {@link TPCacheAdapterRepository}

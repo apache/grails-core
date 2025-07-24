@@ -19,9 +19,9 @@
 
 package org.grails.datastore.mapping.query.event;
 
-import org.grails.datastore.mapping.query.Query;
-
 import java.util.List;
+
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Query fired after a query has run.

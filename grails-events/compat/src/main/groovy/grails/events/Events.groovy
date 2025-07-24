@@ -21,6 +21,7 @@ package grails.events
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.slf4j.LoggerFactory
 import reactor.bus.Bus
 import reactor.bus.Event

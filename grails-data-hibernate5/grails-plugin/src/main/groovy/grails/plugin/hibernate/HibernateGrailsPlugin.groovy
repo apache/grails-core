@@ -19,20 +19,22 @@
 
 package grails.plugin.hibernate
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.convert.converter.Converter
+import org.springframework.core.convert.support.ConfigurableConversionService
+import org.springframework.core.env.PropertyResolver
+
 import grails.config.Config
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.orm.bootstrap.HibernateDatastoreSpringInitializer
 import grails.plugins.Plugin
 import grails.util.Environment
-import groovy.transform.CompileStatic
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.DomainClassArtefactHandler
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.core.convert.converter.Converter
-import org.springframework.core.convert.support.ConfigurableConversionService
-import org.springframework.core.env.PropertyResolver
 
 /**
  * Plugin that integrates Hibernate into a Grails application

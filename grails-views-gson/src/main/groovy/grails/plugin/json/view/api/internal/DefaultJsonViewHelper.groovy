@@ -19,6 +19,16 @@
 
 package grails.plugin.json.view.api.internal
 
+import java.beans.PropertyDescriptor
+import java.lang.reflect.ParameterizedType
+
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+import org.codehaus.groovy.runtime.StackTraceUtils
+
+import org.springframework.http.HttpMethod
+import org.springframework.util.ReflectionUtils
+
 import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.view.api.JsonView
@@ -28,18 +38,10 @@ import grails.views.api.http.Parameters
 import grails.views.api.internal.DefaultGrailsViewHelper
 import grails.views.mvc.http.DelegatingParameters
 import grails.views.utils.ViewUtils
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
-import org.codehaus.groovy.runtime.StackTraceUtils
 import org.grails.core.util.IncludeExcludeSupport
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.model.MappingFactory
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.http.HttpMethod
-import org.springframework.util.ReflectionUtils
-
-import java.beans.PropertyDescriptor
-import java.lang.reflect.ParameterizedType
 
 @CompileStatic
 @InheritConstructors

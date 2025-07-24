@@ -16,14 +16,15 @@
  */
 package org.grails.cli
 
-import grails.build.logging.GrailsConsole
-import grails.build.proxy.SystemPropertiesAuthenticator
-import grails.config.ConfigMap
-import grails.io.support.SystemStreamsRedirector
-import grails.util.BuildSettings
-import grails.util.Environment
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+
 import jline.UnixTerminal
 import jline.console.UserInterruptException
 import jline.console.completer.ArgumentCompleter
@@ -32,6 +33,13 @@ import jline.internal.NonBlockingInputStream
 import org.gradle.tooling.BuildActionExecuter
 import org.gradle.tooling.BuildCancelledException
 import org.gradle.tooling.ProjectConnection
+
+import grails.build.logging.GrailsConsole
+import grails.build.proxy.SystemPropertiesAuthenticator
+import grails.config.ConfigMap
+import grails.io.support.SystemStreamsRedirector
+import grails.util.BuildSettings
+import grails.util.Environment
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 import org.grails.build.parsing.DefaultCommandLine
@@ -58,12 +66,6 @@ import org.grails.cli.profile.repository.StaticJarProfileRepository
 import org.grails.config.CodeGenConfig
 import org.grails.config.NavigableMap
 import org.grails.exceptions.ExceptionUtils
-
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
 
 /**
  * Main class for the Grails command line. Handles interactive mode and running Grails commands within the context of a profile

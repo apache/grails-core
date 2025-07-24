@@ -20,6 +20,7 @@
 package org.apache.grails.testing.mongo
 
 import groovy.transform.PackageScope
+
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.MongoDBContainer

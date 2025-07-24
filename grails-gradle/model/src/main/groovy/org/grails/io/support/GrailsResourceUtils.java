@@ -18,11 +18,6 @@
  */
 package org.grails.io.support;
 
-import grails.util.BuildSettings;
-import groovy.lang.Closure;
-import groovy.util.ConfigObject;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -40,6 +35,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import groovy.lang.Closure;
+import groovy.util.ConfigObject;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import grails.util.BuildSettings;
 
 
 /**

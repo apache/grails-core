@@ -18,6 +18,15 @@
  */
 package org.grails.plugins.web
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.config.PropertiesFactoryBean
+import org.springframework.boot.web.servlet.ServletRegistrationBean
+import org.springframework.core.io.Resource
+import org.springframework.util.ClassUtils
+import org.springframework.web.servlet.view.InternalResourceViewResolver
+
 import grails.config.Config
 import grails.core.gsp.GrailsTagLibClass
 import grails.gsp.PageRenderer
@@ -27,8 +36,6 @@ import grails.util.Environment
 import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.gsp.GroovyPageResourceLoader
 import org.grails.gsp.GroovyPagesTemplateEngine
@@ -54,11 +61,6 @@ import org.grails.web.pages.FilteringCodecsByContentTypeSettings
 import org.grails.web.pages.GroovyPagesServlet
 import org.grails.web.servlet.view.GroovyPageViewResolver
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.beans.factory.config.PropertiesFactoryBean
-import org.springframework.boot.web.servlet.ServletRegistrationBean
-import org.springframework.core.io.Resource
-import org.springframework.util.ClassUtils
-import org.springframework.web.servlet.view.InternalResourceViewResolver
 
 /**
  * Sets up and configures the GSP and GSP tag library support in Grails.

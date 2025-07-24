@@ -18,13 +18,11 @@
  */
 package grails.doc.macros
 
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Internal
-import org.radeox.api.engine.context.InitialRenderContext
-
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
+
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.radeox.macro.BaseMacro
 import org.radeox.macro.CodeMacro
 import org.radeox.macro.parameter.BaseMacroParameter

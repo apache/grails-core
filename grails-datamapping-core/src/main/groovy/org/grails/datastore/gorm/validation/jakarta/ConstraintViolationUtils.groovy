@@ -19,13 +19,15 @@
 
 package org.grails.datastore.gorm.validation.jakarta
 
-import grails.gorm.services.Service
 import groovy.transform.CompileStatic
-import org.springframework.validation.Errors
-import org.springframework.validation.MapBindingResult
 
 import jakarta.validation.ConstraintViolation
 import jakarta.validation.ConstraintViolationException
+
+import org.springframework.validation.Errors
+import org.springframework.validation.MapBindingResult
+
+import grails.gorm.services.Service
 
 /**
  * Utility methods for handling ConstraintViolationException

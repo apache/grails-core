@@ -18,14 +18,15 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Card
 import org.apache.grails.data.testing.tck.domains.CardProfile
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.TestAuthor
 import org.apache.grails.data.testing.tck.domains.TestBook
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.proxy.ProxyHandler
-import spock.lang.IgnoreIf
 
 /**
  * @author Graeme Rocher

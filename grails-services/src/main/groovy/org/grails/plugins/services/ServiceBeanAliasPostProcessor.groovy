@@ -18,16 +18,18 @@
  */
 package org.grails.plugins.services
 
-import grails.artefact.Artefact
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
-import org.grails.core.artefact.ServiceArtefactHandler
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.GenericBeanDefinition
 import org.springframework.core.AliasRegistry
+
+import grails.artefact.Artefact
+import grails.util.GrailsNameUtils
+import org.grails.core.artefact.ServiceArtefactHandler
 
 /**
  * Registers bean aliases for service beans provided by plugins.

@@ -18,14 +18,15 @@
  */
 package grails.io
 
-import grails.util.BuildSettings
+import java.nio.file.Paths
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+
+import grails.util.BuildSettings
 import org.grails.io.support.Resource
 import org.grails.io.support.SpringIOUtils
 import org.grails.io.support.UrlResource
-
-import java.nio.file.Paths
 
 /**
  * Utility methods for performing I/O operations.

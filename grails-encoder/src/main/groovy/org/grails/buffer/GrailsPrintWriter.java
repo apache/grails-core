@@ -18,16 +18,20 @@
  */
 package org.grails.buffer;
 
-import groovy.lang.GroovyObject;
-import groovy.lang.MetaClass;
-import groovy.lang.Writable;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 
+import groovy.lang.GroovyObject;
+import groovy.lang.MetaClass;
+import groovy.lang.Writable;
+import org.codehaus.groovy.runtime.GStringImpl;
+import org.codehaus.groovy.runtime.InvokerHelper;
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.grails.charsequences.CharSequences;
 import org.grails.encoder.EncodedAppender;
 import org.grails.encoder.EncodedAppenderFactory;
@@ -37,9 +41,6 @@ import org.grails.encoder.Encoder;
 import org.grails.encoder.EncodingStateRegistry;
 import org.grails.encoder.StreamingEncoder;
 import org.grails.encoder.StreamingEncoderWriter;
-import org.codehaus.groovy.runtime.GStringImpl;
-import org.codehaus.groovy.runtime.InvokerHelper;
-import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
 
 /**
  * PrintWriter implementation that doesn't have synchronization. null object
@@ -131,7 +132,7 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
                 handleIOException(e);
             }
         }
-        else {        
+        else {
             InvokerHelper.write(this, obj);
         }
         return this;
@@ -562,7 +563,7 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
             write((StreamCharBuffer)writable);
             return;
         }
-        
+
         usageFlag = true;
         if (trouble)
             return;

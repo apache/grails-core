@@ -19,9 +19,10 @@
 
 package org.grails.events.registry
 
-import grails.events.subscriber.Subscription
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
+import grails.events.subscriber.Subscription
 
 /**
  * Abstract subscription

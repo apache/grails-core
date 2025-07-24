@@ -19,10 +19,10 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-import org.springframework.core.env.PropertyResolver;
-
 import java.io.Closeable;
 import java.util.Map;
+
+import org.springframework.core.env.PropertyResolver;
 
 /**
  * Models multiple connection sources

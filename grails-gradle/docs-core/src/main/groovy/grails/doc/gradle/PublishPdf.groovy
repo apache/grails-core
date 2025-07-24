@@ -18,17 +18,26 @@
  */
 package grails.doc.gradle
 
-import grails.doc.PdfPublisher
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
-import javax.inject.Inject
+import grails.doc.PdfPublisher
 
 /**
  * Gradle task for generating a gdoc-based PDF user guide. Assumes the

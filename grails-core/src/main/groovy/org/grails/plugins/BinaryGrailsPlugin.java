@@ -18,18 +18,6 @@
  */
 package org.grails.plugins;
 
-import grails.core.GrailsApplication;
-import grails.io.IOUtils;
-import grails.io.ResourceUtils;
-import grails.plugins.exceptions.PluginException;
-import grails.util.BuildSettings;
-import org.grails.core.io.StaticResourceLoader;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.util.StringUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,6 +31,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.util.StringUtils;
+
+import grails.core.GrailsApplication;
+import grails.io.IOUtils;
+import grails.io.ResourceUtils;
+import grails.plugins.exceptions.PluginException;
+import grails.util.BuildSettings;
+import org.grails.core.io.StaticResourceLoader;
 
 /**
  * Models a pre-compiled binary plugin.

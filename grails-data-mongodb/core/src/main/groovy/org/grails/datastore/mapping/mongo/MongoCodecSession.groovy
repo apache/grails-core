@@ -17,6 +17,13 @@
  *  under the License.
  */
 package org.grails.datastore.mapping.mongo
+
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.CompileStatic
+
+import jakarta.persistence.FlushModeType
+
 import com.mongodb.WriteConcern
 import com.mongodb.bulk.BulkWriteResult
 import com.mongodb.client.FindIterable
@@ -30,12 +37,15 @@ import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.WriteModel
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
-import groovy.transform.CompileStatic
 import org.bson.BsonDocumentReader
 import org.bson.BsonDocumentWrapper
 import org.bson.Document
 import org.bson.codecs.DecoderContext
 import org.bson.conversions.Bson
+
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.dao.DataIntegrityViolationException
+
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.mapping.core.OptimisticLockingException
 import org.grails.datastore.mapping.core.impl.PendingDelete
@@ -58,11 +68,7 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.mapping.transactions.SessionOnlyTransaction
 import org.grails.datastore.mapping.transactions.Transaction
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.dao.DataIntegrityViolationException
 
-import jakarta.persistence.FlushModeType
-import java.util.concurrent.ConcurrentHashMap
 /**
  * A MongoDB session for codec mapping style
  *

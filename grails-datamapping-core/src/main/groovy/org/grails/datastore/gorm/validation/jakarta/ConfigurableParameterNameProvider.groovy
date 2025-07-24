@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.validation.jakarta
 
+import java.lang.reflect.Constructor
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
 
 import jakarta.validation.ParameterNameProvider
-import java.lang.reflect.Constructor
-import java.lang.reflect.Method
 
 /**
  * A configurable parameter name provider

@@ -18,13 +18,13 @@
  */
 package grails.boot.config.tools
 
-import grails.boot.config.GrailsApplicationPostProcessor
-import grails.core.GrailsApplicationLifeCycle
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 
+import grails.boot.config.GrailsApplicationPostProcessor
+import grails.core.GrailsApplicationLifeCycle
 
 /**
  * Profiles bean creation outputting data to the console

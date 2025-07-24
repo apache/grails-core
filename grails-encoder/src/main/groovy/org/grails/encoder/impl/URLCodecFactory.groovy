@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.encoder.impl;
+package org.grails.encoder.impl
 
 import groovy.transform.CompileStatic
+
 import org.grails.encoder.CodecFactory
 import org.grails.encoder.CodecIdentifier
 import org.grails.encoder.Decoder
@@ -27,7 +28,7 @@ import org.grails.encoder.Encoder
 
 /**
  * Implements the 'www-form-urlencoded' encoding scheme, also misleadingly known as URL encoding.
- * 
+ *
  * @see <a href="http://www.w3.org/TR/html4/interact/forms.html#h-17.13.4.1">Chapter 17.13.4 Form content types</a>
  *           of the <a href="http://www.w3.org/TR/html4/">HTML 4.01 Specification</a>
  *
@@ -57,7 +58,7 @@ public class URLCodecFactory implements CodecFactory {
         }
 
         public void markEncoded(CharSequence string) {
-            
+
         }
     };
 

@@ -19,10 +19,12 @@
 
 package grails.views.json.test.spock
 
-import grails.views.json.test.JsonViewUnitTest
 import groovy.transform.CompileStatic
+
 import org.spockframework.runtime.extension.IGlobalExtension
 import org.spockframework.runtime.model.SpecInfo
+
+import grails.views.json.test.JsonViewUnitTest
 
 @CompileStatic
 class JsonViewSpockExtension implements IGlobalExtension {

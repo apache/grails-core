@@ -15,7 +15,6 @@
 package org.grails.datastore.gorm.internal
 
 import groovy.transform.CompileStatic
-
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 
 /**
@@ -28,7 +27,7 @@ abstract class MethodInvokingClosure extends Closure {
     protected apiDelegate
     protected Class[] parameterTypes
     protected MetaMethod metaMethod
-    
+
     MethodInvokingClosure(apiDelegate, String methodName, Class[] parameterTypes) {
         super(apiDelegate, apiDelegate)
         this.apiDelegate = apiDelegate
@@ -50,11 +49,11 @@ abstract class MethodInvokingClosure extends Closure {
     int getMaximumNumberOfParameters() {
         parameterTypes.length
     }
-    
+
     /**
-     * Utility method for choosing matching metamethod, handles MethodSelectionException 
-     * 
-     * 
+     * Utility method for choosing matching metamethod, handles MethodSelectionException
+     *
+     *
      * @param theMetaClass
      * @param methodName
      * @param parameterTypes

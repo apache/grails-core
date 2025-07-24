@@ -18,7 +18,10 @@
  */
 package org.grails.datastore.gorm.plugin.support
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.config.ConstructorArgumentValues
@@ -29,12 +32,11 @@ import org.springframework.beans.factory.support.ManagedList
 import org.springframework.core.Ordered
 import org.springframework.util.ClassUtils
 
-import java.util.regex.Pattern
 /**
  * BeanDefinitionRegistryPostProcessor that replaces multiple discovered PersistenceContextInterceptor beans with
  * a single aggregating instance. The previous multiple PersistenceContextInterceptor beans will be removed from
  * the context and re-added as inner beans of the new AggregatePersistenceContextInterceptor bean.
- * 
+ *
  * PersistenceContextInterceptor beans are discovered by the bean name. The default pattern used for matching
  * the beans is ^.*[pP]ersistenceInterceptor$
  *
@@ -59,7 +61,7 @@ class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryP
             registry.registerBeanDefinition(aggregatorBeanName, createAggregateBeanDefinition(interceptorBeans))
         }
     }
-    
+
     protected Collection<String> findPersistenceInterceptorBeanNames(BeanDefinitionRegistry registry) {
         // assume that all persistenceInterceptor beans match the defined pattern
         // checking for type (class) would require instantiating classes
@@ -86,6 +88,6 @@ class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryP
     }
 
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
-        
+
     }
 }

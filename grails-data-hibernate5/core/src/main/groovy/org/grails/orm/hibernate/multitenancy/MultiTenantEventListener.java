@@ -19,6 +19,10 @@
 
 package org.grails.orm.hibernate.multitenancy;
 
+import java.io.Serializable;
+
+import org.springframework.context.ApplicationEvent;
+
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
@@ -35,9 +39,6 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
-import org.springframework.context.ApplicationEvent;
-
-import java.io.Serializable;
 
 /**
  * An event listener that hooks into persistence events to enable discriminator based multi tenancy (ie {@link org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode#DISCRIMINATOR}

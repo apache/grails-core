@@ -19,8 +19,10 @@
 package org.grails.gsp.jsp
 
 import groovy.transform.CompileStatic
-import org.grails.buffer.FastStringPrintWriter
+
 import org.springframework.util.Assert
+
+import org.grails.buffer.FastStringPrintWriter
 
 /**
  * @author Graeme Rocher
@@ -54,7 +56,7 @@ class JspTagLibImpl implements JspTagLib {
         JspTag tag = getTag(name)
 
         if (tag) {
-            Object[] args = (Object[])argsParam 
+            Object[] args = (Object[])argsParam
             if(args == null || args.length==0) {
                  args = [[:]] as Object[]
             }

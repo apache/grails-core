@@ -18,11 +18,13 @@
  */
 package org.grails.encoder;
 
-import grails.core.GrailsApplication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
+
+import grails.core.GrailsApplication;
 
 public class CodecLookupHelper {
     private static final Logger log = LoggerFactory.getLogger(CodecLookupHelper.class);

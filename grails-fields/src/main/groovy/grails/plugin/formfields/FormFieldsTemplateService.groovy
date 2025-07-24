@@ -18,13 +18,17 @@
  */
 package grails.plugin.formfields
 
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.context.request.RequestContextHolder
+
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
-import groovy.transform.Memoized
-import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ManyToOne
 import org.grails.datastore.mapping.model.types.OneToMany
@@ -32,8 +36,6 @@ import org.grails.datastore.mapping.model.types.OneToOne
 import org.grails.scaffolding.model.property.Constrained
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.context.request.RequestContextHolder
 
 import static org.grails.io.support.GrailsResourceUtils.appendPiecesForUri
 

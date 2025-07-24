@@ -29,8 +29,9 @@ import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 
-import org.grails.cli.compiler.grape.DependencyResolutionContext;
 import org.springframework.core.annotation.Order;
+
+import org.grails.cli.compiler.grape.DependencyResolutionContext;
 
 /**
  * {@link import org.codehaus.groovy.transform.ASTTransformation} to resolve {@link Grab @Grab} artifact coordinates.

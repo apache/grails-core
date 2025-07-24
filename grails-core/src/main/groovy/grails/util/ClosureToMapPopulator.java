@@ -18,12 +18,12 @@
  */
 package grails.util;
 
-import groovy.lang.Closure;
-import groovy.lang.GroovyObjectSupport;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+import groovy.lang.Closure;
+import groovy.lang.GroovyObjectSupport;
 
 /**
  * A simple class that takes method invocations and property setters and populates

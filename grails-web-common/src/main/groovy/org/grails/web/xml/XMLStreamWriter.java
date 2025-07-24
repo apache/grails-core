@@ -18,15 +18,15 @@
  */
 package org.grails.web.xml;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Stack;
+
 import groovy.xml.streamingmarkupsupport.StreamingMarkupWriter;
 
 import static org.grails.web.xml.XMLStreamWriter.Mode.CONTENT;
 import static org.grails.web.xml.XMLStreamWriter.Mode.INIT;
 import static org.grails.web.xml.XMLStreamWriter.Mode.TAG;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.Stack;
 
 /**
  * A simple XML Stream Writer that leverages the StreamingMarkupWriter of Groovy

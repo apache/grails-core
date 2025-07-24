@@ -18,8 +18,6 @@
  */
 package org.grails.compiler.injection;
 
-import grails.artefact.Artefact;
-
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
@@ -27,9 +25,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.GrailsArtefactClassInjector;
-import grails.compiler.ast.GrailsDomainClassInjector;
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -51,6 +46,11 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
+
+import grails.artefact.Artefact;
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.GrailsArtefactClassInjector;
+import grails.compiler.ast.GrailsDomainClassInjector;
 import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.io.support.GrailsResourceUtils;

@@ -20,6 +20,7 @@
 package grails.views
 
 import groovy.transform.CompileStatic
+
 import org.grails.exceptions.reporting.SourceCodeAware
 
 /**

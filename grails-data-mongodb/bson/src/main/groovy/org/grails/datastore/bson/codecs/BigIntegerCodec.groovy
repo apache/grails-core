@@ -20,6 +20,7 @@
 package org.grails.datastore.bson.codecs
 
 import groovy.transform.CompileStatic
+
 import org.bson.BsonReader
 import org.bson.BsonWriter
 import org.bson.codecs.Codec

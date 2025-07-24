@@ -14,9 +14,16 @@
  */
 package org.grails.datastore.mapping.mongo;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClient;
 import org.bson.Document;
+
+import org.springframework.context.ApplicationEventPublisher;
+
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.core.impl.PendingOperation;
 import org.grails.datastore.mapping.document.config.DocumentMappingContext;
@@ -24,11 +31,6 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.mongo.config.MongoCollection;
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext;
-import org.springframework.context.ApplicationEventPublisher;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract implementation on the {@link org.grails.datastore.mapping.core.Session} interface for MongoDB

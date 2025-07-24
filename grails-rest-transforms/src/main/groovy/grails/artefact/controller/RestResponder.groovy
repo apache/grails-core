@@ -19,6 +19,17 @@
 package grails.artefact.controller
 
 import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+import groovy.transform.TypeCheckingMode
+
+import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.Errors
+
 import grails.artefact.Controller
 import grails.artefact.controller.support.ResponseRenderer
 import grails.core.support.proxy.ProxyHandler
@@ -26,20 +37,10 @@ import grails.rest.Resource
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
 import grails.web.mime.MimeType
-import groovy.transform.Generated
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.web.util.GrailsApplicationAttributes
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
-
-import jakarta.servlet.http.HttpServletResponse
-
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
 import org.grails.plugins.web.rest.render.ServletRenderContext
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
-import org.springframework.validation.BeanPropertyBindingResult
-import org.springframework.validation.Errors
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  *
@@ -223,7 +224,7 @@ trait RestResponder {
         }
         callRender([status: statusCode ?: HttpStatus.NOT_ACCEPTABLE.value() ])
     }
-    
+
     private callRender(Map args) {
         ((ResponseRenderer)this).render args
     }
@@ -256,7 +257,7 @@ trait RestResponder {
     private MimeType[] getResponseFormat(HttpServletResponse response) {
         response.mimeTypesFormatAware
     }
-    
+
     @CompileStatic(TypeCheckingMode.SKIP)
     private Errors getDomainErrors(object) {
         if (object instanceof Errors) {
@@ -268,7 +269,7 @@ trait RestResponder {
         }
         return null
     }
-    
+
     private List<String> getDefaultResponseFormats(value) {
         Resource resAnn = value != null ? value.getClass().getAnnotation(Resource) : null
         if (resAnn) {

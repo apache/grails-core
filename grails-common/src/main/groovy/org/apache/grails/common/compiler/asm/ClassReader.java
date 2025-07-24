@@ -29,15 +29,15 @@
  */
 package org.apache.grails.common.compiler.asm;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.ClassVisitor;
 import org.springframework.asm.Handle;
 import org.springframework.asm.Label;
 import org.springframework.asm.Opcodes;
 import org.springframework.asm.Type;
-
-import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * A Java class parser to make a {@link org.springframework.asm.ClassVisitor} visit an existing class.

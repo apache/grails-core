@@ -18,10 +18,11 @@
  */
 package org.grails.web.servlet.boostrap;
 
-import grails.util.Environment;
 import groovy.lang.Closure;
-import org.grails.core.AbstractGrailsClass;
+
+import grails.util.Environment;
 import grails.web.servlet.bootstrap.GrailsBootstrapClass;
+import org.grails.core.AbstractGrailsClass;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 @SuppressWarnings("serial")

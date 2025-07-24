@@ -19,12 +19,12 @@
 
 package org.grails.io.watch;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to watch directories for changes.
@@ -54,17 +54,17 @@ public class DirectoryWatcher extends Thread {
                     jnaAvailable = true;
                 } catch( ClassNotFoundException e ) {
                     if(LOG.isWarnEnabled()) {
-                        LOG.warn("Error Initializing Native OS X File Event Watcher. Add JNA to classpath for Faster File Watching performance.");    
+                        LOG.warn("Error Initializing Native OS X File Event Watcher. Add JNA to classpath for Faster File Watching performance.");
                     }
-                    
+
                 }
                 if(jnaAvailable) {
                     directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.MacOsWatchServiceDirectoryWatcher").newInstance();
                 } else {
-                    directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.WatchServiceDirectoryWatcher").newInstance();                    
+                    directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.WatchServiceDirectoryWatcher").newInstance();
                 }
             } else {
-                directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.WatchServiceDirectoryWatcher").newInstance();                
+                directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.WatchServiceDirectoryWatcher").newInstance();
             }
         } catch (Throwable e) {
             LOG.info("Exception while trying to load WatchServiceDirectoryWatcher (this is probably Java 6 and WatchService isn't available). Falling back to PollingDirectoryWatcher.", e);
@@ -133,7 +133,7 @@ public class DirectoryWatcher extends Thread {
     }
 
     /**
-     * Adds a directory to watch for the given file. All files and subdirectories in the directory will be watched. 
+     * Adds a directory to watch for the given file. All files and subdirectories in the directory will be watched.
      *
      * @param dir The directory
      */

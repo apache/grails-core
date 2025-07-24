@@ -21,11 +21,12 @@ package org.grails.core.artefact.gsp;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.LogFactory;
+
 import grails.core.ArtefactHandlerAdapter;
 import grails.core.ArtefactInfo;
 import grails.core.GrailsClass;
 import grails.core.gsp.GrailsTagLibClass;
-import org.apache.commons.logging.LogFactory;
 import org.grails.core.gsp.DefaultGrailsTagLibClass;
 
 /**

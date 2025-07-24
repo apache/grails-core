@@ -19,13 +19,15 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.DomainModelService
-import org.grails.scaffolding.model.property.DomainProperty
 import groovy.xml.MarkupBuilder
+
+import org.springframework.beans.factory.annotation.Autowired
+
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Embedded
-import org.springframework.beans.factory.annotation.Autowired
+import org.grails.scaffolding.model.DomainModelService
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * @see {@link DomainMarkupRenderer}

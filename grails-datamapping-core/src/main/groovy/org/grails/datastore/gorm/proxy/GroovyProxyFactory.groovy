@@ -19,8 +19,8 @@
 package org.grails.datastore.gorm.proxy
 
 import groovy.transform.CompileStatic
-
 import org.codehaus.groovy.runtime.HandleMetaClass
+
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor
 import org.grails.datastore.mapping.engine.EntityPersister
@@ -116,7 +116,7 @@ class GroovyProxyFactory implements ProxyFactory {
     protected <T> MetaClass resolveTargetMetaClass(T proxy, Class<T> type) {
         unwrapHandleMetaClass(proxy.getMetaClass())
     }
-    
+
     private MetaClass unwrapHandleMetaClass(MetaClass metaClass) {
         (metaClass instanceof HandleMetaClass) ? ((HandleMetaClass)metaClass).getAdaptee() : metaClass
     }

@@ -19,16 +19,19 @@
 
 package org.grails.datastore.mapping.mongo.config
 
-import com.mongodb.ConnectionString
-import com.mongodb.MongoClientSettings
-import com.mongodb.MongoCredential
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import com.mongodb.ConnectionString
+import com.mongodb.MongoClientSettings
+import com.mongodb.MongoCredential
+
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
-import java.lang.reflect.Modifier
 /**
  * Helper class for building {@link MongoClientSettings} from a {@link PropertyResolver}
  *

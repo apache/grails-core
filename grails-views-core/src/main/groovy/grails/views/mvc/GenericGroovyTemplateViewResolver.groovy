@@ -20,12 +20,14 @@
 package grails.views.mvc
 
 import groovy.transform.CompileStatic
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.web.servlet.View
-import org.springframework.web.servlet.ViewResolver
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
+
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * A UrlBasedViewResolver for ResolvableGroovyTemplateEngine

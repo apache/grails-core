@@ -19,13 +19,15 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.property.DomainProperty
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.context.MessageSource
 
 import jakarta.annotation.Resource
+
+import org.springframework.context.MessageSource
+
+import grails.util.GrailsNameUtils
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * @see {@link ContextMarkupRenderer}

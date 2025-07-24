@@ -19,12 +19,14 @@
 
 package grails.views.api.internal
 
+import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSourceResolvable
+import org.springframework.context.NoSuchMessageException
+
 import grails.views.api.GrailsView
 import grails.views.api.GrailsViewHelper
 import grails.web.mapping.LinkGenerator
-import groovy.transform.CompileStatic
-import org.springframework.context.MessageSourceResolvable
-import org.springframework.context.NoSuchMessageException
 
 /**
  * Default methods for views, additional methods can be added via traits

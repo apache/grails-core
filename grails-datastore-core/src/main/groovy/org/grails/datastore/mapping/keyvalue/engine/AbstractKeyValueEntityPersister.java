@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.keyvalue.engine;
 
 import org.springframework.context.ApplicationEventPublisher;
+
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.NativeEntryEntityPersister;
 import org.grails.datastore.mapping.keyvalue.mapping.config.Family;

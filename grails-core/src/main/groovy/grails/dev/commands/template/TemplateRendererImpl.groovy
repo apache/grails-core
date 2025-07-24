@@ -19,13 +19,14 @@
 
 package grails.dev.commands.template
 
-import grails.codegen.model.Model
-import grails.dev.commands.io.FileSystemInteraction
-import grails.dev.commands.io.FileSystemInteractionImpl
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.codegen.model.Model
+import grails.dev.commands.io.FileSystemInteraction
+import grails.dev.commands.io.FileSystemInteractionImpl
 import org.grails.io.support.DefaultResourceLoader
 import org.grails.io.support.Resource
 import org.grails.io.support.ResourceLoader

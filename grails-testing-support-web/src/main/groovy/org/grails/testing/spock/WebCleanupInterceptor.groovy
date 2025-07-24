@@ -19,14 +19,17 @@
 
 package org.grails.testing.spock
 
-import grails.testing.web.GrailsWebUnitTest
 import groovy.transform.CompileStatic
+
+import org.spockframework.runtime.extension.IMethodInterceptor
+import org.spockframework.runtime.extension.IMethodInvocation
+
+import org.springframework.web.context.request.RequestContextHolder
+
+import grails.testing.web.GrailsWebUnitTest
 import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.web.gsp.GroovyPagesTemplateRenderer
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
-import org.springframework.web.context.request.RequestContextHolder
 
 @CompileStatic
 class WebCleanupInterceptor implements IMethodInterceptor {

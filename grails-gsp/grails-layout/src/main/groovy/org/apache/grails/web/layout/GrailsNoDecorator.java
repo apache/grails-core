@@ -20,6 +20,7 @@
 package org.apache.grails.web.layout;
 
 import java.util.Iterator;
+
 import com.opensymphony.module.sitemesh.Decorator;
 import com.opensymphony.sitemesh.webapp.decorator.NoDecorator;
 

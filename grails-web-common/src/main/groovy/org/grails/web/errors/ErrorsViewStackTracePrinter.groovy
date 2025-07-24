@@ -18,10 +18,11 @@
  */
 package org.grails.web.errors
 
+import org.springframework.core.io.Resource
+
 import org.grails.core.exceptions.DefaultErrorsPrinter
 import org.grails.core.io.ResourceLocator
 import org.grails.io.support.GrailsResourceUtils
-import org.springframework.core.io.Resource
 
 /**
  * Customized Stack trace output for the errors view.

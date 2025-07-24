@@ -14,18 +14,6 @@
  */
 package org.grails.datastore.mapping.proxy;
 
-import groovy.lang.GroovyObject;
-import javassist.util.proxy.MethodFilter;
-import javassist.util.proxy.MethodHandler;
-import javassist.util.proxy.ProxyFactory;
-import javassist.util.proxy.ProxyObject;
-import org.codehaus.groovy.transform.trait.Traits;
-import org.grails.datastore.mapping.collection.PersistentCollection;
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.grails.datastore.mapping.reflect.ReflectionUtils;
-
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -33,6 +21,20 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import groovy.lang.GroovyObject;
+import org.codehaus.groovy.transform.trait.Traits;
+
+import javassist.util.proxy.MethodFilter;
+import javassist.util.proxy.MethodHandler;
+import javassist.util.proxy.ProxyFactory;
+import javassist.util.proxy.ProxyObject;
+
+import org.grails.datastore.mapping.collection.PersistentCollection;
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.datastore.mapping.reflect.ReflectionUtils;
 
 /**
  * A proxy factory that uses Javassist to create proxies
@@ -185,7 +187,7 @@ public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy
             });
             proxyClass = pf.createClass();
             PROXY_FACTORIES.put(type, proxyClass);
-            
+
             Method getIdMethod = org.springframework.util.ReflectionUtils.findMethod(type, "getId", EMPTY_CLASS_ARRAY);
             Class<?> idType = getIdMethod.getReturnType();
             if(idType != null) {

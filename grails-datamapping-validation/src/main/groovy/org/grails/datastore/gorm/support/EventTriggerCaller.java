@@ -28,8 +28,10 @@ import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
 import groovy.lang.MetaProperty;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.util.ReflectionUtils;
 
 public abstract class EventTriggerCaller {
@@ -37,11 +39,11 @@ public abstract class EventTriggerCaller {
     private static final Object[] EMPTY_ARRAY = {};
     private boolean invertBooleanReturnValue=true;
     private static final EventTriggerCaller noopCaller = new NoopCaller();
-    
+
     public static EventTriggerCaller buildCaller(String eventMethodName, Class<?> clazz) {
         return buildCaller(eventMethodName, clazz, null, null);
     }
-    
+
     public static EventTriggerCaller buildCaller(String eventMethodName, Class<?> clazz, MetaClass metaClass, Class<?>[] preferredArgumentTypes) {
         EventTriggerCaller caller = resolveMethodCaller(eventMethodName, clazz, preferredArgumentTypes);
         if(caller==null) {
@@ -103,21 +105,21 @@ public abstract class EventTriggerCaller {
         }
         return null;
     }
-    
+
     public static EventTriggerCaller wrapNullInNoopCaller(EventTriggerCaller caller) {
         return caller != null ? caller : noopCaller;
     }
-    
+
     public final boolean call(Object entity) {
         return call(entity, EMPTY_ARRAY);
     }
 
     public abstract boolean call(Object entity, Object[] argumentArray);
-    
+
     public boolean isNoOperationCaller() {
         return false;
     }
-    
+
     public boolean asBoolean() {
         return !isNoOperationCaller();
     }
@@ -137,18 +139,18 @@ public abstract class EventTriggerCaller {
     public void setInvertBooleanReturnValue(boolean invertBooleanReturnValue) {
         this.invertBooleanReturnValue = invertBooleanReturnValue;
     }
-    
+
     private static class NoopCaller extends EventTriggerCaller {
         @Override
         public boolean call(Object entity, Object[] argumentArray) {
             return false;
         }
-        
+
         public boolean isNoOperationCaller() {
             return true;
         }
     }
-    
+
     private static class MethodCaller extends EventTriggerCaller {
         Method method;
         int numberOfParameters;

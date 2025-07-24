@@ -19,8 +19,10 @@
 package org.grails.cli.profile.steps
 
 import groovy.transform.CompileStatic
+
 import org.gradle.tooling.BuildException
 import org.gradle.tooling.BuildLauncher
+
 import org.grails.cli.gradle.GradleUtil
 import org.grails.cli.profile.AbstractStep
 import org.grails.cli.profile.ExecutionContext

@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.codehaus.groovy.runtime.MetaClassHelper;
+
 import org.grails.datastore.mapping.model.config.GormProperties;
 
 /**
@@ -75,7 +76,7 @@ public class NameUtils {
     public static String getSetterName(String propertyName) {
         return PROPERTY_SET_PREFIX + capitalize(propertyName);
     }
-    
+
     /**
      * Retrieves the name of a setter for the specified property name
      * @param propertyName The property name

@@ -21,12 +21,13 @@ package org.grails.datastore.gorm.mongo;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.util.Assert;
+
 import grails.mongodb.geo.Distance;
 import grails.mongodb.geo.Point;
 import org.grails.datastore.gorm.finders.MethodExpression;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query.Criterion;
-import org.springframework.util.Assert;
 
 public class Near extends MethodExpression {
 

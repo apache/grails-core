@@ -19,16 +19,19 @@
 
 package org.grails.scaffolding.model.property
 
+import groovy.transform.CompileStatic
+
+import org.springframework.validation.Validator
+
 import grails.gorm.validation.PersistentEntityValidator
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
-import org.springframework.validation.Validator
+
 import static grails.gorm.validation.ConstrainedProperty.BLANK_CONSTRAINT
 
 /**

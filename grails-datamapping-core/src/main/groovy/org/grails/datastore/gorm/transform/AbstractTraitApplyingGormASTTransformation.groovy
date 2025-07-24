@@ -27,6 +27,7 @@ import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.tools.GenericsUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.trait.TraitComposer
+
 import org.grails.datastore.mapping.reflect.AstUtils
 
 /**

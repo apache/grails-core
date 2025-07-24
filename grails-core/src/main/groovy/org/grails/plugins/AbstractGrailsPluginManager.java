@@ -16,21 +16,6 @@
  */
 package org.grails.plugins;
 
-import grails.artefact.Enhanced;
-import grails.plugins.Plugin;
-import grails.plugins.PluginFilter;
-import org.grails.config.NavigableMap;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.plugins.GrailsVersionUtils;
-import grails.util.Environment;
-import grails.util.GrailsNameUtils;
-import groovy.lang.ExpandoMetaClass;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClassRegistry;
-import groovy.util.ConfigObject;
-import groovy.util.ConfigSlurper;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,18 +23,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import groovy.lang.ExpandoMetaClass;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClassRegistry;
+import groovy.util.ConfigObject;
+import groovy.util.ConfigSlurper;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import grails.core.ArtefactHandler;
-import grails.core.GrailsApplication;
 
-import org.grails.plugins.support.WatchPattern;
-import org.grails.spring.RuntimeSpringConfiguration;
-import org.grails.io.support.GrailsResourceUtils;
-
-import grails.plugins.exceptions.PluginException;
-
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -64,6 +47,22 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import grails.artefact.Enhanced;
+import grails.core.ArtefactHandler;
+import grails.core.GrailsApplication;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.plugins.GrailsVersionUtils;
+import grails.plugins.Plugin;
+import grails.plugins.PluginFilter;
+import grails.plugins.exceptions.PluginException;
+import grails.util.Environment;
+import grails.util.GrailsNameUtils;
+import org.grails.config.NavigableMap;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.plugins.support.WatchPattern;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * Abstract implementation of the GrailsPluginManager interface

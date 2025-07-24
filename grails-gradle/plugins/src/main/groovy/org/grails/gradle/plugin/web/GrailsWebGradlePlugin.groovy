@@ -18,17 +18,19 @@
  */
 package org.grails.gradle.plugin.web
 
-import grails.util.Environment
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+
+import grails.util.Environment
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
-
-import javax.inject.Inject
 
 /**
  * Adds web specific extensions

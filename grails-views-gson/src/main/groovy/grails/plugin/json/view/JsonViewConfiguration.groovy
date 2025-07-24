@@ -19,13 +19,15 @@
 
 package grails.plugin.json.view
 
-import grails.views.GenericViewConfiguration
-import grails.web.mime.MimeType
+import java.beans.PropertyDescriptor
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeanUtils
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-import java.beans.PropertyDescriptor
+import grails.views.GenericViewConfiguration
+import grails.web.mime.MimeType
 
 /**
  * Default configuration for JSON views

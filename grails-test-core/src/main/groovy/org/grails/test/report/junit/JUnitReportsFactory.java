@@ -18,10 +18,10 @@
  */
 package org.grails.test.report.junit;
 
-import groovy.lang.Binding;
-
 import java.io.File;
 import java.util.List;
+
+import groovy.lang.Binding;
 
 import org.apache.tools.ant.taskdefs.optional.junit.JUnitResultFormatter;
 

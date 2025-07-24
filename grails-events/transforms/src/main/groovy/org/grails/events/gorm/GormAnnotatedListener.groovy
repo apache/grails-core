@@ -19,15 +19,18 @@
 
 package org.grails.events.gorm
 
-import grails.events.annotation.gorm.Listener
+import java.lang.reflect.Method
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
+
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
 import org.springframework.util.ReflectionUtils
 
-import java.lang.reflect.Method
+import grails.events.annotation.gorm.Listener
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 
 /**
  * Marks a class as a synchronous listener of GORM events

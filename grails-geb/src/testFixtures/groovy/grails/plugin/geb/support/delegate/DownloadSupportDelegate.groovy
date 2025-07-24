@@ -18,10 +18,12 @@
  */
 package grails.plugin.geb.support.delegate
 
-import geb.download.DownloadSupport
-import grails.plugin.geb.ContainerGebSpec
 import groovy.transform.CompileStatic
 import groovy.transform.SelfType
+
+import geb.download.DownloadSupport
+
+import grails.plugin.geb.ContainerGebSpec
 
 /**
  * Handles delegation to the DownloadSupport instance so that the Geb API can be used directly in the test.

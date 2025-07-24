@@ -18,16 +18,17 @@
  */
 package org.grails.plugins.web.controllers.api;
 
+import java.util.Map;
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.context.ApplicationContext;
+
 import grails.core.GrailsApplication;
 import grails.util.Environment;
 import grails.util.Holders;
 import grails.web.databinding.DataBindingUtils;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.context.ApplicationContext;
-
-import java.util.Map;
 
 /**
  * Enhancements made to domain classes for data binding.

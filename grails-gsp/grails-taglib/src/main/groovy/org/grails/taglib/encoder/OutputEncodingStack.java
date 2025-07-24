@@ -18,8 +18,13 @@
  */
 package org.grails.taglib.encoder;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Stack;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.grails.buffer.CodecPrintWriter;
 import org.grails.buffer.GrailsLazyProxyPrintWriter;
 import org.grails.buffer.GrailsLazyProxyPrintWriter.DestinationFactory;
@@ -32,10 +37,6 @@ import org.grails.encoder.EncoderAware;
 import org.grails.encoder.EncodingStateRegistry;
 import org.grails.encoder.StreamingEncoder;
 import org.grails.encoder.StreamingEncoderWriter;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.Stack;
 
 public final class OutputEncodingStack {
     public static final Log log = LogFactory.getLog(OutputEncodingStack.class);

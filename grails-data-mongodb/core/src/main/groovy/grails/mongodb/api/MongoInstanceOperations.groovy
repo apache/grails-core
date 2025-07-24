@@ -19,8 +19,9 @@
 
 package grails.mongodb.api
 
-import grails.gorm.api.GormInstanceOperations
 import org.bson.Document
+
+import grails.gorm.api.GormInstanceOperations
 
 /**
  * Instance methods for GORM for MongoDB

@@ -19,28 +19,9 @@
 
 package grails.boot.config
 
-import grails.boot.GrailsApp
-import grails.config.Settings
-import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplication
-import grails.core.GrailsApplicationClass
-import grails.core.GrailsApplicationLifeCycle
-import grails.plugins.DefaultGrailsPluginManager
-import grails.plugins.GrailsPlugin
-import grails.plugins.GrailsPluginManager
-import grails.spring.BeanBuilder
-import grails.util.Environment
-import grails.util.Holders
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.config.NavigableMap
-import org.grails.config.PrefixedMapPropertySource
-import org.grails.config.PropertySourcesConfig
-import org.grails.core.exceptions.GrailsConfigurationException
-import org.grails.core.lifecycle.ShutdownOperations
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.spring.DefaultRuntimeSpringConfiguration
-import org.grails.spring.RuntimeSpringConfigUtilities
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
@@ -60,6 +41,27 @@ import org.springframework.core.env.AbstractEnvironment
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.io.Resource
+
+import grails.boot.GrailsApp
+import grails.config.Settings
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
+import grails.core.GrailsApplicationLifeCycle
+import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import grails.spring.BeanBuilder
+import grails.util.Environment
+import grails.util.Holders
+import org.grails.config.NavigableMap
+import org.grails.config.PrefixedMapPropertySource
+import org.grails.config.PropertySourcesConfig
+import org.grails.core.exceptions.GrailsConfigurationException
+import org.grails.core.lifecycle.ShutdownOperations
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.spring.DefaultRuntimeSpringConfiguration
+import org.grails.spring.RuntimeSpringConfigUtilities
 
 /**
  * A {@link BeanDefinitionRegistryPostProcessor} that enhances any ApplicationContext with plugin manager capabilities

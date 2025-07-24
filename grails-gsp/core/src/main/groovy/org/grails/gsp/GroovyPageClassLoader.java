@@ -18,13 +18,14 @@
  */
 package org.grails.gsp;
 
+import java.security.CodeSource;
+
 import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.Phases;
-import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation;
 
-import java.security.CodeSource;
+import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation;
 
 /**
  * A class loader that is aware of Groovy Pages and injection operations.

@@ -18,11 +18,11 @@
  */
 package grails.util
 
-import groovy.transform.CompileStatic
-
 import java.lang.reflect.Array
 
+import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
+
 import org.springframework.util.ObjectUtils
 
 /**

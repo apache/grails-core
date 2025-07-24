@@ -18,13 +18,6 @@
  */
 package org.grails.io.support;
 
-import groovy.xml.XmlSlurper;
-import groovy.xml.FactorySupport;
-import org.xml.sax.SAXException;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -45,6 +38,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import groovy.xml.FactorySupport;
+import groovy.xml.XmlSlurper;
+
+import org.xml.sax.SAXException;
 
 /**
  * Simple utility methods for file and stream copying.

@@ -18,11 +18,9 @@
  */
 package org.grails.compiler.injection.testing
 
-import grails.boot.config.GrailsAutoConfiguration
-import grails.boot.test.GrailsApplicationContextLoader
-import grails.testing.mixin.integration.Integration
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -54,11 +52,9 @@ import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
-import org.grails.compiler.injection.GrailsASTUtils
-import org.grails.io.support.MainClassFinder
-import org.grails.testing.context.junit4.GrailsJunit4ClassRunner
-import org.grails.testing.context.junit4.GrailsTestConfiguration
+
 import org.junit.runner.RunWith
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
@@ -68,7 +64,14 @@ import org.springframework.context.ApplicationContextAware
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.web.WebAppConfiguration
 
-import java.lang.reflect.Modifier
+import grails.boot.config.GrailsAutoConfiguration
+import grails.boot.test.GrailsApplicationContextLoader
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.compiler.injection.GrailsASTUtils
+import org.grails.io.support.MainClassFinder
+import org.grails.testing.context.junit4.GrailsJunit4ClassRunner
+import org.grails.testing.context.junit4.GrailsTestConfiguration
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.propX

@@ -19,11 +19,11 @@
 
 package grails.gorm.time
 
-import groovy.transform.CompileStatic
-
 import java.time.LocalTime
 import java.time.OffsetTime
 import java.time.ZoneOffset
+
+import groovy.transform.CompileStatic
 
 /**
  * A trait to convert a {@link java.time.OffsetTime} to and from a long

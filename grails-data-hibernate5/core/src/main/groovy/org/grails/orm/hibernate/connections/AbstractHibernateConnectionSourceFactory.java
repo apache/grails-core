@@ -19,21 +19,24 @@
 
 package org.grails.orm.hibernate.connections;
 
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.hibernate.SessionFactory;
+
+import org.springframework.core.env.PropertyResolver;
+
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory;
+import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettingsBuilder;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.orm.hibernate.cfg.Settings;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettingsBuilder;
-import org.hibernate.SessionFactory;
-import org.springframework.core.env.PropertyResolver;
-
-import javax.sql.DataSource;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Map;
 
 /**
  * Constructs a Hibernate {@link SessionFactory}

@@ -18,16 +18,18 @@
  */
 package org.grails.taglib;
 
-import groovy.lang.Binding;
-import groovy.lang.Closure;
-import org.grails.taglib.encoder.OutputContext;
-import org.grails.taglib.encoder.OutputEncodingStack;
-import org.springframework.util.Assert;
-
 import java.io.Writer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import groovy.lang.Binding;
+import groovy.lang.Closure;
+
+import org.springframework.util.Assert;
+
+import org.grails.taglib.encoder.OutputContext;
+import org.grails.taglib.encoder.OutputEncodingStack;
 
 /**
  * Represents the body of a tag and captures its output returning the result

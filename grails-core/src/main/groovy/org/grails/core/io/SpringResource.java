@@ -18,13 +18,13 @@
  */
 package org.grails.core.io;
 
-import org.grails.io.support.Resource;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+
+import org.grails.io.support.Resource;
 
 /**
  * Bridges Grails and Spring Resource APIs

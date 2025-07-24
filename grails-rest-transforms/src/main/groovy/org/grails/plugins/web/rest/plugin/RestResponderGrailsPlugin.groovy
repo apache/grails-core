@@ -18,16 +18,17 @@
  */
 package org.grails.plugins.web.rest.plugin
 
+import groovy.transform.CompileStatic
+
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.plugins.Plugin
 import grails.rest.Resource
 import grails.util.GrailsUtil
-import groovy.transform.CompileStatic
-
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry

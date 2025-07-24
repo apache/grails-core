@@ -20,9 +20,11 @@
 
 package org.grails.cli.gradle.commands
 
-import grails.io.support.SystemOutErrCapturer
 import groovy.transform.CompileStatic
+
 import org.gradle.tooling.ProjectConnection
+
+import grails.io.support.SystemOutErrCapturer
 import org.grails.cli.gradle.FetchAllTaskSelectorsBuildAction
 import org.grails.cli.gradle.cache.ListReadingCachedGradleOperation
 import org.grails.cli.profile.ProjectContext

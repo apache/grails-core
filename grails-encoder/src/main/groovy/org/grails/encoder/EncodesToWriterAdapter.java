@@ -18,21 +18,21 @@
  */
 package org.grails.encoder;
 
-import org.grails.charsequences.CharSequences;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.grails.charsequences.CharSequences;
+
 public class EncodesToWriterAdapter implements EncodesToWriter {
     private final StreamingEncoder encoder;
     private boolean ignoreEncodingState;
-    
+
     public EncodesToWriterAdapter(StreamingEncoder encoder) {
         this(encoder, false);
     }
-    
+
     public EncodesToWriterAdapter(StreamingEncoder encoder, boolean ignoreEncodingState) {
         this.encoder = encoder;
         this.ignoreEncodingState = ignoreEncodingState;
@@ -55,14 +55,14 @@ public class EncodesToWriterAdapter implements EncodesToWriter {
             writer.write(buf, off, len);
         }
     }
-    
+
     protected EncodingState createNewEncodingState(Encoder encoder, EncodingState encodingState) {
         if (encodingState == null) {
             return new EncodingStateImpl(encoder, null);
         }
         return encodingState.appendEncoder(encoder);
-    }    
-    
+    }
+
     protected boolean shouldEncodeWith(Encoder encoderToApply, EncodingState encodingState) {
         return ignoreEncodingState || encodingState == null || DefaultEncodingStateRegistry.shouldEncodeWith(encoderToApply,
                 encodingState);
@@ -102,5 +102,5 @@ public class EncodesToWriterAdapter implements EncodesToWriter {
             allEncoders.add(baseEncoder);
         }
         return new EncodesToWriterAdapter(ChainedEncoder.createFor(allEncoders));
-    }        
+    }
 }

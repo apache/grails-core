@@ -18,24 +18,6 @@
  */
 package org.grails.compiler.injection;
 
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.ClassInjector;
-import grails.compiler.ast.GlobalClassInjector;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.control.CompilationFailedException;
-import org.codehaus.groovy.control.CompilationUnit;
-import org.codehaus.groovy.control.SourceUnit;
-import org.grails.io.support.FileSystemResource;
-import org.grails.io.support.PathMatchingResourcePatternResolver;
-import org.grails.io.support.Resource;
-import org.springframework.asm.AnnotationVisitor;
-import org.springframework.asm.ClassReader;
-import org.springframework.asm.ClassVisitor;
-import org.springframework.asm.Opcodes;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.util.ClassUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -45,6 +27,26 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.classgen.GeneratorContext;
+import org.codehaus.groovy.control.CompilationFailedException;
+import org.codehaus.groovy.control.CompilationUnit;
+import org.codehaus.groovy.control.SourceUnit;
+
+import org.springframework.asm.AnnotationVisitor;
+import org.springframework.asm.ClassReader;
+import org.springframework.asm.ClassVisitor;
+import org.springframework.asm.Opcodes;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.util.ClassUtils;
+
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.GlobalClassInjector;
+import org.grails.io.support.FileSystemResource;
+import org.grails.io.support.PathMatchingResourcePatternResolver;
+import org.grails.io.support.Resource;
 
 /**
  * A Groovy compiler injection operation that uses a specified array of

@@ -20,6 +20,7 @@
 package grails.testing.spock
 
 import groovy.transform.AnnotationCollector
+
 import org.junit.jupiter.api.BeforeEach
 
 /**

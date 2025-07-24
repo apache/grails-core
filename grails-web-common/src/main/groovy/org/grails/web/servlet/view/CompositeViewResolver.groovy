@@ -20,6 +20,7 @@
 package org.grails.web.servlet.view
 
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.servlet.View
 import org.springframework.web.servlet.ViewResolver

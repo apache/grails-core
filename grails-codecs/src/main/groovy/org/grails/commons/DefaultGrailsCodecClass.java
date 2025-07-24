@@ -18,13 +18,18 @@
  */
 package org.grails.commons;
 
-import org.grails.core.AbstractInjectableGrailsClass;
-import groovy.lang.Closure;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import groovy.lang.Closure;
+
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.core.Ordered;
+import org.springframework.util.ReflectionUtils;
+
+import org.grails.core.AbstractInjectableGrailsClass;
 import org.grails.encoder.CodecFactory;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.CodecMetaClassSupport;
@@ -38,10 +43,6 @@ import org.grails.encoder.EncodingStateRegistry;
 import org.grails.encoder.EncodingStateRegistryLookup;
 import org.grails.encoder.EncodingStateRegistryLookupHolder;
 import org.grails.encoder.StreamingEncoder;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.core.Ordered;
-import org.springframework.util.ReflectionUtils;
 
 /**
  * @author Jeff Brown

@@ -18,23 +18,26 @@
  */
 package org.grails.plugins.web.interceptors
 
-import grails.artefact.Interceptor
-import grails.interceptors.Matcher
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
-import org.grails.datastore.mapping.services.ServiceRegistry
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.util.WebUtils
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.OrderComparator
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.ModelAndView
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import grails.artefact.Interceptor
+import grails.interceptors.Matcher
+import grails.util.GrailsNameUtils
+import org.grails.datastore.mapping.services.ServiceRegistry
+import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.WebUtils
 
 /**
  * Adapts Grails {@link Interceptor} instances to the Spring {@link HandlerInterceptor} interface

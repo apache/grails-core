@@ -19,11 +19,13 @@
 
 package grails.plugin.markup.view
 
+import groovy.text.markup.MarkupTemplateEngine
+import groovy.transform.CompileStatic
+
 import grails.plugin.markup.view.api.MarkupView
 import grails.views.GrailsViewTemplate
 import grails.views.api.GrailsView
-import groovy.text.markup.MarkupTemplateEngine
-import groovy.transform.CompileStatic
+
 /**
  * @author Graeme Rocher
  * @since 1.0

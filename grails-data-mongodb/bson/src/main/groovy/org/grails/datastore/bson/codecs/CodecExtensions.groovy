@@ -18,7 +18,11 @@
  */
 package org.grails.datastore.bson.codecs
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.GStringImpl
+
 import org.bson.BsonArray
 import org.bson.BsonBinary
 import org.bson.BsonBoolean
@@ -53,10 +57,8 @@ import org.bson.codecs.StringCodec
 import org.bson.codecs.configuration.CodecProvider
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.types.ObjectId
-import org.codehaus.groovy.runtime.GStringImpl
-import org.springframework.core.convert.converter.Converter
 
-import java.util.regex.Pattern
+import org.springframework.core.convert.converter.Converter
 
 /**
  * Additional {@link Codec} extensions. This class implements {@CodecProvider} and integrates with the {@CodecRegistry} to make it easier to convert objects to and from BSON documents

@@ -18,11 +18,12 @@
  */
 package org.grails.gsp.io;
 
-import org.grails.gsp.GroovyPageMetaInfo;
-import org.springframework.core.io.Resource;
-
 import java.io.IOException;
 import java.security.PrivilegedAction;
+
+import org.springframework.core.io.Resource;
+
+import org.grails.gsp.GroovyPageMetaInfo;
 
 /**
  * Represents a pre-compiled GSP.

@@ -18,6 +18,18 @@
  */
 package org.grails.datastore.gorm
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+import org.codehaus.groovy.runtime.InvokerHelper
+
+import org.springframework.beans.PropertyAccessorFactory
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.DefaultTransactionDefinition
+import org.springframework.util.Assert
+
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
 import grails.gorm.MultiTenant
@@ -25,11 +37,6 @@ import grails.gorm.PagedResultList
 import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
-
-import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
@@ -50,12 +57,6 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenan
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
-import org.springframework.beans.PropertyAccessorFactory
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.TransactionDefinition
-import org.springframework.transaction.support.DefaultTransactionDefinition
-import org.springframework.util.Assert
 
 /**
  * Static methods of the GORM API.

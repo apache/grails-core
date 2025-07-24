@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.transform
 
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
@@ -31,13 +33,13 @@ import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
+
+import org.springframework.beans.factory.annotation.Autowired
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.internal.RuntimeSupport
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
-import org.springframework.beans.factory.annotation.Autowired
-
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE

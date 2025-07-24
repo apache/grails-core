@@ -19,10 +19,11 @@
 
 package org.grails.datastore.mapping.core.connections
 
-import groovy.transform.CompileStatic
-import org.springframework.core.env.PropertyResolver
-
 import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
 
 /**
  * Default implementation of the {@link ConnectionSources} interface. This implementation reads {@link ConnectionSource} implementations from configuration and stores them in-memory

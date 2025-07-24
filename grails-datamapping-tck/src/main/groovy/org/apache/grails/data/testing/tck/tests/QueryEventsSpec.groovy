@@ -18,16 +18,18 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.event.SmartApplicationListener
+
 import grails.gorm.DetachedCriteria
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Simples
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.query.event.AbstractQueryEvent
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.event.SmartApplicationListener
-import spock.lang.IgnoreIf
 
 /**
  * Tests for query events.

@@ -19,8 +19,9 @@
 
 package grails.gorm
 
-import grails.gorm.api.GormAllOperations
 import groovy.transform.CompileStatic
+
+import grails.gorm.api.GormAllOperations
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 

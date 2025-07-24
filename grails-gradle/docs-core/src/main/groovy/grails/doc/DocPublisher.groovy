@@ -19,14 +19,12 @@
 
 package grails.doc
 
-import grails.doc.asciidoc.AsciiDocEngine
-import grails.doc.internal.FileResourceChecker
-import grails.doc.internal.StringEscapeCategory
-import grails.doc.internal.UserGuideNode
-import grails.doc.internal.YamlTocStrategy
+import java.nio.charset.StandardCharsets
+
 import groovy.ant.AntBuilder
 import groovy.io.FileType
 import groovy.text.Template
+
 import org.apache.commons.logging.LogFactory
 import org.radeox.api.engine.WikiRenderEngine
 import org.radeox.engine.context.BaseInitialRenderContext
@@ -35,7 +33,11 @@ import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 
-import java.nio.charset.StandardCharsets
+import grails.doc.asciidoc.AsciiDocEngine
+import grails.doc.internal.FileResourceChecker
+import grails.doc.internal.StringEscapeCategory
+import grails.doc.internal.UserGuideNode
+import grails.doc.internal.YamlTocStrategy
 
 /**
  * Coordinated the DocEngine the produce documentation based on the gdoc format.

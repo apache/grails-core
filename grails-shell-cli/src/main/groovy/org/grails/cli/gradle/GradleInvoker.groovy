@@ -18,9 +18,11 @@
  */
 package org.grails.cli.gradle
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
+
 import org.gradle.tooling.BuildLauncher
+
+import grails.util.Environment
 import org.grails.build.parsing.CommandLine
 import org.grails.cli.profile.ExecutionContext
 

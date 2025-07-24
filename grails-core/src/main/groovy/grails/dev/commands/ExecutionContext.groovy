@@ -18,9 +18,10 @@
  */
 package grails.dev.commands
 
-import grails.util.BuildSettings
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+
+import grails.util.BuildSettings
 import org.grails.build.parsing.CommandLine
 
 /**

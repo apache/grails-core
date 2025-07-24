@@ -18,13 +18,13 @@
  */
 package org.grails.web.databinding;
 
-import grails.web.databinding.DataBindingUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import grails.beans.util.LazyMetaPropertyMap;
+import grails.web.databinding.DataBindingUtils;
 
 /**
  * Extends the default implementation and does data binding.

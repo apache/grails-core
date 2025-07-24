@@ -19,6 +19,8 @@
 
 package org.grails.datastore.mapping.reflect
 
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -27,8 +29,6 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
-
-import java.lang.annotation.Annotation
 
 /**
  * Utility methods for dealing with annotations in AST transforms

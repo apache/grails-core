@@ -19,11 +19,12 @@
 
 package grails.ui.console.support
 
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
 import grails.core.GrailsApplication
 import grails.persistence.support.PersistenceContextInterceptor
 import grails.ui.support.DevelopmentWebApplicationContext
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 
 /**
  * A {@org.springframework.web.context.WebApplicationContext} for use in the embedded Grails console

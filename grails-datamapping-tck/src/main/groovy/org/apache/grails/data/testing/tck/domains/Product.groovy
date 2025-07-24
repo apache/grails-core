@@ -19,8 +19,9 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-import grails.gorm.annotation.Entity
 import groovy.transform.CompileStatic
+
+import grails.gorm.annotation.Entity
 
 @CompileStatic
 @Entity

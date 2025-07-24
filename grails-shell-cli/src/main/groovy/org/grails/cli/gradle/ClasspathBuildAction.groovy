@@ -20,6 +20,7 @@ package org.grails.cli.gradle
 
 import org.gradle.tooling.BuildAction
 import org.gradle.tooling.BuildController
+
 import org.grails.gradle.plugin.model.GrailsClasspath
 
 /**

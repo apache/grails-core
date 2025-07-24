@@ -19,7 +19,6 @@
 
 package grails.views.compiler
 
-import grails.views.Views
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
@@ -36,6 +35,8 @@ import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
+
+import grails.views.Views
 
 import static org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE
 

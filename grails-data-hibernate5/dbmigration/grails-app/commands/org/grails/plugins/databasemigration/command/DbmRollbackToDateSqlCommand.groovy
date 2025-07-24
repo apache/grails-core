@@ -18,12 +18,14 @@
  */
 package org.grails.plugins.databasemigration.command
 
-import grails.dev.commands.ApplicationCommand
-import groovy.transform.CompileStatic
-import liquibase.Liquibase
-import org.grails.plugins.databasemigration.DatabaseMigrationException
-
 import java.text.ParseException
+
+import groovy.transform.CompileStatic
+
+import liquibase.Liquibase
+
+import grails.dev.commands.ApplicationCommand
+import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @CompileStatic
 class DbmRollbackToDateSqlCommand implements ApplicationCommand, ApplicationContextDatabaseMigrationCommand {

@@ -20,9 +20,10 @@
 package org.grails.datastore.mapping.core.connections
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.DatastoreUtils
+
 import org.springframework.core.env.PropertyResolver
 
+import org.grails.datastore.mapping.core.DatastoreUtils
 
 /**
  * A static non-mutable implementation for existing for a set of existing {@link ConnectionSource} instances

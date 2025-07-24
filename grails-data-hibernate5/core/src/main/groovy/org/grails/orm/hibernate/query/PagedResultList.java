@@ -18,16 +18,18 @@
  */
 package org.grails.orm.hibernate.query;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.query.Query;
+import java.sql.SQLException;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-import java.sql.SQLException;
+
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 public class PagedResultList extends grails.gorm.PagedResultList {
 

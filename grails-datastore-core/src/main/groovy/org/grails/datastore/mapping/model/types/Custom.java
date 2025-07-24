@@ -19,12 +19,12 @@
 
 package org.grails.datastore.mapping.model.types;
 
+import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.AbstractPersistentProperty;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
-
-import java.beans.PropertyDescriptor;
 
 /**
  * Represents a custom type ie. a type whose database read/write semantics are specified by the user.

@@ -19,15 +19,17 @@
 
 package grails.plugin.json.renderer
 
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.plugin.json.view.mvc.JsonViewResolver
 import grails.rest.render.RenderContext
 import grails.util.GrailsNameUtils
 import grails.views.Views
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.plugins.web.rest.render.json.DefaultJsonRenderer
-import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * A container renderer that looks up JSON views

@@ -18,11 +18,10 @@
  */
 package org.grails.web.converters.marshaller.xml;
 
-import grails.converters.XML;
-
 import java.util.Collection;
 import java.util.Set;
 
+import grails.converters.XML;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.NameAwareMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;

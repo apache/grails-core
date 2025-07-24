@@ -19,12 +19,13 @@
 
 package org.grails.plugins.events
 
+import reactor.bus.EventBus
+
 import grails.config.Config
 import grails.plugins.Plugin
 import org.grails.events.bus.spring.EventBusFactoryBean
 import org.grails.events.gorm.GormDispatcherRegistrar
 import org.grails.events.spring.SpringEventTranslator
-import reactor.bus.EventBus
 
 /**
  * A plugin that integrates Reactor into Grails

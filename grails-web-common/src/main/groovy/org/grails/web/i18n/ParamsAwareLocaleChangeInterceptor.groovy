@@ -19,21 +19,23 @@
 package org.grails.web.i18n
 
 import groovy.transform.CompileStatic
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.servlet.DispatcherServlet
-import org.springframework.web.servlet.LocaleResolver
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
-import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.propertyeditors.LocaleEditor
+import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.LocaleResolver
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.web.servlet.support.RequestContextUtils
 
- /**
+import org.grails.web.servlet.mvc.GrailsWebRequest
+
+/**
  * A LocaleChangeInterceptor instance that is aware of the Grails params object.
  *
  * @author Graeme Rocher

@@ -30,25 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.JoinType;
 
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.datastore.mapping.query.event.PostQueryEvent;
-import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.grails.orm.hibernate.AbstractHibernateSession;
-import org.grails.orm.hibernate.IHibernateTemplate;
-import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.grails.datastore.gorm.finders.DynamicFinder;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.query.AssociationQuery;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.LockMode;
@@ -64,12 +45,33 @@ import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.TypeResolver;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.util.ReflectionUtils;
+
+import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.datastore.mapping.query.AssociationQuery;
+import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
+import org.grails.datastore.mapping.query.event.PostQueryEvent;
+import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.orm.hibernate.AbstractHibernateSession;
+import org.grails.orm.hibernate.IHibernateTemplate;
+import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API

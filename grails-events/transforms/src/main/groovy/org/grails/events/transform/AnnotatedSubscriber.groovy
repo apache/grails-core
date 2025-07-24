@@ -19,20 +19,23 @@
 
 package org.grails.events.transform
 
+import java.beans.Introspector
+import java.lang.reflect.Method
+
+import groovy.transform.CompileStatic
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.util.ReflectionUtils
+
 import grails.events.Event
 import grails.events.annotation.Events
+import grails.events.annotation.Subscriber
 import grails.events.bus.EventBusAware
 import grails.events.subscriber.MethodEventSubscriber
 import grails.events.subscriber.MethodSubscriber
-import grails.events.annotation.Subscriber
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.events.EventIdUtils
-import org.springframework.util.ReflectionUtils
-
-import jakarta.annotation.PostConstruct
-import java.beans.Introspector
-import java.lang.reflect.Method
 
 /**
  * Registers subscribed methods. Used by the {@link Subscriber} transformation

@@ -19,13 +19,15 @@
 
 package org.grails.datastore.bson.codecs.temporal
 
+import java.time.LocalTime
+
 import groovy.transform.CompileStatic
+
 import org.bson.BsonReader
 import org.bson.BsonType
 import org.bson.BsonWriter
-import grails.gorm.time.LocalTimeConverter
 
-import java.time.LocalTime
+import grails.gorm.time.LocalTimeConverter
 
 /**
  * A trait to read and write a {@link LocalTime} to MongoDB

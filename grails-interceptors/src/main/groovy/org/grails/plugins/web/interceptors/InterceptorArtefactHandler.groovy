@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.interceptors;
+package org.grails.plugins.web.interceptors
 
-import grails.artefact.Interceptor;
-import grails.core.ArtefactHandlerAdapter;
-import grails.core.DefaultGrailsClass;
-import grails.core.GrailsClass;
+import grails.artefact.Interceptor
+import grails.core.ArtefactHandlerAdapter
+import grails.core.DefaultGrailsClass
+import grails.core.GrailsClass
 
 /**
  * {@link grails.core.ArtefactHandler} for {@link grails.artefact.Interceptor} instances

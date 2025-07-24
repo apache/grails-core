@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.util
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet

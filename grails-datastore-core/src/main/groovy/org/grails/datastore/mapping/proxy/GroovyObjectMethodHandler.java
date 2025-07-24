@@ -18,13 +18,12 @@
  */
 package org.grails.datastore.mapping.proxy;
 
-import groovy.lang.MetaClass;
-
 import java.lang.reflect.Method;
 
-import javassist.util.proxy.MethodHandler;
-
+import groovy.lang.MetaClass;
 import org.codehaus.groovy.runtime.InvokerHelper;
+
+import javassist.util.proxy.MethodHandler;
 
 /**
  * Javassist MethodHandler for handling GroovyObject methods

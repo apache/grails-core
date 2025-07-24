@@ -19,18 +19,20 @@
 
 package org.grails.scaffolding.model
 
-import org.grails.datastore.mapping.config.Property
-import org.grails.scaffolding.model.property.Constrained
-import org.grails.scaffolding.model.property.DomainProperty
-import org.grails.scaffolding.model.property.DomainPropertyFactory
-import grails.util.GrailsClassUtils
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.util.GrailsClassUtils
+import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
-import org.springframework.beans.factory.annotation.Autowired
-
-import java.lang.reflect.Method
+import org.grails.scaffolding.model.property.Constrained
+import org.grails.scaffolding.model.property.DomainProperty
+import org.grails.scaffolding.model.property.DomainPropertyFactory
 
 /**
  * @see {@link DomainModelService}

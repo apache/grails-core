@@ -16,7 +16,10 @@
  */
 package org.apache.grails.common.compiler.asm;
 
-import org.apache.grails.common.annotation.AnnotationMetadataReadingVisitor;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.SpringAsmInfo;
 import org.springframework.asm.Type;
@@ -25,9 +28,7 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import org.apache.grails.common.annotation.AnnotationMetadataReadingVisitor;
 
 /**
  * A more limited version of Spring's annotation reader that only reads annotations on classes

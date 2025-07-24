@@ -17,6 +17,7 @@
  *  under the License.
  */
 package org.grails.cli.gradle;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import org.gradle.tooling.model.Task;
 import org.gradle.tooling.model.TaskSelector;
 import org.gradle.tooling.model.gradle.BasicGradleProject;
 import org.gradle.tooling.model.gradle.BuildInvocations;
+
 import org.grails.cli.gradle.FetchAllTaskSelectorsBuildAction.AllTasksModel;
 
 /**
@@ -43,7 +45,7 @@ import org.grails.cli.gradle.FetchAllTaskSelectorsBuildAction.AllTasksModel;
 public class FetchAllTaskSelectorsBuildAction implements BuildAction<AllTasksModel> {
     private static final long serialVersionUID = 1L;
     private final String currentProjectPath;
-    
+
     public FetchAllTaskSelectorsBuildAction(File currentProjectDir) {
         this.currentProjectPath = currentProjectDir.getAbsolutePath();
     }
@@ -63,13 +65,13 @@ public class FetchAllTaskSelectorsBuildAction implements BuildAction<AllTasksMod
                 selectorNames.add(selector.getName());
             }
             allTaskSelectors.put(project.getName(), selectorNames);
-            
+
             Set<String> taskNames = new LinkedHashSet<String>();
             for (Task task : entryPointsForProject.getTasks()) {
                 taskNames.add(task.getName());
             }
             allTasks.put(project.getName(), taskNames);
-            
+
             projectPaths.put(project.getName(), project.getPath());
             if(project.getProjectDirectory().getAbsolutePath().equals(currentProjectPath)) {
                 model.currentProject = project.getName();
@@ -77,7 +79,7 @@ public class FetchAllTaskSelectorsBuildAction implements BuildAction<AllTasksMod
         }
         return model;
     }
-    
+
     public static class AllTasksModel implements Serializable {
         private static final long serialVersionUID = 1L;
         public Map<String, Set<String>> allTasks;

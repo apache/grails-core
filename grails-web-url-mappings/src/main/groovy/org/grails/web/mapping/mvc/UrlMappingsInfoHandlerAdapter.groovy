@@ -18,26 +18,29 @@
  */
 package org.grails.web.mapping.mvc
 
-import grails.core.GrailsControllerClass
-import grails.util.Environment
-import grails.web.mapping.LinkGenerator
-import grails.web.mapping.ResponseRedirector
-import grails.web.mapping.UrlMappingInfo
-import grails.web.mvc.FlashScope
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
-import org.grails.web.servlet.mvc.ActionResultTransformer
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.util.WebUtils
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.web.servlet.HandlerAdapter
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.view.InternalResourceView
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
-import java.util.concurrent.ConcurrentHashMap
+import grails.core.GrailsControllerClass
+import grails.util.Environment
+import grails.web.mapping.LinkGenerator
+import grails.web.mapping.ResponseRedirector
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mvc.FlashScope
+import org.grails.web.servlet.mvc.ActionResultTransformer
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.WebUtils
 
 /**
  * A {@link HandlerAdapter} that takes a matched {@link UrlMappingInfo} and executes the underlying controller producing an appropriate model

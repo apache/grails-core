@@ -18,15 +18,15 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
+import java.beans.PropertyEditor
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+
 import groovy.transform.CompileStatic
 import groovy.xml.MarkupBuilder
+
 import org.apache.commons.text.StringEscapeUtils
-import org.grails.encoder.CodecLookup
-import org.grails.encoder.Encoder
-import org.grails.taglib.GroovyPageAttributes
-import org.grails.web.servlet.mvc.GrailsWebRequest
+
 import org.springframework.beans.PropertyEditorRegistry
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceResolvable
@@ -34,9 +34,12 @@ import org.springframework.context.NoSuchMessageException
 import org.springframework.context.support.DefaultMessageSourceResolvable
 import org.springframework.validation.Errors
 
-import java.beans.PropertyEditor
-import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
+import org.grails.encoder.CodecLookup
+import org.grails.encoder.Encoder
+import org.grails.taglib.GroovyPageAttributes
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Tags to handle validation and errors.

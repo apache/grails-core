@@ -19,6 +19,15 @@
 
 package grails.plugin.json.view.test
 
+import groovy.json.JsonSlurper
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.MessageSource
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.http.HttpStatus
+
 import grails.core.GrailsApplication
 import grails.plugin.json.view.JsonViewConfiguration
 import grails.plugin.json.view.JsonViewTemplateEngine
@@ -30,15 +39,8 @@ import grails.views.api.HttpView
 import grails.views.api.http.Response
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeUtility
-import groovy.json.JsonSlurper
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.MessageSource
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.http.HttpStatus
 
 /**
  * A trait that test classes can implement to add support for easily testing JSON views

@@ -18,12 +18,13 @@
  */
 package org.grails.web.mapping.mvc;
 
+import org.springframework.http.HttpMethod;
+
 import grails.core.GrailsApplication;
 import grails.web.UrlConverter;
 import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.UrlMappings;
-import org.springframework.http.HttpMethod;
 
 /**
  * A {@link grails.web.mapping.UrlMappings} implementation that matches URLs directly onto controller instances

@@ -18,13 +18,13 @@
  */
 package grails.core;
 
-import grails.config.Config;
-import grails.util.Metadata;
-
-import org.grails.datastore.mapping.model.MappingContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
+
+import grails.config.Config;
+import grails.util.Metadata;
+import org.grails.datastore.mapping.model.MappingContext;
 
 /**
  * <p>The main interface representing a running Grails application. This interface's

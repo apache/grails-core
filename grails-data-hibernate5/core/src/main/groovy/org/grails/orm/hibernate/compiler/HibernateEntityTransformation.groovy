@@ -19,11 +19,10 @@
 
 package org.grails.orm.hibernate.compiler
 
-import grails.gorm.dirty.checking.DirtyCheckedProperty
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import jakarta.persistence.Transient
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
@@ -46,16 +45,20 @@ import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
 import org.codehaus.groovy.transform.sc.StaticCompilationVisitor
-import org.grails.compiler.gorm.GormEntityTransformation
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.AstUtils
-import org.grails.datastore.mapping.reflect.NameUtils
+
+import jakarta.persistence.Transient
+
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.ManagedEntity
 import org.hibernate.engine.spi.PersistentAttributeInterceptable
 import org.hibernate.engine.spi.PersistentAttributeInterceptor
 
-import java.lang.reflect.Modifier
+import grails.gorm.dirty.checking.DirtyCheckedProperty
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.compiler.gorm.GormEntityTransformation
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.reflect.AstUtils
+import org.grails.datastore.mapping.reflect.NameUtils
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
@@ -124,7 +127,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         }
 
         new GormEntityTransformation(compilationUnit: compilationUnit).visit(classNode, sourceUnit)
-        
+
         ClassNode managedEntityClassNode = ClassHelper.make(ManagedEntity)
         ClassNode attributeInterceptableClassNode = ClassHelper.make(PersistentAttributeInterceptable)
         ClassNode entityEntryClassNode = ClassHelper.make(EntityEntry)

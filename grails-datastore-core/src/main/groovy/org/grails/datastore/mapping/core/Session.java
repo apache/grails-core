@@ -24,13 +24,14 @@ import java.util.Map;
 
 import jakarta.persistence.FlushModeType;
 
+import org.springframework.transaction.TransactionDefinition;
+
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.QueryCreator;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.transactions.Transaction;
-import org.springframework.transaction.TransactionDefinition;
 
 /**
  * The Session represents the active interaction with a datastore.

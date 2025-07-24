@@ -18,13 +18,15 @@
  */
 package org.grails.gradle.plugin.core
 
-import grails.util.BuildSettings
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ProjectDependency
+
+import grails.util.BuildSettings
+import grails.util.Environment
 
 /**
  * Makes it easier to define Grails plugins and also makes them aware of the development environment so that they can be run inline without creating a JAR

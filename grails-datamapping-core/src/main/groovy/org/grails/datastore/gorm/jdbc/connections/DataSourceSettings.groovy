@@ -19,15 +19,16 @@
 
 package org.grails.datastore.gorm.jdbc.connections
 
+import javax.sql.DataSource
+
 import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-
-import javax.sql.DataSource
 
 /**
  * DataSource settings

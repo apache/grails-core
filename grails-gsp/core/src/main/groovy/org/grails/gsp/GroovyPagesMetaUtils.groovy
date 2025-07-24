@@ -17,9 +17,11 @@
  *  under the License.
  */
 package org.grails.gsp
+
+import groovy.transform.CompileStatic
+
 import grails.util.Environment
 import grails.util.GrailsMetaClassUtils
-import groovy.transform.CompileStatic
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
 

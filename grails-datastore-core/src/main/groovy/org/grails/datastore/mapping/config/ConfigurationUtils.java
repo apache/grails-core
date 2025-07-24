@@ -18,17 +18,18 @@
  */
 package org.grails.datastore.mapping.config;
 
-import org.grails.datastore.mapping.reflect.ReflectionUtils;
-import org.springframework.core.env.PropertyResolver;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import org.springframework.core.env.PropertyResolver;
+
+import org.grails.datastore.mapping.reflect.ReflectionUtils;
+
 /**
  * Utility methods for configuration
- * 
+ *
  * @author Graeme Rocher
  * @since 6.0
  */

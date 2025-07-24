@@ -18,8 +18,9 @@
  */
 package org.grails.core.support
 
-import grails.core.GrailsApplication
 import org.springframework.context.ApplicationContext
+
+import grails.core.GrailsApplication
 
 /**
  * Interface used for classes that discover the GrailsApplication and ApplicationContext instances

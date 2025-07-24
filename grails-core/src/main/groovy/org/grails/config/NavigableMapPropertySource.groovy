@@ -19,10 +19,10 @@
 package org.grails.config
 
 import groovy.transform.CompileStatic
+
 import org.springframework.boot.origin.OriginTrackedValue
 import org.springframework.core.env.MapPropertySource
 import org.springframework.util.StringUtils
-
 
 /**
  * A {@link org.springframework.core.env.PropertySource} that doesn't return values for navigable submaps

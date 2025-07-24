@@ -18,11 +18,11 @@
  */
 package org.grails.taglib.encoder;
 
+import java.io.Writer;
+
 import grails.core.GrailsApplication;
 import org.grails.encoder.EncodingStateRegistry;
 import org.grails.taglib.AbstractTemplateVariableBinding;
-
-import java.io.Writer;
 
 /**
  * Created by lari on 02/01/15.

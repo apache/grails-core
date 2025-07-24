@@ -18,14 +18,13 @@
  */
 package org.grails.encoder.impl
 
+import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 
-import groovy.json.StringEscapeUtils
 import org.grails.encoder.CodecFactory
 import org.grails.encoder.CodecIdentifier
-import org.grails.encoder.Encoder
 import org.grails.encoder.Decoder
-
+import org.grails.encoder.Encoder
 
 @CompileStatic
 class JSONCodecFactory implements CodecFactory {

@@ -18,11 +18,11 @@
  */
 package org.grails.gsp.compiler;
 
-import org.grails.taglib.GrailsTagException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import org.grails.taglib.GrailsTagException;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
@@ -176,7 +176,7 @@ class GroovyPageScanner implements Tokens {
                     if (c == '@' && c1 == '{') {
                         return found(GDIRECT, 2);
                     }
-                    
+
                     if (tokenLength > maxHtmlLength) {
                         return found(HTML, 0);
                     }

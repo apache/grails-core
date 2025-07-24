@@ -18,22 +18,23 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import groovy.lang.Range;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import groovy.lang.Range;
+
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.TypeDescriptor;
+import org.springframework.util.Assert;
+
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.Query.Criterion;
 import org.grails.datastore.mapping.query.Restrictions;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.core.convert.TypeDescriptor;
-import org.springframework.util.Assert;
 
 /**
  *  Method expression used to evaluate a dynamic finder.

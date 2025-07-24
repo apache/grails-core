@@ -19,14 +19,16 @@
 
 package org.grails.cli.profile.commands
 
+import java.awt.Desktop
+
 import groovy.transform.CompileStatic
+
 import jline.console.completer.Completer
 import jline.console.completer.FileNameCompleter
+
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.ProjectCommand
-
-import java.awt.Desktop
 
 /**
  * @author graemerocher

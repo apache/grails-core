@@ -18,9 +18,6 @@
  */
 package org.grails.buffer;
 
-import groovy.lang.GroovyObjectSupport;
-import groovy.lang.Writable;
-
 import java.io.EOFException;
 import java.io.Externalizable;
 import java.io.IOException;
@@ -43,14 +40,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.Writable;
 import org.codehaus.groovy.runtime.InvokerHelper;
 import org.codehaus.groovy.runtime.StringGroovyMethods;
-import org.grails.encoder.AbstractEncodedAppender;
-import org.grails.encoder.ChainedEncoders;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.grails.charsequences.CharArrayAccessible;
 import org.grails.charsequences.CharSequences;
+import org.grails.encoder.AbstractEncodedAppender;
+import org.grails.encoder.ChainedEncoders;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.DefaultCodecIdentifier;
 import org.grails.encoder.Encodeable;
@@ -844,7 +845,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         appender.finish();
         return appender.chunk;
     }
-    
+
     boolean hasQuicklyCalcutableSize() {
         return totalCharsInDynamicChunks != -1 || dynamicChunkMap.size() == 0;
     }
@@ -960,7 +961,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         appendCharBufferChunk(encodingState, false, false);
         addChunk(new StringChunk(str, off, len)).setEncodingState(encodingState);
     }
-    
+
     public void appendStreamCharBufferChunk(StreamCharBuffer subBuffer) throws IOException {
         appendStreamCharBufferChunk(subBuffer, null);
     }
@@ -1152,7 +1153,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
                 }
             }
         }
-        
+
         public final void write(StreamCharBuffer subBuffer) throws IOException {
             write(subBuffer, null);
         }
@@ -1771,7 +1772,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
                 super.encodeTo(appender, encoder);
             }
         }
-        
+
         @Override
         public void encodeTo(Writer writer, EncodesToWriter encoder) throws IOException {
             if (firstPart != null) {
@@ -1975,7 +1976,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         }
 
         public CharSequence toCharSequence() {
-            if(isSingleBuffer()) { 
+            if(isSingleBuffer()) {
                 return str;
             } else {
                 return CharSequences.createCharSequence(str, offset, length);
@@ -2075,7 +2076,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         @Override
         public void encodeTo(EncodedAppender appender, Encoder encodeToEncoder) throws IOException {
             if (appender instanceof StreamCharBufferEncodedAppender
-                    && getSourceBuffer().isPreferSubChunkWhenWritingToOtherBuffer() 
+                    && getSourceBuffer().isPreferSubChunkWhenWritingToOtherBuffer()
                     && ((StreamCharBufferEncodedAppender)appender).getWriter().getBuffer().isAllowSubBuffers() ) {
                 List<Encoder> nextEncoders = ChainedEncoders.appendEncoder(encoders, encodeToEncoder);
                 ((StreamCharBufferEncodedAppender)appender).getWriter().write(getSourceBuffer(), nextEncoders);
@@ -2089,7 +2090,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
                 }
             }
         }
-        
+
         protected boolean hasOnlyStreamingEncoders() {
             if(encoders == null || encoders.isEmpty()) {
                 return false;
@@ -2627,7 +2628,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         }
         return true;
     }
-    
+
     protected List<StreamCharBuffer> getCurrentParentBuffers() {
         List<StreamCharBuffer> currentParentBuffers = new ArrayList<StreamCharBuffer>();
         if(parentBuffers != null) {
@@ -2641,7 +2642,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         }
         return currentParentBuffers;
     }
-    
+
 
     protected void notifyBufferChange() {
         markBufferChanged();
@@ -2785,11 +2786,11 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
             out.writeInt(0);
         }
     }
-    
+
     public StreamCharBuffer encodeToBuffer(Encoder encoder) {
         return encodeToBuffer(encoder, isAllowSubBuffers(), isNotifyParentBuffersEnabled());
     }
-    
+
     public StreamCharBuffer encodeToBuffer(Encoder encoder, boolean allowSubBuffers, boolean notifyParentBuffersEnabled) {
         StreamCharBuffer coded = new StreamCharBuffer(Math.min(Math.max(totalChunkSize, chunkSize) * 12 / 10, maxChunkSize));
         coded.setAllowSubBuffers(allowSubBuffers);
@@ -2803,11 +2804,11 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
         }
         return coded;
     }
-    
+
     public StreamCharBuffer encodeToBuffer(List<Encoder> encoders) {
         return encodeToBuffer(encoders, isAllowSubBuffers(), isNotifyParentBuffersEnabled());
     }
-    
+
     public StreamCharBuffer encodeToBuffer(List<Encoder> encoders, boolean allowSubBuffers, boolean notifyParentBuffersEnabled) {
         StreamCharBuffer currentBuffer=this;
         for(Encoder encoder : encoders) {
@@ -2835,7 +2836,7 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
     public boolean isAllowSubBuffers() {
         return subBuffersEnabled && !isConnectedMode();
     }
-    
+
     public void setAllowSubBuffers(boolean allowSubBuffers) {
         this.subBuffersEnabled = allowSubBuffers;
     }

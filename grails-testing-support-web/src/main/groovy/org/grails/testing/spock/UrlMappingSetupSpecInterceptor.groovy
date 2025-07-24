@@ -19,10 +19,12 @@
 
 package org.grails.testing.spock
 
-import grails.testing.web.UrlMappingsUnitTest
 import groovy.transform.CompileStatic
+
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
+
+import grails.testing.web.UrlMappingsUnitTest
 
 @CompileStatic
 class UrlMappingSetupSpecInterceptor implements IMethodInterceptor {

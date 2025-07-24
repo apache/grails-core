@@ -18,9 +18,10 @@
  */
 package org.grails.events.spring
 
-import grails.events.bus.EventBus
-import grails.util.GrailsNameUtils
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -28,8 +29,9 @@ import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextClosedEvent
 import org.springframework.context.support.GenericApplicationContext
-import java.util.concurrent.ConcurrentHashMap
 
+import grails.events.bus.EventBus
+import grails.util.GrailsNameUtils
 
 /**
  * Translates Spring Events into Reactor events

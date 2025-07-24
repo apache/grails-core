@@ -18,9 +18,10 @@
  */
 package org.grails.datastore.gorm.services
 
+import groovy.transform.CompileStatic
+
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.Tenants
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore

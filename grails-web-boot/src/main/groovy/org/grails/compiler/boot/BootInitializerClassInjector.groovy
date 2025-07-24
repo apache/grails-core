@@ -19,12 +19,8 @@
 
 package org.grails.compiler.boot
 
-import grails.boot.GrailsPluginApplication
-import grails.boot.config.GrailsAutoConfiguration
-import grails.compiler.ast.AstTransformer
-import grails.compiler.ast.GlobalClassInjectorAdapter
-import grails.plugins.metadata.PluginSource
-import grails.util.Environment
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -38,12 +34,18 @@ import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.SourceUnit
-import org.grails.boot.context.web.GrailsAppServletInitializer
-import org.grails.compiler.injection.GrailsASTUtils
+
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.web.WebApplicationInitializer
 
-import java.lang.reflect.Modifier
+import grails.boot.GrailsPluginApplication
+import grails.boot.config.GrailsAutoConfiguration
+import grails.compiler.ast.AstTransformer
+import grails.compiler.ast.GlobalClassInjectorAdapter
+import grails.plugins.metadata.PluginSource
+import grails.util.Environment
+import org.grails.boot.context.web.GrailsAppServletInitializer
+import org.grails.compiler.injection.GrailsASTUtils
 
 /**
  * A transformation that automatically produces a Spring servlet initializer for a class that extends GrailsConfiguration. Given a class "Application" that

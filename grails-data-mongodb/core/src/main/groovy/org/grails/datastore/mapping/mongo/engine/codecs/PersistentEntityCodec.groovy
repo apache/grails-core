@@ -18,9 +18,11 @@
  */
 package org.grails.datastore.mapping.mongo.engine.codecs
 
-import com.mongodb.DBRef
 import groovy.transform.CompileStatic
+
 import jakarta.persistence.FetchType
+
+import com.mongodb.DBRef
 import org.bson.BsonArray
 import org.bson.BsonDocument
 import org.bson.BsonDocumentWriter
@@ -36,6 +38,7 @@ import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 import org.bson.types.ObjectId
+
 import org.grails.datastore.bson.codecs.BsonPersistentEntityCodec
 import org.grails.datastore.bson.codecs.PropertyDecoder
 import org.grails.datastore.bson.codecs.PropertyEncoder

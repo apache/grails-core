@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.mongo.extensions
 
+import groovy.transform.CompileStatic
+
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 import com.mongodb.ReadPreference
@@ -43,10 +45,10 @@ import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.lang.Nullable
-import groovy.transform.CompileStatic
 import org.bson.Document
 import org.bson.conversions.Bson
 import org.bson.types.ObjectId
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoConstants

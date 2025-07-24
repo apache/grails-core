@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.LineString
-import grails.mongodb.geo.Point
 import groovy.transform.CompileStatic
 
 import org.springframework.dao.DataAccessResourceFailureException
+
+import grails.mongodb.geo.LineString
+import grails.mongodb.geo.Point
 
 /**
  * Adds support for the {@link LineStringType} type to GORM for MongoDB

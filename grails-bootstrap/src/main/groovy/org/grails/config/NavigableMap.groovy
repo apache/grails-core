@@ -18,14 +18,15 @@
  */
 package org.grails.config
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
+
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
-import java.util.regex.Pattern
 
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
@@ -373,7 +374,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     Object navigate(String... path) {
         return navigateMap(this, path)
     }
-    
+
     private Object navigateMap(Map<String, Object> map, String... path) {
         if(map==null || path == null) return null
         if(path.length == 0) {
@@ -411,7 +412,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                 accumulatedPath.append(pathElement)
             }
 
-            Object currentItem = currentMap.get(pathElement) 
+            Object currentItem = currentMap.get(pathElement)
             if(currentItem instanceof NavigableMap) {
                 currentMap = (NavigableMap)currentItem
             } else if (createMissing) {
@@ -433,19 +434,19 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         currentMap
     }
-    
+
     Map<String, Object> toFlatConfig() {
         Map<String, Object> flatConfig = [:]
         flattenKeys(flatConfig, this, [], false)
         flatConfig
     }
-    
+
     Properties toProperties() {
         Properties properties = new Properties()
         flattenKeys((Map<Object, Object>) properties, this, [], true)
         properties
     }
-    
+
     private void flattenKeys(Map<? extends Object, Object> flatConfig, Map currentMap, List<String> path, boolean forceStrings) {
         currentMap.each { key, value ->
             String stringKey = String.valueOf(key)
@@ -480,7 +481,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                 }
             }
-        }        
+        }
     }
 
     @Override

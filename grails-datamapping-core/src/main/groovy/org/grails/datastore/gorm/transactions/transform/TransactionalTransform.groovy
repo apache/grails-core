@@ -14,13 +14,9 @@
  */
 package org.grails.datastore.gorm.transactions.transform
 
-import grails.gorm.transactions.GrailsTransactionTemplate
-import grails.gorm.transactions.NotTransactional
-import grails.gorm.transactions.ReadOnly
-import grails.gorm.transactions.Rollback
-import grails.gorm.transactions.Transactional
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
@@ -38,6 +34,19 @@ import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
+
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
+import org.springframework.transaction.interceptor.RollbackRuleAttribute
+
+import grails.gorm.transactions.GrailsTransactionTemplate
+import grails.gorm.transactions.NotTransactional
+import grails.gorm.transactions.ReadOnly
+import grails.gorm.transactions.Rollback
+import grails.gorm.transactions.Transactional
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
@@ -45,13 +54,6 @@ import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCap
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.TransactionStatus
-import org.springframework.transaction.annotation.Propagation
-import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
-import org.springframework.transaction.interceptor.RollbackRuleAttribute
-
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE

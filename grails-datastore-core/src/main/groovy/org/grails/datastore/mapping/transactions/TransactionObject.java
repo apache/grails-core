@@ -18,8 +18,9 @@
  */
 package org.grails.datastore.mapping.transactions;
 
-import org.grails.datastore.mapping.core.Session;
 import org.springframework.transaction.support.SmartTransactionObject;
+
+import org.grails.datastore.mapping.core.Session;
 
 /**
  * A transaction object returned when the transaction is created.

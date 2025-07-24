@@ -18,22 +18,24 @@
  */
 package grails.rest.render.xml
 
-import grails.converters.XML
-import grails.rest.render.RenderContext
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import org.grails.core.artefact.DomainClassArtefactHandler
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.converters.XML
 import grails.core.GrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.ProxyHandler
+import grails.rest.render.RenderContext
+import grails.web.mime.MimeType
+import org.grails.core.artefact.DomainClassArtefactHandler
+import org.grails.plugins.web.rest.render.xml.DefaultXmlRenderer
 import org.grails.web.converters.marshaller.ObjectMarshaller
 import org.grails.web.converters.marshaller.xml.DeepDomainClassMarshaller
 import org.grails.web.converters.marshaller.xml.GroovyBeanMarshaller
-import grails.web.mime.MimeType
-import org.grails.plugins.web.rest.render.xml.DefaultXmlRenderer
-import org.springframework.beans.factory.annotation.Autowired
-
-import jakarta.annotation.PostConstruct
 
 /**
  * An XML renderer that allows including / excluding properties

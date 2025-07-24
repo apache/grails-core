@@ -21,18 +21,12 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.proxy.ProxyHandler
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
-import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.exceptions.GrailsQueryException
 
-import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
-import org.grails.orm.hibernate.query.HibernateHqlQuery
-import org.grails.orm.hibernate.support.HibernateRuntimeUtils
-import org.grails.datastore.gorm.GormStaticApi
-import org.grails.datastore.gorm.finders.DynamicFinder
-import org.grails.datastore.gorm.finders.FinderMethod
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.Root
+
 import org.hibernate.Criteria
 import org.hibernate.FlushMode
 import org.hibernate.Session
@@ -42,13 +36,21 @@ import org.hibernate.jpa.QueryHints
 import org.hibernate.query.NativeQuery
 import org.hibernate.query.Query
 import org.hibernate.transform.DistinctRootEntityResultTransformer
+
 import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 
-import jakarta.persistence.criteria.CriteriaBuilder
-import jakarta.persistence.criteria.CriteriaQuery
-import jakarta.persistence.criteria.Expression
-import jakarta.persistence.criteria.Root
+import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
+import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
+import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.exceptions.GrailsQueryException
+import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
+import org.grails.orm.hibernate.query.HibernateHqlQuery
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 /**
  * Abstract implementation of the Hibernate static API for GORM, providing String-based method implementations
@@ -111,7 +113,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
 
         id = convertIdentifier(id)
-        
+
         if (id == null) {
             return null
         }
@@ -152,7 +154,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (id == null) {
             return null
         }
-        
+
         (D)hibernateTemplate.execute(  { Session session ->
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)

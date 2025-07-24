@@ -18,15 +18,15 @@
  */
 package org.grails.datastore.gorm
 
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.MappingContext
-
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.utils.ReflectionUtils
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 
 /**

@@ -18,12 +18,12 @@
  */
 package org.grails.orm.hibernate.query;
 
-import grails.orm.HibernateCriteriaBuilder;
-import grails.orm.RlikeExpression;
-
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.DetachedCriteria;
+
+import grails.orm.HibernateCriteriaBuilder;
+import grails.orm.RlikeExpression;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 /**
  * @author Graeme Rocher

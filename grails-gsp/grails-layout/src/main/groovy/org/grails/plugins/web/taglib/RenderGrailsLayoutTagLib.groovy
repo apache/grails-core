@@ -18,24 +18,29 @@
  */
 package org.grails.plugins.web.taglib
 
+import java.nio.charset.StandardCharsets
+
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import jakarta.servlet.http.HttpServletRequest
+
 import com.opensymphony.module.sitemesh.Decorator
+import com.opensymphony.module.sitemesh.Factory
 import com.opensymphony.module.sitemesh.HTMLPage
 import com.opensymphony.module.sitemesh.Page
 import com.opensymphony.module.sitemesh.PageParser
 import com.opensymphony.module.sitemesh.RequestConstants
-import com.opensymphony.module.sitemesh.Factory
 
 import grails.artefact.TagLibrary
 import grails.core.GrailsApplication
 import grails.core.support.GrailsApplicationAware
 import grails.gsp.TagLib
 import grails.util.TypeConvertingMap
-import groovy.text.Template
-import groovy.transform.CompileStatic
+import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 import org.apache.grails.web.layout.FactoryHolder
 import org.apache.grails.web.layout.GSPGrailsLayoutPage
 import org.apache.grails.web.layout.GrailsHTMLPageParser
-import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 import org.apache.grails.web.layout.GroovyPageLayoutFinder
 import org.apache.grails.web.layout.SpringMVCViewDecorator
 import org.grails.buffer.FastStringWriter
@@ -46,9 +51,6 @@ import org.grails.gsp.compiler.GroovyPageParser
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagOutput
 import org.grails.taglib.encoder.OutputContextLookupHelper
-import jakarta.servlet.http.HttpServletRequest
-
-import java.nio.charset.StandardCharsets
 
 /**
  * Tags to help rendering of views and layouts.

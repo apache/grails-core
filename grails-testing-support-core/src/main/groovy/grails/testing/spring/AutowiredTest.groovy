@@ -19,8 +19,10 @@
 package grails.testing.spring
 
 import groovy.transform.CompileStatic
-import org.grails.testing.GrailsUnitTest
+
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+
+import org.grails.testing.GrailsUnitTest
 
 @CompileStatic
 trait AutowiredTest extends GrailsUnitTest {

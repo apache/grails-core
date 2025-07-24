@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.model.DatastoreConfigurationException
 
 /**

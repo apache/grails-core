@@ -18,10 +18,10 @@
  */
 package org.grails.gsp.jsp;
 
-import groovy.lang.Closure;
-
 import java.io.Writer;
 import java.util.Map;
+
+import groovy.lang.Closure;
 
 /**
  * An interface that represents a JSP tag that can be invoked by Grails

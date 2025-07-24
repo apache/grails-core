@@ -19,8 +19,9 @@
 
 package org.grails.events.gorm
 
-import grails.events.annotation.Events
 import groovy.transform.CompileStatic
+
+import grails.events.annotation.Events
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.events.transform.AnnotatedSubscriber
 

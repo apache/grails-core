@@ -18,6 +18,15 @@
  */
 package grails.artefact.controller.support
 
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+
+import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpMethod
+import org.springframework.web.servlet.support.RequestDataValueProcessor
+
 import grails.util.CollectionUtils
 import grails.util.GrailsNameUtils
 import grails.web.api.WebAttributes
@@ -28,16 +37,9 @@ import grails.web.mapping.UrlMappingsHolder
 import grails.web.mapping.mvc.RedirectEventListener
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import grails.web.mvc.FlashScope
-import groovy.transform.CompileStatic
-import groovy.transform.Generated
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpMethod
-import org.springframework.web.servlet.support.RequestDataValueProcessor
-
-import jakarta.servlet.http.HttpServletRequest
 
 /**
  * A trait for objects that redirect the response

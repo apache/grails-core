@@ -19,12 +19,13 @@
 
 package org.grails.events
 
-import grails.events.Event
-import grails.events.subscriber.Subscriber
-import grails.events.trigger.EventTrigger
 import groovy.transform.AutoFinal
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.events.Event
+import grails.events.subscriber.Subscriber
+import grails.events.trigger.EventTrigger
 
 /**
  * Triggers an event

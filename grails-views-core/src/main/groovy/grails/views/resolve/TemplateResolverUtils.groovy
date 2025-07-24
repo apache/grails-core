@@ -19,8 +19,9 @@
 
 package grails.views.resolve
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
+
+import grails.util.GrailsNameUtils
 
 /**
  * Utility methods for resolving template names

@@ -19,15 +19,17 @@
 
 package org.grails.datastore.gorm.validation.constraints.factory
 
-import grails.gorm.validation.Constraint
-import grails.gorm.validation.exceptions.ValidationConfigurationException
-import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.validation.constraints.NullableConstraint
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.springframework.context.MessageSource
-
 import java.beans.Introspector
 import java.lang.reflect.Constructor
+
+import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+
+import grails.gorm.validation.Constraint
+import grails.gorm.validation.exceptions.ValidationConfigurationException
+import org.grails.datastore.gorm.validation.constraints.NullableConstraint
+import org.grails.datastore.mapping.reflect.ClassUtils
 
 /**
  * A default factory for creating constraints

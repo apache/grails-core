@@ -18,11 +18,6 @@
  */
 package org.grails.config;
 
-import grails.config.Config;
-import grails.util.GrailsStringUtils;
-import groovy.transform.CompileStatic;
-import org.grails.core.exceptions.GrailsConfigurationException;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,6 +29,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+
+import groovy.transform.CompileStatic;
+
+import grails.config.Config;
+import grails.util.GrailsStringUtils;
+import org.grails.core.exceptions.GrailsConfigurationException;
 
 
 /**

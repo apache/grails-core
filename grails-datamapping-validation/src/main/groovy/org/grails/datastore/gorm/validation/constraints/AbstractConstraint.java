@@ -25,8 +25,6 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
-import grails.gorm.validation.ConstrainedProperty;
-import grails.gorm.validation.Constraint;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -36,6 +34,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
+
+import grails.gorm.validation.ConstrainedProperty;
+import grails.gorm.validation.Constraint;
 
 /**
  * Abstract class for constraints to extend.

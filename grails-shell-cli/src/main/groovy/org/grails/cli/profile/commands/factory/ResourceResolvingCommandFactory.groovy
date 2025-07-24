@@ -19,15 +19,15 @@
 
 package org.grails.cli.profile.commands.factory
 
-import grails.util.BuildSettings
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
+
+import grails.util.BuildSettings
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.Profile
 import org.grails.io.support.FileSystemResource
 import org.grails.io.support.Resource
-
-import java.util.regex.Pattern
-
 
 /**
  * A abstract {@link CommandFactory} that reads from the file system

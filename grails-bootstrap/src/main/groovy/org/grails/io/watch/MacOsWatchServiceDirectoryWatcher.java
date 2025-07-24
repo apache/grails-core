@@ -19,11 +19,6 @@
 
 package org.grails.io.watch;
 
-import io.methvin.watchservice.MacOSXListeningWatchService;
-import io.methvin.watchservice.WatchablePath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -44,6 +39,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.methvin.watchservice.MacOSXListeningWatchService;
+import io.methvin.watchservice.WatchablePath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of a {@link AbstractDirectoryWatcher} that uses {@link java.nio.WatchService}.

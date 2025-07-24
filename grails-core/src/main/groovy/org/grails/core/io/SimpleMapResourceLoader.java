@@ -18,11 +18,11 @@
  */
 package org.grails.core.io;
 
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
 /**
  * Simple implementation of the ResourceLoader interface that uses a Map to load resources.

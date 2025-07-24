@@ -19,12 +19,13 @@
 
 package org.grails.datastore.gorm.jdbc.schema
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-
-import javax.sql.DataSource
 import java.sql.Connection
 import java.sql.ResultSet
+
+import javax.sql.DataSource
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
  * Resolves the schema names

@@ -24,6 +24,7 @@ import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+
 import org.grails.exceptions.reporting.SourceCodeAware
 
 /**

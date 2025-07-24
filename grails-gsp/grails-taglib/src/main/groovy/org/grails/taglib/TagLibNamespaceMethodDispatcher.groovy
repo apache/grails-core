@@ -19,6 +19,7 @@
 package org.grails.taglib
 
 import groovy.transform.CompileStatic
+
 import org.grails.taglib.encoder.OutputContext
 
 /**

@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+
 import org.hibernate.FlushMode
 import org.hibernate.Session
 

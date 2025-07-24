@@ -18,11 +18,6 @@
  */
 package org.grails.async.transform.internal;
 
-import grails.async.Promise;
-import grails.async.Promises;
-import groovy.lang.Closure;
-import groovy.lang.GroovyObjectSupport;
-
 import java.beans.Introspector;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -30,7 +25,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import groovy.lang.Closure;
+import groovy.lang.GroovyObjectSupport;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
@@ -58,6 +54,10 @@ import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
 import org.codehaus.groovy.transform.stc.StaticTypeCheckingSupport;
+
+import grails.async.Promise;
+import grails.async.Promises;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * Implementation of {@link grails.async.DelegateAsync} transformation

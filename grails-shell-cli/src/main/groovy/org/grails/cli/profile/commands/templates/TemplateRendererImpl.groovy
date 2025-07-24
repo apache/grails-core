@@ -18,11 +18,14 @@
  */
 package org.grails.cli.profile.commands.templates
 
-import grails.codegen.model.Model
+import java.nio.charset.StandardCharsets
+
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.codegen.model.Model
 import org.grails.cli.interactive.completers.ClassNameCompleter
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile
@@ -33,8 +36,6 @@ import org.grails.cli.profile.commands.io.FileSystemInteractionImpl
 import org.grails.io.support.DefaultResourceLoader
 import org.grails.io.support.Resource
 import org.grails.io.support.ResourceLoader
-
-import java.nio.charset.StandardCharsets
 
 /**
  * Interface for classes that can render templates

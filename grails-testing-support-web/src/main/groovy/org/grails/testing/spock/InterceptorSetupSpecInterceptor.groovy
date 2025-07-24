@@ -19,12 +19,14 @@
 
 package org.grails.testing.spock
 
-import grails.testing.web.interceptor.InterceptorUnitTest
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import org.grails.plugins.web.interceptors.GrailsInterceptorHandlerInterceptorAdapter
+
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
+
+import grails.testing.web.interceptor.InterceptorUnitTest
+import org.grails.plugins.web.interceptors.GrailsInterceptorHandlerInterceptorAdapter
 
 @CompileStatic
 class InterceptorSetupSpecInterceptor implements IMethodInterceptor {

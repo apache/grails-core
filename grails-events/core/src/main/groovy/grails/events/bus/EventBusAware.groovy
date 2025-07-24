@@ -21,6 +21,7 @@ package grails.events.bus
 
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.annotation.Autowired
 
 /**

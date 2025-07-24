@@ -18,16 +18,17 @@
  */
 package grails.orm;
 
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.query.HibernateQuery;
+import java.sql.SQLException;
+import java.util.Iterator;
+
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.criterion.Projections;
 import org.hibernate.internal.CriteriaImpl;
 
-import java.sql.SQLException;
-import java.util.Iterator;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.query.HibernateQuery;
 
 /**
  * A result list for Criteria list calls, which is aware of the totalCount for

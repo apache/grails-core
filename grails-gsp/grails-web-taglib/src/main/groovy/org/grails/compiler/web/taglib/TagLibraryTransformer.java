@@ -18,10 +18,13 @@
  */
 package org.grails.compiler.web.taglib;
 
-import grails.artefact.TagLibrary;
-import grails.compiler.ast.AnnotatedClassInjector;
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.GrailsArtefactClassInjector;
+import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
 import groovy.lang.Closure;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -44,18 +47,16 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
+
+import grails.artefact.TagLibrary;
+import grails.compiler.ast.AnnotatedClassInjector;
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.GrailsArtefactClassInjector;
 import org.grails.compiler.injection.GrailsASTUtils;
 import org.grails.core.artefact.gsp.TagLibArtefactHandler;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.taglib.TagOutput;
 import org.grails.taglib.encoder.OutputContextLookupHelper;
-
-import java.lang.reflect.Modifier;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Enhances tag library classes with the appropriate API at compile time.
@@ -130,8 +131,8 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
                 namespace = initialExpression.getText();
             }
         }
-        
-        
+
+
         addGetTagLibNamespaceMethod(classNode, namespace);
 
         MethodCallExpression tagLibraryLookupMethodCall = new MethodCallExpression(new VariableExpression("this", ClassHelper.make(TagLibrary.class)), "getTagLibraryLookup", ZERO_ARGS);

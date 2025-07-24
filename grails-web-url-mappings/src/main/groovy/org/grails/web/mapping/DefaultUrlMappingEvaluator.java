@@ -18,40 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.core.GrailsApplication;
-import grails.core.support.ClassLoaderAware;
-import grails.gorm.validation.ConstrainedProperty;
-import grails.gorm.validation.DefaultConstrainedProperty;
-import grails.util.GrailsUtil;
-import grails.web.mapping.UrlMapping;
-import grails.web.mapping.UrlMappingData;
-import grails.web.mapping.UrlMappingEvaluator;
-import grails.web.mapping.UrlMappingParser;
-import grails.web.mapping.exceptions.UrlMappingException;
-import groovy.lang.Binding;
-import groovy.lang.Closure;
-import groovy.lang.GroovyClassLoader;
-import groovy.lang.GroovyObject;
-import groovy.lang.GroovyObjectSupport;
-import groovy.lang.Script;
-import org.codehaus.groovy.runtime.IOGroovyMethods;
-import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator;
-import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
-import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
-import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
-import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpMethod;
-import org.springframework.util.Assert;
-import org.springframework.web.context.WebApplicationContext;
-
-import jakarta.servlet.ServletContext;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serial;
@@ -65,6 +31,44 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.Binding;
+import groovy.lang.Closure;
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovyObject;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.Script;
+import org.codehaus.groovy.runtime.IOGroovyMethods;
+
+import jakarta.servlet.ServletContext;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpMethod;
+import org.springframework.util.Assert;
+import org.springframework.web.context.WebApplicationContext;
+
+import grails.core.GrailsApplication;
+import grails.core.support.ClassLoaderAware;
+import grails.gorm.validation.ConstrainedProperty;
+import grails.gorm.validation.DefaultConstrainedProperty;
+import grails.util.GrailsUtil;
+import grails.web.mapping.UrlMapping;
+import grails.web.mapping.UrlMappingData;
+import grails.web.mapping.UrlMappingEvaluator;
+import grails.web.mapping.UrlMappingParser;
+import grails.web.mapping.exceptions.UrlMappingException;
+import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator;
+import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
+import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
+import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
 
 import static grails.web.mapping.UrlMapping.ACTION;
 import static grails.web.mapping.UrlMapping.CONTROLLER;

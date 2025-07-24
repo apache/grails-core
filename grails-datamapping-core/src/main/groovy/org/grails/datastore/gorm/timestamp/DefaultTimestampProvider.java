@@ -21,13 +21,14 @@ package org.grails.datastore.gorm.timestamp;
 import java.util.Date;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.springframework.util.ClassUtils;
 
 /**
  * Default implementation of TimestampProvider
- * 
+ *
  * supports creating timestamps for any class that supports a constructor that accepts a Long or long value.
- * 
+ *
  * "currentTimeMillis" can be overrided in subclasses (useful for testing purposes)
  *
  */

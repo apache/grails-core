@@ -18,11 +18,11 @@
  */
 package grails.io
 
-import grails.util.BuildSettings
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import org.grails.io.support.GrailsResourceUtils
 
+import grails.util.BuildSettings
+import org.grails.io.support.GrailsResourceUtils
 
 /**
  * Utility methods for interacting with resources

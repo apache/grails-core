@@ -18,24 +18,24 @@
  */
 package org.grails.encoder;
 
-import org.grails.charsequences.CharSequences;
-
 import java.io.FilterWriter;
 import java.io.IOException;
 import java.io.Writer;
+
+import org.grails.charsequences.CharSequences;
 
 public class StreamingEncoderWriter extends FilterWriter implements EncodedAppenderFactory, EncoderAware {
     private EncodesToWriter encodesToWriter;
     private StreamingEncoder encoder;
     private EncodingStateRegistry encodingStateRegistry;
-    
+
     public StreamingEncoderWriter(Writer out, StreamingEncoder encoder, EncodingStateRegistry encodingStateRegistry) {
         super(out);
         this.encoder = encoder;
         if(encoder instanceof EncodesToWriter) {
             this.encodesToWriter = ((EncodesToWriter)encoder);
         } else {
-            this.encodesToWriter = new EncodesToWriterAdapter(encoder, true); 
+            this.encodesToWriter = new EncodesToWriterAdapter(encoder, true);
         }
         this.encodingStateRegistry = encodingStateRegistry;
     }
@@ -44,7 +44,7 @@ public class StreamingEncoderWriter extends FilterWriter implements EncodedAppen
     public void write(char[] cbuf, int off, int len) throws IOException {
         encodesToWriter.encodeToWriter(cbuf, off, len, out, null);
     }
-    
+
     @Override
     public void write(String str, int off, int len) throws IOException {
         final EncodingState encodingState = lookupEncodingState(str, off, len);
@@ -59,7 +59,7 @@ public class StreamingEncoderWriter extends FilterWriter implements EncodedAppen
         return encodingState == null || DefaultEncodingStateRegistry.shouldEncodeWith(encoderToApply,
                 encodingState);
     }
-    
+
     protected EncodingState lookupEncodingState(String str, int off, int len) {
         if(encodingStateRegistry != null) {
             return encodingStateRegistry.getEncodingStateFor(str);

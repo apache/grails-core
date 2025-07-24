@@ -4,17 +4,17 @@ Public Domain.
 
 package org.grails.web.json;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Stack;
+
+import groovy.lang.Writable;
+
 import static org.grails.web.json.JSONWriter.Mode.ARRAY;
 import static org.grails.web.json.JSONWriter.Mode.DONE;
 import static org.grails.web.json.JSONWriter.Mode.INIT;
 import static org.grails.web.json.JSONWriter.Mode.KEY;
 import static org.grails.web.json.JSONWriter.Mode.OBJECT;
-
-import groovy.lang.Writable;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.Stack;
 
 /**
  * JSONWriter provides a quick and convenient way of producing JSON text.
@@ -77,25 +77,25 @@ public class JSONWriter {
         this.mode = INIT;
         this.writer = w;
     }
-    
+
     private static class WritableString implements Writable {
         private String string;
-        
+
         WritableString(String string) {
             this.string = string;
         }
-        
+
         @Override
         public Writer writeTo(Writer out) throws IOException {
             out.write(string);
             return out;
         }
-        
+
         public String toString() {
             return string;
         }
     }
-    
+
     /**
      * Append a value.
      * @param s A string value.
@@ -305,20 +305,20 @@ public class JSONWriter {
 
     /**
      * Append a number value
-     * 
+     *
      * @param number
      * @return
      */
     public JSONWriter value(Number number) {
         return number != null ? append(number.toString()) : valueNull();
     }
-    
+
     public JSONWriter valueNull() {
         return append(nullWritable);
     }
-    
+
     static Writable nullWritable = new NullWritable();
-    
+
     private static class NullWritable implements Writable {
         @Override
         public Writer writeTo(Writer out) throws IOException {
@@ -337,10 +337,10 @@ public class JSONWriter {
     public JSONWriter value(Object o) {
         return  o != null ? append(new QuotedWritable(o)) : valueNull();
     }
-    
+
     private static class QuotedWritable implements Writable {
         Object o;
-        
+
         QuotedWritable(Object o) {
             this.o = o;
         }
@@ -350,7 +350,7 @@ public class JSONWriter {
             JSONObject.writeValue(out, o);
             return out;
         }
-        
+
         public String toString() {
             return String.valueOf(o);
         }

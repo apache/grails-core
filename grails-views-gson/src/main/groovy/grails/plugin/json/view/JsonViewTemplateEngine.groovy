@@ -19,6 +19,14 @@
 
 package grails.plugin.json.view
 
+import groovy.text.Template
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.OrderComparator
+
 import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.converters.InstantJsonConverter
 import grails.plugin.json.converters.LocalDateJsonConverter
@@ -37,12 +45,6 @@ import grails.views.ViewConfiguration
 import grails.views.WritableScriptTemplate
 import grails.views.api.GrailsView
 import grails.views.compiler.ViewsTransform
-import groovy.text.Template
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.core.OrderComparator
 
 /**
  * A template engine for parsing JSON views

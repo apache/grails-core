@@ -18,16 +18,14 @@
  */
 package org.grails.gsp.jsp
 
-import groovy.transform.CompileStatic
-
 import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.ServletContext
 
-import grails.core.GrailsApplication
-import grails.core.support.GrailsApplicationAware
 import org.springframework.beans.factory.BeanClassLoaderAware
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ResourceLoaderAware
@@ -36,6 +34,9 @@ import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.web.context.ServletContextAware
 import org.springframework.web.context.support.ServletContextResource
+
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
 
 /**
  * Resolves all of the available tag libraries from web.xml and all available JAR files.
@@ -85,7 +86,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
         }
         initialized = true
     }
-    
+
     private loadTagLibLocations(Resource webXml) {
         if (!webXml) {
             return
@@ -126,7 +127,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
         }
         return jspTagLib
     }
-    
+
     private List resolveJarUrls() {
         List<URL> jarURLs = grailsApplication.isWarDeployed() ? getJarsFromServletContext() : resolveRootLoader()?.getURLs() as List
         return jarURLs
@@ -148,7 +149,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
 
     /**
      * Obtains a reference to the first parent classloader that is a URLClassLoader and contains some URLs
-     * 
+     *
      */
     protected URLClassLoader resolveRootLoader() {
         def classLoader = getClass().classLoader

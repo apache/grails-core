@@ -18,12 +18,11 @@
  */
 package grails.web.mapping;
 
-
-import grails.gorm.validation.Constrained;
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import grails.gorm.validation.Constrained;
 
 /**
  * <p>Defines a URL mapping. A URL mapping is a mapping between a URI such as /book/list and

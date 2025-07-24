@@ -18,12 +18,13 @@
  */
 package grails.ui.support
 
-import grails.util.BuildSettings
 import groovy.transform.InheritConstructors
+
 import org.springframework.mock.web.MockServletConfig
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.support.GenericWebApplicationContext
 
+import grails.util.BuildSettings
 
 /**
  * A {@link org.springframework.web.context.WebApplicationContext} used during development

@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.services
 
+import java.lang.reflect.Modifier
+
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsServiceClass
@@ -26,9 +28,6 @@ import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.core.artefact.ServiceArtefactHandler
 import org.grails.core.exceptions.GrailsConfigurationException
-
-import java.lang.reflect.Modifier
-
 
 /**
  * Configures services in the Spring context.

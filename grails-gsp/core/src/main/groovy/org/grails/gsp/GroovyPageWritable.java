@@ -18,16 +18,6 @@
  */
 package org.grails.gsp;
 
-import grails.util.Environment;
-import groovy.lang.Binding;
-import groovy.lang.Writable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.grails.taglib.AbstractTemplateVariableBinding;
-import org.grails.taglib.TemplateVariableBinding;
-import org.grails.taglib.encoder.OutputContext;
-import org.grails.taglib.encoder.OutputContextLookup;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +26,18 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import groovy.lang.Binding;
+import groovy.lang.Writable;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import grails.util.Environment;
+import org.grails.taglib.AbstractTemplateVariableBinding;
+import org.grails.taglib.TemplateVariableBinding;
+import org.grails.taglib.encoder.OutputContext;
+import org.grails.taglib.encoder.OutputContextLookup;
 
 /**
  * Writes itself to the specified writer, typically the response writer.

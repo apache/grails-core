@@ -18,13 +18,15 @@
  */
 package grails.plugin.geb.support
 
-import geb.download.DownloadSupport
-import grails.plugin.geb.ContainerGebSpec
 import groovy.transform.CompileStatic
 import groovy.transform.SelfType
+
+import geb.download.DownloadSupport
 import org.testcontainers.containers.BrowserWebDriverContainer
 import org.testcontainers.images.builder.Transferable
 import spock.lang.Shared
+
+import grails.plugin.geb.ContainerGebSpec
 
 /**
  * Features for supporting Geb tests running in a container.

@@ -14,12 +14,13 @@
  */
 package org.grails.datastore.gorm.async
 
+import groovy.transform.CompileStatic
+
 import grails.async.Promise
 import grails.async.Promises
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorProvider
 import grails.gorm.api.GormStaticOperations
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.async.transform.DelegateAsync
 

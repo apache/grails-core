@@ -18,18 +18,19 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import groovy.lang.MissingMethodException;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+import groovy.lang.MissingMethodException;
+
+import org.springframework.core.convert.ConversionException;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.MappingContext;
-import org.springframework.core.convert.ConversionException;
 
 /**
  * Finder used to return a single result

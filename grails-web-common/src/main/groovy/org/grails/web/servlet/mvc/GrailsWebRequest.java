@@ -18,8 +18,6 @@
  */
 package org.grails.web.servlet.mvc;
 
-import grails.validation.DeferredBindingActions;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Constructor;
@@ -31,23 +29,6 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import grails.web.servlet.mvc.GrailsHttpSession;
-import grails.web.servlet.mvc.GrailsParameterMap;
-import grails.core.GrailsApplication;
-import grails.core.GrailsControllerClass;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.encoder.CodecLookupHelper;
-import org.grails.encoder.DefaultEncodingStateRegistry;
-import org.grails.encoder.Encoder;
-import org.grails.encoder.EncodingStateRegistry;
-import org.grails.encoder.EncodingStateRegistryLookup;
-import org.grails.encoder.EncodingStateRegistryLookupHolder;
-import org.grails.web.beans.PropertyEditorRegistryUtils;
-import org.grails.web.pages.FilteringCodecsByContentTypeSettings;
-import grails.web.mvc.FlashScope;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.PropertyEditorRegistrySupport;
 import org.springframework.context.ApplicationContext;
@@ -59,6 +40,25 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.servlet.handler.DispatcherServletWebRequest;
 import org.springframework.web.servlet.support.RequestContextUtils;
 import org.springframework.web.util.UrlPathHelper;
+
+import grails.core.GrailsApplication;
+import grails.core.GrailsControllerClass;
+import grails.validation.DeferredBindingActions;
+import grails.web.mvc.FlashScope;
+import grails.web.servlet.mvc.GrailsHttpSession;
+import grails.web.servlet.mvc.GrailsParameterMap;
+import org.grails.core.artefact.ControllerArtefactHandler;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.encoder.CodecLookupHelper;
+import org.grails.encoder.DefaultEncodingStateRegistry;
+import org.grails.encoder.Encoder;
+import org.grails.encoder.EncodingStateRegistry;
+import org.grails.encoder.EncodingStateRegistryLookup;
+import org.grails.encoder.EncodingStateRegistryLookupHolder;
+import org.grails.web.beans.PropertyEditorRegistryUtils;
+import org.grails.web.pages.FilteringCodecsByContentTypeSettings;
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Encapsulates a Grails request. An instance of this class is bound to the current thread using

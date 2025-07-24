@@ -19,6 +19,7 @@
 package org.grails.cli.profile.commands
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext

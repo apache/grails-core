@@ -37,8 +37,9 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 
-import org.grails.cli.groovy.DependencyManagementBom;
 import org.springframework.core.Ordered;
+
+import org.grails.cli.groovy.DependencyManagementBom;
 
 /**
  * A base class that lets plugin authors easily add additional BOMs to all apps. All the

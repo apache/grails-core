@@ -20,6 +20,7 @@
 package org.grails.core.io
 
 import groovy.transform.CompileStatic
+
 import org.springframework.core.io.Resource
 
 /**

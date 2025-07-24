@@ -18,6 +18,9 @@
  */
 package grails.util;
 
+import java.lang.reflect.Constructor;
+import java.util.List;
+
 import groovy.lang.AdaptingMetaClass;
 import groovy.lang.Closure;
 import groovy.lang.ClosureInvokingMethod;
@@ -29,13 +32,11 @@ import groovy.lang.MetaClass;
 import groovy.lang.MetaClassRegistry;
 import groovy.lang.MetaMethod;
 import groovy.lang.MetaProperty;
-
-import java.lang.reflect.Constructor;
-import java.util.List;
+import org.codehaus.groovy.runtime.metaclass.ThreadManagedMetaBeanProperty;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.runtime.metaclass.ThreadManagedMetaBeanProperty;
+
 import org.springframework.beans.BeanUtils;
 
 /**
@@ -167,9 +168,9 @@ public class GrailsMetaClassUtils {
         if (instance instanceof GroovyObject) {
             GroovyObject groovyObject = (GroovyObject) instance;
             MetaClass metaClass = groovyObject.getMetaClass();
-            
+
             metaClass = unwrapDelegatingMetaClass(metaClass);
-            
+
             if (!(metaClass instanceof ExpandoMetaClass)) {
                 metaClass = getExpandoMetaClass(instance.getClass());
                 groovyObject.setMetaClass(metaClass);

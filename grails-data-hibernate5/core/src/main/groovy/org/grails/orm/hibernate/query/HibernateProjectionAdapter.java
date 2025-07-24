@@ -21,9 +21,10 @@ package org.grails.orm.hibernate.query;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.grails.datastore.mapping.query.Query;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.Projections;
+
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Adapts Grails datastore API to Hibernate projections.

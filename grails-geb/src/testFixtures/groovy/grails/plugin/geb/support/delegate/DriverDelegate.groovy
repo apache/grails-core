@@ -18,9 +18,10 @@
  */
 package grails.plugin.geb.support.delegate
 
-import grails.plugin.geb.ContainerGebSpec
 import groovy.transform.CompileStatic
 import groovy.transform.SelfType
+
+import grails.plugin.geb.ContainerGebSpec
 
 /**
  * Handles delegation to select methods of the driver instance for end user convenience.

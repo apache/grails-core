@@ -19,10 +19,11 @@
 
 package org.grails.datastore.gorm.validation.constraints
 
+import org.springframework.context.MessageSource
+
 import grails.gorm.validation.Constraint
 import org.grails.datastore.gorm.validation.constraints.factory.DefaultConstraintFactory
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.context.MessageSource
 
 /**
  * A constraint that restricts constraints to be applicable only to a given {@link org.grails.datastore.mapping.model.MappingContext}

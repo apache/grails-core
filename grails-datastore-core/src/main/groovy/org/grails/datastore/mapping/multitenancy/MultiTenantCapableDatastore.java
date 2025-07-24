@@ -19,12 +19,13 @@
 
 package org.grails.datastore.mapping.multitenancy;
 
+import java.io.Serializable;
+
 import groovy.lang.Closure;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
-
-import java.io.Serializable;
 
 /**
  * An implementation that is capable of multi tenancy

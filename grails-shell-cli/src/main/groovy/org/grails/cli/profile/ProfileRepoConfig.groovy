@@ -16,11 +16,11 @@
  */
 package org.grails.cli.profile
 
+import java.nio.file.Paths
+
 import grails.util.BuildSettings
 import grails.util.Environment
 import org.grails.cli.GrailsCli
-
-import java.nio.file.Paths
 
 class ProfileRepoConfig {
     String name

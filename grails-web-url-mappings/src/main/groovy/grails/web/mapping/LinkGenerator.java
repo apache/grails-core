@@ -18,10 +18,10 @@
  */
 package grails.web.mapping;
 
-import grails.util.CollectionUtils;
-
 import java.util.Map;
 import java.util.Set;
+
+import grails.util.CollectionUtils;
 
 /**
  * Generates links for a Grails application based on URL mapping rules and/or base context settings.
@@ -51,7 +51,7 @@ public interface LinkGenerator {
     String ATTRIBUTE_ELEMENT_ID = "elementId";
     String ATTRIBUTE_PLUGIN = "plugin";
     String ATTRIBUTE_NAMESPACE = "namespace";
-    
+
 
     Set<String> LINK_ATTRIBUTES = CollectionUtils.newSet(
        ATTRIBUTE_RESOURCE,

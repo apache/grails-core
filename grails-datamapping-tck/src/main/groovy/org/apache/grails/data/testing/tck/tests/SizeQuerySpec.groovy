@@ -18,9 +18,9 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Country
 import org.apache.grails.data.testing.tck.domains.Person
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Tests for querying the size of collections etc.

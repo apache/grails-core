@@ -18,20 +18,22 @@
  */
 package grails.util;
 
-import grails.config.Config;
-import grails.core.GrailsApplication;
-import grails.plugins.GrailsPluginManager;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.core.support.GrailsApplicationDiscoveryStrategy;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.Lifecycle;
 import org.springframework.util.Assert;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import grails.config.Config;
+import grails.core.GrailsApplication;
+import grails.plugins.GrailsPluginManager;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.core.support.GrailsApplicationDiscoveryStrategy;
 
 /**
  * Allows looking up key classes in a static context

@@ -18,17 +18,19 @@
  */
 package grails.rest.render.errors
 
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpStatus
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.Errors
+import org.springframework.validation.ObjectError
+
 import grails.rest.render.RenderContext
 import grails.util.GrailsWebUtil
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
 import org.grails.web.xml.PrettyPrintXMLStreamWriter
 import org.grails.web.xml.StreamingMarkupWriter
 import org.grails.web.xml.XMLStreamWriter
-import org.springframework.validation.BeanPropertyBindingResult
-import org.springframework.validation.Errors
-import org.springframework.validation.ObjectError
-import org.springframework.http.HttpStatus
 
 /**
  * A renderer that renders errors in in the Vnd.Error format (see https://github.com/blongden/vnd.error)

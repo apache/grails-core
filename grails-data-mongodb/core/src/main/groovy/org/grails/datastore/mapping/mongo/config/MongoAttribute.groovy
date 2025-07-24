@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.mongo.config
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.grails.datastore.mapping.document.config.Attribute
 
 /**

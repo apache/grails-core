@@ -19,13 +19,24 @@
 
 package org.grails.datastore.bson.query;
 
-import grails.gorm.DetachedCriteria;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import org.codehaus.groovy.runtime.NullObject;
+
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.Document;
 import org.bson.codecs.EncoderContext;
 import org.bson.codecs.configuration.CodecRegistry;
-import org.codehaus.groovy.runtime.NullObject;
+
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+
+import grails.gorm.DetachedCriteria;
 import org.grails.datastore.bson.codecs.CodecCustomTypeMarshaller;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.core.Session;
@@ -40,14 +51,6 @@ import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * A base class for Query implementations that create BSON queries based on MongoDB query format. See https://docs.mongodb.com/manual/tutorial/query-documents/

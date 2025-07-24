@@ -18,9 +18,10 @@
  */
 package org.grails.datastore.gorm.transform
 
+import java.beans.Introspector
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
-import jakarta.annotation.PostConstruct
-import jakarta.annotation.PreDestroy
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -40,10 +41,11 @@ import org.codehaus.groovy.control.ErrorCollector
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.sc.StaticCompileTransformation
 import org.codehaus.groovy.transform.trait.Traits
-import org.grails.datastore.mapping.reflect.NameUtils
 
-import java.beans.Introspector
-import java.lang.reflect.Modifier
+import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
+
+import org.grails.datastore.mapping.reflect.NameUtils
 
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args

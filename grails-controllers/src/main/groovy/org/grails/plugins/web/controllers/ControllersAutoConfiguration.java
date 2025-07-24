@@ -19,15 +19,12 @@
 
 package org.grails.plugins.web.controllers;
 
-import grails.config.Settings;
-import grails.core.GrailsApplication;
+import java.util.EnumSet;
+
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
-import org.grails.web.config.http.GrailsFilters;
-import org.grails.web.filters.HiddenHttpMethodFilter;
-import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
-import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -45,7 +42,12 @@ import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.EnumSet;
+import grails.config.Settings;
+import grails.core.GrailsApplication;
+import org.grails.web.config.http.GrailsFilters;
+import org.grails.web.filters.HiddenHttpMethodFilter;
+import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
+import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
 
 @AutoConfiguration(before = { HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class })
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)

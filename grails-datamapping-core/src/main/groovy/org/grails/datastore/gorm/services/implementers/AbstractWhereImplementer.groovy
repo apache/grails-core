@@ -19,8 +19,6 @@
 
 package org.grails.datastore.gorm.services.implementers
 
-import grails.gorm.DetachedCriteria
-import grails.gorm.services.Where
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -32,6 +30,9 @@ import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
+
+import grails.gorm.DetachedCriteria
+import grails.gorm.services.Where
 import org.grails.datastore.gorm.query.transform.DetachedCriteriaTransformer
 import org.grails.datastore.mapping.reflect.AstUtils
 

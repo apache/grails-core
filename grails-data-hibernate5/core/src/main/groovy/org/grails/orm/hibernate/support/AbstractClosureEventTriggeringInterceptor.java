@@ -28,6 +28,7 @@ import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.event.spi.PreInsertEventListener;
 import org.hibernate.event.spi.PreLoadEventListener;
 import org.hibernate.event.spi.PreUpdateEventListener;
+
 import org.springframework.context.ApplicationContextAware;
 
 /**

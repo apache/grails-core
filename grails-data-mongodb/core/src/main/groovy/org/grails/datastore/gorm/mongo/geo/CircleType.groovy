@@ -14,8 +14,9 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.Circle
 import org.bson.Document
+
+import grails.mongodb.geo.Circle
 import org.grails.datastore.mapping.model.PersistentProperty
 
 /**

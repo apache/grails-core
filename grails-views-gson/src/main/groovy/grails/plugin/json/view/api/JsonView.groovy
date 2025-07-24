@@ -19,6 +19,8 @@
 
 package grails.plugin.json.view.api
 
+import groovy.transform.CompileStatic
+
 import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.internal.DefaultGrailsJsonViewHelper
@@ -31,7 +33,6 @@ import grails.views.GrailsViewTemplate
 import grails.views.ResolvableGroovyTemplateEngine
 import grails.views.ViewException
 import grails.views.api.GrailsView
-import groovy.transform.CompileStatic
 
 /**
  * Extends default view API with additional methods

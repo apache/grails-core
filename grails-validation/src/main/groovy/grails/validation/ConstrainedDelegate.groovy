@@ -19,11 +19,13 @@
 
 package grails.validation
 
-import grails.gorm.validation.ConstrainedProperty
-import grails.gorm.validation.Constraint
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.springframework.validation.Errors
+
+import grails.gorm.validation.ConstrainedProperty
+import grails.gorm.validation.Constraint
 
 /**
  * Bridge from the old API to the new

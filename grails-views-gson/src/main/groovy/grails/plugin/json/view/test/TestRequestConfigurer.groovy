@@ -19,14 +19,16 @@
 
 package grails.plugin.json.view.test
 
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpMethod
+
 import grails.config.Config
 import grails.plugin.json.view.api.JsonView
 import grails.util.TypeConvertingMap
 import grails.views.api.HttpView
 import grails.views.api.http.Request
 import grails.views.mvc.http.DelegatingParameters
-import groovy.transform.CompileStatic
-import org.springframework.http.HttpMethod
 
 /**
  * Allows configuring the JSON view rendering for request state

@@ -18,15 +18,6 @@
  */
 package grails.web.databinding;
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBinder;
-import grails.databinding.DataBindingSource;
-import grails.util.Environment;
-import grails.util.Holders;
-import grails.validation.ValidationErrors;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
@@ -36,13 +27,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+
 import jakarta.servlet.ServletRequest;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+
 import grails.core.GrailsApplication;
+import grails.databinding.CollectionDataBindingSource;
+import grails.databinding.DataBinder;
+import grails.databinding.DataBindingSource;
+import grails.util.Environment;
+import grails.util.Holders;
+import grails.validation.ValidationErrors;
 import grails.web.mime.MimeType;
 import grails.web.mime.MimeTypeResolver;
 import grails.web.mime.MimeTypeUtils;
-
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -51,11 +56,6 @@ import org.grails.web.databinding.DefaultASTDatabindingHelper;
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry;
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry;
 import org.grails.web.databinding.bindingsource.InvalidRequestBodyException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.validation.ObjectError;
 
 /**
  * Utility methods to perform data binding from Grails objects.

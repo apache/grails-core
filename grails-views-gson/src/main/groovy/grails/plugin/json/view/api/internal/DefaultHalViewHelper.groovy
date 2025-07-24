@@ -19,6 +19,13 @@
 
 package grails.plugin.json.view.api.internal
 
+import java.lang.reflect.Field
+
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpMethod
+
 import grails.gorm.PagedResultList
 import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.JsonOutput
@@ -35,8 +42,6 @@ import grails.views.api.HttpView
 import grails.views.api.http.Parameters
 import grails.views.utils.ViewUtils
 import grails.web.mime.MimeType
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
 import org.grails.core.util.IncludeExcludeSupport
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -50,9 +55,6 @@ import org.grails.datastore.mapping.model.types.Simple
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.springframework.http.HttpMethod
-
-import java.lang.reflect.Field
 
 /**
  * Helps creating HAL links

@@ -19,24 +19,26 @@
 
 package org.grails.events.rxjava
 
-import grails.events.Event
-import grails.events.subscriber.Subscriber
-import grails.events.trigger.EventTrigger
-import grails.events.subscriber.Subscription
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.events.bus.AbstractEventBus
-import org.grails.events.registry.ClosureSubscription
-import org.grails.events.registry.EventSubscriberSubscription
+
 import rx.Scheduler
 import rx.functions.Action1
 import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
 import rx.subjects.Subject
 
-import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
+import grails.events.Event
+import grails.events.subscriber.Subscriber
+import grails.events.subscriber.Subscription
+import grails.events.trigger.EventTrigger
+import org.grails.events.bus.AbstractEventBus
+import org.grails.events.registry.ClosureSubscription
+import org.grails.events.registry.EventSubscriberSubscription
 
 /**
  * An EventBus implementation that uses RxJava

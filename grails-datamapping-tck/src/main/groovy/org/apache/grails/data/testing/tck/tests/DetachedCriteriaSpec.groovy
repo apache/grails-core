@@ -20,8 +20,8 @@ package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.PagedResultList
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 class DetachedCriteriaSpec extends GrailsDataTckSpec {
 

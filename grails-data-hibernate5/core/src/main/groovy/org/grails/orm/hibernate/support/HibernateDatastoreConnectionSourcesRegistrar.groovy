@@ -19,12 +19,12 @@
 
 package org.grails.orm.hibernate.support
 
+import javax.sql.DataSource
+
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.bootstrap.support.InstanceFactoryBean
-import org.grails.datastore.mapping.config.Settings
-import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.grailsversion.GrailsVersion
+
 import org.hibernate.SessionFactory
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.config.ConstructorArgumentValues
@@ -34,8 +34,10 @@ import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.core.Ordered
 import org.springframework.transaction.PlatformTransactionManager
 
-import javax.sql.DataSource
-
+import org.grails.datastore.gorm.bootstrap.support.InstanceFactoryBean
+import org.grails.datastore.mapping.config.Settings
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.grailsversion.GrailsVersion
 
 /**
  * A factory bean that looks up a datastore by connection name

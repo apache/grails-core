@@ -21,6 +21,7 @@ package grails.plugin.json.view.test
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+
 import org.springframework.http.HttpStatus
 
 /**

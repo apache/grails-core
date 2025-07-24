@@ -20,10 +20,12 @@
 package org.grails.scaffolding.model.property
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.model.PersistentProperty
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentProperty
 
 /**
  * @see {@link DomainPropertyFactory}

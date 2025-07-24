@@ -19,6 +19,7 @@
 package org.grails.cli.profile.steps
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.ProfileCommand
 import org.grails.cli.profile.Step

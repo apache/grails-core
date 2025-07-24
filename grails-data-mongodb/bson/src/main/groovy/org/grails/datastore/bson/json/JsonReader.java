@@ -15,6 +15,10 @@
  */
 package org.grails.datastore.bson.json;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+
 import org.bson.AbstractBsonReader;
 import org.bson.BsonBinary;
 import org.bson.BsonContextType;
@@ -27,10 +31,6 @@ import org.bson.BsonType;
 import org.bson.json.JsonParseException;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
-
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
 
 /**
  * A simplified fork of {@link org.bson.json.JsonReader} that works with readers and removes processing related to MongoDB

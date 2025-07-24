@@ -18,7 +18,6 @@
  */
 package org.grails.datastore.gorm.jdbc;
 
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -27,11 +26,12 @@ import java.util.Properties;
 
 import javax.sql.DataSource;
 
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.util.ClassUtils;
+
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 
 /**
  * NOTE: Forked from Spring Boot logic to avoid hard dependency on Boot.

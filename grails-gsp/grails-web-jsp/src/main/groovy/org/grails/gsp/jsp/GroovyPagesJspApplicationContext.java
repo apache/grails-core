@@ -18,6 +18,9 @@
  */
 package org.grails.gsp.jsp;
 
+import java.util.Iterator;
+import java.util.LinkedList;
+
 import jakarta.el.ArrayELResolver;
 import jakarta.el.BeanELResolver;
 import jakarta.el.CompositeELResolver;
@@ -35,12 +38,11 @@ import jakarta.el.VariableMapper;
 import jakarta.servlet.jsp.JspApplicationContext;
 import jakarta.servlet.jsp.el.ImplicitObjectELResolver;
 import jakarta.servlet.jsp.el.ScopedAttributeELResolver;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.util.ClassUtils;
 
-import java.util.Iterator;
-import java.util.LinkedList;
+import org.springframework.util.ClassUtils;
 
 /**
  * @author Graeme Rocher

@@ -18,10 +18,11 @@
  */
 package org.grails.web.databinding.converters
 
-import grails.databinding.converters.ValueConverter;
 import groovy.transform.CompileStatic
 
 import org.springframework.web.multipart.MultipartFile
+
+import grails.databinding.converters.ValueConverter
 
 /**
  * @author Jeff Brown

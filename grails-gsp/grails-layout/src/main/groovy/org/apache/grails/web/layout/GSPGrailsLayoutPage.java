@@ -18,16 +18,17 @@
  */
 package org.apache.grails.web.layout;
 
-import com.opensymphony.module.sitemesh.HTMLPage;
-import com.opensymphony.module.sitemesh.parser.AbstractHTMLPage;
-import com.opensymphony.sitemesh.Content;
-import com.opensymphony.sitemesh.compatability.Content2HTMLPage;
-import org.grails.buffer.StreamCharBuffer;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.opensymphony.module.sitemesh.HTMLPage;
+import com.opensymphony.module.sitemesh.parser.AbstractHTMLPage;
+import com.opensymphony.sitemesh.Content;
+import com.opensymphony.sitemesh.compatability.Content2HTMLPage;
+
+import org.grails.buffer.StreamCharBuffer;
 
 /**
  * Grails/GSP specific implementation of Sitemesh's AbstractHTMLPage

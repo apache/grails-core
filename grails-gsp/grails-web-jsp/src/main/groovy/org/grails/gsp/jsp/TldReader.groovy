@@ -20,8 +20,10 @@ package org.grails.gsp.jsp
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
+
 import org.grails.io.support.SpringIOUtils
 
 /**
@@ -34,9 +36,9 @@ class TldReader {
     final Map<String,String> tags = [:]
     final List<String> listeners = []
     String uri
-        
+
     public TldReader(InputStream inputStream) {
-        inputStream.withStream { 
+        inputStream.withStream {
             init(new BufferedInputStream(inputStream))
         }
     }

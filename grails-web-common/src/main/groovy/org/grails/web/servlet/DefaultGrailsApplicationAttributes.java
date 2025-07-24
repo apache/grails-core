@@ -18,18 +18,18 @@
  */
 package org.grails.web.servlet;
 
-import grails.core.GrailsApplication;
-import grails.core.GrailsControllerClass;
-import grails.plugins.GrailsPluginManager;
-import grails.util.Holders;
-import grails.web.mvc.FlashScope;
-import grails.web.pages.GroovyPagesUriService;
+import java.io.Writer;
+
 import groovy.lang.GroovyObject;
+
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.gsp.ResourceAwareTemplateEngine;
-import org.grails.web.pages.DefaultGroovyPagesUriService;
-import org.grails.web.util.GrailsApplicationAttributes;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.MessageSource;
@@ -37,11 +37,15 @@ import org.springframework.util.Assert;
 import org.springframework.validation.Errors;
 import org.springframework.web.util.UrlPathHelper;
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import java.io.Writer;
+import grails.core.GrailsApplication;
+import grails.core.GrailsControllerClass;
+import grails.plugins.GrailsPluginManager;
+import grails.util.Holders;
+import grails.web.mvc.FlashScope;
+import grails.web.pages.GroovyPagesUriService;
+import org.grails.gsp.ResourceAwareTemplateEngine;
+import org.grails.web.pages.DefaultGroovyPagesUriService;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Holds knowledge about how to obtain certain attributes from either the ServletContext
@@ -54,7 +58,7 @@ import java.io.Writer;
  */
 public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttributes {
     protected static final String DEFAULT_NAMESPACE = "g";
-    
+
     private static Log LOG = LogFactory.getLog(DefaultGrailsApplicationAttributes.class);
 
     private UrlPathHelper urlHelper = new UrlPathHelper();

@@ -19,15 +19,16 @@
 
 package org.grails.plugins.sitemesh3
 
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.PropertySource
+
 import grails.plugins.Plugin
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib
 import org.grails.plugins.web.taglib.SitemeshTagLib
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.util.WebUtils
-import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.core.env.MapPropertySource
-import org.springframework.core.env.PropertySource
 
 class Sitemesh3GrailsPlugin extends Plugin {
 

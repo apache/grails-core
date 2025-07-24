@@ -19,14 +19,15 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
+import java.lang.reflect.Array;
+import java.util.Collection;
 
-import grails.gorm.validation.ConstrainedProperty;
 import groovy.lang.IntRange;
+
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
 
-import java.lang.reflect.Array;
-import java.util.Collection;
+import grails.gorm.validation.ConstrainedProperty;
 
 /**
  * Validates size of the property, for strings and arrays

@@ -19,11 +19,13 @@
 
 package grails.config.external
 
-import grails.util.Environment
+import java.nio.file.DirectoryStream
+import java.nio.file.Files
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.config.PropertySourcesConfig
-import org.grails.config.yaml.YamlPropertySourceLoader
+
 import org.springframework.boot.ConfigurableBootstrapContext
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.SpringApplicationRunListener
@@ -35,9 +37,9 @@ import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 
-import java.nio.file.DirectoryStream
-import java.nio.file.Files
-import java.nio.file.Path
+import grails.util.Environment
+import org.grails.config.PropertySourcesConfig
+import org.grails.config.yaml.YamlPropertySourceLoader
 
 @CompileStatic
 @Slf4j

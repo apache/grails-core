@@ -19,15 +19,12 @@
 
 package org.grails.transaction;
 
-import grails.config.Config;
-
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.grails.config.PropertySourcesConfig;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -43,22 +40,25 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.util.ClassUtils;
 
+import grails.config.Config;
+import org.grails.config.PropertySourcesConfig;
+
 /**
  *  A {@link BeanDefinitionRegistryPostProcessor} for using the "Best Effort 1 Phase Commit" (BE1PC) in Grails
- *  applications when there are multiple data sources.  
- *  
+ *  applications when there are multiple data sources.
+ *
  *  When the context contains multiple transactionManager beans, the bean with the name "transactionManager"
  *  will be renamed to "$primaryTransactionManager" and a new ChainedTransactionManager bean will be added with the name
  *  "transactionManager". All transactionManager beans will be registered in the ChainedTransactionManager bean.
  *
- *  The post processor checks if the previous transactionManager bean is an instance of {@link JtaTransactionManager}. 
+ *  The post processor checks if the previous transactionManager bean is an instance of {@link JtaTransactionManager}.
  *  In that case it will not do anything since it's assumed that JTA/XA is handling transactions spanning multiple datasources.
- *  
+ *
  *  For performance reasons an additional dataSource can be marked as non-transactional by adding a property 'transactional = false' in
  *  it's dataSource configuration. This will leave the dataSource out of the transactions initiated by Grails transactions.
- *  This is the default behaviour in Grails versions before Grails 2.3.6 .  
- *  
- *  
+ *  This is the default behaviour in Grails versions before Grails 2.3.6 .
+ *
+ *
  * @author Lari Hotari
  * @since 2.3.6
  *
@@ -77,7 +77,7 @@ public class ChainedTransactionManagerPostProcessor implements BeanDefinitionReg
     private static final String PRIMARY_TRANSACTION_MANAGER = "$primaryTransactionManager";
     private static final String TRANSACTION_MANAGER = "transactionManager";
     private static final String READONLY = "readOnly";
-    
+
     private Config config;
 
     private Map<String, Map> dsConfigs;
@@ -86,7 +86,7 @@ public class ChainedTransactionManagerPostProcessor implements BeanDefinitionReg
     public ChainedTransactionManagerPostProcessor(Config config) {
         this(config, null, null);
     }
-    
+
     public ChainedTransactionManagerPostProcessor(Config config, String whitelistPattern, String blacklistPattern) {
         transactionManagerBeanNames = null;
         this.config = config;
@@ -97,15 +97,15 @@ public class ChainedTransactionManagerPostProcessor implements BeanDefinitionReg
             beanNameBlacklistPattern = blacklistPattern;
         }
     }
-    
+
     public ChainedTransactionManagerPostProcessor() {
         this(new PropertySourcesConfig(), null, null);
     }
-    
+
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        
+
     }
 
     protected void registerAdditionalTransactionManagers(BeanDefinitionRegistry registry, BeanDefinition chainedTransactionManagerBeanDefinition, ManagedList<RuntimeBeanReference> transactionManagerRefs) {
@@ -176,7 +176,7 @@ public class ChainedTransactionManagerPostProcessor implements BeanDefinitionReg
             return null;
         }
         BeanDefinition transactionManagerBeanDefinition = registry.getBeanDefinition(TRANSACTION_MANAGER);
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();            
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         Class<?> transactionManagerBeanClass = ClassUtils.resolveClassName(transactionManagerBeanDefinition.getBeanClassName(), classLoader);
         return transactionManagerBeanClass;
     }
@@ -198,7 +198,7 @@ public class ChainedTransactionManagerPostProcessor implements BeanDefinitionReg
     protected boolean isValidTransactionManagerBeanDefinition(String beanName, BeanDefinition beanDefinition) {
         return beanName.matches(beanNameWhitelistPattern) && (beanNameBlacklistPattern==null || !beanName.matches(beanNameBlacklistPattern)) && !beanName.matches(beanNameInternalBlacklistPattern);
     }
-    
+
     protected boolean isNotTransactional(String suffix) {
         if (suffix == null || config == null) {
             return false;

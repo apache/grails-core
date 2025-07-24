@@ -18,14 +18,15 @@
  */
 package org.grails.gradle.plugin.publishing
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-
-import javax.inject.Inject
 
 /**
  * @author Puneet Behl

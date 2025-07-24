@@ -20,20 +20,23 @@
 package org.grails.orm.hibernate.support
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.proxy.ProxyHandler
-import org.grails.datastore.mapping.validation.ValidationErrors
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.codehaus.groovy.runtime.StringGroovyMethods
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.OneToOne
+
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+
 import org.springframework.core.convert.ConversionService
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
+
+import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.validation.ValidationErrors
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 
 /**
  * Utility methods used at runtime by the GORM for Hibernate implementation

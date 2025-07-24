@@ -19,6 +19,10 @@
 
 package org.grails.datastore.gorm.mongo.api
 
+import java.util.function.Function
+
+import groovy.transform.CompileStatic
+
 import com.mongodb.ReadPreference
 import com.mongodb.client.AggregateIterable
 import com.mongodb.client.FindIterable
@@ -30,12 +34,14 @@ import com.mongodb.client.model.Filters
 import com.mongodb.client.model.FindOneAndDeleteOptions
 import com.mongodb.client.model.Projections
 import com.mongodb.client.model.TextSearchOptions
+import org.bson.Document
+import org.bson.conversions.Bson
+
+import org.springframework.transaction.PlatformTransactionManager
+
 import grails.gorm.multitenancy.Tenants
 import grails.mongodb.MongoEntity
 import grails.mongodb.api.MongoAllOperations
-import groovy.transform.CompileStatic
-import org.bson.Document
-import org.bson.conversions.Bson
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
@@ -48,9 +54,6 @@ import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.springframework.transaction.PlatformTransactionManager
-
-import java.util.function.Function
 
 /**
  * MongoDB static API implementation

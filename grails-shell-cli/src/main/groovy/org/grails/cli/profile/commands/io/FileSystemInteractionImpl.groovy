@@ -18,9 +18,10 @@
  */
 package org.grails.cli.profile.commands.io
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.GrailsConsole
 import grails.util.BuildSettings
-import groovy.transform.CompileStatic
 import org.grails.cli.profile.ExecutionContext
 import org.grails.io.support.DefaultResourceLoader
 import org.grails.io.support.FileSystemResource

@@ -18,9 +18,9 @@
  */
 package org.grails.core.io;
 
-import org.springframework.core.io.Resource;
-
 import java.util.Collection;
+
+import org.springframework.core.io.Resource;
 
 /**
  * Used to locate resources at development or production time.

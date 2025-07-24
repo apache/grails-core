@@ -19,8 +19,9 @@
 
 package grails.plugin.json.view.api
 
-import grails.plugin.json.builder.JsonOutput
 import groovy.transform.CompileStatic
+
+import grails.plugin.json.builder.JsonOutput
 
 /**
  * @author Colin Harrington

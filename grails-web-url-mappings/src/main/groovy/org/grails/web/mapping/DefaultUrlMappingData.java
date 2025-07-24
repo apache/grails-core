@@ -22,9 +22,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.util.Assert;
+
 import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingData;
-import org.springframework.util.Assert;
 
 /**
  * Default implementating of the UrlMappingData interface.

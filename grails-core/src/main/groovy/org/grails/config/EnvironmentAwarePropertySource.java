@@ -19,13 +19,14 @@
 
 package org.grails.config;
 
-import grails.util.Environment;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.PropertySources;
 
-import java.util.ArrayList;
-import java.util.List;
+import grails.util.Environment;
 
 /**
  * A PropertySource aware of the Grails environment and that resolves keys based on the environment from other property sources

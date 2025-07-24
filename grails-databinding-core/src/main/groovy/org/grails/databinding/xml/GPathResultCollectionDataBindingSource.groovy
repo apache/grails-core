@@ -18,11 +18,12 @@
  */
 package org.grails.databinding.xml
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
-import grails.databinding.SimpleMapDataBindingSource;
 import groovy.transform.CompileStatic
 import groovy.xml.slurpersupport.GPathResult
+
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
+import grails.databinding.SimpleMapDataBindingSource
 
 @CompileStatic
 class GPathResultCollectionDataBindingSource implements CollectionDataBindingSource {

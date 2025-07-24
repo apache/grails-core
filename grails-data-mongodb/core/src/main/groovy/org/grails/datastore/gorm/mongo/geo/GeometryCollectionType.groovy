@@ -14,9 +14,11 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.GeometryCollection
 import groovy.transform.CompileStatic
+
 import org.bson.Document
+
+import grails.mongodb.geo.GeometryCollection
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentProperty

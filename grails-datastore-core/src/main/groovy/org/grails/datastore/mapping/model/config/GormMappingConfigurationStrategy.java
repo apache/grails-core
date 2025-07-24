@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.mapping.model.config;
 
-import groovy.lang.Closure;
-
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
@@ -35,9 +33,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import groovy.lang.Closure;
+import groovy.lang.MetaProperty;
+
 import jakarta.persistence.Entity;
 
-import groovy.lang.MetaProperty;
+import org.springframework.util.StringUtils;
+
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.IdentityMapping;
@@ -55,7 +57,6 @@ import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.ReflectionUtils;
-import org.springframework.util.StringUtils;
 
 import static org.grails.datastore.mapping.model.config.GormProperties.BELONGS_TO;
 import static org.grails.datastore.mapping.model.config.GormProperties.EMBEDDED;
@@ -644,7 +645,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
                         }
                         else if(relatedClassPropertyName != null) {
                             // in this case no mappedBy is found so check if the the property name is the same as the class name (eg. 'Foo' would be come 'foo')
-                            // using this convention we consider this the default property to map to 
+                            // using this convention we consider this the default property to map to
                             String classNameAsProperty = Introspector.decapitalize(propType.getSimpleName());
                             if (property.getName().equals(classNameAsProperty) && !mappedBy.containsKey(relatedClassPropertyName)) {
                                 relatedClassPropertyType = relatedCpf.getPropertyType(relatedClassPropertyName);

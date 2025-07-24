@@ -18,15 +18,16 @@
  */
 package org.grails.web.databinding
 
-import grails.databinding.errors.BindingError;
-import grails.databinding.events.DataBindingListenerAdapter;
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 
 import org.springframework.context.MessageSource
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.validation.BindingResult
 import org.springframework.validation.FieldError
+
+import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListenerAdapter
+import grails.util.GrailsNameUtils
 
 @CompileStatic
 class GrailsWebDataBindingListener extends DataBindingListenerAdapter {

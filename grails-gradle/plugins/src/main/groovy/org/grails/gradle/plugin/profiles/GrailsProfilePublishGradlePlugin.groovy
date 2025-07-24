@@ -18,16 +18,18 @@
  */
 package org.grails.gradle.plugin.profiles
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.GenerateMavenPom
 import org.gradle.api.tasks.bundling.Jar
-import org.grails.gradle.plugin.publishing.GrailsPublishGradlePlugin
 
-import javax.inject.Inject
+import org.grails.gradle.plugin.publishing.GrailsPublishGradlePlugin
 
 /**
  * A plugin for publishing profiles

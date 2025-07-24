@@ -19,12 +19,9 @@
 
 package org.grails.compiler.injection
 
-import grails.artefact.Artefact
-import grails.compiler.ast.ClassInjector
-import grails.core.ArtefactHandler
-import grails.io.IOUtils
-import grails.plugins.metadata.GrailsPlugin
-import grails.util.GrailsNameUtils
+import java.lang.reflect.Modifier
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -32,8 +29,6 @@ import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
-import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.apache.grails.common.properties.PropertyFileUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -47,13 +42,19 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import grails.artefact.Artefact
+import grails.compiler.ast.ClassInjector
+import grails.core.ArtefactHandler
+import grails.io.IOUtils
+import grails.plugins.metadata.GrailsPlugin
+import grails.util.GrailsNameUtils
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.apache.grails.common.properties.PropertyFileUtils
 import org.grails.core.io.support.GrailsFactoriesLoader
 import org.grails.io.support.AntPathMatcher
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.UrlResource
-
-import java.lang.reflect.Modifier
-import java.nio.charset.StandardCharsets
 
 /**
  * A global transformation that applies Grails' transformations to classes within a Grails project

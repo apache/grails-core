@@ -18,18 +18,19 @@
  */
 package org.grails.web.mapping;
 
-import grails.core.GrailsApplication;
-import grails.gorm.validation.Constrained;
-import grails.gorm.validation.ConstrainedProperty;
-import grails.web.mapping.UrlMapping;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.WebApplicationContext;
-
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 
 import jakarta.servlet.ServletContext;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.WebApplicationContext;
+
+import grails.core.GrailsApplication;
+import grails.gorm.validation.Constrained;
+import grails.gorm.validation.ConstrainedProperty;
+import grails.web.mapping.UrlMapping;
 
 /**
  * Abstract UrlMapping implementation that provides common basic functionality.

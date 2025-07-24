@@ -18,8 +18,6 @@
  */
 package org.grails.taglib;
 
-import groovy.lang.Binding;
-
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,6 +25,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.Binding;
 
 /**
  * Abstract super class for GroovyPage bindings

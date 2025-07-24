@@ -20,6 +20,7 @@
 package org.grails.cli.profile.commands
 
 import jline.console.completer.Completer
+
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 import org.grails.cli.profile.Command

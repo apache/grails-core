@@ -19,14 +19,15 @@
 
 package org.grails.plugins.domain.support;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import groovy.lang.Closure;
+
 import grails.gorm.validation.ConstrainedProperty;
 import grails.validation.Constrained;
 import grails.validation.ConstrainedDelegate;
 import grails.validation.ConstraintsEvaluator;
-import groovy.lang.Closure;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class ConstraintEvaluatorAdapter implements ConstraintsEvaluator {
 

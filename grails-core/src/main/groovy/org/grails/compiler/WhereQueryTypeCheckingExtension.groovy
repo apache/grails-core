@@ -23,9 +23,9 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.MethodCall
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.grails.compiler.injection.GrailsASTUtils
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
 
+import org.grails.compiler.injection.GrailsASTUtils
 
 /**
  *
@@ -38,7 +38,7 @@ class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
         setup { newScope() }
 
         finish { scopeExit() }
-        
+
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
             if(currentScope.processingWhereQueryClosure) {
@@ -46,13 +46,13 @@ class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
             }
             dynamicCall
         }
-        
+
         afterMethodCall { MethodCall call ->
             if(isWhereQueryCall(call)) {
                 scopeExit()
             }
         }
-        
+
         beforeMethodCall { MethodCall call ->
             if(isWhereQueryCall(call)) {
                 newScope {
@@ -62,11 +62,11 @@ class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
         }
         null
     }
-    
+
     protected boolean isWhereQueryCall(MethodCall call) {
-        call instanceof MethodCallExpression && 
-            call.objectExpression instanceof ClassExpression && 
-            GrailsASTUtils.isDomainClass(call.objectExpression.type, null) && 
+        call instanceof MethodCallExpression &&
+            call.objectExpression instanceof ClassExpression &&
+            GrailsASTUtils.isDomainClass(call.objectExpression.type, null) &&
             call.method.value == 'where'
     }
 }

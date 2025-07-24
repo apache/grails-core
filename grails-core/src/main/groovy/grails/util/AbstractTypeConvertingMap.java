@@ -18,10 +18,6 @@
  */
 package grails.util;
 
-import groovy.lang.GroovyObjectSupport;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.codehaus.groovy.util.HashCodeHelper;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,6 +30,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.GroovyObjectSupport;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.codehaus.groovy.util.HashCodeHelper;
 
 /**
  * AbstractTypeConvertingMap is a Map with type conversion capabilities.
@@ -58,10 +58,10 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
         if (map == null) map = new LinkedHashMap();
         wrappedMap = map;
     }
-    
+
     public boolean equals(Map that) {
         return equals((Object)that);
-    }    
+    }
 
     @Override
     public boolean equals(Object that) {
@@ -96,8 +96,8 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
             final Object key = it.next();
             Object thisValue = wrappedMap.get(key);
             Object thatValue = thatMap.wrappedMap.get(key);
-            if (thisValue == null && thatValue != null || 
-                thisValue != null && thatValue == null || 
+            if (thisValue == null && thatValue != null ||
+                thisValue != null && thatValue == null ||
                 thisValue != thatValue && !thisValue.equals(thatValue)) {
                 return false;
             }
@@ -378,7 +378,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
         if (value instanceof Date) {
             return (Date)value;
         }
-        
+
         if (value != null) {
             try {
                 return new SimpleDateFormat(format).parse(value.toString());

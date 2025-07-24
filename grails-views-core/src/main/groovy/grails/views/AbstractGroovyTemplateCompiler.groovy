@@ -19,8 +19,14 @@
 
 package grails.views
 
-import grails.views.compiler.ViewsTransform
-import grails.views.resolve.GenericGroovyTemplateResolver
+import java.util.concurrent.Callable
+import java.util.concurrent.CompletionService
+import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilationUnit
@@ -29,13 +35,10 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.codehaus.groovy.control.io.FileReaderSource
-import java.util.concurrent.Callable
-import java.util.concurrent.Executors
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.ExecutorCompletionService
-import java.util.concurrent.CompletionService
-import java.util.concurrent.Future
+
+import grails.views.compiler.ViewsTransform
+import grails.views.resolve.GenericGroovyTemplateResolver
+
 /**
  * A generic compiler for Groovy templates that are compiled into classes in production
  *
@@ -78,10 +81,10 @@ abstract class AbstractGroovyTemplateCompiler {
     }
 
     void compile(List<File> sources) {
-        
+
         ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2)
         CompletionService completionService = new ExecutorCompletionService(threadPool);
-        
+
         try {
             Integer collationLevel = Runtime.getRuntime().availableProcessors()*2
             if(sources.size() < collationLevel) {
@@ -118,7 +121,7 @@ abstract class AbstractGroovyTemplateCompiler {
             }
 
             int pending = futures.size()
-                
+
             while (pending > 0) {
                 // Wait for up to 100ms to see if anything has completed.
                 // The completed future is returned if one is found; otherwise null.
@@ -128,13 +131,13 @@ abstract class AbstractGroovyTemplateCompiler {
                     Boolean response = completed.get() as Boolean//need this to throw exceptions on main thread it seems
                     --pending;
                 }
-            } 
-        }     
+            }
+        }
         finally {
                 threadPool.shutdown()
         }
-                
-        
+
+
 
     }
 

@@ -19,14 +19,16 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
-import com.mongodb.ConnectionString
-import com.mongodb.ServerAddress
 import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import com.mongodb.ConnectionString
+import com.mongodb.ServerAddress
 import org.bson.codecs.Codec
 import org.bson.codecs.configuration.CodecRegistry
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.mongo.MongoConstants
 import org.grails.datastore.mapping.mongo.config.MongoSettings

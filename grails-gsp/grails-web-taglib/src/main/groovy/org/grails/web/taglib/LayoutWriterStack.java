@@ -18,15 +18,16 @@
  */
 package org.grails.web.taglib;
 
-import groovy.lang.Closure;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+
+import groovy.lang.Closure;
+
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * Class that can be used by "layout" tags, i.e. tags that use the different parts in their body to assemble a bigger part.

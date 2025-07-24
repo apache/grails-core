@@ -24,6 +24,7 @@ import org.bson.Document
 import org.bson.codecs.Codec
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.configuration.CodecRegistry
+
 import org.grails.datastore.bson.codecs.CodecCustomTypeMarshaller
 import org.grails.datastore.bson.codecs.CodecExtensions
 import org.grails.datastore.bson.codecs.PropertyDecoder
@@ -32,7 +33,6 @@ import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Custom
-
 
 /**
  * A {@PropertyDecoder} capable of decoding {@Custom} types

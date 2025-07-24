@@ -44,13 +44,14 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.ASTTransformationVisitor;
 
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+import org.springframework.util.ClassUtils;
+
 import org.grails.cli.compiler.dependencies.SpringBootDependenciesDependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
 import org.grails.cli.compiler.grape.GrapeEngineInstaller;
 import org.grails.cli.compiler.grape.MavenResolverGrapeEngineFactory;
 import org.grails.cli.util.ResourceUtils;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
-import org.springframework.util.ClassUtils;
 
 /**
  * Compiler for Groovy sources. Primarily a simple Facade for

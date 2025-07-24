@@ -18,26 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.core.GrailsApplication;
-import grails.core.GrailsControllerClass;
-import grails.gorm.validation.Constrained;
-import grails.gorm.validation.ConstrainedProperty;
-import grails.plugins.VersionComparator;
-import grails.util.GrailsStringUtils;
-import grails.web.mapping.UrlMapping;
-import grails.web.mapping.UrlMappingData;
-import grails.web.mapping.UrlMappingInfo;
-import grails.web.mapping.exceptions.UrlMappingException;
-import groovy.lang.Closure;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.Assert;
-import org.springframework.validation.Errors;
-import org.springframework.validation.MapBindingResult;
-import org.springframework.web.context.request.RequestContextHolder;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -53,6 +33,29 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import groovy.lang.Closure;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.util.Assert;
+import org.springframework.validation.Errors;
+import org.springframework.validation.MapBindingResult;
+import org.springframework.web.context.request.RequestContextHolder;
+
+import grails.core.GrailsApplication;
+import grails.core.GrailsControllerClass;
+import grails.gorm.validation.Constrained;
+import grails.gorm.validation.ConstrainedProperty;
+import grails.plugins.VersionComparator;
+import grails.util.GrailsStringUtils;
+import grails.web.mapping.UrlMapping;
+import grails.web.mapping.UrlMappingData;
+import grails.web.mapping.UrlMappingInfo;
+import grails.web.mapping.exceptions.UrlMappingException;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
 
 /**
  * <p>A UrlMapping implementation that takes a Grails URL pattern and turns it into a regex matcher so that

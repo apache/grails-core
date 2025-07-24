@@ -19,17 +19,22 @@
 
 package grails.doc.git
 
+import java.nio.charset.StandardCharsets
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
-
-import javax.inject.Inject
-import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.time.LocalDateTime
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
 
 @CompileStatic
 @CacheableTask

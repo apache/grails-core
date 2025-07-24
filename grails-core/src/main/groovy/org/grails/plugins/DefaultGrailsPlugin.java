@@ -18,33 +18,28 @@
  */
 package org.grails.plugins;
 
-import grails.core.ArtefactHandler;
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsApplicationAware;
-import grails.core.support.ParentApplicationContextAware;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.plugins.Plugin;
-import grails.plugins.exceptions.PluginException;
-import grails.spring.BeanBuilder;
-import grails.util.CollectionUtils;
-import grails.util.Environment;
-import grails.util.GrailsArrayUtils;
-import grails.util.GrailsClassUtils;
-import grails.util.GrailsUtil;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
-import org.grails.core.io.SpringResource;
-import org.grails.plugins.support.WatchPattern;
-import org.grails.plugins.support.WatchPatternParser;
-import org.grails.spring.RuntimeSpringConfiguration;
+
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.BeansException;
@@ -59,17 +54,25 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.filter.TypeFilter;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import grails.core.ArtefactHandler;
+import grails.core.GrailsApplication;
+import grails.core.support.GrailsApplicationAware;
+import grails.core.support.ParentApplicationContextAware;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.plugins.Plugin;
+import grails.plugins.exceptions.PluginException;
+import grails.spring.BeanBuilder;
+import grails.util.CollectionUtils;
+import grails.util.Environment;
+import grails.util.GrailsArrayUtils;
+import grails.util.GrailsClassUtils;
+import grails.util.GrailsUtil;
+import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
+import org.grails.core.io.SpringResource;
+import org.grails.plugins.support.WatchPattern;
+import org.grails.plugins.support.WatchPatternParser;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * Implementation of the GrailsPlugin interface that wraps a Groovy plugin class

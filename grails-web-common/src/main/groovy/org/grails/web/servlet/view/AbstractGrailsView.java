@@ -18,22 +18,22 @@
  */
 package org.grails.web.servlet.view;
 
-import groovy.text.Template;
-
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Map;
+
+import groovy.text.Template;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.util.WebUtils;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.servlet.view.AbstractUrlBasedView;
 
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
+import org.grails.web.util.WebUtils;
 
 /**
  * A view applied to a Grails application that ensures an appropriate web request is bound
@@ -78,8 +78,8 @@ public abstract class AbstractGrailsView extends AbstractUrlBasedView {
                 RequestContextHolder.setRequestAttributes(requestAttributes);
             }
         }
-    }    
-    
+    }
+
     /**
      * Renders a page with the specified TemplateEngine, mode and response.
      * @param model The model to use
@@ -90,21 +90,21 @@ public abstract class AbstractGrailsView extends AbstractUrlBasedView {
      * @throws java.io.IOException Thrown when an error occurs writing the response
      */
     abstract protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request, HttpServletResponse response) throws Exception;
-    
+
     protected GrailsWebRequest createGrailsWebRequest(HttpServletRequest request, HttpServletResponse response,
             ServletContext servletContext) {
         return new GrailsWebRequest(request, response, servletContext);
-    }    
+    }
 
     public void rethrowRenderException(Throwable ex, String message) {
         if (ex instanceof Error) {
             throw (Error) ex;
-        }        
+        }
         if (ex instanceof RuntimeException) {
             throw (RuntimeException) ex;
         }
         throw new UndeclaredThrowableException(ex, message);
     }
-    
+
     abstract public Template getTemplate();
 }

@@ -18,12 +18,6 @@
  */
 package grails.validation;
 
-import static grails.compiler.ast.GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY;
-import static grails.compiler.ast.GrailsArtefactClassInjector.ZERO_PARAMETERS;
-
-import grails.gorm.validation.ConstrainedProperty;
-import grails.util.GrailsNameUtils;
-
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,9 +52,15 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
+
+import grails.gorm.validation.ConstrainedProperty;
+import grails.util.GrailsNameUtils;
 import org.grails.compiler.injection.ASTErrorsHelper;
 import org.grails.compiler.injection.ASTValidationErrorsHelper;
 import org.grails.web.plugins.support.ValidationSupport;
+
+import static grails.compiler.ast.GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY;
+import static grails.compiler.ast.GrailsArtefactClassInjector.ZERO_PARAMETERS;
 
 public class DefaultASTValidateableHelper implements ASTValidateableHelper{
 
@@ -176,7 +176,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
      * Retrieves a Map describing all of the properties which need to be constrained for the class
      * represented by classNode.  The keys in the Map will be property names and the values are the
      * type of the corresponding property.
-     * 
+     *
      * @param classNode the class to inspect
      * @return a Map describing all of the properties which need to be constrained
      */

@@ -19,25 +19,27 @@
 
 package org.grails.plugins.datasource
 
-import groovy.transform.CompileStatic
-
 import javax.management.MalformedObjectNameException
 import javax.management.ObjectName
 
+import groovy.transform.CompileStatic
+
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
-import grails.core.GrailsApplication
+
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.ListableBeanFactory
 import org.springframework.jmx.export.MBeanExporter
 import org.springframework.jmx.support.RegistrationPolicy
+
+import grails.core.GrailsApplication
 
 @CompileStatic
 class TomcatJDBCPoolMBeanExporter extends MBeanExporter {
     private static final Log log = LogFactory.getLog(TomcatJDBCPoolMBeanExporter.class)
     GrailsApplication grailsApplication
     private ListableBeanFactory beanFactory
-    
+
     public TomcatJDBCPoolMBeanExporter() {
         super();
         this.setRegistrationPolicy(RegistrationPolicy.REPLACE_EXISTING)
@@ -62,7 +64,7 @@ class TomcatJDBCPoolMBeanExporter extends MBeanExporter {
                     log.warn("Unable to register JMX MBean for ${objectName} beanName:${entry.key}", e)
                 }
             }
-        } 
+        }
     }
 
     protected boolean isJmxEnabled(String beanName, org.apache.tomcat.jdbc.pool.DataSource dataSource) {
@@ -91,7 +93,7 @@ class TomcatJDBCPoolMBeanExporter extends MBeanExporter {
         }
         return new ObjectName('grails.dataSource', properties)
     }
-    
+
     @Override
     public void setBeanFactory(BeanFactory beanFactory) {
         super.setBeanFactory(beanFactory)

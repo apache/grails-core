@@ -18,10 +18,10 @@
  */
 package org.grails.gsp.compiler.tags;
 
-import org.grails.taglib.GrailsTagException;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.grails.taglib.GrailsTagException;
 
 /**
  * A registry for holding all Grails tag implementations.

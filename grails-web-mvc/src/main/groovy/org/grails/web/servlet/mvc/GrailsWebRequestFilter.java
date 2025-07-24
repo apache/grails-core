@@ -26,13 +26,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import grails.web.mvc.FlashScope;
-import org.grails.web.util.WebUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import grails.web.mvc.FlashScope;
+import org.grails.web.util.WebUtils;
 
 /**
  * Binds a {@link GrailsWebRequestFilter} to the currently executing thread.

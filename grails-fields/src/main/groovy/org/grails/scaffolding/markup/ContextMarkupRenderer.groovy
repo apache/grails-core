@@ -19,8 +19,8 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * Used to output context surrounding any given content. Context is any markup that will be rendered

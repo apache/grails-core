@@ -19,10 +19,11 @@
 package org.grails.encoder.impl
 
 import groovy.transform.CompileStatic
-import org.grails.encoder.Encoder
+
 import org.grails.encoder.CodecFactory
 import org.grails.encoder.CodecIdentifier
 import org.grails.encoder.Decoder
+import org.grails.encoder.Encoder
 
 @CompileStatic
 class HTMLCodecFactory implements CodecFactory {
@@ -32,5 +33,5 @@ class HTMLCodecFactory implements CodecFactory {
         public CodecIdentifier getCodecIdentifier() {
             return HTMLEncoder.HTML_CODEC_IDENTIFIER;
         }
-    } 
+    }
 }

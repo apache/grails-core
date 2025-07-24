@@ -19,15 +19,30 @@
 
 package org.grails.datastore.gorm.validation.constraints.eval;
 
-import grails.gorm.validation.Constrained;
-import grails.gorm.validation.ConstrainedProperty;
-import grails.gorm.validation.exceptions.ValidationConfigurationException;
-import grails.gorm.validation.DefaultConstrainedProperty;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaBeanProperty;
 import groovy.lang.MetaMethod;
 import groovy.lang.MetaProperty;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.StaticMessageSource;
+
+import grails.gorm.validation.Constrained;
+import grails.gorm.validation.ConstrainedProperty;
+import grails.gorm.validation.DefaultConstrainedProperty;
+import grails.gorm.validation.exceptions.ValidationConfigurationException;
 import org.grails.datastore.gorm.validation.constraints.builder.ConstrainedPropertyBuilder;
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
@@ -41,18 +56,6 @@ import org.grails.datastore.mapping.model.types.Identity;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.NameUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.StaticMessageSource;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Evaluates constraints for entities

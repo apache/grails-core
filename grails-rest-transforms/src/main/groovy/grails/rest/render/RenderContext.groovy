@@ -18,9 +18,10 @@
  */
 package grails.rest.render
 
-import grails.web.mime.MimeType
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+
+import grails.web.mime.MimeType
 
 /**
  * Passed to a renderer to provide context information

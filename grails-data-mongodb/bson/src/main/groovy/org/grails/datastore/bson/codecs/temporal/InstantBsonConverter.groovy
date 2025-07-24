@@ -19,13 +19,15 @@
 
 package org.grails.datastore.bson.codecs.temporal
 
+import java.time.Instant
+
 import groovy.transform.CompileStatic
+
 import org.bson.BsonReader
 import org.bson.BsonType
 import org.bson.BsonWriter
-import grails.gorm.time.InstantConverter
 
-import java.time.Instant
+import grails.gorm.time.InstantConverter
 
 /**
  * A trait to read and write a {@link java.time.Instant} to MongoDB

@@ -18,14 +18,14 @@
  */
 package org.grails.web.mapping.reporting
 
-import grails.dev.commands.ApplicationCommand
-import grails.dev.commands.ExecutionContext
-import grails.web.mapping.UrlMappings
-import grails.web.mapping.reporting.UrlMappingsRenderer
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Commons
 
+import grails.dev.commands.ApplicationCommand
+import grails.dev.commands.ExecutionContext
+import grails.web.mapping.UrlMappings
+import grails.web.mapping.reporting.UrlMappingsRenderer
 
 /**
  * A {@link ApplicationCommand} that renders the URL mappings

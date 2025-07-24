@@ -18,12 +18,12 @@
  */
 package org.grails.datastore.gorm.proxy;
 
+import java.io.Serializable;
+
 import grails.core.support.proxy.EntityProxyHandler;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
-
-import java.io.Serializable;
 
 /**
  * Adapts the proxy handler interface

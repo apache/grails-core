@@ -18,19 +18,22 @@
  */
 package grails.web.mapping
 
-import grails.web.http.HttpHeaders
-import grails.web.mapping.mvc.RedirectEventListener
-import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Commons
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.GrailsApplicationAttributes
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import org.springframework.http.HttpStatus
 import org.springframework.util.Assert
 import org.springframework.web.servlet.support.RequestDataValueProcessor
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import grails.web.http.HttpHeaders
+import grails.web.mapping.mvc.RedirectEventListener
+import grails.web.mapping.mvc.exceptions.CannotRedirectException
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+
 /**
  * Encapsulates the logic for issuing a redirect based on a Map of arguments
  *

@@ -16,16 +16,17 @@
  */
 package grails.ui.command
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.config.Settings
 import grails.dev.commands.ApplicationContextCommandRegistry
 import grails.dev.commands.ExecutionContext
 import grails.ui.support.DevelopmentGrailsApplication
-import groovy.transform.CompileStatic
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.context.ConfigurableApplicationContext
-
 
 /**
  * @author Graeme Rocher

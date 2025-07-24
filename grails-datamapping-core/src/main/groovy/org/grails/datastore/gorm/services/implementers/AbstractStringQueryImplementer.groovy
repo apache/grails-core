@@ -19,7 +19,8 @@
 
 package org.grails.datastore.gorm.services.implementers
 
-import grails.gorm.services.Query
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
@@ -30,10 +31,10 @@ import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
+
+import grails.gorm.services.Query
 import org.grails.datastore.gorm.services.transform.QueryStringTransformer
 import org.grails.datastore.mapping.reflect.AstUtils
-
-import java.lang.annotation.Annotation
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX

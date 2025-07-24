@@ -23,21 +23,22 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.MethodCall
 import org.codehaus.groovy.ast.stmt.EmptyStatement
-import org.grails.compiler.injection.GrailsASTUtils
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
+
+import org.grails.compiler.injection.GrailsASTUtils
 
 /**
  *
  * @since 2.4
  */
 class DomainMappingTypeCheckingExtension extends TypeCheckingDSL {
-    
+
     @Override
     public Object run() {
         setup { newScope() }
 
         finish { scopeExit() }
-        
+
         beforeVisitClass { ClassNode classNode ->
             def mappingProperty = classNode.getField('mapping')
             if(mappingProperty && mappingProperty.isStatic() && mappingProperty.initialExpression instanceof ClosureExpression) {
@@ -72,7 +73,7 @@ class DomainMappingTypeCheckingExtension extends TypeCheckingDSL {
             }
             dynamicCall
         }
-        
+
         null
     }
 }

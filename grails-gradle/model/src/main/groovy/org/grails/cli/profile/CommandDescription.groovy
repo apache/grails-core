@@ -21,6 +21,7 @@ package org.grails.cli.profile
 import groovy.transform.Canonical
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import jline.console.completer.Completer
 
 /**

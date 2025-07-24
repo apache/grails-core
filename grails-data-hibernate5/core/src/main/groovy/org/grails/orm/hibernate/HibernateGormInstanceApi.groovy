@@ -20,11 +20,13 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
 import org.hibernate.tuple.NonIdentifierAttribute
+
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 
 /**
  * The implementation of the GORM instance API contract for Hibernate.

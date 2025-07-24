@@ -19,8 +19,8 @@
 package grails.util
 
 import groovy.transform.CompileStatic
-import org.springframework.context.MessageSource
 
+import org.springframework.context.MessageSource
 
 /**
  * A simple class that selects a single {@link  org.springframework.context.MessageSource  MessageSource}

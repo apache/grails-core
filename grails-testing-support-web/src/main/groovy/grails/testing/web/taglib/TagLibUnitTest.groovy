@@ -18,11 +18,12 @@
  */
 package grails.testing.web.taglib
 
-import grails.testing.web.GrailsWebUnitTest
-import groovy.transform.CompileStatic
-import org.grails.testing.ParameterizedGrailsUnitTest
-
 import java.lang.reflect.ParameterizedType
+
+import groovy.transform.CompileStatic
+
+import grails.testing.web.GrailsWebUnitTest
+import org.grails.testing.ParameterizedGrailsUnitTest
 
 @CompileStatic
 trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnitTest {

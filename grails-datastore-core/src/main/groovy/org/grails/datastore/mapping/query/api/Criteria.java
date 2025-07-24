@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.mapping.query.api;
 
-import groovy.lang.Closure;
-import groovy.lang.DelegatesTo;
-import org.grails.datastore.mapping.query.Query;
-
 import java.util.Collection;
 import java.util.Map;
+
+import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
+
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Interface for the implementations that construct of criteria queries.
@@ -678,7 +679,7 @@ public interface Criteria  {
      *
      * @param readOnly True to disable dirty checking
      *
-     * @return This Criteria instance          
+     * @return This Criteria instance
      */
     Criteria readOnly(boolean readOnly);
 }

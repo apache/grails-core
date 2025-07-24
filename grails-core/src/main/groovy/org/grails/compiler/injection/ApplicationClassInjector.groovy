@@ -16,10 +16,8 @@
  */
 package org.grails.compiler.injection
 
-import grails.compiler.ast.AstTransformer
-import grails.compiler.ast.GrailsArtefactClassInjector
-import grails.io.ResourceUtils
-import grails.util.BuildSettings
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
@@ -34,12 +32,16 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.SourceUnit
+
+import org.springframework.util.ClassUtils
+
+import grails.compiler.ast.AstTransformer
+import grails.compiler.ast.GrailsArtefactClassInjector
+import grails.io.ResourceUtils
+import grails.util.BuildSettings
 import org.grails.core.artefact.ApplicationArtefactHandler
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.UrlResource
-import org.springframework.util.ClassUtils
-
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX

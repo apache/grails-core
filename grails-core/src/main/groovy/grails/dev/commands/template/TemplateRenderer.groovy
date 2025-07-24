@@ -18,8 +18,9 @@
  */
 package grails.dev.commands.template
 
-import grails.codegen.model.Model
 import groovy.transform.CompileDynamic
+
+import grails.codegen.model.Model
 import org.grails.io.support.Resource
 
 /**

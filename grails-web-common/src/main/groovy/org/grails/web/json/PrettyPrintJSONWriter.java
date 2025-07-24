@@ -18,13 +18,14 @@
  */
 package org.grails.web.json;
 
+import java.io.IOException;
+import java.io.Writer;
+
+import groovy.lang.Writable;
+
 import static org.grails.web.json.JSONWriter.Mode.ARRAY;
 import static org.grails.web.json.JSONWriter.Mode.KEY;
 import static org.grails.web.json.JSONWriter.Mode.OBJECT;
-import groovy.lang.Writable;
-
-import java.io.IOException;
-import java.io.Writer;
 
 /**
  * A JSONWriter dedicated to create indented/pretty printed output.

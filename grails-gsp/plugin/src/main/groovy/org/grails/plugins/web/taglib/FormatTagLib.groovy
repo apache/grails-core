@@ -18,20 +18,23 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
-import groovy.transform.CompileStatic
-import org.grails.plugins.web.GrailsTagDateHelper
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
-import org.grails.encoder.CodecLookup
-import org.grails.encoder.Encoder
-import org.grails.web.servlet.mvc.GrailsWebRequest
+
+import groovy.transform.CompileStatic
+
 import org.springframework.context.MessageSource
 import org.springframework.context.NoSuchMessageException
 import org.springframework.util.StringUtils
+
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
+import org.grails.encoder.CodecLookup
+import org.grails.encoder.Encoder
+import org.grails.plugins.web.GrailsTagDateHelper
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * The base application tag library for Grails many of which take inspiration from Rails helpers (thanks guys! :)

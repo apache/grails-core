@@ -19,9 +19,12 @@
 
 package org.grails.testing.spock
 
-import grails.testing.spring.AutowiredTest
+import java.lang.annotation.Annotation
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
-import org.grails.testing.GrailsUnitTest
+
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -31,9 +34,8 @@ import org.spockframework.runtime.model.MethodInfo
 import org.spockframework.runtime.model.MethodKind
 import org.spockframework.runtime.model.SpecInfo
 
-import java.lang.annotation.Annotation
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
+import grails.testing.spring.AutowiredTest
+import org.grails.testing.GrailsUnitTest
 
 @CompileStatic
 class TestingSupportExtension implements IGlobalExtension {

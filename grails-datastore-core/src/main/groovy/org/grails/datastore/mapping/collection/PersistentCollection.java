@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.mapping.collection;
 
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection;
-
 import java.util.Collection;
+
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection;
 
 /**
  * A lazy loaded collection.

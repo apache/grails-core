@@ -18,6 +18,15 @@
  */
 package org.grails.core;
 
+import java.util.Collections;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.util.ClassUtils;
+import org.springframework.validation.Validator;
+
 import grails.core.GrailsDomainClass;
 import grails.util.GrailsNameUtils;
 import grails.validation.Constrained;
@@ -27,13 +36,6 @@ import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingConte
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.validation.discovery.ConstrainedDiscovery;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.ClassUtils;
-import org.springframework.validation.Validator;
-
-import java.util.Collections;
-import java.util.Map;
 
 /**
  * Default implementation of the {@link GrailsDomainClass} interface

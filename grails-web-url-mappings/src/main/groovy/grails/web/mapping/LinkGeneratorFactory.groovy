@@ -19,13 +19,15 @@
 
 package grails.web.mapping
 
-import grails.web.CamelCaseUrlConverter
-import grails.web.UrlConverter
 import groovy.transform.CompileStatic
-import org.grails.web.mapping.DefaultLinkGenerator
+
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
+
+import grails.web.CamelCaseUrlConverter
+import grails.web.UrlConverter
+import org.grails.web.mapping.DefaultLinkGenerator
 
 /**
  * Helper class for creating a {@link LinkGenerator}. Useful for testing

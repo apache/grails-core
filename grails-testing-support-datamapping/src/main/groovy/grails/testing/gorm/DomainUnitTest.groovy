@@ -18,9 +18,9 @@
  */
 package grails.testing.gorm
 
-import groovy.transform.CompileStatic
-
 import java.lang.reflect.ParameterizedType
+
+import groovy.transform.CompileStatic
 
 @CompileStatic
 trait DomainUnitTest<T> implements DataTest {

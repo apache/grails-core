@@ -4,13 +4,6 @@ Public Domain.
 
 package org.grails.web.json;
 
-import groovy.lang.Writable;
-import org.grails.encoder.EncodesToWriter;
-import org.grails.encoder.StreamingEncoder;
-import org.grails.encoder.StreamingEncoderWritable;
-import org.grails.encoder.StreamingEncoderWriter;
-import org.springframework.util.ClassUtils;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
@@ -19,6 +12,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.Writable;
+
+import org.springframework.util.ClassUtils;
+
+import org.grails.encoder.EncodesToWriter;
+import org.grails.encoder.StreamingEncoder;
+import org.grails.encoder.StreamingEncoderWritable;
+import org.grails.encoder.StreamingEncoderWriter;
 
 /**
  * A JSONObject is an unordered collection of name/value pairs. Its

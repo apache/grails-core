@@ -18,9 +18,11 @@
  */
 package org.grails.cli.profile.commands
 
-import grails.build.logging.GrailsConsole
 import groovy.transform.CompileDynamic
+
 import jline.console.completer.Completer
+
+import grails.build.logging.GrailsConsole
 import org.grails.cli.profile.AbstractStep
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.MultiStepCommand
@@ -101,7 +103,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
     List<Step> getSteps() {
         if(steps==null) {
             steps = []
-            data.steps?.each { 
+            data.steps?.each {
                 Map<String, Object> stepParameters = it.collectEntries { k,v -> [k as String, v] }
                 AbstractStep step = createStep(stepParameters)
                 if (step != null) {

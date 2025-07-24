@@ -18,11 +18,9 @@
  */
 
 package org.grails.compiler.injection
-import grails.artefact.Enhances
-import grails.compiler.traits.TraitInjector
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
@@ -39,6 +37,10 @@ import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
+
+import grails.artefact.Enhances
+import grails.compiler.traits.TraitInjector
+import org.apache.grails.common.compiler.GroovyTransformOrder
 
 import static java.lang.reflect.Modifier.PUBLIC
 

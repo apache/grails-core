@@ -19,9 +19,9 @@
 
 package org.apache.grails.web.layout;
 
-import grails.util.Holder;
-
 import com.opensymphony.module.sitemesh.Factory;
+
+import grails.util.Holder;
 
 /**
  * Holds a reference to the Grails Layout Factory object.

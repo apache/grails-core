@@ -27,14 +27,15 @@ import java.util.Properties;
 
 import joptsimple.OptionSet;
 
+import org.springframework.boot.cli.util.Log;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.util.SystemPropertyUtils;
+
 import org.grails.cli.command.options.CompilerOptionHandler;
 import org.grails.cli.command.options.OptionSetGroovyCompilerConfiguration;
 import org.grails.cli.compiler.GroovyCompilerConfiguration;
 import org.grails.cli.compiler.RepositoryConfigurationFactory;
 import org.grails.cli.compiler.grape.RepositoryConfiguration;
-import org.springframework.boot.cli.util.Log;
-import org.springframework.util.FileCopyUtils;
-import org.springframework.util.SystemPropertyUtils;
 
 /**
  * Shared logic for the {@link InstallCommand} and {@link UninstallCommand}.

@@ -18,9 +18,9 @@
  */
 package org.grails.encoder;
 
-import org.grails.charsequences.CharSequences;
-
 import java.io.IOException;
+
+import org.grails.charsequences.CharSequences;
 
 /**
  * Abstract base class for implementations of {@link EncodedAppender} interface
@@ -30,7 +30,7 @@ import java.io.IOException;
  */
 public abstract class AbstractEncodedAppender implements EncodedAppender {
     private boolean ignoreEncodingState;
-    
+
     /**
      * Append a portion of a char array to the buffer and attach the
      * encodingState information to it

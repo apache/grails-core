@@ -18,6 +18,25 @@
  */
 package org.grails.datastore.mapping.query;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import jakarta.persistence.FetchType;
+import jakarta.persistence.FlushModeType;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.criteria.JoinType;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -28,23 +47,6 @@ import org.grails.datastore.mapping.query.api.AssociationCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.query.event.PostQueryEvent;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
-import jakarta.persistence.FetchType;
-import jakarta.persistence.FlushModeType;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.criteria.JoinType;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Models a query that can be executed against a data store.
@@ -1162,7 +1164,7 @@ public abstract class Query implements Cloneable{
                     newList.add(val instanceof CharSequence ? val.toString() : val);
                 }
                 return newList;
-            } else { 
+            } else {
                 return values;
             }
         }

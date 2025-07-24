@@ -19,6 +19,9 @@
 
 package org.grails.datastore.gorm.jdbc;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
@@ -27,9 +30,6 @@ import org.springframework.core.convert.converter.ConverterFactory;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.util.Assert;
-
-import java.util.EnumSet;
-import java.util.Set;
 
 /**
  * Internal {@link ConversionService} used by {@link RelaxedDataBinder} to support

@@ -14,10 +14,12 @@
  */
 package org.grails.datastore.mapping.mongo.config
 
-import com.mongodb.WriteConcern
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import com.mongodb.WriteConcern
+
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.document.config.Attribute
 import org.grails.datastore.mapping.document.config.Collection

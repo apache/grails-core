@@ -36,6 +36,10 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.FlushModeType;
 
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.dao.CannotAcquireLockException;
+
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.collection.AbstractPersistentCollection;
 import org.grails.datastore.mapping.collection.PersistentCollection;
@@ -72,9 +76,6 @@ import org.grails.datastore.mapping.model.types.Simple;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.query.Query;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.dao.CannotAcquireLockException;
 
 /**
  * Provides an implementation of the {@link org.grails.datastore.mapping.engine.EntityPersister} class that

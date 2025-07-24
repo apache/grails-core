@@ -18,12 +18,13 @@
  */
 package org.grails.web.util;
 
-import grails.util.GrailsWebUtil;
-import groovy.lang.Writable;
-import org.grails.buffer.StreamCharBuffer;
-
 import java.io.IOException;
 import java.io.Writer;
+
+import groovy.lang.Writable;
+
+import grails.util.GrailsWebUtil;
+import org.grails.buffer.StreamCharBuffer;
 
 /**
  * Represents some content that has been used in an include request.

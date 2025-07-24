@@ -20,10 +20,12 @@
 package org.grails.datastore.bson.codecs.encoders
 
 import groovy.transform.CompileStatic
+
 import org.bson.BsonWriter
 import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.types.ObjectId
+
 import org.grails.datastore.bson.codecs.PropertyEncoder
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.config.GormProperties

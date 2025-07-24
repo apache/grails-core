@@ -18,12 +18,12 @@
  */
 package org.grails.compiler
 
-import grails.util.GrailsNameUtils
-
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.MethodCall
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
+
+import grails.util.GrailsNameUtils
 import org.grails.compiler.injection.GrailsASTUtils
 
 /**

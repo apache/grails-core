@@ -19,12 +19,12 @@
 package org.grails.build.interactive;
 
 
+import java.io.IOException;
+import java.util.List;
+
 import jline.console.ConsoleReader;
 import jline.console.CursorBuffer;
 import jline.console.completer.CompletionHandler;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Fixes issues with the default CandidateListCompletionHandler such as clearing out the whole buffer when

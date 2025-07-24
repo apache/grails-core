@@ -18,6 +18,8 @@
  */
 package org.grails.gsp.io;
 
+import org.springframework.core.io.Resource;
+
 import grails.plugins.GrailsPlugin;
 import org.grails.core.io.DefaultResourceLocator;
 import org.grails.gsp.GroovyPageBinding;
@@ -25,7 +27,6 @@ import org.grails.io.support.GrailsResourceUtils;
 import org.grails.taglib.AbstractTemplateVariableBinding;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputContextLookupHelper;
-import org.springframework.core.io.Resource;
 
 /**
  * <p>

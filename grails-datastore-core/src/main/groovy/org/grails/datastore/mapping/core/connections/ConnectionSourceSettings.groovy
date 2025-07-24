@@ -23,11 +23,12 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import jakarta.persistence.FlushModeType
+
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-
-import jakarta.persistence.FlushModeType
 
 /**
  * Default settings shared across all implementations

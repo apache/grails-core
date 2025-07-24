@@ -19,20 +19,14 @@
 
 package org.apache.grails.web.layout;
 
-import groovy.text.Template;
-
 import java.util.Collections;
 import java.util.Map;
+
+import groovy.text.Template;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.view.AbstractGrailsView;
-import org.grails.web.util.WebUtils;
-import org.springframework.web.servlet.View;
-import org.springframework.web.servlet.view.AbstractUrlBasedView;
 
 import com.opensymphony.module.sitemesh.HTMLPage;
 import com.opensymphony.module.sitemesh.RequestConstants;
@@ -40,6 +34,13 @@ import com.opensymphony.module.sitemesh.mapper.DefaultDecorator;
 import com.opensymphony.sitemesh.Content;
 import com.opensymphony.sitemesh.SiteMeshContext;
 import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
+
+import org.springframework.web.servlet.View;
+import org.springframework.web.servlet.view.AbstractUrlBasedView;
+
+import org.grails.web.servlet.view.AbstractGrailsView;
+import org.grails.web.util.GrailsApplicationAttributes;
+import org.grails.web.util.WebUtils;
 
 /**
  * Encapsulates the logic for rendering a layout.

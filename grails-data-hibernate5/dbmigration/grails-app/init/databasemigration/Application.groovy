@@ -18,10 +18,11 @@
  */
 package databasemigration
 
+import groovy.transform.CompileStatic
+
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
 import grails.plugins.metadata.PluginSource
-import groovy.transform.CompileStatic
 
 @PluginSource
 @CompileStatic

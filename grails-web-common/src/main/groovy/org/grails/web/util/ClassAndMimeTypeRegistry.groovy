@@ -18,15 +18,16 @@
  */
 package org.grails.web.util
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
-import grails.util.Environment
-import groovy.transform.CompileStatic
-import grails.util.GrailsClassUtils
-
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import groovy.transform.CompileStatic
+
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+
+import grails.util.Environment
+import grails.util.GrailsClassUtils
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeProvider
 
@@ -119,7 +120,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
         R findObject = null
         final objectList = registeredObjectsByType.get(currentClass)
         if (objectList) {
-            findObject = (R)objectList.find { 
+            findObject = (R)objectList.find {
                 MimeTypeProvider r = (MimeTypeProvider)it
                 r.mimeTypes.any { MimeType mt ->
                     mt  == mimeType

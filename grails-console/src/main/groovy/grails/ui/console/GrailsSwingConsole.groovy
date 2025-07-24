@@ -18,15 +18,16 @@
  */
 package grails.ui.console
 
-import grails.boot.GrailsApp
-import grails.ui.console.support.GroovyConsoleApplicationContext
-import grails.ui.console.support.GroovyConsoleWebApplicationContext
 import groovy.transform.CompileStatic
+
 import org.springframework.boot.ApplicationContextFactory
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.io.ResourceLoader
 import org.springframework.util.ClassUtils
 
+import grails.boot.GrailsApp
+import grails.ui.console.support.GroovyConsoleApplicationContext
+import grails.ui.console.support.GroovyConsoleWebApplicationContext
 
 /**
  * The Grails console runs Grails embedded within a Swing console instead of within a container like Tomcat

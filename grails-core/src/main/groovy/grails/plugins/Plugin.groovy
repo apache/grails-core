@@ -18,6 +18,14 @@
  */
 package grails.plugins
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.config.Config
 import grails.core.ArtefactHandler
 import grails.core.GrailsApplication
@@ -25,14 +33,7 @@ import grails.core.GrailsApplicationLifeCycle
 import grails.core.support.GrailsApplicationAware
 import grails.spring.BeanBuilder
 import grails.util.Environment
-import groovy.transform.CompileStatic
 import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
-import org.springframework.beans.BeansException
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationContextAware
-import org.springframework.context.ConfigurableApplicationContext
-
 
 /**
  * Super class for plugins to implement. Plugin implementations should define the various plugin hooks

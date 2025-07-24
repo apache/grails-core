@@ -18,12 +18,12 @@
  */
 package org.grails.web.converters.marshaller.xml;
 
-import grails.converters.XML;
-import groovy.lang.Writable;
-
 import java.io.IOException;
 
+import groovy.lang.Writable;
 import org.codehaus.groovy.runtime.EncodingGroovyMethods;
+
+import grails.converters.XML;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 

@@ -21,9 +21,11 @@ package org.grails.orm.hibernate.cfg
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.config.Property
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
+
+import org.grails.datastore.mapping.config.Property
 
 /**
  * Defines the identity generation strategy. In the case of a 'composite' identity the properties

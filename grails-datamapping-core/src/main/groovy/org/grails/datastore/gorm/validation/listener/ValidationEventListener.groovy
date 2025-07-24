@@ -20,6 +20,11 @@
 package org.grails.datastore.gorm.validation.listener
 
 import groovy.transform.CompileStatic
+
+import jakarta.persistence.FlushModeType
+
+import org.springframework.context.ApplicationEvent
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.gorm.GormValidationApi
@@ -30,9 +35,6 @@ import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
 import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
-import org.springframework.context.ApplicationEvent
-
-import jakarta.persistence.FlushModeType
 
 /**
  * An event listener for ensuring entities are valid before saving or updating

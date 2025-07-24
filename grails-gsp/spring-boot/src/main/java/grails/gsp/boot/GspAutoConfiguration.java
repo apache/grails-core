@@ -25,24 +25,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-import grails.core.ApplicationAttributes;
-import grails.core.GrailsApplication;
-import org.grails.encoder.impl.StandaloneCodecLookup;
-import org.grails.encoder.CodecLookup;
-import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.gsp.io.GroovyPageScriptSource;
-import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
-import org.grails.taglib.TagLibraryLookup;
-import org.grails.web.gsp.GroovyPagesTemplateRenderer;
-import org.grails.web.pages.StandaloneTagLibraryLookup;
-import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator;
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
-import org.grails.gsp.jsp.TagLibraryResolverImpl;
-import org.grails.web.servlet.view.GroovyPageViewResolver;
+import jakarta.servlet.ServletContext;
+
 import org.sitemesh.autoconfigure.SiteMeshAutoConfiguration;
-import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
-import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,10 +57,25 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.ViewResolver;
 
-import org.grails.plugins.web.taglib.SitemeshTagLib;
+import grails.core.ApplicationAttributes;
+import grails.core.GrailsApplication;
+import org.grails.encoder.CodecLookup;
+import org.grails.encoder.impl.StandaloneCodecLookup;
+import org.grails.gsp.GroovyPagesTemplateEngine;
+import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.gsp.jsp.TagLibraryResolver;
+import org.grails.gsp.jsp.TagLibraryResolverImpl;
+import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
+import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
-
-import jakarta.servlet.ServletContext;
+import org.grails.plugins.web.taglib.SitemeshTagLib;
+import org.grails.taglib.TagLibraryLookup;
+import org.grails.web.gsp.GroovyPagesTemplateRenderer;
+import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator;
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
+import org.grails.web.pages.StandaloneTagLibraryLookup;
+import org.grails.web.servlet.view.GroovyPageViewResolver;
 
 @Configuration
 @AutoConfigureAfter(WebMvcAutoConfiguration.class)
@@ -278,7 +279,7 @@ public class GspAutoConfiguration {
     /**
      * {@link WebMvcAutoConfiguration} adds defaultViewResolver and viewResolver beans.
      *
-     *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces 
+     *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces
      *  the viewResolver bean with GSP view resolver by default.
      *
      *  The behavior of this class can be controlled with spring.gsp.removeDefaultViewResolver and
@@ -330,7 +331,7 @@ public class GspAutoConfiguration {
 
         protected Properties createDefaultProperties() {
             Properties defaultProperties = new Properties();
-            // scan for spring JSP taglib tld files by default, also scan for 
+            // scan for spring JSP taglib tld files by default, also scan for
             defaultProperties.put("grails.gsp.tldScanPattern","classpath*:/META-INF/spring*.tld,classpath*:/META-INF/fmt.tld,classpath*:/META-INF/c.tld,classpath*:/META-INF/c-1_0-rt.tld");
             return defaultProperties;
         }

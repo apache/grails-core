@@ -18,13 +18,14 @@
  */
 package org.grails.boot.internal
 
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.springframework.util.ClassUtils
-
-import javax.tools.ToolProvider
 import java.nio.charset.Charset
 
+import javax.tools.ToolProvider
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilerConfiguration
+
+import org.springframework.util.ClassUtils
 
 /**
  * Helper for recompiling Java code at runtime

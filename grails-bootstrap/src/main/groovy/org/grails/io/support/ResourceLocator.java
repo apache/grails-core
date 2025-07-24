@@ -18,8 +18,6 @@
  */
 package org.grails.io.support;
 
-import grails.util.Environment;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -28,6 +26,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import grails.util.Environment;
 
 /**
  * Used to locate resources at build / development time

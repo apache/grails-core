@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.jdbc
 
-import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.jdbc.schema.SchemaHandler
-
 import java.sql.Connection
 import java.sql.SQLException
+
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.gorm.jdbc.schema.SchemaHandler
 
 /**
  * Allows restoring the target schema prior to releasing the connection to the pool in Multi-Tenant environment

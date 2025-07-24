@@ -19,8 +19,6 @@
 
 package org.grails.plugins.web
 
-import groovy.transform.CompileStatic
-
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -32,6 +30,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
 import java.time.temporal.TemporalAccessor
+
+import groovy.transform.CompileStatic
 
 /**
  * The default implementation of {@link GrailsTagDateHelper}

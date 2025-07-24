@@ -18,12 +18,14 @@
  */
 package org.grails.web.pages
 
+import org.codehaus.groovy.control.CompilerConfiguration
+
 import org.apache.tools.ant.BuildException
 import org.apache.tools.ant.DirectoryScanner
 import org.apache.tools.ant.taskdefs.MatchingTask
 import org.apache.tools.ant.types.Path
 import org.apache.tools.ant.types.Reference
-import org.codehaus.groovy.control.CompilerConfiguration
+
 import org.grails.gsp.compiler.GroovyPageCompiler
 
 /**

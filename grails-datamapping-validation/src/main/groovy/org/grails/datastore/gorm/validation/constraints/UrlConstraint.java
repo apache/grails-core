@@ -19,13 +19,15 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.ConstrainedProperty;
+import java.util.List;
+
 import org.apache.commons.validator.routines.RegexValidator;
 import org.apache.commons.validator.routines.UrlValidator;
+
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
 
-import java.util.List;
+import grails.gorm.validation.ConstrainedProperty;
 
 /**
  * Validates a url.

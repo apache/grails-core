@@ -16,6 +16,7 @@ package grails.mongodb.geo
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+
 import org.springframework.util.Assert
 
 /**

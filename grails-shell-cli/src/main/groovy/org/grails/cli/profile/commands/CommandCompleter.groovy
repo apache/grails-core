@@ -19,6 +19,7 @@
 package org.grails.cli.profile.commands
 
 import jline.console.completer.Completer
+
 import org.grails.cli.profile.Command
 
 /**

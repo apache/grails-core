@@ -18,12 +18,13 @@
  */
 package org.grails.gsp.io;
 
-import grails.util.CacheEntry;
-import org.springframework.core.io.Resource;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.core.io.Resource;
+
+import grails.util.CacheEntry;
 
 /**
  * Extends {@link GroovyPageStaticResourceLocator} adding caching of the result

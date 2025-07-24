@@ -18,12 +18,11 @@
  */
 package org.grails.datastore.gorm.services.transform
 
-import grails.gorm.services.Service
-import grails.gorm.transactions.NotTransactional
+import java.beans.Introspector
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import groovyjarjarasm.asm.Opcodes
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -47,6 +46,12 @@ import org.codehaus.groovy.control.io.URLReaderSource
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.trait.TraitComposer
+
+import groovyjarjarasm.asm.Opcodes
+
+import grails.gorm.services.Service
+import grails.gorm.transactions.NotTransactional
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.services.ServiceImplementer
@@ -82,9 +87,6 @@ import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransform
 import org.grails.datastore.gorm.validation.jakarta.services.implementers.MethodValidationImplementer
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
-
-import java.beans.Introspector
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignX

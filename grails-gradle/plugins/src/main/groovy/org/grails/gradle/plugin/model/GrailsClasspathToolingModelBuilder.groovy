@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.model
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException

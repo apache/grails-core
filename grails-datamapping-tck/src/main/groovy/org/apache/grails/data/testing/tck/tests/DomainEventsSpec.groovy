@@ -18,12 +18,13 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import grails.gorm.DetachedCriteria
-import org.apache.grails.data.testing.tck.domains.ModifyPerson
-import org.apache.grails.data.testing.tck.domains.PersonEvent
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 import spock.lang.PendingFeature
+
+import grails.gorm.DetachedCriteria
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ModifyPerson
+import org.apache.grails.data.testing.tck.domains.PersonEvent
 
 /**
  * @author graemerocher

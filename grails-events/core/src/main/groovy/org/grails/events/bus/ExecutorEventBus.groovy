@@ -19,16 +19,18 @@
 
 package org.grails.events.bus
 
-import grails.events.Event
-import grails.events.subscriber.Subscription
-import grails.events.trigger.EventTrigger
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
-import org.springframework.core.task.SyncTaskExecutor
-
 import java.util.concurrent.Callable
 import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+
+import org.springframework.core.task.SyncTaskExecutor
+
+import grails.events.Event
+import grails.events.subscriber.Subscription
+import grails.events.trigger.EventTrigger
 
 /**
  * An event bus that uses an {@link Executor}

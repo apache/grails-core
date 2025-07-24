@@ -20,6 +20,7 @@
 package org.grails.gradle.plugin.views.markup
 
 import groovy.transform.CompileStatic
+
 import org.grails.gradle.plugin.views.AbstractGroovyTemplatePlugin
 
 /**

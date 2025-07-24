@@ -18,10 +18,11 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.ValueConverter
+import java.time.LocalDateTime
+
 import groovy.transform.CompileStatic
 
-import java.time.LocalDateTime
+import grails.databinding.converters.ValueConverter
 
 /**
  * This class is a {@link ValueConverter} for {@link LocalDateTime} target type.

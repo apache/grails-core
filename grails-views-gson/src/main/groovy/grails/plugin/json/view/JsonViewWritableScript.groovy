@@ -19,6 +19,8 @@
 
 package grails.plugin.json.view
 
+import groovy.transform.CompileStatic
+
 import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.JsonView
@@ -28,7 +30,6 @@ import grails.util.GrailsNameUtils
 import grails.views.AbstractWritableScript
 import grails.views.GrailsViewTemplate
 import grails.views.api.GrailsView
-import groovy.transform.CompileStatic
 import org.grails.buffer.FastStringWriter
 
 @CompileStatic

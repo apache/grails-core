@@ -20,6 +20,7 @@
 package org.grails.cli.profile.repository
 
 import groovy.transform.CompileStatic
+
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils
 import org.eclipse.aether.DefaultRepositorySystemSession
 import org.eclipse.aether.RepositorySystem
@@ -34,6 +35,7 @@ import org.eclipse.aether.spi.locator.ServiceLocator
 import org.eclipse.aether.transport.file.FileTransporterFactory
 import org.eclipse.aether.transport.http.HttpTransporterFactory
 import org.eclipse.aether.util.repository.AuthenticationBuilder
+
 import org.grails.cli.compiler.grape.DefaultRepositorySystemSessionAutoConfiguration
 import org.grails.cli.compiler.grape.DependencyResolutionContext
 import org.grails.cli.compiler.grape.MavenResolverGrapeEngine

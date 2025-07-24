@@ -18,8 +18,13 @@
  */
 package org.grails.compiler.injection;
 
-import grails.plugins.GrailsPluginInfo;
-import grails.util.GrailsNameUtils;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.PropertyNode;
@@ -30,14 +35,10 @@ import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
-import org.grails.io.support.Resource;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import grails.plugins.GrailsPluginInfo;
+import grails.util.GrailsNameUtils;
+import org.grails.io.support.Resource;
 
 /**
  * Reads plugin info from the AST

@@ -19,12 +19,12 @@
 
 package org.apache.grails.gradle.tasks.bom
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.MapConstructor
 import groovy.transform.ToString
-
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 @CompileStatic
 @MapConstructor(includes = ['groupId', 'artifactId', 'version', 'versionPropertyReference', 'source'], includeSuperProperties = true)

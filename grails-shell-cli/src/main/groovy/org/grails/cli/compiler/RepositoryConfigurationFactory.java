@@ -30,10 +30,11 @@ import org.codehaus.plexus.interpolation.Interpolator;
 import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
 import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
 
+import org.springframework.util.StringUtils;
+
 import org.grails.cli.compiler.grape.RepositoryConfiguration;
 import org.grails.cli.compiler.maven.MavenSettings;
 import org.grails.cli.compiler.maven.MavenSettingsReader;
-import org.springframework.util.StringUtils;
 
 /**
  * Factory used to create {@link RepositoryConfiguration}s.

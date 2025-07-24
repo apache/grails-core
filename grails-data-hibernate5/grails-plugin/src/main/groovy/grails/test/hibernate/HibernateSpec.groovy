@@ -19,13 +19,14 @@
 
 package grails.test.hibernate
 
-import grails.config.Config
 import groovy.transform.CompileStatic
-import org.grails.config.PropertySourcesConfig
-import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.cfg.Settings
+
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.MutablePropertySources
@@ -38,9 +39,11 @@ import org.springframework.core.io.support.SpringFactoriesLoader
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.interceptor.DefaultTransactionAttribute
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+
+import grails.config.Config
+import org.grails.config.PropertySourcesConfig
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.cfg.Settings
 
 /**
  * Specification for Hibernate tests

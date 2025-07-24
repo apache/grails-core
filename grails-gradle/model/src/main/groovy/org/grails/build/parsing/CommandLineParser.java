@@ -18,13 +18,12 @@
  */
 package org.grails.build.parsing;
 
-import grails.util.Environment;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import grails.util.Environment;
 
 /**
  * Command line parser that parses arguments to the command line. Written as a

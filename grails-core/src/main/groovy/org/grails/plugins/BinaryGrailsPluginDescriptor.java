@@ -18,13 +18,16 @@
  */
 package org.grails.plugins;
 
-import groovy.xml.slurpersupport.GPathResult;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.grails.io.support.SpringIOUtils;
-import org.springframework.core.io.Resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+
+import groovy.xml.slurpersupport.GPathResult;
+
+import org.springframework.core.io.Resource;
+
+import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.io.support.SpringIOUtils;
 
 /**
  * Holds a reference to the parsed grails-plugin.xml descriptor and the

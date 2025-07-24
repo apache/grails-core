@@ -18,18 +18,20 @@
  */
 package org.grails.datastore.gorm.services
 
-import grails.gorm.transactions.TransactionService
-import grails.gorm.transactions.GrailsTransactionTemplate
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
-import org.grails.datastore.mapping.services.Service
-import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionSystemException
+
+import grails.gorm.transactions.GrailsTransactionTemplate
+import grails.gorm.transactions.TransactionService
+import org.grails.datastore.mapping.services.Service
+import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
  * The transaction service implementation

@@ -18,13 +18,15 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.SessionCreationEvent
+import spock.lang.IgnoreIf
+
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.event.SmartApplicationListener
-import spock.lang.IgnoreIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCreationEvent
 
 /**
  * Test case that session creation events are fired.

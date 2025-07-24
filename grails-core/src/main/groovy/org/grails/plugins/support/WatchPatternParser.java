@@ -18,14 +18,15 @@
  */
 package org.grails.plugins.support;
 
-import grails.io.ResourceUtils;
-import grails.util.BuildSettings;
-import grails.util.GrailsStringUtils;
-import org.springframework.util.StringUtils;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.util.StringUtils;
+
+import grails.io.ResourceUtils;
+import grails.util.BuildSettings;
+import grails.util.GrailsStringUtils;
 
 /**
  * Parses a Grails plugin's watchedResources property value into a list of

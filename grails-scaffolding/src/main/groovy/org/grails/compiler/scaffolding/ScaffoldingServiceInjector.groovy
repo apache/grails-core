@@ -19,22 +19,23 @@
 
 package org.grails.compiler.scaffolding
 
-import grails.compiler.ast.AstTransformer
-import grails.compiler.ast.GrailsArtefactClassInjector
-import grails.plugin.scaffolding.GormService
-import grails.plugin.scaffolding.annotation.Scaffold
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.SourceUnit
+
+import grails.compiler.ast.AstTransformer
+import grails.compiler.ast.GrailsArtefactClassInjector
+import grails.plugin.scaffolding.GormService
+import grails.plugin.scaffolding.annotation.Scaffold
 import org.grails.compiler.injection.GrailsASTUtils
 import org.grails.core.artefact.ServiceArtefactHandler
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.plugins.web.rest.transform.ResourceTransform
-
-import java.util.regex.Pattern
 
 /**
  * Transformation that turns a service into a scaffolding service at compile time if '@ScaffoldService'

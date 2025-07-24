@@ -18,37 +18,39 @@
  */
 package org.grails.web.mapping
 
+import java.util.regex.Pattern
+
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+import groovy.util.logging.Slf4j
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpMethod
+
 import grails.config.Settings
+import grails.plugins.GrailsPluginManager
+import grails.plugins.PluginManagerAware
+import grails.util.Environment
 import grails.util.GrailsClassUtils
+import grails.util.GrailsNameUtils
+import grails.util.GrailsWebUtil
 import grails.web.CamelCaseUrlConverter
+import grails.web.UrlConverter
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlCreator
 import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappingsHolder
-import groovy.util.logging.Slf4j
-import org.springframework.beans.factory.annotation.Value
-import jakarta.annotation.PostConstruct
-import java.util.regex.Pattern
-
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.GrailsWebUtil
-import grails.web.UrlConverter
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
-
 import org.grails.core.artefact.DomainClassArtefactHandler
-import grails.plugins.GrailsPluginManager
-import grails.plugins.PluginManagerAware
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.web.servlet.mvc.DefaultRequestStateLookupStrategy
 import org.grails.web.servlet.mvc.GrailsRequestStateLookupStrategy
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.WebUtils
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.http.HttpMethod
 
 /**
  * A link generating service for applications to use when generating links.
@@ -73,7 +75,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
     @Autowired
     @Qualifier("grailsUrlMappingsHolder")
     UrlMappingsHolder urlMappingsHolder
-    
+
     @Autowired(required=false)
     @Qualifier('grailsDomainClassMappingContext')
     MappingContext mappingContext
@@ -126,7 +128,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 }
             }
             writer.append uri
-            
+
             def params = attrs.get(ATTRIBUTE_PARAMS)
 
             if(params instanceof Map) {

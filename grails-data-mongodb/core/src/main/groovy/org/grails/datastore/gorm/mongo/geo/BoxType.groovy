@@ -14,9 +14,11 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.Box
 import groovy.transform.CompileStatic
+
 import org.bson.Document
+
+import grails.mongodb.geo.Box
 import org.grails.datastore.mapping.model.PersistentProperty
 
 /**

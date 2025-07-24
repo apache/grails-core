@@ -18,19 +18,21 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+import spock.lang.PendingFeatureIf
+import spock.lang.Unroll
+
+import org.springframework.validation.Validator
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
 import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
 import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
 import org.apache.grails.data.testing.tck.domains.Task
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.validation.CascadingValidator
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.validation.Validator
-import spock.lang.IgnoreIf
-import spock.lang.PendingFeatureIf
-import spock.lang.Unroll
 
 /**
  * Tests validation semantics.

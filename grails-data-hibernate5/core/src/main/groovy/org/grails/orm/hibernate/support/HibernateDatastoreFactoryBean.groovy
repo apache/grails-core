@@ -20,14 +20,18 @@
 package org.grails.orm.hibernate.support
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.orm.hibernate.AbstractHibernateDatastore
+
 import org.hibernate.SessionFactory
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.core.env.PropertyResolver
+
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.orm.hibernate.AbstractHibernateDatastore
+
 /**
  * Helper for constructing the datastore
  *

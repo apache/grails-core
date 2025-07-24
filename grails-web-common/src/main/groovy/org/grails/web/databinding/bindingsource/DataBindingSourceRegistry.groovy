@@ -18,9 +18,8 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
-
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
 import grails.web.mime.MimeType
 import org.grails.databinding.bindingsource.DataBindingSourceCreator
 

@@ -18,10 +18,7 @@
  */
 package org.grails.plugins.web.rest.transform
 
-import grails.rest.Link
-import grails.rest.Linkable
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -42,6 +39,10 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import grails.rest.Link
+import grails.rest.Linkable
+import org.apache.grails.common.compiler.GroovyTransformOrder
 
 import static java.lang.reflect.Modifier.PRIVATE
 import static java.lang.reflect.Modifier.PUBLIC

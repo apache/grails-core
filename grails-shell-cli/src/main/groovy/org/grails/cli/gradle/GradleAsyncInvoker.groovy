@@ -18,11 +18,11 @@
  */
 package org.grails.cli.gradle
 
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 
 /**
  * @author Graeme Rocher

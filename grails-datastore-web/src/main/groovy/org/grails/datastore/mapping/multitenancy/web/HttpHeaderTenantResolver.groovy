@@ -20,13 +20,15 @@
 package org.grails.datastore.mapping.multitenancy.web
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.multitenancy.TenantResolver
-import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
+
+import jakarta.servlet.http.HttpServletRequest
+
 import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletWebRequest
 
-import jakarta.servlet.http.HttpServletRequest
+import org.grails.datastore.mapping.multitenancy.TenantResolver
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 
 /**
  * A tenant resolver that resolves the tenant from the request HTTP Header

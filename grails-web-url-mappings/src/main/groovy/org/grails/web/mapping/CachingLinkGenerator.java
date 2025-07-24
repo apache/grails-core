@@ -18,18 +18,20 @@
  */
 package org.grails.web.mapping;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+
 import grails.util.GrailsMetaClassUtils;
 import grails.util.GrailsStringUtils;
 import grails.web.mapping.LinkGenerator;
 import grails.web.mapping.UrlMapping;
 import grails.web.servlet.mvc.GrailsParameterMap;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * A link generator that uses a LRU cache to cache generated links.
@@ -128,7 +130,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
         }
         buffer.append(CLOSING_BRACKET);
     }
-    
+
     protected String getCacheKeyValueForResource(Object o) {
         StringBuilder builder = new StringBuilder(o.getClass().getName());
         builder.append("->");

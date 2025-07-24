@@ -22,13 +22,14 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
 
 import jakarta.persistence.AccessType
 import jakarta.persistence.CascadeType
 import jakarta.persistence.EnumType
 import jakarta.persistence.FetchType
+
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.validation.DataBinder
 
 /**
  * Base class for classes returned from {@link org.grails.datastore.mapping.model.PropertyMapping#getMappedForm()}

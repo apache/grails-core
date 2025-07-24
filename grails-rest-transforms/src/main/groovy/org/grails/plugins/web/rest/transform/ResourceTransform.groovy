@@ -18,18 +18,10 @@
  */
 package org.grails.plugins.web.rest.transform
 
-import grails.artefact.Artefact
-import grails.compiler.ast.ClassInjector
-import grails.io.IOUtils
-import grails.rest.Resource
-import grails.rest.RestfulController
-import grails.util.GrailsNameUtils
-import grails.web.controllers.ControllerMethod
-import grails.web.mapping.UrlMappings
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import jakarta.annotation.PostConstruct
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -64,16 +56,27 @@ import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+
+import grails.artefact.Artefact
+import grails.compiler.ast.ClassInjector
+import grails.io.IOUtils
+import grails.rest.Resource
+import grails.rest.RestfulController
+import grails.util.GrailsNameUtils
+import grails.web.controllers.ControllerMethod
+import grails.web.mapping.UrlMappings
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.compiler.injection.ArtefactTypeAstTransformation
 import org.grails.compiler.injection.GrailsAwareInjectionOperation
 import org.grails.compiler.injection.TraitInjectionUtils
 import org.grails.compiler.web.ControllerActionTransformer
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-
-import java.lang.reflect.Modifier
 
 import static java.lang.reflect.Modifier.FINAL
 import static java.lang.reflect.Modifier.PRIVATE
@@ -111,7 +114,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
     public static final ClassNode AUTOWIRED_CLASS_NODE = new ClassNode(Autowired).getPlainNodeReference()
 
     private CompilationUnit unit
-    
+
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit source) {
@@ -137,26 +140,26 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             } else {
                 superClassNode = ClassHelper.make(RestfulController)
             }
-            
+
             final ast = source.getAST()
             final newControllerClassNode = new ClassNode(className, PUBLIC, nonGeneric(superClassNode, parent))
-            
+
             final transactionalAnn = new AnnotationNode(TransactionalTransform.MY_TYPE)
             transactionalAnn.addMember(ATTR_READY_ONLY,ConstantExpression.PRIM_TRUE)
             newControllerClassNode.addAnnotation(transactionalAnn)
-            
+
             final readOnlyAttr = annotationNode.getMember(ATTR_READY_ONLY)
             boolean isReadOnly = readOnlyAttr != null && ((ConstantExpression)readOnlyAttr).trueExpression
             addConstructor(newControllerClassNode, parent, isReadOnly)
-            
+
             List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(ControllerArtefactHandler.TYPE, GrailsAwareInjectionOperation.getClassInjectors());
-                        
+
             ArtefactTypeAstTransformation.performInjection(source, newControllerClassNode, injectors.findAll { !(it instanceof ControllerActionTransformer) })
-            
+
             if(unit) {
                 TraitInjectionUtils.processTraitsForNode(source, newControllerClassNode, 'Controller', unit)
             }
-            
+
             final responseFormatsAttr = annotationNode.getMember(ATTR_RESPONSE_FORMATS)
             final uriAttr = annotationNode.getMember(ATTR_URI)
             final namespaceAttr = annotationNode.getMember(ATTR_NAMESPACE)
@@ -233,7 +236,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
 
                     def addMappingsMethodCall = applyDefaultMethodTarget(new MethodCallExpression(urlMappingsVar, "addMappings", urlMappingsClosure), urlMappingsClassNode)
                     methodBody.addStatement(new IfStatement(new BooleanExpression(urlMappingsVar), new ExpressionStatement(addMappingsMethodCall),new EmptyStatement()))
-                    
+
                     def initialiseUrlMappingsMethod = new MethodNode("initializeUrlMappings", PUBLIC, VOID_CLASS_NODE, ZERO_PARAMETERS, null, methodBody)
                     initialiseUrlMappingsMethod.addAnnotation(new AnnotationNode(new ClassNode(PostConstruct).getPlainNodeReference()))
                     initialiseUrlMappingsMethod.addAnnotation(controllerMethodAnnotation)
@@ -259,7 +262,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             ast.classes.add(newControllerClassNode)
         }
     }
-    
+
     ConstructorNode addConstructor(ClassNode controllerClassNode, ClassNode domainClassNode, boolean readOnly) {
         BlockStatement constructorBody = new BlockStatement()
         constructorBody.addStatement(new ExpressionStatement(new ConstructorCallExpression(ClassNode.SUPER, new TupleExpression(new ClassExpression(domainClassNode),new ConstantExpression(readOnly, true)))))
@@ -267,7 +270,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
         AnnotatedNodeUtils.markAsGenerated(controllerClassNode, constructorNode)
         return constructorNode
     }
-    
+
     void setCompilationUnit(CompilationUnit unit) {
         this.unit = unit
     }

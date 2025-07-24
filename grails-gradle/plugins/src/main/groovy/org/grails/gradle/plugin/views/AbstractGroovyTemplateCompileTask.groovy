@@ -19,8 +19,11 @@
 
 package org.grails.gradle.plugin.views
 
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -42,8 +45,6 @@ import org.gradle.process.ExecOperations
 import org.gradle.process.ExecResult
 import org.gradle.process.JavaExecSpec
 import org.gradle.work.InputChanges
-
-import javax.inject.Inject
 
 /**
  * Abstract Gradle task for compiling templates, using GenericGroovyTemplateCompiler

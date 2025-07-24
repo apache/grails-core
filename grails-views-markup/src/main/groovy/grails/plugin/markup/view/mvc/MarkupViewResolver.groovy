@@ -19,6 +19,12 @@
 
 package grails.plugin.markup.view.mvc
 
+import groovy.transform.CompileStatic
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.core.support.proxy.ProxyHandler
 import grails.plugin.markup.view.MarkupViewConfiguration
 import grails.plugin.markup.view.MarkupViewTemplate
@@ -27,9 +33,6 @@ import grails.plugin.markup.view.renderer.MarkupViewXmlRenderer
 import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
-import org.springframework.beans.factory.annotation.Autowired
-import jakarta.annotation.PostConstruct
 
 /**
  * @author Graeme Rocher

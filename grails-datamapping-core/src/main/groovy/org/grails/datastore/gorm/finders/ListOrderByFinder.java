@@ -18,12 +18,12 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import groovy.lang.Closure;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import groovy.lang.Closure;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;

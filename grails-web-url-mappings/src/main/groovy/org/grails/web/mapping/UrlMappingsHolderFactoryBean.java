@@ -18,19 +18,11 @@
  */
 package org.grails.web.mapping;
 
-import grails.config.Config;
-import grails.core.GrailsApplication;
-import grails.core.GrailsClass;
-import grails.core.GrailsControllerClass;
-import grails.core.GrailsUrlMappingsClass;
-import grails.core.events.ArtefactAdditionEvent;
-import grails.core.support.GrailsApplicationAware;
-import grails.web.UrlConverter;
-import grails.web.mapping.UrlMapping;
-import grails.web.mapping.UrlMappings;
+import java.util.ArrayList;
+import java.util.List;
+
 import groovy.lang.Script;
-import org.grails.core.artefact.UrlMappingsArtefactHandler;
-import org.grails.web.mapping.mvc.GrailsControllerUrlMappings;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -41,8 +33,18 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
+import grails.config.Config;
+import grails.core.GrailsApplication;
+import grails.core.GrailsClass;
+import grails.core.GrailsControllerClass;
+import grails.core.GrailsUrlMappingsClass;
+import grails.core.events.ArtefactAdditionEvent;
+import grails.core.support.GrailsApplicationAware;
+import grails.web.UrlConverter;
+import grails.web.mapping.UrlMapping;
+import grails.web.mapping.UrlMappings;
+import org.grails.core.artefact.UrlMappingsArtefactHandler;
+import org.grails.web.mapping.mvc.GrailsControllerUrlMappings;
 
 /**
  * Constructs the UrlMappingsHolder from the registered UrlMappings class within a GrailsApplication.

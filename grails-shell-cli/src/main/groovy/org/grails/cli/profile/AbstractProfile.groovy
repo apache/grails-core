@@ -16,17 +16,22 @@
  */
 package org.grails.cli.profile
 
-import grails.io.IOUtils
-import grails.util.CosineSimilarity
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+
 import jline.console.completer.ArgumentCompleter
 import jline.console.completer.Completer
 import org.eclipse.aether.artifact.DefaultArtifact
 import org.eclipse.aether.graph.Dependency
 import org.eclipse.aether.graph.Exclusion
 import org.eclipse.aether.util.graph.selector.ExclusionDependencySelector
+import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.SafeConstructor
+
+import grails.io.IOUtils
+import grails.util.CosineSimilarity
+import grails.util.Environment
 import org.grails.build.parsing.ScriptNameResolver
 import org.grails.cli.interactive.completers.StringsCompleter
 import org.grails.cli.profile.commands.CommandRegistry
@@ -34,9 +39,6 @@ import org.grails.cli.profile.commands.DefaultMultiStepCommand
 import org.grails.cli.profile.commands.script.GroovyScriptCommand
 import org.grails.config.NavigableMap
 import org.grails.io.support.Resource
-import org.yaml.snakeyaml.LoaderOptions
-import org.yaml.snakeyaml.Yaml
-import org.yaml.snakeyaml.constructor.SafeConstructor
 
 import static org.grails.cli.profile.ProfileUtil.createDependency
 

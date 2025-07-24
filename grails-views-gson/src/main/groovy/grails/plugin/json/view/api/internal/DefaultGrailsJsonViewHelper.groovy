@@ -19,6 +19,13 @@
 
 package grails.plugin.json.view.api.internal
 
+import java.beans.PropertyDescriptor
+
+import groovy.text.Template
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+import groovy.util.logging.Slf4j
+
 import grails.core.support.proxy.ProxyHandler
 import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.JsonOutput
@@ -36,10 +43,6 @@ import grails.views.api.GrailsView
 import grails.views.api.internal.DefaultGrailsViewHelper
 import grails.views.resolve.TemplateResolverUtils
 import grails.views.utils.ViewUtils
-import groovy.text.Template
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
 import org.grails.buffer.FastStringWriter
 import org.grails.core.util.IncludeExcludeSupport
 import org.grails.datastore.gorm.GormValidateable
@@ -56,9 +59,6 @@ import org.grails.datastore.mapping.model.types.EmbeddedCollection
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
-
-import java.beans.PropertyDescriptor
-
 
 /**
  * Extended version of {@link DefaultGrailsViewHelper} with methods specific to JSON view rendering

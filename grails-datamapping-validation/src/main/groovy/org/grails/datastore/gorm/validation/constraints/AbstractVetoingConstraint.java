@@ -19,9 +19,10 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.VetoingConstraint;
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
+
+import grails.gorm.validation.VetoingConstraint;
 
 /**
  * A constraint that can veto further constraint processing

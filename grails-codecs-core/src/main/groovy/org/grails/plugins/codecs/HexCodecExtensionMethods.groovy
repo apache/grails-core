@@ -18,9 +18,9 @@
  */
 package org.grails.plugins.codecs
 
-import org.codehaus.groovy.runtime.NullObject
-
 import java.nio.charset.StandardCharsets
+
+import org.codehaus.groovy.runtime.NullObject
 
 class HexCodecExtensionMethods {
 

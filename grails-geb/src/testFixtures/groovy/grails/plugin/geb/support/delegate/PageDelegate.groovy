@@ -18,6 +18,9 @@
  */
 package grails.plugin.geb.support.delegate
 
+import groovy.transform.CompileStatic
+import groovy.transform.SelfType
+
 import geb.Module
 import geb.Page
 import geb.content.Navigable
@@ -30,11 +33,10 @@ import geb.navigator.Navigator
 import geb.textmatching.TextMatchingSupport
 import geb.url.UrlFragment
 import geb.waiting.WaitingSupport
-import grails.plugin.geb.ContainerGebSpec
-import groovy.transform.CompileStatic
-import groovy.transform.SelfType
 import org.openqa.selenium.By
 import org.openqa.selenium.WebElement
+
+import grails.plugin.geb.ContainerGebSpec
 
 /**
  * Handles delegation to the page instance so that the Geb API can be used directly in the test.

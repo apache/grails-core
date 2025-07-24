@@ -18,8 +18,8 @@
  */
 package org.grails.gradle.plugin.publishing
 
-import grails.util.GrailsNameUtils
 import groovy.namespace.QName
+
 import io.github.gradlenexus.publishplugin.InitializeNexusStagingRepository
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.GradleException
@@ -45,6 +45,8 @@ import org.gradle.api.tasks.javadoc.Groovydoc
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
+
+import grails.util.GrailsNameUtils
 import org.grails.gradle.plugin.util.SourceSets
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP

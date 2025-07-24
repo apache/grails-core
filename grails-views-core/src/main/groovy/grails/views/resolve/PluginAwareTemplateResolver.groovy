@@ -18,14 +18,14 @@
  */
 package grails.views.resolve
 
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
 import grails.plugins.GrailsPluginManager
 import grails.plugins.PluginManagerAware
 import grails.views.ViewConfiguration
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.plugins.BinaryGrailsPlugin
-
 
 /**
  * A template resolver capable of looking through the installed Grails plugins and finding a template within the scope of the plugin

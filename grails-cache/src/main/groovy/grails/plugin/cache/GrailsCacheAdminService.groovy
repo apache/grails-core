@@ -19,6 +19,7 @@
 package grails.plugin.cache
 
 import groovy.transform.CompileStatic
+
 import org.grails.plugin.cache.GrailsCacheManagerAware
 
 @CompileStatic

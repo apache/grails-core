@@ -18,6 +18,10 @@
  */
 package org.grails.web.gsp.io;
 
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
 import grails.core.GrailsApplication;
 import grails.core.GrailsControllerClass;
 import grails.core.support.GrailsApplicationAware;
@@ -25,7 +29,6 @@ import grails.util.GrailsNameUtils;
 import grails.web.mime.MimeType;
 import grails.web.mime.MimeTypeResolver;
 import grails.web.pages.GroovyPagesUriService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.grails.core.artefact.ControllerArtefactHandler;
 import org.grails.gsp.io.DefaultGroovyPageLocator;
 import org.grails.gsp.io.GroovyPageScriptSource;
@@ -34,7 +37,6 @@ import org.grails.taglib.TemplateVariableBinding;
 import org.grails.web.pages.DefaultGroovyPagesUriService;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.GrailsApplicationAttributes;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Extended GroovyPageLocator that deals with the details of Grails' conventions
@@ -50,7 +52,7 @@ public class GrailsConventionGroovyPageLocator extends DefaultGroovyPageLocator 
     private GroovyPagesUriService uriService = new DefaultGroovyPagesUriService();
 
     private MimeTypeResolver mimeTypeResolver;
-    
+
     private GrailsApplication grailsApplication;
 
     @Autowired(required = false)

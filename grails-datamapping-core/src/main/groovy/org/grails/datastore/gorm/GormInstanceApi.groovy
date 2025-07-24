@@ -18,18 +18,18 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.api.GormInstanceOperations
 import groovy.transform.CompileStatic
-
 import org.codehaus.groovy.runtime.InvokerHelper
-import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSources
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
+
+import grails.gorm.api.GormInstanceOperations
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.proxy.EntityProxy
 import org.grails.datastore.mapping.reflect.EntityReflector

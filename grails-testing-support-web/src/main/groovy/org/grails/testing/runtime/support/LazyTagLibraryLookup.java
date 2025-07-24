@@ -19,21 +19,23 @@
 
 package org.grails.testing.runtime.support;
 
-import grails.core.gsp.GrailsTagLibClass;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
-import org.grails.plugins.web.GroovyPagesGrailsPlugin;
-import org.grails.taglib.TagLibraryLookup;
+
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.ClassUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import grails.core.gsp.GrailsTagLibClass;
+import org.grails.plugins.web.GroovyPagesGrailsPlugin;
+import org.grails.taglib.TagLibraryLookup;
 
 /**
  * Lazy implementation of the tag library lookup class designed for testing purposes.

@@ -18,13 +18,14 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.ValueConverter
 import groovy.transform.CompileStatic
 
+import grails.databinding.converters.ValueConverter
+
 /**
- * 
+ *
  * A ValueConverter for converting String to Currency.
- * 
+ *
  * @see ValueConverter
  * @since 2.3.10
  *

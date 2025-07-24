@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.order.ManualEntityOrdering;

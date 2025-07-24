@@ -19,6 +19,7 @@
 package org.grails.gsp.jsp
 
 import groovy.transform.CompileStatic
+
 import jakarta.servlet.jsp.JspContext
 import jakarta.servlet.jsp.JspWriter
 import jakarta.servlet.jsp.tagext.BodyContent
@@ -30,11 +31,14 @@ import jakarta.servlet.jsp.tagext.SimpleTag
 import jakarta.servlet.jsp.tagext.Tag
 import jakarta.servlet.jsp.tagext.TagAdapter
 import jakarta.servlet.jsp.tagext.TryCatchFinally
+
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
-import org.grails.buffer.FastStringWriter
+
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.util.ClassUtils
+
+import org.grails.buffer.FastStringWriter
 
 /**
  * @author Graeme Rocher
@@ -54,7 +58,7 @@ class JspTagImpl implements JspTag {
         this.tagClassName = tagClassName
         this.classLoader = classLoader
     }
-    
+
     JspTagImpl(Class tagClass) {
         this.tagClass = tagClass
         this.tagClassName = tagClass.name
@@ -65,7 +69,7 @@ class JspTagImpl implements JspTag {
     void doTag(Writer targetWriter, Map<String,Object> attributes) {
         doTag targetWriter,attributes, null
     }
-    
+
     protected void checkInitialized() {
         if(tagClass==null) {
             synchronized(this) {
@@ -91,7 +95,7 @@ class JspTagImpl implements JspTag {
         GroovyPagesPageContext pageContext = PageContextFactory.getCurrent()
 
         assignParentTag(pageContext, tag)
-        
+
         assignPageContext(pageContext, tag)
 
         applyAttributes(tag, attributes)

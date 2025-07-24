@@ -18,9 +18,11 @@
  */
 package org.grails.plugins.databasemigration.command
 
-import grails.dev.commands.ApplicationCommand
 import groovy.transform.CompileStatic
+
 import liquibase.Liquibase
+
+import grails.dev.commands.ApplicationCommand
 
 @CompileStatic
 class DbmDbDocCommand implements ApplicationCommand, ApplicationContextDatabaseMigrationCommand {

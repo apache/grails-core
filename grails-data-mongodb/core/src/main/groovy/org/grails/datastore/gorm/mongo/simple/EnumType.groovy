@@ -14,9 +14,15 @@
  */
 package org.grails.datastore.gorm.mongo.simple
 
+import java.lang.reflect.Array
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import jakarta.persistence.EnumType as JEnumType
+
 import org.bson.Document
+
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.Datastore
@@ -34,12 +40,10 @@ import org.grails.datastore.mapping.query.Query.Equals
 import org.grails.datastore.mapping.query.Query.In
 import org.grails.datastore.mapping.query.Query.NotEquals
 
-import jakarta.persistence.EnumType as JEnumType
-import java.lang.reflect.Array
 /**
  * A custom type for persisting Enum which have an id field in domain classes.
  * For example: To save identity instead of string in database for field <b>type</b>.
- * 
+ *
  * <pre>
  *      class User {
  *          UserType type
@@ -48,17 +52,17 @@ import java.lang.reflect.Array
  *
  *      enum UserType {
  *          A(1), B(2)
- *          
+ *
  *          final int id
  *          UserType(int id) {
  *              this.id = id
  *          }
  *      }
  * </pre>
- * 
+ *
  * @author Shashank Agrawal
  * @author Causecode Technologies
- * 
+ *
  * @since 3.1.3
  *
  */
@@ -117,7 +121,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
     }
 
     /*
-     * Get the value of enum for write or query operation i.e. 
+     * Get the value of enum for write or query operation i.e.
      * if enum is marked for ordinal mapping, return its ordinal value,
      * if enum has id, returns the id,
      * otherwise return the name of enum itself.

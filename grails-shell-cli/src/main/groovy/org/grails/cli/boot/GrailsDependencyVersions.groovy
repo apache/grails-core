@@ -18,16 +18,16 @@
  */
 package org.grails.cli.boot
 
-import grails.util.Environment
 import groovy.grape.Grape
 import groovy.grape.GrapeEngine
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
+
+import grails.util.Environment
 import org.grails.cli.compiler.dependencies.Dependency
 import org.grails.cli.compiler.dependencies.DependencyManagement
-
 
 /**
  * Introduces dependency management based on a published BOM file

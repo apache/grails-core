@@ -18,6 +18,27 @@
  */
 package grails.artefact
 
+import java.lang.reflect.Method
+
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+import org.codehaus.groovy.runtime.InvokerHelper
+
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.context.ApplicationContext
+import org.springframework.http.HttpMethod
+import org.springframework.validation.BindingResult
+import org.springframework.validation.Errors
+import org.springframework.validation.ObjectError
+import org.springframework.web.context.ContextLoader
+import org.springframework.web.context.request.RequestAttributes
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.servlet.ModelAndView
+
 import grails.artefact.controller.support.RequestForwarder
 import grails.artefact.controller.support.ResponseRedirector
 import grails.artefact.controller.support.ResponseRenderer
@@ -30,9 +51,6 @@ import grails.web.api.ServletAttributes
 import grails.web.api.WebAttributes
 import grails.web.databinding.DataBinder
 import grails.web.databinding.DataBindingUtils
-import groovy.transform.CompileStatic
-import groovy.transform.Generated
-import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.compiler.web.ControllerActionTransformer
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.config.GormProperties
@@ -44,21 +62,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.SynchronizerTokensHolder
 import org.grails.web.servlet.mvc.TokenResponseHandler
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.context.ApplicationContext
-import org.springframework.http.HttpMethod
-import org.springframework.validation.BindingResult
-import org.springframework.validation.Errors
-import org.springframework.validation.ObjectError
-import org.springframework.web.context.ContextLoader
-import org.springframework.web.context.request.RequestAttributes
-import org.springframework.web.context.request.RequestContextHolder
-import org.springframework.web.servlet.ModelAndView
-
-import jakarta.servlet.ServletRequest
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
-import java.lang.reflect.Method
 
 /**
  * Classes that implement the {@link Controller} trait are automatically treated as web controllers in a Grails application

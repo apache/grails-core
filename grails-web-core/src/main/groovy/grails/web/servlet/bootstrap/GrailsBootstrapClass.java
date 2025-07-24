@@ -19,6 +19,7 @@
 package grails.web.servlet.bootstrap;
 
 import groovy.lang.Closure;
+
 import grails.core.GrailsClass;
 
 /**

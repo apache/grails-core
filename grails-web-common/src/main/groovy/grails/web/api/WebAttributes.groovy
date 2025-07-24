@@ -18,17 +18,18 @@
  */
 package grails.web.api
 
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+
+import org.springframework.web.context.request.RequestContextHolder
+
 import grails.core.GrailsApplication
 import grails.core.GrailsControllerClass
 import grails.plugins.GrailsPluginManager
 import grails.web.mvc.FlashScope
 import grails.web.servlet.mvc.GrailsParameterMap
-import groovy.transform.Generated
-import org.grails.web.util.GrailsApplicationAttributes
-import groovy.transform.CompileStatic
-
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.web.context.request.RequestContextHolder
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  *
@@ -42,14 +43,14 @@ import org.springframework.web.context.request.RequestContextHolder
  */
 @CompileStatic
 trait WebAttributes {
-    
+
     private GrailsApplication grailsApplication
 
     @Generated
     GrailsWebRequest currentRequestAttributes() {
         (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
     }
-    
+
     /**
      * Obtains the GrailsApplicationAttributes instance
      *
@@ -109,7 +110,7 @@ trait WebAttributes {
     String getActionName() {
         currentRequestAttributes().getActionName()
     }
-    
+
     /**
      * Obtains the Grails FlashScope instance
      *
@@ -138,7 +139,7 @@ trait WebAttributes {
     GrailsWebRequest getWebRequest() {
         currentRequestAttributes()
     }
-    
+
     /**
      * Obtains the GrailsApplication instance
      * @return The GrailsApplication instance

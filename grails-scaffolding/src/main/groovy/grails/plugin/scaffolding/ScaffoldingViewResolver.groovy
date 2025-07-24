@@ -19,18 +19,12 @@
 
 package grails.plugin.scaffolding
 
-import grails.codegen.model.ModelBuilder
-import grails.io.IOUtils
-import grails.plugin.scaffolding.annotation.Scaffold
-import grails.util.BuildSettings
-import grails.util.Environment
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
 import groovy.transform.CompileStatic
-import org.grails.buffer.FastStringWriter
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.servlet.view.GroovyPageView
-import org.grails.web.servlet.view.GroovyPageViewResolver
+
 import org.springframework.context.ResourceLoaderAware
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.FileSystemResource
@@ -39,7 +33,15 @@ import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.UrlResource
 import org.springframework.web.servlet.View
 
-import java.util.concurrent.ConcurrentHashMap
+import grails.codegen.model.ModelBuilder
+import grails.io.IOUtils
+import grails.plugin.scaffolding.annotation.Scaffold
+import grails.util.BuildSettings
+import grails.util.Environment
+import org.grails.buffer.FastStringWriter
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.servlet.view.GroovyPageView
+import org.grails.web.servlet.view.GroovyPageViewResolver
 
 /**
  * @author Graeme Rocher

@@ -28,26 +28,28 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 
-import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.datastore.mapping.query.event.PostQueryEvent;
-import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.grails.orm.hibernate.query.HibernateHqlQuery;
-import org.grails.orm.hibernate.query.HibernateQuery;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
-import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.proxy.HibernateProxy;
+
 import org.springframework.context.ApplicationEventPublisher;
+
+import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.event.PostQueryEvent;
+import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
+import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
+import org.grails.orm.hibernate.query.HibernateHqlQuery;
+import org.grails.orm.hibernate.query.HibernateQuery;
 
 /**
  * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.

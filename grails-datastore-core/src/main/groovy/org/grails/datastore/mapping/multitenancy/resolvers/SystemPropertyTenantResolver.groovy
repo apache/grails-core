@@ -20,6 +20,7 @@
 package org.grails.datastore.mapping.multitenancy.resolvers
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 

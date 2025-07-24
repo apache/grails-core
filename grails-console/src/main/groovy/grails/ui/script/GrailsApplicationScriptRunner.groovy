@@ -18,14 +18,17 @@
  */
 package grails.ui.script
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.config.Config
 import grails.core.GrailsApplication
 import grails.persistence.support.PersistenceContextInterceptor
 import grails.ui.support.DevelopmentGrailsApplication
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ImportCustomizer
-import org.springframework.context.ConfigurableApplicationContext
+
 /**
  * Used to run Grails scripts within the context of a Grails application
  *

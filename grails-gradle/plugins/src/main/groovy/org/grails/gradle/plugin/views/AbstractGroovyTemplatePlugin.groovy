@@ -19,9 +19,9 @@
 
 package org.grails.gradle.plugin.views
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -31,6 +31,8 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
+
+import grails.util.GrailsNameUtils
 import org.grails.gradle.plugin.core.IntegrationTestGradlePlugin
 import org.grails.gradle.plugin.util.SourceSets
 

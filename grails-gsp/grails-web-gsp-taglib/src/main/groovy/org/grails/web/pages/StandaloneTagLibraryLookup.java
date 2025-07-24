@@ -19,30 +19,31 @@
 
 package org.grails.web.pages;
 
-import grails.core.gsp.GrailsTagLibClass;
-import grails.gsp.TagLib;
-import org.grails.core.gsp.DefaultGrailsTagLibClass;
-import org.grails.taglib.TagLibraryLookup;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
-
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
+
+import grails.core.gsp.GrailsTagLibClass;
+import grails.gsp.TagLib;
+import org.grails.core.gsp.DefaultGrailsTagLibClass;
+import org.grails.taglib.TagLibraryLookup;
+
 /**
- * GSP TagLibraryLookup class that's used for standalone GSP 
- * 
+ * GSP TagLibraryLookup class that's used for standalone GSP
+ *
  * @author Lari Hotari
  * @since 2.4.0
  */
 public class StandaloneTagLibraryLookup extends TagLibraryLookup implements ApplicationListener<ContextRefreshedEvent> {
     Set<Object> tagLibInstancesSet;
-    
+
     private StandaloneTagLibraryLookup() {
-        
+
     }
 
     public void afterPropertiesSet() {

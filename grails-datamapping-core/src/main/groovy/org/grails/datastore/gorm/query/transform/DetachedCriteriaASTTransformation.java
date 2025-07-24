@@ -18,7 +18,6 @@
  */
 package org.grails.datastore.gorm.query.transform;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
@@ -27,6 +26,8 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * Transforms regular Groovy-style finders into detached criteria

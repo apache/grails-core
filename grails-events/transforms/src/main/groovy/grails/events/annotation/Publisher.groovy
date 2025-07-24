@@ -18,16 +18,18 @@
  */
 package grails.events.annotation
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
-import org.grails.datastore.gorm.transform.GormASTTransformationClass
-import org.springframework.transaction.event.TransactionPhase
-
 import java.lang.annotation.Documented
 import java.lang.annotation.ElementType
 import java.lang.annotation.Inherited
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
+import org.springframework.transaction.event.TransactionPhase
+
+import org.grails.datastore.gorm.transform.GormASTTransformationClass
 
 /**
  * Transforms a method so the return value is emitted as an event

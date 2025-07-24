@@ -19,17 +19,22 @@
 
 package org.grails.orm.hibernate;
 
+import java.io.File;
+import java.util.Map;
+import java.util.Properties;
+
+import javax.naming.NameNotFoundException;
+import javax.sql.DataSource;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.orm.hibernate.cfg.HibernateMappingContext;
-import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.Interceptor;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
 import org.hibernate.cfg.NamingStrategy;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -49,11 +54,9 @@ import org.springframework.orm.hibernate5.HibernateExceptionTranslator;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.Assert;
 
-import javax.naming.NameNotFoundException;
-import javax.sql.DataSource;
-import java.io.File;
-import java.util.Map;
-import java.util.Properties;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.orm.hibernate.cfg.HibernateMappingContext;
+import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 
 /**
  * Configures a SessionFactory using a {@link org.grails.orm.hibernate.cfg.HibernateMappingContext} and a {@link org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration}

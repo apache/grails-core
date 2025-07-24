@@ -18,13 +18,14 @@
  */
 package grails.plugin.cache;
 
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
-import org.springframework.cache.support.SimpleValueWrapper;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+
+import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+
+import org.springframework.cache.support.SimpleValueWrapper;
 
 /**
  * @author Jakob Drangmeister
@@ -38,7 +39,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
    private final boolean allowNullValues;
 
    /**
-    * Create a new GrailsConcurrentLinkedMapCache with the specified name 
+    * Create a new GrailsConcurrentLinkedMapCache with the specified name
     * and capacity
     * @param name the name of the cache
     * @param capacity of the map
@@ -56,7 +57,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
    }
 
    /**
-    * Create a new GrailsConcurrentLinkedMapCache with the specified name 
+    * Create a new GrailsConcurrentLinkedMapCache with the specified name
     * and capacity
     * @param name the name of the cache
     * @param capacity of the map
@@ -167,7 +168,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
    }
 
    @SuppressWarnings("serial")
-   
+
    private static class NullHolder implements Serializable {
    }
 }

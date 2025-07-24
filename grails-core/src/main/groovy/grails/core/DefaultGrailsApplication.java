@@ -18,16 +18,6 @@
  */
 package grails.core;
 
-import grails.config.Config;
-import grails.core.events.ArtefactAdditionEvent;
-import grails.util.GrailsNameUtils;
-import grails.util.GrailsUtil;
-import groovy.lang.GroovyClassLoader;
-import groovy.lang.GroovyRuntimeException;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClassRegistry;
-import groovy.lang.MetaMethod;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
@@ -46,19 +36,18 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovyRuntimeException;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClassRegistry;
+import groovy.lang.MetaMethod;
 import org.codehaus.groovy.reflection.CachedClass;
 import org.codehaus.groovy.runtime.m12n.ExtensionModuleScanner;
 import org.codehaus.groovy.runtime.metaclass.MetaClassRegistryImpl;
-import org.grails.config.PropertySourcesConfig;
-import org.grails.core.AbstractGrailsApplication;
-import org.grails.core.artefact.DomainClassArtefactHandler;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -68,6 +57,19 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+
+import grails.config.Config;
+import grails.core.events.ArtefactAdditionEvent;
+import grails.util.GrailsNameUtils;
+import grails.util.GrailsUtil;
+import org.grails.config.PropertySourcesConfig;
+import org.grails.core.AbstractGrailsApplication;
+import org.grails.core.artefact.DomainClassArtefactHandler;
+import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor;
 
 /**
  * Default implementation of the GrailsApplication interface that manages application loading,
@@ -140,7 +142,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
         this(new GroovyClassLoader());
         this.applicationClass = applicationClass;
     }
-    
+
     public DefaultGrailsApplication(ClassLoader classLoader) {
         super();
         this.classLoader = classLoader;

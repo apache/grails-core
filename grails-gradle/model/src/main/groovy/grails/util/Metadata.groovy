@@ -18,20 +18,23 @@
  */
 package grails.util
 
-import grails.io.IOUtils
+import java.lang.ref.Reference
+import java.lang.ref.SoftReference
+
 import groovy.transform.CompileStatic
+
+import org.springframework.boot.env.YamlPropertySourceLoader
+import org.springframework.core.env.ConfigurablePropertyResolver
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.MutablePropertySources
+import org.springframework.core.env.PropertySource
+import org.springframework.core.env.PropertySourcesPropertyResolver
+import org.springframework.core.io.InputStreamResource
+
+import grails.io.IOUtils
 import org.grails.io.support.FileSystemResource
 import org.grails.io.support.Resource
 import org.grails.io.support.UrlResource
-import org.springframework.core.env.ConfigurablePropertyResolver
-import org.springframework.core.env.MutablePropertySources
-import org.springframework.core.env.PropertySource
-import org.springframework.core.env.MapPropertySource
-import org.springframework.core.env.PropertySourcesPropertyResolver
-import org.springframework.core.io.InputStreamResource
-import org.springframework.boot.env.YamlPropertySourceLoader
-import java.lang.ref.Reference
-import java.lang.ref.SoftReference
 
 /**
  * Represents the application Metadata and loading mechanics.

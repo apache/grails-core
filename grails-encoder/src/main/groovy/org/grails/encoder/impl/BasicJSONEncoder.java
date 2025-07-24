@@ -18,11 +18,13 @@
  */
 package org.grails.encoder.impl;
 
+import org.codehaus.groovy.runtime.StringGroovyMethods;
+
+import org.springframework.util.ClassUtils;
+
 import org.grails.encoder.AbstractCharReplacementEncoder;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.DefaultCodecIdentifier;
-import org.codehaus.groovy.runtime.StringGroovyMethods;
-import org.springframework.util.ClassUtils;
 
 /**
  * Escapes characters in JSON output
@@ -42,8 +44,8 @@ public class BasicJSONEncoder extends AbstractCharReplacementEncoder {
         super(JSON_CODEC_IDENTIFIER);
     }
 
-    
-    
+
+
     /* (non-Javadoc)
      * @see AbstractCharReplacementEncoder#escapeCharacter(char, char)
      */
@@ -74,7 +76,7 @@ public class BasicJSONEncoder extends AbstractCharReplacementEncoder {
                 // preserve special handling that exists in JSONObject.quote to improve security if JSON is embedded in HTML document
                 // prevents outputting "</" gets outputted with unicode escaping for the slash
                 if (previousChar == '<') {
-                    return "\\u002f"; 
+                    return "\\u002f";
                 }
                 break;
         }
@@ -98,11 +100,11 @@ public class BasicJSONEncoder extends AbstractCharReplacementEncoder {
     protected Object doEncode(Object o) {
         if(o == null) {
             return null;
-        }        
+        }
         if(o instanceof CharSequence || ClassUtils.isPrimitiveOrWrapper(o.getClass()) ) {
             return super.encode(o);
         } else {
-            return encodeAsJsonObject(o);            
+            return encodeAsJsonObject(o);
         }
     }
 

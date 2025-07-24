@@ -19,8 +19,9 @@
 
 package grails.views.resolve
 
-import grails.views.ViewUriResolver
 import groovy.transform.CompileStatic
+
+import grails.views.ViewUriResolver
 import org.grails.buffer.FastStringWriter
 
 /**

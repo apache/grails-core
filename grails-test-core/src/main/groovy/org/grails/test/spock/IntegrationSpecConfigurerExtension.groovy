@@ -18,18 +18,21 @@
  */
 package org.grails.test.spock
 
-import grails.util.Holders
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
-import org.grails.test.support.GrailsTestInterceptor
-import org.grails.test.support.GrailsTestMode
+
 import org.spockframework.runtime.extension.IAnnotationDrivenExtension
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 import org.spockframework.runtime.model.FeatureInfo
 import org.spockframework.runtime.model.SpecInfo
+
 import org.springframework.context.ApplicationContext
 
-import java.lang.annotation.Annotation
+import grails.util.Holders
+import org.grails.test.support.GrailsTestInterceptor
+import org.grails.test.support.GrailsTestMode
 
 /**
  * Spock extension that can be applied to Integration tests to make them Grails aware

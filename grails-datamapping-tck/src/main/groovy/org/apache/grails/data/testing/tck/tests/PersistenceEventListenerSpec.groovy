@@ -18,9 +18,12 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.gorm.DetachedCriteria
-import org.apache.grails.data.testing.tck.domains.Simples
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Simples
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
@@ -29,8 +32,6 @@ import org.grails.datastore.mapping.engine.event.EventType
 import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PreDeleteEvent
 import org.grails.datastore.mapping.engine.event.ValidationEvent
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.ConfigurableApplicationContext
 
 /**
  * @author Tom Widmer

@@ -18,7 +18,12 @@
  */
 package org.grails.cli.boot;
 
-import grails.util.Environment;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Grab;
 import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -32,6 +37,8 @@ import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
+
+import grails.util.Environment;
 import org.grails.cli.compiler.AstUtils;
 import org.grails.cli.compiler.CompilerAutoConfiguration;
 import org.grails.cli.compiler.DependencyCustomizer;
@@ -40,12 +47,6 @@ import org.grails.cli.compiler.autoconfigure.SpringMvcCompilerAutoConfiguration;
 import org.grails.cli.compiler.dependencies.Dependency;
 import org.grails.cli.compiler.dependencies.DependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
-
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 
 /**

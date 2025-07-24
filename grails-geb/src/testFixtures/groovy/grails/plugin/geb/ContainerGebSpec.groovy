@@ -18,16 +18,18 @@
  */
 package grails.plugin.geb
 
+import groovy.transform.CompileStatic
+
 import geb.test.GebTestManager
+import spock.lang.Shared
+import spock.lang.Specification
+
 import grails.plugin.geb.support.ContainerSupport
 import grails.plugin.geb.support.ReportingSupport
 import grails.plugin.geb.support.delegate.BrowserDelegate
 import grails.plugin.geb.support.delegate.DownloadSupportDelegate
 import grails.plugin.geb.support.delegate.DriverDelegate
 import grails.plugin.geb.support.delegate.PageDelegate
-import groovy.transform.CompileStatic
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * A {@link geb.spock.GebSpec GebSpec} that leverages Testcontainers to run the browser inside a container.

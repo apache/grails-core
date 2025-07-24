@@ -15,13 +15,12 @@
  */
 package org.grails.datastore.bson.json;
 
-
-import org.bson.BsonRegularExpression;
-import org.bson.json.JsonParseException;
-
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
+
+import org.bson.BsonRegularExpression;
+import org.bson.json.JsonParseException;
 
 /**
  * Parses the string representation of a JSON object into a set of {@link JsonToken}-derived objects.

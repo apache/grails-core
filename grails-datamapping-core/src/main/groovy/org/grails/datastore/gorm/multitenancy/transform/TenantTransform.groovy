@@ -18,12 +18,7 @@
  */
 package org.grails.datastore.gorm.multitenancy.transform
 
-import grails.gorm.multitenancy.CurrentTenant
-import grails.gorm.multitenancy.Tenant
-import grails.gorm.multitenancy.TenantService
-import grails.gorm.multitenancy.WithoutTenant
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
@@ -39,6 +34,12 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
+
+import grails.gorm.multitenancy.CurrentTenant
+import grails.gorm.multitenancy.Tenant
+import grails.gorm.multitenancy.TenantService
+import grails.gorm.multitenancy.WithoutTenant
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.AstUtils

@@ -18,12 +18,13 @@
  */
 package grails.util;
 
+import java.io.PrintWriter;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
 import org.grails.exceptions.reporting.StackTraceFilterer;
-
-import java.io.PrintWriter;
 
 /**
  * Grails utility methods for command line and GUI applications.

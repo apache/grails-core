@@ -18,6 +18,21 @@
  */
 package org.grails.datastore.gorm.events;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEvent;
+
 import grails.gorm.annotation.AutoTimestamp;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.gorm.timestamp.TimestampProvider;
@@ -34,20 +49,6 @@ import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEvent;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * An event listener that adds support for GORM-style auto-timestamping
@@ -258,7 +259,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
 
     /**
      * Temporarily disables the last updated processing during the execution of the runnable
-     * 
+     *
      * @param runnable The code to execute while the last updated listener is disabled
      */
     public void withoutLastUpdated(final Runnable runnable)  {

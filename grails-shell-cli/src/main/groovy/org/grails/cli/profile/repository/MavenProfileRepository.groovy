@@ -16,13 +16,15 @@
  */
 package org.grails.cli.profile.repository
 
-import grails.util.Environment
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.xml.XmlSlurper
+
 import org.eclipse.aether.artifact.Artifact
 import org.eclipse.aether.artifact.DefaultArtifact
 import org.eclipse.aether.graph.Dependency
+
+import grails.util.Environment
 import org.grails.cli.boot.GrailsDependencyVersions
 import org.grails.cli.compiler.grape.DependencyResolutionContext
 import org.grails.cli.compiler.grape.DependencyResolutionFailedException

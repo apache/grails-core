@@ -18,15 +18,13 @@
  */
 package grails.test.mongodb
 
-import com.mongodb.client.MongoClient
-import grails.config.Config
 import groovy.transform.CompileStatic
-import org.grails.config.PropertySourcesConfig
-import org.grails.datastore.mapping.core.DatastoreUtils
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.mongo.MongoDatastore
+
+import com.mongodb.client.MongoClient
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.PropertySource
@@ -35,9 +33,14 @@ import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.SpringFactoriesLoader
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+
+import grails.config.Config
+import org.grails.config.PropertySourcesConfig
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.mongo.MongoDatastore
 
 /**
  * Base class for MongoDB tests

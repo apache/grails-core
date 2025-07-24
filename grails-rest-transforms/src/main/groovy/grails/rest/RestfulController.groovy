@@ -18,12 +18,13 @@
  */
 package grails.rest
 
+import org.springframework.http.HttpStatus
+
 import grails.artefact.Artefact
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 import grails.util.GrailsNameUtils
 import grails.web.http.HttpHeaders
-import org.springframework.http.HttpStatus
 
 import static org.springframework.http.HttpStatus.CREATED
 import static org.springframework.http.HttpStatus.NOT_FOUND
@@ -205,10 +206,10 @@ class RestfulController<T> {
             '*'{ render status: NO_CONTENT } // NO CONTENT STATUS CODE
         }
     }
-    
+
     /**
      * handles the request for write methods (create, edit, update, save, delete) when controller is in read only mode
-     * 
+     *
      * @return true if controller is read only
      */
     protected boolean handleReadOnly() {
@@ -219,12 +220,12 @@ class RestfulController<T> {
             return false
         }
     }
-    
+
     /**
      * The object that can be bound to a domain instance.  Defaults to the request.  Subclasses may override this
      * method to return anything that is a valid second argument to the bindData method in a controller.  This
      * could be the request, a {@link java.util.Map} or a {@link org.grails.databinding.DataBindingSource}.
-     * 
+     *
      * @return the object to bind to a domain instance
      */
     protected getObjectToBind() {
@@ -250,7 +251,7 @@ class RestfulController<T> {
     protected T createResource(Map params) {
         resource.newInstance(params)
     }
-    
+
     /**
      * Creates a new instance of the resource.  If the request
      * contains a body the body will be parsed and used to
@@ -315,7 +316,7 @@ class RestfulController<T> {
 
     /**
      * Deletes a resource
-     * 
+     *
      * @param resource The resource to be deleted
      */
     protected void deleteResource(T resource) {

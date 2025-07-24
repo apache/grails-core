@@ -19,10 +19,6 @@
 
 package org.grails.compiler.scaffolding
 
-import grails.compiler.ast.AstTransformer
-import grails.compiler.ast.GrailsArtefactClassInjector
-import grails.plugin.scaffolding.annotation.Scaffold
-import grails.rest.RestfulController
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -30,6 +26,11 @@ import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.SourceUnit
+
+import grails.compiler.ast.AstTransformer
+import grails.compiler.ast.GrailsArtefactClassInjector
+import grails.plugin.scaffolding.annotation.Scaffold
+import grails.rest.RestfulController
 import org.grails.compiler.injection.GrailsASTUtils
 import org.grails.compiler.web.ControllerActionTransformer
 import org.grails.core.artefact.ControllerArtefactHandler

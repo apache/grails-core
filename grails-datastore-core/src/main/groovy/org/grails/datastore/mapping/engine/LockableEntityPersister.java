@@ -20,12 +20,13 @@ package org.grails.datastore.mapping.engine;
 
 import java.io.Serializable;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.CannotAcquireLockException;
+
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 
 /**
  * Abstract base class for entity persisters that support locking.

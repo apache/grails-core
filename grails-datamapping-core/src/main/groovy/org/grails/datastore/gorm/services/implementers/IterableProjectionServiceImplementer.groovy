@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.services.implementers
 
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+
 import org.grails.datastore.gorm.GormEntity
 
 /**

@@ -23,17 +23,20 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-import org.grails.orm.hibernate.HibernateEventListeners
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
-import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
-import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor
+
 import org.hibernate.CustomEntityDirtinessStrategy
 import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.Configuration
 import org.hibernate.cfg.ImprovedNamingStrategy
 import org.hibernate.cfg.NamingStrategy
+
 import org.springframework.core.io.Resource
+
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.orm.hibernate.HibernateEventListeners
+import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
+import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor
 
 /**
  * Settings for Hibernate

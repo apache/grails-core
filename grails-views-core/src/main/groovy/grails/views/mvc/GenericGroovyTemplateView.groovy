@@ -19,6 +19,16 @@
 
 package grails.views.mvc
 
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.http.HttpStatus
+import org.springframework.web.servlet.LocaleResolver
+import org.springframework.web.servlet.view.AbstractUrlBasedView
+
 import grails.config.Config
 import grails.views.ResolvableGroovyTemplateEngine
 import grails.views.api.GrailsView
@@ -28,16 +38,8 @@ import grails.views.api.http.Response
 import grails.views.mvc.http.DelegatingParameters
 import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.http.HttpStatus
-import org.springframework.web.servlet.LocaleResolver
-import org.springframework.web.servlet.view.AbstractUrlBasedView
-
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 
 /**
  * An implementation of the Spring AbstractUrlBaseView class for ResolvableGroovyTemplateEngine

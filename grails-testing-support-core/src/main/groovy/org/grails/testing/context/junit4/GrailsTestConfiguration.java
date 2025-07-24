@@ -18,17 +18,18 @@
  */
 package org.grails.testing.context.junit4;
 
-import grails.boot.test.GrailsApplicationContextLoader;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.test.context.ContextConfiguration;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+
+import grails.boot.test.GrailsApplicationContextLoader;
 
 /**
  * @author Graeme Rocher

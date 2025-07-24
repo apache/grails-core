@@ -24,7 +24,6 @@ import java.util.Properties;
 
 import javax.sql.DataSource;
 
-import org.grails.orm.hibernate.exceptions.CouldNotDetermineHibernateDialectException;
 import org.hibernate.HibernateException;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.selector.internal.StrategySelectorImpl;
@@ -41,6 +40,7 @@ import org.hibernate.service.Service;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceBinding;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.jdbc.datasource.DataSourceUtils;
@@ -48,6 +48,8 @@ import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import org.grails.orm.hibernate.exceptions.CouldNotDetermineHibernateDialectException;
 
 /**
  * @author Steven Devijver

@@ -18,13 +18,14 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
-import grails.plugins.GrailsPluginManager
+import jakarta.annotation.PostConstruct
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 
-import jakarta.annotation.PostConstruct
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
+import grails.plugins.GrailsPluginManager
 
 /**
  * Javascript tags.
@@ -39,7 +40,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
 
     boolean hasResourceProcessor = false
 
-    static encodeAsForTags = [escapeJavascript: 'JavaScript', 
+    static encodeAsForTags = [escapeJavascript: 'JavaScript',
                               javascript: [expressionCodec:"JavaScript", scriptletCodec:"JavaScript", replaceOnly:true]]
 
     @PostConstruct

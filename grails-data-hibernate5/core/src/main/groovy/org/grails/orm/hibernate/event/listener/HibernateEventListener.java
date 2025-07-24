@@ -18,15 +18,9 @@
  */
 package org.grails.orm.hibernate.event.listener;
 
-import grails.gorm.MultiTenant;
-import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
-import org.grails.datastore.gorm.timestamp.TimestampProvider;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.ValidationEvent;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
-import org.grails.orm.hibernate.support.ClosureEventListener;
-import org.grails.orm.hibernate.support.SoftKey;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -40,10 +34,18 @@ import org.hibernate.event.spi.PreInsertEvent;
 import org.hibernate.event.spi.PreLoadEvent;
 import org.hibernate.event.spi.PreUpdateEvent;
 import org.hibernate.event.spi.SaveOrUpdateEvent;
+
 import org.springframework.context.ApplicationEvent;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import grails.gorm.MultiTenant;
+import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
+import org.grails.datastore.gorm.timestamp.TimestampProvider;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.engine.event.ValidationEvent;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.support.ClosureEventListener;
+import org.grails.orm.hibernate.support.SoftKey;
 
 /**
  * <p>Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.

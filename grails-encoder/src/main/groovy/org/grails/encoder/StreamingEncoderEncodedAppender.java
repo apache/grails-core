@@ -18,9 +18,9 @@
  */
 package org.grails.encoder;
 
-import org.grails.charsequences.CharSequences;
-
 import java.io.IOException;
+
+import org.grails.charsequences.CharSequences;
 
 /**
  * EncodedAppender implementation used for piping / chaining several StreamingEncoders
@@ -29,7 +29,7 @@ import java.io.IOException;
 public class StreamingEncoderEncodedAppender extends AbstractEncodedAppender {
     private final StreamingEncoder encoder;
     private final EncodedAppender target;
-    
+
     public StreamingEncoderEncodedAppender(StreamingEncoder encoder, EncodedAppender target) {
         this.encoder = encoder;
         this.target = target;
@@ -39,7 +39,7 @@ public class StreamingEncoderEncodedAppender extends AbstractEncodedAppender {
     public void close() throws IOException {
         target.close();
     }
-    
+
     @Override
     public void flush() throws IOException {
         target.flush();

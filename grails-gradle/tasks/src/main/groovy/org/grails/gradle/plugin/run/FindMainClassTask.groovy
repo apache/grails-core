@@ -18,7 +18,10 @@
  */
 package org.grails.gradle.plugin.run
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
@@ -35,11 +38,10 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskAction
+
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.MainClassFinder
 import org.grails.io.support.MainClassHolder
-
-import javax.inject.Inject
 
 /**
  * A task that finds the main task, differs slightly from Boot's version as expects a subclass of GrailsConfiguration

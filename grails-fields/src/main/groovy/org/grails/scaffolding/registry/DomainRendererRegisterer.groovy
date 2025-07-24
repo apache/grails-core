@@ -19,9 +19,13 @@
 
 package org.grails.scaffolding.registry
 
-import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileStatic
+
 import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.web.mapping.LinkGenerator
 import org.grails.scaffolding.registry.input.AssociationInputRenderer
 import org.grails.scaffolding.registry.input.BidirectionalToManyInputRenderer
 import org.grails.scaffolding.registry.input.BooleanInputRenderer
@@ -39,7 +43,6 @@ import org.grails.scaffolding.registry.input.TimeInputRenderer
 import org.grails.scaffolding.registry.input.TimeZoneInputRenderer
 import org.grails.scaffolding.registry.input.UrlInputRenderer
 import org.grails.scaffolding.registry.output.DefaultOutputRenderer
-import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * Bean for registering the default domain renderers

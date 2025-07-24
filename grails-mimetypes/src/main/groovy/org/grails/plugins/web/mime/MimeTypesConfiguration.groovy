@@ -18,6 +18,13 @@
  */
 package org.grails.plugins.web.mime
 
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+
 import grails.config.Config
 import grails.config.Settings
 import grails.core.GrailsApplication
@@ -25,13 +32,8 @@ import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeProvider
 import grails.web.mime.MimeTypeResolver
 import grails.web.mime.MimeUtility
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Primary
 
 /**
  * Configuration for Codecs

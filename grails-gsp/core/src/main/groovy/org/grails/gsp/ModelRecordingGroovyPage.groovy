@@ -18,14 +18,14 @@
  */
 package org.grails.gsp
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
 import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.gsp.compiler.GroovyPageParser
 import org.grails.gsp.jsp.JspTagLib
 import org.grails.taglib.encoder.OutputContext
-
-import java.util.concurrent.ConcurrentHashMap
-
 
 /**
  * Development time helper class to add model definitions to existing GSP pages

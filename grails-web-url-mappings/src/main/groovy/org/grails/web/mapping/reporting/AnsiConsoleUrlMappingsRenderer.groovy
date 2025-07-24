@@ -18,12 +18,14 @@
  */
 package org.grails.web.mapping.reporting
 
+import groovy.transform.CompileStatic
+
+import org.fusesource.jansi.Ansi
+
 import grails.build.logging.GrailsConsole
 import grails.gorm.validation.ConstrainedProperty
 import grails.web.mapping.UrlMapping
 import grails.web.mapping.reporting.UrlMappingsRenderer
-import groovy.transform.CompileStatic
-import org.fusesource.jansi.Ansi
 import org.grails.web.mapping.ResponseCodeMappingData
 import org.grails.web.mapping.ResponseCodeUrlMapping
 

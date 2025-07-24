@@ -18,10 +18,6 @@
  */
 package org.grails.web.util;
 
-import org.grails.buffer.GrailsPrintWriterAdapter;
-import org.grails.buffer.StreamByteBuffer;
-import org.grails.buffer.StreamCharBuffer;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -33,6 +29,10 @@ import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletResponseWrapper;
+
+import org.grails.buffer.GrailsPrintWriterAdapter;
+import org.grails.buffer.StreamByteBuffer;
+import org.grails.buffer.StreamCharBuffer;
 
 /**
  * Response wrapper used to capture the content of a response (such as within in an include).
@@ -180,7 +180,7 @@ public class IncludeResponseWrapper extends HttpServletResponseWrapper {
 
         return "";
     }
-    
+
     @Override
     public void resetBuffer() {
        if(isCommitted()) throw new IllegalStateException("Response already committed");
@@ -196,7 +196,7 @@ public class IncludeResponseWrapper extends HttpServletResponseWrapper {
     @Override
     public void reset() {
         resetBuffer();
-    }    
+    }
 
     @Override
     public void setContentLength(int len) {

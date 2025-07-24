@@ -18,10 +18,11 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.FormattedValueConverter;
+import java.time.LocalDateTime
+
 import groovy.transform.CompileStatic
 
-import java.time.LocalDateTime
+import grails.databinding.converters.FormattedValueConverter
 
 /**
  * @author Emma Richardson

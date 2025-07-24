@@ -18,9 +18,22 @@
  */
 package org.grails.orm.hibernate
 
-import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import org.hibernate.FlushMode
+import org.hibernate.HibernateException
+import org.hibernate.LockMode
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+
+import org.springframework.beans.BeanWrapperImpl
+import org.springframework.beans.InvalidPropertyException
+import org.springframework.dao.DataAccessException
+import org.springframework.validation.Errors
+import org.springframework.validation.Validator
+
+import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.core.Datastore
@@ -36,16 +49,6 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
-import org.hibernate.FlushMode
-import org.hibernate.HibernateException
-import org.hibernate.LockMode
-import org.hibernate.Session
-import org.hibernate.SessionFactory
-import org.springframework.beans.BeanWrapperImpl
-import org.springframework.beans.InvalidPropertyException
-import org.springframework.dao.DataAccessException
-import org.springframework.validation.Errors
-import org.springframework.validation.Validator
 
 /**
  * Abstract extension of the {@link GormInstanceApi} class that provides common logic shared by Hibernate 3 and Hibernate 4

@@ -19,14 +19,16 @@
 package org.grails.web.context
 
 import groovy.transform.CompileStatic
-import grails.core.GrailsApplication
-import org.grails.core.support.GrailsApplicationDiscoveryStrategy
-import org.grails.web.servlet.mvc.GrailsWebRequest
+
+import jakarta.servlet.ServletContext
+
 import org.springframework.context.ApplicationContext
 import org.springframework.web.context.ContextLoader
 import org.springframework.web.context.support.WebApplicationContextUtils
 
-import jakarta.servlet.ServletContext
+import grails.core.GrailsApplication
+import org.grails.core.support.GrailsApplicationDiscoveryStrategy
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Strategy for discovering the GrailsApplication and ApplicationContext instances in the Servlet environment

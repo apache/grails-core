@@ -18,16 +18,14 @@
  */
 package grails.orm;
 
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.GroovySystem;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
-import org.grails.orm.hibernate.query.AbstractHibernateQuery;
-import org.grails.orm.hibernate.query.HibernateProjectionAdapter;
-import org.grails.orm.hibernate.query.HibernateQuery;
+
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.PluralAttribute;
+
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Criterion;
@@ -37,13 +35,19 @@ import org.hibernate.criterion.Projections;
 import org.hibernate.sql.JoinType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
+
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.PluralAttribute;
-import java.util.List;
-import java.util.Map;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
+import org.grails.orm.hibernate.query.AbstractHibernateQuery;
+import org.grails.orm.hibernate.query.HibernateProjectionAdapter;
+import org.grails.orm.hibernate.query.HibernateQuery;
 
 /**
  * <p>Wraps the Hibernate Criteria API in a builder. The builder can be retrieved through the "createCriteria()" dynamic static

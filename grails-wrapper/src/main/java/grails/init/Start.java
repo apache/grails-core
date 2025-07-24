@@ -16,8 +16,6 @@
  */
 package grails.init;
 
-import grails.proxy.SystemPropertiesAuthenticator;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -30,6 +28,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
+
+import grails.proxy.SystemPropertiesAuthenticator;
 
 /**
  * The purpose of this class is to download the expanded Grails wrapper jars into GRAILS_WRAPPER_HOME (`.grails` in the project root)

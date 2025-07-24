@@ -18,22 +18,23 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import grails.converters.JSON;
-import grails.persistence.PersistenceMethod;
-import grails.web.controllers.ControllerMethod;
-import groovy.lang.GroovyObject;
-
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
+import groovy.lang.GroovyObject;
+
+import org.springframework.beans.BeanUtils;
+
+import grails.converters.JSON;
+import grails.persistence.PersistenceMethod;
+import grails.web.controllers.ControllerMethod;
 import org.grails.core.util.IncludeExcludeSupport;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.IncludeExcludePropertyMarshaller;
 import org.grails.web.json.JSONWriter;
-import org.springframework.beans.BeanUtils;
 
 /**
  * @author Siegfried Puchbauer

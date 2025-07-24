@@ -18,21 +18,23 @@
  */
 package grails.validation
 
-import grails.gorm.validation.ConstrainedProperty
-import grails.util.Holders
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import org.grails.datastore.gorm.support.BeforeValidateHelper
-import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
-import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
-import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
-import org.grails.validation.ConstraintEvalUtils
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
+
+import grails.gorm.validation.ConstrainedProperty
+import grails.util.Holders
+import org.grails.datastore.gorm.support.BeforeValidateHelper
+import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
+import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
+import org.grails.validation.ConstraintEvalUtils
 
 /**
  * A trait that can be applied to make any object Validateable

@@ -18,16 +18,9 @@
  */
 package org.grails.core;
 
-import grails.config.Config;
-import grails.core.ArtefactHandler;
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsConfigurationAware;
-import grails.util.Environment;
-import grails.util.Holders;
-import grails.util.Metadata;
 import groovy.lang.GroovyObjectSupport;
 import groovy.util.ConfigObject;
-import org.grails.config.PropertySourcesConfig;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.context.ApplicationContext;
@@ -38,6 +31,15 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.SmartApplicationListener;
 import org.springframework.core.Ordered;
 import org.springframework.util.ClassUtils;
+
+import grails.config.Config;
+import grails.core.ArtefactHandler;
+import grails.core.GrailsApplication;
+import grails.core.support.GrailsConfigurationAware;
+import grails.util.Environment;
+import grails.util.Holders;
+import grails.util.Metadata;
+import org.grails.config.PropertySourcesConfig;
 
 public abstract class AbstractGrailsApplication extends GroovyObjectSupport implements GrailsApplication, ApplicationContextAware, BeanClassLoaderAware, SmartApplicationListener {
     protected ClassLoader classLoader;

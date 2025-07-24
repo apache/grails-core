@@ -19,9 +19,8 @@
 package org.grails.datastore.mapping.config.utils
 
 import groovy.transform.CompileStatic
+
 import org.springframework.core.env.PropertyResolver
-
-
 
 /**
  * Adapts a property resolver to the Map<String,String> interface

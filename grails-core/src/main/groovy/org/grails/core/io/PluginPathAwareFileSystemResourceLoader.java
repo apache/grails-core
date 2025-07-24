@@ -18,12 +18,12 @@
  */
 package org.grails.core.io;
 
+import java.util.Collection;
+
 import org.springframework.core.io.ContextResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.core.io.Resource;
-
-import java.util.Collection;
 
 /**
  * FileSystemResourceLoader capable of understanding paths to plugins via the ResourceLocator interface

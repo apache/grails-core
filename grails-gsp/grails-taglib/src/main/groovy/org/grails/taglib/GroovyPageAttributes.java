@@ -18,10 +18,10 @@
  */
 package org.grails.taglib;
 
-import grails.util.TypeConvertingMap;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import grails.util.TypeConvertingMap;
 
 /**
  * Defines attributes passed to a GSP tag. Mixes in TypeConvertingMap for ease of type conversion.

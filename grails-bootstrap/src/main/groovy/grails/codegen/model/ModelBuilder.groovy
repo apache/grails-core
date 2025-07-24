@@ -18,9 +18,10 @@
  */
 package grails.codegen.model
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 import org.apache.groovy.util.BeanUtils
+
+import grails.util.GrailsNameUtils
 import org.grails.io.support.FileSystemResource
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.Resource

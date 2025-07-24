@@ -18,9 +18,10 @@
  */
 package grails.validation;
 
-import org.grails.core.exceptions.GrailsException;
 import org.springframework.validation.Errors;
 import org.springframework.validation.ObjectError;
+
+import org.grails.core.exceptions.GrailsException;
 
 /**
  * Thrown when validation fails during a .save().
@@ -43,14 +44,14 @@ public class ValidationException extends GrailsException {
         return errors;
     }
 
-    public String getMessage() { 
-        return fullMessage; 
+    public String getMessage() {
+        return fullMessage;
     }
-    
+
     public static String formatErrors(Errors errors) {
         return formatErrors(errors, null);
     }
-    
+
     public static String formatErrors(Errors errors, String msg) {
         StringBuilder b = new StringBuilder();
         if(msg != null && msg.length() > 0) {

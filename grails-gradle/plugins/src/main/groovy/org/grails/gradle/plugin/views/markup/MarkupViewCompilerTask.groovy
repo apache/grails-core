@@ -19,15 +19,17 @@
 
 package org.grails.gradle.plugin.views.markup
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.process.ExecOperations
-import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
 
-import javax.inject.Inject
+import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
 
 /**
  * MarkupView compiler task for Gradle

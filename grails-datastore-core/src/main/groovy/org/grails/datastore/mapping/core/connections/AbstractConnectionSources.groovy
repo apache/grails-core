@@ -21,8 +21,10 @@ package org.grails.datastore.mapping.core.connections
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.DatastoreUtils
+
 import org.springframework.core.env.PropertyResolver
+
+import org.grails.datastore.mapping.core.DatastoreUtils
 
 /**
  * Abstract implementation of the {@link ConnectionSources} interface

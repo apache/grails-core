@@ -22,12 +22,14 @@ package org.grails.cli.profile
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+
 import org.eclipse.aether.graph.Dependency
-import org.grails.config.NavigableMap
-import org.grails.io.support.Resource
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
+
+import org.grails.config.NavigableMap
+import org.grails.io.support.Resource
 
 import static org.grails.cli.profile.ProfileUtil.createDependency
 

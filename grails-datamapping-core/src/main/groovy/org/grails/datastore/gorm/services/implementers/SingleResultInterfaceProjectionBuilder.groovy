@@ -26,6 +26,7 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.Statement
+
 import org.grails.datastore.gorm.services.ServiceImplementer
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block

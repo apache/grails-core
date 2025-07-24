@@ -25,9 +25,10 @@ import java.util.List;
 
 import joptsimple.OptionSet;
 
-import org.grails.cli.util.ResourceUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import org.grails.cli.util.ResourceUtils;
 
 /**
  * Extract source file options (anything following '--' in an {@link OptionSet}).

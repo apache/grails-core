@@ -19,8 +19,9 @@
 
 package grails.views.api
 
-import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileStatic
+
+import grails.web.mapping.LinkGenerator
 
 /**
  * Methods available via the 'g' namespace in views

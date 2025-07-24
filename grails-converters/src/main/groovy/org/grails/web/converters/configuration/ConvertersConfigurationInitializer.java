@@ -18,27 +18,28 @@
  */
 package org.grails.web.converters.configuration;
 
-import grails.config.Config;
-import org.grails.config.PropertySourcesConfig;
-import grails.converters.JSON;
-import grails.converters.XML;
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsApplicationAware;
-import grails.core.support.proxy.DefaultProxyHandler;
-import grails.core.support.proxy.ProxyHandler;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.web.converters.Converter;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller;
+
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+
+import grails.config.Config;
+import grails.converters.JSON;
+import grails.converters.XML;
+import grails.core.GrailsApplication;
+import grails.core.support.GrailsApplicationAware;
+import grails.core.support.proxy.DefaultProxyHandler;
+import grails.core.support.proxy.ProxyHandler;
+import org.grails.config.PropertySourcesConfig;
+import org.grails.web.converters.Converter;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller;
 
 /**
  * @author Siegfried Puchbauer
@@ -73,7 +74,7 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
     public void afterPropertiesSet() {
         initialize();
     }
-    
+
     public void initialize() {
         if(LOG.isDebugEnabled()) {
             LOG.debug("Initializing Converters Default Configurations...");

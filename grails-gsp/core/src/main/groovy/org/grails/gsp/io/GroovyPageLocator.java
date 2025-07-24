@@ -18,8 +18,9 @@
  */
 package org.grails.gsp.io;
 
-import org.grails.taglib.TemplateVariableBinding;
 import org.springframework.core.io.ResourceLoader;
+
+import org.grails.taglib.TemplateVariableBinding;
 
 /**
  * Used to locate GSPs whether in development or WAR deployed mode.

@@ -19,8 +19,9 @@
 
 package grails.views.api.internal
 
-import grails.views.api.http.Parameters
 import groovy.transform.CompileStatic
+
+import grails.views.api.http.Parameters
 
 /**
  * An empty parameters implementation

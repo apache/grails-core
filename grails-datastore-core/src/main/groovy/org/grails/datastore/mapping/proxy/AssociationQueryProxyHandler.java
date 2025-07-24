@@ -18,16 +18,17 @@
  */
 package org.grails.datastore.mapping.proxy;
 
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
-import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.util.ReflectionUtils;
-
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.util.ReflectionUtils;
+
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 
 /**
  * A proxy handler that uses a {@link org.grails.datastore.mapping.engine.AssociationQueryExecutor} to retrieve the association

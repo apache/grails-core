@@ -21,6 +21,11 @@ package grails.gorm.validation
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+import org.springframework.validation.Errors
+import org.springframework.validation.FieldError
+
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.mapping.model.MappingContext
@@ -32,9 +37,6 @@ import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.springframework.context.MessageSource
-import org.springframework.validation.Errors
-import org.springframework.validation.FieldError
 
 /**
  * A Validator that validates a {@link org.grails.datastore.mapping.model.PersistentEntity} against known constraints

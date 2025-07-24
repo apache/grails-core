@@ -20,8 +20,10 @@
 package org.grails.cli.profile.commands
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile
+
 /**
  * A command for creating a plugin
  *

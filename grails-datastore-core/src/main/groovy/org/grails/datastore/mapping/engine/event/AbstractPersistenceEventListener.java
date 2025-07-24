@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.engine.event;
 
 import org.springframework.context.ApplicationEvent;
+
 import org.grails.datastore.mapping.core.Datastore;
 
 /**

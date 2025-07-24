@@ -19,10 +19,12 @@
 package org.grails.datastore.mapping.core;
 
 import groovy.lang.Closure;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.services.ServiceRegistry;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
+
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.services.ServiceRegistry;
 
 /**
  * The <code>Datastore</code> interface is the basic common denominator all NoSQL databases should support:

@@ -18,10 +18,12 @@
  */
 package grails.ui.shell.support
 
-import grails.core.GrailsApplication
 import org.apache.groovy.groovysh.Groovysh
 import org.codehaus.groovy.tools.shell.IO
+
 import org.springframework.context.support.GenericApplicationContext
+
+import grails.core.GrailsApplication
 
 /**
  * @author Graeme Rocher

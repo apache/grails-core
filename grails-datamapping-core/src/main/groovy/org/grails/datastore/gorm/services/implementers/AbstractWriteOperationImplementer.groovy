@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 

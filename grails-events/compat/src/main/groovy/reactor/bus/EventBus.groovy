@@ -20,6 +20,7 @@
 package reactor.bus
 
 import groovy.util.logging.Slf4j
+
 import reactor.bus.registry.Subscription
 import reactor.bus.selector.Selector
 import reactor.fn.Consumer

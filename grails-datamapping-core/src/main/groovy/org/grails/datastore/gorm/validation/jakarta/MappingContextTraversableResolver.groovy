@@ -19,16 +19,18 @@
 
 package org.grails.datastore.gorm.validation.jakarta
 
+import java.lang.annotation.ElementType
+
 import groovy.transform.CompileStatic
+
+import jakarta.validation.Path
+import jakarta.validation.TraversableResolver
+
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.proxy.ProxyHandler
-
-import jakarta.validation.Path
-import jakarta.validation.TraversableResolver
-import java.lang.annotation.ElementType
 
 /**
  * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade

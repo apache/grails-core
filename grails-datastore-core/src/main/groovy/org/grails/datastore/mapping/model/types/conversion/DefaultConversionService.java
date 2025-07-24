@@ -19,9 +19,9 @@
 
 package org.grails.datastore.mapping.model.types.conversion;
 
-import groovy.lang.GroovyObject;
-
 import java.io.Serializable;
+
+import groovy.lang.GroovyObject;
 
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.format.datetime.DateFormatterRegistrar;

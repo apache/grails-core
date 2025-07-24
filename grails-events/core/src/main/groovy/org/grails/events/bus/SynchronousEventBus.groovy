@@ -19,12 +19,13 @@
 
 package org.grails.events.bus
 
-import grails.events.Event
-import grails.events.subscriber.Subscription
+import java.util.concurrent.Callable
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 
-import java.util.concurrent.Callable
+import grails.events.Event
+import grails.events.subscriber.Subscription
 
 /**
  * A default synchronous event bus for testing

@@ -19,23 +19,25 @@
 
 package org.grails.events.bus
 
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
 import grails.events.Event
 import grails.events.bus.EventBus
 import grails.events.emitter.EventEmitter
 import grails.events.subscriber.Subjects
 import grails.events.subscriber.Subscriber
 import grails.events.subscriber.Subscription
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
 import org.grails.events.registry.ClosureSubscription
 import org.grails.events.registry.EventSubscriberSubscription
-import org.springframework.transaction.event.TransactionPhase
-import org.springframework.transaction.support.TransactionSynchronization
-import org.springframework.transaction.support.TransactionSynchronizationManager
-
-import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Abstract event bus impl

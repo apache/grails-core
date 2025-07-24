@@ -18,6 +18,9 @@
  */
 package org.grails.gsp.compiler.transform;
 
+import java.util.List;
+import java.util.Stack;
+
 import groovy.lang.Closure;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
@@ -33,11 +36,9 @@ import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
+
 import org.grails.buffer.GrailsPrintWriter;
 import org.grails.gsp.GroovyPage;
-
-import java.util.List;
-import java.util.Stack;
 
 /**
  * Scan MethodCallExpression in GSP to convert callsite calls into static calls (printHtmlPart ...)

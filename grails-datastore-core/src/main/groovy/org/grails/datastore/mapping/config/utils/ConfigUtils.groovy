@@ -19,9 +19,10 @@
 package org.grails.datastore.mapping.config.utils
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.types.conversion.DefaultConversionService
+
 import org.springframework.core.convert.ConversionService
 
+import org.grails.datastore.mapping.model.types.conversion.DefaultConversionService
 
 /**
  * @author Graeme Rocher

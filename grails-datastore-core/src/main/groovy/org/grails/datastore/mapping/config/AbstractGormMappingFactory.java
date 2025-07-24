@@ -19,12 +19,14 @@
 
 package org.grails.datastore.mapping.config;
 
-import groovy.lang.Closure;
-
 import java.beans.PropertyDescriptor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.Closure;
+
+import org.springframework.beans.BeanUtils;
 
 import org.grails.datastore.mapping.config.groovy.DefaultMappingConfigurationBuilder;
 import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder;
@@ -37,7 +39,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.springframework.beans.BeanUtils;
 
 /**
  * Abstract GORM implementation that uses the GORM MappingConfigurationBuilder to configure entity mappings.

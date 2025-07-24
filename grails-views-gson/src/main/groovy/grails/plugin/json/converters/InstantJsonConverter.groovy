@@ -19,10 +19,11 @@
 
 package grails.plugin.json.converters
 
-import grails.plugin.json.builder.JsonGenerator
+import java.time.Instant
+
 import groovy.transform.CompileStatic
 
-import java.time.Instant
+import grails.plugin.json.builder.JsonGenerator
 
 /**
  * A class to render a {@link java.time.Instant} as json

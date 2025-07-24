@@ -20,6 +20,9 @@
 package grails.gorm
 
 import groovy.transform.CompileStatic
+
+import jakarta.persistence.criteria.JoinType
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -31,8 +34,6 @@ import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware
 import org.grails.datastore.mapping.query.api.QueryableCriteria
-
-import jakarta.persistence.criteria.JoinType
 
 /**
  * Represents criteria that is not bound to the current connection and can be built up and re-used at a later date.

@@ -20,6 +20,7 @@
 package grails.mongodb.mapping
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.MappingDefinition
 import org.grails.datastore.mapping.mongo.config.MongoAttribute
 import org.grails.datastore.mapping.mongo.config.MongoCollection

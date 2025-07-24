@@ -19,8 +19,15 @@
 
 package grails.gorm;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
+
+import jakarta.persistence.criteria.JoinType;
+
 import org.grails.datastore.gorm.query.criteria.AbstractCriteriaBuilder;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -29,11 +36,6 @@ import org.grails.datastore.mapping.query.QueryCreator;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.ProjectionList;
-
-import jakarta.persistence.criteria.JoinType;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import static org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria;
 
@@ -166,7 +168,7 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
         query.projections().count();
         return (Number) query.singleResult();
     }
-    
+
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(SCROLL_CALL, new Object[]{c});

@@ -16,6 +16,14 @@
 
 package org.grails.datastore.bson.json;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Base64;
+import java.util.Date;
+import java.util.TimeZone;
+
 import org.bson.AbstractBsonWriter;
 import org.bson.BSONException;
 import org.bson.BsonBinary;
@@ -26,14 +34,6 @@ import org.bson.BsonTimestamp;
 import org.bson.json.JsonWriterSettings;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Base64;
-import java.util.Date;
-import java.util.TimeZone;
 
 /**
  * Simplified fork of {@link org.bson.json.JsonWriter} that ignores behaviour specific to MongoDB and produces more compat output

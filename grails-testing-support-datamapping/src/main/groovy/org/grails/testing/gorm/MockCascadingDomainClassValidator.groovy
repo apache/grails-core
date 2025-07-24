@@ -19,12 +19,14 @@
 
 package org.grails.testing.gorm
 
+import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+
 import grails.gorm.validation.CascadingValidator
 import grails.gorm.validation.PersistentEntityValidator
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.context.MessageSource
 
 @CompileStatic
 class MockCascadingDomainClassValidator extends PersistentEntityValidator implements CascadingValidator {

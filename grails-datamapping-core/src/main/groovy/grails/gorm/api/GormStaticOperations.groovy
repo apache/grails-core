@@ -19,12 +19,13 @@
 
 package grails.gorm.api
 
+import org.springframework.transaction.TransactionDefinition
+
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
-import org.springframework.transaction.TransactionDefinition
 
 /**
  * Interface for the default static methods in GORM

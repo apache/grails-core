@@ -19,6 +19,7 @@
 package grails.plugin.geb
 
 import groovy.transform.CompileStatic
+
 import org.opentest4j.IncompleteExecutionException
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation

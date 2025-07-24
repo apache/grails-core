@@ -19,13 +19,14 @@
 
 package org.grails.events
 
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
 import grails.events.Event
 import grails.events.subscriber.EventSubscriber
 import grails.events.subscriber.Subscriber
 import grails.events.trigger.EventTrigger
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 /**
  * Simple trigger for an Subscriber

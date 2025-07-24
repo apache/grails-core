@@ -18,47 +18,6 @@
  */
 package org.grails.gsp;
 
-import grails.config.Config;
-import grails.config.Settings;
-import grails.core.GrailsApplication;
-import grails.core.GrailsClass;
-import grails.io.IOUtils;
-import grails.util.CacheEntry;
-import grails.util.Environment;
-import grails.util.GrailsUtil;
-import groovy.lang.GroovyClassLoader;
-import groovy.text.Template;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.control.CompilationFailedException;
-import org.codehaus.groovy.control.CompilerConfiguration;
-import org.codehaus.groovy.runtime.IOGroovyMethods;
-import org.grails.core.artefact.DomainClassArtefactHandler;
-import org.grails.core.exceptions.DefaultErrorsPrinter;
-import org.grails.exceptions.ExceptionUtils;
-import org.grails.gsp.compiler.GroovyPageParser;
-import org.grails.gsp.io.DefaultGroovyPageLocator;
-import org.grails.gsp.io.GroovyPageCompiledScriptSource;
-import org.grails.gsp.io.GroovyPageLocator;
-import org.grails.gsp.io.GroovyPageResourceScriptSource;
-import org.grails.gsp.io.GroovyPageScriptSource;
-import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.taglib.TagLibraryLookup;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanClassLoaderAware;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ResourceLoaderAware;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.UrlResource;
-import org.springframework.scripting.ScriptSource;
-import org.springframework.scripting.support.ResourceScriptSource;
-import org.springframework.util.Assert;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,6 +33,50 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import groovy.lang.GroovyClassLoader;
+import groovy.text.Template;
+import org.codehaus.groovy.control.CompilationFailedException;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.runtime.IOGroovyMethods;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ResourceLoaderAware;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.UrlResource;
+import org.springframework.scripting.ScriptSource;
+import org.springframework.scripting.support.ResourceScriptSource;
+import org.springframework.util.Assert;
+
+import grails.config.Config;
+import grails.config.Settings;
+import grails.core.GrailsApplication;
+import grails.core.GrailsClass;
+import grails.io.IOUtils;
+import grails.util.CacheEntry;
+import grails.util.Environment;
+import grails.util.GrailsUtil;
+import org.grails.core.artefact.DomainClassArtefactHandler;
+import org.grails.core.exceptions.DefaultErrorsPrinter;
+import org.grails.exceptions.ExceptionUtils;
+import org.grails.gsp.compiler.GroovyPageParser;
+import org.grails.gsp.io.DefaultGroovyPageLocator;
+import org.grails.gsp.io.GroovyPageCompiledScriptSource;
+import org.grails.gsp.io.GroovyPageLocator;
+import org.grails.gsp.io.GroovyPageResourceScriptSource;
+import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.gsp.jsp.TagLibraryResolver;
+import org.grails.taglib.TagLibraryLookup;
 
 /**
  * Based on (but not extending) the existing TemplateEngine implementations

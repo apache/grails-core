@@ -20,8 +20,10 @@
 package org.grails.datastore.mapping.core.connections
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+
 import org.springframework.core.env.PropertyResolver
+
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 
 /**
  * Initializer sequence for creating {@link ConnectionSources}

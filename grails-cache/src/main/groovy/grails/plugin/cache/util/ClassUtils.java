@@ -18,12 +18,12 @@
  */
 package grails.plugin.cache.util;
 
-import grails.util.GrailsNameUtils;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import org.springframework.util.ReflectionUtils;
+
+import grails.util.GrailsNameUtils;
 
 /**
  * @author Jeff Brown

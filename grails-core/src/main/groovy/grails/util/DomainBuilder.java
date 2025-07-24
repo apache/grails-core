@@ -18,11 +18,10 @@
  */
 package grails.util;
 
-import groovy.util.ObjectGraphBuilder;
-
 import java.lang.reflect.Field;
 import java.util.Collection;
 
+import groovy.util.ObjectGraphBuilder;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
 /**

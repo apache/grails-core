@@ -23,6 +23,8 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionImplementor;
@@ -41,7 +43,6 @@ import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * A {@link org.grails.datastore.mapping.engine.Persister} specifically for persisting PersistentEntity instances.

@@ -20,6 +20,9 @@
 package org.grails.datastore.mapping.document.config;
 
 import groovy.lang.Closure;
+
+import org.springframework.util.Assert;
+
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.model.AbstractMappingContext;
@@ -27,7 +30,6 @@ import org.grails.datastore.mapping.model.MappingConfigurationStrategy;
 import org.grails.datastore.mapping.model.MappingFactory;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
-import org.springframework.util.Assert;
 
 /**
  * Models a {@link org.grails.datastore.mapping.model.MappingContext} for a Document store.

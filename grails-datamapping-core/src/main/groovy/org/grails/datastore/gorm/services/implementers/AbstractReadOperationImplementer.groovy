@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.services.implementers
 
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -25,11 +27,10 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.tools.GeneralUtils
+
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.mapping.reflect.AstUtils
-
-import java.lang.reflect.Modifier
 
 /**
  * Abstract implementor for read operations

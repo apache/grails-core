@@ -18,39 +18,6 @@
  */
 package grails.plugins;
 
-import grails.core.GrailsApplication;
-import grails.core.support.ParentApplicationContextAware;
-import grails.plugins.exceptions.PluginException;
-import grails.util.Environment;
-import grails.util.GrailsClassUtils;
-import groovy.lang.GroovyClassLoader;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClassRegistry;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.control.CompilationFailedException;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.codehaus.groovy.runtime.IOGroovyMethods;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.AbstractGrailsPluginManager;
-import org.grails.plugins.BinaryGrailsPlugin;
-import org.grails.plugins.BinaryGrailsPluginDescriptor;
-import org.grails.plugins.CorePluginFinder;
-import org.grails.plugins.DefaultGrailsPlugin;
-import org.grails.plugins.IdentityPluginFilter;
-import org.grails.plugins.PluginFilterRetriever;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.util.Assert;
-
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
@@ -67,6 +34,42 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClassRegistry;
+import org.codehaus.groovy.control.CompilationFailedException;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.codehaus.groovy.runtime.IOGroovyMethods;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.util.Assert;
+
+import grails.core.GrailsApplication;
+import grails.core.support.ParentApplicationContextAware;
+import grails.plugins.exceptions.PluginException;
+import grails.util.Environment;
+import grails.util.GrailsClassUtils;
+import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.plugins.AbstractGrailsPluginManager;
+import org.grails.plugins.BinaryGrailsPlugin;
+import org.grails.plugins.BinaryGrailsPluginDescriptor;
+import org.grails.plugins.CorePluginFinder;
+import org.grails.plugins.DefaultGrailsPlugin;
+import org.grails.plugins.IdentityPluginFilter;
+import org.grails.plugins.PluginFilterRetriever;
+import org.grails.spring.DefaultRuntimeSpringConfiguration;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * <p>Handles the loading and management of plug-ins in the Grails system.

@@ -18,10 +18,11 @@
  */
 package org.grails.web.databinding
 
-import grails.databinding.errors.BindingError;
-import grails.databinding.events.DataBindingListener;
 import groovy.transform.CompileStatic
 import groovy.util.logging.Commons
+
+import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListener
 
 /**
  * @author Jeff Brown

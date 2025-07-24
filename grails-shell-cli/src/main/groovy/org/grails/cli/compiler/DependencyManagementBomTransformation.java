@@ -30,6 +30,15 @@ import java.util.Map;
 import java.util.Set;
 
 import groovy.grape.Grape;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.control.messages.Message;
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
+import org.codehaus.groovy.syntax.SyntaxException;
+
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
@@ -40,20 +49,13 @@ import org.apache.maven.model.building.DefaultModelBuildingRequest;
 import org.apache.maven.model.resolution.InvalidRepositoryException;
 import org.apache.maven.model.resolution.ModelResolver;
 import org.apache.maven.model.resolution.UnresolvableModelException;
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.AnnotationNode;
-import org.codehaus.groovy.ast.expr.ConstantExpression;
-import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.expr.ListExpression;
-import org.codehaus.groovy.control.messages.Message;
-import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
-import org.codehaus.groovy.syntax.SyntaxException;
+
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 
 import org.grails.cli.compiler.dependencies.MavenModelDependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
 import org.grails.cli.groovy.DependencyManagementBom;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 
 /**
  * {@link org.codehaus.groovy.transform.ASTTransformation} for processing

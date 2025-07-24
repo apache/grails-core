@@ -18,10 +18,11 @@
  */
 package org.grails.validation
 
+import groovy.transform.CompileStatic
+
 import grails.config.Config
 import grails.config.Settings
 import grails.util.ClosureToMapPopulator
-import groovy.transform.CompileStatic
 import org.grails.core.lifecycle.ShutdownOperations
 
 /**

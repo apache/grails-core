@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.mapping.proxy;
 
-import org.grails.datastore.mapping.model.config.GormProperties;
-
 import java.lang.reflect.Method;
+
+import org.grails.datastore.mapping.model.config.GormProperties;
 
 /**
  * Base class for entity proxy handlers that are aware of Groovy
@@ -61,17 +61,17 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
             return super.getPropertyBeforeResolving(self, property);
         }
     }
-    
+
     @Override
     public Object invokeMethodBeforeResolving(Object self, String methodName, Object[] args) {
         Object result = invokeEntityProxyMethods(self, methodName, args);
         if(!wasHandled(result)) {
             return super.invokeMethodBeforeResolving(self, methodName, args);
-        } else { 
+        } else {
             return result;
         }
     }
-    
+
     @Override
     public Object handleInvocation(Object self, Method thisMethod, Object[] args) {
         Object result = invokeEntityProxyMethods(self, thisMethod.getName(), args);
@@ -86,8 +86,8 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
 
     protected Object handleInvocationFallback(Object self, Method thisMethod, Object[] args) {
        return INVOKE_IMPLEMENTATION;
-    }    
-    
+    }
+
     protected Object invokeEntityProxyMethods(Object self, String methodName, Object[] args) {
         if (methodName.equals(IS_PROXY_METHOD)) {
             return true;

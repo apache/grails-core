@@ -19,10 +19,10 @@
 
 package org.grails.datastore.gorm.validation.jakarta.services.implementers
 
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
-import jakarta.validation.Constraint
-import jakarta.validation.ConstraintViolationException
-import jakarta.validation.ParameterNameProvider
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.ConstructorNode
@@ -38,14 +38,16 @@ import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
+
+import jakarta.validation.Constraint
+import jakarta.validation.ConstraintViolationException
+import jakarta.validation.ParameterNameProvider
+
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.gorm.validation.jakarta.ConfigurableParameterNameProvider
 import org.grails.datastore.gorm.validation.jakarta.services.ValidatedService
 import org.grails.datastore.mapping.reflect.ClassUtils
-
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 
 import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
 import static org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE
@@ -122,7 +124,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
         else{
             validatedMethodCount++
         }
-        
+
         targetClassNode.putNodeMetaData(VALIDATED_METHOD, validatedMethodCount)
 
         // add a field that holds a reference to the java.lang.reflect.Method to be validated

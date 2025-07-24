@@ -21,6 +21,7 @@ package grails.plugin.json.renderer
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.validation.Errors
 
 /**

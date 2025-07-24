@@ -19,16 +19,19 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import groovy.transform.CompileStatic
+
 import com.mongodb.client.FindIterable
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
-import groovy.transform.CompileStatic
 import org.bson.Document
+
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources
-import org.springframework.core.env.PropertyResolver
 
 /**
  *

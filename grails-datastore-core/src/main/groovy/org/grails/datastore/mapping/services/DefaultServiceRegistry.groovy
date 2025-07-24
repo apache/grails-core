@@ -19,13 +19,15 @@
 
 package org.grails.datastore.mapping.services
 
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.model.lifecycle.Initializable
+
 import org.springframework.util.ClassUtils
 
-import java.lang.reflect.Modifier
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.model.lifecycle.Initializable
 
 /**
  * The default {@link ServiceRegistry} implementation

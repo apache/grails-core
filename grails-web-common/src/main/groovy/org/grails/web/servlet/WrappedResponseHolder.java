@@ -18,9 +18,9 @@
  */
 package org.grails.web.servlet;
 
-import org.grails.core.lifecycle.ShutdownOperations;
-
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.grails.core.lifecycle.ShutdownOperations;
 
 /**
  * A holder for the original Wrapped response for use when using includes.

@@ -19,9 +19,10 @@
 
 package org.grails.datastore.mapping.transactions;
 
-import org.grails.datastore.mapping.core.Datastore;
 import org.springframework.transaction.NoTransactionException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import org.grails.datastore.mapping.core.Datastore;
 
 /**
  * Utility methods for Transactions.

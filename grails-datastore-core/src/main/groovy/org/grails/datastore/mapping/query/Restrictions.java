@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.mapping.query;
 
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-
 import java.util.Collection;
+
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 /**
  * Factory for creating {@link org.grails.datastore.mapping.query.Query.Criterion} instances

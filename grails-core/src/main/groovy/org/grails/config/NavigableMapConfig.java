@@ -18,17 +18,6 @@
  */
 package org.grails.config;
 
-import grails.config.Config;
-import grails.util.GrailsStringUtils;
-import groovy.util.ConfigObject;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.convert.ConversionException;
-import org.springframework.core.convert.support.ConfigurableConversionService;
-import org.springframework.core.convert.support.DefaultConversionService;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -39,6 +28,20 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+
+import groovy.util.ConfigObject;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.core.convert.ConversionException;
+import org.springframework.core.convert.support.ConfigurableConversionService;
+import org.springframework.core.convert.support.DefaultConversionService;
+
+import grails.config.Config;
+import grails.util.GrailsStringUtils;
+import org.grails.core.exceptions.GrailsConfigurationException;
 
 /**
  * A {@link Config} implementation that operates against a {@link org.grails.config.NavigableMap}

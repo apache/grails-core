@@ -18,14 +18,25 @@
  */
 package grails.plugin.formfields
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import org.springframework.beans.BeanWrapper
+import org.springframework.beans.BeanWrapperImpl
+import org.springframework.beans.PropertyAccessorFactory
+import org.springframework.context.support.StaticMessageSource
+
 import grails.core.GrailsApplication
 import grails.core.support.GrailsApplicationAware
 import grails.core.support.proxy.ProxyHandler
 import grails.gorm.validation.ConstrainedProperty
 import grails.gorm.validation.DefaultConstrainedProperty
 import grails.validation.Validateable
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.model.MappingContext
@@ -36,15 +47,6 @@ import org.grails.datastore.mapping.model.types.Basic
 import org.grails.scaffolding.model.property.Constrained
 import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.scaffolding.model.property.DomainPropertyFactory
-import org.springframework.beans.BeanWrapper
-import org.springframework.beans.BeanWrapperImpl
-import org.springframework.beans.PropertyAccessorFactory
-import org.springframework.context.support.StaticMessageSource
-
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 @CompileStatic
 class BeanPropertyAccessorFactory implements GrailsApplicationAware {
@@ -86,7 +88,7 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
     private boolean getAddPathFromRoot() {
         grailsApplication.config.getProperty('grails.plugin.fields.i18n.addPathFromRoot', Boolean)
     }
-    
+
     private DomainProperty resolvePropertyFromPathComponents(BeanWrapper beanWrapper, List<String> pathElements, Map params) {
         String propertyName = pathElements.remove(0)
         PersistentEntity beanClass = resolveDomainClass(beanWrapper.wrappedClass)
@@ -168,7 +170,7 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
         if (type == null) {
             String match = getPropertyMatch(propertyName)
             if (match) {
-                Type genericType = beanWrapper.getPropertyDescriptor(match).readMethod.genericReturnType 
+                Type genericType = beanWrapper.getPropertyDescriptor(match).readMethod.genericReturnType
                 if (genericType instanceof ParameterizedType) {
                     ParameterizedType parameterizedType = genericType as ParameterizedType
                     switch (parameterizedType.rawType) {
@@ -205,6 +207,6 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
         def matcher = propertyName =~ INDEXED_PROPERTY_PATTERN
         matcher.matches() ? (matcher[0] as String[])[1] : propertyName
     }
-    
-    
+
+
 }

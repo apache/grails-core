@@ -19,8 +19,23 @@
 
 package grails.views
 
+import groovy.text.Template
+import groovy.text.TemplateEngine
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import org.codehaus.groovy.control.CompilationFailedException
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import org.codehaus.groovy.control.customizers.ImportCustomizer
+
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.MessageSource
+import org.springframework.context.support.StaticMessageSource
+
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.ProxyHandler
 import grails.util.Environment
@@ -33,20 +48,8 @@ import grails.views.resolve.GenericViewUriResolver
 import grails.views.resolve.TemplateResolverUtils
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeUtility
-import groovy.text.Template
-import groovy.text.TemplateEngine
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import org.codehaus.groovy.control.CompilationFailedException
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.web.mime.DefaultMimeUtility
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
-import org.springframework.context.support.StaticMessageSource
 
 /**
  * A TemplateEngine that can resolve templates using the configured TemplateResolver
@@ -179,7 +182,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
     void setMessageSource(MessageSource messageSource) {
         this.messageSource = messageSource
     }
-    
+
     @Autowired(required = false)
     void setMimeUtility(MimeUtility mimeUtility) {
         this.mimeUtility = mimeUtility

@@ -20,7 +20,6 @@ package org.grails.datastore.gorm.transform
 
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -32,6 +31,8 @@ import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.AbstractASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.mapping.core.order.OrderedComparator
 import org.grails.datastore.mapping.reflect.ClassUtils
 

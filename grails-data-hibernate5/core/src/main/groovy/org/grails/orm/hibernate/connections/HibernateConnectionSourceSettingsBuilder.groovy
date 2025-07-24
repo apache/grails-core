@@ -20,9 +20,11 @@
 package org.grails.orm.hibernate.connections
 
 import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.config.ConfigurationBuilder
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-import org.springframework.core.env.PropertyResolver
 
 /**
  * Builds the GORM for Hibernate configuration

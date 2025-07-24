@@ -18,18 +18,20 @@
  */
 package grails.plugin.geb.support.delegate
 
+import java.time.Duration
+
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.SelfType
+
 import geb.Browser
 import geb.Page
 import geb.js.JavascriptInterface
 import geb.url.UrlFragment
 import geb.webstorage.WebStorage
-import grails.plugin.geb.ContainerGebSpec
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.transform.SelfType
 import org.openqa.selenium.WebDriver
 
-import java.time.Duration
+import grails.plugin.geb.ContainerGebSpec
 
 import static groovy.lang.Closure.DELEGATE_FIRST
 

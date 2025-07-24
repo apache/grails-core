@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import grails.gorm.CriteriaBuilder;
 import groovy.lang.Closure;
 
+import grails.gorm.CriteriaBuilder;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.SessionCallback;

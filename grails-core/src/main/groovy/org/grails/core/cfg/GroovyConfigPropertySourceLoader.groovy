@@ -16,16 +16,18 @@
  */
 package org.grails.core.cfg
 
-import grails.util.Environment
-import grails.util.Metadata
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.config.NavigableMap
-import org.grails.config.NavigableMapPropertySource
-import org.grails.core.exceptions.GrailsConfigurationException
+
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.PropertySource
 import org.springframework.core.io.Resource
+
+import grails.util.Environment
+import grails.util.Metadata
+import org.grails.config.NavigableMap
+import org.grails.config.NavigableMapPropertySource
+import org.grails.core.exceptions.GrailsConfigurationException
 
 /**
  * Adds support for defining a 'application.groovy' file in ConfigSlurper format in order to configure Spring Boot within Grails

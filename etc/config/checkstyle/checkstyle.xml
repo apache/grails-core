@@ -32,11 +32,21 @@
 
     <!-- TreeWalker Checks -->
     <module name="TreeWalker">
-        <module name="AvoidStarImport"/>
+
         <module name="SuppressWarningsHolder"/>
+
+        <!-- Imports -->
+        <module name="AvoidStarImport"/>
         <module name="RedundantImport"/>
         <module name="UnusedImports">
             <property name="processJavadoc" value="false"/>
+        </module>
+        <module name="ImportOrderCheck">
+            <property name="groups" value="java,javax,/^(groovy|org\.apache\.groovy|org\.codehaus\.groovy)\..+/,jakarta,*,org.springframework,/^(grails|org\.apache\.grails|org\.grails)\..+/"/>
+            <property name="ordered" value="true"/>
+            <property name="option" value="bottom"/>
+            <property name="separated" value="true"/>
+            <property name="sortStaticImportsAlphabetically" value="true"/>
         </module>
     </module>
 

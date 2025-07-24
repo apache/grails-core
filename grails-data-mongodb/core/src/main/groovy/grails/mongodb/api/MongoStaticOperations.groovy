@@ -19,18 +19,19 @@
 
 package grails.mongodb.api
 
+import java.util.function.Function
+
 import com.mongodb.ReadPreference
 import com.mongodb.client.AggregateIterable
 import com.mongodb.client.FindIterable
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.FindOneAndDeleteOptions
-import grails.gorm.api.GormStaticOperations
 import org.bson.Document
 import org.bson.conversions.Bson
-import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
 
-import java.util.function.Function
+import grails.gorm.api.GormStaticOperations
+import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
 
 /**
  * Static operations for GORM for MongoDB

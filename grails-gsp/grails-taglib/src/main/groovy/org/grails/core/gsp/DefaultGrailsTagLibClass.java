@@ -18,13 +18,6 @@
  */
 package org.grails.core.gsp;
 
-import grails.core.gsp.GrailsTagLibClass;
-import groovy.lang.Closure;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaProperty;
-import org.grails.core.AbstractInjectableGrailsClass;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +25,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import groovy.lang.Closure;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaProperty;
+
+import grails.core.gsp.GrailsTagLibClass;
+import org.grails.core.AbstractInjectableGrailsClass;
+import org.grails.core.artefact.gsp.TagLibArtefactHandler;
 
 /**
  * Default implementation of a tag lib class.

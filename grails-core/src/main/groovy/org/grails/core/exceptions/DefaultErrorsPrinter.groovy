@@ -20,12 +20,14 @@ package org.grails.core.exceptions
 
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+
 import org.grails.core.io.ResourceLocator
 import org.grails.exceptions.reporting.CodeSnippetPrinter
 import org.grails.exceptions.reporting.DefaultStackTracePrinter
 import org.grails.exceptions.reporting.SourceCodeAware
-import org.springframework.core.io.FileSystemResource
-import org.springframework.core.io.Resource
 
 /**
  * Default implementation of the {@link StackTracePrinter} interface.

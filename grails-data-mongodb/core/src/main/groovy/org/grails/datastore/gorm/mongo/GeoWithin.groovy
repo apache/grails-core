@@ -14,14 +14,16 @@
 */
 package org.grails.datastore.gorm.mongo
 
+import groovy.transform.CompileStatic
+
+import org.springframework.util.Assert
+
 import grails.mongodb.geo.LineString
 import grails.mongodb.geo.Point
 import grails.mongodb.geo.Shape
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
-import org.springframework.util.Assert
 
 /**
  * Dynamic finder extension for GeoWithin style queries

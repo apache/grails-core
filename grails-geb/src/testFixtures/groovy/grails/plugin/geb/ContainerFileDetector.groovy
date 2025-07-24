@@ -19,11 +19,12 @@
 package grails.plugin.geb
 
 import groovy.transform.CompileStatic
+
 import org.openqa.selenium.remote.FileDetector
 
 /**
  * An extension of {@link org.openqa.selenium.remote.FileDetector}
- * that will get passed additional parameters from the webdriver container holder. 
+ * that will get passed additional parameters from the webdriver container holder.
  * <p>
  * Implementations must provide a zero-argument constructor to ensure compatibility with {@link java.util.ServiceLoader}.
  *

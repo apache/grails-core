@@ -18,12 +18,13 @@
  */
 package grails.ui.shell.support
 
-import grails.core.GrailsApplication
-import grails.ui.support.DevelopmentWebApplicationContext
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import org.apache.groovy.groovysh.Groovysh
 import org.codehaus.groovy.tools.shell.IO
+
+import grails.core.GrailsApplication
+import grails.ui.support.DevelopmentWebApplicationContext
 
 /**
  * @author Graeme Rocher

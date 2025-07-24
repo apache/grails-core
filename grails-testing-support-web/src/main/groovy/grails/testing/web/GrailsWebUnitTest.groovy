@@ -18,6 +18,14 @@
  */
 package grails.testing.web
 
+import groovy.text.Template
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import org.springframework.mock.web.MockHttpSession
+import org.springframework.mock.web.MockServletContext
+
 import grails.artefact.TagLibrary
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -25,10 +33,6 @@ import grails.core.gsp.GrailsTagLibClass
 import grails.util.GrailsNameUtils
 import grails.web.mvc.FlashScope
 import grails.web.servlet.mvc.GrailsParameterMap
-import groovy.text.Template
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.grails.buffer.GrailsPrintWriter
 import org.grails.commons.CodecArtefactHandler
 import org.grails.commons.DefaultGrailsCodecClass
@@ -42,8 +46,6 @@ import org.grails.taglib.TagLibraryLookup
 import org.grails.testing.GrailsUnitTest
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.mock.web.MockHttpSession
-import org.springframework.mock.web.MockServletContext
 
 @CompileStatic
 @Slf4j

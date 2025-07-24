@@ -14,14 +14,22 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.MultiTenant
-import grails.gorm.multitenancy.Tenants
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.reflection.CachedMethod
 import org.codehaus.groovy.runtime.metaclass.ClosureStaticMetaMethod
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
+
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionSystemException
+
+import grails.gorm.MultiTenant
+import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.finders.CountByFinder
 import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
 import org.grails.datastore.gorm.finders.FindAllByFinder
@@ -51,12 +59,6 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.MetaClassUtils
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.TransactionSystemException
-
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Enhances a class with GORM behavior
@@ -241,7 +243,7 @@ class GormEnhancer implements Closeable {
                     }
                 }
         }
-        }        
+        }
         return buildNamedCriteriaProxy(entity, namedQueries, queryName, args)
     }
 

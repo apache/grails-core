@@ -18,12 +18,13 @@
  */
 package scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.dev.commands.GrailsApplicationCommand
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
-import groovy.transform.CompileStatic
 
 /**
  * Generates a controller that performs CRUD operations and the associated views

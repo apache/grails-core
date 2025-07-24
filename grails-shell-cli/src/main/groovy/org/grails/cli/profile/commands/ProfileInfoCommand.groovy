@@ -18,9 +18,10 @@
  */
 package org.grails.cli.profile.commands
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.GrailsConsole
 import grails.config.ConfigMap
-import groovy.transform.CompileStatic
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
@@ -29,7 +30,6 @@ import org.grails.cli.profile.ProfileRepository
 import org.grails.cli.profile.ProfileRepositoryAware
 import org.grails.cli.profile.ProjectContext
 import org.grails.config.CodeGenConfig
-
 
 /**
  * A command to find out information about the given profile

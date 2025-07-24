@@ -19,8 +19,9 @@
 
 package org.grails.datastore.mapping.query.event;
 
-import org.grails.datastore.mapping.query.Query;
 import org.springframework.context.ApplicationEvent;
+
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Base class for query events.

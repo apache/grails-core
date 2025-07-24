@@ -26,28 +26,31 @@ import java.lang.reflect.Constructor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
+
 import jakarta.servlet.ServletContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.control.MultipleCompilationErrorsException;
-import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import grails.core.GrailsApplication;
-import grails.util.GrailsStringUtils;
-import org.grails.core.artefact.ServiceArtefactHandler;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.core.exceptions.GrailsException;
-import org.grails.exceptions.reporting.SourceCodeAware;
-import org.grails.gsp.ResourceAwareTemplateEngine;
-import org.grails.buffer.FastStringPrintWriter;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import grails.core.GrailsApplication;
+import grails.util.GrailsStringUtils;
+import org.grails.buffer.FastStringPrintWriter;
+import org.grails.core.artefact.ControllerArtefactHandler;
+import org.grails.core.artefact.ServiceArtefactHandler;
+import org.grails.core.exceptions.GrailsException;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.exceptions.reporting.SourceCodeAware;
+import org.grails.gsp.ResourceAwareTemplateEngine;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Wraps a Grails RuntimeException and attempts to extract more relevent diagnostic messages

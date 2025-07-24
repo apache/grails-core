@@ -18,8 +18,9 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.web.mime.MimeType
 import groovy.transform.CompileStatic
+
+import grails.web.mime.MimeType
 
 /**
  * Creates DataBindingSource objects from JSON API in the request body

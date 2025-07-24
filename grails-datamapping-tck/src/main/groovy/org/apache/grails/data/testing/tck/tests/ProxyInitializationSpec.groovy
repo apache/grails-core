@@ -18,9 +18,9 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ContactDetails
 import org.apache.grails.data.testing.tck.domains.Patient
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.proxy.ProxyHandler
 
 class ProxyInitializationSpec extends GrailsDataTckSpec {

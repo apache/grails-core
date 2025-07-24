@@ -19,6 +19,7 @@
 package org.grails.cli.interactive.completers
 
 import groovy.transform.CompileStatic
+
 import jline.console.completer.Completer
 
 /**

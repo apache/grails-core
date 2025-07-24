@@ -19,24 +19,11 @@
 
 package org.grails.datastore.gorm.bootstrap
 
-import grails.gorm.annotation.Entity
+import java.beans.Introspector
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
-import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
-import org.grails.datastore.gorm.plugin.support.PersistenceContextInterceptorAggregator
-import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInterceptor
-import org.grails.datastore.mapping.config.DatastoreServiceMethodInvokingFactoryBean
-import org.grails.datastore.mapping.core.DatastoreUtils
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.model.types.BasicTypeConverterRegistrar
-import org.grails.datastore.mapping.reflect.AstUtils
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
-import org.grails.datastore.mapping.reflect.NameUtils
-import org.grails.datastore.mapping.services.Service
-import org.grails.datastore.mapping.services.ServiceDefinition
-import org.grails.datastore.mapping.services.SoftServiceLoader
-import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
+
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
@@ -55,7 +42,22 @@ import org.springframework.core.io.support.ResourcePatternResolver
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory
 import org.springframework.util.ClassUtils
 
-import java.beans.Introspector
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.gorm.plugin.support.PersistenceContextInterceptorAggregator
+import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInterceptor
+import org.grails.datastore.mapping.config.DatastoreServiceMethodInvokingFactoryBean
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.BasicTypeConverterRegistrar
+import org.grails.datastore.mapping.reflect.AstUtils
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
+import org.grails.datastore.mapping.reflect.NameUtils
+import org.grails.datastore.mapping.services.Service
+import org.grails.datastore.mapping.services.ServiceDefinition
+import org.grails.datastore.mapping.services.SoftServiceLoader
+import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
 
 /**
  * Abstract class for datastore initializers to implement

@@ -18,11 +18,6 @@
  */
 package org.grails.web.servlet;
 
-import grails.web.mvc.FlashScope;
-import org.grails.web.util.GrailsApplicationAttributes;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -31,10 +26,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+
 import jakarta.servlet.http.HttpSession;
 
-import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.springframework.web.context.request.RequestContextHolder;
+
+import grails.web.mvc.FlashScope;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Grails implementation of Flash scope (@see grails.web.mvc.FlashScope).
@@ -169,7 +170,7 @@ public class GrailsFlashScope implements FlashScope {
     public Object put(String key, Object value) {
         // create the session if it doesn't exist
         registerWithSessionIfNecessary();
-       
+
         if (current.containsKey(key)) {
             current.remove(key);
         }

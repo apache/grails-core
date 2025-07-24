@@ -18,17 +18,8 @@
  */
 package org.grails.orm.hibernate.support;
 
-import org.grails.datastore.gorm.events.AutoTimestampEventListener;
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
-import org.grails.datastore.mapping.engine.ModificationTrackingEntityAccess;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import java.util.Map;
+
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.event.spi.AbstractEvent;
@@ -43,11 +34,22 @@ import org.hibernate.event.spi.PreUpdateEvent;
 import org.hibernate.event.spi.SaveOrUpdateEvent;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.tuple.entity.EntityMetamodel;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import java.util.Map;
+import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
+import org.grails.datastore.mapping.engine.ModificationTrackingEntityAccess;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.orm.hibernate.AbstractHibernateDatastore;
 
 /**
  * Listens for Hibernate events and publishes corresponding Datastore events.

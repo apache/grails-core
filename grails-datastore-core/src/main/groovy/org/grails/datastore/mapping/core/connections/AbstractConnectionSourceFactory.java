@@ -19,12 +19,13 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
-import org.grails.datastore.mapping.multitenancy.TenantResolver;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.PropertyResolver;
 
-import java.util.List;
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
+import org.grails.datastore.mapping.multitenancy.TenantResolver;
 
 /**
  * Abstract implementation of the {@link ConnectionSourceFactory} interface

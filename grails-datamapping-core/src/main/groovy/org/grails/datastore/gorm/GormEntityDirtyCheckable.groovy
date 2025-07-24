@@ -19,12 +19,13 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+
+import jakarta.annotation.Generated
+
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-
-import jakarta.annotation.Generated
 
 /**
  *
@@ -35,19 +36,19 @@ import jakarta.annotation.Generated
  */
 @CompileStatic
 trait GormEntityDirtyCheckable extends DirtyCheckable {
-    
+
     @Override
     @Generated
     boolean hasChanged(String propertyName) {
         PersistentEntity entity = currentGormInstanceApi().persistentEntity
-        
+
         PersistentProperty persistentProperty = entity.getPropertyByName(propertyName)
         if (!persistentProperty) {
-            // Not persistent property, transient. We don't track changes for transients 
+            // Not persistent property, transient. We don't track changes for transients
             return false
         }
-        
-        Property propertyMapping = persistentProperty.getMapping().getMappedForm() 
+
+        Property propertyMapping = persistentProperty.getMapping().getMappedForm()
         if (propertyMapping.derived) {
             // Derived property cannot be changed, ex. sql formula
             return false

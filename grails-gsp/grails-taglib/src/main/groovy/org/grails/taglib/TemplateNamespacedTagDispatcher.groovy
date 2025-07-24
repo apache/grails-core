@@ -17,9 +17,11 @@
  *  under the License.
  */
 package org.grails.taglib
+
+import groovy.transform.CompileStatic
+
 import grails.core.GrailsApplication
 import grails.util.Environment
-import groovy.transform.CompileStatic
 import org.grails.taglib.encoder.OutputContextLookupHelper
 
 @CompileStatic
@@ -38,9 +40,9 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
         })
         callRender(argsToAttrs(name, args), filterBodyAttr(args))
     }
-    
+
     protected void registerTagMetaMethods(ExpandoMetaClass emc) {
-        
+
     }
 
     protected callRender(Map attrs, Object body) {
@@ -63,7 +65,7 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
         }
         attr
     }
-    
+
     protected Object filterBodyAttr(Object args) {
         if (args instanceof Object[]) {
             Object[] tagArgs = ((Object[])args)

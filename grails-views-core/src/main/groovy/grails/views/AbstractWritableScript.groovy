@@ -19,10 +19,12 @@
 
 package grails.views
 
-import grails.views.api.GrailsView
 import groovy.transform.CompileStatic
+
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import grails.views.api.GrailsView
 
 /**
  * A script that is writable

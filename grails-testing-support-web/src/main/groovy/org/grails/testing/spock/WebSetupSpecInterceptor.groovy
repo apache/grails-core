@@ -19,14 +19,22 @@
 
 package org.grails.testing.spock
 
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+
+import org.spockframework.runtime.extension.IMethodInterceptor
+import org.spockframework.runtime.extension.IMethodInvocation
+
+import org.springframework.util.ClassUtils
+import org.springframework.web.multipart.support.StandardServletMultipartResolver
+import org.springframework.web.servlet.i18n.SessionLocaleResolver
+
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.testing.web.GrailsWebUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.CamelCaseUrlConverter
 import grails.web.HyphenatedUrlConverter
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
@@ -48,11 +56,6 @@ import org.grails.web.pages.FilteringCodecsByContentTypeSettings
 import org.grails.web.servlet.view.CompositeViewResolver
 import org.grails.web.servlet.view.GroovyPageViewResolver
 import org.grails.web.util.GrailsApplicationAttributes
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
-import org.springframework.util.ClassUtils
-import org.springframework.web.multipart.support.StandardServletMultipartResolver
-import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
 @CompileStatic
 class WebSetupSpecInterceptor implements IMethodInterceptor {

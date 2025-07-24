@@ -22,11 +22,12 @@ package org.grails.datastore.gorm.mongo;
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.util.Assert;
+
 import grails.mongodb.geo.Circle;
 import org.grails.datastore.gorm.finders.MethodExpression;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query.Criterion;
-import org.springframework.util.Assert;
 
 /**
  * A dynamic finder method expression that adds the ability to query within a circle

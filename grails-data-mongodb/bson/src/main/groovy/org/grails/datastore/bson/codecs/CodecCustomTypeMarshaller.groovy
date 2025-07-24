@@ -20,8 +20,10 @@
 package org.grails.datastore.bson.codecs
 
 import groovy.transform.CompileStatic
+
 import org.bson.Document
 import org.bson.codecs.Codec
+
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext

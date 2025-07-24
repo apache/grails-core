@@ -19,10 +19,11 @@
 
 package grails.plugin.json.converters
 
-import grails.plugin.json.builder.JsonGenerator
+import java.time.Period
+
 import groovy.transform.CompileStatic
 
-import java.time.Period
+import grails.plugin.json.builder.JsonGenerator
 
 /**
  * A class to render a {@link Period} as json

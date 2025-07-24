@@ -16,7 +16,10 @@
  */
 package org.grails.gradle.plugin.profiles
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -34,9 +37,8 @@ import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
-import org.grails.gradle.plugin.profiles.tasks.ProfileCompilerTask
 
-import javax.inject.Inject
+import org.grails.gradle.plugin.profiles.tasks.ProfileCompilerTask
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
 

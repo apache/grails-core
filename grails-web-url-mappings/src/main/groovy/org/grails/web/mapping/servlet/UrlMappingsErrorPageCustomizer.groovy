@@ -18,17 +18,18 @@
  */
 package org.grails.web.mapping.servlet
 
-import grails.web.mapping.UrlMapping
-import grails.web.mapping.UrlMappings
 import groovy.transform.CompileStatic
-import org.grails.web.mapping.ResponseCodeMappingData
-import org.grails.web.mapping.ResponseCodeUrlMapping
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.web.server.ErrorPage
 import org.springframework.boot.web.server.WebServerFactoryCustomizer
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory
 import org.springframework.http.HttpStatus
 
+import grails.web.mapping.UrlMapping
+import grails.web.mapping.UrlMappings
+import org.grails.web.mapping.ResponseCodeMappingData
+import org.grails.web.mapping.ResponseCodeUrlMapping
 
 /**
  * Customizes the error pages based on UrlMappings

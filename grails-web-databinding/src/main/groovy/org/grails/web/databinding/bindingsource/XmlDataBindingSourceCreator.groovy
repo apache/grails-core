@@ -18,17 +18,18 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
-import grails.databinding.SimpleMapDataBindingSource;
 import groovy.transform.CompileStatic
 import groovy.xml.slurpersupport.GPathResult
-import grails.web.mime.MimeType
 
+import org.xml.sax.SAXParseException
+
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
+import grails.databinding.SimpleMapDataBindingSource
+import grails.web.mime.MimeType
 import org.grails.databinding.bindingsource.DataBindingSourceCreationException
 import org.grails.databinding.xml.GPathResultCollectionDataBindingSource
 import org.grails.databinding.xml.GPathResultMap
-import org.xml.sax.SAXParseException
 import org.grails.io.support.SpringIOUtils
 
 /**
@@ -77,7 +78,7 @@ class XmlDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceCr
         def gpath = SpringIOUtils.createXmlSlurper().parse(reader)
         return new GPathResultCollectionDataBindingSource(gpath)
     }
-    
+
     @Override
     protected DataBindingSourceCreationException createBindingSourceCreationException(Exception e) {
         if(e instanceof SAXParseException) {

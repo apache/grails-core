@@ -18,9 +18,6 @@
  */
 package org.grails.spring.context.support;
 
-import grails.util.CacheEntry;
-import grails.util.Pair;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -45,6 +42,9 @@ import org.springframework.util.Assert;
 import org.springframework.util.DefaultPropertiesPersister;
 import org.springframework.util.PropertiesPersister;
 import org.springframework.util.StringUtils;
+
+import grails.util.CacheEntry;
+import grails.util.Pair;
 
 /**
  * Spring-specific {@link org.springframework.context.MessageSource} implementation
@@ -126,7 +126,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
     private PropertiesPersister propertiesPersister = new DefaultPropertiesPersister();
 
     private ResourceLoader resourceLoader = new DefaultResourceLoader();
-    
+
     /** Cache to hold filename lists per Locale */
     private final ConcurrentMap<Pair<String, Locale>, CacheEntry<List<Pair<String, Resource>>>> cachedFilenames =
             new ConcurrentHashMap<Pair<String, Locale>, CacheEntry<List<Pair<String, Resource>>>>();
@@ -136,7 +136,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
     /** Cache to hold merged loaded properties per locale */
     private final ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedProperties = new ConcurrentHashMap<Locale, CacheEntry<PropertiesHolder>>();
-    
+
     private final ConcurrentMap<String, CacheEntry<Resource>> cachedResources = new ConcurrentHashMap<String, CacheEntry<Resource>>();
 
 
@@ -165,20 +165,20 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      */
     public Set<String> getBundleCodes(Locale locale,String...basenames){
         List<String> validBaseNames = getValidBasenames(basenames);
-        
+
         Set<String> codes = new HashSet<>();
         for(String basename: validBaseNames){
             List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename,locale);
             for (Pair<String, Resource> filenameAndResource : filenamesAndResources) {
                 if(filenameAndResource.getbValue() != null) {
                     PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
-                    codes.addAll(propHolder.getProperties().stringPropertyNames());                    
+                    codes.addAll(propHolder.getProperties().stringPropertyNames());
                 }
             }
         }
         return codes;
     }
-    
+
     protected List<String> getValidBasenames(String[] basenames){
         List<String> validBaseNames = new LinkedList<>();
         for(String basename:basenames){
@@ -191,7 +191,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         }
         return validBaseNames;
     }
-    
+
     /**
      * Set an array of basenames, each following the basic ResourceBundle convention
      * of not specifying file extension or language codes, but in contrast to
@@ -280,7 +280,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             this.fileCacheMillis = this.cacheMillis;
         }
     }
-    
+
     /**
      * Set the number of seconds to cache loaded properties files.
      * <ul>
@@ -339,7 +339,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             for (String basename : this.basenames) {
                 List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename, locale);
                 for (Pair<String, Resource> filenameAndResource : filenamesAndResources) {
-                    if(filenameAndResource.getbValue() != null) {                   
+                    if(filenameAndResource.getbValue() != null) {
                         PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
                         String result = propHolder.getProperty(code);
                         if (result != null) {
@@ -369,7 +369,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             for (String basename : this.basenames) {
                 List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename, locale);
                 for (Pair<String, Resource> filenameAndResource : filenamesAndResources) {
-                    if(filenameAndResource.getbValue() != null) {                    
+                    if(filenameAndResource.getbValue() != null) {
                         PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
                         MessageFormat result = propHolder.getMessageFormat(code, locale);
                         if (result != null) {
@@ -447,7 +447,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             }
         });
     }
-        
+
     /**
      * Calculate the filenames for the given bundle basename and Locale,
      * appending language code, country code, and variant code.
@@ -506,7 +506,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             }
         }, true, null);
     }
-    
+
     protected static class PropertiesHolderCacheEntry extends CacheEntry<PropertiesHolder> {
         public PropertiesHolderCacheEntry() {
             super();
@@ -522,7 +522,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             return updater.call();
         }
     }
-    
+
 
     /**
      * Load the properties from the given resource.
@@ -599,7 +599,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
     public String toString() {
         return getClass().getName() + ": basenames=[" + StringUtils.arrayToCommaDelimitedString(this.basenames) + "]";
     }
-    
+
     protected Resource locateResource(final String filename) {
         return CacheEntry.getValue(cachedResources, filename, cacheMillis, new Callable<Resource>() {
             @Override
@@ -608,7 +608,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             }
         });
     }
-    
+
     protected Resource locateResourceWithoutCache(String filename) {
         Resource resource = resourceLoader.getResource(org.grails.io.support.ResourceLoader.CLASSPATH_URL_PREFIX + filename + PROPERTIES_SUFFIX);
         if(!resource.exists()) {
@@ -622,7 +622,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         } else {
             return null;
         }
-    }    
+    }
 
     /**
      * PropertiesHolder for caching.
@@ -635,7 +635,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
         private String filename;
         private Resource resource;
-        
+
         private long fileTimestamp = -1;
 
         /** Cache to hold already generated MessageFormats per message code */
@@ -647,15 +647,15 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             this.resource = resource;
             doUpdate(true);
         }
-        
+
         public PropertiesHolder(Properties properties) {
             this.properties = properties;
         }
-        
+
         public boolean update() {
             return doUpdate(false);
         }
-        
+
         private boolean doUpdate(boolean initialization) {
             if(filename == null) {
                 return false;
@@ -699,7 +699,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
                 this.cachedMessageFormats.clear();
                 return true;
             }
-        }       
+        }
 
         public String getFilename() {
             return filename;

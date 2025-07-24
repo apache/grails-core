@@ -18,7 +18,19 @@
  */
 package org.grails.gsp.jsp;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 import groovy.lang.Binding;
+
 import jakarta.el.ELContext;
 import jakarta.servlet.GenericServlet;
 import jakarta.servlet.Servlet;
@@ -36,21 +48,12 @@ import jakarta.servlet.jsp.JspFactory;
 import jakarta.servlet.jsp.JspWriter;
 import jakarta.servlet.jsp.PageContext;
 import jakarta.servlet.jsp.tagext.BodyContent;
-import org.grails.gsp.GroovyPage;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+
 import org.springframework.util.Assert;
 import org.springframework.web.context.request.RequestContextHolder;
 
-import java.io.IOException;
-import java.io.Writer;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import org.grails.gsp.GroovyPage;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * A JSP PageContext implementation for use with GSP.

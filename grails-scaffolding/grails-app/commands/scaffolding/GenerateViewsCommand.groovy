@@ -18,13 +18,14 @@
  */
 package scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import grails.dev.commands.GrailsApplicationCommand
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
-import groovy.transform.CompileStatic
 import org.grails.io.support.Resource
 
 /**

@@ -19,10 +19,12 @@
 
 package org.grails.testing.spock
 
-import grails.testing.spock.RunOnce
 import groovy.transform.CompileStatic
+
 import org.spockframework.runtime.extension.AbstractAnnotationDrivenExtension
 import org.spockframework.runtime.model.MethodInfo
+
+import grails.testing.spock.RunOnce
 
 @CompileStatic
 class RunOnceExtension extends AbstractAnnotationDrivenExtension<RunOnce> {

@@ -19,20 +19,23 @@
 
 package grails.plugin.json.view.mvc
 
+import groovy.transform.CompileStatic
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.validation.Errors
+
 import grails.core.support.proxy.ProxyHandler
 import grails.plugin.json.renderer.ErrorsJsonViewRenderer
 import grails.plugin.json.renderer.JsonViewJsonRenderer
-import grails.plugin.json.view.JsonViewTemplateEngine
 import grails.plugin.json.view.JsonViewConfiguration
+import grails.plugin.json.view.JsonViewTemplateEngine
 import grails.plugin.json.view.JsonViewWritableScript
 import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.validation.Errors
 
-import jakarta.annotation.PostConstruct
 /**
  * @author Graeme Rocher
  * @since 1.0

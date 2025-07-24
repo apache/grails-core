@@ -18,11 +18,10 @@
  */
 package grails.util;
 
-import groovy.lang.MetaClass;
-import groovy.util.Proxy;
-
 import java.util.Map;
 
+import groovy.lang.MetaClass;
+import groovy.util.Proxy;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.InvokerHelper;
 

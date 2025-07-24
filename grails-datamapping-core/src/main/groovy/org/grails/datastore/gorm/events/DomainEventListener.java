@@ -26,6 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.util.ReflectionUtils;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
@@ -43,10 +48,6 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.context.ApplicationEvent;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.util.ReflectionUtils;
 
 /**
  * An event listener that provides support for GORM domain events.
@@ -165,7 +166,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
         }
 
         return invokeEvent(EVENT_BEFORE_INSERT, entity, ea, event);
-    }    
+    }
 
     protected void setVersion(final EntityAccess ea) {
         final Class versionType = ea.getPersistentEntity().getVersion().getType();
@@ -186,7 +187,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
     public boolean beforeUpdate(final PersistentEntity entity, final EntityAccess ea, PreUpdateEvent event) {
         return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea, event);
-    }    
+    }
 
     public boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea) {
         return invokeEvent(EVENT_BEFORE_DELETE, entity, ea, null);
@@ -194,7 +195,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
     public boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea, PreDeleteEvent event) {
         return invokeEvent(EVENT_BEFORE_DELETE, entity, ea, event);
-    }    
+    }
 
     public void beforeLoad(final PersistentEntity entity, final EntityAccess ea) {
         beforeLoad(entity, ea, null);
@@ -210,7 +211,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
     public void afterDelete(final PersistentEntity entity, final EntityAccess ea, PostDeleteEvent event) {
         invokeEvent(EVENT_AFTER_DELETE, entity, ea, event);
-    }    
+    }
 
     public void afterInsert(final PersistentEntity entity, final EntityAccess ea) {
         afterInsert(entity, ea, null);
@@ -286,7 +287,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
             return true;
         }
 
-        
+
         final Object result;
         if(ea != null) {
             final Object o = ea.getEntity();

@@ -18,24 +18,24 @@
  */
 package org.grails.databinding.converters.web
 
-import grails.databinding.converters.ValueConverter;
-import groovy.transform.CompileStatic
-
 import java.text.NumberFormat
 import java.text.ParsePosition
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.http.HttpServletRequest
 
-import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.servlet.LocaleResolver
 
+import grails.databinding.converters.ValueConverter
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * A ValueConverter that knows how to convert a String to any numeric type and is Locale aware.  The
  * converter will use the Locale of the current request if being invoked as part of a
  * request, otherwise will use Locale.getDefault()
- * 
+ *
  * @author Jeff Brown
  * @since 2.3
  *
@@ -44,7 +44,7 @@ import org.springframework.web.servlet.LocaleResolver
 class LocaleAwareNumberConverter implements ValueConverter {
 
     Class<?> targetType
-    
+
     @Autowired(required=false)
     LocaleResolver localeResolver
 

@@ -19,17 +19,18 @@
 
 package org.grails.taglib;
 
+import java.io.Writer;
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
+
 import org.grails.encoder.Encoder;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputEncodingStack;
 import org.grails.taglib.encoder.OutputEncodingStackAttributes;
 import org.grails.taglib.encoder.WithCodecHelper;
-
-import java.io.Writer;
-import java.util.Map;
 
 /**
  * Created by lari on 16/07/14.

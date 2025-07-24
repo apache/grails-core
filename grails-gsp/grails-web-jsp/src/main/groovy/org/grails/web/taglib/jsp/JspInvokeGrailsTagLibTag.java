@@ -18,11 +18,6 @@
  */
 package org.grails.web.taglib.jsp;
 
-import grails.core.gsp.GrailsTagLibClass;
-import grails.util.Holders;
-import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
-
 import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,6 +29,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import groovy.lang.Closure;
+import groovy.lang.GroovyObject;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import jakarta.servlet.jsp.JspException;
 import jakarta.servlet.jsp.JspTagException;
 import jakarta.servlet.jsp.JspWriter;
@@ -41,15 +40,17 @@ import jakarta.servlet.jsp.tagext.BodyContent;
 import jakarta.servlet.jsp.tagext.BodyTagSupport;
 import jakarta.servlet.jsp.tagext.DynamicAttributes;
 
-import grails.core.GrailsApplication;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-import org.grails.buffer.FastStringPrintWriter;
-import org.grails.gsp.GroovyPage;
-import org.grails.taglib.GrailsTagException;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.ApplicationContext;
+
+import grails.core.GrailsApplication;
+import grails.core.gsp.GrailsTagLibClass;
+import grails.util.Holders;
+import org.grails.buffer.FastStringPrintWriter;
+import org.grails.core.artefact.gsp.TagLibArtefactHandler;
+import org.grails.gsp.GroovyPage;
+import org.grails.taglib.GrailsTagException;
 
 /**
  * A tag that invokes a tag defined in a the Grails dynamic tag library. Authors of Grails tags

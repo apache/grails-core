@@ -19,15 +19,26 @@
 
 package org.grails.cli.profile.commands
 
-import grails.build.logging.GrailsConsole
-import grails.io.IOUtils
-import grails.util.Environment
-import grails.util.GrailsNameUtils
+import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.stream.Stream
+
 import groovy.ant.AntBuilder
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
 import org.eclipse.aether.graph.Dependency
+
+import grails.build.logging.GrailsConsole
+import grails.io.IOUtils
+import grails.util.Environment
+import grails.util.GrailsNameUtils
 import org.grails.build.logging.GrailsConsoleAntBuilder
 import org.grails.build.parsing.CommandLine
 import org.grails.cli.GrailsCli
@@ -41,15 +52,6 @@ import org.grails.cli.profile.commands.io.GradleDependency
 import org.grails.cli.profile.repository.MavenProfileRepository
 import org.grails.io.support.FileSystemResource
 import org.grails.io.support.Resource
-
-import java.nio.file.DirectoryNotEmptyException
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
-import java.util.stream.Stream
 
 /**
  * Command for creating Grails applications

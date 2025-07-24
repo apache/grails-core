@@ -19,20 +19,21 @@
 
 package org.grails.cli.profile.commands.factory
 
-import grails.build.logging.GrailsConsole
-import grails.util.GrailsNameUtils
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import grails.build.logging.GrailsConsole
+import grails.util.GrailsNameUtils
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.Profile
 import org.grails.cli.profile.commands.script.GroovyScriptCommand
 import org.grails.cli.profile.commands.script.GroovyScriptCommandTransform
 import org.grails.io.support.Resource
-
-import java.nio.charset.StandardCharsets
 
 /**
  * A {@link CommandFactory} that creates {@link Command} instances from Groovy scripts

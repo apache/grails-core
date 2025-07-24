@@ -19,13 +19,14 @@
 
 package grails.plugin.json.renderer
 
+import groovy.transform.CompileStatic
+
 import grails.core.support.proxy.ProxyHandler
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.views.mvc.renderer.DefaultViewRenderer
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
 
 /**
  * A renderer that will lookup a JSON view if it exists and render it, otherwise fallback to default

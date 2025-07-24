@@ -18,6 +18,14 @@
  */
 package grails.rest.render.util
 
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.MessageSource
+import org.springframework.http.HttpMethod
+
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.EntityProxyHandler
 import grails.core.support.proxy.ProxyHandler
@@ -30,8 +38,6 @@ import grails.util.GrailsMessageSourceUtils
 import grails.util.GrailsWebUtil
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -41,10 +47,6 @@ import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
-import org.springframework.http.HttpMethod
 
 /**
  * Abstract base class for HAL renderers

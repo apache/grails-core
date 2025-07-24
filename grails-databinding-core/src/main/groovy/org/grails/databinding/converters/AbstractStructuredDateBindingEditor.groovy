@@ -18,9 +18,10 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.DataBindingSource;
-import grails.databinding.StructuredBindingEditor;
 import groovy.transform.CompileStatic
+
+import grails.databinding.DataBindingSource
+import grails.databinding.StructuredBindingEditor
 
 /**
  * @author Jeff Brown

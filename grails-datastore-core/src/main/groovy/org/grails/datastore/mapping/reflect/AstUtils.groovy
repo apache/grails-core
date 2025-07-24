@@ -18,6 +18,10 @@
  */
 package org.grails.datastore.mapping.reflect
 
+import java.lang.annotation.Annotation
+import java.lang.reflect.Modifier
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.TypeChecked
@@ -51,16 +55,13 @@ import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.trait.Traits
-import org.springframework.util.StringUtils
 
 import jakarta.persistence.Entity
-import java.lang.annotation.Annotation
-import java.lang.reflect.Modifier
-import java.util.regex.Pattern
+
+import org.springframework.util.StringUtils
 
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse
-
 
 /**
  * Utility methods for dealing with Groovy ASTs

@@ -18,22 +18,20 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.CollectionDataBindingSource;
-import grails.databinding.DataBindingSource;
-import grails.databinding.SimpleMapDataBindingSource
-import groovy.json.JsonException
-import groovy.json.JsonSlurper;
-import groovy.transform.CompileStatic
-
 import java.util.regex.Pattern
 
-import org.grails.web.json.JSONObject
+import groovy.json.JsonException
+import groovy.json.JsonSlurper
+import groovy.transform.CompileStatic
 
-import grails.web.mime.MimeType
-
-import org.grails.databinding.bindingsource.DataBindingSourceCreationException
 import org.springframework.beans.factory.annotation.Autowired
 
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
+import grails.databinding.SimpleMapDataBindingSource
+import grails.web.mime.MimeType
+import org.grails.databinding.bindingsource.DataBindingSourceCreationException
+import org.grails.web.json.JSONObject
 
 /**
  * Creates DataBindingSource objects from JSON in the request body

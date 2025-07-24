@@ -20,6 +20,7 @@ package org.grails.cli.boot
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.boot.cli.command.CommandFactory
 import org.springframework.boot.cli.command.CommandRunner
 

@@ -19,14 +19,16 @@
 
 package org.grails.taglib
 
-import grails.core.gsp.GrailsTagLibClass
-import grails.util.GrailsClassUtils
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.codehaus.groovy.reflection.CachedMethod
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
-import org.grails.taglib.encoder.OutputContextLookupHelper
+
 import org.springframework.context.ApplicationContext
+
+import grails.core.gsp.GrailsTagLibClass
+import grails.util.GrailsClassUtils
+import org.grails.taglib.encoder.OutputContextLookupHelper
 
 class TagLibraryMetaUtils {
     // used for testing (GroovyPageUnitTestMixin.mockTagLib) and "nonEnhancedTagLibClasses" in GroovyPagesGrailsPlugin
@@ -51,7 +53,7 @@ class TagLibraryMetaUtils {
             registerNamespaceMetaProperty(mc, gspTagLibraryLookup, ns)
         }
     }
-    
+
     @CompileStatic
     static void registerNamespaceMetaProperty(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace) {
         if(!metaClass.hasProperty(namespace) && !doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[])) {
@@ -62,7 +64,7 @@ class TagLibraryMetaUtils {
     @CompileStatic
     static registerMethodMissingForTags(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace, String name, boolean addAll=true, boolean overrideMethods=true) {
         GroovyObject mc = (GroovyObject)metaClass;
-        
+
         if(overrideMethods || !doesMethodExist(metaClass, name, [Map, Closure] as Class[])) {
             mc.setProperty(name) {Map attrs, Closure body ->
                 TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
@@ -104,7 +106,7 @@ class TagLibraryMetaUtils {
         GroovyObject mc = (GroovyObject)metaClass;
         mc.setProperty(GrailsClassUtils.getGetterName(name)) {-> result }
     }
-    
+
     @CompileStatic
     static void registerTagMetaMethods(MetaClass emc, TagLibraryLookup lookup, String namespace) {
         for(String tagName : lookup.getAvailableTags(namespace)) {
@@ -115,7 +117,7 @@ class TagLibraryMetaUtils {
             registerTagMetaMethods(emc, lookup, TagOutput.DEFAULT_NAMESPACE)
         }
     }
-    
+
     @CompileStatic
     protected static boolean doesMethodExist(final MetaClass mc, final String methodName, final Class[] parameterTypes, boolean staticScope=false, boolean onlyReal=false) {
         boolean methodExists = false
@@ -131,7 +133,7 @@ class TagLibraryMetaUtils {
             }
         }
     }
-        
+
     @CompileStatic
     private static boolean isRealMethod(MetaMethod existingMethod) {
         existingMethod instanceof CachedMethod

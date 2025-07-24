@@ -19,6 +19,12 @@
 
 package grails.views
 
+import java.beans.PropertyDescriptor
+
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.BeanUtils
+
 import grails.config.ConfigMap
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
@@ -26,13 +32,9 @@ import grails.core.support.GrailsApplicationAware
 import grails.util.BuildSettings
 import grails.util.Environment
 import grails.util.Metadata
-import groovy.transform.CompileStatic
 import org.grails.config.CodeGenConfig
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.io.support.GrailsResourceUtils
-import org.springframework.beans.BeanUtils
-
-import java.beans.PropertyDescriptor
 
 /**
  * Default configuration

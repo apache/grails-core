@@ -18,9 +18,6 @@
  */
 package org.grails.datastore.mapping.mongo.config;
 
-import com.mongodb.ConnectionString;
-import groovy.lang.Closure;
-
 import java.beans.PropertyDescriptor;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -35,6 +32,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import groovy.lang.Closure;
+
+import com.mongodb.ConnectionString;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecConfigurationException;
@@ -46,6 +46,11 @@ import org.bson.types.Code;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
 import org.bson.types.Symbol;
+
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.core.convert.converter.ConverterRegistry;
+import org.springframework.core.env.PropertyResolver;
+
 import org.grails.datastore.bson.codecs.BigDecimalCodec;
 import org.grails.datastore.bson.codecs.CodecCustomTypeMarshaller;
 import org.grails.datastore.bson.codecs.CodecExtensions;
@@ -75,7 +80,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.document.config.Attribute;
 import org.grails.datastore.mapping.document.config.Collection;
 import org.grails.datastore.mapping.document.config.DocumentMappingContext;
-
 import org.grails.datastore.mapping.model.AbstractClassMapping;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
@@ -89,9 +93,6 @@ import org.grails.datastore.mapping.mongo.MongoConstants;
 import org.grails.datastore.mapping.mongo.MongoDatastore;
 import org.grails.datastore.mapping.mongo.connections.AbstractMongoConnectionSourceSettings;
 import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.core.convert.converter.ConverterRegistry;
-import org.springframework.core.env.PropertyResolver;
 
 /**
  * Models a {@link org.grails.datastore.mapping.model.MappingContext} for Mongo.

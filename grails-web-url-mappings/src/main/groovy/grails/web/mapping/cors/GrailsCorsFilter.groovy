@@ -19,6 +19,7 @@
 package grails.web.mapping.cors
 
 import groovy.transform.CompileStatic
+
 import org.springframework.core.Ordered
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource

@@ -18,10 +18,11 @@
  */
 package grails.util
 
-import groovy.transform.CompileStatic
-import org.springframework.util.StringUtils
-
 import java.util.regex.Pattern
+
+import groovy.transform.CompileStatic
+
+import org.springframework.util.StringUtils
 
 /**
  * Extra methods for string manipulation
@@ -207,7 +208,7 @@ abstract class GrailsStringUtils extends StringUtils{
      * GrailsStringUtils.trimToNull("xyz")         = "xyz"
      * GrailsStringUtils.trimToNull("    xyz    ") = "xyz"
      * </pre>
-     * 
+     *
      *  based on https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/StringUtils.java#L8838
      *
      * @param str  the String to be trimmed, may be null

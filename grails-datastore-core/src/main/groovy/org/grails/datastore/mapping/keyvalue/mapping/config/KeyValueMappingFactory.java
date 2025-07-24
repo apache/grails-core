@@ -14,12 +14,12 @@
  */
 package org.grails.datastore.mapping.keyvalue.mapping.config;
 
+import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.MappingFactory;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-
-import java.beans.PropertyDescriptor;
 
 /**
  * @author Graeme Rocher

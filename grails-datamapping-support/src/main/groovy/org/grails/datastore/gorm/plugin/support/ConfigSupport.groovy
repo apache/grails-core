@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.plugin.support
 
-import org.grails.config.PropertySourcesConfig
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.convert.converter.Converter
 import org.springframework.core.convert.support.ConfigurableConversionService
 import org.springframework.core.env.PropertyResolver
+
+import org.grails.config.PropertySourcesConfig
 
 /**
  * Support for configuration when developing Grails plugins

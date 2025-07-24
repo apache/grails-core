@@ -20,15 +20,16 @@ package org.grails.web.servlet.context.support;
 
 import jakarta.servlet.ServletContext;
 
-import grails.web.servlet.context.GrailsWebApplicationContext;
-import grails.core.GrailsApplication;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.web.context.ConfigurableWebApplicationContext;
 import org.springframework.web.context.ServletContextAware;
+
+import grails.core.GrailsApplication;
+import grails.web.servlet.context.GrailsWebApplicationContext;
+import org.grails.spring.DefaultRuntimeSpringConfiguration;
 
 /**
  * Subclasses DefaultRuntimeSpringConfiguration to provide construction of WebApplicationContext instances.

@@ -18,23 +18,25 @@
  */
 package org.grails.plugins.web.mapping
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
+import org.springframework.aop.framework.ProxyFactoryBean
+import org.springframework.aop.target.HotSwappableTargetSource
+import org.springframework.context.ApplicationContext
+
 import grails.config.Settings
 import grails.plugins.Plugin
 import grails.util.Environment
 import grails.util.GrailsUtil
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import org.grails.core.artefact.UrlMappingsArtefactHandler
-import org.grails.spring.beans.factory.HotSwappableTargetSourceFactoryBean
-import org.grails.web.mapping.CachingLinkGenerator
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappings
 import grails.web.mapping.UrlMappingsHolder
+import org.grails.core.artefact.UrlMappingsArtefactHandler
+import org.grails.spring.beans.factory.HotSwappableTargetSourceFactoryBean
+import org.grails.web.mapping.CachingLinkGenerator
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
-import org.springframework.aop.framework.ProxyFactoryBean
-import org.springframework.aop.target.HotSwappableTargetSource
-import org.springframework.context.ApplicationContext
 
 /**
  * Handles the configuration of URL mappings.

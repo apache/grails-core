@@ -25,11 +25,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.springframework.util.ReflectionUtils;
+import org.springframework.web.util.HtmlUtils;
+
 import org.grails.encoder.AbstractCharReplacementEncoder;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.DefaultCodecIdentifier;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.web.util.HtmlUtils;
 
 /**
  * This encoder is for HTML4 documents. It uses escaping information from

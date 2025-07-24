@@ -19,11 +19,16 @@
 
 package org.grails.datastore.gorm.async.transform;
 
-import grails.async.Promise;
-import grails.async.Promises;
+import java.beans.Introspector;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovyObjectSupport;
-import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
@@ -52,15 +57,11 @@ import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
 import org.codehaus.groovy.transform.stc.StaticTypeCheckingSupport;
-import org.grails.async.transform.internal.DelegateAsyncUtils;
 
-import java.beans.Introspector;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import grails.async.Promise;
+import grails.async.Promises;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
+import org.grails.async.transform.internal.DelegateAsyncUtils;
 
 import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse;
 import static org.codehaus.groovy.ast.tools.GenericsUtils.createGenericsSpec;

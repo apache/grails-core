@@ -20,11 +20,13 @@
 package org.grails.datastore.bson.codecs.encoders
 
 import groovy.transform.CompileStatic
+
 import org.bson.BsonWriter
 import org.bson.codecs.Codec
 import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
+
 import org.grails.datastore.bson.codecs.PropertyEncoder
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingMap

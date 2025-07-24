@@ -19,23 +19,25 @@
 
 package grails.testing.web.interceptor
 
+import java.lang.reflect.ParameterizedType
+
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+
+import org.springframework.web.servlet.ModelAndView
+
 import grails.artefact.Interceptor
 import grails.core.GrailsClass
 import grails.testing.web.GrailsWebUnitTest
 import grails.util.GrailsNameUtils
 import grails.web.mapping.UrlMappingInfo
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.plugins.web.interceptors.GrailsInterceptorHandlerInterceptorAdapter
 import org.grails.plugins.web.interceptors.InterceptorArtefactHandler
 import org.grails.testing.ParameterizedGrailsUnitTest
 import org.grails.web.mapping.ForwardUrlMappingInfo
 import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.web.servlet.ModelAndView
-
-import java.lang.reflect.ParameterizedType
 
 @CompileStatic
 trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnitTest {

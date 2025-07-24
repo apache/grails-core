@@ -18,16 +18,11 @@
  */
 package org.grails.compiler.injection;
 
-import grails.util.GrailsNameUtils;
-import grails.util.Mixin;
-import grails.util.MixinTargetAware;
-import groovy.lang.GroovyObjectSupport;
-
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import groovy.lang.GroovyObjectSupport;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -46,6 +41,11 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
+import grails.util.GrailsNameUtils;
+import grails.util.Mixin;
+import grails.util.MixinTargetAware;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * The logic for the {@link grails.util.Mixin} location transform.

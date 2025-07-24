@@ -18,11 +18,12 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.ChildEntity
-import org.apache.grails.data.testing.tck.domains.TestEntity
+import spock.lang.IgnoreRest
+
 import grails.validation.ValidationException
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.IgnoreRest
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * @author graemerocher

@@ -19,20 +19,23 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import groovy.transform.CompileStatic
+
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import groovy.transform.CompileStatic
 import org.bson.codecs.Codec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.codecs.configuration.CodecRegistry
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.core.env.PropertyResolver
 
 /**
  * A factory for building {@link MongoClient} instances

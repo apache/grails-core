@@ -28,9 +28,10 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
+
+import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 
 /**
  * Provides methods to help with reflective operations

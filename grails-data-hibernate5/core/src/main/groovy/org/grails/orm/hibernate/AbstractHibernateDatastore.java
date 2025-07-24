@@ -18,10 +18,36 @@
  */
 package org.grails.orm.hibernate;
 
-import grails.gorm.multitenancy.Tenants;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+
+import javax.sql.DataSource;
+
 import groovy.lang.Closure;
-import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
+
+import jakarta.annotation.PreDestroy;
+
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.core.env.PropertyResolver;
+
+import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
+import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
+import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
 import org.grails.datastore.mapping.config.Settings;
 import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
@@ -43,28 +69,7 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
-import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
 import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.springframework.beans.BeanUtils;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.MessageSource;
-import org.springframework.context.MessageSourceAware;
-import org.springframework.core.env.PropertyResolver;
-
-import jakarta.annotation.PreDestroy;
-import javax.sql.DataSource;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * Datastore implementation that uses a Hibernate SessionFactory underneath.

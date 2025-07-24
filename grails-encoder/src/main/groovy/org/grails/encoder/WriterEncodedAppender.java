@@ -18,10 +18,10 @@
  */
 package org.grails.encoder;
 
-import org.grails.charsequences.CharSequences;
-
 import java.io.IOException;
 import java.io.Writer;
+
+import org.grails.charsequences.CharSequences;
 
 /**
  * An EncodedAppender implementation that writes to a java.io.Writer.
@@ -79,7 +79,7 @@ public class WriterEncodedAppender extends AbstractEncodedAppender {
     public void close() throws IOException {
         target.close();
     }
-    
+
     @Override
     protected EncodingState createNewEncodingState(Encoder encoder, EncodingState encodingState) {
         return null;

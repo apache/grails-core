@@ -18,16 +18,20 @@
  */
 package grails.mongodb
 
+import java.util.function.Function
+
+import groovy.transform.CompileStatic
+
 import com.mongodb.ReadPreference
 import com.mongodb.client.AggregateIterable
 import com.mongodb.client.FindIterable
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.FindOneAndDeleteOptions
-import grails.mongodb.api.MongoAllOperations
-import groovy.transform.CompileStatic
 import org.bson.Document
 import org.bson.conversions.Bson
+
+import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
@@ -39,8 +43,6 @@ import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
-
-import java.util.function.Function
 
 /**
  * Enhances the default {@link GormEntity} class with MongoDB specific methods

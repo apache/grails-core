@@ -19,6 +19,28 @@
 
 package org.grails.orm.hibernate.connections;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Properties;
+
+import javax.sql.DataSource;
+
+import org.hibernate.Interceptor;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.spi.MetadataContributor;
+import org.hibernate.cfg.Configuration;
+import org.hibernate.cfg.NamingStrategy;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.io.Resource;
+
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.SpringDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
@@ -32,25 +54,6 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
-import org.hibernate.Interceptor;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.spi.MetadataContributor;
-import org.hibernate.cfg.Configuration;
-import org.hibernate.cfg.NamingStrategy;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.MessageSource;
-import org.springframework.context.MessageSourceAware;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.io.Resource;
-
-import javax.sql.DataSource;
-import java.io.File;
-import java.io.IOException;
-import java.util.Properties;
 
 /**
  * Constructs {@link SessionFactory} instances from a {@link HibernateMappingContext}

@@ -19,11 +19,12 @@
 
 package grails.events.subscriber
 
-import grails.events.Event
+import java.lang.reflect.Method
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 
-import java.lang.reflect.Method
+import grails.events.Event
 
 /**
  * A method subscribers for methods that accept an event argument

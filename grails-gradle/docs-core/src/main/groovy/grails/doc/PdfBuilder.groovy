@@ -18,17 +18,17 @@
  */
 package grails.doc
 
-import groovy.transform.CompileStatic
-import org.jsoup.parser.Parser
+import java.nio.charset.StandardCharsets
 
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 
+import groovy.transform.CompileStatic
+
 import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 import org.w3c.dom.Document
 import org.xhtmlrenderer.pdf.ITextRenderer
-
-import java.nio.charset.StandardCharsets
 
 @CompileStatic
 class PdfBuilder {
@@ -77,7 +77,7 @@ class PdfBuilder {
 
     static boolean cleanHtml = System.getProperty('grails.docs.clean.html') == null ? true : Boolean.getBoolean("grails.docs.clean.html")
     static boolean debugPdf = Boolean.getBoolean("grails.docs.debug.pdf")
-    
+
     private static String cleanupHtml(File htmlFile, String xml) {
         String result = cleanHtml ? Jsoup.parse(xml, "", Parser.xmlParser()).outerHtml() : xml
         result = removeCssLinks(result)
@@ -121,7 +121,7 @@ class PdfBuilder {
         """<style type="text/css">
          pre, code {
           font-size: 10px;
-         } 
+         }
          .toc-item { margin-bottom: 2px; }
          .toc-item strong { margin-right: 2px; }
         .contribute-btn, #navigation, #ref-button, #toggle-col1 { display: none; }

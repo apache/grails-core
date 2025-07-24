@@ -21,7 +21,6 @@ package org.grails.databinding.compiler;
 
 import java.util.Map;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.FieldNode;
@@ -33,6 +32,8 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 @GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
 public class BindingFormatASTTransformation implements ASTTransformation, TransformWithPriority {

@@ -18,10 +18,11 @@
  */
 package org.grails.spring.beans;
 
+import org.springframework.beans.BeansException;
+
 import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
 import grails.core.support.GrailsConfigurationAware;
-import org.springframework.beans.BeansException;
 
 /**
  * Implementation of {@link org.springframework.beans.factory.config.BeanPostProcessor}

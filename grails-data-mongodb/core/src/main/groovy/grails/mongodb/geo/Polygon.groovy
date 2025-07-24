@@ -16,6 +16,7 @@ package grails.mongodb.geo
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+
 import org.springframework.util.Assert
 
 /**
@@ -63,7 +64,7 @@ class Polygon extends Shape implements GeoJSON{
      */
     public List<List<List<Double>>> asList() {
          points.collect() { List<Point> ring ->
-            ring.collect { Point p -> 
+            ring.collect { Point p ->
                 p.asList()
             }
         }
@@ -82,16 +83,16 @@ class Polygon extends Shape implements GeoJSON{
     static Polygon valueOf(List coords) {
         Assert.notNull(coords, "Argument coords cannot be null")
 
-        
+
 
         /*
-         * Search for list type - it could be 
+         * Search for list type - it could be
          * (1) List<Point>  - a single ring polygon
          * (2) List<List<Number>> - a single ring with list as long/lat/alt
          * (3) List<List<Point> - a multi-ring polygon
          * (4) List<List<List<Double> - a multi-ring polygon with list as long/lat/alt
          */
-         try 
+         try
          {
             if(coords[0] instanceof Point){
                 return new Polygon( [fromSingleCoordsList(coords)] ) // case (1) above
@@ -124,12 +125,12 @@ class Polygon extends Shape implements GeoJSON{
          catch(IndexOutOfBoundsException ioobe){
             throw new IllegalArgumentException("Coordinate lists cannot be empty")
          }
-         
+
     }
 
     /**
      *  A single ring.  This could be a list of Point objects or a List points as number lists.
-     *   E.g. List<Point> or List<List<Number>> 
+     *   E.g. List<Point> or List<List<Number>>
      */
     private static List<Point> fromSingleCoordsList(List coords) {
         Assert.notNull(coords, "Argument coords cannot be null")

@@ -20,15 +20,16 @@ package org.grails.compiler
 
 import java.lang.reflect.Modifier
 
-import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
-import static org.codehaus.groovy.ast.ClassHelper.Integer_TYPE
-import static org.codehaus.groovy.ast.ClassHelper.LIST_TYPE
-
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.MethodCall
-import org.grails.compiler.injection.GrailsASTUtils
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
+
+import org.grails.compiler.injection.GrailsASTUtils
+
+import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
+import static org.codehaus.groovy.ast.ClassHelper.Integer_TYPE
+import static org.codehaus.groovy.ast.ClassHelper.LIST_TYPE
 
 /**
  *

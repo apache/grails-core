@@ -19,15 +19,17 @@
 
 package org.grails.events.gorm
 
-import grails.events.bus.EventBus
+import java.beans.Introspector
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
+import org.springframework.context.ApplicationEvent
+
+import grails.events.bus.EventBus
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
-import org.springframework.context.ApplicationEvent
-
-import java.beans.Introspector
 
 /**
  * Dispatches GORM events to the {@link EventBus}

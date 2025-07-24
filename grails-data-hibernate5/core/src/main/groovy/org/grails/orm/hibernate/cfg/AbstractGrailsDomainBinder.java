@@ -18,11 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.

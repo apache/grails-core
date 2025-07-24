@@ -18,12 +18,12 @@
  */
 package org.grails.gsp.compiler;
 
-import grails.util.GrailsStringUtils;
-import org.grails.gsp.GroovyPage;
-
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.lang.reflect.Array;
+
+import grails.util.GrailsStringUtils;
+import org.grails.gsp.GroovyPage;
 
 
 /**

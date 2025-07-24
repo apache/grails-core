@@ -21,8 +21,8 @@ package org.grails.datastore.mapping.core.grailsversion
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import org.grails.datastore.mapping.reflect.ClassUtils
 
+import org.grails.datastore.mapping.reflect.ClassUtils
 
 /**
  * A class to represent a version of Grails for comparison

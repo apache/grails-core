@@ -18,16 +18,18 @@
  */
 package org.grails.web.converters;
 
-import groovy.lang.Writable;
-import org.grails.buffer.FastStringWriter;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.Writable;
+
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+
+import org.grails.buffer.FastStringWriter;
 
 /**
  * Abstract base implementation of the Converter interface that provides a default toString() implementation.

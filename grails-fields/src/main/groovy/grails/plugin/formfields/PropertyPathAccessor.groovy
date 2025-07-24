@@ -19,22 +19,24 @@
 
 package grails.plugin.formfields
 
-import grails.core.GrailsDomainClass
-import grails.gorm.validation.DefaultConstrainedProperty
-import grails.util.GrailsNameUtils
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.validation.FieldError
+
+import grails.core.GrailsDomainClass
+import grails.gorm.validation.DefaultConstrainedProperty
+import grails.util.GrailsNameUtils
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.scaffolding.model.property.Constrained
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.validation.FieldError
 
 import static grails.plugin.formfields.BeanPropertyAccessorFactory.stripIndex
-import static java.util.Collections.EMPTY_LIST
 import static grails.util.GrailsStringUtils.substringAfterLast
+import static java.util.Collections.EMPTY_LIST
 
 @CompileStatic
 @Canonical

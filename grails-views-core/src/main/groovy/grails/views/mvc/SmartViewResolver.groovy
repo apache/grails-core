@@ -18,8 +18,19 @@
  */
 package grails.views.mvc
 
+import groovy.transform.CompileStatic
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+
+import org.springframework.beans.BeanUtils
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.servlet.LocaleResolver
+import org.springframework.web.servlet.View
+
 import grails.config.Config
 import grails.core.support.GrailsConfigurationAware
 import grails.views.ResolvableGroovyTemplateEngine
@@ -29,14 +40,7 @@ import grails.views.resolve.TemplateResolverUtils
 import grails.web.http.HttpHeaders
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
-import org.springframework.beans.BeanUtils
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.servlet.LocaleResolver
-import org.springframework.web.servlet.View
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 /**
  * Spring's default view resolving mechanism only accepts the view name and locale, this forces you to code around its limitations when you want to add intelligent features such as
  * version and mime type awareness.

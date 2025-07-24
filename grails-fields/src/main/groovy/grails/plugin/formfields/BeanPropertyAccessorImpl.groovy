@@ -18,6 +18,13 @@
  */
 package grails.plugin.formfields
 
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.transform.TupleConstructor
+
+import org.springframework.validation.FieldError
+
 import grails.core.GrailsApplication
 import grails.core.GrailsDomainClass
 import grails.gorm.Entity
@@ -26,17 +33,12 @@ import grails.util.GrailsClassUtils
 import grails.util.GrailsNameUtils
 import grails.validation.Validateable
 import grails.web.databinding.WebDataBinding
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-import groovy.transform.Memoized
-import groovy.transform.TupleConstructor
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.scaffolding.model.property.Constrained
-import org.springframework.validation.FieldError
 
 @CompileStatic
 @Canonical
@@ -85,11 +87,11 @@ class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     List<String> getLabelKeys() {
         List<String> labelKeys = []
-        
-        labelKeys << "${GrailsNameUtils.getPropertyName(rootBeanType.simpleName)}.${pathFromRoot}.label".replaceAll(/\[(.+)\]/, '') 
+
+        labelKeys << "${GrailsNameUtils.getPropertyName(rootBeanType.simpleName)}.${pathFromRoot}.label".replaceAll(/\[(.+)\]/, '')
         if(addPathFromRoot) {
             labelKeys << "${pathFromRoot}.label".replaceAll(/\[(.+)\]/, '')
-        }                
+        }
         labelKeys << "${GrailsNameUtils.getPropertyName(beanType.simpleName)}.${propertyName}.label".toString()
 
         return labelKeys.unique() as List<String>

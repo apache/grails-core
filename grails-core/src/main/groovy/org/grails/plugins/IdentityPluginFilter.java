@@ -18,9 +18,9 @@
  */
 package org.grails.plugins;
 
-import grails.plugins.PluginFilter;
-
 import java.util.List;
+
+import grails.plugins.PluginFilter;
 
 /**
  * No-op implementation of <code>PluginFilter</code>.

@@ -19,16 +19,18 @@
 
 package org.grails.events.spring
 
-import grails.events.Event
-import grails.events.subscriber.Subscription
+import java.util.concurrent.Callable
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import org.grails.events.bus.AbstractEventBus
+
 import org.springframework.context.ApplicationListener
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.event.GenericApplicationListenerAdapter
 
-import java.util.concurrent.Callable
+import grails.events.Event
+import grails.events.subscriber.Subscription
+import org.grails.events.bus.AbstractEventBus
 
 /**
  * An event bus that uses the Spring Event Publisher

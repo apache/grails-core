@@ -18,9 +18,6 @@
  */
 package org.grails.spring.context.annotation;
 
-import grails.util.BuildSettings;
-import grails.util.Environment;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -31,11 +28,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import grails.util.GrailsStringUtils;
-import grails.plugins.GrailsPluginManager;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.w3c.dom.Element;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.HierarchicalBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -49,7 +47,11 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.ReflectionUtils;
-import org.w3c.dom.Element;
+
+import grails.plugins.GrailsPluginManager;
+import grails.util.BuildSettings;
+import grails.util.Environment;
+import grails.util.GrailsStringUtils;
 
 /**
  * Extends Spring's default &lt;context:component-scan/&gt; element to ignore

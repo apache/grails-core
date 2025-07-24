@@ -20,9 +20,11 @@
 package org.grails.datastore.gorm.jdbc.connections
 
 import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.config.ConfigurationBuilder
 import org.grails.datastore.mapping.config.Settings
-import org.springframework.core.env.PropertyResolver
 
 /**
  * Settings builder for {@link DataSourceSettings}

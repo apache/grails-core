@@ -20,6 +20,7 @@
 package org.grails.datastore.bson.codecs
 
 import groovy.transform.CompileStatic
+
 import org.bson.BsonDocument
 import org.bson.BsonDocumentWriter
 import org.bson.BsonReader
@@ -32,6 +33,7 @@ import org.bson.codecs.DecoderContext
 import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
+
 import org.grails.datastore.bson.codecs.decoders.BasicCollectionTypeDecoder
 import org.grails.datastore.bson.codecs.decoders.CustomTypeDecoder
 import org.grails.datastore.bson.codecs.decoders.EmbeddedCollectionDecoder

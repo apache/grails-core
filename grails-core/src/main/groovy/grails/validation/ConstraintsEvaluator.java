@@ -18,9 +18,9 @@
  */
 package grails.validation;
 
-import groovy.lang.Closure;
-
 import java.util.Map;
+
+import groovy.lang.Closure;
 
 /**
  * Evaluates and returns constraints.

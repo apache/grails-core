@@ -17,10 +17,9 @@
   -->
 
 <xsd:schema xmlns="http://www.grails.org/schema/context" xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-			xmlns:beans="http://www.springframework.org/schema/beans"
-			xmlns:tool="http://www.springframework.org/schema/tool"
-			targetNamespace="http://www.grails.org/schema/context" elementFormDefault="qualified"
-			attributeFormDefault="unqualified">
+            xmlns:tool="http://www.springframework.org/schema/tool"
+            targetNamespace="http://www.grails.org/schema/context" elementFormDefault="qualified"
+            attributeFormDefault="unqualified">
 
 	<xsd:import namespace="http://www.springframework.org/schema/beans"/>
 	<xsd:import namespace="http://www.springframework.org/schema/tool"/>

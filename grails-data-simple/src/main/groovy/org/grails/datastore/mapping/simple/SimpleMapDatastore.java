@@ -27,6 +27,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import groovy.lang.Closure;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.transaction.PlatformTransactionManager;
+
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
 import org.grails.datastore.gorm.GormStaticApi;
@@ -64,10 +70,6 @@ import org.grails.datastore.mapping.multitenancy.TenantResolver;
 import org.grails.datastore.mapping.simple.connections.SimpleMapConnectionSourceFactory;
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * A simple implementation of the {@link org.grails.datastore.mapping.core.Datastore} interface that backs onto an in-memory map.

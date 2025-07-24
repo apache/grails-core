@@ -18,10 +18,10 @@
  */
 package org.grails.web.pages;
 
-import grails.util.GrailsNameUtils;
-import grails.web.pages.GroovyPagesUriService;
 import groovy.lang.GroovyObject;
 
+import grails.util.GrailsNameUtils;
+import grails.web.pages.GroovyPagesUriService;
 import org.grails.buffer.FastStringWriter;
 import org.grails.core.artefact.ControllerArtefactHandler;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
@@ -40,7 +40,7 @@ public class GroovyPagesUriSupport implements GroovyPagesUriService {
     private static final String SLASH_UNDR = "/_";
     private static final String BLANK = "";
     private static final String UNDERSCORE = "_";
-    protected static final String EXTENSION = ".gsp";    
+    protected static final String EXTENSION = ".gsp";
     protected static final String SUFFIX = ".gsp";
     public static final String RELATIVE_STRING = "../";
 

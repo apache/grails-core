@@ -18,26 +18,6 @@
  */
 package org.grails.plugins;
 
-import grails.config.Config;
-import grails.core.GrailsApplication;
-import grails.io.IOUtils;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.util.GrailsNameUtils;
-import groovy.lang.GroovyObjectSupport;
-import org.grails.config.yaml.YamlPropertySourceLoader;
-import org.grails.core.AbstractGrailsClass;
-import org.grails.core.cfg.GroovyConfigPropertySourceLoader;
-import org.grails.plugins.support.WatchPattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.PropertySource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.util.Assert;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
@@ -45,6 +25,29 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.GroovyObjectSupport;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.PropertySource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.util.Assert;
+
+import grails.config.Config;
+import grails.core.GrailsApplication;
+import grails.io.IOUtils;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.util.GrailsNameUtils;
+import org.grails.config.yaml.YamlPropertySourceLoader;
+import org.grails.core.AbstractGrailsClass;
+import org.grails.core.cfg.GroovyConfigPropertySourceLoader;
+import org.grails.plugins.support.WatchPattern;
 
 /**
  * Abstract implementation that provides some default behaviours

@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.run
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.tasks.JavaExec
 
 /**

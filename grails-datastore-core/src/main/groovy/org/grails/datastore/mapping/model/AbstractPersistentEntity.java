@@ -31,6 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.beans.BeanUtils;
+import org.springframework.util.Assert;
+
 import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.core.EntityCreationException;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -43,8 +46,6 @@ import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.Assert;
 
 /**
  * Abstract implementation to be subclasses on a per datastore basis

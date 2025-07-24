@@ -22,12 +22,14 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import grails.core.GrailsApplication;
-import org.grails.spring.RuntimeSpringConfiguration;
-import grails.plugins.exceptions.PluginException;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.type.filter.TypeFilter;
+
+import grails.core.GrailsApplication;
+import grails.plugins.exceptions.PluginException;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * <p>Handles the loading and management of plug-ins in the Grails system.

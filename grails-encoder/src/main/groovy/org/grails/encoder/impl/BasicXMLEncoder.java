@@ -18,10 +18,11 @@
  */
 package org.grails.encoder.impl;
 
+import org.springframework.util.ClassUtils;
+
 import org.grails.encoder.AbstractCharReplacementEncoder;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.DefaultCodecIdentifier;
-import org.springframework.util.ClassUtils;
 
 /**
  * Encoder implementation that escapes some characters for inclusion in XML documents
@@ -48,11 +49,11 @@ public class BasicXMLEncoder extends AbstractCharReplacementEncoder {
     private static final String ESCAPED_LINE_SEPARATOR = xmlEscapeCharacter(LINE_SEPARATOR);
     private static final char PARAGRAPH_SEPARATOR = '\u2029';
     private static final String ESCAPED_PARAGRAPH_SEPARATOR = xmlEscapeCharacter(PARAGRAPH_SEPARATOR);
-    
+
     protected static final String xmlEscapeCharacter(char ch) {
         return "&#" + ((int) ch)  + ";";
     }
-    
+
     public static final CodecIdentifier XML_CODEC_IDENTIFIER=new DefaultCodecIdentifier("XML");
 
     public BasicXMLEncoder() {
@@ -86,7 +87,7 @@ public class BasicXMLEncoder extends AbstractCharReplacementEncoder {
       }
       return null;
     }
-    
+
     @Override
     public final Object encode(Object o) {
         return doEncode(o);
@@ -99,11 +100,11 @@ public class BasicXMLEncoder extends AbstractCharReplacementEncoder {
         if(o instanceof CharSequence || ClassUtils.isPrimitiveOrWrapper(o.getClass())) {
             return doCharReplacementEncoding(o);
         } else {
-            return encodeAsXmlObject(o);            
+            return encodeAsXmlObject(o);
         }
     }
 
     protected Object encodeAsXmlObject(Object o) {
         return o;
-    }    
+    }
 }

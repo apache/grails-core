@@ -18,16 +18,19 @@
  */
 package grails.plugin.hibernate.commands
 
-import grails.dev.commands.ApplicationCommand
-import grails.dev.commands.ExecutionContext
-import grails.util.Environment
 import groovy.transform.CompileStatic
-import org.grails.build.parsing.CommandLine
-import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.orm.hibernate.HibernateDatastore
+
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
 import org.hibernate.tool.schema.TargetType
+
+import grails.dev.commands.ApplicationCommand
+import grails.dev.commands.ExecutionContext
+import grails.util.Environment
+import org.grails.build.parsing.CommandLine
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.orm.hibernate.HibernateDatastore
+
 /**
  * Adds a schema-export command
  *

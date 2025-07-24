@@ -14,10 +14,6 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import grails.gorm.DetachedCriteria;
-import groovy.lang.Closure;
-import groovy.lang.MissingMethodException;
-
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,17 +23,24 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import groovy.lang.Closure;
+import groovy.lang.MissingMethodException;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.JoinType;
 
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.springframework.core.convert.ConversionException;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.util.StringUtils;
+
+import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.finders.MethodExpression.Between;
 import org.grails.datastore.gorm.finders.MethodExpression.Equal;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThan;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThanEquals;
 import org.grails.datastore.gorm.finders.MethodExpression.Ilike;
 import org.grails.datastore.gorm.finders.MethodExpression.InList;
-import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.InRange;
 import org.grails.datastore.gorm.finders.MethodExpression.IsEmpty;
 import org.grails.datastore.gorm.finders.MethodExpression.IsNotEmpty;
@@ -47,6 +50,7 @@ import org.grails.datastore.gorm.finders.MethodExpression.LessThan;
 import org.grails.datastore.gorm.finders.MethodExpression.LessThanEquals;
 import org.grails.datastore.gorm.finders.MethodExpression.Like;
 import org.grails.datastore.gorm.finders.MethodExpression.NotEqual;
+import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
@@ -58,9 +62,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.NameUtils;
-import org.springframework.core.convert.ConversionException;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.util.StringUtils;
+
 /**
  * Abstract base class for dynamic finders.
  *

@@ -18,13 +18,15 @@
  */
 package org.grails.gsp;
 
-import grails.plugins.GrailsPlugin;
+import java.util.Map;
+
 import groovy.lang.Binding;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.taglib.TemplateVariableBinding;
 
-import java.util.Map;
+import grails.plugins.GrailsPlugin;
+import org.grails.taglib.TemplateVariableBinding;
 
 /**
  * Script Binding that is used in GSP evaluation.

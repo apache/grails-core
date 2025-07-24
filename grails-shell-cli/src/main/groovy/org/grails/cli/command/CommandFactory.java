@@ -18,9 +18,9 @@
  */
 package org.grails.cli.command;
 
-import org.springframework.boot.cli.command.Command;
-
 import java.util.Collection;
+
+import org.springframework.boot.cli.command.Command;
 
 /**
  * Factory used to create CLI {@link org.springframework.boot.cli.command.Command}s. Intended for use with a Java

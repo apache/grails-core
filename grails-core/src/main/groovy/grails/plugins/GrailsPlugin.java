@@ -18,20 +18,22 @@
  */
 package grails.plugins;
 
-import grails.core.GrailsApplication;
-import grails.util.Environment;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.GroovyObject;
-import org.grails.plugins.support.WatchPattern;
-import org.grails.spring.RuntimeSpringConfiguration;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.filter.TypeFilter;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import grails.core.GrailsApplication;
+import grails.util.Environment;
+import org.grails.plugins.support.WatchPattern;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * <p>Plugin interface that adds Spring {@link org.springframework.beans.factory.config.BeanDefinition}s

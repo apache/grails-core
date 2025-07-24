@@ -19,12 +19,16 @@
 
 package org.grails.plugins.web.taglib
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.servlet.support.RequestContextUtils
+
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
 import grails.util.TypeConvertingMap
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMapping
-import groovy.transform.CompileStatic
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
 import org.grails.taglib.TagOutput
@@ -32,8 +36,6 @@ import org.grails.taglib.encoder.OutputContextLookupHelper
 import org.grails.web.mapping.ForwardUrlMappingInfo
 import org.grails.web.mapping.UrlMappingUtils
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.servlet.support.RequestContextUtils
 
 /**
  * Tag library with tags that integration with the URL mappings API (paginate, include etc.)

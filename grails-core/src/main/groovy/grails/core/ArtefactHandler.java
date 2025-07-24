@@ -19,6 +19,7 @@
 package grails.core;
 
 import org.codehaus.groovy.ast.ClassNode;
+
 import org.springframework.core.Ordered;
 
 /**

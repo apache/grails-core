@@ -21,20 +21,21 @@ package grails.web.api
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import org.springframework.context.ApplicationContext
-import org.springframework.web.context.support.WebApplicationContextUtils
 
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpSession
 
+import org.springframework.context.ApplicationContext
+import org.springframework.web.context.support.WebApplicationContextUtils
+
 /**
  * A trait that adds attributes specific to the Servlet API
  *
  * @author Graeme Rocher
  * @author Jeff Brown
- * 
+ *
  */
 @CompileStatic
 trait ServletAttributes implements WebAttributes {

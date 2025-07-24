@@ -18,11 +18,14 @@
  */
 package grails.web.mapping.cors
 
-import grails.util.TypeConvertingMap
-import groovy.transform.CompileStatic
 import java.util.function.Consumer
+
+import groovy.transform.CompileStatic
+
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.web.cors.CorsConfiguration
+
+import grails.util.TypeConvertingMap
 
 /**
  * A bean that stores config and converts it to the format expected by Spring

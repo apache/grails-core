@@ -18,15 +18,27 @@
  */
 package org.grails.gsp;
 
-import grails.core.GrailsApplication;
-import grails.util.CollectionUtils;
+import java.io.Writer;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import groovy.lang.Script;
+import org.codehaus.groovy.runtime.InvokerHelper;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.runtime.InvokerHelper;
+
+import grails.core.GrailsApplication;
+import grails.util.CollectionUtils;
 import org.grails.buffer.GrailsPrintWriter;
 import org.grails.encoder.Encoder;
 import org.grails.exceptions.ExceptionUtils;
@@ -43,16 +55,6 @@ import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputEncodingStack;
 import org.grails.taglib.encoder.OutputEncodingStackAttributes;
 import org.grails.taglib.encoder.WithCodecHelper;
-
-import java.io.Writer;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * <p>NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
@@ -400,7 +402,7 @@ public abstract class GroovyPage extends Script {
                         staticOut.append('\"').append(value).append('\"');
                     }
                 }
-                
+
                 if (body == null) {
                     staticOut.append("/>");
                 } else {

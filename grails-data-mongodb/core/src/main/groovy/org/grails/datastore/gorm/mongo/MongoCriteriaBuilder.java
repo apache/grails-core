@@ -15,11 +15,10 @@
 
 package org.grails.datastore.gorm.mongo;
 
-import grails.gorm.CriteriaBuilder;
-
 import java.util.List;
 import java.util.Map;
 
+import grails.gorm.CriteriaBuilder;
 import grails.mongodb.geo.Distance;
 import grails.mongodb.geo.GeoJSON;
 import grails.mongodb.geo.Point;
@@ -28,8 +27,8 @@ import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.mongo.query.MongoQuery.Near;
 import org.grails.datastore.mapping.mongo.query.MongoQuery.WithinBox;
-import org.grails.datastore.mapping.mongo.query.MongoQuery.WithinPolygon;
 import org.grails.datastore.mapping.mongo.query.MongoQuery.WithinCircle;
+import org.grails.datastore.mapping.mongo.query.MongoQuery.WithinPolygon;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware;

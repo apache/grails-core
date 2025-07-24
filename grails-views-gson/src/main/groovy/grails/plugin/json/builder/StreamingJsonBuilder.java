@@ -18,13 +18,6 @@
  */
 package grails.plugin.json.builder;
 
-import groovy.json.JsonException;
-import groovy.lang.Closure;
-import groovy.lang.DelegatesTo;
-import groovy.lang.GString;
-import groovy.lang.GroovyObjectSupport;
-import groovy.lang.Writable;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
@@ -32,6 +25,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import groovy.json.JsonException;
+import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
+import groovy.lang.GString;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.Writable;
 
 /**
  * Temporary fork of {@link groovy.json.StreamingJsonBuilder} until Groovy 2.4.5 is out.

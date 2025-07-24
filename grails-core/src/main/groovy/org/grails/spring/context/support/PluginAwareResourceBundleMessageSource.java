@@ -18,6 +18,24 @@
  */
 package org.grails.spring.context.support;
 
+import java.io.File;
+import java.io.FilenameFilter;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+
 import grails.core.DefaultGrailsApplication;
 import grails.core.GrailsApplication;
 import grails.core.GrailsApplicationClass;
@@ -32,23 +50,6 @@ import grails.util.GrailsStringUtils;
 import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
 import org.grails.core.support.internal.tools.ClassRelativeResourcePatternResolver;
 import org.grails.plugins.BinaryGrailsPlugin;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-
-import java.io.File;
-import java.io.FilenameFilter;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * A ReloadableResourceBundleMessageSource that is capable of loading message sources from plugins.
@@ -93,7 +94,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         if (pluginCacheMillis == Long.MIN_VALUE) {
             pluginCacheMillis = cacheMillis;
         }
-        
+
         if (localResourceLoader == null) {
             return;
         }
@@ -210,7 +211,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         }
         return null;
     }
-    
+
     protected PropertiesHolder getMergedBinaryPluginProperties(final Locale locale) {
         return CacheEntry.getValue(cachedMergedBinaryPluginProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
             @Override
@@ -277,7 +278,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         }
     }
 
-    
+
     /**
      * Set the number of seconds to cache the list of matching properties files loaded from plugin.
      * <ul>

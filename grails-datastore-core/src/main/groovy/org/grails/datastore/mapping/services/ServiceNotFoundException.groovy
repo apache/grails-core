@@ -20,6 +20,7 @@
 package org.grails.datastore.mapping.services
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.core.DatastoreException
 
 /**

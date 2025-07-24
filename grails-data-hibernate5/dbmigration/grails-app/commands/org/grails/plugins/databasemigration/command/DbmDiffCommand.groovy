@@ -18,10 +18,12 @@
  */
 package org.grails.plugins.databasemigration.command
 
+import groovy.transform.CompileStatic
+
+import liquibase.database.Database
+
 import grails.dev.commands.ApplicationCommand
 import grails.util.Environment
-import groovy.transform.CompileStatic
-import liquibase.database.Database
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @CompileStatic

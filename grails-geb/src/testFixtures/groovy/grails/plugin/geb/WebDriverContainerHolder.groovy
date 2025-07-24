@@ -18,16 +18,20 @@
  */
 package grails.plugin.geb
 
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.function.Supplier
+
+import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
+
 import com.github.dockerjava.api.model.ContainerNetwork
 import geb.Browser
 import geb.Configuration
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
-import grails.plugin.geb.serviceloader.ServiceRegistry
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
@@ -38,9 +42,7 @@ import org.testcontainers.containers.BrowserWebDriverContainer
 import org.testcontainers.containers.PortForwardingContainer
 import org.testcontainers.images.PullPolicy
 
-import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.util.function.Supplier
+import grails.plugin.geb.serviceloader.ServiceRegistry
 
 /**
  * Responsible for initializing a {@link org.testcontainers.containers.BrowserWebDriverContainer BrowserWebDriverContainer}
