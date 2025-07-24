@@ -383,7 +383,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                 Backref prop = new Backref();
                 final PersistentEntity owner = property.getOwner();
                 prop.setEntityName(owner.getName());
-                prop.setName(UNDERSCORE + addUnderscore(owner.getJavaClass().getSimpleName(), property.getName()) + "Backref");
+                String s2 = property.getName();
+                prop.setName(UNDERSCORE + new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) + UNDERSCORE + new BackticksRemover().apply(s2) + "Backref");
                 prop.setSelectable(false);
                 prop.setUpdateable(false);
                 if (isManyToMany) {
@@ -753,7 +754,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             else {
                 var clazz = namingStrategyWrapper.getColumnName(className);
                 var prop = namingStrategyWrapper.getTableName(property.getName());
-                columnName = isEnum ? clazz : addUnderscore(prop, clazz);
+                columnName = isEnum ? clazz : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
             }
 
             if (isEnum) {
@@ -807,14 +808,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         collection.setElement(element);
 
         new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, config);
-    }
-
-    private String addUnderscore(String s1, String s2) {
-        return removeBackticks(s1) + UNDERSCORE + removeBackticks(s2);
-    }
-
-    private String removeBackticks(String s) {
-        return s.startsWith("`") && s.endsWith("`") ? s.substring(1, s.length() - 1) : s;
     }
 
     private Column getColumnForSimpleValue(SimpleValue element) {
@@ -940,7 +933,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         Backref prop = new Backref();
         PersistentEntity owner = property.getOwner();
         prop.setEntityName(owner.getName());
-        prop.setName(UNDERSCORE + addUnderscore(owner.getJavaClass().getSimpleName(), property.getName()) + "Backref");
+        String s2 = property.getName();
+        prop.setName(UNDERSCORE + new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) + UNDERSCORE + new BackticksRemover().apply(s2) + "Backref");
         prop.setUpdateable(false);
         prop.setInsertable(true);
         prop.setCollectionRole(collection.getRole());
@@ -1150,14 +1144,14 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (hasJoinTableMapping) {
                 return jt.getName();
             }
-            return addUnderscore(left, propertyColumnName);
+            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(propertyColumnName);
         }
 
         if (property instanceof Basic) {
             if (hasJoinTableMapping) {
                 return jt.getName();
             }
-            return addUnderscore(left, propertyColumnName);
+            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(propertyColumnName);
         }
 
         if (property.getAssociatedEntity() == null) {
@@ -1171,9 +1165,10 @@ public class GrailsDomainBinder implements MetadataContributor {
                 return jt.getName();
             }
             if (property.isOwningSide()) {
-                return addUnderscore(left, propertyColumnName);
+                return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(propertyColumnName);
             }
-            return addUnderscore(right, namingStrategyWrapper.getColumnName(property1.getInversePropertyName()));
+            String s2 = namingStrategyWrapper.getColumnName(property1.getInversePropertyName());
+            return new BackticksRemover().apply(right) + UNDERSCORE + new BackticksRemover().apply(s2);
         }
 
         if (shouldCollectionBindWithJoinColumn(property)) {
@@ -1182,13 +1177,13 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
             left = trimBackTigs(left);
             right = trimBackTigs(right);
-            return addUnderscore(left, right);
+            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(right);
         }
 
         if (property.isOwningSide()) {
-            return addUnderscore(left, right);
+            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(right);
         }
-        return addUnderscore(right, left);
+        return new BackticksRemover().apply(right) + UNDERSCORE + new BackticksRemover().apply(left);
     }
 
     private String trimBackTigs(String tableName) {
@@ -2247,9 +2242,9 @@ public class GrailsDomainBinder implements MetadataContributor {
                             for (PersistentProperty cip : compositeIdentity) {
                                 // for each property of a composite id by default we use the table name and the property name as a prefix
                                 String string = namingStrategyWrapper.getColumnName(referencedProperty.getName());
-                                String compositeIdPrefix = addUnderscore(prefix, string);
+                                String compositeIdPrefix = new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(string);
                                 String suffix = getDefaultColumnName(cip, sessionFactoryBeanName);
-                                String finalColumnName = addUnderscore(compositeIdPrefix, suffix);
+                                String finalColumnName = new BackticksRemover().apply(compositeIdPrefix) + UNDERSCORE + new BackticksRemover().apply(suffix);
                                 cc = new ColumnConfig();
                                 cc.setName(finalColumnName);
                                 columns.add(cc);
@@ -2259,7 +2254,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     }
 
                     String suffix = getDefaultColumnName(referencedProperty, sessionFactoryBeanName);
-                    String finalColumnName = addUnderscore(prefix, suffix);
+                    String finalColumnName = new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(suffix);
                     cc.setName(finalColumnName);
                     columns.add(cc);
                 }
@@ -2886,8 +2881,9 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         if (columnName == null) {
             if (isNotEmpty(path)) {
-                columnName = addUnderscore(namingStrategyWrapper.getColumnName(path),
-                        getDefaultColumnName(grailsProp, sessionFactoryBeanName));
+                String s1 = namingStrategyWrapper.getColumnName(path);
+                String s2 = getDefaultColumnName(grailsProp, sessionFactoryBeanName);
+                columnName = new BackticksRemover().apply(s1) + UNDERSCORE + new BackticksRemover().apply(s2);
             } else {
                 columnName = getDefaultColumnName(grailsProp, sessionFactoryBeanName);
             }
@@ -2923,7 +2919,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
             if (!association.isBidirectional() && association instanceof org.grails.datastore.mapping.model.types.OneToMany) {
                 String prefix = namingStrategyWrapper.getTableName(property.getOwner().getName());
-                return addUnderscore(prefix, columnName) + FOREIGN_KEY_SUFFIX;
+                return new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(columnName) + FOREIGN_KEY_SUFFIX;
             }
 
             if (property.isInherited() && isBidirectionalManyToOne(property)) {
