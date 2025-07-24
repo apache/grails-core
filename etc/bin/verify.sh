@@ -41,7 +41,7 @@ trap cleanup ERR
 cd "${DOWNLOAD_LOCATION}"
 
 echo "Downloading KEYS file ..."
-curl -sSfLO "https://dist.apache.org/repos/dist/release/grails/KEYS"
+curl -sSfLO "https://dist.apache.org/repos/dist/release/incubator/grails/KEYS"
 echo "✅ KEYS Downloaded"
 
 echo "Downloading Artifacts ..."
