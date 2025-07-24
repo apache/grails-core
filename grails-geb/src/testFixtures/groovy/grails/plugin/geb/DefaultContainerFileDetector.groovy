@@ -23,7 +23,7 @@ import org.openqa.selenium.remote.UselessFileDetector
 
 /**
  * Detects files on the local disk.
- * 
+ *
  * @since 4.2
  */
 class DefaultContainerFileDetector extends LocalFileDetector implements ContainerFileDetector {
@@ -31,7 +31,7 @@ class DefaultContainerFileDetector extends LocalFileDetector implements Containe
 
 /**
  * A file detector that never finds anything.
- * 
+ *
  * @since 4.2
  */
 class UselessContainerFileDetector extends UselessFileDetector implements ContainerFileDetector {

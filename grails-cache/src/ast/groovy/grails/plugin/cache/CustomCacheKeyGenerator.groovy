@@ -32,162 +32,162 @@ import org.springframework.cache.interceptor.SimpleKeyGenerator
 @CompileStatic
 class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
 
-	private final KeyGenerator innerKeyGenerator
+    private final KeyGenerator innerKeyGenerator
 
-	CustomCacheKeyGenerator(KeyGenerator innerKeyGenerator){
-		this.innerKeyGenerator = innerKeyGenerator
-	}
+    CustomCacheKeyGenerator(KeyGenerator innerKeyGenerator){
+        this.innerKeyGenerator = innerKeyGenerator
+    }
 
-	CustomCacheKeyGenerator(){
-		this.innerKeyGenerator = new SimpleKeyGenerator()
-	}
+    CustomCacheKeyGenerator(){
+        this.innerKeyGenerator = new SimpleKeyGenerator()
+    }
 
-	@SuppressWarnings("serial")
-	private static final class CacheKey implements Serializable {
-		final String targetClassName
-		final String targetMethodName
-		final int targetObjectHashCode
-		final Object simpleKey
+    @SuppressWarnings("serial")
+    private static final class CacheKey implements Serializable {
+        final String targetClassName
+        final String targetMethodName
+        final int targetObjectHashCode
+        final Object simpleKey
 
-		CacheKey(String targetClassName, String targetMethodName,
-				 int targetObjectHashCode, Object simpleKey) {
-			this.targetClassName = targetClassName
-			this.targetMethodName = targetMethodName
-			this.targetObjectHashCode = targetObjectHashCode
-			this.simpleKey = simpleKey
-		}
-		@Override
-		int hashCode() {
-			final int prime = 31
-			int result = 1
-			result = prime * result
-					+ ((simpleKey == null) ? 0 : simpleKey.hashCode())
-			result = prime * result
-					+ ((targetClassName == null) ? 0 : targetClassName
-							.hashCode())
-			result = prime * result
-					+ ((targetMethodName == null) ? 0 : targetMethodName
-							.hashCode())
-			result = prime * result + targetObjectHashCode
-			return result
-		}
-		@Override
-		boolean equals(Object obj) {
-			if (this.is(obj))
-				return true
-			if (obj == null)
-				return false
-			if (getClass() != obj.getClass())
-				return false
-			CacheKey other = (CacheKey) obj
-			if (simpleKey == null) {
-				if (other.simpleKey != null)
-					return false
-			} else if (!simpleKey.equals(other.simpleKey))
-				return false
-			else if ( simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0 ) ) {
-				return true // equal if simpleKey is identical but not an empty map
-			}
+        CacheKey(String targetClassName, String targetMethodName,
+                 int targetObjectHashCode, Object simpleKey) {
+            this.targetClassName = targetClassName
+            this.targetMethodName = targetMethodName
+            this.targetObjectHashCode = targetObjectHashCode
+            this.simpleKey = simpleKey
+        }
+        @Override
+        int hashCode() {
+            final int prime = 31
+            int result = 1
+            result = prime * result
+                    + ((simpleKey == null) ? 0 : simpleKey.hashCode())
+            result = prime * result
+                    + ((targetClassName == null) ? 0 : targetClassName
+                            .hashCode())
+            result = prime * result
+                    + ((targetMethodName == null) ? 0 : targetMethodName
+                            .hashCode())
+            result = prime * result + targetObjectHashCode
+            return result
+        }
+        @Override
+        boolean equals(Object obj) {
+            if (this.is(obj))
+                return true
+            if (obj == null)
+                return false
+            if (getClass() != obj.getClass())
+                return false
+            CacheKey other = (CacheKey) obj
+            if (simpleKey == null) {
+                if (other.simpleKey != null)
+                    return false
+            } else if (!simpleKey.equals(other.simpleKey))
+                return false
+            else if ( simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0 ) ) {
+                return true // equal if simpleKey is identical but not an empty map
+            }
 
-			if (targetClassName == null) {
-				if (other.targetClassName != null)
-					return false
-			} else if (!targetClassName.equals(other.targetClassName))
-				return false
-			if (targetMethodName == null) {
-				if (other.targetMethodName != null)
-					return false
-			} else if (!targetMethodName.equals(other.targetMethodName))
-				return false
-			if (targetObjectHashCode != other.targetObjectHashCode)
-				return false
-			return true
-		}
-	}
+            if (targetClassName == null) {
+                if (other.targetClassName != null)
+                    return false
+            } else if (!targetClassName.equals(other.targetClassName))
+                return false
+            if (targetMethodName == null) {
+                if (other.targetMethodName != null)
+                    return false
+            } else if (!targetMethodName.equals(other.targetMethodName))
+                return false
+            if (targetObjectHashCode != other.targetObjectHashCode)
+                return false
+            return true
+        }
+    }
 
-	Object generate(Object target, Method method, Object... params) {
-		Class<?> objClass = AopProxyUtils.ultimateTargetClass(target)
+    Object generate(Object target, Method method, Object... params) {
+        Class<?> objClass = AopProxyUtils.ultimateTargetClass(target)
 
-		return new CacheKey(
-				objClass.getName().intern(),
-				method.toString().intern(),
-				target.hashCode(), innerKeyGenerator.generate(target, method, params))
-	}
+        return new CacheKey(
+                objClass.getName().intern(),
+                method.toString().intern(),
+                target.hashCode(), innerKeyGenerator.generate(target, method, params))
+    }
 
-	@Override
-	Serializable generate(String className, String methodName, int objHashCode, Closure keyGenerator) {
-		final Object simpleKey = keyGenerator.call()
-		return new TemporaryGrailsCacheKey(className, methodName, objHashCode, simpleKey)
-	}
+    @Override
+    Serializable generate(String className, String methodName, int objHashCode, Closure keyGenerator) {
+        final Object simpleKey = keyGenerator.call()
+        return new TemporaryGrailsCacheKey(className, methodName, objHashCode, simpleKey)
+    }
 
-	@Override
-	Serializable generate(String className, String methodName, int objHashCode, Map methodParams) {
-		final Object simpleKey = methodParams
-		return new TemporaryGrailsCacheKey(className, methodName, objHashCode, simpleKey)
-	}
+    @Override
+    Serializable generate(String className, String methodName, int objHashCode, Map methodParams) {
+        final Object simpleKey = methodParams
+        return new TemporaryGrailsCacheKey(className, methodName, objHashCode, simpleKey)
+    }
 
 
-	@CompileStatic
-	private static class TemporaryGrailsCacheKey implements Serializable {
-		final String targetClassName
-		final String targetMethodName
-		final int targetObjectHashCode
-		final Object simpleKey
+    @CompileStatic
+    private static class TemporaryGrailsCacheKey implements Serializable {
+        final String targetClassName
+        final String targetMethodName
+        final int targetObjectHashCode
+        final Object simpleKey
 
-		TemporaryGrailsCacheKey(String targetClassName, String targetMethodName,
-								int targetObjectHashCode, Object simpleKey) {
-			this.targetClassName = targetClassName
-			this.targetMethodName = targetMethodName
-			this.targetObjectHashCode = targetObjectHashCode
-			this.simpleKey = simpleKey
-		}
-		@Override
-		int hashCode() {
-			final int prime = 31
-			int result = 1
-			result = prime * result
-			+ ((simpleKey == null) ? 0 : simpleKey.hashCode())
-			result = prime * result
-			+ ((targetClassName == null) ? 0 : targetClassName
-					.hashCode())
-			result = prime * result
-			+ ((targetMethodName == null) ? 0 : targetMethodName
-					.hashCode())
-			result = prime * result + targetObjectHashCode
-			return result
-		}
-		@Override
-		boolean equals(Object obj) {
-			if (this.is(obj))
-				return true
-			if (obj == null)
-				return false
-			if (getClass() != obj.getClass())
-				return false
-			TemporaryGrailsCacheKey other = (TemporaryGrailsCacheKey) obj
-			if (simpleKey == null) {
-				if (other.simpleKey != null)
-					return false
-			} else if (!simpleKey.equals(other.simpleKey))
-				return false
-			else if ( simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0 ) ) {
-				return true // equal if simpleKey is identical but not an empty map
-			}
+        TemporaryGrailsCacheKey(String targetClassName, String targetMethodName,
+                                int targetObjectHashCode, Object simpleKey) {
+            this.targetClassName = targetClassName
+            this.targetMethodName = targetMethodName
+            this.targetObjectHashCode = targetObjectHashCode
+            this.simpleKey = simpleKey
+        }
+        @Override
+        int hashCode() {
+            final int prime = 31
+            int result = 1
+            result = prime * result
+            + ((simpleKey == null) ? 0 : simpleKey.hashCode())
+            result = prime * result
+            + ((targetClassName == null) ? 0 : targetClassName
+                    .hashCode())
+            result = prime * result
+            + ((targetMethodName == null) ? 0 : targetMethodName
+                    .hashCode())
+            result = prime * result + targetObjectHashCode
+            return result
+        }
+        @Override
+        boolean equals(Object obj) {
+            if (this.is(obj))
+                return true
+            if (obj == null)
+                return false
+            if (getClass() != obj.getClass())
+                return false
+            TemporaryGrailsCacheKey other = (TemporaryGrailsCacheKey) obj
+            if (simpleKey == null) {
+                if (other.simpleKey != null)
+                    return false
+            } else if (!simpleKey.equals(other.simpleKey))
+                return false
+            else if ( simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0 ) ) {
+                return true // equal if simpleKey is identical but not an empty map
+            }
 
-			if (targetClassName == null) {
-				if (other.targetClassName != null)
-					return false
-			} else if (!targetClassName.equals(other.targetClassName))
-				return false
-			if (targetMethodName == null) {
-				if (other.targetMethodName != null)
-					return false
-			} else if (!targetMethodName.equals(other.targetMethodName))
-				return false
-			if (targetObjectHashCode != other.targetObjectHashCode)
-				return false
-			return true
-		}
-	}
+            if (targetClassName == null) {
+                if (other.targetClassName != null)
+                    return false
+            } else if (!targetClassName.equals(other.targetClassName))
+                return false
+            if (targetMethodName == null) {
+                if (other.targetMethodName != null)
+                    return false
+            } else if (!targetMethodName.equals(other.targetMethodName))
+                return false
+            if (targetObjectHashCode != other.targetObjectHashCode)
+                return false
+            return true
+        }
+    }
 
 }
