@@ -46,7 +46,7 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
 
     // Used to surface versions for groovydoc
-    implementation project(':grails-dependencies')
+    implementation project(':grails-dependencies-starter-web')
     implementation project(':grails-testing-support-core')
     implementation project(':grails-data-hibernate5')
     implementation 'org.apache.grails:grails-gradle-plugins'

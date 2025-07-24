@@ -27,23 +27,14 @@ group = 'org.apache.grails'
 
 ext {
     skipJavaComponent = true
+    pomDescription = 'A meta-project that aggregates all Grails assets files under one place.'
 }
 
 def configurations = [
-        'api'        : [
-                ':grails-core',
-                ':grails-rest-transforms',
-                ':grails-databinding',
-                ':grails-i18n',
-                ':grails-services',
-                ':grails-url-mappings',
-                ':grails-interceptors',
-                ':grails-async',
-                ':grails-events',
-                ':grails-gsp',
-        ],
-        'runtimeOnly': [
-                'com.h2database:h2',
+        'api': [
+                'org.webjars.npm:bootstrap',
+                'org.webjars.npm:bootstrap-icons',
+                'org.webjars.npm:jquery',
         ]
 ]
 

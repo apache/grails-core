@@ -20,21 +20,12 @@
 group "examples"
 
 dependencies {
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.apache.grails:grails-core"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
-    implementation ("org.apache.grails:grails-dependencies") {
-        exclude module:'grails-data-simple'
-    }
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'com.h2database:h2'
     implementation "org.apache.grails:grails-codecs"
-    implementation "org.apache.grails:grails-services"
     implementation "org.apache.grails:grails-datasource"
-    implementation "org.apache.grails:grails-web-boot"
     implementation "org.apache.grails:grails-logging"
     implementation "org.apache.grails:grails-cache"
-    implementation "org.apache.grails:grails-events"
     implementation project(":grails-plugin")
     implementation "org.apache.grails:grails-views-gson"
     implementation project(":mongodb-gson-templates")

@@ -26,19 +26,14 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))
-    api 'org.springframework.boot:spring-boot-starter-logging'
-    api 'org.springframework.boot:spring-boot-starter-actuator'
-    api 'org.springframework.boot:spring-boot-autoconfigure'
-    api 'org.springframework.boot:spring-boot-starter-tomcat'
-
-    api 'org.apache.grails:grails-web-boot'
     if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
         api 'org.apache.grails:grails-sitemesh3'
     }
     else {
         api 'org.apache.grails:grails-layout'
     }
-    api 'org.apache.grails:grails-dependencies'
+    api 'org.apache.grails:grails-dependencies-starter-web'
+    api 'com.h2database:h2'
     api 'jakarta.servlet:jakarta.servlet-api'
 
     console 'org.apache.grails:grails-console'

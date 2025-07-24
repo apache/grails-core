@@ -25,14 +25,9 @@ configurations.configureEach {
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation "org.springframework.boot:spring-boot-starter-logging"
-    implementation "org.springframework.boot:spring-boot-autoconfigure"
-    implementation "org.springframework.boot:spring-boot-starter-actuator"
-    implementation "org.springframework.boot:spring-boot-starter-tomcat"
     implementation "javax.servlet:javax.servlet-api:$servletApiVersion"
-    implementation "org.apache.grails:grails-core:$grailsVersion"
-    implementation "org.apache.grails:grails-dependencies:$grailsVersion"
-    implementation "org.apache.grails:grails-web-boot:$grailsVersion"
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'com.h2database:h2'
 
     implementation project(':grails-plugin')
     implementation "org.apache.grails:grails-data-hibernate5:$hibernateDatastoreVersion"
