@@ -6,7 +6,7 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 
-class SimpleValueBinderSpec extends HibernateGormDatastoreSpec {
+class SimpleValueColumnBinderSpec extends HibernateGormDatastoreSpec {
 
     void "Test defaults"() {
         when:
@@ -15,7 +15,7 @@ class SimpleValueBinderSpec extends HibernateGormDatastoreSpec {
         def tableName = "table"
         def contributor = "contributor"
         def nullable = false
-        def simpleValueBinder = new SimpleValueBinder()
+        def simpleValueBinder = new SimpleValueColumnBinder()
         Table table = new Table(contributor,tableName);
         table.setName(tableName)
         def grailsDomainBinder = getGrailsDomainBinder()
@@ -37,7 +37,7 @@ class SimpleValueBinderSpec extends HibernateGormDatastoreSpec {
         def type = "String"
         def columnName = "columnName"
         def nullable = true
-        def simpleValueBinder = new SimpleValueBinder()
+        def simpleValueBinder = new SimpleValueColumnBinder()
         def grailsDomainBinder = getGrailsDomainBinder()
         BasicValue simpleValue = new BasicValue(grailsDomainBinder.metadataBuildingContext, null);
         simpleValueBinder.bindSimpleValue(simpleValue, type, columnName, nullable)

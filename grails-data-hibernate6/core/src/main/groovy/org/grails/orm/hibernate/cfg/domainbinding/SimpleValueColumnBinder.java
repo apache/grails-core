@@ -6,7 +6,7 @@ import org.hibernate.mapping.SimpleValue;
 
 import java.util.Optional;
 
-public class SimpleValueBinder {
+public class SimpleValueColumnBinder {
 
     /**
      * Binds a value for the specified parameters to the meta model.
