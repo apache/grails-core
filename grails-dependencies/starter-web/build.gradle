@@ -27,7 +27,7 @@ group = 'org.apache.grails'
 
 ext {
     skipJavaComponent = true
-    pomDescription = 'A meta-project that aggregates all non-test, non-database Grails dependencies.'
+    pomDescription = 'A meta-project that aggregates all web, non-test, non-database Grails dependencies.'
 }
 
 def configurations = [

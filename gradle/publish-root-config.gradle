@@ -43,7 +43,7 @@ def publishedProjects = [
         'grails-databinding',
         'grails-databinding-core',
         'grails-datasource',
-        'grails-dependencies-all',
+        'grails-dependencies-starter-web',
         'grails-dependencies-assets',
         'grails-dependencies-test',
         'grails-domain-class',

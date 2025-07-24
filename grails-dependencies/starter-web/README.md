@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-## grails-dependencies-all
-A meta-project that aggregates all non-test, non-database Grails dependencies.
+## grails-dependencies-starter-web
+
+A meta-project that aggregates all web, non-test, non-database Grails dependencies.
 

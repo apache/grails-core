@@ -20,7 +20,7 @@
 group "examples"
 
 dependencies {
-    implementation 'org.apache.grails:grails-dependencies-all'
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
     implementation "org.apache.grails:grails-codecs"
     implementation "org.apache.grails:grails-datasource"

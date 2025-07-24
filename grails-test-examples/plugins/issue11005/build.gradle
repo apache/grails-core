@@ -33,7 +33,7 @@ dependencies {
     else {
         implementation 'org.apache.grails:grails-layout'
     }
-    api 'org.apache.grails:grails-dependencies-all'
+    api 'org.apache.grails:grails-dependencies-starter-web'
     api 'com.h2database:h2'
     api 'jakarta.servlet:jakarta.servlet-api'
 

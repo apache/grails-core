@@ -26,7 +26,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     implementation "javax.servlet:javax.servlet-api:$servletApiVersion"
-    implementation 'org.apache.grails:grails-dependencies-all'
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
 
     implementation project(':grails-plugin')
