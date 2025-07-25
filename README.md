@@ -21,19 +21,13 @@ Grails Spring Security
 
 See [documentation](https://apache.github.io/grails-spring-security/latest/ghpages.html) for detailed information.
 
-[core-plugin](https://apache.github.io/grails-spring-security/latest/core-plugin/guide/)
-
-[rest-plugin](https://apache.github.io/grails-spring-security/latest/rest-plugin/guide/)
-
-[ui-plugin](https://apache.github.io/grails-spring-security/latest/ui-plugin/guide/)
-
-[acl-plugin](https://apache.github.io/grails-spring-security/latest/acl-plugin/guide/)
-
-[ldap-plugin](https://apache.github.io/grails-spring-security/latest/ldap-plugin/guide/)
-
-[cas-plugin](https://apache.github.io/grails-spring-security/latest/cas-plugin/guide/)
-
-[oauth2-plugin](https://apache.github.io/grails-spring-security/latest/oauth2-plugin/guide/)
+- [CORE](https://apache.github.io/grails-spring-security/latest/core-plugin/guide/)
+  - [ACL](https://apache.github.io/grails-spring-security/latest/acl-plugin/guide/)
+  - [CAS](https://apache.github.io/grails-spring-security/latest/cas-plugin/guide/)
+  - [LDAP](https://apache.github.io/grails-spring-security/latest/ldap-plugin/guide/)
+  - [OAuth2](https://apache.github.io/grails-spring-security/latest/oauth2-plugin/guide/)
+  - [REST](https://apache.github.io/grails-spring-security/latest/rest-plugin/guide/)
+  - [UI](https://apache.github.io/grails-spring-security/latest/ui-plugin/guide/)
 
 ### Building
 
