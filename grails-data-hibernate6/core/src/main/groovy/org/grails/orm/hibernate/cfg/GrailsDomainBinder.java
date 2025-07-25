@@ -48,7 +48,6 @@ import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
 import org.hibernate.boot.model.internal.BinderHelper;
-import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.boot.spi.AccessType;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
@@ -1107,8 +1106,9 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         String s = calculateTableForMany(property, sessionFactoryBeanName);
         String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategyWrapper.getTableName(s));
-        String schemaName = getSchemaName(mappings);
-        String catalogName = getCatalogName(mappings);
+
+        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
+        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
         if(jt != null) {
             if(jt.getSchema() != null) {
                 schemaName = jt.getSchema();
@@ -1541,8 +1541,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                                       InFlightMetadataCollector mappings, Mapping gormMapping, String sessionFactoryBeanName) {
         classBinding.bindClass(sub, joinedSubclass, mappings);
 
-        String schemaName = getSchemaName(mappings);
-        String catalogName = getCatalogName(mappings);
+        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
+        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
 
         Table mytable = mappings.addTable(
                 schemaName, catalogName,
@@ -1573,8 +1573,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         String logicalTableName = unqualify(model.getEntityName());
         String physicalTableName = getTableName(sub, sessionFactoryBeanName);
 
-        String schemaName = getSchemaName(mappings);
-        String catalogName = getCatalogName(mappings);
+        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
+        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
 
         mappings.addTableNameBinding(schemaName, catalogName, logicalTableName, physicalTableName, denormalizedSuperTable);
         return physicalTableName;
@@ -1682,11 +1682,11 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         var schema = ofNullable(m.getTable())
                 .map(org.grails.orm.hibernate.cfg.Table::getSchema)
-                .orElse(getSchemaName(mappings));
+                .orElse(new NamespaceNameExtractor().getSchemaName(mappings));
 
         var catalog = ofNullable(m.getTable())
                 .map(org.grails.orm.hibernate.cfg.Table::getCatalog)
-                .orElse( getCatalogName(mappings));
+                .orElse(new NamespaceNameExtractor().getCatalogName(mappings));
 
 
         var isAbstract = !m.getTablePerHierarchy() && m.isTablePerConcreteClass() && root.isAbstract();
@@ -2428,8 +2428,8 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
         }
 
-        String schemaName = getSchemaName(mappings);
-        String catalogName = getCatalogName(mappings);
+        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
+        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
 
         params.put(PersistentIdentifierGenerator.IDENTIFIER_NORMALIZER, this.metadataBuildingContext.getObjectNameNormalizer());
 
@@ -2456,22 +2456,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         Table table = id.getTable();
         table.setPrimaryKey(new PrimaryKey(table));
-    }
-
-    private String getSchemaName(InFlightMetadataCollector mappings) {
-        Identifier schema = mappings.getDatabase().getDefaultNamespace().getName().getSchema();
-        if(schema != null) {
-            return schema.getCanonicalName();
-        }
-        return null;
-    }
-
-    private String getCatalogName(InFlightMetadataCollector mappings) {
-        Identifier catalog = mappings.getDatabase().getDefaultNamespace().getName().getCatalog();
-        if(catalog != null) {
-            return catalog.getCanonicalName();
-        }
-        return null;
     }
 
     /**
