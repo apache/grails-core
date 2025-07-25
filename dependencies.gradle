@@ -42,7 +42,7 @@ ext {
             'objenesis.version'                  : '3.4',
             'gradle-spock.version'               : '2.3-groovy-3.0',
             'gradle-nexus-publish-plugin.version': '2.0.0',
-            'spring-boot.version'                : '3.5.3',
+            'spring-boot.version'                : '3.5.4',
             'springloaded.version'               : '1.2.8.RELEASE',
     ]
 
@@ -82,7 +82,7 @@ ext {
             'bootstrap.version'            : '5.3.7',
             'commons-codec.version'        : '1.18.0',
             'geb-spock.version'            : '7.0',
-            'groovy.version'               : '4.0.27',
+            'groovy.version'               : '4.0.28',
             'h2.version'                   : '2.3.232',
             'jackson.version'              : '2.19.1',
             'jquery.version'               : '3.7.1',
