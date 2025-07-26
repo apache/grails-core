@@ -164,7 +164,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 String controller
                 String action = urlAttrs.get(ATTRIBUTE_ACTION)?.toString()
                 def id = urlAttrs.get(ATTRIBUTE_ID)
-                String httpMethod;
+                String httpMethod
                 final methodAttribute = urlAttrs.get(ATTRIBUTE_METHOD)
                 final paramsAttribute = urlAttrs.get(ATTRIBUTE_PARAMS)
                 Map params = paramsAttribute instanceof Map ? (Map) paramsAttribute : [:]

@@ -111,7 +111,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         if(profile != null && !visitedProfiles.contains(profile)) {
             visitedProfiles.add(profile)
             profile.getExtends().each { Profile dependentProfile ->
-                visitTopologicalSort(dependentProfile, sortedProfiles, visitedProfiles);
+                visitTopologicalSort(dependentProfile, sortedProfiles, visitedProfiles)
             }
             sortedProfiles.add(profile)
         }

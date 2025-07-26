@@ -118,7 +118,7 @@ Note: if project properties are used, the properties must be defined prior to ap
 
     @Override
     void apply(Project project) {
-        project.rootProject.logger.info("Applying Grails Publish Gradle Plugin for `${project.name}`...");
+        project.rootProject.logger.info("Applying Grails Publish Gradle Plugin for `${project.name}`...")
         if (project.extensions.findByName('grailsPublish') == null) {
             project.extensions.create('grailsPublish', GrailsPublishExtension)
         }

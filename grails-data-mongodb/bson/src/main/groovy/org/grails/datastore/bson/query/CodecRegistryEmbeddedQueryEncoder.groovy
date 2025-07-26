@@ -49,8 +49,8 @@ class CodecRegistryEmbeddedQueryEncoder implements EmbeddedQueryEncoder {
         if(codec == null) {
             codec = new BsonPersistentEntityCodec(codecRegistry, associatedEntity)
         }
-        final BsonDocument doc = new BsonDocument();
-        codec.encode(new BsonDocumentWriter(doc), instance, BsonQuery.ENCODER_CONTEXT);
-        return doc;
+        final BsonDocument doc = new BsonDocument()
+        codec.encode(new BsonDocumentWriter(doc), instance, BsonQuery.ENCODER_CONTEXT)
+        return doc
     }
 }

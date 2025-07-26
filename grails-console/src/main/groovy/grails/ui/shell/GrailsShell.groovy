@@ -67,7 +67,7 @@ class GrailsShell extends GrailsApp {
      * @return the running {@link org.springframework.context.ApplicationContext}
      */
     public static ConfigurableApplicationContext run(Class<?> source, String... args) {
-        return run([ source ] as Class[], args);
+        return run([ source ] as Class[], args)
     }
 
     /**
@@ -78,7 +78,7 @@ class GrailsShell extends GrailsApp {
      * @return the running {@link org.springframework.context.ApplicationContext}
      */
     public static ConfigurableApplicationContext run(Class<?>[] sources, String[] args) {
-        return new GrailsShell(sources).run(args);
+        return new GrailsShell(sources).run(args)
     }
 
     /**

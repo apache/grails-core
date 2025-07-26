@@ -50,6 +50,6 @@ class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
 
     @Override
     protected SourceUnit getSourceUnit() {
-        return null;
+        return null
     }
 }

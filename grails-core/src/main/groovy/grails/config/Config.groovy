@@ -58,5 +58,5 @@ interface Config extends PropertyResolver, ConfigMap {
      *
      * @see #getRequiredProperty(String, Class)
      */
-    public <T> T getProperty(String key, Class<T> targetType, T defaultValue, List<T> allowedValues);
+    public <T> T getProperty(String key, Class<T> targetType, T defaultValue, List<T> allowedValues)
 }

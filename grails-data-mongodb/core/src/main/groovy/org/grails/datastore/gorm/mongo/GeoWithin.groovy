@@ -39,7 +39,7 @@ class GeoWithin extends MethodExpression {
 
     @Override
     Query.Criterion createCriterion() {
-        return new MongoQuery.GeoWithin(propertyName, arguments[0]);
+        return new MongoQuery.GeoWithin(propertyName, arguments[0])
     }
 
     @Override

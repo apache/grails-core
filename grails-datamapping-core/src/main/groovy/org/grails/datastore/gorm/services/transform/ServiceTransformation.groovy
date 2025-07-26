@@ -121,7 +121,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.warning
 @GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
 class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation implements CompilationUnitAware, ASTTransformation {
 
-    private static final ClassNode MY_TYPE = new ClassNode(Service.class);
+    private static final ClassNode MY_TYPE = new ClassNode(Service.class)
     private static final Object APPLIED_MARKER = new Object()
     private static final List<ServiceImplementer> DEFAULT_IMPLEMENTORS = [
             new FindAllImplementer(),

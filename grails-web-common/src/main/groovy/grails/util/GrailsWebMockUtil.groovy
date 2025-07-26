@@ -106,7 +106,7 @@ class GrailsWebMockUtil {
 
     static GrailsWebRequest bindMockWebRequest(ServletContext servletContext, MockHttpServletRequest request, MockHttpServletResponse response) {
         GrailsWebRequest webRequest = new GrailsWebRequest(request,
-                                                response, servletContext);
+                                                response, servletContext)
         request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, webRequest)
         RequestContextHolder.setRequestAttributes(webRequest)
         webRequest

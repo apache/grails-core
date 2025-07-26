@@ -48,14 +48,14 @@ class RenderSitemeshTagLib implements TagLibrary {
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
         WebAppContext context = new WebAppContext("text/html", request, response,
-                servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false);
-        Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context);
+                servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false)
+        Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context)
         if (attrs.name) {
             request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
         }
-        String[] decoratorPaths = siteMeshFilter.decoratorSelector.selectDecoratorPaths(content, context);
+        String[] decoratorPaths = siteMeshFilter.decoratorSelector.selectDecoratorPaths(content, context)
         for (String decoratorPath : decoratorPaths) {
-            content = context.decorate(decoratorPath, content);
+            content = context.decorate(decoratorPath, content)
         }
         content.getData().writeValueTo(out)
         request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, savedAttribute)
@@ -66,9 +66,9 @@ class RenderSitemeshTagLib implements TagLibrary {
             return null
         }
         Content content = request.getAttribute(WebAppContext.CONTENT_KEY)
-        ContentProperty currentProperty = content.getExtractedProperties();
+        ContentProperty currentProperty = content.getExtractedProperties()
         for (String childPropertyName : name.split("\\.")) {
-            currentProperty = currentProperty.getChild(childPropertyName);
+            currentProperty = currentProperty.getChild(childPropertyName)
         }
         currentProperty
     }

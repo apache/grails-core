@@ -51,7 +51,7 @@ class PropertyConfig extends Property {
     // Whether the first column is created from cloning this instance
     boolean firstColumnIsColumnCopy = false
 
-    boolean explicitSaveUpdateCascade;
+    boolean explicitSaveUpdateCascade
 
     /**
      * The Hibernate type or user type of the property. This can be

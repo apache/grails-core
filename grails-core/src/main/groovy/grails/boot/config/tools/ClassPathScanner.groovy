@@ -147,7 +147,7 @@ class ClassPathScanner {
             }
             else {
                 String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
-                        ClassUtils.convertClassNameToResourcePath(pkg) + Settings.CLASS_RESOURCE_PATTERN;
+                        ClassUtils.convertClassNameToResourcePath(pkg) + Settings.CLASS_RESOURCE_PATTERN
 
                 scanUsingPattern(resourcePatternResolver, pattern, classLoader, annotationFilter, classes)
             }

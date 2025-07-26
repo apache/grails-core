@@ -31,7 +31,7 @@ class SitemeshTagLib implements TagLibrary {
     static String namespace = 'sitemesh'
     CodecLookup codecLookup
     // from org.grails.gsp.compiler.SitemeshPreprocessor
-    public static final String XML_CLOSING_FOR_EMPTY_TAG_ATTRIBUTE_NAME = "gsp_sm_xmlClosingForEmptyTag";
+    public static final String XML_CLOSING_FOR_EMPTY_TAG_ATTRIBUTE_NAME = "gsp_sm_xmlClosingForEmptyTag"
 
     SitemeshTagLib(CodecLookup codecLookup) {
         this.codecLookup = codecLookup

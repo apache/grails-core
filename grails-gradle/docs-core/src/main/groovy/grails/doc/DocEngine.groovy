@@ -308,7 +308,7 @@ class NoteMacro extends BaseMacro {
 
 class BlockQuoteFilter extends RegexTokenFilter {
     BlockQuoteFilter() {
-        super(/(?m)^bc.\s*?(.*?)\n\n/);
+        super(/(?m)^bc.\s*?(.*?)\n\n/)
     }
     void handleMatch(StringBuffer buffer, MatchResult result, FilterContext context) {
         buffer << "<pre class=\"bq\"><code>${result.group(1)}</code></pre>\n\n"
@@ -317,7 +317,7 @@ class BlockQuoteFilter extends RegexTokenFilter {
 
 class ItalicFilter extends RegexTokenFilter {
     ItalicFilter() {
-        super(/\b_([^\n]*?)_\b/);
+        super(/\b_([^\n]*?)_\b/)
     }
     void handleMatch(StringBuffer buffer, MatchResult result, FilterContext context) {
         buffer << " <em class=\"italic\">${result.group(1)}</em> "
@@ -326,7 +326,7 @@ class ItalicFilter extends RegexTokenFilter {
 
 class BoldFilter extends RegexTokenFilter {
     BoldFilter() {
-        super(/\*([^\n]*?)\*/);
+        super(/\*([^\n]*?)\*/)
     }
     void handleMatch(StringBuffer buffer, MatchResult result, FilterContext context) {
         buffer << "<strong class=\"bold\">${result.group(1)}</strong>"
@@ -335,7 +335,7 @@ class BoldFilter extends RegexTokenFilter {
 
 class CodeFilter extends RegexTokenFilter {
     CodeFilter() {
-        super(/@([^\n]*?)@/);
+        super(/@([^\n]*?)@/)
     }
 
     void handleMatch(StringBuffer buffer, MatchResult result, FilterContext context) {
@@ -352,7 +352,7 @@ class CodeFilter extends RegexTokenFilter {
 
 class ImageFilter extends RegexTokenFilter {
     ImageFilter() {
-        super(/!([^\n<>=]*?\.(jpg|png|gif))!/);
+        super(/!([^\n<>=]*?\.(jpg|png|gif))!/)
     }
 
     void handleMatch(StringBuffer buffer, MatchResult result, FilterContext context) {
@@ -369,7 +369,7 @@ class ImageFilter extends RegexTokenFilter {
 
 class TextileLinkFilter extends RegexTokenFilter {
     TextileLinkFilter() {
-        super(/"([^"]+?)":(\S+?)(\s)/);
+        super(/"([^"]+?)":(\S+?)(\s)/)
     }
 
     void handleMatch(StringBuffer buffer, MatchResult result, FilterContext context) {

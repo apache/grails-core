@@ -78,13 +78,13 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
 
-        ModuleNode ast = source.getAST();
-        List<ClassNode> classes = new ArrayList<>(ast.getClasses());
+        ModuleNode ast = source.getAST()
+        List<ClassNode> classes = new ArrayList<>(ast.getClasses())
 
-        URL url = GrailsASTUtils.getSourceUrl(source);
+        URL url = GrailsASTUtils.getSourceUrl(source)
 
         if (url == null) return
-        if (!GrailsResourceUtils.isProjectSource(new UrlResource(url))) return;
+        if (!GrailsResourceUtils.isProjectSource(new UrlResource(url))) return
 
         List<ArtefactHandler> artefactHandlers = GrailsFactoriesLoader.loadFactories(ArtefactHandler)
         ClassInjector[] classInjectors = GrailsAwareInjectionOperation.getClassInjectors()
@@ -130,7 +130,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 continue
             }
 
-            if (!GrailsResourceUtils.isGrailsResource(new UrlResource(url))) continue;
+            if (!GrailsResourceUtils.isGrailsResource(new UrlResource(url))) continue
 
             if (projectName && projectVersion) {
                 GrailsASTUtils.addAnnotationOrGetExisting(classNode, GrailsPlugin, [name: GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(projectName.toString()), version: projectVersion])

@@ -50,7 +50,7 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
 
     final String[] artefactTypes = [ServiceArtefactHandler.TYPE] as String[]
     public static Pattern SERVICE_PATTERN = Pattern.compile(".+/" +
-        GrailsResourceUtils.GRAILS_APP_DIR + "/services/(.+)Service\\.groovy");
+        GrailsResourceUtils.GRAILS_APP_DIR + "/services/(.+)Service\\.groovy")
 
     @Override
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {

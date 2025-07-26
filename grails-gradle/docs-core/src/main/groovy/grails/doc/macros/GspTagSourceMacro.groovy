@@ -32,11 +32,11 @@ import org.radeox.util.Encoder
 class GspTagSourceMacro extends BaseMacro implements Serializable {
 
     @Internal
-    protected String description = " ";
+    protected String description = " "
     @Internal
-    protected String[] paramDescription = {};
+    protected String[] paramDescription = {}
 
-    private static final long serialVersionUID = 0L;
+    private static final long serialVersionUID = 0L
 
 
 

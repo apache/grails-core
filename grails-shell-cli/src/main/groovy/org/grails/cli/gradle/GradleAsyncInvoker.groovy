@@ -31,7 +31,7 @@ import groovy.transform.CompileStatic
 class GradleAsyncInvoker {
     GradleInvoker invoker
 
-    public static final ExecutorService POOL = Executors.newFixedThreadPool(4);
+    public static final ExecutorService POOL = Executors.newFixedThreadPool(4)
 
     static {
         Runtime.addShutdownHook {

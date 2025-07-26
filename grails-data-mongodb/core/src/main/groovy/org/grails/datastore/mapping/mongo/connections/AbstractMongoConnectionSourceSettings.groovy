@@ -56,7 +56,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
     /**
      * The host name to use
      */
-    String host = ServerAddress.defaultHost();
+    String host = ServerAddress.defaultHost()
 
     /**
      * The port to use

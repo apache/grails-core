@@ -37,20 +37,20 @@ class TokenResponseActionResultTransformer implements ActionResultTransformer{
     def transformActionResult(GrailsWebRequest webRequest, String viewName, Object actionResult) {
         def request = webRequest.request
         def response = webRequest.response
-        TokenResponseHandler handler = (TokenResponseHandler) request.getAttribute(TokenResponseHandler.KEY);
+        TokenResponseHandler handler = (TokenResponseHandler) request.getAttribute(TokenResponseHandler.KEY)
         if (handler != null && !handler.wasInvoked() && handler.wasInvalidToken()) {
-            String uri = (String) request.getAttribute(SynchronizerTokensHolder.TOKEN_URI);
+            String uri = (String) request.getAttribute(SynchronizerTokensHolder.TOKEN_URI)
             if (uri == null) {
-                uri = WebUtils.getForwardURI(request);
+                uri = WebUtils.getForwardURI(request)
             }
             try {
-                FlashScope flashScope = webRequest.getFlashScope();
-                flashScope.put(TokenResponseHandler.INVALID_TOKEN_ATTRIBUTE, request.getParameter(SynchronizerTokensHolder.TOKEN_KEY));
-                response.sendRedirect(uri);
-                return null;
+                FlashScope flashScope = webRequest.getFlashScope()
+                flashScope.put(TokenResponseHandler.INVALID_TOKEN_ATTRIBUTE, request.getParameter(SynchronizerTokensHolder.TOKEN_KEY))
+                response.sendRedirect(uri)
+                return null
             }
             catch (IOException e) {
-                throw new ControllerExecutionException("I/O error sending redirect to URI: " + uri,e);
+                throw new ControllerExecutionException("I/O error sending redirect to URI: " + uri,e)
             }
         }
         return actionResult

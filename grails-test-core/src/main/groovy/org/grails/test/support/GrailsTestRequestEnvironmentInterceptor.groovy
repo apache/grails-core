@@ -50,7 +50,7 @@ class GrailsTestRequestEnvironmentInterceptor {
         def response = new GrailsMockHttpServletResponse()
         GrailsWebRequest webRequest = GrailsWebMockUtil.bindMockWebRequest(applicationContext, request, response)
         Holders.servletContext = webRequest.servletContext
-        Holders.addApplicationDiscoveryStrategy(new ServletEnvironmentGrailsApplicationDiscoveryStrategy(webRequest.servletContext));
+        Holders.addApplicationDiscoveryStrategy(new ServletEnvironmentGrailsApplicationDiscoveryStrategy(webRequest.servletContext))
         webRequest.servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, applicationContext)
         webRequest.controllerName = controllerName
     }

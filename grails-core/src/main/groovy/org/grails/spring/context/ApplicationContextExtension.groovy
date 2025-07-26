@@ -40,10 +40,10 @@ class ApplicationContextExtension {
      */
     public static Object propertyMissing(ApplicationContext applicationContext, String name ) {
         if(applicationContext.containsBean(name)) {
-            return applicationContext.getBean(name);
+            return applicationContext.getBean(name)
         }
         else {
-            return null;
+            return null
         }
     }
 
@@ -55,6 +55,6 @@ class ApplicationContextExtension {
      * @return A bean or null
      */
     public static Object getAt(ApplicationContext applicationContext, String name) {
-        return propertyMissing(applicationContext, name);
+        return propertyMissing(applicationContext, name)
     }
 }

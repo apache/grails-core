@@ -50,11 +50,11 @@ class DefaultConstrainedDiscovery implements ConstrainedDiscovery {
     }
 
     private static Map<String, Constrained> adaptConstraints(Map<String, ConstrainedProperty> evaluated) {
-        Map<String, Constrained> finalConstraints = new LinkedHashMap<>(evaluated.size());
+        Map<String, Constrained> finalConstraints = new LinkedHashMap<>(evaluated.size())
         for (Map.Entry<String, ConstrainedProperty> entry : evaluated.entrySet()) {
-            finalConstraints.put(entry.getKey(), new ConstrainedDelegate(entry.getValue()));
+            finalConstraints.put(entry.getKey(), new ConstrainedDelegate(entry.getValue()))
         }
-        return finalConstraints;
+        return finalConstraints
     }
 
 }

@@ -54,12 +54,12 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
 
     ApplicationContext applicationContext
 
-    protected Collection<ActionResultTransformer> actionResultTransformers = Collections.emptyList();
+    protected Collection<ActionResultTransformer> actionResultTransformers = Collections.emptyList()
     protected Map<String, Object> controllerCache = new ConcurrentHashMap<>()
     protected ResponseRedirector redirector
 
     void setApplicationContext(ApplicationContext applicationContext) {
-        this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer.class).values();
+        this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer.class).values()
         this.applicationContext = applicationContext
         this.redirector = new ResponseRedirector(applicationContext.getBean(LinkGenerator))
     }
@@ -74,9 +74,9 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
 
-        boolean isAsyncRequest = WebUtils.isAsync(request) && !WebUtils.isError(request);
+        boolean isAsyncRequest = WebUtils.isAsync(request) && !WebUtils.isError(request)
         if(isAsyncRequest) {
-            Object modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW);
+            Object modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
             if(modelAndView instanceof ModelAndView) {
                 return (ModelAndView)modelAndView
             }

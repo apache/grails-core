@@ -129,7 +129,7 @@ class MimeType {
 
     int hashCode() {
         def result = name.hashCode()
-        result = 31 * result + (version != null ? version.hashCode() : 0);
+        result = 31 * result + (version != null ? version.hashCode() : 0)
         return result
     }
 

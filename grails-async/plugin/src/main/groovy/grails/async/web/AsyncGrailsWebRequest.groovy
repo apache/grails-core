@@ -75,7 +75,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
      * @return The GrailsWebRequest
      */
     static AsyncGrailsWebRequest lookup(HttpServletRequest request) {
-        AsyncGrailsWebRequest webRequest = (AsyncGrailsWebRequest) request.getAttribute(WEB_REQUEST);
+        AsyncGrailsWebRequest webRequest = (AsyncGrailsWebRequest) request.getAttribute(WEB_REQUEST)
         return webRequest
     }
 

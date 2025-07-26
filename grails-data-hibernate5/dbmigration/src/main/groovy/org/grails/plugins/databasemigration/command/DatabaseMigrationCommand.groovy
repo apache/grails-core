@@ -250,7 +250,7 @@ trait DatabaseMigrationCommand {
         def compareControl = new CompareControl([] as CompareControl.SchemaComparison[], null as String)
         DiffOutputControl diffOutputControl = createDiffOutputControl()
 
-        final CommandScope command = new CommandScope("groovyGenerateChangeLog");
+        final CommandScope command = new CommandScope("groovyGenerateChangeLog")
         command
                 .addArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG, originalDatabase)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, originalDatabase)
@@ -262,7 +262,7 @@ trait DatabaseMigrationCommand {
                 .addArgumentValue(DiffOutputControlCommandStep.INCLUDE_TABLESPACE_ARG, diffOutputControl.getIncludeTablespace())
                 .addArgumentValue(GenerateChangelogCommandStep.OVERWRITE_OUTPUT_FILE_ARG, GenerateChangelogCommandStep.OVERWRITE_OUTPUT_FILE_ARG.getDefaultValue())
                 .addArgumentValue(GenerateChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG, AbstractChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG.getDefaultValue())
-                .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue());
+                .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue())
 
 
         if(diffOutputControl.isReplaceIfExistsSet()) {
@@ -277,7 +277,7 @@ trait DatabaseMigrationCommand {
         def compareControl = new CompareControl([] as CompareControl.SchemaComparison[], null as String)
         DiffOutputControl diffOutputControl = createDiffOutputControl()
 
-        final CommandScope command = new CommandScope("groovyDiffChangelog");
+        final CommandScope command = new CommandScope("groovyDiffChangelog")
         command
                 .addArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG, referenceDatabase)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, targetDatabase)
@@ -289,7 +289,7 @@ trait DatabaseMigrationCommand {
                 .addArgumentValue(DiffOutputControlCommandStep.INCLUDE_SCHEMA_ARG, diffOutputControl.getIncludeSchema())
                 .addArgumentValue(DiffOutputControlCommandStep.INCLUDE_TABLESPACE_ARG, diffOutputControl.getIncludeTablespace())
                 .addArgumentValue(GenerateChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG, AbstractChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG.getDefaultValue())
-                .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue());
+                .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue())
 
         if(diffOutputControl.isReplaceIfExistsSet()) {
             command.addArgumentValue(GenerateChangelogCommandStep.USE_OR_REPLACE_OPTION, true)

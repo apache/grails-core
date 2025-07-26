@@ -29,5 +29,6 @@ ruleset {
     }
     NoWildcardImports
     UnnecessaryGroovyImport
+    UnnecessarySemicolon
     UnusedImport
 }

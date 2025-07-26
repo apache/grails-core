@@ -59,7 +59,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     public static final String MATCHED_REQUEST = "org.grails.url.match.info"
 
     protected UrlMappingsHolder urlMappingsHolder
-    protected UrlPathHelper urlHelper = new UrlPathHelper();
+    protected UrlPathHelper urlHelper = new UrlPathHelper()
     protected MimeTypeResolver mimeTypeResolver
     protected HandlerInterceptor[] webRequestHandlerInterceptors
 
@@ -129,7 +129,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
         if(matchedInfo != null && errorStatus == null) return matchedInfo
 
-        String uri = urlHelper.getPathWithinApplication(request);
+        String uri = urlHelper.getPathWithinApplication(request)
         def webRequest = GrailsWebRequest.lookup(request)
 
         Assert.notNull(webRequest, "HandlerMapping requires a Grails web request")

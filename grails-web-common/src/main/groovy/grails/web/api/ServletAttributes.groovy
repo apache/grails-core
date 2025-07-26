@@ -60,7 +60,7 @@ trait ServletAttributes implements WebAttributes {
     @Generated
     ApplicationContext getApplicationContext() {
         if (applicationContext == null) {
-            this.applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(getServletContext());
+            this.applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(getServletContext())
         }
         this.applicationContext
     }

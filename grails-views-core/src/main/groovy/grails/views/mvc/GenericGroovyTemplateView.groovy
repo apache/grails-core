@@ -138,7 +138,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
 
     @CompileStatic
     private static class HttpViewRequest implements Request {
-        final HttpServletRequest request;
+        final HttpServletRequest request
 
         HttpViewRequest(HttpServletRequest request) {
             this.request = request

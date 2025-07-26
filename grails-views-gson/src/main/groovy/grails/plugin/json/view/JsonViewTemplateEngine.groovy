@@ -103,7 +103,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         options.dateFormat(config.dateFormat, locale)
         options.timezone(config.timeZone)
 
-        ServiceLoader<JsonGenerator.Converter> loader = ServiceLoader.load(JsonGenerator.Converter.class);
+        ServiceLoader<JsonGenerator.Converter> loader = ServiceLoader.load(JsonGenerator.Converter.class)
         List<JsonGenerator.Converter> converters = []
         for (JsonGenerator.Converter converter : loader) {
             converters.add(converter)
@@ -129,7 +129,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         super.prepareCustomizers(compilerConfiguration)
         if(compileStatic) {
             compilerConfiguration.addCompilationCustomizers(
-                    new ASTTransformationCustomizer(Collections.singletonMap("extensions", JsonTemplateTypeCheckingExtension.name), CompileStatic.class));
+                    new ASTTransformationCustomizer(Collections.singletonMap("extensions", JsonTemplateTypeCheckingExtension.name), CompileStatic.class))
         }
 
     }

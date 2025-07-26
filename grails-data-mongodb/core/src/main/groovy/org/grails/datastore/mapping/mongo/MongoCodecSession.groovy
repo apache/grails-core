@@ -87,14 +87,14 @@ class MongoCodecSession extends AbstractMongoSession {
     }
 
     public MongoCodecSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
-        this(datastore, mappingContext, publisher, false);
+        this(datastore, mappingContext, publisher, false)
     }
     public MongoCodecSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
-        super(datastore, mappingContext, publisher, stateless);
+        super(datastore, mappingContext, publisher, stateless)
 
 
         FlushModeType defaultFlushMode = datastore.getDefaultFlushMode()
-        setFlushMode(defaultFlushMode);
+        setFlushMode(defaultFlushMode)
     }
 
     @Override
@@ -105,15 +105,15 @@ class MongoCodecSession extends AbstractMongoSession {
 
     @Override
     void flush(WriteConcern writeConcern) {
-        WriteConcern currentWriteConcern = this.getWriteConcern();
+        WriteConcern currentWriteConcern = this.getWriteConcern()
         try {
-            this.writeConcern = writeConcern;
-            final Map<PersistentEntity, Collection<PendingUpdate>> pendingUpdates = getPendingUpdates();
-            final Map<PersistentEntity, Collection<PendingInsert>> pendingInserts = getPendingInserts();
-            final Map<PersistentEntity, Collection<PendingDelete>> pendingDeletes = getPendingDeletes();
+            this.writeConcern = writeConcern
+            final Map<PersistentEntity, Collection<PendingUpdate>> pendingUpdates = getPendingUpdates()
+            final Map<PersistentEntity, Collection<PendingInsert>> pendingInserts = getPendingInserts()
+            final Map<PersistentEntity, Collection<PendingDelete>> pendingDeletes = getPendingDeletes()
 
             if(pendingUpdates.isEmpty() && pendingInserts.isEmpty() && pendingDeletes.isEmpty()) {
-                return;
+                return
             }
 
 
@@ -147,7 +147,7 @@ class MongoCodecSession extends AbstractMongoSession {
 
                 final Collection<PendingUpdate> updates = pendingUpdates[persistentEntity]
                 if(updates) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels);
+                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
                     for (PendingUpdate update in updates) {
                         update.run()
 
@@ -246,8 +246,8 @@ class MongoCodecSession extends AbstractMongoSession {
 
                     final boolean isAcknowledged = wc.isAcknowledged()
                     if( !bulkWriteResult.wasAcknowledged() && isAcknowledged) {
-                        errorOccured = true;
-                        throw new DataIntegrityViolationException("Write operation was not acknowledged");
+                        errorOccured = true
+                        throw new DataIntegrityViolationException("Write operation was not acknowledged")
                     }
                     else if(isAcknowledged) {
                         final int matchedCount = bulkWriteResult.matchedCount
@@ -263,13 +263,13 @@ class MongoCodecSession extends AbstractMongoSession {
             }
 
             for (Runnable postFlushOperation : postFlushOperations) {
-                postFlushOperation.run();
+                postFlushOperation.run()
             }
         } finally {
-            clearPendingOperations();
-            postFlushOperations.clear();
-            firstLevelCollectionCache.clear();
-            this.writeConcern = currentWriteConcern;
+            clearPendingOperations()
+            postFlushOperations.clear()
+            firstLevelCollectionCache.clear()
+            this.writeConcern = currentWriteConcern
         }
     }
 
@@ -294,7 +294,7 @@ class MongoCodecSession extends AbstractMongoSession {
 
     @Override
     protected Transaction beginTransactionInternal() {
-        return new SessionOnlyTransaction<MongoClient>(getNativeInterface(), this);
+        return new SessionOnlyTransaction<MongoClient>(getNativeInterface(), this)
     }
 
     @Override
@@ -304,8 +304,8 @@ class MongoCodecSession extends AbstractMongoSession {
 
     @Override
     long deleteAll(QueryableCriteria criteria) {
-        final PersistentEntity entity = criteria.getPersistentEntity();
-        final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity);
+        final PersistentEntity entity = criteria.getPersistentEntity()
+        final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity)
 
         final MongoCollection collection = getCollection(entity)
         final DeleteResult deleteResult = collection.deleteMany((Bson)nativeQuery)

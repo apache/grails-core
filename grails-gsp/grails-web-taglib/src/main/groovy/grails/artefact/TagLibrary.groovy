@@ -132,21 +132,21 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
      * @throws MissingPropertyException When no tag namespace or tag is found
      */
     Object propertyMissing(String name) {
-        TagLibraryLookup gspTagLibraryLookup = getTagLibraryLookup();
+        TagLibraryLookup gspTagLibraryLookup = getTagLibraryLookup()
         if (gspTagLibraryLookup != null) {
 
-            Object result = gspTagLibraryLookup.lookupNamespaceDispatcher(name);
+            Object result = gspTagLibraryLookup.lookupNamespaceDispatcher(name)
             if (result == null) {
                 String namespace = getTaglibNamespace()
-                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(namespace, name);
+                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
                 if (tagLibrary == null) {
-                    tagLibrary = gspTagLibraryLookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, name);
+                    tagLibrary = gspTagLibraryLookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, name)
                 }
 
                 if (tagLibrary != null) {
-                    Object tagProperty = tagLibrary.getProperty(name);
+                    Object tagProperty = tagLibrary.getProperty(name)
                     if (tagProperty instanceof Closure) {
-                        result = ((Closure<?>)tagProperty).clone();
+                        result = ((Closure<?>)tagProperty).clone()
                     }
                 }
             }
@@ -158,15 +158,15 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                 TagLibraryMetaUtils.registerPropertyMissingForTag(this.metaClass, name, result)
 
                 // Register the property for the ExpandoMetaClass so that other tag libs that inherit from it benefit
-                TagLibraryMetaUtils.registerPropertyMissingForTag(mc, name, result);
+                TagLibraryMetaUtils.registerPropertyMissingForTag(mc, name, result)
             }
 
             if (result != null) {
-                return result;
+                return result
             }
         }
 
-        throw new MissingPropertyException(name, this.getClass());
+        throw new MissingPropertyException(name, this.getClass())
     }
 
 }

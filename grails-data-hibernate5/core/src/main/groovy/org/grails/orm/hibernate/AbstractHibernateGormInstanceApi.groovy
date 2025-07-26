@@ -330,7 +330,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
                 def otherSideReflector = datastore.mappingContext.getEntityReflector(otherSide)
                 try {
-                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name);
+                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name)
                     if (id) {
                         final Object associatedInstance = t.get(prop.type, id)
                         if (associatedInstance) {
@@ -463,14 +463,14 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      * to set a ThreadLocal variable that determines the value for getAssumedUnsaved().
      */
     static void markInsertActive() {
-        insertActiveThreadLocal.set(Boolean.TRUE);
+        insertActiveThreadLocal.set(Boolean.TRUE)
     }
 
     /**
      * Clears the ThreadLocal variable set by markInsertActive().
      */
     static void resetInsertActive() {
-        insertActiveThreadLocal.remove();
+        insertActiveThreadLocal.remove()
     }
 
     /**

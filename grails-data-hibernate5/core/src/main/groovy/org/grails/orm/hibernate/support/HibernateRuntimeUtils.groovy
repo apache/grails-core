@@ -46,16 +46,16 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler
  */
 @CompileStatic
 class HibernateRuntimeUtils {
-    private static ProxyHandler proxyHandler = new HibernateProxyHandler();
+    private static ProxyHandler proxyHandler = new HibernateProxyHandler()
 
-    private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler";
+    private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler"
 
     @SuppressWarnings("rawtypes")
     public static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
         if (sessionFactory != null && session != null) {
-            final Set definedFilterNames = sessionFactory.getDefinedFilterNames();
+            final Set definedFilterNames = sessionFactory.getDefinedFilterNames()
             if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER))
-                session.enableFilter(DYNAMIC_FILTER_ENABLER); // work around for HHH-2624
+                session.enableFilter(DYNAMIC_FILTER_ENABLER) // work around for HHH-2624
         }
     }
 
@@ -92,9 +92,9 @@ class HibernateRuntimeUtils {
             ((GormValidateable)target).setErrors(errors)
         }
         else {
-            mc.setProperty(target, GormProperties.ERRORS, errors);
+            mc.setProperty(target, GormProperties.ERRORS, errors)
         }
-        return errors;
+        return errors
     }
 
     public static void autoAssociateBidirectionalOneToOnes(PersistentEntity entity, Object target) {

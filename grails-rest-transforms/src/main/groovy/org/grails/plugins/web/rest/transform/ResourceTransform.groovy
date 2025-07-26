@@ -152,7 +152,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             boolean isReadOnly = readOnlyAttr != null && ((ConstantExpression)readOnlyAttr).trueExpression
             addConstructor(newControllerClassNode, parent, isReadOnly)
 
-            List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(ControllerArtefactHandler.TYPE, GrailsAwareInjectionOperation.getClassInjectors());
+            List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(ControllerArtefactHandler.TYPE, GrailsAwareInjectionOperation.getClassInjectors())
 
             ArtefactTypeAstTransformation.performInjection(source, newControllerClassNode, injectors.findAll { !(it instanceof ControllerActionTransformer) })
 

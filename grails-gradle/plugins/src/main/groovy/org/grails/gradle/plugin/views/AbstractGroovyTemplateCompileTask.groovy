@@ -86,7 +86,7 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
     @PathSensitive(PathSensitivity.RELATIVE)
     @Override
     FileTree getSource() {
-        return super.getSource();
+        return super.getSource()
     }
 
     private ExecOperations execOperations

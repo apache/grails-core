@@ -196,7 +196,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
         def readerFactory = new CachingMetadataReaderFactory(resourcePatternResolver)
         for (pkg in packages) {
             String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
-                    ClassUtils.convertClassNameToResourcePath(pkg) + ENTITY_CLASS_RESOURCE_PATTERN;
+                    ClassUtils.convertClassNameToResourcePath(pkg) + ENTITY_CLASS_RESOURCE_PATTERN
 
             scanUsingPattern(pattern, readerFactory)
         }

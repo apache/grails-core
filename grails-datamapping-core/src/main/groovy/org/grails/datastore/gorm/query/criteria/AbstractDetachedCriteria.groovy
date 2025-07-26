@@ -61,7 +61,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected Map<String, FetchType> fetchStrategies = [:]
     protected Map<String, JoinType> joinTypes = [:]
     protected Closure lazyQuery
-    protected String alias;
+    protected String alias
     protected String connectionName = ConnectionSource.DEFAULT
     protected Map<String, DetachedAssociationCriteria> associationCriteriaMap = [:]
 
@@ -356,14 +356,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     protected List convertArgumentList(Collection argList) {
-        List convertedList = new ArrayList(argList.size());
+        List convertedList = new ArrayList(argList.size())
         for (Object item : argList) {
             if(item instanceof CharSequence) {
-                item = item.toString();
+                item = item.toString()
             }
-            convertedList.add(item);
+            convertedList.add(item)
         }
-        return convertedList;
+        return convertedList
     }
     /**
      * @see Criteria
@@ -495,8 +495,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     @Override
     Criteria exists(QueryableCriteria<?> subquery) {
-        add new Query.Exists(subquery);
-        return this;
+        add new Query.Exists(subquery)
+        return this
     }
 
     /**
@@ -504,8 +504,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     @Override
     Criteria notExists(QueryableCriteria<?> subquery) {
-        add new Query.NotExists(subquery);
-        return this;
+        add new Query.NotExists(subquery)
+        return this
     }
 
     /**

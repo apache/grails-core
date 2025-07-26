@@ -223,7 +223,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                     if (path.fileName.toString() == fileName) {
                         files.add(path.toFile())
                     }
-                    return FileVisitResult.CONTINUE;
+                    return FileVisitResult.CONTINUE
                 }
             })
         }

@@ -34,7 +34,7 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 @CompileStatic
 class StaticConnectionSources<T, S extends ConnectionSourceSettings> extends AbstractConnectionSources<T, S> {
 
-    protected final Map<String, ConnectionSource<T, S>> connectionSourceMap = new LinkedHashMap<>();
+    protected final Map<String, ConnectionSource<T, S>> connectionSourceMap = new LinkedHashMap<>()
 
     StaticConnectionSources(ConnectionSource<T, S> defaultConnectionSource, Iterable<ConnectionSource<T, S>> otherConnectionSources, PropertyResolver configuration = DatastoreUtils.createPropertyResolver(null)) {
         super(defaultConnectionSource, new SingletonConnectionSources.NullConnectionFactory<T, S>(), configuration)

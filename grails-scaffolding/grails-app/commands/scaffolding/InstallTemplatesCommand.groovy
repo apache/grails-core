@@ -40,7 +40,7 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
-    final String description = 'Installs scaffolding templates that use f:all to render properties';
+    final String description = 'Installs scaffolding templates that use f:all to render properties'
 
     @Override
     boolean handle() {

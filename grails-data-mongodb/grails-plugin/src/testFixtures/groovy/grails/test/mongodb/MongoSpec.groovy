@@ -78,7 +78,7 @@ abstract class MongoSpec extends Specification {
     protected List<Class> getDomainClasses() { [] }
 
     void setupSpec() {
-        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader());
+        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader())
         ResourceLoader resourceLoader = new DefaultResourceLoader()
 
         List<PropertySource> propertySources = []

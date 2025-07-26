@@ -95,7 +95,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
         if(applicationContext instanceof ConfigurableApplicationContext) {
             return (ConfigurableApplicationContext)applicationContext
         }
-        return null;
+        return null
     }
 
     @Override

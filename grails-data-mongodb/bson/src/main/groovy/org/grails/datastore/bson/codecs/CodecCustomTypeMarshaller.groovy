@@ -63,17 +63,17 @@ class CodecCustomTypeMarshaller implements CustomTypeMarshaller<Document, Docume
 
     @Override
     Object write(PersistentProperty property, Document value, Document nativeTarget) {
-        throw new UnsupportedOperationException("Use the codec directly");
+        throw new UnsupportedOperationException("Use the codec directly")
     }
 
     @Override
     Document query(PersistentProperty property, Query.PropertyCriterion criterion, Document nativeQuery) {
-        throw new UnsupportedOperationException("Use the codec directly");
+        throw new UnsupportedOperationException("Use the codec directly")
     }
 
     @Override
     Document read(PersistentProperty property, Document source) {
-        throw new UnsupportedOperationException("Use the codec directly");
+        throw new UnsupportedOperationException("Use the codec directly")
     }
 
 }

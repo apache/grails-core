@@ -38,46 +38,46 @@ import grails.util.GrailsStringUtils
 @CompileStatic
 class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
 
-    public static final String[] COMMAND_NAME = new String[] {"groovyGenerateChangeLog"};
+    public static final String[] COMMAND_NAME = new String[] {"groovyGenerateChangeLog"}
 
     private static final String INFO_MESSAGE =
             "When generating formatted SQL changelogs, it is important to decide if batched statements\n" +
                     "should be split or not.  For storedlogic objects, the default behavior is 'splitStatements:false'\n." +
-                    "All other objects default to 'splitStatements:true'.  See https://docs.liquibase.org for additional information.";
+                    "All other objects default to 'splitStatements:true'.  See https://docs.liquibase.org for additional information."
 
     @Override
     void run(CommandResultsBuilder resultsBuilder) throws Exception {
-        CommandScope commandScope = resultsBuilder.getCommandScope();
+        CommandScope commandScope = resultsBuilder.getCommandScope()
 
-        String changeLogFile = GrailsStringUtils.trimToNull(commandScope.getArgumentValue(CHANGELOG_FILE_ARG));
+        String changeLogFile = GrailsStringUtils.trimToNull(commandScope.getArgumentValue(CHANGELOG_FILE_ARG))
         if (changeLogFile != null && changeLogFile.toLowerCase().endsWith(".sql")) {
-            Scope.getCurrentScope().getUI().sendMessage("\n" + INFO_MESSAGE + "\n");
-            Scope.getCurrentScope().getLog(getClass()).info("\n" + INFO_MESSAGE + "\n");
+            Scope.getCurrentScope().getUI().sendMessage("\n" + INFO_MESSAGE + "\n")
+            Scope.getCurrentScope().getLog(getClass()).info("\n" + INFO_MESSAGE + "\n")
         }
 
-        final Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG);
+        final Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG)
 
-        InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass());
+        InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass())
 
         DiffCommandStep diffCommandStep = new DiffCommandStep()
 
-        DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder);
+        DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder)
 
         DiffOutputControl diffOutputControl = (DiffOutputControl) resultsBuilder.getResult(DiffOutputControlCommandStep.DIFF_OUTPUT_CONTROL.getName())
 
-        DiffToChangeLog changeLogWriter = new DiffToChangeLog(diffResult, diffOutputControl);
+        DiffToChangeLog changeLogWriter = new DiffToChangeLog(diffResult, diffOutputControl)
 
-        changeLogWriter.setChangeSetAuthor(commandScope.getArgumentValue(AUTHOR_ARG));
-        changeLogWriter.setChangeSetContext(commandScope.getArgumentValue(CONTEXT_ARG));
-        changeLogWriter.setChangeSetPath(changeLogFile);
+        changeLogWriter.setChangeSetAuthor(commandScope.getArgumentValue(AUTHOR_ARG))
+        changeLogWriter.setChangeSetContext(commandScope.getArgumentValue(CONTEXT_ARG))
+        changeLogWriter.setChangeSetPath(changeLogFile)
 
-        ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy();
+        ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy()
         try {
-            referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS);
+            referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS)
             if (GrailsStringUtils.trimToNull(changeLogFile) != null) {
                 changeLogWriter.print(changeLogFile, ChangeLogSerializerFactory.instance.getSerializer(changeLogFile))
             } else {
-                PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream());
+                PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream())
                 try {
                     changeLogWriter.print(outputStream, ChangeLogSerializerFactory.instance.getSerializer('groovy'))
                 } finally {
@@ -86,10 +86,10 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
 
             }
             if (GrailsStringUtils.trimToNull(changeLogFile) != null) {
-                Scope.getCurrentScope().getUI().sendMessage("Generated changelog written to " + new File(changeLogFile).getAbsolutePath());
+                Scope.getCurrentScope().getUI().sendMessage("Generated changelog written to " + new File(changeLogFile).getAbsolutePath())
             }
         } finally {
-            referenceDatabase.setObjectQuotingStrategy(originalStrategy);
+            referenceDatabase.setObjectQuotingStrategy(originalStrategy)
         }
     }
 

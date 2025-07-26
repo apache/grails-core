@@ -37,13 +37,13 @@ class OrderedComparator<T> implements Comparator<T> {
      * Useful constant for the highest precedence value.
      * @see java.lang.Integer#MIN_VALUE
      */
-    public static final int HIGHEST_PRECEDENCE = Integer.MIN_VALUE;
+    public static final int HIGHEST_PRECEDENCE = Integer.MIN_VALUE
 
     /**
      * Useful constant for the lowest precedence value.
      * @see java.lang.Integer#MAX_VALUE
      */
-    public static final int LOWEST_PRECEDENCE = Integer.MAX_VALUE;
+    public static final int LOWEST_PRECEDENCE = Integer.MAX_VALUE
 
     @Override
     int compare(T o1, T o2) {

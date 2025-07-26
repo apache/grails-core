@@ -37,8 +37,8 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 @CompileStatic
 abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D> {
 
-    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate";
-    private static final String ARGUMENT_EVICT = "evict";
+    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
+    private static final String ARGUMENT_EVICT = "evict"
 
 
     protected ClassLoader classLoader
@@ -58,7 +58,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
     }
 
     boolean validate(D instance, List validatedFieldsList, Map arguments = Collections.emptyMap()) {
-        Errors errors = setupErrorsProperty(instance);
+        Errors errors = setupErrorsProperty(instance)
 
         Validator validator = getValidator()
         if(validator == null) return true
@@ -76,7 +76,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
             deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
         }
 
-        evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments);
+        evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
         fireEvent instance, validatedFieldsList
 
@@ -133,30 +133,30 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
     abstract applyManualFlush(Session session)
 
     private void fireEvent(Object target, List<?> validatedFieldsList) {
-        ValidationEvent event = new ValidationEvent(datastore, target);
-        event.setValidatedFields(validatedFieldsList);
-        datastore.getApplicationEventPublisher().publishEvent(event);
+        ValidationEvent event = new ValidationEvent(datastore, target)
+        event.setValidatedFields(validatedFieldsList)
+        datastore.getApplicationEventPublisher().publishEvent(event)
     }
 
     @SuppressWarnings("rawtypes")
     private Errors filterErrors(Errors errors, Set validatedFields, Object target) {
-        if (validatedFields == null) return errors;
+        if (validatedFields == null) return errors
 
-        ValidationErrors result = new ValidationErrors(target);
+        ValidationErrors result = new ValidationErrors(target)
 
-        final List allErrors = errors.getAllErrors();
+        final List allErrors = errors.getAllErrors()
         for (Object allError : allErrors) {
-            ObjectError error = (ObjectError) allError;
+            ObjectError error = (ObjectError) allError
 
             if (error instanceof FieldError) {
-                FieldError fieldError = (FieldError) error;
-                if (!validatedFields.contains(fieldError.getField())) continue;
+                FieldError fieldError = (FieldError) error
+                if (!validatedFields.contains(fieldError.getField())) continue
             }
 
-            result.addError(error);
+            result.addError(error)
         }
 
-        return result;
+        return result
     }
 
     /**

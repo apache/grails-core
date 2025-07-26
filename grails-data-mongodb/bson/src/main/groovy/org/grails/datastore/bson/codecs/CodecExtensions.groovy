@@ -324,7 +324,7 @@ class CodecExtensions implements CodecProvider {
         }
 
         protected BsonValue readValue(final BsonReader reader, final DecoderContext decoderContext) {
-            return codecRegistry.get(BsonValueCodecProvider.getClassForBsonType(reader.getCurrentBsonType())).decode(reader, decoderContext);
+            return codecRegistry.get(BsonValueCodecProvider.getClassForBsonType(reader.getCurrentBsonType())).decode(reader, decoderContext)
         }
     }
     static class ListCodec implements Codec<List>, CodecRegistryAware {
@@ -376,7 +376,7 @@ class CodecExtensions implements CodecProvider {
             def targetClass = BsonValueCodecProvider.getClassForBsonType(currentBsonType)
 
             def codec = codecRegistry.get(targetClass)
-            return codec.decode(reader, decoderContext);
+            return codec.decode(reader, decoderContext)
         }
     }
 

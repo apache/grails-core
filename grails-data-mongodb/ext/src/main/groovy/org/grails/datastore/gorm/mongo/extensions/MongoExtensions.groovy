@@ -537,7 +537,7 @@ class MongoExtensions {
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final Map<String, Object> document, final WriteConcern writeConcern) {
-        insert(collection, asList(document), writeConcern);
+        insert(collection, asList(document), writeConcern)
     }
 
     static void insert(final MongoCollection<Document> collection, final Map<String, Object>... documents) {
@@ -550,11 +550,11 @@ class MongoExtensions {
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final WriteConcern writeConcern, final Map<String, Object>... documents) {
-        insert(collection, documents, writeConcern);
+        insert(collection, documents, writeConcern)
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final Map<String,Object>[] documents, final WriteConcern writeConcern) {
-        insert(collection, asList(documents), writeConcern);
+        insert(collection, asList(documents), writeConcern)
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final List<? extends Map<String, Object>> documents) {
@@ -563,7 +563,7 @@ class MongoExtensions {
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final List<? extends Map<String, Object>> documents, final WriteConcern aWriteConcern) {
-        return insert(collection, documents, aWriteConcern, null);
+        return insert(collection, documents, aWriteConcern, null)
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final List<? extends Map<String, Object>> documents, final WriteConcern writeConcern, final InsertManyOptions insertOptions) {

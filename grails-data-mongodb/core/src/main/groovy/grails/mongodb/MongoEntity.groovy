@@ -88,7 +88,7 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
     Document getDbo() {
         AbstractMongoSession session = (AbstractMongoSession)AbstractDatastore.retrieveSession(MongoDatastore)
         // check first for embedded cached entries
-        SessionImplementor<Document> si = (SessionImplementor<Document>) session;
+        SessionImplementor<Document> si = (SessionImplementor<Document>) session
         def persistentEntity = session.mappingContext.getPersistentEntity(getClass().name)
         Document dbo = (Document)si.getCachedEntry(persistentEntity, MongoEntityPersister.createEmbeddedCacheEntryKey(this))
         if(dbo != null) return dbo

@@ -42,11 +42,11 @@ class ConnectionSourcesInitializer {
      * @return The {@link ConnectionSources}
      */
     public static <T,S extends ConnectionSourceSettings> ConnectionSources create(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
-        ConnectionSource defaultConnectionSource = connectionSourceFactory.create(ConnectionSource.DEFAULT, configuration);
-        Class<ConnectionSources> connectionSourcesClass = defaultConnectionSource.getSettings().getConnectionSourcesClass();
+        ConnectionSource defaultConnectionSource = connectionSourceFactory.create(ConnectionSource.DEFAULT, configuration)
+        Class<ConnectionSources> connectionSourcesClass = defaultConnectionSource.getSettings().getConnectionSourcesClass()
 
         if(connectionSourcesClass == null) {
-            return new InMemoryConnectionSources(defaultConnectionSource, connectionSourceFactory, configuration);
+            return new InMemoryConnectionSources(defaultConnectionSource, connectionSourceFactory, configuration)
         }
         else {
             try {

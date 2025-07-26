@@ -70,7 +70,7 @@ abstract class AbstractTraitApplyingGormASTTransformation extends AbstractGormAS
     protected void weaveTrait(ClassNode classNode, SourceUnit source, Class traitJavaClass, ClassNode... genericArguments) {
         weaveTraitWithGenerics(classNode, traitJavaClass, genericArguments)
         if (compilationUnit != null) {
-            TraitComposer.doExtendTraits(classNode, source, compilationUnit);
+            TraitComposer.doExtendTraits(classNode, source, compilationUnit)
         }
     }
 

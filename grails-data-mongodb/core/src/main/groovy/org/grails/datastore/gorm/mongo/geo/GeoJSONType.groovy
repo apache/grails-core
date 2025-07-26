@@ -46,12 +46,12 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
 
     @Override
     boolean supports(MappingContext context) {
-        return context instanceof MongoMappingContext;
+        return context instanceof MongoMappingContext
     }
 
     @Override
     boolean supports(Datastore datastore) {
-        return datastore instanceof MongoDatastore;
+        return datastore instanceof MongoDatastore
     }
 
     @Override

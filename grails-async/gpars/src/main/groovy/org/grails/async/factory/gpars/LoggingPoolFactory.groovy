@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 @CompileStatic
 class LoggingPoolFactory implements PoolFactory {
 
-    private static final long KEEP_ALIVE_TIME = 10L;
+    private static final long KEEP_ALIVE_TIME = 10L
     public static final Logger LOG = LoggerFactory.getLogger(LoggingPoolFactory)
 
     public static Method createThreadNameMethod
@@ -83,7 +83,7 @@ class LoggingPoolFactory implements PoolFactory {
      * @return The newly created thread pool
      */
     private static ThreadPoolExecutor createResizeablePool(boolean daemon, int poolSize) {
-        assert poolSize > 0;
+        assert poolSize > 0
         return new ThreadPoolExecutor(poolSize, 1000, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new ThreadFactory() {
             @Override
             Thread newThread(Runnable r) {

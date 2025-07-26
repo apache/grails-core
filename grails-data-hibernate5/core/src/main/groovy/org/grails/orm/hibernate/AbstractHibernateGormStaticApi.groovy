@@ -310,7 +310,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D find(CharSequence query, Collection params, Map args) {
         if(query instanceof GString) {
-            throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
+            throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.")
         }
 
         String queryString = query.toString()
@@ -564,7 +564,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         return (D) template.execute { Session session ->
             Example example = Example.create(exampleObject).ignoreCase()
 
-            Criteria crit = session.createCriteria(persistentEntity.javaClass);
+            Criteria crit = session.createCriteria(persistentEntity.javaClass)
             hibernateTemplate.applySettings(crit)
             crit.add example
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
@@ -584,7 +584,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         return (List<D>) template.execute { Session session ->
             Example example = Example.create(exampleObject).ignoreCase()
 
-            Criteria crit = session.createCriteria(persistentEntity.javaClass);
+            Criteria crit = session.createCriteria(persistentEntity.javaClass)
             hibernateTemplate.applySettings(crit)
             crit.add example
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
@@ -645,7 +645,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List executeQuery(CharSequence query, Collection params, Map args) {
         if(query instanceof GString) {
-            throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
+            throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.")
         }
 
         def template = hibernateTemplate
@@ -883,18 +883,18 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             q.cacheable = ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_CACHE, args)
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
-            Integer fetchSizeParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class);
-            q.setFetchSize(fetchSizeParam.intValue());
+            Integer fetchSizeParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class)
+            q.setFetchSize(fetchSizeParam.intValue())
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
-            Integer timeoutParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_TIMEOUT), Integer.class);
-            q.setTimeout(timeoutParam.intValue());
+            Integer timeoutParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_TIMEOUT), Integer.class)
+            q.setTimeout(timeoutParam.intValue())
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
-            q.setReadOnly((Boolean)args.remove(DynamicFinder.ARGUMENT_READ_ONLY));
+            q.setReadOnly((Boolean)args.remove(DynamicFinder.ARGUMENT_READ_ONLY))
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
-            q.setHibernateFlushMode((FlushMode)args.remove(DynamicFinder.ARGUMENT_FLUSH_MODE));
+            q.setHibernateFlushMode((FlushMode)args.remove(DynamicFinder.ARGUMENT_FLUSH_MODE))
         }
 
         args.remove(DynamicFinder.ARGUMENT_CACHE)

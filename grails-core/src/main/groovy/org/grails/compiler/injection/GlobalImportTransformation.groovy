@@ -39,7 +39,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 class GlobalImportTransformation implements ASTTransformation, TransformWithPriority {
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
-        ModuleNode ast = source.getAST();
+        ModuleNode ast = source.getAST()
         ast.addImport("Autowired", ClassHelper.make("org.springframework.beans.factory.annotation.Autowired"))
     }
 

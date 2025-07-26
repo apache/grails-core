@@ -41,12 +41,12 @@ import org.grails.orm.hibernate.AbstractHibernateDatastore
 @CompileStatic
 public class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore> implements FactoryBean<T>, ApplicationContextAware {
 
-    private final Class<T> objectType;
-    private final MappingContext mappingContext;
-    private final SessionFactory sessionFactory;
-    private final PropertyResolver configuration;
-    private final String dataSourceName;
-    ApplicationContext applicationContext;
+    private final Class<T> objectType
+    private final MappingContext mappingContext
+    private final SessionFactory sessionFactory
+    private final PropertyResolver configuration
+    private final String dataSourceName
+    ApplicationContext applicationContext
 
     HibernateDatastoreFactoryBean(Class<T> objectType, MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver configuration, String dataSourceName) {
         this.objectType = objectType
@@ -58,7 +58,7 @@ public class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore>
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
+        this.applicationContext = applicationContext
     }
 
     @Override
@@ -70,16 +70,16 @@ public class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore>
             datastore.setApplicationContext(applicationContext)
         }
 
-        return datastore;
+        return datastore
     }
 
     @Override
     public Class<?> getObjectType() {
-        return objectType;
+        return objectType
     }
 
     @Override
     public boolean isSingleton() {
-        return true;
+        return true
     }
 }

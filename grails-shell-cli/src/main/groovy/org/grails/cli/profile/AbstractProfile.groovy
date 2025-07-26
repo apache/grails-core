@@ -74,8 +74,8 @@ abstract class AbstractProfile implements Profile {
     protected String parentTargetFolder
     protected final ClassLoader classLoader
     protected ExclusionDependencySelector exclusionDependencySelector = new ExclusionDependencySelector()
-    protected String description = "";
-    protected String instructions = "";
+    protected String description = ""
+    protected String instructions = ""
     protected String version = Environment.grailsVersion
 
     AbstractProfile(Resource profileDir) {
@@ -490,7 +490,7 @@ abstract class AbstractProfile implements Profile {
             else {
                 context.console.error("Command not found ${context.commandLine.commandName}")
                 def mostSimilar = CosineSimilarity.mostSimilar(commandName, commandsByName.keySet())
-                List<String> topMatches = mostSimilar.subList(0, Math.min(3, mostSimilar.size()));
+                List<String> topMatches = mostSimilar.subList(0, Math.min(3, mostSimilar.size()))
                 if(topMatches) {
                     context.console.log("Did you mean: ${topMatches.join(' or ')}?")
                 }

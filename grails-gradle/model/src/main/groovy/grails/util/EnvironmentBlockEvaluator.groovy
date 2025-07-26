@@ -27,56 +27,56 @@ import groovy.transform.PackageScope
  */
 @CompileStatic
 class EnvironmentBlockEvaluator extends GroovyObjectSupport {
-    private Environment current;
-    private Closure<?> callable;
+    private Environment current
+    private Closure<?> callable
 
     Closure<?> getCallable() {
-        return callable;
+        return callable
     }
 
     Object execute() {
-        return callable == null ? null : callable.call();
+        return callable == null ? null : callable.call()
     }
 
     @PackageScope
     EnvironmentBlockEvaluator(Environment e) {
-        current = e;
+        current = e
     }
 
     @SuppressWarnings("unused")
     void environments(Closure<?> c) {
         if (c != null) {
-            c.setDelegate(this);
-            c.call();
+            c.setDelegate(this)
+            c.call()
         }
     }
     @SuppressWarnings("unused")
     void production(Closure<?> c) {
         if (current == Environment.PRODUCTION) {
-            callable = c;
+            callable = c
         }
     }
     @SuppressWarnings("unused")
     void development(Closure<?> c) {
         if (current == Environment.DEVELOPMENT) {
-            callable = c;
+            callable = c
         }
     }
     @SuppressWarnings("unused")
     void test(Closure<?> c) {
         if (current == Environment.TEST) {
-            callable = c;
+            callable = c
         }
     }
 
     Object methodMissing(String name, Object args) {
-        Object[] argsArray = (Object[])args;
+        Object[] argsArray = (Object[])args
         if (args != null && argsArray.length > 0 && (argsArray[0] instanceof Closure)) {
             if (current == Environment.CUSTOM && current.getName().equals(name)) {
-                callable = (Closure<?>) argsArray[0];
+                callable = (Closure<?>) argsArray[0]
             }
-            return null;
+            return null
         }
-        throw new MissingMethodException(name, Environment.class, argsArray);
+        throw new MissingMethodException(name, Environment.class, argsArray)
     }
 }

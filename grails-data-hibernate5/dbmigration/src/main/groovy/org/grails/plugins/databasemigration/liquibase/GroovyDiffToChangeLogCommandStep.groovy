@@ -41,23 +41,23 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
     @Override
     void run(CommandResultsBuilder resultsBuilder) {
         CommandScope commandScope = resultsBuilder.getCommandScope()
-        Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG);
-        String changeLogFile = commandScope.getArgumentValue(CHANGELOG_FILE_ARG);
+        Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG)
+        String changeLogFile = commandScope.getArgumentValue(CHANGELOG_FILE_ARG)
 
-        InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass());
+        InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass())
 
         DiffCommandStep diffCommandStep = new DiffCommandStep()
 
-        DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder);
+        DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder)
 
-        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream());
+        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream())
 
-        ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy();
+        ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy()
 
         DiffOutputControl diffOutputControl = (DiffOutputControl) resultsBuilder.getResult(DiffOutputControlCommandStep.DIFF_OUTPUT_CONTROL.getName())
 
         try {
-            referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS);
+            referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS)
             if (GrailsStringUtils.trimToNull(changeLogFile) == null) {
                 createDiffToChangeLogObject(diffResult, diffOutputControl, false).print(outputStream, ChangeLogSerializerFactory.instance.getSerializer('groovy'))
             } else {
@@ -65,10 +65,10 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
             }
         }
         finally {
-            referenceDatabase.setObjectQuotingStrategy(originalStrategy);
-            outputStream.flush();
+            referenceDatabase.setObjectQuotingStrategy(originalStrategy)
+            outputStream.flush()
         }
-        resultsBuilder.addResult("statusCode", 0);
+        resultsBuilder.addResult("statusCode", 0)
 
     }
 

@@ -83,7 +83,7 @@ abstract class AbstractGroovyTemplateCompiler {
     void compile(List<File> sources) {
 
         ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2)
-        CompletionService completionService = new ExecutorCompletionService(threadPool);
+        CompletionService completionService = new ExecutorCompletionService(threadPool)
 
         try {
             Integer collationLevel = Runtime.getRuntime().availableProcessors()*2
@@ -126,10 +126,10 @@ abstract class AbstractGroovyTemplateCompiler {
                 // Wait for up to 100ms to see if anything has completed.
                 // The completed future is returned if one is found; otherwise null.
                 // (Tune 100ms as desired)
-                def completed = completionService.poll(100, TimeUnit.MILLISECONDS);
+                def completed = completionService.poll(100, TimeUnit.MILLISECONDS)
                 if (completed != null) {
                     Boolean response = completed.get() as Boolean//need this to throw exceptions on main thread it seems
-                    --pending;
+                    --pending
                 }
             }
         }

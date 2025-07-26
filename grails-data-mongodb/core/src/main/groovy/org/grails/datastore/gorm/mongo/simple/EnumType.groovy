@@ -71,12 +71,12 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
 
     @Override
     boolean supports(MappingContext context) {
-        return context instanceof MongoMappingContext;
+        return context instanceof MongoMappingContext
     }
 
     @Override
     boolean supports(Datastore datastore) {
-        return datastore instanceof MongoDatastore;
+        return datastore instanceof MongoDatastore
     }
 
     /**
@@ -86,7 +86,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      */
     private static Class getCollectionType(PersistentProperty property) {
         if(property instanceof Basic) {
-            return ((Basic)property).componentType;
+            return ((Basic)property).componentType
         }
         else if(property instanceof Association) {
             return ((Association)property).associatedEntity.javaClass
@@ -96,12 +96,12 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
 
     private static Object getEnumValueForOrdinal(Number value, Class type) {
         try {
-            Object values = type.getMethod("values").invoke(type);
-            return Array.get(values, value.intValue());
+            Object values = type.getMethod("values").invoke(type)
+            return Array.get(values, value.intValue())
         } catch (Exception e) {
             // ignore
         }
-        return value;
+        return value
     }
 
     private static boolean isEnumTypeCollection(PersistentProperty property) {
@@ -109,7 +109,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
             return false
         }
         else {
-            Basic basic = (Basic)property;
+            Basic basic = (Basic)property
             return basic.componentType.isEnum()
         }
     }

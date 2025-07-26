@@ -41,7 +41,7 @@ class TomcatJDBCPoolMBeanExporter extends MBeanExporter {
     private ListableBeanFactory beanFactory
 
     public TomcatJDBCPoolMBeanExporter() {
-        super();
+        super()
         this.setRegistrationPolicy(RegistrationPolicy.REPLACE_EXISTING)
     }
 

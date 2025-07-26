@@ -36,7 +36,7 @@ abstract class MethodInvokingClosure extends Closure {
     }
 
     @Override
-    abstract Object call(Object[] args);
+    abstract Object call(Object[] args)
 
     Object doCall(Object[] args) {
         call(args)

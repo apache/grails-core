@@ -174,7 +174,7 @@ class JspTagImpl implements JspTag {
                 tagBean.setPropertyValue key, value
             }
             else if(key && tag instanceof DynamicAttributes){
-                ((DynamicAttributes)tag).setDynamicAttribute(null,key,value);
+                ((DynamicAttributes)tag).setDynamicAttribute(null,key,value)
             }
         }
     }

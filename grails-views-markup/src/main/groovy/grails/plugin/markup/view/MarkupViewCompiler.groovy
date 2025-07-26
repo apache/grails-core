@@ -49,7 +49,7 @@ class MarkupViewCompiler extends AbstractGroovyTemplateCompiler {
         configuration.addCompilationCustomizers(templateCustomizer)
         if(viewConfiguration.isCompileStatic()) {
             configuration.addCompilationCustomizers(
-                    new ASTTransformationCustomizer(Collections.singletonMap("extensions", "groovy.text.markup.MarkupTemplateTypeCheckingExtension"), CompileStatic.class));
+                    new ASTTransformationCustomizer(Collections.singletonMap("extensions", "groovy.text.markup.MarkupTemplateTypeCheckingExtension"), CompileStatic.class))
         }
         return configuration
     }

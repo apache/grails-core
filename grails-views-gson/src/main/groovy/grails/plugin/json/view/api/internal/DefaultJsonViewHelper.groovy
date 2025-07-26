@@ -74,8 +74,8 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
     protected final JsonOutput.JsonWritable NULL_OUTPUT = new JsonOutput.JsonWritable() {
         @Override
         Writer writeTo(Writer out) throws IOException {
-            out.write(JsonOutput.NULL_VALUE);
-            return out;
+            out.write(JsonOutput.NULL_VALUE)
+            return out
         }
     }
 

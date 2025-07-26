@@ -69,7 +69,7 @@ public interface RenderContext {
     /**
      * @return The HTTP method
      */
-    HttpMethod getHttpMethod();
+    HttpMethod getHttpMethod()
 
     /**
      * @param status The status to set

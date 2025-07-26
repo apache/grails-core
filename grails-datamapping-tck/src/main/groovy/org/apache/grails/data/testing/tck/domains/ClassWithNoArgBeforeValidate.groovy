@@ -19,7 +19,7 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-import grails.persistence.Entity;
+import grails.persistence.Entity
 
 @Entity
 class ClassWithNoArgBeforeValidate implements Serializable {

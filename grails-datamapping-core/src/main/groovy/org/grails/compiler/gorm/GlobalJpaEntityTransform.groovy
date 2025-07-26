@@ -51,8 +51,8 @@ class GlobalJpaEntityTransform extends AbstractASTTransformation implements ASTT
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit source) {
-        ModuleNode ast = source.getAST();
-        List<ClassNode> classes = ast.getClasses();
+        ModuleNode ast = source.getAST()
+        List<ClassNode> classes = ast.getClasses()
         for (ClassNode aClass : classes) {
             visitClass(aClass, source)
         }

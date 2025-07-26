@@ -88,7 +88,7 @@ class GradleUtil {
                 }
             }
         } finally {
-            projectConnection.close();
+            projectConnection.close()
         }
     }
 

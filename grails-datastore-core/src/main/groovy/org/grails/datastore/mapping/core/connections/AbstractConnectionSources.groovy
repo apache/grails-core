@@ -35,20 +35,20 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 @CompileStatic
 abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings> implements ConnectionSources<T, S> {
 
-    protected final ConnectionSource<T, S> defaultConnectionSource;
-    protected final ConnectionSourceFactory<T, S> connectionSourceFactory;
-    protected final PropertyResolver configuration;
+    protected final ConnectionSource<T, S> defaultConnectionSource
+    protected final ConnectionSourceFactory<T, S> connectionSourceFactory
+    protected final PropertyResolver configuration
     protected final Collection<ConnectionSourcesListener<T,S>> listeners = []
 
     AbstractConnectionSources(ConnectionSource<T, S> defaultConnectionSource, ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
         if(connectionSourceFactory == null) {
-            throw new IllegalArgumentException("Argument [connectionSourceFactory] cannot be null");
+            throw new IllegalArgumentException("Argument [connectionSourceFactory] cannot be null")
         }
         if(defaultConnectionSource == null) {
-            throw new IllegalStateException("The default ConnectionSource cannot be null!");
+            throw new IllegalStateException("The default ConnectionSource cannot be null!")
         }
         if(configuration == null) {
-            this.configuration = DatastoreUtils.createPropertyResolver(Collections.emptyMap());
+            this.configuration = DatastoreUtils.createPropertyResolver(Collections.emptyMap())
         }
         else {
             this.configuration = configuration
@@ -70,33 +70,33 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
      * @return An iterable of connection source names. Should never return null.
      */
     protected Iterable<String> getConnectionSourceNames(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
-        Map<String, Object> allConnectionSources = configuration.getProperty(connectionSourceFactory.getConnectionSourcesConfigurationKey().toString(), Map.class, Collections.emptyMap());
-        return toValidConnectionSourceNames(allConnectionSources);
+        Map<String, Object> allConnectionSources = configuration.getProperty(connectionSourceFactory.getConnectionSourcesConfigurationKey().toString(), Map.class, Collections.emptyMap())
+        return toValidConnectionSourceNames(allConnectionSources)
     }
 
     public static Set<String> toValidConnectionSourceNames(Map<String, Object> allConnectionSources) {
-        Set<String> names = allConnectionSources.keySet();
-        Set<String> newNames = new LinkedHashSet<>();
+        Set<String> names = allConnectionSources.keySet()
+        Set<String> newNames = new LinkedHashSet<>()
         for (String name : names) {
-            int i = name.indexOf('.');
+            int i = name.indexOf('.')
             if(i > -1) {
-                newNames.add( name.substring(0,i) );
+                newNames.add( name.substring(0,i) )
             }
             else {
-                newNames.add(name);
+                newNames.add(name)
             }
         }
-        return newNames;
+        return newNames
     }
 
     @Override
     ConnectionSourceFactory<T, S> getFactory() {
-        return this.connectionSourceFactory;
+        return this.connectionSourceFactory
     }
 
     @Override
     ConnectionSource<T, S> getDefaultConnectionSource() {
-        return this.defaultConnectionSource;
+        return this.defaultConnectionSource
     }
 
     @Override

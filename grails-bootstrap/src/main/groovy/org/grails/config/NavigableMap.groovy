@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class NavigableMap implements Map<String, Object>, Cloneable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(NavigableMap.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NavigableMap.class)
 
     private static final Pattern SPLIT_PATTERN = ~/\./
     private static final String SPRING_PROFILES = 'spring.profiles.active'
@@ -561,22 +561,22 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
         @Override
         Object put(String key, Object value) {
-            throw new UnsupportedOperationException("Configuration cannot be modified");
+            throw new UnsupportedOperationException("Configuration cannot be modified")
         }
 
         @Override
         Object remove(Object key) {
-            throw new UnsupportedOperationException("Configuration cannot be modified");
+            throw new UnsupportedOperationException("Configuration cannot be modified")
         }
 
         @Override
         void putAll(Map<? extends String, ?> m) {
-            throw new UnsupportedOperationException("Configuration cannot be modified");
+            throw new UnsupportedOperationException("Configuration cannot be modified")
         }
 
         @Override
         void clear() {
-            throw new UnsupportedOperationException("Configuration cannot be modified");
+            throw new UnsupportedOperationException("Configuration cannot be modified")
         }
 
         @Override
@@ -625,7 +625,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
 
         Object invokeMethod(String name, Object args) {
-            throw new NullPointerException("Cannot invoke method " + name + "() on NullSafeNavigator");
+            throw new NullPointerException("Cannot invoke method " + name + "() on NullSafeNavigator")
         }
 
         boolean equals(Object to) {
@@ -658,7 +658,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
 
 //        public int hashCode() {
-//            throw new NullPointerException("Cannot invoke method hashCode() on NullSafeNavigator");
+//            throw new NullPointerException("Cannot invoke method hashCode() on NullSafeNavigator")
 //        }
     }
 }

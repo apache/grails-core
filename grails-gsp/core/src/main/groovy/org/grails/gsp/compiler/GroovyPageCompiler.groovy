@@ -108,7 +108,7 @@ class GroovyPageCompiler {
             compilerConfig.setTargetDirectory(targetDir)
             compilerConfig.setSourceEncoding(encoding)
             ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2)
-            CompletionService completionService = new ExecutorCompletionService(threadPool);
+            CompletionService completionService = new ExecutorCompletionService(threadPool)
             List<Future<Map>> futures = []
             try {
                 Integer collationLevel = Runtime.getRuntime().availableProcessors()*2
@@ -140,11 +140,11 @@ class GroovyPageCompiler {
                     // Wait for up to 100ms to see if anything has completed.
                     // The completed future is returned if one is found; otherwise null.
                     // (Tune 100ms as desired)
-                    def completed = completionService.poll(100, TimeUnit.MILLISECONDS);
+                    def completed = completionService.poll(100, TimeUnit.MILLISECONDS)
                     if (completed != null) {
                         Map results = completed.get() as Map //need this to throw exceptions on main thread it seems
                         compileGSPRegistry += results
-                        --pending;
+                        --pending
                     }
                 }
 
@@ -155,7 +155,7 @@ class GroovyPageCompiler {
                 if (viewregistryFile.exists()) {
                     // only changed files are added to the mapping, read the existing mapping file
                     viewregistryFile.withInputStream { stream ->
-                        views.load(new InputStreamReader(stream, "UTF-8"));
+                        views.load(new InputStreamReader(stream, "UTF-8"))
                     }
                 }
                 views.putAll(compileGSPRegistry)

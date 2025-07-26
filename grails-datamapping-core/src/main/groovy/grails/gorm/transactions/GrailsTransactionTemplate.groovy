@@ -52,15 +52,15 @@ class GrailsTransactionTemplate {
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, TransactionDefinition transactionDefinition) {
-        this(transactionManager, transactionDefinition instanceof TransactionAttribute ? (TransactionAttribute)transactionDefinition : new GrailsTransactionAttribute(transactionDefinition));
+        this(transactionManager, transactionDefinition instanceof TransactionAttribute ? (TransactionAttribute)transactionDefinition : new GrailsTransactionAttribute(transactionDefinition))
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, TransactionAttribute transactionAttribute) {
-        this(transactionManager, transactionAttribute instanceof CustomizableRollbackTransactionAttribute ? (CustomizableRollbackTransactionAttribute)transactionAttribute : new CustomizableRollbackTransactionAttribute(transactionAttribute));
+        this(transactionManager, transactionAttribute instanceof CustomizableRollbackTransactionAttribute ? (CustomizableRollbackTransactionAttribute)transactionAttribute : new CustomizableRollbackTransactionAttribute(transactionAttribute))
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute) {
-        this.transactionAttribute = transactionAttribute;
+        this.transactionAttribute = transactionAttribute
         this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager, this.transactionAttribute)
     }
 
@@ -136,14 +136,14 @@ class GrailsTransactionTemplate {
      */
     private static class ThrowableHolder {
 
-        private final Throwable throwable;
+        private final Throwable throwable
 
         ThrowableHolder(Throwable throwable) {
-            this.throwable = throwable;
+            this.throwable = throwable
         }
 
         Throwable getThrowable() {
-            return this.throwable;
+            return this.throwable
         }
     }
 
@@ -154,12 +154,12 @@ class GrailsTransactionTemplate {
     private static class ThrowableHolderException extends RuntimeException {
 
         ThrowableHolderException(Throwable throwable) {
-            super(throwable);
+            super(throwable)
         }
 
         @Override
         public String toString() {
-            return getCause().toString();
+            return getCause().toString()
         }
     }
 }

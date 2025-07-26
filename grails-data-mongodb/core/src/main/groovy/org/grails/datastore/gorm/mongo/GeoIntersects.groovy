@@ -34,7 +34,7 @@ class GeoIntersects extends MethodExpression{
 
     @Override
     Query.Criterion createCriterion() {
-        return new MongoQuery.GeoIntersects(propertyName, arguments[0]);
+        return new MongoQuery.GeoIntersects(propertyName, arguments[0])
     }
 
     @Override

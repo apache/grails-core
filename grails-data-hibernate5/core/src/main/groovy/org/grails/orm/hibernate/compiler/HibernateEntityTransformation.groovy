@@ -85,26 +85,26 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
-    private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity.class);
-    private static final Object APPLIED_MARKER = new Object();
+    private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity.class)
+    private static final Object APPLIED_MARKER = new Object()
 
 //    final boolean available = ClassUtils.isPresent("org.hibernate.SessionFactory") && Boolean.valueOf(System.getProperty("hibernate.enhance", "true"))
     CompilationUnit compilationUnit
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
-        AnnotatedNode parent = (AnnotatedNode) astNodes[1];
-        AnnotationNode node = (AnnotationNode) astNodes[0];
+        AnnotatedNode parent = (AnnotatedNode) astNodes[1]
+        AnnotationNode node = (AnnotationNode) astNodes[0]
 
         if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
-            throw new RuntimeException("Internal error: wrong types: ${node.getClass()} / ${parent.getClass()}");
+            throw new RuntimeException("Internal error: wrong types: ${node.getClass()} / ${parent.getClass()}")
         }
 
         if (!MY_TYPE.equals(node.getClassNode()) || !(parent instanceof ClassNode)) {
-            return;
+            return
         }
 
-        ClassNode cNode = (ClassNode) parent;
+        ClassNode cNode = (ClassNode) parent
 
         visit(cNode, sourceUnit)
     }

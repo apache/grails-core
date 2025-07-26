@@ -63,7 +63,7 @@ class FactoriesLoaderSupport {
             Map<String, String[]> loadedProperties = loadedPropertiesForClassLoader.get(System.identityHashCode(classLoader))
             if (loadedProperties == null) {
                 Set<String> allKeys = [] as Set
-                def urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION);
+                def urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION)
                 Collection<Properties> allProperties = []
                 urls.each { URL url ->
                     def properties = new Properties()
@@ -92,7 +92,7 @@ class FactoriesLoaderSupport {
             return loadedProperties.get(factoryClassName)
         }
         catch (IOException ex) {
-            throw new IllegalArgumentException("Unable to load [$factoryClassName] factories from location [$FACTORIES_RESOURCE_LOCATION]", ex);
+            throw new IllegalArgumentException("Unable to load [$factoryClassName] factories from location [$FACTORIES_RESOURCE_LOCATION]", ex)
         }
     }
 }

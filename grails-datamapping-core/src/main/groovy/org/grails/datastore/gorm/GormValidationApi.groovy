@@ -49,7 +49,7 @@ import org.grails.datastore.mapping.validation.ValidationErrors
 @CompileStatic
 class GormValidationApi<D> extends AbstractGormApi<D> {
 
-    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate";
+    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
 
     private Validator internalValidator
     BeforeValidateHelper beforeValidateHelper

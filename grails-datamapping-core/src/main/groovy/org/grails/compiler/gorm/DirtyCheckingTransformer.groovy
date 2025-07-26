@@ -83,9 +83,9 @@ import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
  */
 @CompileStatic
 class DirtyCheckingTransformer implements CompilationUnitAware {
-    private static final String VOID = "void";
-    private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = [];
-    private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class];
+    private static final String VOID = "void"
+    private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
+    private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
 
     private static final ClassNode VALIDATION_CONSTRAINT_NODE
     public static final String METHOD_NAME_MARK_DIRTY = "markDirty"
@@ -147,7 +147,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
             classNode.addInterface(dirtyCheckableTrait)
             if(compilationUnit != null) {
-                org.codehaus.groovy.transform.trait.TraitComposer.doExtendTraits(classNode, source, compilationUnit);
+                org.codehaus.groovy.transform.trait.TraitComposer.doExtendTraits(classNode, source, compilationUnit)
             }
 
         }
@@ -346,7 +346,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             if (ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
                 returnType = originalReturnType.getPlainNodeReference()
             } else {
-                returnType = alignReturnType(classNode, originalReturnType);
+                returnType = alignReturnType(classNode, originalReturnType)
             }
         } else {
             returnType = originalReturnType
@@ -377,7 +377,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
 
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
-        if (classNode.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.artefact.Artefact'}) return;
+        if (classNode.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.artefact.Artefact'}) return
 
         performInjectionOnAnnotatedClass(source, classNode)
     }
@@ -387,7 +387,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
 
     public boolean shouldInject(URL url) {
-        return AstUtils.isDomainClass(url);
+        return AstUtils.isDomainClass(url)
     }
 
     void performInjectionOnAnnotatedEntity(ClassNode classNode) {
@@ -398,12 +398,12 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     private static ClassNode alignReturnType(final ClassNode receiver, final ClassNode originalReturnType) {
         ClassNode copiedReturnType
         if(originalReturnType.isGenericsPlaceHolder()) {
-            copiedReturnType = originalReturnType.getPlainNodeReference();
+            copiedReturnType = originalReturnType.getPlainNodeReference()
             copiedReturnType.setName( originalReturnType.getName() )
             copiedReturnType.setGenericsPlaceHolder(true)
         }
         else {
-            copiedReturnType = originalReturnType.getPlainNodeReference();
+            copiedReturnType = originalReturnType.getPlainNodeReference()
         }
 
         final genericTypes = originalReturnType.getGenericsTypes()
@@ -465,15 +465,15 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
 
     private boolean isSetter(String methodName, MethodNode declaredMethod) {
-        return declaredMethod.getParameters().length == 1 && ReflectionUtils.isSetter(methodName, OBJECT_CLASS_ARG);
+        return declaredMethod.getParameters().length == 1 && ReflectionUtils.isSetter(methodName, OBJECT_CLASS_ARG)
     }
 
     private boolean isGetter(String methodName, MethodNode declaredMethod) {
-        return declaredMethod.getParameters().length == 0 && ReflectionUtils.isGetter(methodName, EMPTY_JAVA_CLASS_ARRAY);
+        return declaredMethod.getParameters().length == 0 && ReflectionUtils.isGetter(methodName, EMPTY_JAVA_CLASS_ARRAY)
     }
 
     String[] getArtefactTypes() {
-        return ["Domain"] as String[];
+        return ["Domain"] as String[]
     }
 
     @CompileStatic

@@ -27,5 +27,5 @@ public interface GeoJSON {
      *
      * @return The coordinate list
      */
-    abstract List<? extends Object> asList();
+    abstract List<? extends Object> asList()
 }

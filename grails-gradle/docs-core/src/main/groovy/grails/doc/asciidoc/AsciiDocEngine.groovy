@@ -39,7 +39,7 @@ import static org.asciidoctor.Asciidoctor.Factory.create
  */
 @InheritConstructors
 class AsciiDocEngine extends DocEngine {
-    Asciidoctor asciidoctor = create();
+    Asciidoctor asciidoctor = create()
     Map attributes = [
         'imagesdir': '../img',
         'source-highlighter':'coderay',

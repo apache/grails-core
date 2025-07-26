@@ -70,10 +70,10 @@ class GrailsRepositoryConfiguration {
     @Override
     boolean equals(Object obj) {
         if (this == obj) {
-            return true;
+            return true
         }
         if (obj == null) {
-            return false;
+            return false
         }
         String name = null
         if (obj instanceof RepositoryConfiguration) {
@@ -86,12 +86,12 @@ class GrailsRepositoryConfiguration {
 
     static int nullSafeHashCode(char[] array) {
         if (array == null) {
-            return 0;
+            return 0
         }
-        int hash = INITIAL_HASH;
+        int hash = INITIAL_HASH
         for (char element : array) {
-            hash = MULTIPLIER * hash + element;
+            hash = MULTIPLIER * hash + element
         }
-        return hash;
+        return hash
     }
 }

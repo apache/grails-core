@@ -126,7 +126,7 @@ abstract class GrailsArrayUtils {
             int len2 = Array.getLength( otherArray )
 
             def newArray = Array.newInstance(type, len + len2)
-            System.arraycopy(array, 0, newArray, 0, len);
+            System.arraycopy(array, 0, newArray, 0, len)
             try {
                 System.arraycopy otherArray, 0, newArray, len, len2
             } catch (ArrayStoreException ase) {
@@ -173,15 +173,15 @@ abstract class GrailsArrayUtils {
 
     static <T> T[] concat(T[] first, T[] second) {
         if (first == null) {
-            return second;
+            return second
         }
         if (second == null) {
-            return first;
+            return first
         }
 
-        T[] result = (T[]) java.lang.reflect.Array.newInstance(first.getClass().getComponentType(), first.length + second.length);
-        System.arraycopy(first, 0, result, 0, first.length);
-        System.arraycopy(second, 0, result, first.length, second.length);
-        return result;
+        T[] result = (T[]) java.lang.reflect.Array.newInstance(first.getClass().getComponentType(), first.length + second.length)
+        System.arraycopy(first, 0, result, 0, first.length)
+        System.arraycopy(second, 0, result, first.length, second.length)
+        return result
     }
 }

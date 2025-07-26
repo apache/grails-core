@@ -33,9 +33,9 @@ import org.grails.scaffolding.model.property.DomainProperty
 @CompileStatic
 abstract class DomainRendererRegistry<T extends DomainRenderer> {
 
-    protected SortedSet<Entry> domainRegistryEntries = new TreeSet<Entry>();
+    protected SortedSet<Entry> domainRegistryEntries = new TreeSet<Entry>()
 
-    protected final AtomicInteger RENDERER_SEQUENCE = new AtomicInteger(0);
+    protected final AtomicInteger RENDERER_SEQUENCE = new AtomicInteger(0)
 
     void registerDomainRenderer(T domainRenderer, Integer priority) {
         domainRegistryEntries.add(new Entry(domainRenderer, priority))
@@ -56,8 +56,8 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
 
     private class Entry implements Comparable<Entry> {
         protected final T renderer
-        private final int priority;
-        private final int seq;
+        private final int priority
+        private final int seq
 
         Entry(T renderer, int priority) {
             this.renderer = renderer
@@ -66,7 +66,7 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
         }
 
         public int compareTo(Entry entry) {
-            return priority == entry.priority ? entry.seq - seq : entry.priority - priority;
+            return priority == entry.priority ? entry.seq - seq : entry.priority - priority
         }
     }
 }
