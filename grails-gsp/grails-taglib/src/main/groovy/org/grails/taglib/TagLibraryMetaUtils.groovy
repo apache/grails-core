@@ -42,7 +42,7 @@ class TagLibraryMetaUtils {
     }
 
     @CompileStatic
-    public static void enhanceTagLibMetaClass(MetaClass mc, TagLibraryLookup gspTagLibraryLookup, String namespace) {
+    static void enhanceTagLibMetaClass(MetaClass mc, TagLibraryLookup gspTagLibraryLookup, String namespace) {
         registerTagMetaMethods(mc, gspTagLibraryLookup, namespace)
         registerNamespaceMetaProperties(mc, gspTagLibraryLookup)
     }

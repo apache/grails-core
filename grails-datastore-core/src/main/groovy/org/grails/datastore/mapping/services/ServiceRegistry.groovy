@@ -30,12 +30,12 @@ interface ServiceRegistry {
     /**
      * @return An iterable of the available services
      */
-    public <T extends Service> Iterable<T> getServices()
+    <T extends Service> Iterable<T> getServices()
     /**
      * Obtain a service for the given interface
      *
      * @param interfaceType The interface type
      * @return
      */
-    public <T> T getService(Class<T> interfaceType) throws ServiceNotFoundException
+    <T> T getService(Class<T> interfaceType) throws ServiceNotFoundException
 }

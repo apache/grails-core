@@ -37,7 +37,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Target([ElementType.TYPE])
 @GroovyASTTransformationClass("org.grails.plugins.web.rest.transform.ResourceTransform")
-public @interface Resource {
+@interface Resource {
 
     /**
      * @return Whether this is a read-only resource (one that doesn't allow DELETE, POST, PUT or PATCH requests)

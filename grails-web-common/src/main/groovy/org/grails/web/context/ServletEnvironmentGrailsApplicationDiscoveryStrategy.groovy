@@ -47,7 +47,7 @@ class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsAppl
     }
 
     @Override
-    public GrailsApplication findGrailsApplication() {
+    GrailsApplication findGrailsApplication() {
         def context = findApplicationContext()
         if(context) {
             return context.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication)
@@ -61,7 +61,7 @@ class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsAppl
     }
 
     @Override
-    public ApplicationContext findApplicationContext() {
+    ApplicationContext findApplicationContext() {
         if (applicationContext != null) {
             return applicationContext
         }

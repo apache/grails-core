@@ -183,7 +183,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         }
     }
 
-    public void setExecutionContext(ExecutionContext executionContext) {
+    void setExecutionContext(ExecutionContext executionContext) {
         this.executionContext = executionContext
         this.consoleLogger = executionContext.console
         this.templateRenderer = new TemplateRendererImpl(executionContext, profile, profileRepository)

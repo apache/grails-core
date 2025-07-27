@@ -20,7 +20,7 @@ package grails.mongodb.geo
  * @author Graeme Rocher
  * @since 2.0
  */
-public abstract class Shape {
+abstract class Shape {
 
     /**
      * Converts the Shape into a coordinate list

@@ -351,7 +351,7 @@ abstract class AbstractProfile implements Profile {
     }
 
     @Override
-    public Iterable<Profile> getExtends() {
+    Iterable<Profile> getExtends() {
         return parentNames.collect() { String parentName ->
             def parent = profileRepository.getProfile(parentName, true)
             if(parent == null) {
@@ -362,7 +362,7 @@ abstract class AbstractProfile implements Profile {
     }
 
     @Override
-    public Iterable<Completer> getCompleters(ProjectContext context) {
+    Iterable<Completer> getCompleters(ProjectContext context) {
         def commands = getCommands(context)
 
         Collection<Completer> completers = []

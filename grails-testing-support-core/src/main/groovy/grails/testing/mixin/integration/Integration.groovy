@@ -34,7 +34,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Target([ElementType.TYPE])
 @GroovyASTTransformationClass("org.grails.compiler.injection.testing.IntegrationTestAstTransformation")
-public @interface Integration {
+@interface Integration {
 
     /**
      *

@@ -54,7 +54,7 @@ class StandaloneCodecLookup extends BasicCodecLookup {
     }
 
     @Override
-    public void registerCodecFactory(CodecFactory codecFactory) {
+    void registerCodecFactory(CodecFactory codecFactory) {
         super.registerCodecFactory(codecFactory)
         registerMetaMethods(codecFactory)
     }

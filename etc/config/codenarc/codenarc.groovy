@@ -30,5 +30,6 @@ ruleset {
     NoWildcardImports
     UnnecessaryGroovyImport
     UnnecessarySemicolon
+    UnnecessaryPublicModifier
     UnusedImport
 }

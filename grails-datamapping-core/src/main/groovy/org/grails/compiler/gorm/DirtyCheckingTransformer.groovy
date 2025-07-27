@@ -386,7 +386,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         performInjection(source, null, classNode)
     }
 
-    public boolean shouldInject(URL url) {
+    boolean shouldInject(URL url) {
         return AstUtils.isDomainClass(url)
     }
 

@@ -341,7 +341,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
     }
 
     @Generated
-    public static ApplicationContext getStaticApplicationContext() {
+    static ApplicationContext getStaticApplicationContext() {
          RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes()
          if (!(requestAttributes instanceof GrailsWebRequest)) {
              return ContextLoader.getCurrentWebApplicationContext()

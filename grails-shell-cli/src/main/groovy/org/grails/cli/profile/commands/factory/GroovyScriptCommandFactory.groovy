@@ -58,7 +58,7 @@ class GroovyScriptCommandFactory extends ResourceResolvingCommandFactory<GroovyS
     }
 
     @CompileDynamic
-    public static GroovyClassLoader createGroovyScriptCommandClassLoader() {
+    static GroovyClassLoader createGroovyScriptCommandClassLoader() {
         def configuration = new CompilerConfiguration()
         // TODO: Report bug, this fails with @CompileStatic with a ClassCastException
         String baseClassName = GroovyScriptCommand.class.getName()

@@ -40,7 +40,7 @@ class MongoConstants {
 
 
     @CompileDynamic
-    public static <T> T mapToObject(Class<T> targetType, Map<String,Object> values) {
+    static <T> T mapToObject(Class<T> targetType, Map<String,Object> values) {
         T t = targetType.getDeclaredConstructor().newInstance()
         for(String name in values.keySet()) {
             if(t.respondsTo(name)) {

@@ -28,7 +28,7 @@ class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
     boolean insideMapping = false
     List<String> responseCodes = []
 
-    public void visitProperty(PropertyNode node){
+    void visitProperty(PropertyNode node){
         if (node?.name == "mappings") {
             insideMapping = true
         }
@@ -37,14 +37,14 @@ class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
             insideMapping = false
         }
     }
-    public void visitMethodCallExpression(MethodCallExpression call) {
+    void visitMethodCallExpression(MethodCallExpression call) {
         if (insideMapping && call.methodAsString =~ /^\d{3}$/ && !responseCodes.contains(call.methodAsString)) {
             responseCodes << call.methodAsString
         }
         super.visitMethodCallExpression(call)
     }
 
-    public void visitExpressionStatement(ExpressionStatement statement) {
+    void visitExpressionStatement(ExpressionStatement statement) {
         super.visitExpressionStatement(statement)
     }
 

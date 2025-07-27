@@ -29,19 +29,19 @@ import grails.core.GrailsClass
  * @author Graeme Rocher
  * @since 3.0
  */
-public class InterceptorArtefactHandler extends ArtefactHandlerAdapter {
+class InterceptorArtefactHandler extends ArtefactHandlerAdapter {
 
     public static final String MATCH_SUFFIX = ".INTERCEPTOR_MATCHED"
 
     public static final String TYPE = Interceptor.class.getSimpleName()
     public static final String PLUGIN_NAME = "interceptors"
 
-    public InterceptorArtefactHandler() {
+    InterceptorArtefactHandler() {
         super(TYPE, GrailsClass.class, DefaultGrailsClass.class, TYPE)
     }
 
     @Override
-    public String getPluginName() {
+    String getPluginName() {
         return PLUGIN_NAME
     }
 }

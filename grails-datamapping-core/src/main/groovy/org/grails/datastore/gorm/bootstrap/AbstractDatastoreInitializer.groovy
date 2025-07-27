@@ -281,7 +281,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
     }
 
 
-    abstract public Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry)
+    abstract Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry)
 
     /**
      * Internal method aiding in datastore configuration.

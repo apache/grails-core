@@ -69,5 +69,5 @@ interface ConstraintRegistry {
      * @param name The short name of the constraint
      * @return The constraint
      */
-    public <T extends Constraint> List<ConstraintFactory<T>> findConstraintFactories(Class<T> constraintType)
+    <T extends Constraint> List<ConstraintFactory<T>> findConstraintFactories(Class<T> constraintType)
 }

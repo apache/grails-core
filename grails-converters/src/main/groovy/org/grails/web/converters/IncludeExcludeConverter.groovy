@@ -24,7 +24,7 @@ package org.grails.web.converters
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface IncludeExcludeConverter<W> extends ConfigurableConverter<W> {
+interface IncludeExcludeConverter<W> extends ConfigurableConverter<W> {
 
     void setIncludes(List<String> includes)
 

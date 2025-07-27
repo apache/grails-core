@@ -1119,13 +1119,13 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    public Criteria cache(boolean shouldCache) {
+    Criteria cache(boolean shouldCache) {
         // no-op for now
         this
     }
 
     @Override
-    public Criteria readOnly(boolean readOnly) {
+    Criteria readOnly(boolean readOnly) {
         // no-op for now
         this
     }

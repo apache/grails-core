@@ -51,7 +51,7 @@ import org.grails.web.servlet.view.GroovyPageViewResolver
 class ScaffoldingViewResolver extends GroovyPageViewResolver implements ResourceLoaderAware, ModelBuilder {
     final Class templateOverridePluginDescriptor
 
-    public ScaffoldingViewResolver() {
+    ScaffoldingViewResolver() {
         this.templateOverridePluginDescriptor = null
     }
 
@@ -79,7 +79,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
      *
      * @param templateOverridePluginDescriptor
      */
-    public ScaffoldingViewResolver(Class templateOverridePluginDescriptor) {
+    ScaffoldingViewResolver(Class templateOverridePluginDescriptor) {
         this.templateOverridePluginDescriptor = templateOverridePluginDescriptor
     }
 

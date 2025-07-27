@@ -212,7 +212,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         }
     }
 
-    public void setGrailsCorsConfiguration(GrailsCorsConfiguration grailsCorsConfiguration) {
+    void setGrailsCorsConfiguration(GrailsCorsConfiguration grailsCorsConfiguration) {
         this.corsConfigurations = grailsCorsConfiguration.corsConfigurations
     }
 }

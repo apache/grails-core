@@ -46,7 +46,7 @@ abstract class CompileStaticGroovyPage extends GroovyPage {
     }
 
     @Override
-    public Object getProperty(String property) {
+    Object getProperty(String property) {
         return resolveProperty(property)
     }
 

@@ -90,7 +90,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      * @param callable The closure
      * @return The result of the closure
      */
-    public <T> T mutex(D instance, Closure<T> callable) {
+    <T> T mutex(D instance, Closure<T> callable) {
         execute({ Session session ->
             try {
                 session.lock(instance)

@@ -51,7 +51,7 @@ class HibernateRuntimeUtils {
     private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler"
 
     @SuppressWarnings("rawtypes")
-    public static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
+    static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
         if (sessionFactory != null && session != null) {
             final Set definedFilterNames = sessionFactory.getDefinedFilterNames()
             if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER))
@@ -67,7 +67,7 @@ class HibernateRuntimeUtils {
      * @param target object to initialize
      * @return the new Errors object
      */
-    public static Errors setupErrorsProperty(Object target) {
+    static Errors setupErrorsProperty(Object target) {
 
         boolean isGormValidateable = target instanceof GormValidateable
 
@@ -97,7 +97,7 @@ class HibernateRuntimeUtils {
         return errors
     }
 
-    public static void autoAssociateBidirectionalOneToOnes(PersistentEntity entity, Object target) {
+    static void autoAssociateBidirectionalOneToOnes(PersistentEntity entity, Object target) {
         def mappingContext = entity.mappingContext
         for (Association association :  entity.associations) {
             if (!(association instanceof OneToOne) || !association.bidirectional || !association.owningSide) {

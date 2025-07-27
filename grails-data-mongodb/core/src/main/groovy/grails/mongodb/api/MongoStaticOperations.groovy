@@ -94,7 +94,7 @@ interface MongoStaticOperations<D> extends GormStaticOperations<D> {
      * @param callable The callable
      * @return The result of the closure
      */
-    public <T> T withCollection(String collectionName, Closure<T> callable)
+    <T> T withCollection(String collectionName, Closure<T> callable)
 
     /**
      * Use the given collection for this entity for the scope of the session
@@ -110,7 +110,7 @@ interface MongoStaticOperations<D> extends GormStaticOperations<D> {
      * @param callable The callable
      * @return The result of the closure
      */
-    public <T> T withDatabase(String databaseName, Closure<T> callable)
+    <T> T withDatabase(String databaseName, Closure<T> callable)
 
     /**
      * Use the given database for this entity for the scope of the session

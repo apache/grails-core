@@ -57,7 +57,7 @@ class GradleStep extends AbstractStep {
     String getName() { "gradle" }
 
     @Override
-    public boolean handle(ExecutionContext context) {
+    boolean handle(ExecutionContext context) {
         try {
             GradleUtil.runBuildWithConsoleOutput(context) { BuildLauncher buildLauncher ->
                 buildLauncher.forTasks(tasks as String[])

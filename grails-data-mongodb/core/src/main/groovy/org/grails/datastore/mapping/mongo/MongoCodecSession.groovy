@@ -86,10 +86,10 @@ class MongoCodecSession extends AbstractMongoSession {
         throw new IllegalArgumentException("Type [$type] is not an entity")
     }
 
-    public MongoCodecSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
+    MongoCodecSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
         this(datastore, mappingContext, publisher, false)
     }
-    public MongoCodecSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
+    MongoCodecSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
         super(datastore, mappingContext, publisher, stateless)
 
 
@@ -278,7 +278,7 @@ class MongoCodecSession extends AbstractMongoSession {
         return mongoDatastore.mongoClient
     }
 
-    public DocumentMappingContext getDocumentMappingContext() {
+    DocumentMappingContext getDocumentMappingContext() {
         return (DocumentMappingContext) getMappingContext()
     }
 

@@ -34,17 +34,17 @@ import grails.databinding.converters.ValueConverter
 class CurrencyValueConverter implements ValueConverter {
 
     @Override
-    public boolean canConvert(Object value) {
+    boolean canConvert(Object value) {
         value instanceof String
     }
 
     @Override
-    public Object convert(Object value) {
+    Object convert(Object value) {
         Currency.getInstance(value as String)
     }
 
     @Override
-    public Class<?> getTargetType() {
+    Class<?> getTargetType() {
         Currency
     }
 

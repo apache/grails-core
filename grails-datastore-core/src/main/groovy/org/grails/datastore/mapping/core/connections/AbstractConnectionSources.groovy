@@ -74,7 +74,7 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
         return toValidConnectionSourceNames(allConnectionSources)
     }
 
-    public static Set<String> toValidConnectionSourceNames(Map<String, Object> allConnectionSources) {
+    static Set<String> toValidConnectionSourceNames(Map<String, Object> allConnectionSources) {
         Set<String> names = allConnectionSources.keySet()
         Set<String> newNames = new LinkedHashSet<>()
         for (String name : names) {
@@ -100,7 +100,7 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
     }
 
     @Override
-    public void close() throws IOException {
+    void close() throws IOException {
         for(ConnectionSource connectionSource : allConnectionSources) {
             connectionSource.close()
         }

@@ -26,8 +26,8 @@ import groovy.transform.Immutable
 @Immutable
 class SimpleTemplate {
     String template
-    
-    public String render(Map<String, String> variables) {
+
+    String render(Map<String, String> variables) {
         String result = template?:''
         variables.each { k, v ->
             result = result.replace("@${k}@".toString(), v?:'')

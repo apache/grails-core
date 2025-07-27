@@ -34,7 +34,7 @@ import org.grails.compiler.injection.GrailsASTUtils
 class DomainMappingTypeCheckingExtension extends TypeCheckingDSL {
 
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }

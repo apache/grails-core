@@ -141,7 +141,7 @@ class GroovyScriptCommandTransform implements ASTTransformation {
         }
     }
 
-    public static ConstructorNode getDefaultConstructor(ClassNode classNode) {
+    static ConstructorNode getDefaultConstructor(ClassNode classNode) {
         for (ConstructorNode cons in classNode.getDeclaredConstructors()) {
             if (cons.getParameters().length == 0) {
                 return cons

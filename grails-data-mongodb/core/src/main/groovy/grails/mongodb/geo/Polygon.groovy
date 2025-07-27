@@ -62,7 +62,7 @@ class Polygon extends Shape implements GeoJSON{
      *
      * @return The list
      */
-    public List<List<List<Double>>> asList() {
+    List<List<List<Double>>> asList() {
          points.collect() { List<Point> ring ->
             ring.collect { Point p ->
                 p.asList()

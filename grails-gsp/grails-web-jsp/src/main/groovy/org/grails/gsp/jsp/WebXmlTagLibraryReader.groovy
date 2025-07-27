@@ -35,7 +35,7 @@ class WebXmlTagLibraryReader {
      */
     Map<String, String> tagLocations = [:]
 
-    public WebXmlTagLibraryReader(InputStream inputStream) {
+    WebXmlTagLibraryReader(InputStream inputStream) {
         inputStream.withStream {
             init(new BufferedInputStream(inputStream))
         }

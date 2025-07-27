@@ -34,11 +34,11 @@ import org.springframework.web.filter.CorsFilter
 @CompileStatic
 class GrailsCorsFilter extends CorsFilter implements Ordered {
 
-    public GrailsCorsFilter() {
+    GrailsCorsFilter() {
         super(new UrlBasedCorsConfigurationSource())
     }
 
-    public GrailsCorsFilter(GrailsCorsConfiguration corsConfiguration) {
+    GrailsCorsFilter(GrailsCorsConfiguration corsConfiguration) {
         super(configurationSource(corsConfiguration.corsConfigurations))
     }
 

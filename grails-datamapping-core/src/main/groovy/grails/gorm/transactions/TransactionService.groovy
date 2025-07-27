@@ -38,7 +38,7 @@ interface TransactionService {
      * @param callable The callable
      * @return The result
      */
-    public <T> T withTransaction(@ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withTransaction(@ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
 
     /**
      * Executes the given callable within the context of a transaction that is automatically rolled back with the default attributes
@@ -46,14 +46,14 @@ interface TransactionService {
      * @param callable The callable
      * @return The result
      */
-    public <T> T withRollback(@ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withRollback(@ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
     /**
      * Executes the given callable within the context of a new transaction with the default attributes
      *
      * @param callable The callable
      * @return The result
      */
-    public <T> T withNewTransaction(@ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withNewTransaction(@ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
 
     /**
      * Executes the given callable within the context of a transaction with the given definition
@@ -62,7 +62,7 @@ interface TransactionService {
      * @param callable The callable The callable
      * @return The result of the callable
      */
-    public <T> T withTransaction(TransactionDefinition definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withTransaction(TransactionDefinition definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
 
     /**
      * Executes the given callable within the context of a transaction with the given definition
@@ -71,7 +71,7 @@ interface TransactionService {
      * @param callable The callable The callable
      * @return The result of the callable
      */
-    public <T> T withTransaction(Map definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withTransaction(Map definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
 
     /**
      * Executes the given callable within the context of a transaction that is automatically rolled back with the default attributes
@@ -80,7 +80,7 @@ interface TransactionService {
      * @param callable The callable
      * @return The result
      */
-    public <T> T withRollback(TransactionDefinition definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withRollback(TransactionDefinition definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
     /**
      * Executes the given callable within the context of a new transaction with the default attributes
      *
@@ -88,5 +88,5 @@ interface TransactionService {
      * @param callable The callable
      * @return The result
      */
-    public <T> T withNewTransaction(TransactionDefinition definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
+    <T> T withNewTransaction(TransactionDefinition definition, @ClosureParams(value=SimpleType.class, options="org.springframework.transaction.TransactionStatus") Closure<T> callable)
 }

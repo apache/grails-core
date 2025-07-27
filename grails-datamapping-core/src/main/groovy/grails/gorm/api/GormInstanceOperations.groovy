@@ -53,7 +53,7 @@ interface GormInstanceOperations<D> {
      * @param callable The closure
      * @return The result of the closure
      */
-    public <T> T mutex(D instance, Closure<T> callable)
+    <T> T mutex(D instance, Closure<T> callable)
 
     /**
      * Refreshes the state of the current instance

@@ -31,7 +31,7 @@ class ClosureCompleter implements Completer {
     private Closure<Collection<String>> closure
     private Completer completer
 
-    public ClosureCompleter(Closure<Collection<String>> closure) {
+    ClosureCompleter(Closure<Collection<String>> closure) {
         this.closure = closure
     }
 
@@ -43,7 +43,7 @@ class ClosureCompleter implements Completer {
     }
 
     @Override
-    public int complete(String buffer, int cursor, List<CharSequence> candidates) {
+    int complete(String buffer, int cursor, List<CharSequence> candidates) {
         getCompleter().complete(buffer, cursor, candidates)
     }
 }

@@ -40,7 +40,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
     private static final long serialVersionUID = 1L
     private boolean inheritRollbackOnly = true
 
-    public GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
+    GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
         super()
         propagationBehavior = other.propagationBehavior
         isolationLevel = other.isolationLevel
@@ -49,7 +49,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         name = other.name
     }
 
-    public GrailsTransactionAttribute(TransactionDefinition other) {
+    GrailsTransactionAttribute(TransactionDefinition other) {
         super()
         propagationBehavior = other.propagationBehavior
         isolationLevel = other.isolationLevel
@@ -58,18 +58,18 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         name = other.name
     }
 
-    public GrailsTransactionAttribute(GrailsTransactionAttribute other) {
+    GrailsTransactionAttribute(GrailsTransactionAttribute other) {
         this((RuleBasedTransactionAttribute)other)
     }
 
-    public GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
+    GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
         super(other)
         if(other instanceof GrailsTransactionAttribute) {
             this.inheritRollbackOnly = ((GrailsTransactionAttribute)other).inheritRollbackOnly
         }
     }
 
-    public boolean isInheritRollbackOnly() {
+    boolean isInheritRollbackOnly() {
         return inheritRollbackOnly
     }
 
@@ -108,7 +108,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         return !(winner instanceof NoRollbackRuleAttribute)
     }
 
-    public void setInheritRollbackOnly(boolean inheritRollbackOnly) {
+    void setInheritRollbackOnly(boolean inheritRollbackOnly) {
         this.inheritRollbackOnly = inheritRollbackOnly
     }
 }

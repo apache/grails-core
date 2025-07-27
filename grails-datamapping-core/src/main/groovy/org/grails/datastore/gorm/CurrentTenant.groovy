@@ -60,7 +60,7 @@ class CurrentTenant  {
      * @param callable The closure
      * @return The result of the closure
      */
-    public static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
+    static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
         try {
             set(tenantId)
             callable.call()

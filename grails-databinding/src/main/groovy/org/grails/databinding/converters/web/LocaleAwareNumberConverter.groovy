@@ -49,12 +49,12 @@ class LocaleAwareNumberConverter implements ValueConverter {
     LocaleResolver localeResolver
 
     @Override
-    public boolean canConvert(Object value) {
+    boolean canConvert(Object value) {
         value instanceof String
     }
 
     @Override
-    public Object convert(Object value) {
+    Object convert(Object value) {
         def trimmedValue = value.toString().trim()
         def parsePosition = new ParsePosition(0)
         def result = numberFormatter.parse((String)value, parsePosition).asType(getTargetType())

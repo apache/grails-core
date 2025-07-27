@@ -22,7 +22,7 @@ package demo
 
 class UriMatchingInterceptor {
 
-    public UriMatchingInterceptor() {
+    UriMatchingInterceptor() {
         match uri: '/interceptorDemo/one'
     }
 

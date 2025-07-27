@@ -34,7 +34,7 @@ import org.grails.compiler.injection.GrailsASTUtils
 class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
 
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }

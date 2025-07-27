@@ -20,7 +20,7 @@ package grails.mongodb.geo
  * @author Graeme Rocher
  * @since 2.0
  */
-public interface GeoJSON {
+interface GeoJSON {
 
     /**
      * Converts the GeoJSON shape into a coordinate list

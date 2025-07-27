@@ -71,12 +71,12 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     private ServletInputStream cachedInputStream
 
 
-    public GrailsMockHttpServletRequest() {
+    GrailsMockHttpServletRequest() {
         super()
         method = 'GET'
     }
 
-    public GrailsMockHttpServletRequest(ServletContext servletContext) {
+    GrailsMockHttpServletRequest(ServletContext servletContext) {
         super(servletContext)
         method = 'GET'
     }
@@ -442,7 +442,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     boolean isAsyncSupported() { true }
 
     @Override
-    public ServletInputStream getInputStream() {
+    ServletInputStream getInputStream() {
         if (cachedInputStream == null) {
             cachedInputStream = super.getInputStream()
         }

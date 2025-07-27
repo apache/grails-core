@@ -66,7 +66,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
         return tagLibs[uri]
     }
 
-    public synchronized void initialize() {
+    synchronized void initialize() {
         if(servletContext) {
             Resource webXml = getWebXmlFromServletContext()
             if (webXml?.exists()) {
@@ -173,7 +173,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
     }
 
     @Override
-    public void setBeanClassLoader(ClassLoader classLoader) {
+    void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader
     }
 

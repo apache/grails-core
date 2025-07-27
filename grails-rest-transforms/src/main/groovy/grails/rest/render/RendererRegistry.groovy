@@ -26,21 +26,21 @@ import grails.web.mime.MimeType
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface RendererRegistry {
+interface RendererRegistry {
 
     /**
      * Adds a new renderer
      *
      * @param renderer The renderer to add
      */
-    public <T> void addRenderer(Renderer<T> renderer)
+    <T> void addRenderer(Renderer<T> renderer)
 
     /**
      * Adds a default renderer, which are fall backs if the type is not known
      *
      * @param renderer The renderer to add
      */
-    public void addDefaultRenderer(Renderer<Object> renderer)
+    void addDefaultRenderer(Renderer<Object> renderer)
 
     /**
      * Adds a container renderer
@@ -48,7 +48,7 @@ public interface RendererRegistry {
      * @param objectType The object type
      * @param renderer The renderer
      */
-    public void addContainerRenderer(Class objectType, Renderer renderer)
+    void addContainerRenderer(Class objectType, Renderer renderer)
 
     /**
      * Finds a renderer
@@ -58,7 +58,7 @@ public interface RendererRegistry {
      *
      * @return The renderer
      */
-    public <T> Renderer<T> findRenderer(MimeType contentType, T object)
+    <T> Renderer<T> findRenderer(MimeType contentType, T object)
 
     /**
      * Finds a renderer for a container (List, Errors, Map etc.) for another object
@@ -68,7 +68,7 @@ public interface RendererRegistry {
      * @param object The object to render, an instance of the container (list, map etc.)
      * @return A renderer or null if non exists
      */
-    public <C, T> Renderer<C> findContainerRenderer(MimeType contentType, Class<C> containerType, T object)
+    <C, T> Renderer<C> findContainerRenderer(MimeType contentType, Class<C> containerType, T object)
 
     /**
      * Whether the specified class is a container (list, map etc.)

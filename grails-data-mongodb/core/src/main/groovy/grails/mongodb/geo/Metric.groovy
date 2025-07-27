@@ -25,7 +25,7 @@ import groovy.transform.EqualsAndHashCode
  */
 @EqualsAndHashCode
 @CompileStatic
-public class Metric {
+class Metric {
     /** the radius of the earth in kilometers **/
     static Metric KILOMETERS = new Metric(6378.137d)
     /** the radius of the earth in miles **/

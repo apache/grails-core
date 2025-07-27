@@ -41,7 +41,7 @@ class ConnectionSourcesInitializer {
      * @param configuration The configuration
      * @return The {@link ConnectionSources}
      */
-    public static <T,S extends ConnectionSourceSettings> ConnectionSources create(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
+    static <T,S extends ConnectionSourceSettings> ConnectionSources create(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
         ConnectionSource defaultConnectionSource = connectionSourceFactory.create(ConnectionSource.DEFAULT, configuration)
         Class<ConnectionSources> connectionSourcesClass = defaultConnectionSource.getSettings().getConnectionSourcesClass()
 

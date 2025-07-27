@@ -44,7 +44,7 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
     private List<String> embeddedDatabaseBeanNames
 
     @Override
-    public void start() {
+    void start() {
         embeddedDatabaseBeanNames = []
         applicationContext.getBeansOfType(DataSource).each { String beanName, DataSource dataSource ->
             if(isEmbeddedH2orHsqldb(dataSource)) {
@@ -55,7 +55,7 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
     }
 
     @Override
-    public void stop() {
+    void stop() {
         embeddedDatabaseBeanNames?.each { String beanName ->
             shutdownEmbeddedDatabase(applicationContext.getBean(beanName, DataSource))
         }
@@ -64,28 +64,28 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
     }
 
     @Override
-    public boolean isRunning() {
+    boolean isRunning() {
         return running
     }
 
     @Override
-    public int getPhase() {
+    int getPhase() {
         return Integer.MIN_VALUE
     }
 
     @Override
-    public boolean isAutoStartup() {
+    boolean isAutoStartup() {
         return true
     }
 
     @Override
-    public void stop(Runnable callback) {
+    void stop(Runnable callback) {
         stop()
         callback.run()
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext
     }
 

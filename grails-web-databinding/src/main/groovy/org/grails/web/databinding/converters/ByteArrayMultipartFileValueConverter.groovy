@@ -31,7 +31,7 @@ import grails.databinding.converters.ValueConverter
 @CompileStatic
 class ByteArrayMultipartFileValueConverter implements ValueConverter {
 
-    public Object convert(Object value) {
+    Object convert(Object value) {
         MultipartFile mf
         if(value instanceof MultipartFile) {
             mf = (MultipartFile)value
@@ -47,11 +47,11 @@ class ByteArrayMultipartFileValueConverter implements ValueConverter {
         mf?.bytes
     }
 
-    public Class<?> getTargetType() {
+    Class<?> getTargetType() {
         byte[]
     }
 
-    public boolean canConvert(Object value) {
+    boolean canConvert(Object value) {
         def canConvertValue = false
         if(value instanceof MultipartFile) {
             canConvertValue = true

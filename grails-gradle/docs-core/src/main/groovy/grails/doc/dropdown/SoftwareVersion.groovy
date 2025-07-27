@@ -88,7 +88,7 @@ class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
     }
 
     @Override
-    public String toString() {
+    String toString() {
         return "SoftwareVersion{" +
                 "major=" + major +
                 ", minor=" + minor +

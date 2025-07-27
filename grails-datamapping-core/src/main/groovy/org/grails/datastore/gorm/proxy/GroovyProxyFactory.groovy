@@ -47,7 +47,7 @@ class GroovyProxyFactory implements ProxyFactory {
 
     @Override
     @Override
-    public Class<?> getProxiedClass(Object o) {
+    Class<?> getProxiedClass(Object o) {
         if(isProxy(o)) {
             return o.getClass().getSuperclass()
         }
@@ -92,7 +92,7 @@ class GroovyProxyFactory implements ProxyFactory {
      * @return A proxy instance
      */
     @Override
-    public <T> T createProxy(Session session, Class<T> type, Serializable key) {
+    <T> T createProxy(Session session, Class<T> type, Serializable key) {
         EntityPersister persister = (EntityPersister) session.getPersister(type)
         T proxy = type.newInstance()
         persister.setObjectIdentifier(proxy, key)
@@ -131,7 +131,7 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @Override
-    public boolean isInitialized(Object object, String associationName) {
+    boolean isInitialized(Object object, String associationName) {
         final Object value = ClassPropertyFetcher.getInstancePropertyValue(object, associationName)
         return value == null || isInitialized(value)
     }

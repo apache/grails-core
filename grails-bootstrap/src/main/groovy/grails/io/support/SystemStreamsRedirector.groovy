@@ -52,7 +52,7 @@ class SystemStreamsRedirector {
         original().withRedirectedIO(closure)
     }
     
-    public <T> T withRedirectedIO(Closure<T> closure) {
+    <T> T withRedirectedIO(Closure<T> closure) {
         SystemStreamsRedirector previous = redirect()
         try {
             return closure.call()

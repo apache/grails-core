@@ -50,7 +50,7 @@ class GrailsShell extends GrailsApp {
         configureApplicationContextClass()
     }
 
-    public configureApplicationContextClass() {
+    void configureApplicationContextClass() {
         if (ClassUtils.isPresent("jakarta.servlet.ServletContext", Thread.currentThread().contextClassLoader)) {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(GroovyshWebApplicationContext))
         } else {
@@ -66,7 +66,7 @@ class GrailsShell extends GrailsApp {
      * @param args the application arguments (usually passed from a Java main method)
      * @return the running {@link org.springframework.context.ApplicationContext}
      */
-    public static ConfigurableApplicationContext run(Class<?> source, String... args) {
+    static ConfigurableApplicationContext run(Class<?> source, String... args) {
         return run([ source ] as Class[], args)
     }
 
@@ -77,7 +77,7 @@ class GrailsShell extends GrailsApp {
      * @param args the application arguments (usually passed from a Java main method)
      * @return the running {@link org.springframework.context.ApplicationContext}
      */
-    public static ConfigurableApplicationContext run(Class<?>[] sources, String[] args) {
+    static ConfigurableApplicationContext run(Class<?>[] sources, String[] args) {
         return new GrailsShell(sources).run(args)
     }
 
@@ -86,7 +86,7 @@ class GrailsShell extends GrailsApp {
      *
      * @param args The first argument is the Application class name
      */
-    public static void main(String[] args) {
+    static void main(String[] args) {
         if(args) {
             def applicationClass = Thread.currentThread().contextClassLoader.loadClass(args[0])
             new GrailsShell(applicationClass).run(args)

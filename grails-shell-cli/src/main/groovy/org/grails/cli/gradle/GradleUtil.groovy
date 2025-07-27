@@ -50,7 +50,7 @@ import org.grails.cli.profile.ProjectContext
 class GradleUtil {
     private static final boolean DEFAULT_SUPPRESS_OUTPUT = true
 
-    public static ProjectConnection openGradleConnection(File baseDir) {
+    static ProjectConnection openGradleConnection(File baseDir) {
         GradleConnector gradleConnector = GradleConnector.newConnector().forProjectDirectory(baseDir)
         if (System.getenv("GRAILS_GRADLE_HOME")) {
             gradleConnector.useInstallation(new File(System.getenv("GRAILS_GRADLE_HOME")))
@@ -74,8 +74,8 @@ class GradleUtil {
         gradleConnector.connect()
     }
 
-    public static <T> T withProjectConnection(File baseDir, boolean suppressOutput = DEFAULT_SUPPRESS_OUTPUT,
-                                              @ClosureParams(value = SimpleType.class, options = "org.gradle.tooling.ProjectConnection") Closure<T> closure) {
+    static <T> T withProjectConnection(File baseDir, boolean suppressOutput = DEFAULT_SUPPRESS_OUTPUT,
+                                       @ClosureParams(value = SimpleType.class, options = "org.gradle.tooling.ProjectConnection") Closure<T> closure) {
         ProjectConnection projectConnection = openGradleConnection(baseDir)
         try {
             if (suppressOutput) {
@@ -92,8 +92,8 @@ class GradleUtil {
         }
     }
 
-    public static void runBuildWithConsoleOutput(ExecutionContext context,
-                                                 @ClosureParams(value = SimpleType.class, options = "org.gradle.tooling.BuildLauncher") Closure<?> buildLauncherCustomizationClosure) {
+    static void runBuildWithConsoleOutput(ExecutionContext context,
+                                          @ClosureParams(value = SimpleType.class, options = "org.gradle.tooling.BuildLauncher") Closure<?> buildLauncherCustomizationClosure) {
         withProjectConnection(context.getBaseDir(), DEFAULT_SUPPRESS_OUTPUT) { ProjectConnection projectConnection ->
             BuildLauncher launcher = projectConnection.newBuild()
             setupConsoleOutput(context, launcher)
@@ -103,7 +103,7 @@ class GradleUtil {
         }
     }
 
-    public static LongRunningOperation setupConsoleOutput(ProjectContext context, LongRunningOperation operation) {
+    static LongRunningOperation setupConsoleOutput(ProjectContext context, LongRunningOperation operation) {
         GrailsConsole grailsConsole = context.console
         operation.colorOutput = grailsConsole.ansiEnabled
         operation.standardOutput = new GrailsConsolePrintStream( grailsConsole.out )
@@ -111,31 +111,31 @@ class GradleUtil {
         operation
     }
 
-    public static <T> T runBuildActionWithConsoleOutput(ProjectContext context, BuildAction<T> buildAction) {
+    static <T> T runBuildActionWithConsoleOutput(ProjectContext context, BuildAction<T> buildAction) {
         // workaround for GROOVY-7211, static type checking problem when default parameters are used
         runBuildActionWithConsoleOutput(context, buildAction, null)
     }
 
-    public static <T> T runBuildActionWithConsoleOutput(ProjectContext context, BuildAction<T> buildAction,
-                                                        @ClosureParams(value = FromString.class, options = "org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
+    static <T> T runBuildActionWithConsoleOutput(ProjectContext context, BuildAction<T> buildAction,
+                                                 @ClosureParams(value = FromString.class, options = "org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
         withProjectConnection(context.getBaseDir(), DEFAULT_SUPPRESS_OUTPUT) { ProjectConnection projectConnection ->
             runBuildActionWithConsoleOutput(projectConnection, context, buildAction, buildActionExecuterCustomizationClosure)
         }
     }
 
-    public static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction) {
+    static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction) {
         // workaround for GROOVY-7211, static type checking problem when default parameters are used
         runBuildActionWithConsoleOutput(connection, context, buildAction, null)
     }
 
-    public static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction, @ClosureParams(value=FromString.class, options="org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
+    static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction, @ClosureParams(value=FromString.class, options="org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
         BuildActionExecuter<T> buildActionExecuter = connection.action(buildAction)
         setupConsoleOutput(context, buildActionExecuter)
         buildActionExecuterCustomizationClosure?.call(buildActionExecuter)
         return buildActionExecuter.run()
     }
 
-    public static wireCancellationSupport(ExecutionContext context, BuildLauncher buildLauncher) {
+    static wireCancellationSupport(ExecutionContext context, BuildLauncher buildLauncher) {
         DefaultCancellationTokenSource cancellationTokenSource = new DefaultCancellationTokenSource()
         buildLauncher.withCancellationToken(cancellationTokenSource.token())
         context.addCancelledListener({

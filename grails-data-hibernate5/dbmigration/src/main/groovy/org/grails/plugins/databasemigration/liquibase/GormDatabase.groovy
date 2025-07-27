@@ -68,7 +68,7 @@ class GormDatabase extends HibernateDatabase {
      * Return the hibernate {@link Metadata} used by this database.
      */
     @Override
-    public Metadata getMetadata() {
+    Metadata getMetadata() {
         metadata
     }
 

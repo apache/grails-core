@@ -37,7 +37,7 @@ class TldReader {
     final List<String> listeners = []
     String uri
 
-    public TldReader(InputStream inputStream) {
+    TldReader(InputStream inputStream) {
         inputStream.withStream {
             init(new BufferedInputStream(inputStream))
         }

@@ -94,7 +94,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    public <T> T withNewSession(Closure<T> callable) {
+    <T> T withNewSession(Closure<T> callable) {
         AbstractHibernateDatastore hibernateDatastore = (AbstractHibernateDatastore) datastore
         hibernateDatastore.withNewSession(callable)
     }

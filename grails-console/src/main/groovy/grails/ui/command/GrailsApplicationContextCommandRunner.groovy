@@ -90,7 +90,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      *
      * @param args The first argument is the Command name, the last argument is the Application class name
      */
-    public static void main(String[] args) {
+    static void main(String[] args) {
         if(args.size() > 1) {
             Class applicationClass = null
             String className = args.last()

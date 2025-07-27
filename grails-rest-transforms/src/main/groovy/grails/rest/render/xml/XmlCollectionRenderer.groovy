@@ -41,7 +41,7 @@ class XmlCollectionRenderer extends XmlRenderer implements ContainerRenderer {
         this.componentType = componentType
     }
 
-    public XmlCollectionRenderer(Class targetType, MimeType... mimeTypes) {
+    XmlCollectionRenderer(Class targetType, MimeType... mimeTypes) {
         super(targetType, mimeTypes)
     }
 

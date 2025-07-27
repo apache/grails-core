@@ -41,7 +41,7 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
         domainRegistryEntries.add(new Entry(domainRenderer, priority))
     }
 
-    public SortedSet<Entry> getDomainRegistryEntries() {
+    SortedSet<Entry> getDomainRegistryEntries() {
         this.domainRegistryEntries
     }
 
@@ -65,7 +65,7 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
             seq = RENDERER_SEQUENCE.incrementAndGet()
         }
 
-        public int compareTo(Entry entry) {
+        int compareTo(Entry entry) {
             return priority == entry.priority ? entry.seq - seq : entry.priority - priority
         }
     }

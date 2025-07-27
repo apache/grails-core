@@ -53,7 +53,7 @@ class RenderStep extends AbstractStep {
     String getName() { NAME }
 
     @Override
-    public boolean handle(ExecutionContext context) {
+    boolean handle(ExecutionContext context) {
         def commandLine = context.getCommandLine()
         String nameAsArgument = commandLine.getRemainingArgs()[0]
         String artifactName

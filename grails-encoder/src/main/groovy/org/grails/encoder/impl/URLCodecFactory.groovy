@@ -35,40 +35,40 @@ import org.grails.encoder.Encoder
  * @since 2.4
  */
 @CompileStatic
-public class URLCodecFactory implements CodecFactory {
+class URLCodecFactory implements CodecFactory {
     static final CodecIdentifier URL_CODEC_IDENTIFIER = new DefaultCodecIdentifier("URL")
 
     Encoder encoder = new Encoder() {
         @Override
-        public CodecIdentifier getCodecIdentifier() {
+        CodecIdentifier getCodecIdentifier() {
             URL_CODEC_IDENTIFIER
         }
 
-        public Object encode(Object o) {
+        Object encode(Object o) {
             if(o==null) return o
             URLEncoder.encode(String.valueOf(o), resolveEncoding())
         }
 
-        public boolean isApplyToSafelyEncoded() {
+        boolean isApplyToSafelyEncoded() {
             true
         }
 
-        public boolean isSafe() {
+        boolean isSafe() {
             true
         }
 
-        public void markEncoded(CharSequence string) {
+        void markEncoded(CharSequence string) {
 
         }
     }
 
     Decoder decoder = new Decoder() {
-        public CodecIdentifier getCodecIdentifier() {
+        CodecIdentifier getCodecIdentifier() {
             URL_CODEC_IDENTIFIER
         }
 
         @Override
-        public Object decode(Object o) {
+        Object decode(Object o) {
             if(o==null) return o
             URLDecoder.decode(String.valueOf(o), resolveEncoding())
         }

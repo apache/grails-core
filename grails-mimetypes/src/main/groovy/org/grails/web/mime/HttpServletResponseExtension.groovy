@@ -226,7 +226,7 @@ class HttpServletResponseExtension {
         apiSupport.withFormat(response, callable)
     }
 
-    public static void loadMimeTypeConfig(Config config) {
+    static void loadMimeTypeConfig(Config config) {
         useAcceptHeader = config.getProperty(Settings.MIME_USE_ACCEPT_HEADER, Boolean, true)
 
         if (config.containsKey(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS_XHR)) {

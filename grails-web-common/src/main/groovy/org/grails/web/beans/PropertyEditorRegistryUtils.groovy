@@ -55,7 +55,7 @@ class PropertyEditorRegistryUtils {
      * @param registry
      * @param locale
      */
-    public static void registerCustomEditors(GrailsWebRequest grailsWebRequest, PropertyEditorRegistry registry, Locale locale) {
+    static void registerCustomEditors(GrailsWebRequest grailsWebRequest, PropertyEditorRegistry registry, Locale locale) {
         // Formatters for the different number types.
         def floatFormat = NumberFormat.getInstance(locale)
         def integerFormat = NumberFormat.getIntegerInstance(locale)

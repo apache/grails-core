@@ -62,7 +62,7 @@ class LineString extends Shape implements GeoJSON{
      * @param coords The coordinates, which should be a list of {@link Point} instances or lists containing x and y values
      * @return A LineString
      */
-    public static LineString valueOf(List coords) {
+    static LineString valueOf(List coords) {
         if(coords.size() < 2) throw new IllegalArgumentException("Coordinates should contain at least 2 entries for a LineString")
 
         List<Point> points = (List<Point>) coords.collect() {
