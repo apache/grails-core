@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.CascadeBehaviorFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
@@ -131,9 +132,9 @@ public class GrailsDomainBinder implements MetadataContributor {
     private static final String STRING_TYPE = "string";
     private static final String EMPTY_PATH = "";
     private static final char UNDERSCORE = '_';
-    private static final String CASCADE_ALL = "all";
-    private static final String CASCADE_SAVE_UPDATE = "save-update";
-    private static final String CASCADE_NONE = "none";
+    public static final String CASCADE_ALL = "all";
+    public static final String CASCADE_SAVE_UPDATE = "save-update";
+    public static final String CASCADE_NONE = "none";
     private static final String BACKTICK = "`";
 
     public static final String ENUM_TYPE_CLASS = "org.hibernate.type.EnumType";
@@ -2497,7 +2498,8 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         prop.setOptional(grailsProperty.isNullable());
 
-        setCascadeBehaviour(grailsProperty, prop);
+//        setCascadeBehaviour(grailsProperty, prop);
+        prop.setCascade(new CascadeBehaviorFetcher().getCascadeBehaviour(grailsProperty));
 
         // lazy to true
         final boolean isToOne = grailsProperty instanceof ToOne && !(grailsProperty instanceof Embedded);

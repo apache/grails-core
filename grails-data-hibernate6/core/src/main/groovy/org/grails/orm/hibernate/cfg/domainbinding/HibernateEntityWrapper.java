@@ -31,7 +31,7 @@ public class HibernateEntityWrapper {
        } else if (hibernateEmbeddedPersistentEntity != null) {
            return hibernateEmbeddedPersistentEntity.getMappedForm();
        } else {
-           return null;
+           throw new MappingException("Not correct Persistent Entity");
        }
     }
 

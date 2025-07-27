@@ -83,6 +83,9 @@ dependencies {
     testImplementation 'org.testcontainers:spock'
     testImplementation 'org.jsr107.ri:cache-ri-impl:1.1.1'
 
+    testImplementation 'org.objenesis:objenesis:3.4' // or a more recent version if available
+
+
     testImplementation 'com.h2database:h2'
     testImplementation 'org.junit.platform:junit-platform-suite', {
         // api: SelectClasses, Suite
@@ -97,6 +100,8 @@ dependencies {
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
     testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+        exclude group: 'org.hibernate.orm', module: 'hibernate-core'
     }
 
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
@@ -105,6 +110,7 @@ dependencies {
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'
     testRuntimeOnly 'org.springframework:spring-aop'
+
 }
 
 

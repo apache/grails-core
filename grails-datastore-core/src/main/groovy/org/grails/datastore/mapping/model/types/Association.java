@@ -319,4 +319,29 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         final String cascade = mappedForm.getCascadeValidate();
         return cascade != null ? CascadeValidateType.fromMappedName(cascade) : CascadeValidateType.DEFAULT;
     }
+
+
+    public boolean isHasOne() {
+        return Optional.of(this)
+                .filter(OneToOne.class::isInstance )
+                .map(OneToOne.class::cast)
+                .map(ToOne::isForeignKeyInChild)
+                .orElse(false);
+    }
+
+    public boolean isOneToOne() {
+        return this instanceof OneToOne;
+    }
+
+    public boolean isOneToMany() {
+        return this instanceof OneToMany;
+    }
+
+    public boolean isManyToMany() {
+        return this instanceof ManyToMany;
+    }
+
+    public boolean isManyToOne() {
+        return this instanceof ManyToOne;
+    }
 }

@@ -21,9 +21,11 @@ import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
+import org.grails.orm.hibernate.cfg.CompositeIdentity
 
 /**
  * Models the mapping from GORM classes to the db.
@@ -96,6 +98,11 @@ class Mapping extends Entity<PropertyConfig> {
      * The identity definition
      */
     Property identity = new Identity()
+
+    boolean isCompositeIdProperty(PersistentProperty property) {
+        return (identity instanceof CompositeIdentity) && (property.name in identity.propertyNames)
+    }
+
 
     /**
      * Caching config
