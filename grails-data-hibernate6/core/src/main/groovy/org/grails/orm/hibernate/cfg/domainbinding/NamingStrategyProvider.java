@@ -1,9 +1,12 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
+import org.apache.groovy.parser.antlr4.util.StringUtils;
+import org.codehaus.groovy.util.StringUtil;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NamingStrategyProvider {
@@ -66,10 +69,12 @@ public class NamingStrategyProvider {
 
 
     private static String getKey(String sessionFactoryBeanName) {
-        String key = "sessionFactory".equals(sessionFactoryBeanName) ?
+        if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
+            return ConnectionSource.DEFAULT;
+        }
+        return "sessionFactory".equals(sessionFactoryBeanName) ?
                 ConnectionSource.DEFAULT :
                 sessionFactoryBeanName.substring("sessionFactory_".length());
-        return key;
     }
 
 }

@@ -70,7 +70,7 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
         firstName index: true
         lastName index: true
         age index: true
-        pets cascade: 'all-delete-orphan'
+//        pets cascade: 'all-delete-orphan'
     }
 
     static constraints = {
