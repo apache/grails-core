@@ -28,6 +28,7 @@ buildCache {
 rootProject.name = 'testapp1'
 
 includeBuild('../../../grails-mail') {
+    name = 'grails-mail'
     dependencySubstitution {
         substitute module('org.grails.plugins:grails-mail') using project(':')
     }

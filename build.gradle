@@ -8,62 +8,23 @@ apply plugin: 'org.apache.grails.gradle.grails-publish'
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/core' }
-    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+        }
+    }
 }
 
 dependencies {
 
-    implementation(platform("org.apache.grails:grails-bom:$grailsVersion"))
+    compileOnly platform("org.apache.grails:grails-bom:$grailsVersion")
+    compileOnly 'org.apache.grails:grails-dependencies-starter-web'
 
-    api 'org.apache.grails:grails-gsp', {
-        // api: GroovyPageTemplate, GroovyPagesTemplateEngine
-    }
-    api 'org.apache.grails.web:grails-web-common', {
-        // api: GroovyPagesUriService
-        // impl: GrailsWebRequest, WrappedResponseHolder
-    }
-    api 'org.springframework:spring-beans', {
-        // api: DisposableBean, InitializingBean
-        // impl: @Autowired(runtime), @Qualifier(runtime)
-    }
-    api 'org.springframework:spring-context', {
-        // api: ApplicationContext, JndiObjectFactoryBean
-        // impl: @Bean(runtime)
-    }
-    api 'org.springframework:spring-context-support', {
-        // api: JavaMailSender, MailMessage, MailSender, SimpleMailMessage
-        // impl: JavaMailSenderImpl, MimeMailMessage, MimeMessageHelper
-    }
-    api 'org.springframework:spring-core', {
-        // api: InputStreamSource
-        // impl: Assert, ByteArrayResource, FileSystemResource, PropertiesPropertySource, StringUtils
-    }
-
-    implementation 'org.apache.grails.views:grails-web-taglib', {
-        // for taglib support
-    }
-    implementation 'org.apache.grails.web:grails-web-url-mappings', {
-        // impl: LinkGenerator
-    }
-    implementation 'org.apache.groovy:groovy-templates', {
-        // impl: Template
-    }
-    implementation 'org.eclipse.angus:jakarta.mail', {
+    // avoid pulling the bom in to set this version, instead use a property
+    implementation "org.eclipse.angus:jakarta.mail:$jakartaMailImplVersion", {
         // impl: SMTPMessage
-    }
-    implementation 'org.springframework:spring-web', {
-        // impl: RequestContextHolder
-    }
-    implementation 'org.springframework:spring-webmvc', {
-        // impl: DispatcherServlet, FixedLocaleResolver, RequestContextUtils
-    }
-    implementation 'org.springframework.boot:spring-boot', {
-        // impl: Bindable, Binder, @ConfigurationProperties, ConfigurationPropertySources,
-        //       @EnableConfigurationProperties(runtime)
-    }
-    implementation 'org.springframework.boot:spring-boot-autoconfigure', {
-        // impl: @AutoConfiguration(runtime), @ConditionalOnMissingBean(runtime), @ConditionalOnProperty(runtime)
     }
 
     compileOnlyApi 'jakarta.mail:jakarta.mail-api', {
@@ -71,26 +32,9 @@ dependencies {
         // impl: MimeMessage, MimeUtility
     }
 
-    compileOnly 'jakarta.inject:jakarta.inject-api', { // Used by Spring DI
-        // impl: @Inject(runtime)
-    }
-    compileOnly 'jakarta.servlet:jakarta.servlet-api', { // Provided by the servlet container
-        // impl: Cookie, HttpServletResponse, HttpServletRequest
-    }
-    compileOnly 'org.apache.grails:grails-core', { // Provided as this is a Grails plugin
-        // api: Config, GrailsApplication, GrailsPluginManager, Plugin
-        // impl: @Artefact(runtime), @Enhances(runtime)
-    }
-    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
-
-    testImplementation 'jakarta.servlet:jakarta.servlet-api', {
-        // impl: ServletContext
-    }
-    testImplementation 'org.apache.grails.testing:grails-testing-support-core', {
-        // impl: GrailsUnitTest
-    }
-    testImplementation 'org.spockframework:spock-core'
-
+    testImplementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    testImplementation 'org.apache.grails:grails-dependencies-starter-web'
+    testImplementation 'org.apache.grails:grails-dependencies-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -123,3 +67,7 @@ tasks.withType(Test).configureEach {
 compileJava.options.release = javaVersion.toInteger()
 
 apply from: layout.projectDirectory.file('gradle/docs-config.gradle')
+
+grails {
+    springDependencyManagement = false
+}

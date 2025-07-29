@@ -30,7 +30,7 @@ mailService.sendMail {
 | 2.x    | 3              |
 | 3.x    | 4-5            |
 | 4.x    | 6              |
-| 5.x    | 7              |
+| 5.x    | 7.0.0-M5+      |
 
 ## Issues
 

@@ -12,11 +12,17 @@ version = '0.1'
 group = 'testapp1'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
-apply plugin: 'com.bertramlabs.asset-pipeline'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
 repositories {
-    maven { url = 'https://repo.grails.org/grails/core' }
-    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+        }
+    }
 }
 
 dependencies {
@@ -33,7 +39,7 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap-icons'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-i18n'

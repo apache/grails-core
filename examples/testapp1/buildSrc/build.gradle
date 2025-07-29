@@ -9,12 +9,17 @@ file('../../../gradle.properties').withInputStream {
 }
 
 repositories {
-    maven { url = 'https://repo.grails.org/grails/core' }
-    maven { url = 'https://repository.apache.org/content/repositories/snapshots' }
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+        }
+    }
 }
 
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    implementation 'com.bertramlabs.plugins:asset-pipeline-gradle'
+    implementation 'cloud.wondrify:asset-pipeline-gradle'
     implementation 'org.apache.grails:grails-gradle-plugins'
 }
