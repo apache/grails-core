@@ -19,16 +19,15 @@ public class LogCascadeMapping {
     /**
      * Logs the cascade mapping strategy for a given association if debug logging is enabled.
      *
-     * @param grailsProperty    The association property.
+     * @param association    The association property.
      * @param cascadeStrategy   The calculated cascade string.
-     * @param referenced        The entity referenced by the association.
      */
-    public void logCascadeMapping(Association grailsProperty, CascadeBehavior cascadeStrategy, PersistentEntity referenced) {
-        if (log.isDebugEnabled() && referenced != null) {
-            String assType = getAssociationType(grailsProperty);
+    public void logCascadeMapping(Association association, CascadeBehavior cascadeStrategy) {
+        if (log.isDebugEnabled()) {
+            String assType = getAssociationType(association);
             log.debug("Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]",
-                    assType, grailsProperty.getOwner().getName(), grailsProperty.getName(),
-                    referenced.getJavaClass().getName(), cascadeStrategy);
+                    assType, association.getOwner().getName(), association.getName(),
+                    association.getAssociatedEntity().getJavaClass().getName(), cascadeStrategy);
         }
     }
 
