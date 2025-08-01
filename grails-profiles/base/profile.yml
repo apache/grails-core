@@ -27,15 +27,10 @@ build:
         - eclipse
         - idea
         - org.apache.grails.gradle.grails-app
+        - groovy
 dependencies:
     - scope: build
       coords: "org.apache.grails:grails-gradle-plugins"
-    - scope: testAndDevelopmentOnly
-      coords: "org.webjars.npm:bootstrap"
-    - scope: testAndDevelopmentOnly
-      coords: "org.webjars.npm:bootstrap-icons"
-    - scope: testAndDevelopmentOnly
-      coords: "org.webjars.npm:jquery"
     - scope: implementation
       coords: "org.springframework.boot:spring-boot-starter-logging"
     - scope: implementation
@@ -46,7 +41,13 @@ dependencies:
       coords: "org.springframework.boot:spring-boot-starter"
     - scope: implementation
       coords: "org.apache.grails:grails-core"
+    - scope: implementation
+      coords: "org.apache.grails:grails-i18n"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-datamapping"
     - scope: console
       coords: "org.apache.grails:grails-console"
+    - scope: runtimeOnly
+      coords: "org.fusesource.jansi:jansi"
+    - scope: testImplementation
+      coords: "org.spockframework:spock-core"
