@@ -1,6 +1,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import groovy.transform.CompileStatic;
+import org.hibernate.MappingException;
+
+import java.util.Arrays;
 
 
 public enum CascadeBehavior {
@@ -63,26 +66,16 @@ public enum CascadeBehavior {
         return value;
     }
 
-    /**
-     * Safely converts a string from a mapping configuration to a {@link CascadeBehavior} enum.
-     * <p>
-     * This method is case-insensitive and will return {@link #NONE} if the input string
-     * is null or does not match any known cascade behavior.
-     *
-     * @param value The string to parse (e.g., "all", "save-update").
-     * @return The corresponding {@link CascadeBehavior}, or {@link #NONE} if not found.
-     */
+
     public static CascadeBehavior fromString(String value) {
-        if (value == null) {
-            return NONE;
-        }
-        for (CascadeBehavior behavior : CascadeBehavior.values()) {
-            if (behavior.value.equalsIgnoreCase(value)) {
-                return behavior;
-            }
-        }
-        // Default to the safest option for any truly unrecognized cascade string.
-        return NONE;
+        return Arrays.stream(CascadeBehavior.values())
+//                .filter(behavior -> behavior != CascadeBehavior.NONE)
+                .filter(behavior -> behavior.value.equalsIgnoreCase(value)
+                        || ("all-delete-orphan".equalsIgnoreCase(value) && behavior == ALL )
+                )
+                .findFirst()
+                .orElseThrow(() -> new MappingException("Invalid Cascade value: " + value + "."));
+
     }
 
 }

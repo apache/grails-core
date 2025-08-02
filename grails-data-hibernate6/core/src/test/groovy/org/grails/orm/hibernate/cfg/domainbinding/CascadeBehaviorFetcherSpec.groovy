@@ -5,6 +5,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import spock.lang.Shared
 import spock.lang.Unroll
 import org.hibernate.MappingException
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.*
 
 class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 
@@ -13,40 +14,40 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
     // A single, comprehensive source of truth for all metadata test scenarios.
     private static final List cascadeMetadataTestData = [
             // --- UNIDIRECTIONAL hasMany (should be supported in Hibernate 6+) ---
-            ["uni: explicit 'all'"          , AW_All_Uni        , "books", Book, "all"],
-            ["uni: explicit 'save-update'"  , AW_SaveUpdate_Uni , "books", Book, "save-update"],
-            ["uni: explicit 'merge'"        , AW_Merge_Uni      , "books", Book, "merge"],
-            ["uni: explicit 'delete'"       , AW_Delete_Uni     , "books", Book, "delete"],
-            ["uni: explicit 'lock'"         , AW_Lock_Uni       , "books", Book, "lock"],
-            ["uni: explicit 'replicate'"    , AW_Replicate_Uni  , "books", Book, "replicate"],
-            ["uni: explicit 'evict'"        , AW_Evict_Uni      , "books", Book, "evict"],
-            ["uni: explicit 'persist'"      , AW_Persist_Uni    , "books", Book, "persist"],
+            ["uni: explicit 'all'"          , AW_All_Uni        , "books", Book, ALL.getValue()],
+            ["uni: explicit 'save-update'"  , AW_SaveUpdate_Uni , "books", Book, SAVE_UPDATE.getValue()],
+            ["uni: explicit 'merge'"        , AW_Merge_Uni      , "books", Book, MERGE.getValue()],
+            ["uni: explicit 'delete'"       , AW_Delete_Uni     , "books", Book, DELETE.getValue()],
+            ["uni: explicit 'lock'"         , AW_Lock_Uni       , "books", Book, LOCK.getValue()],
+            ["uni: explicit 'replicate'"    , AW_Replicate_Uni  , "books", Book, REPLICATE.getValue()],
+            ["uni: explicit 'evict'"        , AW_Evict_Uni      , "books", Book, EVICT.getValue()],
+            ["uni: explicit 'persist'"      , AW_Persist_Uni    , "books", Book, PERSIST.getValue()],
             ["uni: invalid string"          , AW_Invalid_Uni    , "books", Book, MappingException],
-            ["uni: default"                 , AW_Default_Uni    , "books", Book, "none"], // Hibernate 6 default
+            ["uni: default"                 , AW_Default_Uni    , "books", Book, SAVE_UPDATE.getValue()], 
 
             // --- BIDIRECTIONAL hasMany (with belongsTo) ---
-            ["bi: explicit 'all'"           , AW_All_Bi         , "books", Book_BT_All       , "all"],
-            ["bi: explicit 'save-update'"   , AW_SaveUpdate_Bi  , "books", Book_BT_SaveUpdate, "save-update"],
-            ["bi: explicit 'merge'"         , AW_Merge_Bi       , "books", Book_BT_Merge     , "merge"],
-            ["bi: explicit 'delete'"        , AW_Delete_Bi      , "books", Book_BT_Delete    , "delete"],
-            ["bi: explicit 'lock'"          , AW_Lock_Bi        , "books", Book_BT_Lock      , "lock"],
-            ["bi: explicit 'replicate'"     , AW_Replicate_Bi   , "books", Book_BT_Replicate , "replicate"],
-            ["bi: explicit 'evict'"         , AW_Evict_Bi       , "books", Book_BT_Evict     , "evict"],
-            ["bi: explicit 'persist'"       , AW_Persist_Bi     , "books", Book_BT_Persist   , "persist"],
+            ["bi: explicit 'all'"           , AW_All_Bi         , "books", Book_BT_All       , ALL.getValue()],
+            ["bi: explicit 'save-update'"   , AW_SaveUpdate_Bi  , "books", Book_BT_SaveUpdate, SAVE_UPDATE.getValue()],
+            ["bi: explicit 'merge'"         , AW_Merge_Bi       , "books", Book_BT_Merge     , MERGE.getValue()],
+            ["bi: explicit 'delete'"        , AW_Delete_Bi      , "books", Book_BT_Delete    , DELETE.getValue()],
+            ["bi: explicit 'lock'"          , AW_Lock_Bi        , "books", Book_BT_Lock      , LOCK.getValue()],
+            ["bi: explicit 'replicate'"     , AW_Replicate_Bi   , "books", Book_BT_Replicate , REPLICATE.getValue()],
+            ["bi: explicit 'evict'"         , AW_Evict_Bi       , "books", Book_BT_Evict     , EVICT.getValue()],
+            ["bi: explicit 'persist'"       , AW_Persist_Bi     , "books", Book_BT_Persist   , PERSIST.getValue()],
             ["bi: invalid string"           , AW_Invalid_Bi     , "books", Book_BT_Invalid   , MappingException],
-            ["bi: default"                  , AW_Default_Bi     , "books", Book_BT_Default   , "save-update"], // More conservative default
+            ["bi: default"                  , AW_Default_Bi     , "books", Book_BT_Default   , ALL.getValue()], // More conservative default
 
             // --- OTHER RELATIONSHIP TYPES ---
-            ["bi: hasOne (with belongsTo)"  , AW_HasOne_Bi      , "profile" , Profile_BT      , "save-update"], // Conservative default
-            ["uni: hasOne (no belongsTo)"   , AW_HasOne_Uni     , "passport", Passport        , MappingException], // Should be supported
-            ["many-to-many (owning side)"   , Post              , "tags"    , Tag_BT          , "save-update"],
-            ["many-to-many (inverse side)"  , Tag_BT            , "posts"   , Post            , "none"],
-            ["many-to-one (belongsTo)"      , Book_BT_Default   , "author"  , AW_Default_Bi   , "none"],
+            ["bi: hasOne (with belongsTo)"  , AW_HasOne_Bi      , "profile" , Profile_BT      , ALL.getValue()], // Conservative default
+            ["uni: hasOne (no belongsTo)"   , AW_HasOne_Uni     , "passport", Passport        , ALL.getValue()], // Should be supported
+            ["many-to-many (owning side)"   , Post              , "tags"    , Tag_BT          , SAVE_UPDATE.getValue()],
+            ["many-to-many (inverse side)"  , Tag_BT            , "posts"   , Post            , NONE.getValue()],
+            ["many-to-one (belongsTo)"      , Book_BT_Default   , "author"  , AW_Default_Bi   , NONE.getValue()],
 
 //             --- Additional Hibernate 6+ specific scenarios ---
-            ["uni: hasMany with explicit none", AW_None_Uni     , "books", Book             , MappingException],
-            ["bi: hasOne default conservative", AW_HasOne_Default, "profile", Profile_Default , "save-update"],
-            ["orphan removal scenario"        , AW_OrphanRemoval , "books", Book_Orphan      , "all"]
+            ["uni: hasMany with explicit none", AW_None_Uni     , "books", Book             , NONE.getValue()],
+            ["bi: hasOne default conservative", AW_HasOne_Default, "profile", Profile_Default , ALL.getValue()],
+            ["orphan removal scenario"        , AW_OrphanRemoval , "books", Book_Orphan      , ALL.getValue()]
 
     ]
 

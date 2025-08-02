@@ -218,9 +218,8 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         SimpleValue value = new SimpleValue(metadataBuildingContext, map.getCollectionTable());
 
-        String type = getIndexColumnType(property, STRING_TYPE);
-        String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
-        new SimpleValueBinder().bindSimpleValue(value, type, columnName1, true);
+        bindSimpleValue(getIndexColumnType(property, STRING_TYPE), value, true,
+                getIndexColumnName(property, sessionFactoryBeanName), mappings);
         PropertyConfig pc = getPropertyConfig(property);
         if (pc != null && pc.getIndexColumn() != null) {
             bindColumnConfigToColumn(property, getColumnForSimpleValue(value), getSingleColumnConfig(pc.getIndexColumn()));
@@ -247,8 +246,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             if(typeName == null || typeName.equals(Object.class.getName())) {
                 typeName = StandardBasicTypes.STRING.getName();
             }
-            String columnName = getMapElementName(property, sessionFactoryBeanName);
-            new SimpleValueBinder().bindSimpleValue(elt, typeName, columnName, false);
+            bindSimpleValue(typeName, elt, false, getMapElementName(property, sessionFactoryBeanName), mappings);
 
             elt.setTypeName(typeName);
         }
@@ -281,7 +279,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         Table collectionTable = list.getCollectionTable();
         SimpleValue iv = new SimpleValue(metadataBuildingContext, collectionTable);
-        new SimpleValueBinder().bindSimpleValue(iv, "integer", columnName, true);
+        bindSimpleValue("integer", iv, true, columnName, mappings);
         iv.setTypeName("integer");
         list.setIndex(iv);
         list.setBaseIndex(0);
@@ -703,7 +701,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     throw new MappingException("Missing type or column for column["+columnName+"] on domain["+domainName+"] referencing["+className+"]");
                 }
 
-                new SimpleValueBinder().bindSimpleValue(element, typeName, columnName, true);
+                bindSimpleValue(typeName, element,true, columnName, mappings);
                 if (hasJoinColumnMapping) {
                     bindColumnConfigToColumn(property, getColumnForSimpleValue(element), config.getJoinTable().getColumn());
                 }
@@ -725,7 +723,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     columnName = namingStrategy.propertyToColumnName(NameUtils.decapitalize(domainClass.getName())) + FOREIGN_KEY_SUFFIX;
                 }
 
-                new SimpleValueBinder().bindSimpleValue(element, "long", columnName, true);
+                bindSimpleValue("long", element,true, columnName, mappings);
             }
         }
 
@@ -2736,7 +2734,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig config = getPropertyConfig(grailsProperty);
         if (config != null && config.getCascade() != null) {
             cascadeStrategy = config.getCascade();
-            LOG.debug("Cascade strategy for property ${grailsProperty.getName()} is ${cascadeStrategy}");
         } else if (grailsProperty instanceof Association) {
             Association association = (Association) grailsProperty;
             PersistentEntity referenced = association.getAssociatedEntity();
@@ -2784,8 +2781,6 @@ public class GrailsDomainBinder implements MetadataContributor {
                 }
             }
             logCascadeMapping(association, cascadeStrategy, referenced);
-        } else {
-            LOG.debug("No cascade strategy for property: " + grailsProperty);
         }
         prop.setCascade(cascadeStrategy);
     }
@@ -2931,6 +2926,29 @@ public class GrailsDomainBinder implements MetadataContributor {
                 simpleValue.setTypeParameters(config.getTypeParams());
             }
         }
+    }
+
+    /**
+     * Binds a value for the specified parameters to the meta model.
+     *
+     * @param type        The type of the property
+     * @param simpleValue The simple value instance
+     * @param nullable    Whether it is nullable
+     * @param columnName  The property name
+     * @param mappings    The mappings
+     */
+    protected void bindSimpleValue(String type, SimpleValue simpleValue, boolean nullable,
+                                   String columnName, InFlightMetadataCollector mappings) {
+
+        simpleValue.setTypeName(type);
+        Table t = simpleValue.getTable();
+        Column column = new Column();
+        column.setNullable(nullable);
+        column.setValue(simpleValue);
+        column.setName(columnName);
+        if (t != null) t.addColumn(column);
+
+        simpleValue.addColumn(column);
     }
 
     /**

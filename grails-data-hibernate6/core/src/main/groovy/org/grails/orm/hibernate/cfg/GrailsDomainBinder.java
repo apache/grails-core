@@ -2498,7 +2498,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         prop.setOptional(grailsProperty.isNullable());
 
-//        setCascadeBehaviour(grailsProperty, prop);
+//        prop.setCascade(setCascadeBehaviour(grailsProperty, prop));
         prop.setCascade(new CascadeBehaviorFetcher().getCascadeBehaviour(grailsProperty));
 
         // lazy to true
@@ -2551,7 +2551,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         return false;
     }
 
-    private void setCascadeBehaviour(PersistentProperty grailsProperty, Property prop) {
+    public String setCascadeBehaviour(PersistentProperty grailsProperty, Property prop) {
         String cascadeStrategy = "none";
         // set to cascade all for the moment
         PersistentEntity domainClass = grailsProperty.getOwner();
@@ -2609,7 +2609,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         } else {
             LOG.debug("No cascade strategy for property: " + grailsProperty);
         }
-        prop.setCascade(cascadeStrategy);
+        return cascadeStrategy;
+//        prop.setCascade(cascadeStrategy);
     }
 
     private boolean isCircularAssociation(PersistentProperty grailsProperty) {

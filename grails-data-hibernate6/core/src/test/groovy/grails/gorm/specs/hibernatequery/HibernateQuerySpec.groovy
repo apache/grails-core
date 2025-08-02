@@ -36,7 +36,6 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.domainClasses.clear()
         manager.addAllDomainClasses([Person, Pet, Face,EagerOwner])
     }
 

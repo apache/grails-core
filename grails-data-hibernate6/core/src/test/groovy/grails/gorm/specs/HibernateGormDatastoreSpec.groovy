@@ -2,9 +2,15 @@ package grails.gorm.specs
 
 import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.AbstractHibernateSession
+import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
+import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.Session
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.internal.BootstrapContextImpl
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
@@ -105,5 +111,22 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
     protected ServiceRegistryImplementor getServiceRegistry() {
         (manager.hibernateDatastore.sessionFactory as SessionFactoryImpl)
                 .getServiceRegistry()
+    }
+
+    protected HibernateDatastore getDatastore() {
+        manager.hibernateDatastore
+    }
+
+
+    protected AbstractHibernateSession getSession() {
+        datastore.connect() as AbstractHibernateSession
+    }
+
+    protected PersistentEntity getPersistentEntity(Class clazz) {
+        getMappingContext().getPersistentEntity(clazz.typeName)
+    }
+
+    protected HibernateQuery getQuery(Class clazz) {
+        return  new HibernateQuery(session, getPersistentEntity(clazz))
     }
 }
