@@ -52,13 +52,13 @@ rootProject.name = 'grails-forge'
 
 include(
         'grails-cli',
-        'grails-forge-core',
-        'grails-forge-cli',
         'grails-cli-shadow', // to allow us to transform our own artifacts
-        'test-core',
+        'grails-forge-analytics-postgres',
         'grails-forge-api',
+        'grails-forge-cli',
+        'grails-forge-core',
         'grails-forge-web-netty',
-        'grails-forge-analytics-postgres'
+        'test-core',
 )
 
 includeBuild('..') {

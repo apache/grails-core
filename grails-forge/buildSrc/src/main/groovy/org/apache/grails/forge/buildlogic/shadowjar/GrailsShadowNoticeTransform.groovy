@@ -14,11 +14,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.grails.buildsrc
+package org.apache.grails.forge.buildlogic.shadowjar
 
 import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheNoticeResourceTransformer
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.gradle.api.file.FileTreeElement
 
 import java.util.regex.Pattern
@@ -26,13 +25,12 @@ import java.util.regex.Pattern
 /**
  * jakarta is eclipse licensed, so we need to include the NOTICE.md file
  */
-@Slf4j
 @CompileStatic
 class GrailsShadowNoticeTransform extends ApacheNoticeResourceTransformer {
 
     private static final List<Pattern> NOTICE_PATTERNS = [
-            Pattern.compile('META-INF/[^/]*NOTICE[^/]*', Pattern.CASE_INSENSITIVE),
-            Pattern.compile('[^/]*NOTICE[^/]*', Pattern.CASE_INSENSITIVE)
+            ~'(?i)META-INF/[^/]*NOTICE[^/]*',
+            ~'(?i)[^/]*NOTICE[^/]*'
     ]
 
     @Override

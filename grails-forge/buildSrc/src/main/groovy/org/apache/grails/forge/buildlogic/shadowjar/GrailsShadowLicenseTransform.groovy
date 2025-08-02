@@ -14,13 +14,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.grails.buildsrc
+package org.apache.grails.forge.buildlogic.shadowjar
 
 import com.github.jengelman.gradle.plugins.shadow.transformers.Transformer
 import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContext
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.apache.tools.zip.ZipEntry
 import org.apache.tools.zip.ZipOutputStream
 import org.gradle.api.file.FileTreeElement
@@ -31,15 +30,14 @@ import java.util.regex.Pattern
 /**
  * supports combining into a single license file.
  */
-@Slf4j
 @CompileStatic
 class GrailsShadowLicenseTransform implements Transformer {
 
     private static final List<Pattern> LICENSE_PATTERNS = [
-            Pattern.compile('META-INF/[^/]*LICENSE[^/]*', Pattern.CASE_INSENSITIVE),
-            Pattern.compile('META-INF/LICENSES/.*', Pattern.CASE_INSENSITIVE),
-            Pattern.compile('[^/]*LICENSE[^/]*', Pattern.CASE_INSENSITIVE),
-            Pattern.compile('LICENSES/.*', Pattern.CASE_INSENSITIVE)
+            ~'(?i)META-INF/[^/]*LICENSE[^/]*',
+            ~'(?i)META-INF/LICENSES/.*',
+            ~'(?i)[^/]*LICENSE[^/]*',
+            ~'(?i)LICENSES/.*'
     ]
 
     private static final String LICENSE_PATH = 'META-INF/LICENSE'
@@ -68,8 +66,8 @@ class GrailsShadowLicenseTransform implements Transformer {
     }
 
     @Override
-    @CompileDynamic
     // Multiple assignments without list expressions on the right hand side are unsupported in static type checking mode
+    @CompileDynamic
     void transform(TransformerContext context) {
         if (!licenses) {
             // Add our license as previously seen so we can dedupe - this transformer only applies to the copy of other jars

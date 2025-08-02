@@ -17,9 +17,6 @@
  *  under the License.
  */
 
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.apache.grails.buildsrc.GrailsShadowLicenseTransform
-import org.apache.grails.buildsrc.GrailsShadowNoticeTransform
 import org.grails.forge.internal.tasks.GenerateManpageAsciidoc
 import org.grails.forge.internal.tasks.PicocliBuildCompletionTask
 

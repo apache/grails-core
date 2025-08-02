@@ -15,8 +15,8 @@
  *  limitations under the License.
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.apache.grails.buildsrc.GrailsShadowLicenseTransform
-import org.apache.grails.buildsrc.GrailsShadowNoticeTransform
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 
 plugins {
     id 'groovy'
@@ -44,6 +44,8 @@ dependencies {
 
     // forge dependencies
     implementation project(':grails-forge-cli'), {
+        // exclude the slf4j-nop dependency because the simple slf4j implementation is already included
+        // which will cause a duplicate warning message
         exclude group: 'org.slf4j', module: 'slf4j-nop'
     }
 }
@@ -54,7 +56,7 @@ apply {
 
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
-    it.archiveClassifier.set('all')
+    it.archiveClassifier = 'all'
 
     // services & custom grails.factories have to be merged since commands can be created from both sources
     it.mergeServiceFiles()
