@@ -28,6 +28,7 @@ file('../gradle.properties').withInputStream {
 }
 
 ext {
+    isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv('SOURCE_DATE_EPOCH'))
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
@@ -41,7 +42,7 @@ ext {
 
 allprojects {
     props.forEach { k, v ->
-        if(!project.hasProperty(k as String)) {
+        if (!project.hasProperty(k as String)) {
             project.ext.set(k as String, v)
         }
     }
@@ -70,6 +71,18 @@ allprojects {
                 gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
         )
     }
+}
+
+subprojects {
+    configurations.configureEach {
+        resolutionStrategy {
+            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
+            cacheDynamicVersionsFor(cacheHours, 'hours')
+            cacheChangingModulesFor(cacheHours, 'hours')
+        }
+    }
+
+    apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
 
 apply {

@@ -64,6 +64,10 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:${rootProperties.gradleLicensePluginVersion}", {
+        // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
+        exclude group: 'org.springframework', module: 'spring-core'
+    }
     implementation "io.micronaut.build.internal:micronaut-gradle-plugins:$micronautGradlePlugins"
     implementation "com.fizzed:rocker-compiler:$rockerVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
@@ -80,6 +84,7 @@ dependencies {
     }
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
+    implementation "org.apache.ant:ant:$antVersion"
 }
 
 gradlePlugin {
