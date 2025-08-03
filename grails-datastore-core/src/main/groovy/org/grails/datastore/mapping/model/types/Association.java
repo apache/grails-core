@@ -255,6 +255,12 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         return associatedEntity != null && associatedEntity.getJavaClass().isAssignableFrom(owner.getJavaClass());
     }
 
+    public boolean isCorrectlyOwned() {
+        return Optional.ofNullable( getAssociatedEntity())
+                .map(associatedEntity-> associatedEntity.isOwningEntity(getOwner()))
+                .orElse(false);
+    }
+
     protected Set<CascadeType> getCascadeOperations() {
         if (cascadeOperations == null) {
             buildCascadeOperations();

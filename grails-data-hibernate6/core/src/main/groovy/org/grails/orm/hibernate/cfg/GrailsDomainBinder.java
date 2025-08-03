@@ -1243,15 +1243,18 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
     }
 
-    public void evaluateMapping(PersistentEntity domainClass) {
-        try {
-            final Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
-            trackCustomCascadingSaves(m, domainClass.getPersistentProperties());
-            AbstractGrailsDomainBinder.cacheMapping(domainClass.getJavaClass(), m);
-        } catch (Exception e) {
-            throw new DatastoreConfigurationException("Error evaluating ORM mappings block for domain [" +
-                    domainClass.getName() + "]:  " + e.getMessage(), e);
-        }
+    public void evaluateMapping(PersistentEntity persistentEntity) {
+        Optional.ofNullable(persistentEntity).ifPresent(domainClass -> {
+            try {
+                final Mapping m = new HibernateEntityWrapper(domainClass).getMappedForm();
+                trackCustomCascadingSaves(m, domainClass.getPersistentProperties());
+                AbstractGrailsDomainBinder.cacheMapping(domainClass.getJavaClass(), m);
+            } catch (Exception e) {
+                throw new DatastoreConfigurationException("Error evaluating ORM mappings block for domain [" +
+                        domainClass.getName() + "]:  " + e.getMessage(), e);
+            }
+        });
+
     }
 
     /**

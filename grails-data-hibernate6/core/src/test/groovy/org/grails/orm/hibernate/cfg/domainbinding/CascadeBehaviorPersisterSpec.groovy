@@ -37,18 +37,7 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     // --- Unidirectional `hasMany` Persistence Tests ---
 
-    @Rollback
-    void "test unidirectional default cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_Default_Uni_P(name: "Owner")
-        owner.addToChildren(new ChildPersister(title: "Child"))
-        owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
-        !owner.errors.hasErrors()
-        Owner_Default_Uni_P.count() == 1
-        ChildPersister.count() == 1
-    }
 
     @Rollback
     void "test unidirectional 'all' cascade persists child"() {
@@ -129,6 +118,20 @@ class CascadeBehaviorPersisterSpec extends Specification {
         !owner.errors.hasErrors()
         Owner_Persist_Bi_P.count() == 1
         Child_BT_Persist_P.count() == 1
+    }
+
+
+    @Rollback
+    void "test unidirectional default cascade persists child"() {
+        when: "A new owner is saved after adding a child"
+        def owner = new Owner_Default_Uni_P(name: "Owner")
+        owner.addToChildren(new ChildPersister(title: "Child"))
+        owner.save(flush: true)
+
+        then: "The owner is saved without errors and both owner and child exist"
+        !owner.errors.hasErrors()
+        Owner_Default_Uni_P.count() == 1
+        ChildPersister.count() == 1
     }
 
     // --- Orphan Removal Persistence Test ---

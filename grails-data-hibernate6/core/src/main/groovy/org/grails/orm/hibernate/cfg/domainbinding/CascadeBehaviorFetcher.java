@@ -22,8 +22,13 @@ public class CascadeBehaviorFetcher {
     public String getCascadeBehaviour(PersistentProperty<?> grailsProperty) {
         var cascadeStrategy = NONE;
         if (grailsProperty instanceof Association association) {
-            cascadeStrategy = getDefinedBehavior(grailsProperty)
-                    .orElse(getImpliedBehavior(association));
+            Optional<CascadeBehavior> definedBehavior = getDefinedBehavior(grailsProperty);
+            if (definedBehavior.isEmpty()) {
+                cascadeStrategy =  getImpliedBehavior(association);
+            } else {
+                cascadeStrategy = definedBehavior.get();
+            }
+//            cascadeStrategy = definedBehavior.orElse(getImpliedBehavior(association));
             new LogCascadeMapping(LOG).logCascadeMapping(association, cascadeStrategy);
         }
         return cascadeStrategy.getValue();
@@ -36,36 +41,29 @@ public class CascadeBehaviorFetcher {
     }
 
     private CascadeBehavior getImpliedBehavior( Association association) {
-        PersistentEntity referenced = association.getAssociatedEntity();
-        PersistentEntity domainClass = association.getOwner();
-
+        if(association.getAssociatedEntity() == null) {
+            throw new MappingException("Relationship " + association + " has no associated entity");
+        }
         if (association.isHasOne()) {
             return ALL;
         }
         else if (association.isOneToOne()) {
-            if (referenced != null && association.isOwningSide()) {
-                return ALL;
-            } else {
-                return SAVE_UPDATE;
-            }
+            return association.isOwningSide() ?  ALL : SAVE_UPDATE;
         }
         else if (association.isOneToMany()) {
-            if (referenced != null && association.isOwningSide()) {
-                return ALL;
-            } else {
-                return SAVE_UPDATE;
-            }
+            return association.isOwningSide() ?  ALL : SAVE_UPDATE;
         }  else if (association.isManyToMany()) {
-            if ((referenced != null && referenced.isOwningEntity(domainClass)) || association.isCircular()) {
-                return SAVE_UPDATE;
-            }
-            return NONE;
+           return  association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE :NONE;
         }
         else if (association.isManyToOne()) {
-            if (referenced != null && referenced.isOwningEntity(domainClass) && !association.isCircular()) {
+            if (    association.isCorrectlyOwned()
+                    && !association.isCircular()
+            ) {
                 return ALL;
             }
-            else if (new HibernateEntityWrapper(domainClass).getMappedForm().isCompositeIdProperty(association)) {
+            else if (new HibernateEntityWrapper(association.getOwner())
+                    .getMappedForm()
+                    .isCompositeIdProperty(association)) {
                 return ALL;
             }
             return NONE;
@@ -74,6 +72,8 @@ public class CascadeBehaviorFetcher {
             return ALL;
         }
         else if (Map.class.isAssignableFrom(association.getType())) {
+            PersistentEntity referenced = association.getAssociatedEntity();
+            PersistentEntity domainClass = association.getOwner();
             if (referenced != null && referenced.isOwningEntity(domainClass)) {
                 return ALL;
             }
