@@ -104,7 +104,7 @@ public class GrailsGsp implements DefaultFeature {
                 .groupId("org.apache.grails")
                 .artifactId("grails-gsp")
                 .implementation());
-        if(!generatorContext.isFeaturePresent(Sitemesh3.class)) {
+        if (!generatorContext.isFeaturePresent(Sitemesh3.class)) {
             generatorContext.addDependency(Dependency.builder()
                     .groupId("org.apache.grails")
                     .artifactId("grails-layout")

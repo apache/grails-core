@@ -16,15 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.forge.feature.spring;
 
-apply plugin: 'com.github.hierynomus.license-report'
+import org.grails.forge.application.ApplicationType;
+import org.grails.forge.feature.Category;
+import org.grails.forge.feature.OneOfFeature;
 
-List<String> licenseExclusions = rootProject.subprojects.collect {
-    "org.apache.grails:${it.findProperty('pomArtifactId') ?: it.name}:${rootProject.projectVersion}" as String
-}
+public interface SpringThreadingFeature extends OneOfFeature {
 
-downloadLicenses {
-    includeProjectDependencies = true
-    dependencyConfiguration = 'runtimeClasspath'
-    excludeDependencies = licenseExclusions
+    @Override
+    default Class<?> getFeatureClass() {
+        return SpringThreadingFeature.class;
+    }
+
+    @Override
+    default boolean supports(ApplicationType applicationType) {
+        return true;
+    }
+
+    @Override
+    default String getCategory() {
+        return Category.SPRING;
+    }
 }
