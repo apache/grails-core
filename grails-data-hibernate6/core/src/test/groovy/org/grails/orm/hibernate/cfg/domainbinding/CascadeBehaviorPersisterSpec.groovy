@@ -8,6 +8,8 @@ import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 
+import java.io.Serializable
+
 /**
  * Tests the persistence behavior of various one-to-many cascade settings in GORM.
  * This spec uses a dedicated set of domain classes to ensure complete test isolation.
@@ -31,7 +33,16 @@ class CascadeBehaviorPersisterSpec extends Specification {
             Owner_Lock_Bi_P, Owner_Replicate_Bi_P, Owner_Evict_Bi_P, Owner_Persist_Bi_P,
 
             // Orphan Removal
-            Child_Orphan_P, Owner_Orphan_P
+            Child_Orphan_P, Owner_Orphan_P,
+
+            // Map Association
+            MapParentP_All, MapChildP_All, MapParentP_SaveUpdate, MapChildP_SaveUpdate,
+
+            // Composite ID
+            CompositeIdParentP, CompositeIdManyToOneP,
+
+            // Embedded
+            OwnerWithEmbeddedP
     )
     @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
@@ -47,6 +58,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_All_Uni_P.count() == 1
         ChildPersister.count() == 1
@@ -60,6 +74,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_SaveUpdate_Uni_P.count() == 1
         ChildPersister.count() == 1
@@ -73,6 +90,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_Persist_Uni_P.count() == 1
         ChildPersister.count() == 1
@@ -89,6 +109,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_All_Bi_P.count() == 1
         Child_BT_All_P.count() == 1
@@ -102,6 +125,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_SaveUpdate_Bi_P.count() == 1
         Child_BT_SaveUpdate_P.count() == 1
@@ -115,6 +141,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_Persist_Bi_P.count() == 1
         Child_BT_Persist_P.count() == 1
@@ -129,6 +158,9 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_Default_Uni_P.count() == 1
         ChildPersister.count() == 1
@@ -144,9 +176,88 @@ class CascadeBehaviorPersisterSpec extends Specification {
         owner.save(flush: true)
 
         then: "The owner is saved without errors and both owner and child exist"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
         !owner.errors.hasErrors()
         Owner_Orphan_P.count() == 1
         Child_Orphan_P.count() == 1
+    }
+
+    // --- Map Association Persistence Tests ---
+
+    @Rollback
+    void "test map with belongsTo cascade persists child"() {
+        when: "A new owner with a map entry is saved"
+        def owner = new MapParentP_All(name: "Owner")
+        def child = new MapChildP_All(childValue: "bar")
+        owner.settings = [foo: child]
+        child.parent = owner
+        owner.save(flush: true)
+
+        then: "The owner and child are saved"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
+        !owner.errors.hasErrors()
+        MapParentP_All.count() == 1
+        MapChildP_All.count() == 1
+    }
+
+    @Rollback
+    void "test map without belongsTo cascade persists child"() {
+        when: "A new owner with a map entry is saved"
+        def owner = new MapParentP_SaveUpdate(name: "Owner")
+        owner.settings = [foo: new MapChildP_SaveUpdate(childValue: "bar")]
+        owner.save(flush: true)
+
+        then: "The owner and child are saved"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
+        !owner.errors.hasErrors()
+        MapParentP_SaveUpdate.count() == 1
+        MapChildP_SaveUpdate.count() == 1
+    }
+
+    // --- Composite ID Persistence Test ---
+
+    @Rollback
+    void "test composite id with hasMany cascade persists child"() {
+        when: "A parent with a composite ID child is saved"
+        def parent = new CompositeIdParentP(name: "Parent")
+        def child = new CompositeIdManyToOneP(name: "Child")
+        parent.addToChildren(child)
+        parent.save(flush: true)
+
+        then: "The parent and child are saved"
+        if (parent.hasErrors()) {
+            println "Errors saving parent: ${parent.errors}"
+        }
+        !parent.errors.hasErrors()
+        CompositeIdParentP.count() == 1
+        CompositeIdManyToOneP.count() == 1
+        def savedChild = CompositeIdManyToOneP.findByName("Child")
+        savedChild.parent.id == parent.id
+    }
+
+    // --- Embedded Association Persistence Test ---
+
+    @Rollback
+    void "test embedded association persists embedded object"() {
+        when: "A new owner with an embedded object is saved"
+        def owner = new OwnerWithEmbeddedP(name: "Owner", address: new EmbeddedP(street: "123 Main St", city: "Anytown"))
+        owner.save(flush: true)
+
+        then: "The owner is saved without errors and the embedded properties are persisted"
+        if (owner.hasErrors()) {
+            println "Errors saving owner: ${owner.errors}"
+        }
+        !owner.errors.hasErrors()
+        OwnerWithEmbeddedP.count() == 1
+        def savedOwner = OwnerWithEmbeddedP.findByName("Owner")
+        savedOwner.address.street == "123 Main St"
+        savedOwner.address.city == "Anytown"
     }
 }
 
@@ -364,4 +475,64 @@ class Owner_Orphan_P {
 class Child_Orphan_P {
     String title
     static belongsTo = [owner: Owner_Orphan_P]
+}
+
+// --- Domain Classes for Map Association Tests ---
+@Entity
+class MapParentP_All {
+    String name
+    static hasMany = [settings: MapChildP_All]
+    Map<String, MapChildP_All> settings
+}
+
+@Entity
+class MapChildP_All {
+    String childValue
+    static belongsTo = [parent: MapParentP_All]
+}
+
+@Entity
+class MapParentP_SaveUpdate {
+    String name
+    static hasMany = [settings: MapChildP_SaveUpdate]
+    Map<String, MapChildP_SaveUpdate> settings
+}
+
+@Entity
+class MapChildP_SaveUpdate {
+    String childValue
+}
+
+// --- Domain Classes for Composite ID Test ---
+@Entity
+class CompositeIdParentP implements Serializable {
+    Long id
+    String name
+    static hasMany = [children: CompositeIdManyToOneP]
+}
+
+@Entity
+class CompositeIdManyToOneP implements Serializable {
+    String name
+    CompositeIdParentP parent
+
+    static mapping = {
+        id composite: ['name', 'parent']
+    }
+
+    static belongsTo = [parent: CompositeIdParentP]
+}
+
+// --- Domain Classes for Embedded Association Test ---
+@Entity
+class OwnerWithEmbeddedP {
+    String name
+    EmbeddedP address
+
+    static embedded = ['address']
+}
+
+class EmbeddedP {
+    String street
+    String city
 }

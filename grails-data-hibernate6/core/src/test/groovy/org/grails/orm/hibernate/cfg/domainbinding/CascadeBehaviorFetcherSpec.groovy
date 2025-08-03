@@ -2,9 +2,11 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import jakarta.persistence.Embeddable
 import org.hibernate.MappingException
 import spock.lang.Shared
 import spock.lang.Unroll
+
 
 import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.*
 
@@ -45,8 +47,17 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 //             --- Additional Hibernate 6+ specific scenarios ---
             ["uni: hasMany with explicit none", AW_None_Uni, "books", BookUni, NONE.getValue()],
             ["bi: hasOne default conservative", AW_HasOne_Default, "profile", Profile_Default , ALL.getValue()],
-            ["orphan removal scenario"        , AW_OrphanRemoval , "books", Book_Orphan      , ALL.getValue()]
+            ["orphan removal scenario"        , AW_OrphanRemoval , "books", Book_Orphan      , ALL.getValue()],
 
+            // --- Map Association Scenarios ---
+            ["map with belongsTo", ImpliedMapParent_All, "settings", ImpliedMapChild_All, ALL.getValue()],
+            ["map without belongsTo", ImpliedMapParent_SaveUpdate, "settings", ImpliedMapChild_SaveUpdate, SAVE_UPDATE.getValue()],
+
+            // --- Composite ID Scenario ---
+            ["many-to-one in composite id", CompositeIdManyToOne, "parent", CompositeIdParent, ALL.getValue()],
+
+            // --- Embedded Association Scenario ---
+            ["embedded association", EOwner, "address", EAddress, ALL.getValue()]
     ]
 
 
@@ -75,12 +86,24 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
         then: "The result matches the expectation"
         if (expectation instanceof Class && Exception.isAssignableFrom(expectation)) {
             // Expecting an exception
-            assert thrownException != null : "Expected ${expectation.simpleName} to be thrown but no exception was thrown for ${description}"
-            assert expectation.isAssignableFrom(thrownException.class) : "Expected ${expectation.simpleName} but got ${thrownException.class.simpleName} for ${description}"
+            if (thrownException == null) {
+                println "Error for description: '${description}'. Expected ${expectation.simpleName} to be thrown but no exception was thrown."
+            } else if (!expectation.isAssignableFrom(thrownException.class)) {
+                println "Error for description: '${description}'. Expected ${expectation.simpleName} but got ${thrownException.class.simpleName}."
+            }
+            assert thrownException != null
+            assert expectation.isAssignableFrom(thrownException.class)
         } else {
             // Expecting a string result
-            assert thrownException == null : "Unexpected exception thrown: ${thrownException?.message} for ${description}"
-            assert result == expectation : "Expected cascade behavior '${expectation}' but got '${result}' for ${description}"
+            if (thrownException != null) {
+                println "Error for description: '${description}'. Unexpected exception thrown: ${thrownException?.message}"
+                thrownException.printStackTrace()
+            }
+            assert thrownException == null
+            if (result != expectation) {
+                println "Error for description: '${description}'. Expected cascade behavior '${expectation}' but got '${result}'."
+            }
+            assert result == expectation
         }
 
         where:
@@ -145,3 +168,50 @@ class Buffalo{}
 @Entity class AW_HasOne_Default { static hasOne = [profile: Profile_Default] }
 @Entity class Book_Orphan { String title; static belongsTo = [author: AW_OrphanRemoval] }
 @Entity class AW_OrphanRemoval { static hasMany = [books: Book_Orphan]; static mapping = { books cascade: 'all-delete-orphan' } }
+
+// --- Map Association Scenarios ---
+@Entity class ImpliedMapParent_All {
+    static hasMany = [settings: ImpliedMapChild_All]
+    Map<String, ImpliedMapChild_All> settings
+}
+@Entity class ImpliedMapChild_All {
+    String value
+    static belongsTo = [parent: ImpliedMapParent_All]
+}
+@Entity class ImpliedMapParent_SaveUpdate {
+    static hasMany = [settings: ImpliedMapChild_SaveUpdate]
+    Map<String, ImpliedMapChild_SaveUpdate> settings
+}
+@Entity class ImpliedMapChild_SaveUpdate { String value }
+
+
+// --- Composite ID Scenario ---
+@Entity
+class CompositeIdParent {
+    Long id
+    String name
+    static hasMany = [children: CompositeIdManyToOne]
+}
+@Entity
+class CompositeIdManyToOne implements Serializable {
+    String name
+    CompositeIdParent parent
+
+    static mapping = {
+        id composite: ['name', 'parent']
+    }
+
+    static belongsTo = [parent: CompositeIdParent]
+}
+
+// --- Embedded Association Scenario ---
+@Entity
+class EOwner {
+    EAddress address
+    static embedded = ['address']
+}
+
+@Embeddable
+class EAddress {
+    String street
+}

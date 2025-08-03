@@ -2501,8 +2501,10 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         prop.setOptional(grailsProperty.isNullable());
 
-//        prop.setCascade(setCascadeBehaviour(grailsProperty, prop));
-        prop.setCascade(new CascadeBehaviorFetcher().getCascadeBehaviour(grailsProperty));
+        if (grailsProperty instanceof Association<?> association) {
+            prop.setCascade(new CascadeBehaviorFetcher().getCascadeBehaviour(association));
+        }
+
 
         // lazy to true
         final boolean isToOne = grailsProperty instanceof ToOne && !(grailsProperty instanceof Embedded);
@@ -2554,67 +2556,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         return false;
     }
 
-    public String setCascadeBehaviour(PersistentProperty grailsProperty, Property prop) {
-        String cascadeStrategy = "none";
-        // set to cascade all for the moment
-        PersistentEntity domainClass = grailsProperty.getOwner();
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(grailsProperty);
-        if (config != null && config.getCascade() != null) {
-            cascadeStrategy = config.getCascade();
-            LOG.debug("Cascade strategy for property ${grailsProperty.getName()} is ${cascadeStrategy}");
-        } else if (grailsProperty instanceof Association) {
-            Association association = (Association) grailsProperty;
-            PersistentEntity referenced = association.getAssociatedEntity();
-            if (isHasOne(association)) {
-                cascadeStrategy = CASCADE_ALL;
-            }
-            else if (association instanceof org.grails.datastore.mapping.model.types.OneToOne) {
-                if (referenced != null && association.isOwningSide()) {
-                    cascadeStrategy = CASCADE_ALL;
-                }
-                else {
-                    cascadeStrategy = CASCADE_SAVE_UPDATE;
-                }
-            } else if (association instanceof org.grails.datastore.mapping.model.types.OneToMany) {
-                if (referenced != null && association.isOwningSide()) {
-                    cascadeStrategy = CASCADE_ALL;
-                }
-                else {
-                    cascadeStrategy = CASCADE_SAVE_UPDATE;
-                }
-            } else if (grailsProperty instanceof ManyToMany) {
-                if ((referenced != null && referenced.isOwningEntity(domainClass)) || association.isCircular()) {
-                    cascadeStrategy = CASCADE_SAVE_UPDATE;
-                }
-            } else if (grailsProperty instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
-                if (referenced != null && referenced.isOwningEntity(domainClass) && !isCircularAssociation(grailsProperty)) {
-                    cascadeStrategy = CASCADE_ALL;
-                }
-                else if(isCompositeIdProperty(new HibernateEntityWrapper(domainClass).getMappedForm(), grailsProperty)) {
-                    cascadeStrategy = CASCADE_ALL;
-                }
-                else {
-                    cascadeStrategy = CASCADE_NONE;
-                }
-            }
-            else if (grailsProperty instanceof Basic) {
-                cascadeStrategy = CASCADE_ALL;
-            }
-            else if (Map.class.isAssignableFrom(grailsProperty.getType())) {
-                referenced = association.getAssociatedEntity();
-                if (referenced != null && referenced.isOwningEntity(domainClass)) {
-                    cascadeStrategy = CASCADE_ALL;
-                } else {
-                    cascadeStrategy = CASCADE_SAVE_UPDATE;
-                }
-            }
-            logCascadeMapping(association, cascadeStrategy, referenced);
-        } else {
-            LOG.debug("No cascade strategy for property: " + grailsProperty);
-        }
-        return cascadeStrategy;
-//        prop.setCascade(cascadeStrategy);
-    }
+
 
     private boolean isCircularAssociation(PersistentProperty grailsProperty) {
         return grailsProperty.getType().equals(grailsProperty.getOwner().getJavaClass());

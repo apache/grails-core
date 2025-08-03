@@ -9,6 +9,10 @@ import org.hibernate.MappingException;
 
 import java.util.Optional;
 
+/**
+ * This class exists because Embedded Entities do not inherit
+ * from HibernatePersistentEntity but have similar functionality.
+ */
 public class HibernateEntityWrapper {
 
     private HibernatePersistentEntity hibernatePersistentEntity;
