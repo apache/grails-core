@@ -40,7 +40,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🧩 Assemble"
         working-directory: grails-forge
-        run: ./gradlew grails-forge-cli:assemble
+        run: ./gradlew grails-cli:assemble
   deploy:
     name: "Deploy to Google Cloud Run"
     runs-on: ubuntu-24.04
