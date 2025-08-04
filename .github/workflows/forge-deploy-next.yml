@@ -54,7 +54,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔑 Login to Google Cloud"
-        uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
           create_credentials_file: 'true'
@@ -109,7 +109,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔑 Login to Google Cloud"
-        uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
           create_credentials_file: 'true'
