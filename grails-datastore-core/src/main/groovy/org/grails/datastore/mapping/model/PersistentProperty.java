@@ -21,7 +21,9 @@ package org.grails.datastore.mapping.model;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 
 import java.util.Optional;
@@ -94,6 +96,12 @@ public interface PersistentProperty<T extends Property> {
     EntityReflector.PropertyWriter getWriter();
 
     default boolean isUnidirectionalOneToMany() {
-        return ((this instanceof OneToMany) && !((Association)this).isBidirectional());
+        return ((this instanceof OneToMany) && !((Association<?>)this).isBidirectional());
     }
+
+    default boolean isLazyAble() {
+        return this instanceof ToOne && !(this instanceof Embedded) ||
+                !(this instanceof Association) && !this.equals(this.getOwner().getIdentity());
+    }
+
 }

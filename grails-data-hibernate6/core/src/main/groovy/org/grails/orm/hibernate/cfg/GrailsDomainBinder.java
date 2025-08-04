@@ -16,7 +16,6 @@ package org.grails.orm.hibernate.cfg;
 
 import groovy.lang.Closure;
 import jakarta.persistence.Entity;
-import org.codehaus.groovy.transform.trait.Traits;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -30,9 +29,6 @@ import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.CascadeBehaviorFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
@@ -50,14 +46,12 @@ import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
 import org.hibernate.boot.model.internal.BinderHelper;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
-import org.hibernate.boot.spi.AccessType;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.boot.spi.MetadataContributor;
 import org.hibernate.engine.OptimisticLockStyle;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.FilterDefinition;
-import org.hibernate.engine.spi.PersistentAttributeInterceptable;
 import org.hibernate.id.PersistentIdentifierGenerator;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.mapping.Backref;
@@ -98,7 +92,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1787,7 +1780,10 @@ public class GrailsDomainBinder implements MetadataContributor {
     private void createClassProperties(HibernatePersistentEntity domainClass, PersistentClass persistentClass,
                                          InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
-        final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties();
+        final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties()
+                .stream()
+                .filter(persistentProperty -> persistentProperty.getMappedForm() != null)
+                .toList();
         Table table = persistentClass.getTable();
 
         Mapping gormMapping = new HibernateEntityWrapper(domainClass).getMappedForm();
@@ -2147,7 +2143,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         Property prop = new Property();
         prop.setValue(value);
-        bindProperty(grailsProperty, prop, mappings);
+        new PropertyBinder().bindProperty(grailsProperty, prop);
         return prop;
     }
 
@@ -2349,7 +2345,10 @@ public class GrailsDomainBinder implements MetadataContributor {
             manyToOne.setFetchMode(FetchMode.DEFAULT);
         }
 
-        manyToOne.setLazy(getLaziness(property));
+
+        manyToOne.setLazy(Optional.ofNullable(config)
+                .map(org.grails.datastore.mapping.config.Property::getLazy)
+                .orElse(property != null));
 
         if (config != null) {
             manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
@@ -2383,7 +2382,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
             Property prop = new Property();
             prop.setValue(val);
-            bindProperty(version, prop, mappings);
+            new PropertyBinder().bindProperty(version, prop);
             prop.setLazy(false);
             val.setNullValue("undefined");
             entity.setVersion(prop);
@@ -2454,7 +2453,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         prop.setValue(id);
 
         // bind property
-        bindProperty(identifier, prop, mappings);
+        new PropertyBinder().bindProperty(identifier, prop);
         // set identifier property
         entity.setIdentifierProperty(prop);
 
@@ -2462,128 +2461,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         table.setPrimaryKey(new PrimaryKey(table));
     }
 
-    /**
-     * Binds a property to Hibernate runtime meta model. Deals with cascade strategy based on the Grails domain model
-     *
-     * @param grailsProperty The grails property instance
-     * @param prop           The Hibernate property
-     * @param mappings       The Hibernate mappings
-     */
-    private void bindProperty(PersistentProperty grailsProperty, Property prop, InFlightMetadataCollector mappings) {
-        // set the property name
-        prop.setName(grailsProperty.getName());
-        if (isBidirectionalManyToOneWithListMapping(grailsProperty, prop)) {
-            prop.setInsertable(false);
-            prop.setUpdateable(false);
-        } else {
-            prop.setInsertable(getInsertableness(grailsProperty));
-            prop.setUpdateable(getUpdateableness(grailsProperty));
-        }
-
-        AccessType accessType = AccessType.getAccessStrategy(
-               new PersistentPropertyToPropertyConfig().apply(grailsProperty).getAccessType()
-        );
-
-        if(accessType == AccessType.FIELD) {
-            EntityReflector.PropertyReader reader = grailsProperty.getReader();
-            Method getter  = reader != null ? reader.getter() : null;
-            if(getter != null && getter.getAnnotation(Traits.Implemented.class) != null) {
-                prop.setPropertyAccessorName(TraitPropertyAccessStrategy.class.getName());
-            }
-            else {
-                prop.setPropertyAccessorName( accessType.getType() );
-            }
-        }
-        else {
-            prop.setPropertyAccessorName( accessType.getType() );
-        }
-
-
-        prop.setOptional(grailsProperty.isNullable());
-
-        if (grailsProperty instanceof Association<?> association) {
-            prop.setCascade(new CascadeBehaviorFetcher().getCascadeBehaviour(association));
-        }
-
-
-        // lazy to true
-        final boolean isToOne = grailsProperty instanceof ToOne && !(grailsProperty instanceof Embedded);
-        PersistentEntity propertyOwner = grailsProperty.getOwner();
-        boolean isLazyable = isToOne ||
-                !(grailsProperty instanceof Association) && !grailsProperty.equals(propertyOwner.getIdentity());
-
-        if (isLazyable) {
-            final boolean isLazy = getLaziness(grailsProperty);
-            prop.setLazy(isLazy);
-
-            if (isLazy && isToOne && !(PersistentAttributeInterceptable.class.isAssignableFrom(propertyOwner.getJavaClass()))) {
-//                handleLazyProxy(propertyOwner, grailsProperty);
-            }
-        }
-    }
-
-    private boolean getLaziness(PersistentProperty grailsProperty) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(grailsProperty);
-        final Boolean lazy = config.getLazy();
-        if(lazy == null && grailsProperty instanceof Association) {
-            return true;
-        }
-        else if(lazy != null) {
-            return lazy;
-        }
-        return false;
-    }
-
-    private boolean getInsertableness(PersistentProperty grailsProperty) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(grailsProperty);
-        return config == null || config.getInsertable();
-    }
-
-    private boolean getUpdateableness(PersistentProperty grailsProperty) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(grailsProperty);
-        return config == null || config.getUpdatable();
-    }
-
-    private boolean isBidirectionalManyToOneWithListMapping(PersistentProperty grailsProperty, Property prop) {
-        if(grailsProperty instanceof Association) {
-
-            Association association = (Association) grailsProperty;
-            Association otherSide = association.getInverseSide();
-            return association.isBidirectional() && otherSide != null &&
-                    prop.getValue() instanceof ManyToOne &&
-                    List.class.isAssignableFrom(otherSide.getType());
-        }
-        return false;
-    }
-
-
-
-    private boolean isCircularAssociation(PersistentProperty grailsProperty) {
-        return grailsProperty.getType().equals(grailsProperty.getOwner().getJavaClass());
-    }
-
-    private void logCascadeMapping(Association grailsProperty, String cascadeStrategy, PersistentEntity referenced) {
-        if (LOG.isDebugEnabled() & referenced != null) {
-            String assType = getAssociationDescription(grailsProperty);
-            LOG.debug("Mapping cascade strategy for " + assType + " property " + grailsProperty.getOwner().getName() + "." + grailsProperty.getName() + " referencing type [" + referenced.getJavaClass().getName() + "] -> [CASCADE: " + cascadeStrategy + "]");
-        }
-    }
-
-    private String getAssociationDescription(Association grailsProperty) {
-        String assType = "unknown";
-        if (grailsProperty instanceof ManyToMany) {
-            assType = "many-to-many";
-        } else if (grailsProperty instanceof org.grails.datastore.mapping.model.types.OneToMany) {
-            assType = "one-to-many";
-        } else if (grailsProperty instanceof org.grails.datastore.mapping.model.types.OneToOne) {
-            assType = "one-to-one";
-        } else if (grailsProperty instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
-            assType = "many-to-one";
-        } else if (grailsProperty.isEmbedded()) {
-            assType = "embedded";
-        }
-        return assType;
-    }
 
     /**
      * Binds a simple value to the Hibernate metamodel. A simple value is
