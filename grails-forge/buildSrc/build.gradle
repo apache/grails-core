@@ -95,7 +95,7 @@ dependencies {
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
     implementation "org.apache.ant:ant:$antVersion"
-    implementation "org.apache.grails.gradle.common:grails-gradle-common:$projectVersion"
+    implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
 }
 
 gradlePlugin {

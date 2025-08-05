@@ -21,7 +21,7 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.apache.grails.gradle.common'
+group = 'org.apache.grails.gradle'
 
 ext {
     pomTitle = 'Grails Gradle Common'
