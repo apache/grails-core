@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.feature.other;
+package org.grails.forge.feature.micronaut;
 
 import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
