@@ -72,15 +72,9 @@ grailsVersion={version}
 
 ==== 4. Unified Bill of Materials
 
-Previously Grails did not have a single Bill of Materials (BOM).
-Instead it had a `micronaut-bom` and a `spring-bom`.
-With the removal of Micronaut from the Grails, the `micronaut-bom` is no longer needed.
-Instead, we can have a single bom that inherits from the `spring-bom`.
+Previously Grails did not have a single Bill of Materials (BOM). Instead it had a `micronaut-bom` and a `spring-bom` that existed side by side. As of Grails 7, a `grails-bom` is published that inherits from the `spring-bom` and the `micronaut-bom` is not included by default.
 
-Grails 7 introduces a BOM that includes all the dependencies required for a Grails application.
-This BOM is available in the `org.apache.grails:grails-bom` artifact.
-The BOM is automatically applied when a Grails Gradle plugin is applied via the Spring Dependency Management plugin.
-For projects that do not use a Grails Gradle plugin, you can apply the BOM via a https://docs.gradle.org/current/userguide/java_platform_plugin.html#sec:java_platform_consumption[Gradle Platform]:
+Grails 7 introduces a BOM that includes all the dependencies required for a Grails application. This BOM is available in the `org.apache.grails:grails-bom` artifact. The BOM is automatically applied when a Grails Gradle plugin is applied via the Spring Dependency Management plugin. For projects that do not use a Grails Gradle plugin, you can apply the BOM via a https://docs.gradle.org/current/userguide/java_platform_plugin.html#sec:java_platform_consumption[Gradle Platform]:
 
 [source,groovy]
 .build.gradle
@@ -256,14 +250,28 @@ jakartaeeMigration {
 6. `grails.beans.util.LazyBeanMap` -> `grails.beans.util.LazyMetaPropertyMap`
 7. `org.grails.plugins.databinding.DataBindingGrailsPlugin` -> `DataBindingConfiguration`
 
-===== 12.4 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
-- This change was made based on community input: https://github.com/orgs/grails/discussions/13517
-- The removal of Micronaut enabled simplification of the Grails codebase and the return of Live Reload via https://github.com/HotswapProjects/HotswapAgent
-- The Micronaut Parent Context is no longer in Grails by default.
-- The following dependencies are no longer included in Grails or grails-bom: io.micronaut:micronaut-\*, io.micronaut.cache:micronaut-cache-core, io.micronaut.groovy:micronaut-runtime-groovy and io.micronaut.spring:micronaut-spring-*
-- Micronaut can be added via the Micronaut Spring Boot Starter: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter.
-- Using Micronaut Parent Context: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springParentContext
-- Using a Bean Post Processor: https://micronaut-projects.github.io/micronaut-spring/latest/guide/#beanPostProcessor
+===== 12.4 Micronaut in Grails is now supported via the plugin `grails-micronaut`
+In Grails 4 to Grails 6, Micronaut was integrated by making Micronaut the parent context of the Grails application. As of Grails 7, Micronaut is set up via the https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter[micronaut-spring-starter] using the `grails-micronaut` plugin. Discussion around this change can be found https://github.com/apache/grails-core/discussions/13517[here].
+
+To enable Micronaut in your Grails application, two steps must be completed.  First, the `grails-micronaut` plugin needs added to the build file.  Second, the property `micronautPlatformVersion` needs set to your desired version. Only Micronaut 4.9.2 or higher is supported for Grails.
+
+Here's an example build file:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.apache.grails:grails-micronaut'
+}
+----
+
+Here's an example `gradle.properties` file:
+
+[source,properties]
+.gradle.properties
+----
+micronautPlatformVersion=4.9.2
+----
 
 ===== 12.5 hibernate-ehcache
 
