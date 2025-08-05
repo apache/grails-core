@@ -43,7 +43,7 @@ Details of our release process are documented at: https://github.com/apache/grai
 
 As a reminder, most of our tools support an env `GRAILS_REPO_URL` so that the tools can be used from the staging location.  Set it to the staging repo like this: `export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging`
 
-The vote is open for the next 72 hours and passes if a majority of at least
+The vote is open for a minimum of 72 hours and passes if a majority of at least
 three +1 PPMC votes are cast.
 
 [ ] +1 Release Apache Grails (incubating) ${VERSION}

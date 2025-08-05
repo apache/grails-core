@@ -223,7 +223,7 @@ The first vote is conducted on the [Grails dev mailing list](https://lists.apach
 
 ### Apache Groovy PMC
 
-As an incubating project under Apache Groovy, after 72 hours & a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the source upload job for the generated email.
+As an incubating project under Apache Groovy, after a minimum of 72 hours and a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the source upload job for the generated email.
 
 ## 5. Releasing
 
