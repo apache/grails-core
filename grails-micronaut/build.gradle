@@ -26,18 +26,6 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
-// force a local build version for debugging
-//project.configurations.configureEach({ Configuration configuration ->
-//    configuration.resolutionStrategy.eachDependency({ DependencyResolveDetails details ->
-//        String dependencyName = details.requested.name
-//        String group = details.requested.group
-//        if (group == 'io.micronaut' && dependencyName.startsWith('micronaut-core-processor')) {
-//            logger.lifecycle("Forcing Micronaut Core Processor version to 4.9.99 for Grails Micronaut plugin")
-//            details.useVersion('4.9.99')
-//        }
-//    } as Action<DependencyResolveDetails>)
-//} as Action<Configuration>)
-
 dependencies {
     annotationProcessor platform(project(':grails-bom'))
     annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
@@ -58,7 +46,7 @@ dependencies {
         exclude group:"org.slf4j", module: "slf4j-simple"
     }
 
-    implementation platform(project(':grails-bom'))
+    compileOnly platform(project(':grails-bom'))
     compileOnly project(':grails-core')
 
     // Logging
