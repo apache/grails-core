@@ -33,7 +33,7 @@ class PropertyFileUtilsSpec extends Specification {
                 '#Fri Jan 01 00:00:00 UTC 1970',
                 'key1=value1',
                 '#Sat Mar 03 15:00:00 UTC 2001'
-        ].join('\n'), StandardCharsets.ISO_8859_1.name())
+        ].join(System.lineSeparator()), StandardCharsets.ISO_8859_1.name())
 
         when:
         PropertyFileUtils.makePropertiesFileReproducible(file)
@@ -56,7 +56,7 @@ class PropertyFileUtilsSpec extends Specification {
         given:
         File file = File.createTempFile('notimestamp', '.properties')
         file.deleteOnExit()
-        file.write('fuz=buz\nweb=foo', StandardCharsets.ISO_8859_1.name())
+        file.write("fuz=buz${System.lineSeparator()}web=foo" as String, StandardCharsets.ISO_8859_1.name())
 
         when:
         PropertyFileUtils.makePropertiesFileReproducible(file)
@@ -69,7 +69,7 @@ class PropertyFileUtilsSpec extends Specification {
         given:
         File file = File.createTempFile('envprops', '.properties')
         file.deleteOnExit()
-        file.write('#Mon Apr 04 04:04:04 UTC 2004\nhello=world', StandardCharsets.ISO_8859_1.name())
+        file.write("#Mon Apr 04 04:04:04 UTC 2004${System.lineSeparator()}hello=world" as String, StandardCharsets.ISO_8859_1.name())
 
         when:
         SystemStubs.withEnvironmentVariable('SOURCE_DATE_EPOCH', '42424242').execute {
@@ -88,7 +88,7 @@ class PropertyFileUtilsSpec extends Specification {
                 '#Fri Jan 01 00:00:00 UTC 1970',
                 'key1=value1',
                 '#Sat Mar 03 15:00:00 UTC 2001'
-        ].join('\n').getBytes(StandardCharsets.ISO_8859_1.name()))
+        ].join(System.lineSeparator()).getBytes(StandardCharsets.ISO_8859_1.name()))
 
         when:
         ByteArrayInputStream result = PropertyFileUtils.makePropertiesOutputReproducible(baos)
@@ -111,7 +111,7 @@ class PropertyFileUtilsSpec extends Specification {
         baos.write([
                 '#Tue Apr 02 02:02:02 UTC 2002',
                 'testing=another'
-        ].join('\n').getBytes(StandardCharsets.ISO_8859_1.name()))
+        ].join(System.lineSeparator()).getBytes(StandardCharsets.ISO_8859_1.name()))
 
         when:
         ByteArrayInputStream result = null
@@ -131,14 +131,14 @@ class PropertyFileUtilsSpec extends Specification {
     def 'outputstream - leaves content unchanged when no timestamp comment present'() {
         given:
         ByteArrayOutputStream baos = new ByteArrayOutputStream()
-        baos.write('alpha=one\nbeta=two\n'.getBytes(StandardCharsets.ISO_8859_1.name()))
+        baos.write("alpha=one${System.lineSeparator()}beta=two${System.lineSeparator()}".getBytes(StandardCharsets.ISO_8859_1.name()))
 
         when:
         ByteArrayInputStream result = PropertyFileUtils.makePropertiesOutputReproducible(baos)
         String output = new String(result.readAllBytes(), StandardCharsets.ISO_8859_1.name())
 
         then:
-        output == 'alpha=one\nbeta=two\n'
+        output == "alpha=one${System.lineSeparator()}beta=two${System.lineSeparator()}"
     }
 }
 
