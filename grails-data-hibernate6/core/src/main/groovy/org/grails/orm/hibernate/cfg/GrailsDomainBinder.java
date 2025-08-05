@@ -1788,9 +1788,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         Mapping gormMapping = new HibernateEntityWrapper(domainClass).getMappedForm();
 
-        if (gormMapping != null) {
             table.setComment(gormMapping.getComment());
-        }
 
         List<Embedded> embedded = new ArrayList<>();
 
@@ -1857,7 +1855,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                         LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
                     }
 
-                    final boolean isHasOne = isHasOne(association);
+                    final boolean isHasOne = association.isHasOne();
                     if (isHasOne && !association.isBidirectional()) {
                         throw new MappingException("hasOne property [" + currentGrailsProp.getOwner().getName() +
                                 "." + currentGrailsProp.getName() + "] is not bidirectional. Specify the other side of the relationship!");
@@ -1905,49 +1903,14 @@ public class GrailsDomainBinder implements MetadataContributor {
             Property property = createProperty(value, persistentClass, association, mappings);
             persistentClass.addProperty(property);
         }
-        bindNaturalIdentifier(table, gormMapping, persistentClass);
-    }
-
-    private boolean isHasOne(Association association) {
-        return association instanceof org.grails.datastore.mapping.model.types.OneToOne && ((org.grails.datastore.mapping.model.types.OneToOne)association).isForeignKeyInChild();
-    }
-
-    private void bindNaturalIdentifier(Table table, Mapping mapping, PersistentClass persistentClass) {
-        Object o = mapping != null ? mapping.getIdentity() : null;
-        if (!(o instanceof Identity)) {
-            return;
-        }
-
-        Identity identity = (Identity) o;
-        final NaturalId naturalId = identity.getNatural();
-        if (naturalId == null || naturalId.getPropertyNames().isEmpty()) {
-            return;
-        }
-
-        UniqueKey uk = new UniqueKey();
-        uk.setTable(table);
-
-        boolean mutable = naturalId.isMutable();
-
-        for (String propertyName : naturalId.getPropertyNames()) {
-            Property property = persistentClass.getProperty(propertyName);
-
-            property.setNaturalIdentifier(true);
-            if (!mutable) property.setUpdateable(false);
-
-            uk.addColumns(property.getValue());
-        }
-
-        new UniqueNameGenerator().setGeneratedUniqueName(uk);
-
-        table.addUniqueKey(uk);
+        new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
     }
 
     private boolean canBindOneToOneWithSingleColumnAndForeignKey(Association currentGrailsProp) {
         if (currentGrailsProp.isBidirectional()) {
             final Association otherSide = currentGrailsProp.getInverseSide();
             if(otherSide != null) {
-                if (isHasOne(otherSide)) {
+                if (otherSide.isHasOne()) {
                     return false;
                 }
                 if (!currentGrailsProp.isOwningSide() && (otherSide.isOwningSide())) {
@@ -2200,8 +2163,10 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (config != null && !config.isUniqueWithinGroup()) {
                 c.setUnique(config.isUnique());
             }
-            else if (property.isBidirectional() && isHasOne(property.getInverseSide())) {
-                c.setUnique(true);
+            else {
+                if (property.isBidirectional() && property.getInverseSide().isHasOne()) {
+                    c.setUnique(true);
+                }
             }
         }
     }
@@ -2297,7 +2262,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
         final Association otherSide = property.getInverseSide();
 
-        final boolean hasOne = isHasOne(otherSide);
+        final boolean hasOne = otherSide.isHasOne();
         oneToOne.setConstrained(hasOne);
         oneToOne.setForeignKeyType(oneToOne.isConstrained() ?
                 ForeignKeyDirection.FROM_PARENT :
@@ -2563,7 +2528,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 column.setNullable(false);
             }
             else if (property instanceof org.grails.datastore.mapping.model.types.OneToOne && association.isBidirectional() && !association.isOwningSide()) {
-                if (isHasOne(((Association) property).getInverseSide())) {
+                if (((Association) property).getInverseSide().isHasOne()) {
                     column.setNullable(false);
                 }
                 else {
