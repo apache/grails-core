@@ -18,7 +18,7 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestPlayer
+import org.apache.grails.data.testing.tck.domains.TestAuthor
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
@@ -35,7 +35,7 @@ import spock.util.concurrent.PollingConditions
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestPlayer])
+        manager.addAllDomainClasses([TestAuthor])
     }
 
     TestSaveOrUpdateEventListener listener
@@ -56,19 +56,18 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
     void "test state change from listener update the object"() {
 
         when:
-        TestPlayer john = new TestPlayer(name: "John").save(flush: true)
+        TestAuthor john = new TestAuthor(name: "John").save(flush: true)
 
         then:
-        new PollingConditions().eventually { listener.isExecuted && TestPlayer.count() }
+        new PollingConditions().eventually { listener.isExecuted && TestAuthor.count() }
 
         when:
         manager.session.flush()
         manager.session.clear()
-        john = TestPlayer.get(john.id)
+        john = TestAuthor.get(john.id)
 
         then:
-        john.attributes
-        john.attributes.size() == 3
+        john.name == "Foo"
 
     }
 }
@@ -83,8 +82,8 @@ class TestSaveOrUpdateEventListener extends AbstractPersistenceEventListener {
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
-        TestPlayer player = (TestPlayer) event.entityObject
-        player.attributes = ["test0", "test1", "test2"]
+        TestAuthor player = (TestAuthor) event.entityObject
+        player.name = "Foo"
         isExecuted = true
     }
 

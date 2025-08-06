@@ -371,7 +371,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             Class<?> mappedClass = referenced.getMappedClass();
             Mapping m = getMapping(mappedClass);
 
-            boolean compositeIdProperty = isCompositeIdProperty(m, property.getInverseSide());
+            boolean compositeIdProperty = m.isCompositeIdProperty(property.getInverseSide());
             if (!compositeIdProperty) {
                 Backref prop = new Backref();
                 final PersistentEntity owner = property.getOwner();
@@ -1780,28 +1780,22 @@ public class GrailsDomainBinder implements MetadataContributor {
     private void createClassProperties(HibernatePersistentEntity domainClass, PersistentClass persistentClass,
                                          InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
+        Mapping gormMapping = new HibernateEntityWrapper(domainClass).getMappedForm();
+        Table table = persistentClass.getTable();
+        table.setComment(gormMapping.getComment());
         final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties()
                 .stream()
                 .filter(persistentProperty -> persistentProperty.getMappedForm() != null)
+                .filter(persistentProperty -> !gormMapping.isCompositeIdProperty(persistentProperty))
+                .filter(persistentProperty -> !gormMapping.isIdentityProperty(persistentProperty))
+                .filter(persistentProperty -> !persistentProperty.getName().equals(GormProperties.VERSION) )
+                .filter(persistentProperty -> !persistentProperty.isInherited())
                 .toList();
-        Table table = persistentClass.getTable();
 
-        Mapping gormMapping = new HibernateEntityWrapper(domainClass).getMappedForm();
-
-            table.setComment(gormMapping.getComment());
 
         List<Embedded> embedded = new ArrayList<>();
 
-        for (PersistentProperty currentGrailsProp : persistentProperties) {
-
-            // if its inherited skip
-            if (currentGrailsProp.isInherited()) {
-                continue;
-            }
-            if(currentGrailsProp.getName().equals(GormProperties.VERSION) ) continue;
-            if (isCompositeIdProperty(gormMapping, currentGrailsProp)) continue;
-            if (isIdentityProperty(gormMapping, currentGrailsProp)) continue;
-
+        for (PersistentProperty<?> currentGrailsProp : persistentProperties) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
             }
@@ -1906,19 +1900,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
     }
 
-    private boolean isIdentityProperty(Mapping gormMapping, PersistentProperty currentGrailsProp) {
-        if (gormMapping == null) {
-            return false;
-        }
 
-        Object identityMapping = gormMapping.getIdentity();
-        if (!(identityMapping instanceof Identity)) {
-            return false;
-        }
-
-        String identityName = ((Identity)identityMapping).getName();
-        return identityName != null && identityName.equals(currentGrailsProp.getName());
-    }
 
     private void bindEnumType(PersistentProperty property, SimpleValue simpleValue,
                                 String path, String sessionFactoryBeanName) {
@@ -1948,20 +1930,6 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
         }
         return userType;
-    }
-
-    private boolean isCompositeIdProperty(Mapping gormMapping, PersistentProperty currentGrailsProp) {
-        if (gormMapping != null && gormMapping.getIdentity() != null) {
-            Object id = gormMapping.getIdentity();
-            if (id instanceof CompositeIdentity) {
-                String[] propertyNames = ((CompositeIdentity) id).getPropertyNames();
-                String property = currentGrailsProp.getName();
-                for (String currentName : propertyNames) {
-                    if(currentName != null && currentName.equals(property)) return true;
-                }
-            }
-        }
-        return false;
     }
 
     private boolean isBidirectionalManyToOne(PersistentProperty currentGrailsProp) {

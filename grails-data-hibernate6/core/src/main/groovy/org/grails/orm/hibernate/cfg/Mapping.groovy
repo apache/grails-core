@@ -102,6 +102,11 @@ class Mapping extends Entity<PropertyConfig> {
     boolean isCompositeIdProperty(PersistentProperty property) {
         return (identity instanceof CompositeIdentity) && (property.name in identity.propertyNames)
     }
+    
+    boolean isIdentityProperty(PersistentProperty property) {
+        def identityMapping = getIdentity()
+        return (identityMapping instanceof Identity) && (identityMapping.name == property.name)
+    }
 
 
     /**
