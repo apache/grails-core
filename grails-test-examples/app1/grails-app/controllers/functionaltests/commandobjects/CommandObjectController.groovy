@@ -29,7 +29,7 @@ class CommandObjectController implements Controller {
     }
 
     def echoPerson(String name) {
-        Person p1 = Person.findByName(name)
-        render(text: p1?.name ?: "No Person found with name: $name")
+        Person person = Person.findByName(name)
+        render(text: person?.name ?: "No Person found with name: $name")
     }
 }

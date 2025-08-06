@@ -34,6 +34,6 @@ class CommandObjectSpec extends ContainerGebSpec {
         go('/commandObject/echo?person=George+Doe')
 
         then: 'the page title is correct'
-        title == 'Welcome to Grails'
+        pageSource == '<html><head></head><body>George Doe</body></html>'
     }
 }
