@@ -350,4 +350,13 @@ public abstract class Association<T extends Property> extends AbstractPersistent
     public boolean isManyToOne() {
         return this instanceof ManyToOne;
     }
+
+    public boolean canBindOneToOneWithSingleColumnAndForeignKey() {
+        return Optional.of(this)
+                .filter(Association::isBidirectional)
+                .map(Association::getInverseSide)
+                .filter(otherSide -> !otherSide.isHasOne())
+                .map(otherSide -> !this.isOwningSide() && otherSide.isOwningSide())
+                .orElse(false);
+    }
 }

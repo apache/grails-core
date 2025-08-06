@@ -1860,7 +1860,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                         throw new MappingException("hasOne property [" + currentGrailsProp.getOwner().getName() +
                                 "." + currentGrailsProp.getName() + "] is not bidirectional. Specify the other side of the relationship!");
                     }
-                    else if (canBindOneToOneWithSingleColumnAndForeignKey((Association) currentGrailsProp)) {
+                    else if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
                         value = new OneToOne(metadataBuildingContext, table, persistentClass);
                         bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH, sessionFactoryBeanName);
                     }
@@ -1904,21 +1904,6 @@ public class GrailsDomainBinder implements MetadataContributor {
             persistentClass.addProperty(property);
         }
         new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
-    }
-
-    private boolean canBindOneToOneWithSingleColumnAndForeignKey(Association currentGrailsProp) {
-        if (currentGrailsProp.isBidirectional()) {
-            final Association otherSide = currentGrailsProp.getInverseSide();
-            if(otherSide != null) {
-                if (otherSide.isHasOne()) {
-                    return false;
-                }
-                if (!currentGrailsProp.isOwningSide() && (otherSide.isOwningSide())) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private boolean isIdentityProperty(Mapping gormMapping, PersistentProperty currentGrailsProp) {
@@ -2046,7 +2031,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
 
-            if (canBindOneToOneWithSingleColumnAndForeignKey((Association) currentGrailsProp)) {
+            if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
                 value = new OneToOne(metadataBuildingContext, table, persistentClass);
                 bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path, sessionFactoryBeanName);
             }
