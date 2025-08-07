@@ -4,9 +4,8 @@ import grails.persistence.Entity
 
 @Entity
 class SimpleCountry {
-    Integer id
+//    Integer id
     String name
 
     static hasMany = [residents: Person]
-    Set residents
 }

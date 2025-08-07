@@ -22,6 +22,7 @@ import org.apache.grails.data.testing.tck.domains.Book
 import org.apache.grails.data.testing.tck.domains.Highway
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 
 /**
  * @author graemerocher
@@ -322,31 +323,31 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         Book.findOrCreateByAuthorGreaterThan('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorLessThan('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorBetween('A', 'B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorGreaterThanEquals('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorLessThanEquals('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         // GemFire doesn't like these...
 //        when:

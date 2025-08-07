@@ -24,6 +24,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -34,6 +35,7 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
+import org.hibernate.MappingException;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -194,7 +196,11 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query gt(String property, Object value) {
-        detachedCriteria.gt(property, value);
+        if(value instanceof Number number) {
+            detachedCriteria.gt(property, number);
+        } else{
+            throw new ConfigurationException("gte only uses numbers");
+        }
         return this;
     }
 
@@ -270,31 +276,52 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query ge(String property, Object value) {
-        detachedCriteria.ge(property, value);
+        if(value instanceof Number number) {
+            detachedCriteria.ge(property, number);
+        } else{
+            throw new ConfigurationException("gte only uses numbers");
+        }
         return this;
     }
 
     @Override
     public Query le(String property, Object value) {
-        detachedCriteria.le(property, value);
+        if(value instanceof Number number) {
+            detachedCriteria.le(property, number);
+        } else{
+            throw new ConfigurationException("gte only uses numbers");
+        }
         return this;
     }
 
     @Override
     public Query gte(String property, Object value) {
-        detachedCriteria.gte(property, value);
+        if(value instanceof Number number) {
+            detachedCriteria.gte(property, number);
+        } else{
+            throw new ConfigurationException("gte only uses numbers");
+        }
+
         return this;
     }
 
     @Override
     public Query lte(String property, Object value) {
-        detachedCriteria.lte(property, value);
+        if(value instanceof Number number) {
+            detachedCriteria.lte(property, number);
+        } else{
+            throw new ConfigurationException("gte only uses numbers");
+        }
         return this;
     }
 
     @Override
     public Query lt(String property, Object value) {
-        detachedCriteria.lt(property, value);
+        if(value instanceof Number number) {
+            detachedCriteria.lt(property, number);
+        } else{
+            throw new ConfigurationException("gte only uses numbers");
+        }
         return this;
     }
 

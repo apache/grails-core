@@ -521,7 +521,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> findAll(D exampleObject, Map args) {
-        throw new UnsupportedOperationException("not yet")
+        throw new UnsupportedOperationException("Example is not supported but maybe in the future")
 //        def template = hibernateTemplate
 //        return (List<D>) template.execute { Session session ->
 //            Example example = Example.create(exampleObject).ignoreCase()

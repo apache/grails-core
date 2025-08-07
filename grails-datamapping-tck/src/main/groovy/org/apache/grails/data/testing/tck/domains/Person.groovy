@@ -36,14 +36,13 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
         lastName == "Simpson"
     }
 
-    Long id
+//    Long id
     Long version
     String firstName
     String lastName
     Integer age = 0
-    Set<Pet> pets = [] as Set
     static hasMany = [pets: Pet]
-    SimpleCountry country
+//    SimpleCountry country
     Face face
     boolean myBooleanProperty
 
@@ -75,7 +74,7 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
 
     static constraints = {
         face nullable: true
-        country nullable: true
+//        country nullable: true
     }
 
     @Override

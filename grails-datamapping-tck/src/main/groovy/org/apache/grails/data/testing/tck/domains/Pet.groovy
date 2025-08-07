@@ -28,9 +28,10 @@ class Pet implements Serializable {
     String name
     Date birthDate = new Date()
     PetType type = new PetType(name: "Unknown")
-    Person owner
     Integer age
     Face face
+
+    static belongsTo=  [owner: Person]
 
     static mapping = {
         name index: true

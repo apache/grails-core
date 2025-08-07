@@ -156,14 +156,21 @@ class CascadeBehaviorPersisterSpec extends Specification {
         def owner = new Owner_Default_Uni_P(name: "Owner")
         owner.addToChildren(new ChildPersister(title: "Child"))
         owner.save(flush: true)
-
-        then: "The owner is saved without errors and both owner and child exist"
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
+
+
+
+
+        then: "The owner is saved without errors and both owner and child exist"
+
         !owner.errors.hasErrors()
         Owner_Default_Uni_P.count() == 1
         ChildPersister.count() == 1
+        def owner2 = Owner_Default_Uni_P.findByName("Owner")
+        owner2.children.size() == 1
+
     }
 
     // --- Orphan Removal Persistence Test ---
