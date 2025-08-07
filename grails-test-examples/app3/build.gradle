@@ -30,12 +30,8 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation 'org.springframework.boot:spring-boot-starter-logging'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
-    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
-    implementation 'org.apache.grails:grails-dependencies'
-    implementation 'org.apache.grails:grails-web-boot'
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'com.h2database:h2'
     if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-sitemesh3'
     }

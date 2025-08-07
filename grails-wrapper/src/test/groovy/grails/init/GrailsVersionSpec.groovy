@@ -49,27 +49,66 @@ class GrailsVersionSpec extends Specification {
 
     def "comparison checks"() {
         expect:
-        new GrailsVersion('7.0.0') < new GrailsVersion('7.0.1')
-        new GrailsVersion('7.0.1') > new GrailsVersion('7.0.0')
-        new GrailsVersion('7.0.0') < new GrailsVersion('7.1.0')
-        new GrailsVersion('8.0.0') > new GrailsVersion('7.0.0')
-        new GrailsVersion('7.0.0') > new GrailsVersion('7.0.0-SNAPSHOT')
-        new GrailsVersion('7.0.0') > new GrailsVersion('7.0.0-RC1')
-        new GrailsVersion('7.0.0') > new GrailsVersion('7.0.0-M1')
-        new GrailsVersion('7.0.0-RC1') > new GrailsVersion('7.0.0-M1')
-        new GrailsVersion('7.0.0-RC2') > new GrailsVersion('7.0.0-RC1')
-        new GrailsVersion('7.0.0-RC1') > new GrailsVersion('7.0.0-SNAPSHOT')
-        new GrailsVersion('7.0.0-M2') > new GrailsVersion('7.0.0-M1')
-        new GrailsVersion('7.0.0-M1') > new GrailsVersion('7.0.0-SNAPSHOT')
+        new GrailsVersion('7.0.0') > new GrailsVersion('7.0.1')
+        new GrailsVersion('7.0.1') < new GrailsVersion('7.0.0')
+        new GrailsVersion('7.0.0') > new GrailsVersion('7.1.0')
+        new GrailsVersion('8.0.0') < new GrailsVersion('7.0.0')
+        new GrailsVersion('7.0.0') < new GrailsVersion('7.0.0-SNAPSHOT')
+        new GrailsVersion('7.0.0') < new GrailsVersion('7.0.0-RC1')
+        new GrailsVersion('7.0.0') < new GrailsVersion('7.0.0-M1')
+        new GrailsVersion('7.0.0-RC1') < new GrailsVersion('7.0.0-M1')
+        new GrailsVersion('7.0.0-RC2') < new GrailsVersion('7.0.0-RC1')
+        new GrailsVersion('7.0.0-RC1') < new GrailsVersion('7.0.0-SNAPSHOT')
+        new GrailsVersion('7.0.0-M2') < new GrailsVersion('7.0.0-M1')
+        new GrailsVersion('7.0.0-M1') < new GrailsVersion('7.0.0-SNAPSHOT')
     }
 
     def "sorted"() {
         expect:
-        [new GrailsVersion('7.0.0'), new GrailsVersion('7.0.0-RC1'), new GrailsVersion('7.0.0-M1'), new GrailsVersion('7.0.0-SNAPSHOT')].sort() == [
-            new GrailsVersion('7.0.0-SNAPSHOT'),
-            new GrailsVersion('7.0.0-M1'),
-            new GrailsVersion('7.0.0-RC1'),
-            new GrailsVersion('7.0.0')
+        [
+                new GrailsVersion('8.0.0'),
+                new GrailsVersion('8.0.0-RC1'),
+                new GrailsVersion('8.0.0-M1'),
+                new GrailsVersion('8.0.0-SNAPSHOT'),
+                new GrailsVersion('7.1.1'),
+                new GrailsVersion('7.1.1-RC1'),
+                new GrailsVersion('7.1.1-M1'),
+                new GrailsVersion('7.1.1-SNAPSHOT'),
+                new GrailsVersion('7.1.0'),
+                new GrailsVersion('7.1.0-RC1'),
+                new GrailsVersion('7.1.0-M1'),
+                new GrailsVersion('7.1.0-SNAPSHOT'),
+                new GrailsVersion('7.0.1'),
+                new GrailsVersion('7.0.1-RC1'),
+                new GrailsVersion('7.0.1-M1'),
+                new GrailsVersion('7.0.1-SNAPSHOT'),
+                new GrailsVersion('7.0.0'),
+                new GrailsVersion('7.0.0-RC1'),
+                new GrailsVersion('7.0.0-M1'),
+                new GrailsVersion('7.0.0-SNAPSHOT'),
         ]
+        ==
+        [
+                new GrailsVersion('7.0.0'),
+                new GrailsVersion('7.0.0-RC1'),
+                new GrailsVersion('7.0.0-M1'),
+                new GrailsVersion('7.0.0-SNAPSHOT'),
+                new GrailsVersion('7.1.1'),
+                new GrailsVersion('7.1.1-RC1'),
+                new GrailsVersion('7.1.1-M1'),
+                new GrailsVersion('7.1.1-SNAPSHOT'),
+                new GrailsVersion('8.0.0'),
+                new GrailsVersion('8.0.0-RC1'),
+                new GrailsVersion('7.1.0'),
+                new GrailsVersion('7.1.0-RC1'),
+                new GrailsVersion('7.1.0-M1'),
+                new GrailsVersion('7.1.0-SNAPSHOT'),
+                new GrailsVersion('8.0.0-M1'),
+                new GrailsVersion('8.0.0-SNAPSHOT'),
+                new GrailsVersion('7.0.1'),
+                new GrailsVersion('7.0.1-RC1'),
+                new GrailsVersion('7.0.1-M1'),
+                new GrailsVersion('7.0.1-SNAPSHOT'),
+        ].sort()
     }
 }

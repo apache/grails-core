@@ -285,12 +285,10 @@ public class GrailsUpdater {
     }
 
     private GrailsVersion getRootVersion(GrailsWrapperRepo repo) throws IOException, SAXException, ParserConfigurationException {
-        SAXParserFactory factory = SAXParserFactory.newInstance();
-        SAXParser saxParser = factory.newSAXParser();
         RootMetadataHandler findLastReleaseHandler = new RootMetadataHandler(grailsWrapperHome.allowedReleaseTypes);
 
         try (InputStream stream = retrieveMavenMetadata(repo, repo.getRootMetadataUrl())) {
-            saxParser.parse(stream, findLastReleaseHandler);
+            createSAXParser().parse(stream, findLastReleaseHandler);
             List<GrailsVersion> foundVersions = findLastReleaseHandler.getVersions();
             if (foundVersions.isEmpty()) {
                 throw new IllegalStateException("No Grails Releases were found for the allowed types: " + grailsWrapperHome.allowedReleaseTypes.stream().map(Enum::name).collect(Collectors.joining(", ")));
@@ -306,12 +304,10 @@ public class GrailsUpdater {
     private String fetchSnapshotForVersion(GrailsWrapperRepo repo, GrailsVersion baseVersion) throws IOException, SAXException, ParserConfigurationException {
         System.out.println("...A Grails snapshot version has been detected. Downloading latest snapshot.");
 
-        SAXParserFactory factory = SAXParserFactory.newInstance();
-        SAXParser saxParser = factory.newSAXParser();
         FindLastSnapshotHandler findVersionHandler = new FindLastSnapshotHandler();
 
         try (InputStream stream = retrieveMavenMetadata(repo, repo.getMetadataUrl(baseVersion))) {
-            saxParser.parse(stream, findVersionHandler);
+            createSAXParser().parse(stream, findVersionHandler);
             return findVersionHandler.getVersion();
         }
     }
@@ -322,5 +318,16 @@ public class GrailsUpdater {
         conn.setRequestProperty("User-Agent", "Apache-Maven/3.9.6");
         conn.setInstanceFollowRedirects(true);
         return conn;
+    }
+
+    private static SAXParser createSAXParser() throws ParserConfigurationException, SAXException {
+        SAXParserFactory factory = SAXParserFactory.newInstance();
+        factory.setFeature("http://javax.xml.XMLConstants/feature/secure-processing", true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setXIncludeAware(false);
+        factory.setNamespaceAware(true);
+        return factory.newSAXParser();
     }
 }

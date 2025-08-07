@@ -103,7 +103,9 @@ include(
         'grails-web-url-mappings',
 
         // POM / BOMs
-        'grails-dependencies',
+        'grails-dependencies-starter-web',
+        'grails-dependencies-test',
+        'grails-dependencies-assets',
         'grails-bom',
 
         // Docs
@@ -190,6 +192,10 @@ project(':grails-async-rxjava').projectDir = file('grails-async/rxjava')
 project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
 project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async').projectDir = file('grails-async/plugin')
+
+project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')
+project(':grails-dependencies-test').projectDir = file('grails-dependencies/test')
+project(':grails-dependencies-assets').projectDir = file('grails-dependencies/assets')
 
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')

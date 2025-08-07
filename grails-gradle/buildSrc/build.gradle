@@ -29,6 +29,15 @@ repositories {
     // mavenLocal()
     mavenCentral()
     gradlePluginPortal()
+    maven {
+        url = 'https://central.sonatype.com/repository/maven-snapshots'
+        content {
+            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+        }
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
 }
 
 file('../../gradle.properties').withInputStream {

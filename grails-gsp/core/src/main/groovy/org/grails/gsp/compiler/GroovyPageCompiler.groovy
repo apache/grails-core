@@ -30,6 +30,8 @@ import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation
 import org.grails.taglib.encoder.OutputEncodingSettings
 import groovy.transform.CompileStatic
+import org.springframework.core.CollectionFactory
+
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.ExecutorService
@@ -148,7 +150,8 @@ class GroovyPageCompiler {
                 // write the view registry to a properties file (this is read by GroovyPagesTemplateEngine at runtime)
                 File viewregistryFile = new File(targetDir, "gsp/views.properties")
                 viewregistryFile.parentFile.mkdirs()
-                Properties views = new Properties()
+                // Use SortedProperties to ensure a consistent order of entries for reproducible builds
+                Properties views = CollectionFactory.createSortedProperties(false)
                 if (viewregistryFile.exists()) {
                     // only changed files are added to the mapping, read the existing mapping file
                     viewregistryFile.withInputStream { stream ->

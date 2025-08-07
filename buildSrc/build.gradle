@@ -38,6 +38,15 @@ repositories {
         }
     }
     maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://central.sonatype.com/repository/maven-snapshots'
+        content {
+            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+        }
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
     mavenCentral()
     gradlePluginPortal()
 }

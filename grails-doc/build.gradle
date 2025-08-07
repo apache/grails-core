@@ -46,7 +46,7 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
 
     // Used to surface versions for groovydoc
-    implementation project(':grails-dependencies')
+    implementation project(':grails-dependencies-starter-web')
     implementation project(':grails-testing-support-core')
     implementation project(':grails-data-hibernate5')
     implementation 'org.apache.grails:grails-gradle-plugins'
@@ -96,11 +96,6 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.inputs.files(gdoc.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)
     gdoc.outputs.dir(gdoc.destinationDir)
 }
-
-// use jsoup in PdfBuilder for cleaning input html
-System.setProperty('grails.docs.clean.html', 'true')
-// creates single.html.before.xml and single.html.after.xml files for debugging pdf input when enabled
-//System.setProperty('grails.docs.debug.pdf','true')
 
 String getVersion(String artifact) {
     String version = configurations.runtimeClasspath

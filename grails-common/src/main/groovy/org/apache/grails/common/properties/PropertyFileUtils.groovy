@@ -37,7 +37,7 @@ final class PropertyFileUtils {
                     .toEpochSecond().toString()
         }
 
-        Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\\\s).*$')
+        Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\s).*$')
 
         List<String> lines = factoriesFile.readLines(StandardCharsets.ISO_8859_1.name())
 
