@@ -36,8 +36,6 @@ dependencies:
     - scope: implementation
       coords: "org.apache.grails:grails-logging"
     - scope: implementation
-      coords: "org.apache.grails:grails-rest-transforms"
-    - scope: implementation
       coords: "org.apache.grails:grails-databinding"
     - scope: implementation
       coords: "org.apache.grails:grails-services"
