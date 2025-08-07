@@ -22,13 +22,11 @@ package functionaltests.commandobjects
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import spock.lang.Issue
-import spock.lang.PendingFeature
 
 @Integration
 @Issue('https://github.com/apache/grails-core/issues/14947')
 class CommandObjectSpec extends ContainerGebSpec {
 
-    @PendingFeature
     void 'should display the correct title on the home page'() {
         when: 'visiting the home page'
         go('/commandObject/echo?person=George+Doe')
