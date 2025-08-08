@@ -17,36 +17,19 @@
  *  under the License.
  */
 
-plugins {
-    id 'groovy-gradle-plugin'
-}
+package functionaltests.commandobjects
 
-apply {
-    from file('../../dependencies.gradle')
-}
+import functionaltests.Person
+import grails.artefact.Controller
 
-repositories {
-    // mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
+class CommandObjectController implements Controller {
+
+    def echo(String person) {
+        render(text: person)
     }
-}
 
-file('../../gradle.properties').withInputStream {
-    Properties props = new Properties()
-    props.load(it)
-    project.ext.gradleProperties = props
-}
-
-dependencies {
-    implementation "${gradleBomDependencies['gradle-nexus-publish-plugin']}"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
+    def echoPerson(String name) {
+        Person person = Person.findByName(name)
+        render(text: person?.name ?: "No Person found with name: $name")
+    }
 }

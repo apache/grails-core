@@ -2,7 +2,12 @@ buildscript {
     repositories {
         mavenCentral()
 @buildRepositories@
-
+        maven {
+           url = 'https://repository.apache.org/content/groups/snapshots'
+           content {
+              includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+           }
+        }
     }
     dependencies {
         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
@@ -18,11 +23,17 @@ group "@grails.app.group@"
 repositories {
     mavenCentral()
 @repositories@
+    maven {
+       url = 'https://repository.apache.org/content/groups/snapshots'
+       content {
+          includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+       }
+    }
 }
 
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    developmentOnly("org.springframework.boot:spring-boot-devtools") // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
+    developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 @dependencies@
 }

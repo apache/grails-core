@@ -82,6 +82,10 @@ public class GrailsBase implements DefaultFeature {
                 .groupId("org.apache.grails")
                 .artifactId("grails-logging")
                 .implementation());
+        generatorContext.addDependency(Dependency.builder()
+                .groupId("org.apache.grails")
+                .artifactId("grails-events")
+                .implementation());
 
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         generatorContext.addTemplate("src/main/groovy", new URLTemplate("src/main/groovy/.gitkeep", classLoader.getResource(".gitkeep")));

@@ -34,6 +34,8 @@ import org.codehaus.groovy.control.Phases
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 
+import org.springframework.core.CollectionFactory
+
 import grails.config.ConfigMap
 import org.apache.grails.common.properties.PropertyFileUtils
 import org.grails.config.CodeGenConfig
@@ -151,7 +153,8 @@ class GroovyPageCompiler {
                 // write the view registry to a properties file (this is read by GroovyPagesTemplateEngine at runtime)
                 File viewregistryFile = new File(targetDir, 'gsp/views.properties')
                 viewregistryFile.parentFile.mkdirs()
-                Properties views = new Properties()
+                // Use SortedProperties to ensure a consistent order of entries for reproducible builds
+                Properties views = CollectionFactory.createSortedProperties(false)
                 if (viewregistryFile.exists()) {
                     // only changed files are added to the mapping, read the existing mapping file
                     viewregistryFile.withInputStream { stream ->

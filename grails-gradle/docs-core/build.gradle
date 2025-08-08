@@ -48,12 +48,9 @@ dependencies {
     api 'org.yaml:snakeyaml'
 
     api 'org.asciidoctor:asciidoctorj'
-    implementation 'org.xhtmlrenderer:flying-saucer-pdf-openpdf'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
 
     runtimeOnly 'org.slf4j:slf4j-api'
-
-    api 'org.jsoup:jsoup'
     testImplementation('org.spockframework:spock-core') {
         transitive = false
     }

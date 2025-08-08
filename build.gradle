@@ -57,6 +57,15 @@ allprojects {
                 includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
     }
 }
 

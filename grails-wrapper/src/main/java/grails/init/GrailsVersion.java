@@ -107,30 +107,30 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
             return 0;
         }
 
-        if (releaseType != o.releaseType) {
-            return o.releaseType.ordinal() - releaseType.ordinal();
-        }
-
-        int majorCompare = Integer.compare(this.major, o.major);
+        int majorCompare = Integer.compare(o.major, this.major);
         if (majorCompare != 0) {
             return majorCompare;
         }
 
-        int minorCompare = Integer.compare(this.minor, o.minor);
+        int minorCompare = Integer.compare(o.minor, this.minor);
         if (minorCompare != 0) {
             return minorCompare;
         }
 
-        int patchCompare = Integer.compare(this.patch, o.patch);
+        int patchCompare = Integer.compare(o.patch, this.patch);
         if (patchCompare != 0) {
             return patchCompare;
+        }
+
+        if (releaseType != o.releaseType) {
+            return releaseType.ordinal() - o.releaseType.ordinal();
         }
 
         if (candidate == null) {
             return 0;
         }
 
-        return Integer.compare(this.candidate, o.candidate);
+        return Integer.compare(o.candidate, this.candidate);
     }
 
     @Override

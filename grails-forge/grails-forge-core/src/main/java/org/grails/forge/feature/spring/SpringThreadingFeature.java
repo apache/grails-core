@@ -16,37 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.forge.feature.spring;
 
-plugins {
-    id 'groovy-gradle-plugin'
-}
+import org.grails.forge.application.ApplicationType;
+import org.grails.forge.feature.Category;
+import org.grails.forge.feature.OneOfFeature;
 
-apply {
-    from file('../../dependencies.gradle')
-}
+public interface SpringThreadingFeature extends OneOfFeature {
 
-repositories {
-    // mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
+    @Override
+    default Class<?> getFeatureClass() {
+        return SpringThreadingFeature.class;
     }
-}
 
-file('../../gradle.properties').withInputStream {
-    Properties props = new Properties()
-    props.load(it)
-    project.ext.gradleProperties = props
-}
+    @Override
+    default boolean supports(ApplicationType applicationType) {
+        return true;
+    }
 
-dependencies {
-    implementation "${gradleBomDependencies['gradle-nexus-publish-plugin']}"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
+    @Override
+    default String getCategory() {
+        return Category.SPRING;
+    }
 }

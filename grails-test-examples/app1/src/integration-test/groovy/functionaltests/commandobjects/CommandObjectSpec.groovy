@@ -17,36 +17,21 @@
  *  under the License.
  */
 
-plugins {
-    id 'groovy-gradle-plugin'
-}
+package functionaltests.commandobjects
 
-apply {
-    from file('../../dependencies.gradle')
-}
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
+import spock.lang.Issue
 
-repositories {
-    // mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
+@Integration
+@Issue('https://github.com/apache/grails-core/issues/14947')
+class CommandObjectSpec extends ContainerGebSpec {
+
+    void 'should display the correct title on the home page'() {
+        when: 'visiting the home page'
+        go('/commandObject/echo?person=George+Doe')
+
+        then: 'the page title is correct'
+        pageSource == '<html><head></head><body>George Doe</body></html>'
     }
-}
-
-file('../../gradle.properties').withInputStream {
-    Properties props = new Properties()
-    props.load(it)
-    project.ext.gradleProperties = props
-}
-
-dependencies {
-    implementation "${gradleBomDependencies['gradle-nexus-publish-plugin']}"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
 }

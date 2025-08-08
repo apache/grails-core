@@ -17,36 +17,14 @@
  *  under the License.
  */
 
-plugins {
-    id 'groovy-gradle-plugin'
-}
+package functionaltests
 
-apply {
-    from file('../../dependencies.gradle')
-}
+class Person {
 
-repositories {
-    // mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
+    String name
+
+    static constraints = {}
+
+    static mapping = {
     }
-}
-
-file('../../gradle.properties').withInputStream {
-    Properties props = new Properties()
-    props.load(it)
-    project.ext.gradleProperties = props
-}
-
-dependencies {
-    implementation "${gradleBomDependencies['gradle-nexus-publish-plugin']}"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
 }

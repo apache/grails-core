@@ -125,13 +125,6 @@ jobs:
           ./gradlew build
           --continue --stacktrace
           --rerun-tasks
-      - name: "✅ Verify Forge CLI"
-        run: |
-          cd grails-forge
-          cp grails-forge-cli/build/distributions/apache-grails-forge-cli-*.zip forge-cli.zip
-          unzip forge-cli -d tmp
-          mv tmp/apache-grails-forge-cli-* tmp/forge-cli
-          ./tmp/forge-cli/bin/grails-forge-cli --version
       - name: "✅ Verify combined CLI"
         run: |
           cd grails-forge

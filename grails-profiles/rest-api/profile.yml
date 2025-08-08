@@ -16,7 +16,6 @@ description: Profile for REST API applications
 features:
     defaults: 
         - hibernate5
-        - events
     required:
         - json-views
 build:
@@ -35,30 +34,16 @@ dependencies:
     - scope: implementation
       coords: "org.apache.grails:grails-rest-transforms"
     - scope: implementation
-      coords: "org.apache.grails:grails-codecs"
-    - scope: implementation
       coords: "org.apache.grails:grails-interceptors"
     - scope: implementation
       coords: "org.apache.grails:grails-services"
-    - scope: implementation
-      coords: "org.apache.grails:grails-datasource"
     - scope: implementation
       coords: "org.apache.grails:grails-databinding"
     - scope: implementation
       coords: "org.apache.grails:grails-web-boot"
     - scope: implementation
       coords: "org.apache.grails:grails-logging"
-    - scope: implementation
-      coords: "org.apache.grails:grails-cache"
-    - scope: implementation
-      coords: "org.apache.grails:grails-async"
-    - scope: testImplementation
-      coords: "io.micronaut:micronaut-http-client:4.6.5"
-    - scope: testImplementation
-      coords: "org.apache.grails:grails-testing-support-web"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-datamapping"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-views-gson"
-    - scope: testImplementation
-      coords: "org.hibernate.validator:hibernate-validator"

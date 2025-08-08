@@ -889,17 +889,11 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
         final ClassNode paramTypeClassNode = param.getType();
         final String methodParamName = param.getName();
-        Expression getParamsExpression = buildGetPropertyExpression(new VariableExpression("this"), "params", classNode);
-        final Expression paramsContainsKeyMethodArguments = new ArgumentListExpression(
-                new ConstantExpression(requestParameterName));
-        final BooleanExpression containsKeyExpression = new BooleanExpression(
-                applyDefaultMethodTarget(new MethodCallExpression(getParamsExpression, "containsKey", paramsContainsKeyMethodArguments), Map.class));
-        final Statement initializeParameterStatement = new ExpressionStatement(
-                new DeclarationExpression(new VariableExpression(
-                        methodParamName, paramTypeClassNode),
-                        Token.newSymbol(Types.EQUALS, 0, 0),
-                        new TernaryExpression(containsKeyExpression, buildGetMapExpression(getParamsExpression, requestParameterName) , new ConstantExpression(null))));
-        wrapper.addStatement(initializeParameterStatement);
+        Expression getParamsExpression = buildGetPropertyExpression(localVarX("this", classNode), "params", classNode);
+        final BooleanExpression containsKeyExpression = boolX(applyDefaultMethodTarget(callX(getParamsExpression, "containsKey", args(constX(requestParameterName))), Map.class));
+
+        wrapper.addStatement(stmt(declX(localVarX(methodParamName, paramTypeClassNode),
+                ternaryX(containsKeyExpression, buildGetMapExpression(getParamsExpression, requestParameterName), nullX()))));
     }
 
     protected void initializePrimitiveOrTypeWrapperParameter(final ClassNode classNode, final BlockStatement wrapper,

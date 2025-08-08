@@ -181,7 +181,7 @@ Note: if project properties are used, the properties must be defined prior to ap
         projectPluginManager.apply(MavenPublishPlugin)
 
         boolean localSigning = false
-        String signingKeyId = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_PASSPHRASE')
+        String signingKeyId = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
         if (isRelease) {
             extraPropertiesExtension.setProperty('signing.keyId', signingKeyId)
             String secringFile = project.findProperty('signing.secretKeyRingFile') ?: System.getenv('SIGNING_KEYRING')

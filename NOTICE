@@ -8,6 +8,9 @@ The Apache Software Foundation (http://www.apache.org/).
 Additional Licenses
 ------------------
 
+This product uses the Jakarta Annotations™ API which is a trademark of the Eclipse Foundation. It is licensed under
+the Eclipse Public License v. 2.0 which is available at https://www.eclipse.org/legal/epl-2.0.
+
 Project Reactor
 This product includes software from Project Reactor, licensed under Apache License, Version 2.0.
 2011-2014 Pivotal Software, Inc.

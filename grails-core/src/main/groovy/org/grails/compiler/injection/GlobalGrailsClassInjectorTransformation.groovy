@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import org.springframework.core.CollectionFactory
 import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlSlurper
@@ -192,7 +193,8 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             if (Modifier.isAbstract(classNode.getModifiers())) return false
 
             def classNodeName = classNode.name
-            def props = new Properties()
+            // Use SortedProperties to ensure a consistent order of entries for reproducible builds
+            def props = CollectionFactory.createSortedProperties(false)
             def superTypeName = superType.getName()
 
             // generate META-INF/grails.factories
