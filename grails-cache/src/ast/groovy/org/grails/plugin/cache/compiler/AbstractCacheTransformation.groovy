@@ -121,7 +121,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     }
 
     protected VariableExpression declareAndInitializeParameterValueMap(AnnotationNode annotationNode, MethodNode methodToCache, BlockStatement codeBlock) {
-        if(annotationNode.getMember("key") instanceof ClosureExpression) {
+        if(annotationNode.getMember('key') instanceof ClosureExpression) {
             // if a key generator is specified don't do anything
             return null
         }
@@ -148,7 +148,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
             if(TenantTransform.hasTenantAnnotation(methodToCache)) {
                 ArgumentListExpression putArgs = args(
                         constX(GormProperties.TENANT_IDENTITY),
-                        callD(classX(Tenants), "currentId")
+                        callD(classX(Tenants), 'currentId')
                 )
                 MethodCallExpression mce = callX(parameterMapVar, 'put', putArgs)
                 mce.methodTarget = mapPutMethod
@@ -257,7 +257,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
             //    return originalMethodCall.call()
 
             Statement ifShouldCacheMethodCallStatement = ifS(
-                    notX(callX(conditionMember, "call")),
+                    notX(callX(conditionMember, 'call')),
                     returnS(originalMethodCallExpr)
             )
             newMethodBody.addStatement(ifShouldCacheMethodCallStatement)

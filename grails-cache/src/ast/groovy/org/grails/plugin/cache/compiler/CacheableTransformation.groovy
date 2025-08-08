@@ -96,7 +96,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         // ValueWrapper $_cache_valueWrapper = $_cache_cacheVariable.get($_cache_cacheKey);
         VariableExpression cacheValueWrapper = varX(CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME, make(Cache.ValueWrapper))
         cachingBlock.addStatement(
-            declS(cacheValueWrapper, callD(cacheDeclaration, "get", cacheKeyDeclaration))
+            declS(cacheValueWrapper, callD(cacheDeclaration, 'get', cacheKeyDeclaration))
         )
 
         // if($_cache_valueWrapper != null) {
@@ -109,10 +109,10 @@ class CacheableTransformation extends AbstractCacheTransformation {
         VariableExpression originalValueExpr = varX(CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME)
         cachingBlock.addStatement(
             ifElseS(notNullX(cacheValueWrapper),
-                returnS( callD(cacheValueWrapper, "get")),
+                returnS( callD(cacheValueWrapper, 'get')),
                 block(
                     declS(originalValueExpr, originalMethodCallExpr),
-                    stmt(callD(cacheDeclaration,"put", args(cacheKeyDeclaration, originalValueExpr))),
+                    stmt(callD(cacheDeclaration, 'put', args(cacheKeyDeclaration, originalValueExpr))),
                     returnS(originalValueExpr)
                 )
             )

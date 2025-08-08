@@ -42,7 +42,7 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
         this.innerKeyGenerator = new SimpleKeyGenerator()
     }
 
-    @SuppressWarnings("serial")
+    @SuppressWarnings('serial')
     private static final class CacheKey implements Serializable {
         final String targetClassName
         final String targetMethodName

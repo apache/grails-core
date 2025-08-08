@@ -76,7 +76,7 @@ class CachePutTransformation extends AbstractCacheTransformation {
         cachingBlock.addStatement(
             block(
                 declS(originalValueExpr, originalMethodCallExpr),
-                stmt(callD(cacheDeclaration,"put", args(cacheKeyDeclaration, originalValueExpr))),
+                stmt(callD(cacheDeclaration, 'put', args(cacheKeyDeclaration, originalValueExpr))),
                 returnS(originalValueExpr)
             )
         )
