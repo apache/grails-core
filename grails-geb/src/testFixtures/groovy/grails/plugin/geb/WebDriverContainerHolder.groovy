@@ -113,16 +113,16 @@ class WebDriverContainerHolder {
         )
 
         Map prefs = [
-                "credentials_enable_service"             : false,
-                "profile.password_manager_enabled"       : false,
-                "profile.password_manager_leak_detection": false
+                'credentials_enable_service'             : false,
+                'profile.password_manager_enabled'       : false,
+                'profile.password_manager_leak_detection': false
         ]
 
         ChromeOptions chromeOptions = new ChromeOptions()
         // TODO: guest would be preferred, but this causes issues with downloads
         // see https://issues.chromium.org/issues/42323769
         // chromeOptions.addArguments("--guest")
-        chromeOptions.setExperimentalOption("prefs", prefs)
+        chromeOptions.setExperimentalOption('prefs', prefs)
 
         currentContainer.tap {
             withEnv('SE_ENABLE_TRACING', grailsGebSettings.tracingEnabled)

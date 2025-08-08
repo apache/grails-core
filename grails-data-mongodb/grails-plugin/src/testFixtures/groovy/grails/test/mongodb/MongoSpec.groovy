@@ -83,13 +83,13 @@ abstract class MongoSpec extends Specification {
 
         List<PropertySource> propertySources = []
 
-        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("yml") }
+        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
         if (ymlLoader) {
-            propertySources.addAll(load(resourceLoader, ymlLoader, "application.yml"))
+            propertySources.addAll(load(resourceLoader, ymlLoader, 'application.yml'))
         }
-        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("groovy") }
+        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
         if (groovyLoader) {
-            propertySources.addAll(load(resourceLoader, groovyLoader, "application.groovy"))
+            propertySources.addAll(load(resourceLoader, groovyLoader, 'application.groovy'))
         }
 
         Map<String, Object> mapPropertySource = propertySources
