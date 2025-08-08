@@ -29,7 +29,7 @@ import grails.util.GrailsNameUtils
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormEntityApi
 
-@Artefact("Service")
+@Artefact('Service')
 @ReadOnly
 @CompileStatic
 class GormService<T extends GormEntity<T>> {

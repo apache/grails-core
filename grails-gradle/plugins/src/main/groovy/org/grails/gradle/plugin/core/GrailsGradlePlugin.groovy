@@ -164,13 +164,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 return null
             }
 
-            """
+            '''
                 withConfig(configuration) {
                     imports {
                         star 'java.time'
                     }
                 }
-            """.stripIndent(16)
+            '''.stripIndent(16)
         }
     }
 
@@ -321,13 +321,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureProfile(Project project) {
         if (!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
             project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
-                profileConfiguration.description = "Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell"
+                profileConfiguration.description = 'Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell'
                 profileConfiguration.canBeConsumed = false
                 profileConfiguration.canBeResolved = true
                 profileConfiguration.transitive = true
 
                 profileConfiguration.defaultDependencies { DependencySet deps ->
-                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
+                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
                     project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
                     deps.add(
                             project.dependencies.create(defaultProfileCoordinates)
@@ -340,7 +340,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
 
                         details.useVersion(grailsVersion)
-                        details.because("Grails Profile defined without a version, defaulting to configured Grails Version")
+                        details.because('Grails Profile defined without a version, defaulting to configured Grails Version')
                     }
                 }
             }
@@ -717,7 +717,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                 if (springBootMainClassName && propertyMainClassName) {
                     if (springBootMainClassName != propertyMainClassName) {
-                        throw new GradleException("If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value")
+                        throw new GradleException(/If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value/)
                     }
                 }
 

@@ -59,7 +59,7 @@ class Publication implements Serializable {
 
         latestBooks {
             maxResults(10)
-            order("datePublished", "desc")
+            order('datePublished', 'desc')
         }
 
         publishedBetween { start, end ->

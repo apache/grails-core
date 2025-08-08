@@ -41,7 +41,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
     boolean hasResourceProcessor = false
 
     static encodeAsForTags = [escapeJavascript: 'JavaScript',
-                              javascript: [expressionCodec:"JavaScript", scriptletCodec:"JavaScript", replaceOnly:true]]
+                              javascript: [expressionCodec:'JavaScript', scriptletCodec:'JavaScript', replaceOnly:true]]
 
     @PostConstruct
     private void initHasResourceProcessor() {
@@ -108,7 +108,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             }
             def reqResCtx = ''
             if (requestPluginContext) {
-                reqResCtx = (requestPluginContext.startsWith("/") ? requestPluginContext.substring(1) : requestPluginContext) + '/'
+                reqResCtx = (requestPluginContext.startsWith('/') ? requestPluginContext.substring(1) : requestPluginContext) + '/'
             }
             attrs.uri = appBase + reqResCtx + 'js/'+attrs.remove('src')
         }

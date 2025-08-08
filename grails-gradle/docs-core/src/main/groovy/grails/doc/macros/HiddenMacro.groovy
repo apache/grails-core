@@ -28,7 +28,7 @@ class HiddenMacro extends BaseMacro implements Serializable {
     private static final long serialVersionUID = 0L
 
     @Input
-    String getName() { "hidden" }
+    String getName() { 'hidden' }
 
     void execute(Writer out, MacroParameter params) {
         out << '<div class="hidden-block">' << params.content << '</div>'

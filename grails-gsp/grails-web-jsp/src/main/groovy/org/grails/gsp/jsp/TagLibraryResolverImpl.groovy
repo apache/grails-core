@@ -94,7 +94,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
         WebXmlTagLibraryReader webXmlReader = new WebXmlTagLibraryReader(webXml.getInputStream())
         webXmlReader.getTagLocations().each { String uri, String location ->
             JspTagLib jspTagLib
-            if (location.startsWith("jar:")) {
+            if (location.startsWith('jar:')) {
                 jspTagLib = loadFromJar(uri, location)
             }
             else {
@@ -138,12 +138,12 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
     }
 
     protected Resource getWebXmlFromServletContext() {
-        return new ServletContextResource(servletContext, "/WEB-INF/web.xml")
+        return new ServletContextResource(servletContext, '/WEB-INF/web.xml')
     }
 
     protected List<URL> getJarsFromServletContext() {
-        def files = servletContext.getResourcePaths("/WEB-INF/lib")
-        files = files.findAll { String path ->  path.endsWith(".jar") || path.endsWith(".zip")}
+        def files = servletContext.getResourcePaths('/WEB-INF/lib')
+        files = files.findAll { String path ->  path.endsWith('.jar') || path.endsWith('.zip')}
         files.collect { String path -> servletContext.getResource(path) } as List
     }
 

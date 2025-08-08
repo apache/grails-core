@@ -74,8 +74,8 @@ abstract class AbstractProfile implements Profile {
     protected String parentTargetFolder
     protected final ClassLoader classLoader
     protected ExclusionDependencySelector exclusionDependencySelector = new ExclusionDependencySelector()
-    protected String description = ""
-    protected String instructions = ""
+    protected String description = ''
+    protected String instructions = ''
     protected String version = Environment.grailsVersion
 
     AbstractProfile(Resource profileDir) {
@@ -113,14 +113,14 @@ abstract class AbstractProfile implements Profile {
     }
 
     protected void initialize() {
-        def profileYml = profileDir.createRelative("profile.yml")
+        def profileYml = profileDir.createRelative('profile.yml')
         Map<String, Object> profileConfig = new Yaml(new SafeConstructor(new LoaderOptions())).<Map<String, Object>> load(profileYml.getInputStream())
 
-        name = profileConfig.get("name")?.toString()
-        description = profileConfig.get("description")?.toString() ?: ''
-        instructions = profileConfig.get("instructions")?.toString() ?: ''
+        name = profileConfig.get('name')?.toString()
+        description = profileConfig.get('description')?.toString() ?: ''
+        instructions = profileConfig.get('instructions')?.toString() ?: ''
 
-        def parents = profileConfig.get("extends")
+        def parents = profileConfig.get('extends')
         if(parents) {
             parentNames = parents.toString().split(',').collect() { String name -> name.trim() }
         }
@@ -130,12 +130,12 @@ abstract class AbstractProfile implements Profile {
         def map = new NavigableMap()
         map.merge(profileConfig)
         navigableConfig = map
-        def commandsByName = profileConfig.get("commands")
+        def commandsByName = profileConfig.get('commands')
         if(commandsByName instanceof Map) {
             def commandsMap = (Map) commandsByName
             for(clsName in  commandsMap.keySet()) {
                 def fileName = commandsMap[clsName].toString()
-                if(fileName.endsWith(".groovy")) {
+                if(fileName.endsWith('.groovy')) {
                     GroovyScriptCommand cmd = (GroovyScriptCommand)classLoader.loadClass(clsName.toString()).newInstance()
                     cmd.profile = this
                     cmd.profileRepository = profileRepository
@@ -155,12 +155,12 @@ abstract class AbstractProfile implements Profile {
             }
         }
 
-        def featuresConfig = profileConfig.get("features")
+        def featuresConfig = profileConfig.get('features')
         if(featuresConfig instanceof Map) {
             Map featureMap = (Map) featuresConfig
-            def featureList = (List) featureMap.get("provided") ?: Collections.emptyList()
-            def defaultFeatures = (List) featureMap.get("defaults") ?: Collections.emptyList()
-            def requiredFeatures = (List) featureMap.get("required") ?: Collections.emptyList()
+            def featureList = (List) featureMap.get('provided') ?: Collections.emptyList()
+            def defaultFeatures = (List) featureMap.get('defaults') ?: Collections.emptyList()
+            def requiredFeatures = (List) featureMap.get('required') ?: Collections.emptyList()
             for (fn in featureList) {
                 def featureData = profileDir.createRelative("features/${fn}/feature.yml")
                 if(featureData.exists()) {
@@ -175,7 +175,7 @@ abstract class AbstractProfile implements Profile {
 
 
 
-        def dependenciesConfig = profileConfig.get("dependencies")
+        def dependenciesConfig = profileConfig.get('dependencies')
 
         if (dependenciesConfig instanceof List) {
             List<Exclusion> exclusions =[]
@@ -195,16 +195,16 @@ abstract class AbstractProfile implements Profile {
             }
         }
 
-        this.repositories = (List<String>)navigableConfig.get("repositories", [])
+        this.repositories = (List<String>)navigableConfig.get('repositories', [])
 
-        this.buildRepositories = (List<String>)navigableConfig.get("build.repositories", [])
-        this.buildPlugins = (List<String>)navigableConfig.get("build.plugins", [])
-        this.buildExcludes = (List<String>)navigableConfig.get("build.excludes", [])
-        this.buildMerge = (List<String>)navigableConfig.get("build.merge", null)
-        this.parentTargetFolder = (String)navigableConfig.get("skeleton.parent.target", null)
-        this.skeletonExcludes = (List<String>)navigableConfig.get("skeleton.excludes", [])
-        this.binaryExtensions = (List<String>)navigableConfig.get("skeleton.binaryExtensions", [])
-        this.executablePatterns = (List<String>)navigableConfig.get("skeleton.executable", [])
+        this.buildRepositories = (List<String>)navigableConfig.get('build.repositories', [])
+        this.buildPlugins = (List<String>)navigableConfig.get('build.plugins', [])
+        this.buildExcludes = (List<String>)navigableConfig.get('build.excludes', [])
+        this.buildMerge = (List<String>)navigableConfig.get('build.merge', null)
+        this.parentTargetFolder = (String)navigableConfig.get('skeleton.parent.target', null)
+        this.skeletonExcludes = (List<String>)navigableConfig.get('skeleton.excludes', [])
+        this.binaryExtensions = (List<String>)navigableConfig.get('skeleton.binaryExtensions', [])
+        this.executablePatterns = (List<String>)navigableConfig.get('skeleton.executable', [])
     }
 
     String getDescription() {
@@ -437,7 +437,7 @@ abstract class AbstractProfile implements Profile {
 
             def parents = getExtends()
             if(parents) {
-                excludes = (List)configuration.navigate("command", "excludes") ?: []
+                excludes = (List)configuration.navigate('command', 'excludes') ?: []
                 registerParentCommands(context, parents, registerCommand)
             }
         }

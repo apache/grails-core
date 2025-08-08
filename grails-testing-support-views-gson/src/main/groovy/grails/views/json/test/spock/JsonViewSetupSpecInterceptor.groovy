@@ -51,7 +51,7 @@ class JsonViewSetupSpecInterceptor implements IMethodInterceptor {
         def config = grailsApp.config
 
         test.defineBeans {
-            grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: "http://localhost:8080")
+            grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: 'http://localhost:8080')
             localeResolver(SessionLocaleResolver)
             grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
                 grailsApplication = grailsApp

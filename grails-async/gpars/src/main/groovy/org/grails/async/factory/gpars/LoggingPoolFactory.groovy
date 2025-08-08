@@ -100,8 +100,8 @@ class LoggingPoolFactory implements PoolFactory {
         }, new RejectedExecutionHandler() {
             @Override
             void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-                throw new IllegalStateException("The thread pool executor cannot run the task. " +
-                    "The upper limit of the thread pool size has probably been reached. " +
+                throw new IllegalStateException('The thread pool executor cannot run the task. ' +
+                    'The upper limit of the thread pool size has probably been reached. ' +
                     "Current pool size: $executor.poolSize Maximum pool size: $executor.maximumPoolSize")
             }
         })

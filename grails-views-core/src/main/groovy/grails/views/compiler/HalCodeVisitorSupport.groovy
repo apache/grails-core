@@ -59,7 +59,7 @@ class HalCodeVisitorSupport extends CodeVisitorSupport {
 
     @Override
     void visitVariableExpression(VariableExpression expression) {
-        if (expression.accessedVariable && expression.accessedVariable.name == "hal") {
+        if (expression.accessedVariable && expression.accessedVariable.name == 'hal') {
             Statement statement = stmt(
                 assignX(propX(varX(expression.accessedVariable), 'delegate'), varX('delegate'))
             )

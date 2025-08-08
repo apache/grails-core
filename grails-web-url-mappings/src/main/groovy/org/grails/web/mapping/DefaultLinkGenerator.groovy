@@ -73,7 +73,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
     GrailsPluginManager pluginManager
 
     @Autowired
-    @Qualifier("grailsUrlMappingsHolder")
+    @Qualifier('grailsUrlMappingsHolder')
     UrlMappingsHolder urlMappingsHolder
 
     @Autowired(required=false)

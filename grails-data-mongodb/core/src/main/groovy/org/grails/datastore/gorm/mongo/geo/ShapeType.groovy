@@ -46,7 +46,7 @@ class ShapeType extends GeoJSONType<Shape>{
             return super.writeInternal(property, key, value, nativeTarget)
         }
         else {
-            throw new InvalidDataAccessResourceUsageException("Only GeoJSON shapes can be persisted using Shape inheritance.")
+            throw new InvalidDataAccessResourceUsageException('Only GeoJSON shapes can be persisted using Shape inheritance.')
         }
     }
 

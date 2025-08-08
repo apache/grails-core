@@ -59,7 +59,7 @@ trait ScriptDatabaseMigrationCommand implements DatabaseMigrationCommand {
     abstract void handle()
 
     String getName() {
-        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), "Command"))
+        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), 'Command'))
     }
 
     void setConfig(ConfigMap config) {

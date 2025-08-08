@@ -46,7 +46,7 @@ import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
  */
 class UrlMappingsGrailsPlugin extends Plugin {
 
-    def watchedResources = ["file:./grails-app/controllers/*UrlMappings.groovy"]
+    def watchedResources = ['file:./grails-app/controllers/*UrlMappings.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
     def dependsOn = [core:version]
@@ -62,9 +62,9 @@ class UrlMappingsGrailsPlugin extends Plugin {
         boolean isReloadEnabled = Environment.isDevelopmentMode() || Environment.current.isReloadEnabled()
         boolean corsFilterEnabled = config.getProperty(Settings.SETTING_CORS_FILTER, Boolean, true)
 
-        urlMappingsHandlerMapping(UrlMappingsHandlerMapping, ref("grailsUrlMappingsHolder")) {
+        urlMappingsHandlerMapping(UrlMappingsHandlerMapping, ref('grailsUrlMappingsHolder')) {
             if (!corsFilterEnabled) {
-                grailsCorsConfiguration = ref("grailsCorsConfiguration")
+                grailsCorsConfiguration = ref('grailsCorsConfiguration')
             }
         }
 
@@ -99,10 +99,10 @@ class UrlMappingsGrailsPlugin extends Plugin {
         ApplicationContext ctx = applicationContext
         UrlMappingsHolder urlMappingsHolder = createUrlMappingsHolder(applicationContext)
 
-        HotSwappableTargetSource ts = ctx.getBean("urlMappingsTargetSource", HotSwappableTargetSource)
+        HotSwappableTargetSource ts = ctx.getBean('urlMappingsTargetSource', HotSwappableTargetSource)
         ts.swap urlMappingsHolder
 
-        LinkGenerator linkGenerator = ctx.getBean("grailsLinkGenerator", LinkGenerator)
+        LinkGenerator linkGenerator = ctx.getBean('grailsLinkGenerator', LinkGenerator)
         if (linkGenerator instanceof CachingLinkGenerator) {
           linkGenerator.clearCache()
        }

@@ -70,7 +70,7 @@ class MarkupViewResolver extends SmartViewResolver {
         if(rendererRegistry != null) {
             def defaultXmlRenderer = rendererRegistry.findRenderer(MimeType.XML, Object.class)
             viewConfiguration.mimeTypes.each { String mimeTypeString ->
-                MimeType mimeType = new MimeType(mimeTypeString, "xml")
+                MimeType mimeType = new MimeType(mimeTypeString, 'xml')
                 rendererRegistry.addDefaultRenderer(
                     new MarkupViewXmlRenderer<Object>(Object.class, mimeType, this , proxyHandler, rendererRegistry, defaultXmlRenderer)
                 )

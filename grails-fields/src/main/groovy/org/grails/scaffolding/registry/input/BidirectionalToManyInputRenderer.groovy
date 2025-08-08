@@ -58,7 +58,7 @@ class BidirectionalToManyInputRenderer implements DomainInputRenderer {
         final String objectName = "${getPropertyName(property)}.id"
         defaultAttributes.remove('required')
         defaultAttributes.remove('readonly')
-        defaultAttributes.href = linkGenerator.link(resource: property.associatedType, action: "create", params: [(objectName): ""])
+        defaultAttributes.href = linkGenerator.link(resource: property.associatedType, action: 'create', params: [(objectName): ''])
         return { ->
             a("Add ${getAssociatedClassName(property)}", defaultAttributes)
         }

@@ -46,10 +46,10 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
     boolean handle() {
 
         try {
-            mkdir("src/main/templates/scaffolding")
-            templates("scaffolding/*").each { Resource r ->
+            mkdir('src/main/templates/scaffolding')
+            templates('scaffolding/*').each { Resource r ->
                 consoleLogger.verbose("Copying template $r.URL")
-                final String path = r.URL.toString().replaceAll(/^.*?META-INF/, "src/main")
+                final String path = r.URL.toString().replaceAll(/^.*?META-INF/, 'src/main')
                 if (path.endsWith('/')) {
                     mkdir(path)
                 } else {
@@ -58,7 +58,7 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
                     consoleLogger.verbose("Copied ${r.filename} to location ${to.canonicalPath}")
                 }
             }
-            consoleLogger.verbose("Templates installation complete")
+            consoleLogger.verbose('Templates installation complete')
             return SUCCESS
         } catch (e) {
             consoleLogger.error e.message, e

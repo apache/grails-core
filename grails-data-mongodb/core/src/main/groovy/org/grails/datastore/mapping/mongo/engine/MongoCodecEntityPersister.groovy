@@ -77,10 +77,10 @@ import org.grails.datastore.mapping.reflect.FieldEntityAccess
 @CompileStatic
 class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
-    public static final String INSTANCE_PREFIX = "instance:"
+    public static final String INSTANCE_PREFIX = 'instance:'
     public static final String MONGO_ID_FIELD = MongoConstants.MONGO_ID_FIELD
     public static final String MONGO_CLASS_FIELD = MongoConstants.MONGO_CLASS_FIELD
-    protected static final String NEXT_ID = "next_id"
+    protected static final String NEXT_ID = 'next_id'
     protected static final String NEXT_ID_SUFFIX = ".$NEXT_ID"
     public static final String INC_OPERATOR = MongoConstants.INC_OPERATOR
     public static final String ASSIGNED_IDENTIFIER_MAPPING = MongoConstants.ASSIGNED_IDENTIFIER_MAPPING
@@ -137,7 +137,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
     }
 
     @Override
-    protected List<Serializable> persistEntities(PersistentEntity pe, @SuppressWarnings("rawtypes") Iterable objs) {
+    protected List<Serializable> persistEntities(PersistentEntity pe, @SuppressWarnings('rawtypes') Iterable objs) {
         objs.collect() {
             persistEntity(pe, it)
         }
@@ -484,7 +484,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
     }
 
     @Override
-    protected void deleteEntities(PersistentEntity pe, @SuppressWarnings("rawtypes") Iterable objects) {
+    protected void deleteEntities(PersistentEntity pe, @SuppressWarnings('rawtypes') Iterable objects) {
         def criteria = new DetachedCriteria(pe.javaClass)
         criteria.in(pe.identity.name, objects.collect() { getObjectIdentifier(it) }.findAll() { it != null })
         mongoSession.deleteAll(
@@ -499,27 +499,27 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
     @Override
     Serializable refresh(Object o) {
-        throw new UnsupportedOperationException("Refresh not supported by codec entity persistence engine")
+        throw new UnsupportedOperationException('Refresh not supported by codec entity persistence engine')
     }
 
     @Override
     Object lock(Serializable id) throws CannotAcquireLockException {
-        throw new UnsupportedOperationException("Pessimistic locks not supported by MongoDB")
+        throw new UnsupportedOperationException('Pessimistic locks not supported by MongoDB')
     }
 
     @Override
     Object lock(Serializable id, int timeout) throws CannotAcquireLockException {
-        throw new UnsupportedOperationException("Pessimistic locks not supported by MongoDB")
+        throw new UnsupportedOperationException('Pessimistic locks not supported by MongoDB')
     }
 
     @Override
     boolean isLocked(Object o) {
-        throw new UnsupportedOperationException("Pessimistic locks not supported by MongoDB")
+        throw new UnsupportedOperationException('Pessimistic locks not supported by MongoDB')
     }
 
     @Override
     void unlock(Object o) {
-        throw new UnsupportedOperationException("Pessimistic locks not supported by MongoDB")
+        throw new UnsupportedOperationException('Pessimistic locks not supported by MongoDB')
     }
 
     @Override

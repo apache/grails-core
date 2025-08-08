@@ -141,7 +141,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         def controller = applicationContext.getBean(controllerClass.name)
 
         if (webRequest == null) {
-            throw new IllegalAccessException("Cannot access the controller outside of a request. Is the controller referenced in a where: block?")
+            throw new IllegalAccessException('Cannot access the controller outside of a request. Is the controller referenced in a where: block?')
         }
 
         webRequest.request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
@@ -232,7 +232,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     void applyTemplate(StringWriter sw, String template, Map params = [:]) {
         def engine = applicationContext.getBean(GroovyPagesTemplateEngine)
 
-        def t = engine.createTemplate(template, "test_" + System.currentTimeMillis())
+        def t = engine.createTemplate(template, 'test_' + System.currentTimeMillis())
         renderTemplateToStringWriter(sw, t, params)
     }
 

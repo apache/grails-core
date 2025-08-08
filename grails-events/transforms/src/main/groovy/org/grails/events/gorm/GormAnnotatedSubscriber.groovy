@@ -32,7 +32,7 @@ import org.grails.events.transform.AnnotatedSubscriber
  * @since 3.3
  */
 @CompileStatic
-@Events(namespace = "gorm")
+@Events(namespace = 'gorm')
 trait GormAnnotatedSubscriber extends AnnotatedSubscriber {
 
     Set<Class<? extends AbstractPersistenceEvent>> getSubscribedEvents() {

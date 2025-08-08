@@ -44,7 +44,7 @@ abstract class ModelRecordingGroovyPage extends GroovyPage {
     public static final String CONFIG_SYSTEM_PROPERTY_NAME
     public static final boolean ENABLED
     static {
-        CONFIG_SYSTEM_PROPERTY_NAME = "grails.views.gsp.modelrecording"
+        CONFIG_SYSTEM_PROPERTY_NAME = 'grails.views.gsp.modelrecording'
         ENABLED = Boolean.getBoolean(CONFIG_SYSTEM_PROPERTY_NAME)
     }
     private static final ModelRecordingCache modelRecordingCache = new ModelRecordingCache()
@@ -112,15 +112,15 @@ class ModelRecordingCache {
     }
 
     private void initialize() {
-        System.err.println("Initialized model recording.")
+        System.err.println('Initialized model recording.')
         ShutdownOperations.addOperation {
-            System.err.println("Writing model recordings to disk...")
+            System.err.println('Writing model recordings to disk...')
             try {
                 close()
             } catch (e) {
                 e.printStackTrace(System.err)
             } finally {
-                System.err.println("Done.")
+                System.err.println('Done.')
             }
         }
     }
@@ -177,9 +177,9 @@ class ModelEntry {
     String getGspDeclaration() {
         if (model || hasTagLibs()) {
             def gspDeclaration = new StringBuilder()
-            gspDeclaration << "@{"
+            gspDeclaration << '@{'
             if (model) {
-                gspDeclaration << " model='''\n"
+                gspDeclaration << / model='''\n/
                 model.each { String fieldName, String fieldType ->
                     String cleanedFieldType = fieldType - ~/^java\.(util|lang)\./
                     String defaultType = DEFAULT_TYPES.get(fieldName)
@@ -198,12 +198,12 @@ class ModelEntry {
                     }
                     gspDeclaration << "${cleanedFieldType} ${fieldName}\n"
                 }
-                gspDeclaration << "''' "
+                gspDeclaration << /''' /
             }
             if (hasTagLibs()) {
                 gspDeclaration << " taglibs='${customTagLibs.join(', ')}' "
             }
-            gspDeclaration << "}\n"
+            gspDeclaration << '}\n'
             return gspDeclaration.toString()
         }
         return null

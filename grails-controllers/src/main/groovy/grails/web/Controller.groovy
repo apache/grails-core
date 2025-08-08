@@ -31,6 +31,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target( [ ElementType.TYPE ] )
-@GroovyASTTransformationClass("org.grails.compiler.web.ControllerArtefactTypeTransformation")
+@GroovyASTTransformationClass('org.grails.compiler.web.ControllerArtefactTypeTransformation')
 @interface Controller {
 }

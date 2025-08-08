@@ -44,8 +44,8 @@ import org.springframework.core.Ordered
  */
 class GrailsLayoutViewResolverPostProcessor implements BeanDefinitionRegistryPostProcessor, Ordered {
 
-    private static final String GRAILS_VIEW_RESOLVER_BEAN_NAME = "jspViewResolver"
-    private static final String GROOVY_PAGE_LAYOUT_FINDER_BEAN_NAME = "groovyPageLayoutFinder"
+    private static final String GRAILS_VIEW_RESOLVER_BEAN_NAME = 'jspViewResolver'
+    private static final String GROOVY_PAGE_LAYOUT_FINDER_BEAN_NAME = 'groovyPageLayoutFinder'
     int order = 0
     Class<?> layoutViewResolverClass = GrailsLayoutViewResolver
     String layoutViewResolverBeanParentName = null

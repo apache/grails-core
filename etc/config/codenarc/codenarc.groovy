@@ -29,6 +29,7 @@ ruleset {
     }
     NoWildcardImports
     UnnecessaryGroovyImport
+    UnnecessaryGString
     UnnecessarySemicolon
     UnnecessaryPublicModifier
     UnusedImport

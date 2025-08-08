@@ -42,7 +42,7 @@ class CacheConfig implements Cloneable {
     /**
      * The cache usage
      */
-    String usage = "read-write"
+    String usage = 'read-write'
     /**
      * Whether caching is enabled
      */
@@ -50,7 +50,7 @@ class CacheConfig implements Cloneable {
     /**
      * What to include in caching
      */
-    String include = "all"
+    String include = 'all'
 
     /**
      * Configures a new CacheConfig instance

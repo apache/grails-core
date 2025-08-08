@@ -41,7 +41,7 @@ class DbmListLocksCommand implements ApplicationCommand, ApplicationContextDatab
         }
     }
 
-    private static void withFilePrintStreamOrSystemOut(String filename, @ClosureParams(value = SimpleType, options = "java.io.PrintStream") Closure closure) {
+    private static void withFilePrintStreamOrSystemOut(String filename, @ClosureParams(value = SimpleType, options = 'java.io.PrintStream') Closure closure) {
         if (!filename) {
             closure.call(System.out)
             return

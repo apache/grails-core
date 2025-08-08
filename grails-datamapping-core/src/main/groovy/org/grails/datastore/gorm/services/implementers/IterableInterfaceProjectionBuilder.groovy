@@ -68,7 +68,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
     boolean isInterfaceProjection(ClassNode domainClass, MethodNode methodNode, ClassNode returnType) {
         if(AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) || returnType.isArray()) {
             ClassNode genericType = AstGenericsUtils.resolveSingleGenericType(returnType)
-            if(genericType != null && genericType.isInterface() && !genericType.packageName?.startsWith("java.")) {
+            if(genericType != null && genericType.isInterface() && !genericType.packageName?.startsWith('java.')) {
 
                 List<String> interfacePropertyNames = AstPropertyResolveUtils.getPropertyNames(genericType)
 
@@ -110,7 +110,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
         def variableScope = newMethodNode.getVariableScope()
         variableScope.putDeclaredVariable(delegateVar)
         closureExpression.setVariableScope(variableScope)
-        Expression collectCall = callX(queryMethodCall, "collect", closureExpression)
+        Expression collectCall = callX(queryMethodCall, 'collect', closureExpression)
 
         if(returnType.isArray()) {
             // handle array cast

@@ -39,21 +39,21 @@ abstract class AbstractDatastoreApi {
 
     protected <T> T execute(SessionCallback<T> callback) {
         if(datastore == null) {
-            throw new IllegalStateException("Cannot execute session callback with null datastore")
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
         DatastoreUtils.execute datastore, callback
     }
 
     protected void execute(VoidSessionCallback callback) {
         if(datastore == null) {
-            throw new IllegalStateException("Cannot execute session callback with null datastore")
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
         DatastoreUtils.execute datastore, callback
     }
 
     Datastore getDatastore() {
         if(datastore == null) {
-            throw new IllegalStateException("No datastore configured in stateless mode")
+            throw new IllegalStateException('No datastore configured in stateless mode')
         }
         return datastore
     }

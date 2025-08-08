@@ -27,11 +27,11 @@ class ConstraintsSpec extends GrailsDataTckSpec {
         manager.domainClasses.addAll([ConstrainedEntity])
     }
 
-    void "Test constraints with static default values"() {
-        given: "A Test class with static constraint values"
-        def ce = new ConstrainedEntity(num: 1000, str: "ABC")
+    void 'Test constraints with static default values'() {
+        given: 'A Test class with static constraint values'
+        def ce = new ConstrainedEntity(num: 1000, str: 'ABC')
 
-        when: "saved is called"
+        when: 'saved is called'
         ce.save()
 
         then:
@@ -39,7 +39,7 @@ class ConstraintsSpec extends GrailsDataTckSpec {
     }
 }
 
-@SuppressWarnings(["ClashingTraitMethods", "UnnecessaryQualifiedReference"])
+@SuppressWarnings(['ClashingTraitMethods', 'UnnecessaryQualifiedReference'])
 @Entity
 class ConstrainedEntity implements Serializable {
 

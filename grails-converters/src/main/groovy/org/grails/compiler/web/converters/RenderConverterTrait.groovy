@@ -29,7 +29,7 @@ import grails.artefact.Enhances
 import org.grails.web.converters.Converter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
-@Enhances(["Controller", "Interceptor"])
+@Enhances(['Controller', 'Interceptor'])
 trait RenderConverterTrait {
 
     /**

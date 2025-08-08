@@ -45,7 +45,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 class DirtyCheckTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     private static final ClassNode MY_TYPE = new ClassNode(DirtyCheck.class)
-    private static final String MY_TYPE_NAME = "@" + MY_TYPE.getNameWithoutPackage()
+    private static final String MY_TYPE_NAME = '@' + MY_TYPE.getNameWithoutPackage()
 
     CompilationUnit compilationUnit
 

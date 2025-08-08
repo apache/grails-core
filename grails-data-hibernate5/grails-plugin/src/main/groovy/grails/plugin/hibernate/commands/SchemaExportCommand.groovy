@@ -40,7 +40,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 @CompileStatic
 class SchemaExportCommand implements ApplicationCommand {
 
-    final String description = "Creates a DDL file of the database schema"
+    final String description = 'Creates a DDL file of the database schema'
     Boolean skipBootstrap = true
 
     @Override
@@ -66,7 +66,7 @@ class SchemaExportCommand implements ApplicationCommand {
         def file = new File(filename)
         file.parentFile.mkdirs()
 
-        HibernateDatastore hibernateDatastore = applicationContext.getBean("hibernateDatastore", HibernateDatastore)
+        HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSourceName)
 
         def serviceRegistry = ((SessionFactoryImplementor)hibernateDatastore.sessionFactory).getServiceRegistry()
@@ -79,8 +79,8 @@ class SchemaExportCommand implements ApplicationCommand {
                 .setDelimiter(';')
 
 
-        String action = export ? "Exporting" : "Generating script to ${file.path}"
-        String ds = argsMap.datasource ? "for DataSource '$argsMap.datasource'" : "for the default DataSource"
+        String action = export ? 'Exporting' : "Generating script to ${file.path}"
+        String ds = argsMap.datasource ? "for DataSource '$argsMap.datasource'" : 'for the default DataSource'
         println "$action in environment '${Environment.current.name}' $ds"
 
         EnumSet<TargetType> targetTypes

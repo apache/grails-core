@@ -39,7 +39,7 @@ import grails.web.mime.MimeType
 @ConfigurationProperties('grails.views.markup')
 class MarkupViewConfiguration extends TemplateConfiguration implements GenericViewConfiguration {
 
-    public static final String MODULE_NAME = "markup"
+    public static final String MODULE_NAME = 'markup'
 
     List<String> mimeTypes = [MimeType.XML.name, MimeType.HAL_XML.name]
 

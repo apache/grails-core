@@ -29,9 +29,9 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
 class YamlTocStrategy {
     private final parser = new Yaml(new SafeConstructor(new LoaderOptions()))
     private resourceChecker
-    private String ext = ".gdoc"
+    private String ext = '.gdoc'
 
-    YamlTocStrategy(resourceChecker, String ext = ".gdoc") {
+    YamlTocStrategy(resourceChecker, String ext = '.gdoc') {
         this.resourceChecker = resourceChecker
         this.ext = ext
     }
@@ -68,7 +68,7 @@ class YamlTocStrategy {
         if (sections.title) {
             node.title = sections.title
             sections = sections.clone()
-            sections.remove("title")
+            sections.remove('title')
         }
 
         for (s in sections) {

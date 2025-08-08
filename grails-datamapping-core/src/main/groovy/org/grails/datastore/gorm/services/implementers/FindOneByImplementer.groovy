@@ -50,7 +50,7 @@ class FindOneByImplementer extends FindAllByImplementer implements SingleResultS
         if(parameters.length == 1 && parameters[0].name == GormProperties.IDENTITY) {
             // add a method that invokes get(id)
             ArgumentListExpression argList = buildArgs(parameters, abstractMethodNode, body)
-            Expression queryMethodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), "get", argList)
+            Expression queryMethodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), 'get', argList)
             body.addStatement(
                 returnS(
                     queryMethodCall
@@ -79,6 +79,6 @@ class FindOneByImplementer extends FindAllByImplementer implements SingleResultS
 
     @Override
     protected String getDynamicFinderPrefix() {
-        return "findBy"
+        return 'findBy'
     }
 }

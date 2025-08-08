@@ -34,7 +34,7 @@ class TenantNotFoundException extends TenantException {
     }
 
     TenantNotFoundException() {
-        super("No tenantId found")
+        super('No tenantId found')
     }
 
     TenantNotFoundException(String s, Throwable throwable) {

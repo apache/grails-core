@@ -52,16 +52,16 @@ class GradleUtil {
 
     static ProjectConnection openGradleConnection(File baseDir) {
         GradleConnector gradleConnector = GradleConnector.newConnector().forProjectDirectory(baseDir)
-        if (System.getenv("GRAILS_GRADLE_HOME")) {
-            gradleConnector.useInstallation(new File(System.getenv("GRAILS_GRADLE_HOME")))
+        if (System.getenv('GRAILS_GRADLE_HOME')) {
+            gradleConnector.useInstallation(new File(System.getenv('GRAILS_GRADLE_HOME')))
         } else {
-            def userHome = System.getProperty("user.home")
+            def userHome = System.getProperty('user.home')
             if (userHome) {
-                File gradleFile = new File(baseDir, "gradle.properties")
+                File gradleFile = new File(baseDir, 'gradle.properties')
                 if (gradleFile.exists() && gradleFile.canRead()) {
                     Properties gradleProperties = new Properties()
                     gradleProperties.load(gradleFile.newInputStream())
-                    String gradleWrapperVersion = gradleProperties.getProperty("gradleWrapperVersion")
+                    String gradleWrapperVersion = gradleProperties.getProperty('gradleWrapperVersion')
 
                     File sdkManGradle = new File("$userHome/.sdkman/candidates/gradle/$gradleWrapperVersion")
                     if (sdkManGradle.exists() && sdkManGradle.isDirectory()) {
@@ -75,7 +75,7 @@ class GradleUtil {
     }
 
     static <T> T withProjectConnection(File baseDir, boolean suppressOutput = DEFAULT_SUPPRESS_OUTPUT,
-                                       @ClosureParams(value = SimpleType.class, options = "org.gradle.tooling.ProjectConnection") Closure<T> closure) {
+                                       @ClosureParams(value = SimpleType.class, options = 'org.gradle.tooling.ProjectConnection') Closure<T> closure) {
         ProjectConnection projectConnection = openGradleConnection(baseDir)
         try {
             if (suppressOutput) {
@@ -93,7 +93,7 @@ class GradleUtil {
     }
 
     static void runBuildWithConsoleOutput(ExecutionContext context,
-                                          @ClosureParams(value = SimpleType.class, options = "org.gradle.tooling.BuildLauncher") Closure<?> buildLauncherCustomizationClosure) {
+                                          @ClosureParams(value = SimpleType.class, options = 'org.gradle.tooling.BuildLauncher') Closure<?> buildLauncherCustomizationClosure) {
         withProjectConnection(context.getBaseDir(), DEFAULT_SUPPRESS_OUTPUT) { ProjectConnection projectConnection ->
             BuildLauncher launcher = projectConnection.newBuild()
             setupConsoleOutput(context, launcher)
@@ -117,7 +117,7 @@ class GradleUtil {
     }
 
     static <T> T runBuildActionWithConsoleOutput(ProjectContext context, BuildAction<T> buildAction,
-                                                 @ClosureParams(value = FromString.class, options = "org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
+                                                 @ClosureParams(value = FromString.class, options = 'org.gradle.tooling.BuildActionExecuter<T>') Closure<?> buildActionExecuterCustomizationClosure) {
         withProjectConnection(context.getBaseDir(), DEFAULT_SUPPRESS_OUTPUT) { ProjectConnection projectConnection ->
             runBuildActionWithConsoleOutput(projectConnection, context, buildAction, buildActionExecuterCustomizationClosure)
         }
@@ -128,7 +128,7 @@ class GradleUtil {
         runBuildActionWithConsoleOutput(connection, context, buildAction, null)
     }
 
-    static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction, @ClosureParams(value=FromString.class, options="org.gradle.tooling.BuildActionExecuter<T>") Closure<?> buildActionExecuterCustomizationClosure) {
+    static <T> T runBuildActionWithConsoleOutput(ProjectConnection connection, ProjectContext context, BuildAction<T> buildAction, @ClosureParams(value=FromString.class, options= 'org.gradle.tooling.BuildActionExecuter<T>') Closure<?> buildActionExecuterCustomizationClosure) {
         BuildActionExecuter<T> buildActionExecuter = connection.action(buildAction)
         setupConsoleOutput(context, buildActionExecuter)
         buildActionExecuterCustomizationClosure?.call(buildActionExecuter)

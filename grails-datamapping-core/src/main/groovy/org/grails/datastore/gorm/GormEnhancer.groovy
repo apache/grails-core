@@ -280,7 +280,7 @@ class GormEnhancer implements Closeable {
                 }
             }
             else {
-                log.debug("Return default tenant id for non-multitenant capable datastore")
+                log.debug('Return default tenant id for non-multitenant capable datastore')
                 return ConnectionSource.DEFAULT
             }
         }
@@ -383,10 +383,10 @@ class GormEnhancer implements Closeable {
     static Datastore findSingleDatastore() {
         Collection<Datastore> allDatastores = DATASTORES_BY_TYPE.values()
         if(allDatastores.isEmpty()) {
-            throw new IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")
+            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
         else if(allDatastores.size() > 1) {
-            throw new IllegalStateException("More than one GORM implementation is configured. Specific the datastore type!")
+            throw new IllegalStateException('More than one GORM implementation is configured. Specific the datastore type!')
         }
         else {
             return allDatastores.first()
@@ -478,7 +478,7 @@ class GormEnhancer implements Closeable {
     @CompileDynamic
     protected void removeConstraints() {
         try {
-            String className = "org.apache.groovy.grails.validation.ConstrainedProperty"
+            String className = 'org.apache.groovy.grails.validation.ConstrainedProperty'
             ClassLoader classLoader = getClass().getClassLoader()
             if(ClassUtils.isPresent(className, classLoader)) {
                 classLoader.loadClass(className).removeConstraint('unique')
@@ -490,7 +490,7 @@ class GormEnhancer implements Closeable {
 
     protected void registerConstraints(Datastore datastore) {
         try {
-            String className = "org.grails.datastore.gorm.support.ConstraintRegistrar"
+            String className = 'org.grails.datastore.gorm.support.ConstraintRegistrar'
             ClassLoader classLoader = getClass().getClassLoader()
             if(ClassUtils.isPresent(className, classLoader)) {
                 classLoader.loadClass(className).newInstance(datastore)

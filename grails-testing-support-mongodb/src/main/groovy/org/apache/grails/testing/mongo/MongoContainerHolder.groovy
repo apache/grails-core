@@ -39,7 +39,7 @@ class MongoContainerHolder {
     static GenericContainer startMongoContainer(DockerImageName dockerImageName) {
         GenericContainer dbContainer = new MongoDBContainer(dockerImageName)
         dbContainer.start()
-        dbContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
+        dbContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger('testcontainers')))
         dbContainer
     }
 

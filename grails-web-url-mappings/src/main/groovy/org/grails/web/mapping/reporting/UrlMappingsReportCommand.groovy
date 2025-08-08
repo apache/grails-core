@@ -38,12 +38,12 @@ import grails.web.mapping.reporting.UrlMappingsRenderer
 @Commons
 class UrlMappingsReportCommand implements ApplicationCommand {
 
-    final String description = "Prints out a report of the project's URL mappings"
+    final String description = /Prints out a report of the project's URL mappings/
 
     @Override
     boolean handle(ExecutionContext executionContext) {
         try {
-            def urlMappings = applicationContext.getBean("grailsUrlMappingsHolder", UrlMappings)
+            def urlMappings = applicationContext.getBean('grailsUrlMappingsHolder', UrlMappings)
 
             UrlMappingsRenderer renderer = new AnsiConsoleUrlMappingsRenderer()
             renderer.render(urlMappings.getUrlMappings().toList())

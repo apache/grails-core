@@ -35,7 +35,7 @@ import jakarta.validation.ParameterNameProvider
 @CompileStatic
 class ConfigurableParameterNameProvider implements ParameterNameProvider{
 
-    public static final String PREFIX = "arg"
+    public static final String PREFIX = 'arg'
     private Map<MethodKey, List<String>> parameterNames = [:]
 
     /**
@@ -54,7 +54,7 @@ class ConfigurableParameterNameProvider implements ParameterNameProvider{
     @Override
     List<String> getParameterNames(Constructor<?> constructor) {
         Class[] parameterTypes = constructor.parameterTypes
-        List<String> existing = parameterNames.get(new MethodKey("<init>", parameterTypes))
+        List<String> existing = parameterNames.get(new MethodKey('<init>', parameterTypes))
         if(existing != null) {
             return existing
         }

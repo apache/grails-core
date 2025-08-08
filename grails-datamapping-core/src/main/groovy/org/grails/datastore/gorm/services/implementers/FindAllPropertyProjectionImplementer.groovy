@@ -70,6 +70,6 @@ class FindAllPropertyProjectionImplementer extends AbstractProjectionImplementer
 
     @Override
     protected String getQueryMethodToInvoke(ClassNode domainClassNode, MethodNode newMethodNode) {
-        return "list"
+        return 'list'
     }
 }

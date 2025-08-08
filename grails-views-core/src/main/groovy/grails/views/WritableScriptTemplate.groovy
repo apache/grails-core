@@ -85,7 +85,7 @@ class WritableScriptTemplate implements Template {
             return templatePath.substring(0, templatePath.lastIndexOf('/'))
         }
         else {
-            return "/"
+            return '/'
         }
     }
     /**

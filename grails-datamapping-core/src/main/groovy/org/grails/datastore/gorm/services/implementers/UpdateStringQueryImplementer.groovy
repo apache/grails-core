@@ -56,16 +56,16 @@ class UpdateStringQueryImplementer extends AbstractStringQueryImplementer implem
     boolean isAnnotated(ClassNode domainClass, MethodNode methodNode) {
         AnnotationNode annotation = AstUtils.findAnnotation(methodNode, Query)
         if (annotation != null) {
-            Expression expr = annotation.getMember("value")
+            Expression expr = annotation.getMember('value')
             if (expr instanceof GStringExpression) {
                 GStringExpression gstring = (GStringExpression) expr
                 String queryStem = gstring.strings[0].text.toLowerCase(Locale.ENGLISH)
-                if (queryStem.contains("update") || queryStem.contains('delete')) {
+                if (queryStem.contains('update') || queryStem.contains('delete')) {
                     return true
                 }
             } else if (expr instanceof ConstantExpression) {
                 String queryStem = ((ConstantExpression) expr).text.toLowerCase(Locale.ENGLISH)
-                if (queryStem.contains("update") || queryStem.contains('delete')) {
+                if (queryStem.contains('update') || queryStem.contains('delete')) {
                     return true
                 }
             }
@@ -82,7 +82,7 @@ class UpdateStringQueryImplementer extends AbstractStringQueryImplementer implem
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression args) {
         ClassNode returnType = newMethodNode.returnType
         boolean isVoid = returnType == ClassHelper.VOID_TYPE
-        Expression methodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), "executeUpdate", args)
+        Expression methodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), 'executeUpdate', args)
         methodCall = isVoid ? methodCall : castX(returnType.plainNodeReference, methodCall)
         return isVoid ? stmt(methodCall) : returnS(methodCall)
     }

@@ -81,7 +81,7 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
                         propertySources = loadPropertiesConfig(resource)
                     }
                 } else {
-                    log.debug("Config file {} not found", [finalLocation] as Object[])
+                    log.debug('Config file {} not found', [finalLocation] as Object[])
                 }
             }
             propertySources.each {
@@ -142,7 +142,7 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
 
     // Load groovy config from classpath
     private static List<PropertySource<?>> loadClassConfig(Class location, Map currentConfig) {
-        log.info("Loading config class {}", location.name)
+        log.info('Loading config class {}', location.name)
         ConfigSlurper slurper = new ConfigSlurper(Environment.current.name)
         WriteFilteringMap filterMap = new WriteFilteringMap(currentConfig)
         slurper.binding = filterMap
@@ -154,7 +154,7 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
 
     // Load groovy config from resource
     private static List<PropertySource<?>> loadGroovyConfig(Resource resource, String encoding, Map currentConfig) {
-        log.info("Loading groovy config file {}", resource.URI)
+        log.info('Loading groovy config file {}', resource.URI)
         String configText = resource.inputStream.getText(encoding)
         ConfigSlurper slurper = new ConfigSlurper(Environment.current.name)
         WriteFilteringMap filterMap = new WriteFilteringMap(currentConfig)
@@ -167,12 +167,12 @@ class ExternalConfigRunListener implements SpringApplicationRunListener {
     }
 
     private List<PropertySource<?>> loadYamlConfig(Resource resource) {
-        log.info("Loading YAML config file {}", resource.URI)
+        log.info('Loading YAML config file {}', resource.URI)
         return yamlPropertySourceLoader.load(resource.filename, resource, null)
     }
 
     private List<PropertySource<?>> loadPropertiesConfig(Resource resource) {
-        log.info("Loading properties config file {}", resource.URI)
+        log.info('Loading properties config file {}', resource.URI)
         return propertiesPropertySourceLoader.load(resource.filename, resource)
     }
 

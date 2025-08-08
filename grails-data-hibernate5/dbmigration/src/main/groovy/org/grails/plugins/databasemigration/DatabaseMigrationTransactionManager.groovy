@@ -44,9 +44,9 @@ class DatabaseMigrationTransactionManager {
      * @return The transactionManager bean for the current dataSource
      */
     PlatformTransactionManager getTransactionManager() {
-        String dataSource = this.dataSource ?: "dataSource"
-        String beanName = "transactionManager"
-        if (dataSource != "dataSource") {
+        String dataSource = this.dataSource ?: 'dataSource'
+        String beanName = 'transactionManager'
+        if (dataSource != 'dataSource') {
             beanName += "_${dataSource}"
         }
         applicationContext.getBean(beanName, PlatformTransactionManager)
@@ -133,7 +133,7 @@ class DatabaseMigrationTransactionManager {
      * @return The result of the closure execution
      */
     void withTransaction(TransactionDefinition definition, Closure callable) {
-        Assert.notNull transactionManager, "No transactionManager bean configured"
+        Assert.notNull transactionManager, 'No transactionManager bean configured'
 
         if (!callable) {
             return

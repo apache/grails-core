@@ -102,13 +102,13 @@ class RenderTagLib implements TagLibrary {
         if (root != null && root != exception && root.message != exception.message) {
             currentOut << "<dt>Caused by</dt><dd>${htmlEncoder.encode(root.message)}</dd>"
         }
-        currentOut << "</dl>"
+        currentOut << '</dl>'
 
         currentOut << errorsViewStackTracePrinter.prettyPrintCodeSnippet(exception, attrs)
 
         def trace = errorsViewStackTracePrinter.prettyPrint(exception.cause ?: exception, attrs)
         if (StringUtils.hasText(trace.trim())) {
-            currentOut << "<h2>Trace</h2>"
+            currentOut << '<h2>Trace</h2>'
             currentOut << """<pre class="${attrs['stackClass'] ?: 'stack'}">"""
             currentOut << htmlEncoder.encode(trace)
             currentOut << '</pre>'

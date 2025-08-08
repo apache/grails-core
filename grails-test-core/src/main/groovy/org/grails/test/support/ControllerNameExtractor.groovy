@@ -35,7 +35,7 @@ class ControllerNameExtractor {
      * @return the controller name or null if nothing could be derived
      */
     static String extractControllerNameFromTestClassName(String testClassName, String[] testClassSuffixes) {
-        def patternSuffix = testClassSuffixes ? "(${testClassSuffixes.join('$|')})" : ""
+        def patternSuffix = testClassSuffixes ? "(${testClassSuffixes.join('$|')})" : ''
         def pattern = ~"(\\w*)Controller\\w*${patternSuffix}"
 
         def matches = testClassName =~ pattern

@@ -38,7 +38,7 @@ class FileInputRenderer implements DomainInputRenderer {
 
     @Override
     Closure renderInput(Map defaultAttributes, DomainProperty property) {
-        defaultAttributes.type = "file"
+        defaultAttributes.type = 'file'
         return { ->
             input(defaultAttributes)
         }

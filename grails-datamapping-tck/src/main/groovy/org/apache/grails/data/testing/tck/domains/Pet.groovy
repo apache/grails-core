@@ -27,7 +27,7 @@ class Pet implements Serializable {
     Long version
     String name
     Date birthDate = new Date()
-    PetType type = new PetType(name: "Unknown")
+    PetType type = new PetType(name: 'Unknown')
     Person owner
     Integer age
     Face face

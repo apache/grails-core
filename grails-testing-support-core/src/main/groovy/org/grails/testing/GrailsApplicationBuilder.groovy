@@ -133,8 +133,8 @@ class GrailsApplicationBuilder {
 
         def classLoader = this.class.classLoader
         ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
-            it.startsWith("org.grails")
-            && !it.contains("UrlMappingsAutoConfiguration") // this currently is causing an issue with tests
+            it.startsWith('org.grails')
+            && !it.contains('UrlMappingsAutoConfiguration') // this currently is causing an issue with tests
         }.each {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
@@ -181,7 +181,7 @@ class GrailsApplicationBuilder {
 
             conversionService(ConversionServiceFactoryBean)
 
-            xmlns context: "http://www.springframework.org/schema/context"
+            xmlns context: 'http://www.springframework.org/schema/context'
             // adds AutowiredAnnotationBeanPostProcessor, CommonAnnotationBeanPostProcessor and others
             // see org.springframework.context.annotation.AnnotationConfigUtils.registerAnnotationConfigProcessors method
             context.'annotation-config'()

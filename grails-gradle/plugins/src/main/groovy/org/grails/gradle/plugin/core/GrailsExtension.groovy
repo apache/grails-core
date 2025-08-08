@@ -96,12 +96,12 @@ class GrailsExtension {
     static class Agent {
         boolean enabled = true
         File path
-        String inclusions = "grails.plugins..*"
+        String inclusions = 'grails.plugins..*'
         String exclusions
         Boolean logging
         boolean synchronize = true
         boolean allowSplitPackages = true
-        File cacheDir = new File("build/springloaded")
+        File cacheDir = new File('build/springloaded')
 
         Map<String, String> systemProperties = ['jdk.reflect.allowGetCallerClass': 'true']
         List<String> jvmArgs = ['-Xverify:none']

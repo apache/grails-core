@@ -35,7 +35,7 @@ class TextareaInputRenderer implements DomainInputRenderer {
 
     @Override
     boolean supports(DomainProperty domainProperty) {
-        domainProperty.constrained?.widget == "textarea"
+        domainProperty.constrained?.widget == 'textarea'
     }
 
     @Override

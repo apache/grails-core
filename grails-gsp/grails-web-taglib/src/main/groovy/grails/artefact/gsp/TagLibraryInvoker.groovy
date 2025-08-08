@@ -53,8 +53,8 @@ trait TagLibraryInvoker extends WebAttributes{
         def lookup = this.tagLibraryLookup
         if(lookup == null) {
             def applicationContext = getGrailsApplication()?.mainContext
-            if(applicationContext?.containsBean("gspTagLibraryLookup")) {
-                lookup = applicationContext?.getBean("gspTagLibraryLookup", TagLibraryLookup)
+            if(applicationContext?.containsBean('gspTagLibraryLookup')) {
+                lookup = applicationContext?.getBean('gspTagLibraryLookup', TagLibraryLookup)
                 setTagLibraryLookup(lookup)
             }
         }
@@ -99,9 +99,9 @@ trait TagLibraryInvoker extends WebAttributes{
     }
 
     private boolean shouldHandleMethodMissing(String methodName, Object[] args) {
-        if("render".equals(methodName)) {
+        if('render'.equals(methodName)) {
             // don't add any new metamethod if an existing render method exists, see GRAILS-11581
-            return !this.respondsTo("render")
+            return !this.respondsTo('render')
         } else {
             return true
         }

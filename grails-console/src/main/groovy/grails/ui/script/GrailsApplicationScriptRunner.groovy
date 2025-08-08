@@ -55,7 +55,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
         }
 
         def binding = new Binding()
-        binding.setVariable("ctx", ctx)
+        binding.setVariable('ctx', ctx)
 
         Config config = ctx.getBean('grailsApplication', GrailsApplication).config
         String defaultPackageKey = 'grails.codegen.defaultPackage'
@@ -128,7 +128,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
 
             new GrailsApplicationScriptRunner(scripts, applicationClass).run(args)
         } else {
-            System.err.println("Missing application class name and script name arguments")
+            System.err.println('Missing application class name and script name arguments')
             System.exit(1)
         }
     }

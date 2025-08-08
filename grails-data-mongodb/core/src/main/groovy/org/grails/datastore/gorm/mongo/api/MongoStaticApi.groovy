@@ -278,7 +278,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
             }
 
 
-            def score = Projections.metaTextScore("score")
+            def score = Projections.metaTextScore('score')
             search = wrapFilterWithMultiTenancy(search)
             FindIterable cursor = coll.find(search)
                                             .projection(score)

@@ -199,7 +199,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
     }
 
     @Autowired(required = false)
-    @Qualifier("grailsDomainClassMappingContext")
+    @Qualifier('grailsDomainClassMappingContext')
     void setMappingContext(MappingContext mappingContext) {
         this.mappingContext = mappingContext
     }
@@ -347,7 +347,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
 
             while(qualifierQueue.peekLast() != null) {
                 boolean isEmpty = qualifierQueue.isEmpty()
-                String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ""
+                String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ''
                 String qualifiedLanguageSpecificPath = "${originalPath}_${language}${qualified}${extensionSuffix}"
                 String qualifiedPath = "${originalPath}${qualified}${extensionSuffix}"
                 qualifiedPaths.add qualifiedPath
@@ -372,7 +372,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                 qualifierQueue.addAll(qualifiers.reverse())
                 while(qualifierQueue.peekLast() != null) {
                     boolean isEmpty = qualifierQueue.isEmpty()
-                    String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ""
+                    String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ''
                     String qualifiedLanguageSpecificPath = "${originalPath}_${language}${qualified}${extensionSuffix}"
                     String qualifiedPath = "${originalPath}${qualified}${extensionSuffix}"
                     qualifiedPaths.add qualifiedPath

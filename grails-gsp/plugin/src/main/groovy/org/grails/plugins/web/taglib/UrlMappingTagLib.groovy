@@ -69,7 +69,7 @@ class UrlMappingTagLib implements TagLibrary{
     Closure include = { Map attrs, body ->
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
-            def controllerName = ((GroovyObject)controller)?.getProperty("controllerName")
+            def controllerName = ((GroovyObject)controller)?.getProperty('controllerName')
             attrs.controller = controllerName
         }
 
@@ -123,7 +123,7 @@ class UrlMappingTagLib implements TagLibrary{
         TypeConvertingMap attrs = (TypeConvertingMap)attrsMap
         def writer = out
         if (attrs.total == null) {
-            throwTagError("Tag [paginate] is missing required attribute [total]")
+            throwTagError('Tag [paginate] is missing required attribute [total]')
         }
 
         def messageSource = grailsAttributes.messageSource
@@ -280,19 +280,19 @@ class UrlMappingTagLib implements TagLibrary{
     Closure sortableColumn = { Map attrs ->
         def writer = out
         if (!attrs.property) {
-            throwTagError("Tag [sortableColumn] is missing required attribute [property]")
+            throwTagError('Tag [sortableColumn] is missing required attribute [property]')
         }
 
         if (!attrs.title && !attrs.titleKey) {
-            throwTagError("Tag [sortableColumn] is missing required attribute [title] or [titleKey]")
+            throwTagError('Tag [sortableColumn] is missing required attribute [title] or [titleKey]')
         }
 
-        def property = attrs.remove("property")
-        def action = attrs.action ? attrs.remove("action") : (actionName ?: "list")
-        def namespace = attrs.remove("namespace")
+        def property = attrs.remove('property')
+        def action = attrs.action ? attrs.remove('action') : (actionName ?: 'list')
+        def namespace = attrs.remove('namespace')
 
-        def defaultOrder = attrs.remove("defaultOrder")
-        if (defaultOrder != "desc") defaultOrder = "asc"
+        def defaultOrder = attrs.remove('defaultOrder')
+        if (defaultOrder != 'desc') defaultOrder = 'asc'
 
         // current sorting property and order
         def sort = params.sort
@@ -300,8 +300,8 @@ class UrlMappingTagLib implements TagLibrary{
 
         // add sorting property and params to link params
         Map linkParams = [:]
-        if (params.id) linkParams.put("id", params.id)
-        def paramsAttr = attrs.remove("params")
+        if (params.id) linkParams.put('id', params.id)
+        def paramsAttr = attrs.remove('params')
         if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr)
         linkParams.sort = property
 
@@ -310,14 +310,14 @@ class UrlMappingTagLib implements TagLibrary{
         if (params.offset) linkParams.offset = params.offset
 
         // determine and add sorting order for this column to link params
-        attrs['class'] = (attrs['class'] ? "${attrs['class']} sortable" : "sortable")
+        attrs['class'] = (attrs['class'] ? "${attrs['class']} sortable" : 'sortable')
         if (property == sort) {
-            attrs['class'] = (attrs['class'] as String) + " sorted " + order
-            if (order == "asc") {
-                linkParams.order = "desc"
+            attrs['class'] = (attrs['class'] as String) + ' sorted ' + order
+            if (order == 'asc') {
+                linkParams.order = 'desc'
             }
             else {
-                linkParams.order = "asc"
+                linkParams.order = 'asc'
             }
         }
         else {
@@ -325,8 +325,8 @@ class UrlMappingTagLib implements TagLibrary{
         }
 
         // determine column title
-        String title = attrs.remove("title") as String
-        String titleKey = attrs.remove("titleKey") as String
+        String title = attrs.remove('title') as String
+        String titleKey = attrs.remove('titleKey') as String
         Object mapping = attrs.remove('mapping')
         if (titleKey) {
             if (!title) title = titleKey
@@ -335,14 +335,14 @@ class UrlMappingTagLib implements TagLibrary{
             title = messageSource.getMessage(titleKey, null, title, locale)
         }
 
-        writer << "<th "
+        writer << '<th '
         // process remaining attributes
         Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
         attrs.each { k, v ->
             writer << k
-            writer << "=\""
+            writer << '="'
             writer << htmlEncoder.encode(v)
-            writer << "\" "
+            writer << '" '
         }
         writer << '>'
         Map linkAttrs = [:]

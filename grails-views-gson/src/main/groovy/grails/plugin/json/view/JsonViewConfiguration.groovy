@@ -39,7 +39,7 @@ import grails.web.mime.MimeType
 @ConfigurationProperties('grails.views.json')
 class JsonViewConfiguration implements GenericViewConfiguration {
 
-    public static final String MODULE_NAME = "json"
+    public static final String MODULE_NAME = 'json'
 
     List<String> mimeTypes = [MimeType.JSON.name, MimeType.HAL_JSON.name]
 

@@ -48,7 +48,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     /**
      * The encoding to use
      */
-    String encoding = "UTF-8"
+    String encoding = 'UTF-8'
     /**
      * Whether to pretty print
      */
@@ -64,7 +64,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     /**
      * The package name to use
      */
-    String packageName = Metadata.getCurrent().getApplicationName() ?: ""
+    String packageName = Metadata.getCurrent().getApplicationName() ?: ''
     /**
      * Whether to compile templates statically
      */
@@ -91,7 +91,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     String templatePath = {
         def current = Environment.current
         def pathToTemplates = current.hasReloadLocation() ? current.reloadLocation : BuildSettings.BASE_DIR?.path
-        pathToTemplates ? new File(pathToTemplates, GrailsResourceUtils.VIEWS_DIR_PATH).path : "./grails-app/views"
+        pathToTemplates ? new File(pathToTemplates, GrailsResourceUtils.VIEWS_DIR_PATH).path : './grails-app/views'
     }()
     /**
      * The default package imports
@@ -100,7 +100,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     /**
      * The default static imports
      */
-    String[] staticImports = ["org.springframework.http.HttpStatus", "org.springframework.http.HttpMethod", "grails.web.http.HttpHeaders"] as String[]
+    String[] staticImports = ['org.springframework.http.HttpStatus', 'org.springframework.http.HttpMethod', 'grails.web.http.HttpHeaders'] as String[]
 
     @Override
     void setGrailsApplication(GrailsApplication grailsApplication) {

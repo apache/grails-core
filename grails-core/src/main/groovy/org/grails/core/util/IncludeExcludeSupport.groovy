@@ -29,8 +29,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class IncludeExcludeSupport<T> {
 
-    static final String INCLUDES_PROPERTY = "includes"
-    static final String EXCLUDES_PROPERTY = "excludes"
+    static final String INCLUDES_PROPERTY = 'includes'
+    static final String EXCLUDES_PROPERTY = 'excludes'
 
     List<T> defaultIncludes
     List<T> defaultExcludes

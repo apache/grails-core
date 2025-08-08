@@ -63,7 +63,7 @@ class SaveImplementer extends AbstractSaveImplementer implements SingleResultSer
         int parameterCount = parameters.length
         if(parameterCount == 1 && AstUtils.isDomainClass(parameters[0].type)) {
             body.addStatement(
-                returnS( callX( varX( parameters[0] ), "save", namedArgs(failOnError: ConstantExpression.TRUE) ) )
+                returnS( callX( varX( parameters[0] ), 'save', namedArgs(failOnError: ConstantExpression.TRUE) ) )
             )
         }
         else {

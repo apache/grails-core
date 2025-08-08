@@ -40,7 +40,7 @@ class GlobalImportTransformation implements ASTTransformation, TransformWithPrio
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
         ModuleNode ast = source.getAST()
-        ast.addImport("Autowired", ClassHelper.make("org.springframework.beans.factory.annotation.Autowired"))
+        ast.addImport('Autowired', ClassHelper.make('org.springframework.beans.factory.annotation.Autowired'))
     }
 
     @Override

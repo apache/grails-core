@@ -104,7 +104,7 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
 
     @Override
     def <F extends ConnectionSourceSettings> MongoConnectionSourceSettings buildRuntimeSettings(String name, PropertyResolver configuration, F fallbackSettings) {
-        MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, "", fallbackSettings)
+        MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, '', fallbackSettings)
         MongoClientSettings.Builder builder = clientOptionsBuilder ?: settingsBuilder.clientOptionsBuilder
         MongoConnectionSourceSettings settings = settingsBuilder.build()
         if(builder != null) {

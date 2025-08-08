@@ -37,7 +37,7 @@ import grails.web.mime.MimeType
 @CompileStatic
 class HalJsonDataBindingSourceCreator extends JsonDataBindingSourceCreator {
 
-    public static final String HAL_EMBEDDED_ELEMENT = "_embedded"
+    public static final String HAL_EMBEDDED_ELEMENT = '_embedded'
 
     @Override
     MimeType[] getMimeTypes() {

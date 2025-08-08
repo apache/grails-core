@@ -98,12 +98,12 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
         sourceDocsDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir('manual'))
         projectVersion = objects.property(String).convention(project.provider { project.version as String })
         filesToAddDropdowns = objects.fileCollection()
-        modifiedPagesDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir("modified-pages"))
+        modifiedPagesDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir('modified-pages'))
         gitTags = objects.fileProperty().convention(project.layout.buildDirectory.file('git-tags.txt'))
         minimumVersion = objects.property(SoftwareVersion).convention(new SoftwareVersion(major: 5))
-        docBaseUrl = objects.property(String).convention("https://docs.grails.org")
-        versionHtml = objects.property(String).convention(project.provider{ "<p><strong>Version:</strong> " + projectVersion.get() + "</p>" })
-        additionalPath = objects.property(String).convention("")
+        docBaseUrl = objects.property(String).convention('https://docs.grails.org')
+        versionHtml = objects.property(String).convention(project.provider{ '<p><strong>Version:</strong> ' + projectVersion.get() + '</p>' })
+        additionalPath = objects.property(String).convention('')
     }
 
     /**
@@ -172,13 +172,13 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
     private List<String> options(String version, String pageRelativePath, List<SoftwareVersion> softwareVersions) {
         List<String> options = []
 
-        final String snapshotHref = docBaseUrl.get() + "/snapshot/" + additionalPath.get() + pageRelativePath
-        options << option(snapshotHref, "SNAPSHOT", version.endsWith("-SNAPSHOT"))
+        final String snapshotHref = docBaseUrl.get() + '/snapshot/' + additionalPath.get() + pageRelativePath
+        options << option(snapshotHref, 'SNAPSHOT', version.endsWith('-SNAPSHOT'))
 
         softwareVersions
                 .forEach { softwareVersion ->
                     final String versionName = softwareVersion?.versionText
-                    final String href = docBaseUrl.get() + "/" + (versionName?.endsWith("-SNAPSHOT") ? "snapshot" : versionName) + "/" + additionalPath.get() + pageRelativePath
+                    final String href = docBaseUrl.get() + '/' + (versionName?.endsWith('-SNAPSHOT') ? 'snapshot' : versionName) + '/' + additionalPath.get() + pageRelativePath
                     options << option(href, versionName, version == versionName)
                 }
 
@@ -192,7 +192,7 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
      * @return The select tag with the options
      */
     private String select(List<String> options) {
-        String selectHtml = "<select onChange='window.document.location.href=this.options[this.selectedIndex].value;'>"
+        String selectHtml = /<select onChange='window.document.location.href=this.options[this.selectedIndex].value;'>/
         options.each { option -> selectHtml += option
         }
         selectHtml += '</select>'

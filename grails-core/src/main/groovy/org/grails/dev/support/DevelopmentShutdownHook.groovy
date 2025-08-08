@@ -34,7 +34,7 @@ import org.springframework.context.ConfigurableApplicationContext
  */
 class DevelopmentShutdownHook implements ApplicationContextAware {
 
-    public static final String INSTALLED = "grails.shutdown.hook.installed"
+    public static final String INSTALLED = 'grails.shutdown.hook.installed'
 
     @CompileStatic
     void setApplicationContext(ApplicationContext applicationContext) {
@@ -52,6 +52,6 @@ class DevelopmentShutdownHook implements ApplicationContextAware {
             }
         }
 
-        System.setProperty(INSTALLED, "true")
+        System.setProperty(INSTALLED, 'true')
     }
 }

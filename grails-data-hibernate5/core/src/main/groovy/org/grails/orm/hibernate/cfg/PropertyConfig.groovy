@@ -358,7 +358,7 @@ class PropertyConfig extends Property {
 
     String getEnumType() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return "default"
+        if(columns.isEmpty()) return 'default'
         return columns[0].enumType
     }
 
@@ -452,7 +452,7 @@ class PropertyConfig extends Property {
 
     protected void checkHasSingleColumn() {
         if (columns?.size() > 1) {
-            throw new RuntimeException("Cannot treat multi-column property as a single-column property")
+            throw new RuntimeException('Cannot treat multi-column property as a single-column property')
         }
     }
 

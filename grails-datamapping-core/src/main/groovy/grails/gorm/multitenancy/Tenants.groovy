@@ -73,7 +73,7 @@ class Tenants {
             return currentId(multiTenantCapableDatastore)
         }
         else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 
@@ -118,7 +118,7 @@ class Tenants {
             }
         }
         else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 
@@ -135,7 +135,7 @@ class Tenants {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return withoutId(multiTenantCapableDatastore, callable)
         } else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 
@@ -153,7 +153,7 @@ class Tenants {
             return withId(multiTenantCapableDatastore, tenantIdentifier, callable)
         }
         else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 
@@ -172,7 +172,7 @@ class Tenants {
             return withId(multiTenantCapableDatastore, tenantIdentifier, callable)
         }
         else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 
@@ -189,7 +189,7 @@ class Tenants {
             return withId(multiTenantCapableDatastore, tenantId, callable)
         }
         else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
     /**
@@ -205,7 +205,7 @@ class Tenants {
             return withId(multiTenantCapableDatastore, tenantId, callable)
         }
         else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 
@@ -238,7 +238,7 @@ class Tenants {
                         case 2:
                             return callable.call(ConnectionSource.DEFAULT, session)
                         default:
-                            throw new IllegalArgumentException("Provided closure accepts too many arguments")
+                            throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
 
                 }
@@ -270,7 +270,7 @@ class Tenants {
                             return callable.call(tenantId)
                             break
                         default:
-                            throw new IllegalArgumentException("Provided closure accepts too many arguments")
+                            throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
                 }
             }
@@ -287,7 +287,7 @@ class Tenants {
                         case 2:
                             return callable.call(tenantId, session)
                         default:
-                            throw new IllegalArgumentException("Provided closure accepts too many arguments")
+                            throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
 
                 }
@@ -336,7 +336,7 @@ class Tenants {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             eachTenant(multiTenantCapableDatastore, callable)
         } else {
-            throw new UnsupportedOperationException("Datastore implementation does not support multi-tenancy")
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
         }
     }
 

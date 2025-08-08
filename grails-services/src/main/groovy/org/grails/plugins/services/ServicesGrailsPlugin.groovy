@@ -41,14 +41,14 @@ class ServicesGrailsPlugin extends Plugin  {
     def loadAfter = ['hibernate']
 
 
-    def watchedResources = ["file:./grails-app/services/**/*Service.groovy",
-                            "file:./plugins/*/grails-app/services/**/*Service.groovy"]
+    def watchedResources = ['file:./grails-app/services/**/*Service.groovy',
+                            'file:./plugins/*/grails-app/services/**/*Service.groovy']
 
     Closure doWithSpring() {{->
         GrailsApplication application = grailsApplication
         final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean.class, false)
         if(springTransactionManagement) {
-            throw new GrailsConfigurationException("Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead")
+            throw new GrailsConfigurationException('Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead')
         }
 
         for (GrailsServiceClass serviceClass in application.getArtefacts(ServiceArtefactHandler.TYPE)) {
@@ -60,8 +60,8 @@ class ServicesGrailsPlugin extends Plugin  {
             } else {
                 beanName = serviceClass.propertyName
             }
-            def scope = serviceClass.getPropertyValue("scope")
-            def lazyInit = serviceClass.hasProperty("lazyInit") ? serviceClass.getPropertyValue("lazyInit") : true
+            def scope = serviceClass.getPropertyValue('scope')
+            def lazyInit = serviceClass.hasProperty('lazyInit') ? serviceClass.getPropertyValue('lazyInit') : true
 
             "${beanName}"(serviceClass.getClazz()) { bean ->
                 bean.autowire =  true
@@ -89,7 +89,7 @@ class ServicesGrailsPlugin extends Plugin  {
             if (Modifier.isAbstract(javaClass.modifiers)) return
             def serviceClass = (GrailsServiceClass) application.addArtefact(ServiceArtefactHandler.TYPE, (Class) event.source)
             def serviceName = "${serviceClass.propertyName}"
-            def scope = serviceClass.getPropertyValue("scope")
+            def scope = serviceClass.getPropertyValue('scope')
 
             beans {
                 "$serviceName"(serviceClass.getClazz()) { bean ->

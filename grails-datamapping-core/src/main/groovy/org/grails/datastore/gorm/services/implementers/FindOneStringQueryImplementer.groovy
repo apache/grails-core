@@ -49,7 +49,7 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
         String methodToExecute = getFindMethodToInvoke(domainClassNode, newMethodNode, returnType)
 
-        if(methodToExecute != "find") {
+        if(methodToExecute != 'find') {
             queryArg = args(queryArg, AstUtils.mapX(max:constX(1)))
         }
 
@@ -58,7 +58,7 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
                 queryArg)
 
         if(!AstUtils.isDomainClass(returnType)) {
-            queryCall = callX(queryCall, "first")
+            queryCall = callX(queryCall, 'first')
         }
         returnS(
            queryCall
@@ -67,10 +67,10 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
 
     protected String getFindMethodToInvoke(ClassNode classNode, MethodNode methodNode, ClassNode returnType) {
         if(AstUtils.isDomainClass(returnType)) {
-            return "find"
+            return 'find'
         }
         else {
-            return "executeQuery"
+            return 'executeQuery'
         }
     }
 
@@ -79,14 +79,14 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
         if(AstUtils.isDomainClass(returnType)) {
             return true
         }
-        else if(!AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) && !returnType.isArray() && !returnType.packageName?.startsWith("rx.")) {
+        else if(!AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) && !returnType.isArray() && !returnType.packageName?.startsWith('rx.')) {
             def queryAnnotation = AstUtils.findAnnotation(methodNode, getAnnotationType())
-            def query = queryAnnotation.getMember("value")
+            def query = queryAnnotation.getMember('value')
             if(query instanceof GStringExpression) {
                 GStringExpression gstring = (GStringExpression)query
                 List<ConstantExpression> strings = gstring.strings
                 ConstantExpression stem = strings.first()
-                if(stem.text.toLowerCase(Locale.ENGLISH).contains("select")) {
+                if(stem.text.toLowerCase(Locale.ENGLISH).contains('select')) {
                     return returnType != ClassHelper.VOID_TYPE
                 }
             }

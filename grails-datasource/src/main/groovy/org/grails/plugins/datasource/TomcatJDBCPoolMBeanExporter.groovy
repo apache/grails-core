@@ -83,12 +83,12 @@ class TomcatJDBCPoolMBeanExporter extends MBeanExporter {
             }
             properties.dataSource = dataSourceName
         } else {
-            if(poolName.startsWith("Tomcat Connection Pool[")) {
+            if(poolName.startsWith('Tomcat Connection Pool[')) {
                 // use bean name if the pool has a default name
                 poolName=beanName
             }
         }
-        if(!poolName.startsWith("Tomcat Connection Pool[")) {
+        if(!poolName.startsWith('Tomcat Connection Pool[')) {
             properties.pool = poolName
         }
         return new ObjectName('grails.dataSource', properties)

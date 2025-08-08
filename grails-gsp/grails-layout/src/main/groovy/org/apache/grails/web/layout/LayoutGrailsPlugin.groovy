@@ -37,7 +37,7 @@ class LayoutGrailsPlugin extends Plugin {
     public static final String DEFAULT_LAYOUT = 'grails.views.layout.default'
     public static final String GRAILS_LAYOUT_ENABLE_NONGSP = 'grails.views.layout.enable.nongsp'
 
-    def title = "Layout"
+    def title = 'Layout'
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
     def observe = ['controllers']

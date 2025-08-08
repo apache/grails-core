@@ -57,6 +57,6 @@ class FileSystemCommandResourceResolver implements CommandResourceResolver {
     }
 
     protected Resource getCommandsDirectory(Profile profile) {
-        profile.profileDir.createRelative("commands/")
+        profile.profileDir.createRelative('commands/')
     }
 }

@@ -35,7 +35,7 @@ import org.springframework.web.servlet.ViewResolver
 @CompileStatic
 class CompositeViewResolver {
 
-    public static final String BEAN_NAME = "compositeViewResolver"
+    public static final String BEAN_NAME = 'compositeViewResolver'
 
     @Autowired(required = false)
     List<ViewResolver> viewResolvers = []

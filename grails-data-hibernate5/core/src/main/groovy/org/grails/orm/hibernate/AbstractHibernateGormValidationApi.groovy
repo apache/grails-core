@@ -37,8 +37,8 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 @CompileStatic
 abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D> {
 
-    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
-    private static final String ARGUMENT_EVICT = "evict"
+    public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
+    private static final String ARGUMENT_EVICT = 'evict'
 
 
     protected ClassLoader classLoader
@@ -138,7 +138,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
         datastore.getApplicationEventPublisher().publishEvent(event)
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     private Errors filterErrors(Errors errors, Set validatedFields, Object target) {
         if (validatedFields == null) return errors
 

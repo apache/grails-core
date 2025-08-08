@@ -156,8 +156,8 @@ trait ResponseRedirector implements WebAttributes {
         String namespace = args.remove('namespace')
         String plugin = args.remove('plugin')?.toString()
         def id = args.id
-        def params = CollectionUtils.getOrCreateChildMap(args, "params")
-        def model = CollectionUtils.getOrCreateChildMap(args, "model")
+        def params = CollectionUtils.getOrCreateChildMap(args, 'params')
+        def model = CollectionUtils.getOrCreateChildMap(args, 'model')
 
         def actionParams = params.findAll { Map.Entry it -> it.key?.toString()?.startsWith('_action_') }
         actionParams.each { Map.Entry it -> params.remove(it.key) }

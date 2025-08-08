@@ -55,7 +55,7 @@ class FindAllStringQueryImplementer extends AbstractStringQueryImplementer imple
     @Override
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression args) {
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
-        String methodName = AstUtils.isIterableOrArrayOfDomainClasses(returnType) ? "findAll" : "executeQuery"
+        String methodName = AstUtils.isIterableOrArrayOfDomainClasses(returnType) ? 'findAll' : 'executeQuery'
         Expression methodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), methodName, args)
         methodCall = castX(returnType.plainNodeReference, methodCall)
         return returnS(methodCall)

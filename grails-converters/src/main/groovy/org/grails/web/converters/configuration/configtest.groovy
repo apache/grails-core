@@ -57,18 +57,18 @@ println "$label --> ${time}ms"
 map[label] = map[label] + time
 }
 
-test("default", defcfg)
-test("chained", chcfg)
-test("immutable", imcfg)
+test('default', defcfg)
+test('chained', chcfg)
+test('immutable', imcfg)
 
  map = [ immutable: 0, chained: 0, default: 0 ]
 
 100.times {
-    test("chained", chcfg)
-    test("immutable", imcfg)
-    test("default", defcfg)
+    test('chained', chcfg)
+    test('immutable', imcfg)
+    test('default', defcfg)
 }
 
-println "======"
+println '======'
 
 println map

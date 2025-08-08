@@ -95,7 +95,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 transformedInstances << objectId
 
                 List<Statement> statements = [
-                        stmt(callX(classX(System), "setProperty", args(propX(classX(BuildSettings), "MAIN_CLASS_NAME"), constX(classNode.name))))
+                        stmt(callX(classX(System), 'setProperty', args(propX(classX(BuildSettings), 'MAIN_CLASS_NAME'), constX(classNode.name))))
                 ]
                 classNode.addStaticInitializerStatements(statements, true)
 
@@ -114,7 +114,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                             GrailsASTUtils.error(source, classNode, "Do not place Groovy sources in common package names such as 'org', 'com', 'io' or 'net' as this can result in performance degradation of classpath scanning")
                         }
                         packageNamesBody.addStatement(new ReturnStatement(new ExpressionStatement(new ListExpression(packageNames.toList()))))
-                        AnnotatedNodeUtils.markAsGenerated(classNode, classNode.addMethod("packageNames", Modifier.PUBLIC, collectionClassNode, ZERO_PARAMETERS, null, packageNamesBody))
+                        AnnotatedNodeUtils.markAsGenerated(classNode, classNode.addMethod('packageNames', Modifier.PUBLIC, collectionClassNode, ZERO_PARAMETERS, null, packageNamesBody))
                     }
                 }
 
@@ -136,7 +136,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
     boolean shouldInject(URL url) {
         if(url == null) return false
         def res = new UrlResource(url)
-        return GrailsResourceUtils.isGrailsResource(res) && res.filename == "Application.groovy"
+        return GrailsResourceUtils.isGrailsResource(res) && res.filename == 'Application.groovy'
     }
 
     private AnnotationNode addAnnotation(String annotationClassName, ClassNode classNode, String conditionalClass = null) {

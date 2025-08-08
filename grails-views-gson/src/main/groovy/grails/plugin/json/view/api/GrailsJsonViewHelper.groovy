@@ -37,7 +37,7 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
     /**
      * The deep parameter
      */
-    String DEEP = "deep"
+    String DEEP = 'deep'
 
     /**
      * Renders a template and returns the output

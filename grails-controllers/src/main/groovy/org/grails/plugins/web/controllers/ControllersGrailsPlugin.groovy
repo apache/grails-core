@@ -45,8 +45,8 @@ import org.grails.web.servlet.view.CompositeViewResolver
 class ControllersGrailsPlugin extends Plugin {
 
     def watchedResources = [
-            "file:./grails-app/controllers/**/*Controller.groovy",
-            "file:./plugins/*/grails-app/controllers/**/*Controller.groovy"]
+            'file:./grails-app/controllers/**/*Controller.groovy',
+            'file:./plugins/*/grails-app/controllers/**/*Controller.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
     def observe = ['domainClass']
@@ -71,7 +71,7 @@ class ControllersGrailsPlugin extends Plugin {
 
         "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
 
-        def handlerInterceptors = springConfig.containsBean("localeChangeInterceptor") ? [ref("localeChangeInterceptor")] : []
+        def handlerInterceptors = springConfig.containsBean('localeChangeInterceptor') ? [ref('localeChangeInterceptor')] : []
         def interceptorsClosure = {
             interceptors = handlerInterceptors
         }
@@ -82,12 +82,12 @@ class ControllersGrailsPlugin extends Plugin {
         for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
             log.debug "Configuring controller $controller.fullName"
             if (controller.available) {
-                def lazyInit = controller.hasProperty("lazyInit") ? controller.getPropertyValue("lazyInit") : true
+                def lazyInit = controller.hasProperty('lazyInit') ? controller.getPropertyValue('lazyInit') : true
                 "${controller.fullName}"(controller.clazz) { bean ->
                     bean.lazyInit = lazyInit
                     def beanScope = controller.getScope()
                     bean.scope = beanScope
-                    bean.autowire =  "byName"
+                    bean.autowire = 'byName'
                     if (beanScope == 'prototype') {
                         bean.beanDefinition.dependencyCheck = AbstractBeanDefinition.DEPENDENCY_CHECK_NONE
                     }
@@ -123,7 +123,7 @@ class ControllersGrailsPlugin extends Plugin {
                 "${controllerClass.fullName}"(controllerClass.clazz) { bean ->
                     def beanScope = controllerClass.getScope()
                     bean.scope = beanScope
-                    bean.autowire = "byName"
+                    bean.autowire = 'byName'
                     if (beanScope == 'prototype') {
                         bean.beanDefinition.dependencyCheck = AbstractBeanDefinition.DEPENDENCY_CHECK_NONE
                     }

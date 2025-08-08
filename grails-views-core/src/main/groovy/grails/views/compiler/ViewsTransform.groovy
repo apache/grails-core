@@ -64,7 +64,7 @@ import org.grails.core.io.support.GrailsFactoriesLoader
 @GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
 @CompileStatic
 class ViewsTransform implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
-    public static final String APPLIED = "grails.views.transform.APPLIED"
+    public static final String APPLIED = 'grails.views.transform.APPLIED'
 
     final String extension
     String dynamicPrefix
@@ -103,7 +103,7 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
 
                     def modelTypesVisitor = new ModelTypesVisitor(source)
                     modelTypesVisitor.visitClass(classNode)
-                    def runMethod = classNode.getMethod("run", GrailsASTUtils.ZERO_PARAMETERS)
+                    def runMethod = classNode.getMethod('run', GrailsASTUtils.ZERO_PARAMETERS)
                     def stm = runMethod.code
                     if(stm instanceof BlockStatement) {
                         BlockStatement bs = (BlockStatement)stm
@@ -186,7 +186,7 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
             def methodName = call.getMethodAsString()
             def arguments = call.getArguments()
 
-            if( methodName == "model" &&  (arguments instanceof ArgumentListExpression) ) {
+            if( methodName == 'model' &&  (arguments instanceof ArgumentListExpression) ) {
                 def args = ((ArgumentListExpression) arguments).getExpressions()
                 if(args.size() == 1 ) {
                     def arg = args.get(0)
@@ -216,7 +216,7 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
 
             classNode.putNodeMetaData(Views.MODEL_TYPES, modelTypes)
             // used by markup template engine
-            classNode.putNodeMetaData("MTE.modelTypes", modelTypes)
+            classNode.putNodeMetaData('MTE.modelTypes', modelTypes)
             super.visitMethodCallExpression(call)
         }
     }

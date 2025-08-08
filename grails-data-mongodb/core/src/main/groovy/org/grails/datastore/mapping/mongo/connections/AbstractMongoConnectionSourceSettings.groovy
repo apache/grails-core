@@ -91,7 +91,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
     /**
      * The collection name to use to resolve connections when using {@link MongoConnectionSources}
      */
-    String connectionsCollection = "mongo.connections"
+    String connectionsCollection = 'mongo.connections'
 
     /**
      * Custom MongoDB codecs

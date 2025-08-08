@@ -69,7 +69,7 @@ import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
 abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
 
     public static final String TRANSACTION_MANAGER_BEAN = 'transactionManager'
-    public static final String ENTITY_CLASS_RESOURCE_PATTERN = "/**/*.class"
+    public static final String ENTITY_CLASS_RESOURCE_PATTERN = '/**/*.class'
     public static final String OSIV_CLASS_NAME = 'org.grails.datastore.mapping.web.support.OpenSessionInViewInterceptor'
 
 
@@ -215,7 +215,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
         }
         else {
             // try the default package in case of a script without recursing into subpackages
-            String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +  "*.class"
+            String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + '*.class'
             scanUsingPattern(pattern, readerFactory)
         }
     }
@@ -226,7 +226,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
         for (Resource res in resources) {
             def reader = readerFactory.getMetadataReader(res)
             def annotationMetadata = reader.annotationMetadata
-            if (annotationMetadata.hasAnnotation("grails.persistence.Entity") || annotationMetadata.hasAnnotation(Entity.name) || annotationMetadata.hasAnnotation(jakarta.persistence.Entity.name)) {
+            if (annotationMetadata.hasAnnotation('grails.persistence.Entity') || annotationMetadata.hasAnnotation(Entity.name) || annotationMetadata.hasAnnotation(jakarta.persistence.Entity.name)) {
                 persistentClasses << classLoader.loadClass(reader.classMetadata.className)
             }
         }
@@ -259,7 +259,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
             GrailsBeanBuilderInit.registerBeans(beanDefinitionRegistry, getBeanDefinitions(beanDefinitionRegistry))
         }
         else {
-            throw new IllegalStateException("Neither Spring 4.0+ nor grails-spring dependency found on classpath to enable GORM configuration. If you are using an earlier version of Spring please add the grails-spring dependency to your classpath.")
+            throw new IllegalStateException('Neither Spring 4.0+ nor grails-spring dependency found on classpath to enable GORM configuration. If you are using an earlier version of Spring please add the grails-spring dependency to your classpath.')
         }
     }
 
@@ -373,16 +373,16 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
     @CompileStatic
     protected Class getGrailsApplicationClass() {
         ClassLoader cl = getClass().getClassLoader()
-        if(ClassUtils.isPresent("grails.core.DefaultGrailsApplication", cl)) {
-            return ClassUtils.forName("grails.core.DefaultGrailsApplication", cl)
+        if(ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
+            return ClassUtils.forName('grails.core.DefaultGrailsApplication', cl)
         }
-        throw new IllegalStateException("No version of Grails found on classpath")
+        throw new IllegalStateException('No version of Grails found on classpath')
 
     }
 
     protected boolean isGrailsPresent() {
         ClassLoader cl = getClass().getClassLoader()
-        if(ClassUtils.isPresent("grails.core.DefaultGrailsApplication", cl)) {
+        if(ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
             return true
         }
         return false
@@ -390,7 +390,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
 
     @CompileStatic
     protected Class getGrailsValidatorClass() {
-        throw new UnsupportedOperationException("Method getGrailsValidatorClass no longer supported")
+        throw new UnsupportedOperationException('Method getGrailsValidatorClass no longer supported')
     }
 
     @CompileDynamic

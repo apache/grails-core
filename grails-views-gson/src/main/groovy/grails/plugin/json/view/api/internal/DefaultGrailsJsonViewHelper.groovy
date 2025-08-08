@@ -70,8 +70,8 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 @Slf4j
 class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements GrailsJsonViewHelper {
 
-    public static final String BEFORE_CLOSURE = "beforeClosure"
-    public static final String PROCESSED_OBJECT_VARIABLE = "org.json.views.RENDER_PROCESSED_OBJECTS"
+    public static final String BEFORE_CLOSURE = 'beforeClosure'
+    public static final String PROCESSED_OBJECT_VARIABLE = 'org.json.views.RENDER_PROCESSED_OBJECTS'
 
     @Override
     JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonDelegate) Closure customizer) {
@@ -95,10 +95,10 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         PersistentEntity entity = mappingContext.getPersistentEntity(object.getClass().name)
 
         if(entity != null) {
-            process(jsonDelegate, entity, object, processedObjects, incs, excs, "", isDeep, renderNulls, expandProperties, includeAssociations, customizer)
+            process(jsonDelegate, entity, object, processedObjects, incs, excs, '', isDeep, renderNulls, expandProperties, includeAssociations, customizer)
         }
         else {
-            processSimple(jsonDelegate, object, processedObjects, incs, excs, "", renderNulls, customizer)
+            processSimple(jsonDelegate, object, processedObjects, incs, excs, '', renderNulls, customizer)
         }
     }
 
@@ -157,7 +157,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         renderTemplate(value, value.class, qualifiers)
     }
 
-    private JsonOutput.JsonWritable renderTemplateOrDefault(Object object, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = "") {
+    private JsonOutput.JsonWritable renderTemplateOrDefault(Object object, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = '') {
         JsonOutput.JsonWritable preProcessed = preProcessedOutput(object, processedObjects)
         if (preProcessed != null) {
             return preProcessed
@@ -171,7 +171,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         renderDefault(object, arguments, customizer, processedObjects, path)
     }
 
-    private JsonOutput.JsonWritable renderDefault(Object object, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = "") {
+    private JsonOutput.JsonWritable renderDefault(Object object, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = '') {
         JsonOutput.JsonWritable preProcessed = preProcessedOutput(object, processedObjects)
         if (preProcessed != null) {
             return preProcessed
@@ -276,7 +276,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         return jsonWritable
     }
 
-    protected JsonOutput.JsonWritable getIterableWritable(Iterable object, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = "") {
+    protected JsonOutput.JsonWritable getIterableWritable(Iterable object, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = '') {
         return getIterableWritable(object) { Object o, Writer out ->
             handleValue(o, out, arguments, customizer, processedObjects, path)
         }
@@ -325,9 +325,9 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                     out.append(JsonOutput.COLON)
                     def value = entry.value
                     if (value instanceof Iterable) {
-                        getIterableWritable(value, arguments, customizer, processedObjects, entry.key.toString() + ".").writeTo(out)
+                        getIterableWritable(value, arguments, customizer, processedObjects, entry.key.toString() + '.').writeTo(out)
                     } else {
-                        handleValue(value, out, arguments, customizer, processedObjects, entry.key.toString() + ".")
+                        handleValue(value, out, arguments, customizer, processedObjects, entry.key.toString() + '.')
                     }
                     entryRendered = true
                 }
@@ -337,7 +337,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         }
     }
 
-    protected void handleValue(Object value, Writer out, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = "") {
+    protected void handleValue(Object value, Writer out, Map arguments, Closure customizer, Map<Object, JsonOutput.JsonWritable> processedObjects, String path = '') {
         if(isSimpleValue(value)) {
             out.append(generator.toJson((Object)value))
         }
@@ -367,8 +367,8 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                 Writer writeTo(Writer out) throws IOException {
                     new StreamingJsonBuilder(out, generator).call {
                         StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate)getDelegate()
-                        jsonDelegate.call("message", e.message)
-                        jsonDelegate.call("stacktrace", stacktrace)
+                        jsonDelegate.call('message', e.message)
+                        jsonDelegate.call('stacktrace', stacktrace)
                     }
                     return out
                 }
@@ -811,7 +811,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
             Template childTemplate
 
             if(controllerName != null) {
-                log.debug("Resolving template [{}] for namespace [{}] and controller [{}]", templateName, namespace, controllerName)
+                log.debug('Resolving template [{}] for namespace [{}] and controller [{}]', templateName, namespace, controllerName)
                 templateUri = viewUriResolver
                                 .resolveTemplateUri(namespace, controllerName, templateName)
                 childTemplate = templateEngine.resolveTemplate(templateUri, view.locale)
@@ -819,7 +819,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
             if (childTemplate == null) {
                 String parentPath = view.viewTemplate.parentPath
-                log.debug("Resolving template [{}] for parent path [{}]", templateName, parentPath)
+                log.debug('Resolving template [{}] for parent path [{}]', templateName, parentPath)
 
                 templateUri = viewUriResolver
                         .resolveTemplateUri(parentPath, templateName)

@@ -90,12 +90,12 @@ import org.grails.datastore.mapping.reflect.FieldEntityAccess
  */
 @CompileStatic
 class PersistentEntityCodec extends BsonPersistentEntityCodec {
-    private static final String BLANK_STRING = ""
+    private static final String BLANK_STRING = ''
     public static final String MONGO_SET_OPERATOR = '$set'
     public static final String MONGO_UNSET_OPERATOR = '$unset'
 
     public static final String DB_REF_ID_FIELD = '$id'
-    public static final String SCHEMALESS_ATTRIBUTES = "schemaless.attributes"
+    public static final String SCHEMALESS_ATTRIBUTES = 'schemaless.attributes'
 
     static {
         registerEncoder(Identity, (PropertyEncoder) new IdentityEncoder() {

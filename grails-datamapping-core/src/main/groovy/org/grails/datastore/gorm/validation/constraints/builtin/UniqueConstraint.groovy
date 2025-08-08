@@ -46,7 +46,7 @@ import org.grails.datastore.mapping.reflect.EntityReflector
 @CompileStatic
 class UniqueConstraint extends AbstractConstraint {
 
-    public static final String NAME = "unique"
+    public static final String NAME = 'unique'
 
     protected List group = []
 
@@ -178,7 +178,7 @@ class UniqueConstraint extends AbstractConstraint {
                     }
                     if (targetId != existingId) {
                         def args = [constraintPropertyName, constraintOwningClass, propertyValue] as Object[]
-                        rejectValue(target, errors, "unique", args, getDefaultMessage("default.not.unique.message"))
+                        rejectValue(target, errors, 'unique', args, getDefaultMessage('default.not.unique.message'))
                     }
                 }
             }

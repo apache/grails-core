@@ -26,23 +26,23 @@ class Snapshot implements Comparable<Snapshot>, Serializable {
     private String text
 
     int getMilestoneVersion() {
-        text.replace("M", "").toInteger()
+        text.replace('M', '').toInteger()
     }
 
     int getReleaseCandidateVersion() {
-        text.replace("RC", "").toInteger()
+        text.replace('RC', '').toInteger()
     }
 
     boolean isBuildSnapshot() {
-        text.endsWith("BUILD-SNAPSHOT")
+        text.endsWith('BUILD-SNAPSHOT')
     }
 
     boolean isReleaseCandidate() {
-        text.startsWith("RC")
+        text.startsWith('RC')
     }
 
     boolean isMilestone() {
-        text.startsWith("M")
+        text.startsWith('M')
     }
 
     Snapshot(String text) {

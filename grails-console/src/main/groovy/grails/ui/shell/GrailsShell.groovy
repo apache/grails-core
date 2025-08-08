@@ -51,7 +51,7 @@ class GrailsShell extends GrailsApp {
     }
 
     void configureApplicationContextClass() {
-        if (ClassUtils.isPresent("jakarta.servlet.ServletContext", Thread.currentThread().contextClassLoader)) {
+        if (ClassUtils.isPresent('jakarta.servlet.ServletContext', Thread.currentThread().contextClassLoader)) {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(GroovyshWebApplicationContext))
         } else {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(GroovyshApplicationContext))
@@ -92,7 +92,7 @@ class GrailsShell extends GrailsApp {
             new GrailsShell(applicationClass).run(args)
         }
         else {
-            System.err.println("Missing application class name argument")
+            System.err.println('Missing application class name argument')
         }
     }
 }

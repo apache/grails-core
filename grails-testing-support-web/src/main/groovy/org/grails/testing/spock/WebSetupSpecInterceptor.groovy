@@ -81,17 +81,17 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
             final classLoader = ControllerUnitTest.class.getClassLoader()
 
             boolean registerConstraintEvaluator
-            if (ClassUtils.isPresent("grails.testing.gorm.DataTest", classLoader)) {
-                Class clazz = classLoader.loadClass("grails.testing.gorm.DataTest")
+            if (ClassUtils.isPresent('grails.testing.gorm.DataTest', classLoader)) {
+                Class clazz = classLoader.loadClass('grails.testing.gorm.DataTest')
                 registerConstraintEvaluator = !clazz.isAssignableFrom(test.class)
             } else {
                 registerConstraintEvaluator = true
             }
 
             if (registerConstraintEvaluator) {
-                constraintRegistry(DefaultConstraintRegistry, ref("messageSource"))
+                constraintRegistry(DefaultConstraintRegistry, ref('messageSource'))
 
-                "org.grails.beans.ConstraintsEvaluator"(DefaultConstraintEvaluator, constraintRegistry, new KeyValueMappingContext("test"), ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config))
+                'org.grails.beans.ConstraintsEvaluator'(DefaultConstraintEvaluator, constraintRegistry, new KeyValueMappingContext('test'), ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config))
             }
 
             rendererRegistry(DefaultRendererRegistry) {
@@ -102,10 +102,10 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
 
             grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean)
 
-            grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: "http://localhost:8080")
+            grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: 'http://localhost:8080')
 
-            if (ClassUtils.isPresent("UrlMappings", classLoader)) {
-                grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, classLoader.loadClass("UrlMappings"))
+            if (ClassUtils.isPresent('UrlMappings', classLoader)) {
+                grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, classLoader.loadClass('UrlMappings'))
             }
 
             def urlMappingsClass = "${config.getProperty('grails.codegen.defaultPackage', 'null')}.UrlMappings"
@@ -123,7 +123,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
 
             "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
 
-            if(ClassUtils.isPresent("org.grails.plugins.web.GroovyPagesGrailsPlugin", classLoader)) {
+            if(ClassUtils.isPresent('org.grails.plugins.web.GroovyPagesGrailsPlugin', classLoader)) {
                 def lazyBean = { bean ->
                     bean.lazyInit = true
                 }
@@ -135,15 +135,15 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
                 }
                 groovyPagesTemplateEngine(GroovyPagesTemplateEngine) { bean ->
                     bean.lazyInit = true
-                    tagLibraryLookup = ref("gspTagLibraryLookup")
-                    jspTagLibraryResolver = ref("jspTagLibraryResolver")
-                    groovyPageLocator = ref("groovyPageLocator")
+                    tagLibraryLookup = ref('gspTagLibraryLookup')
+                    jspTagLibraryResolver = ref('jspTagLibraryResolver')
+                    groovyPageLocator = ref('groovyPageLocator')
                 }
 
                 groovyPagesTemplateRenderer(GroovyPagesTemplateRenderer) { bean ->
                     bean.lazyInit = true
-                    groovyPageLocator = ref("groovyPageLocator")
-                    groovyPagesTemplateEngine = ref("groovyPagesTemplateEngine")
+                    groovyPageLocator = ref('groovyPageLocator')
+                    groovyPagesTemplateEngine = ref('groovyPagesTemplateEngine')
                 }
 
                 // Configure a Spring MVC view resolver

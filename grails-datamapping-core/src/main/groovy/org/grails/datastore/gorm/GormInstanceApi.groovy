@@ -319,7 +319,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
 
     protected D doSave(D instance, Map params, Session session, boolean isInsert = false) {
         boolean hasErrors = false
-        boolean validate = params?.containsKey("validate") ? params.validate : true
+        boolean validate = params?.containsKey('validate') ? params.validate : true
         boolean shouldFlush = params?.flush ? params.flush : false
         if(instance instanceof GormValidateable) {
 
@@ -352,9 +352,9 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         }
 
         if (hasErrors) {
-            boolean failOnErrorEnabled = params?.containsKey("failOnError") ? params.failOnError : failOnError
+            boolean failOnErrorEnabled = params?.containsKey('failOnError') ? params.failOnError : failOnError
             if (failOnErrorEnabled) {
-                throw validationException.newInstance("Validation error occurred during call to save()", InvokerHelper.getProperty(instance, "errors"))
+                throw validationException.newInstance('Validation error occurred during call to save()', InvokerHelper.getProperty(instance, 'errors'))
             }
             return null
         }

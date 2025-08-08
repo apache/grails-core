@@ -50,7 +50,7 @@ class TokenResponseActionResultTransformer implements ActionResultTransformer{
                 return null
             }
             catch (IOException e) {
-                throw new ControllerExecutionException("I/O error sending redirect to URI: " + uri,e)
+                throw new ControllerExecutionException('I/O error sending redirect to URI: ' + uri,e)
             }
         }
         return actionResult

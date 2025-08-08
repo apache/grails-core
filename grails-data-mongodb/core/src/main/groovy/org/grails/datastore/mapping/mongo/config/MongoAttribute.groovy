@@ -34,11 +34,11 @@ import org.grails.datastore.mapping.document.config.Attribute
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class MongoAttribute extends Attribute {
 
-    public static final String INDEX_TYPE = "type"
-    public static final String INDEX_TYPE_2D = "2d"
-    public static final String INDEX_TYPE_2DSPHERE = "2dsphere"
+    public static final String INDEX_TYPE = 'type'
+    public static final String INDEX_TYPE_2D = '2d'
+    public static final String INDEX_TYPE_2DSPHERE = '2dsphere'
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     private Map indexAttributes
 
     /**
@@ -152,7 +152,7 @@ class MongoAttribute extends Attribute {
         return this
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void initIndexAttributes() {
         if (indexAttributes == null) {
             indexAttributes = new HashMap()

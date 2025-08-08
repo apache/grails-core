@@ -95,8 +95,8 @@ class FormatTagLib implements TagLibrary {
      * @attr locale Force the locale for formatting.
      */
     Closure formatBoolean = { attrs ->
-        if (!attrs.containsKey("boolean")) {
-            throwTagError("Tag [formatBoolean] is missing required attribute [boolean]")
+        if (!attrs.containsKey('boolean')) {
+            throwTagError('Tag [formatBoolean] is missing required attribute [boolean]')
         }
 
         def b = attrs['boolean']
@@ -232,7 +232,7 @@ class FormatTagLib implements TagLibrary {
      */
     Closure formatNumber = { attrs ->
         if (!attrs.containsKey('number')) {
-            throwTagError("Tag [formatNumber] is missing required attribute [number]")
+            throwTagError('Tag [formatNumber] is missing required attribute [number]')
         }
 
         def number = attrs.number
@@ -251,7 +251,7 @@ class FormatTagLib implements TagLibrary {
                 }
             }
             else if (!format) {
-                format = messageHelper("number.format", { messageHelper("default.number.format", "0", null, locale) } ,null ,locale)
+                format = messageHelper('number.format', { messageHelper('default.number.format', '0', null, locale) } ,null ,locale)
             }
         }
 
@@ -272,7 +272,7 @@ class FormatTagLib implements TagLibrary {
                 decimalFormat = NumberFormat.getPercentInstance(locale)
             }
             else {
-                throwTagError("Attribute [type] of Tag [formatNumber] specifies an unknown type. Known types are currency, number and percent.")
+                throwTagError('Attribute [type] of Tag [formatNumber] specifies an unknown type. Known types are currency, number and percent.')
             }
         }
 
@@ -362,7 +362,7 @@ class FormatTagLib implements TagLibrary {
      */
     Closure encodeAs = { attrs, body ->
         if (!attrs.codec) {
-            throwTagError("Tag [encodeAs] requires a codec name in the [codec] attribute")
+            throwTagError('Tag [encodeAs] requires a codec name in the [codec] attribute')
         }
         Encoder encoder = codecLookup.lookupEncoder(attrs.codec.toString())
         return encoder.encode(body())

@@ -53,7 +53,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
     LocaleResolver localeResolver
     Config configuration
 
-    private String defaultEncoding = "UTF-8"
+    private String defaultEncoding = 'UTF-8'
 
     void setTemplateEngine(ResolvableGroovyTemplateEngine templateEngine) {
         this.templateEngine = templateEngine

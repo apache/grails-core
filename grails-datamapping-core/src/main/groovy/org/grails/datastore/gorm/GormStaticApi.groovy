@@ -1011,7 +1011,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return The result of the closure execution
      */
     <T> T withTransaction(TransactionDefinition definition, Closure<T> callable) {
-        Assert.notNull transactionManager, "No transactionManager bean configured"
+        Assert.notNull transactionManager, 'No transactionManager bean configured'
 
         if (!callable) {
             return
@@ -1049,7 +1049,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             }
         }
         else {
-            throw new UnsupportedOperationException("Stateless sessions not supported by implementation")
+            throw new UnsupportedOperationException('Stateless sessions not supported by implementation')
         }
     }
 
@@ -1065,7 +1065,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List executeQuery(CharSequence query, Map params, Map args) {
-        unsupported("executeQuery")
+        unsupported('executeQuery')
         return null
     }
 
@@ -1081,7 +1081,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List executeQuery(CharSequence query, Collection params, Map args) {
-        unsupported("executeQuery")
+        unsupported('executeQuery')
         return null
     }
 
@@ -1097,7 +1097,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     Integer executeUpdate(CharSequence query, Map params, Map args) {
-        unsupported("executeUpdate")
+        unsupported('executeUpdate')
         return null
     }
 
@@ -1113,7 +1113,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     Integer executeUpdate(CharSequence query, Collection params, Map args) {
-        unsupported("executeUpdate")
+        unsupported('executeUpdate')
         return null
     }
 
@@ -1129,7 +1129,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D find(CharSequence query, Map params, Map args) {
-        unsupported("find")
+        unsupported('find')
         return null
     }
 
@@ -1145,7 +1145,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D find(CharSequence query, Collection params, Map args) {
-        unsupported("find")
+        unsupported('find')
         return null
     }
 
@@ -1161,7 +1161,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> findAll(CharSequence query, Map params, Map args) {
-        unsupported("findAll")
+        unsupported('findAll')
         return null
     }
 
@@ -1177,7 +1177,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> findAll(CharSequence query, Collection params, Map args) {
-        unsupported("findAll")
+        unsupported('findAll')
         return null
     }
 
@@ -1206,7 +1206,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             def persistentMetaClass = GroovySystem.metaClassRegistry.getMetaClass(persistentClass)
             result = (D)persistentMetaClass.invokeConstructor(queryMap)
             if (shouldSave) {
-                InvokerHelper.invokeMethod(result, "save", null)
+                InvokerHelper.invokeMethod(result, 'save', null)
             }
         }
         result

@@ -239,7 +239,7 @@ trait Validateable {
                     ConstraintEvalUtils.getDefaultConstraints(Holders.grailsApplication.config) : Collections.<String, Object>emptyMap()
             return new DefaultConstraintEvaluator(
                     new DefaultConstraintRegistry(messageSource),
-                    new KeyValueMappingContext(""),
+                    new KeyValueMappingContext(''),
                     defaultConstraints
             )
         }

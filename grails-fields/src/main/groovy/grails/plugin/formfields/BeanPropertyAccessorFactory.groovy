@@ -71,7 +71,7 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
 
     private BeanPropertyAccessor resolvePropertyFromPath(bean, String pathFromRoot) {
         BeanWrapper beanWrapper = PropertyAccessorFactory.forBeanPropertyAccess(bean)
-        List<String> pathElements = pathFromRoot.tokenize(".")
+        List<String> pathElements = pathFromRoot.tokenize('.')
 
         Map<String, Object> params = [rootBean: bean, rootBeanType: bean.getClass(), pathFromRoot: pathFromRoot, grailsApplication: grailsApplication]
 

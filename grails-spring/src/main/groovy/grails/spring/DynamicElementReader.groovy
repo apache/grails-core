@@ -89,7 +89,7 @@ class DynamicElementReader extends GroovyObjectSupport {
             invokeAfterInterceptor = true
             firstCall = false
         }
-        if (name.equals("doCall")) {
+        if (name.equals('doCall')) {
             def callable = args[0]
             callable.resolveStrategy = Closure.DELEGATE_FIRST
             callable.delegate = this

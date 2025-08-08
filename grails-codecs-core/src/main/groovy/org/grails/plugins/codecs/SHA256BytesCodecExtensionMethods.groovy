@@ -26,10 +26,10 @@ class SHA256BytesCodecExtensionMethods {
         if(theTarget == null || theTarget instanceof NullObject) {
             return null
         }
-        DigestUtils.digest("SHA-256", theTarget)
+        DigestUtils.digest('SHA-256', theTarget)
     }
 
     static decodeSHA256Bytes(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode SHA-256 hashes")
+        throw new UnsupportedOperationException('Cannot decode SHA-256 hashes')
     }
 }

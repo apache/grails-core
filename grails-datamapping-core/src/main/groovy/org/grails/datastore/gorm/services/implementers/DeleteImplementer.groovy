@@ -79,7 +79,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
     void implementById(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, Expression byIdLookup) {
         boolean isVoidReturnType = ClassHelper.VOID_TYPE.equals(newMethodNode.returnType)
         VariableExpression obj = varX('$obj')
-        Statement deleteStatement = stmt(callX(obj, "delete"))
+        Statement deleteStatement = stmt(callX(obj, 'delete'))
         if(!isVoidReturnType) {
             deleteStatement = block(
                 deleteStatement,
@@ -104,7 +104,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
 
-        MethodCallExpression deleteCall = callX(detachedCriteriaVar, "deleteAll" )
+        MethodCallExpression deleteCall = callX(detachedCriteriaVar, 'deleteAll')
         boolean isVoidReturnType = ClassHelper.VOID_TYPE.equals(newMethodNode.returnType)
 
         body.addStatements([

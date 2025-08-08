@@ -42,10 +42,10 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
 
     AbstractConnectionSources(ConnectionSource<T, S> defaultConnectionSource, ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
         if(connectionSourceFactory == null) {
-            throw new IllegalArgumentException("Argument [connectionSourceFactory] cannot be null")
+            throw new IllegalArgumentException('Argument [connectionSourceFactory] cannot be null')
         }
         if(defaultConnectionSource == null) {
-            throw new IllegalStateException("The default ConnectionSource cannot be null!")
+            throw new IllegalStateException('The default ConnectionSource cannot be null!')
         }
         if(configuration == null) {
             this.configuration = DatastoreUtils.createPropertyResolver(Collections.emptyMap())

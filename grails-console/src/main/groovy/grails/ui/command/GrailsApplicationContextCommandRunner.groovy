@@ -47,7 +47,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
         def command = ApplicationContextCommandRegistry.instance.findCommand(commandName)
         if(command) {
 
-            Object skipBootstrap = command.hasProperty("skipBootstrap")?.getProperty(command)
+            Object skipBootstrap = command.hasProperty('skipBootstrap')?.getProperty(command)
             if (skipBootstrap instanceof Boolean && !System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP)) {
                 System.setProperty(Settings.SETTING_SKIP_BOOTSTRAP, skipBootstrap.toString())
             }
@@ -105,7 +105,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             runner.run(args.init() as String[])
         }
         else {
-            System.err.println("Missing application class name and script name arguments")
+            System.err.println('Missing application class name and script name arguments')
             System.exit(1)
         }
     }

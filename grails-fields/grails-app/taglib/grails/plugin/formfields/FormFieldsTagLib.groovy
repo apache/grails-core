@@ -62,12 +62,12 @@ class FormFieldsTagLib {
     static final String STACK_PAGE_SCOPE_VARIABLE = 'f:with:stack'
     private static final List<String> DECIMAL_TYPES = ['double', 'float', 'bigdecimal']
 
-    private static final String THEME_ATTR = "theme"
-    private static final String WIDGET_ATTR = "widget"
-    private static final String WRAPPER_ATTR = "wrapper"
-    private static final String TEMPLATES_ATTR = "templates"
-    private static final String PROPERTY_ATTR = "property"
-    private static final String BEAN_ATTR = "bean"
+    private static final String THEME_ATTR = 'theme'
+    private static final String WIDGET_ATTR = 'widget'
+    private static final String WRAPPER_ATTR = 'wrapper'
+    private static final String TEMPLATES_ATTR = 'templates'
+    private static final String PROPERTY_ATTR = 'property'
+    private static final String BEAN_ATTR = 'bean'
     public static final String DISPLAY_STYLE = 'displayStyle'
 
     @Value('${grails.plugin.fields.localizeNumbers:true}')
@@ -241,7 +241,7 @@ class FormFieldsTagLib {
                 model.widget = renderWidget(propertyAccessor, model, widgetAttrs, widgetFolder ?: templatesFolder, theme)
             }
 
-            String templateName = formFieldsTemplateService.getTemplateFor("wrapper")
+            String templateName = formFieldsTemplateService.getTemplateFor('wrapper')
             Map template = formFieldsTemplateService.findTemplate(propertyAccessor, templateName, fieldFolder ?: templatesFolder, theme)
             if (template) {
                 out << render(template: template.path, plugin: template.plugin, model: model + [attrs: wrapperAttrs] + wrapperAttrs)
@@ -315,7 +315,7 @@ class FormFieldsTagLib {
     def widget = { attrs ->
         def bean = resolveBean(attrs.remove(BEAN_ATTR))
         if (!bean) throwTagError("Tag [input] is missing required attribute [$BEAN_ATTR]")
-        if (!attrs.property) throwTagError("Tag [input] is missing required attribute [property]")
+        if (!attrs.property) throwTagError('Tag [input] is missing required attribute [property]')
 
         attrs = getPrefixedAttributes(beanStack.innerAttributes) + attrs
 
@@ -338,7 +338,7 @@ class FormFieldsTagLib {
     def displayWidget = { attrs ->
         def bean = resolveBean(attrs.remove(BEAN_ATTR))
         if (!bean) throwTagError("Tag [displayWidget] is missing required attribute [$BEAN_ATTR]")
-        if (!attrs[PROPERTY_ATTR]) throwTagError("Tag [displayWidget] is missing required attribute [property]")
+        if (!attrs[PROPERTY_ATTR]) throwTagError('Tag [displayWidget] is missing required attribute [property]')
 
         attrs = getPrefixedAttributes(beanStack.innerAttributes) + attrs
 
@@ -412,7 +412,7 @@ class FormFieldsTagLib {
             }
 
 
-            def displayWrapperTemplateName = formFieldsTemplateService.getTemplateFor("displayWrapper")
+            def displayWrapperTemplateName = formFieldsTemplateService.getTemplateFor('displayWrapper')
             def template = formFieldsTemplateService.findTemplate(propertyAccessor, displayWrapperTemplateName, wrapperFolderTouse, theme)
             if (template) {
                 out << render(template: template.path, plugin: template.plugin, model: model + [attrs: wrapperAttrs] + wrapperAttrs)
@@ -499,14 +499,14 @@ class FormFieldsTagLib {
         }
 
         [
-            bean              : propertyAccessor.rootBean,
-            property          : propertyAccessor.pathFromRoot,
-            type              : propertyAccessor.propertyType,
-            beanClass         : propertyAccessor.entity,
-            label             : resolveLabelText(propertyAccessor, attrs),
-            value             : (value instanceof Number || value instanceof Boolean || value) ? value : valueDefault,
-            constraints       : propertyAccessor.constraints,
-            persistentProperty: propertyAccessor.domainProperty,
+                bean              : propertyAccessor.rootBean,
+                property          : propertyAccessor.pathFromRoot,
+                type              : propertyAccessor.propertyType,
+                beanClass         : propertyAccessor.entity,
+                label             : resolveLabelText(propertyAccessor, attrs),
+                value             : (value instanceof Number || value instanceof Boolean || value) ? value : valueDefault,
+                constraints       : propertyAccessor.constraints,
+                persistentProperty: propertyAccessor.domainProperty,
             errors            : propertyAccessor.errors.collect { error ->
                 String errorMsg = null
                 try {
@@ -516,16 +516,16 @@ class FormFieldsTagLib {
                 }
                 // unresolved message codes fallback to the defaultMessage and this should
                 // be escaped as it could be an error message with user input
-                errorMsg && errorMsg == error.defaultMessage ? message(error: error, encodeAs: "HTML") :  message(error: error)
+                errorMsg && errorMsg == error.defaultMessage ? message(error: error, encodeAs: 'HTML') :  message(error: error)
             },
-            required          : attrs.containsKey("required") ? Boolean.valueOf(attrs.remove('required')) : propertyAccessor.required,
-            invalid           : attrs.containsKey("invalid") ? Boolean.valueOf(attrs.remove('invalid')) : propertyAccessor.invalid,
+            required          : attrs.containsKey('required') ? Boolean.valueOf(attrs.remove('required')) : propertyAccessor.required,
+            invalid           : attrs.containsKey('invalid') ? Boolean.valueOf(attrs.remove('invalid')) : propertyAccessor.invalid,
             prefix            : resolvePrefix(attrs.remove('prefix')),
         ]
     }
 
     private CharSequence renderWidget(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:], String widgetFolder, String theme) {
-        String widgetTemplateName = formFieldsTemplateService.getTemplateFor("widget")
+        String widgetTemplateName = formFieldsTemplateService.getTemplateFor('widget')
         Map template = formFieldsTemplateService.findTemplate(propertyAccessor, widgetTemplateName, widgetFolder, theme)
         if (template) {
             render template: template.path, plugin: template.plugin, model: model + [attrs: attrs] + attrs
@@ -542,7 +542,7 @@ class FormFieldsTagLib {
             template = formFieldsTemplateService.findTemplate(propertyAccessor, "displayWidget-$attrs.displayStyle", widgetFolder, theme)
         }
         if (!template) {
-            def displayWidgetTemplateName = formFieldsTemplateService.getTemplateFor("displayWidget")
+            def displayWidgetTemplateName = formFieldsTemplateService.getTemplateFor('displayWidget')
             template = formFieldsTemplateService.findTemplate(propertyAccessor, displayWidgetTemplateName, widgetFolder, theme)
         }
 
@@ -629,7 +629,7 @@ class FormFieldsTagLib {
         } else if (except instanceof Collection) {
             return except as List<String>
         } else {
-            throw new IllegalArgumentException("Must either be null, comma separated string or java.util.Collection")
+            throw new IllegalArgumentException('Must either be null, comma separated string or java.util.Collection')
         }
     }
 
@@ -703,9 +703,9 @@ class FormFieldsTagLib {
         Constrained constrained = (Constrained) model.constraints
         attrs.name = (model.prefix ?: '') + model.property
         attrs.value = model.value
-        if (model.required) attrs.required = "" // TODO: configurable how this gets output? Some people prefer required="required"
-        if (model.invalid) attrs.invalid = ""
-        if (!isEditable(constrained)) attrs.readonly = ""
+        if (model.required) attrs.required = '' // TODO: configurable how this gets output? Some people prefer required="required"
+        if (model.invalid) attrs.invalid = ''
+        if (!isEditable(constrained)) attrs.readonly = ''
 
         boolean oneToOne = false
         boolean manyToOne = false
@@ -739,7 +739,7 @@ class FormFieldsTagLib {
         } else if (model.type.isPrimitive() || model.type in Number) {
             return renderNumericInput(propertyAccessor, model, attrs)
         } else if (model.type in URL) {
-            return g.field(attrs + [type: "url"])
+            return g.field(attrs + [type: 'url'])
         } else if (model.type.isEnum()) {
             return renderEnumInput(model, attrs)
         } else if (oneToOne || manyToOne || manyToMany) {
@@ -749,9 +749,9 @@ class FormFieldsTagLib {
         } else if (datePicker) {
             return renderDateTimeInput(model, attrs)
         } else if (model.type in [byte[], Byte[], Blob]) {
-            return g.field(attrs + [type: "file"])
+            return g.field(attrs + [type: 'file'])
         } else if (model.type in [TimeZone, Currency, Locale]) {
-            if (!model.required) attrs.noSelection = ["": ""]
+            if (!model.required) attrs.noSelection = ['': '']
             return g."${GrailsStringUtils.uncapitalize(model.type.simpleName)}Select"(attrs)
         } else {
             return null
@@ -760,10 +760,10 @@ class FormFieldsTagLib {
 
 
     CharSequence renderDateTimeInput(Map model, Map attrs) {
-        attrs.precision = model.type in [java.sql.Time, LocalDateTime]? "minute" : "day"
+        attrs.precision = model.type in [java.sql.Time, LocalDateTime]? 'minute' : 'day'
         if (!model.required) {
-            attrs.noSelection = ["": ""]
-            attrs.default = "none"
+            attrs.noSelection = ['': '']
+            attrs.default = 'none'
         }
         return g.datePicker(attrs)
     }
@@ -775,18 +775,18 @@ class FormFieldsTagLib {
             if (constrained?.inList) {
                 attrs.from = constrained.inList
                 if (!model.required) {
-                    attrs.noSelection = ["": ""]
+                    attrs.noSelection = ['': '']
                 }
                 return g.select(attrs)
             } else if (constrained?.password) {
-                attrs.type = "password"
+                attrs.type = 'password'
                 attrs.remove('value')
             } else if (constrained?.email) {
-                attrs.type = "email"
+                attrs.type = 'email'
             } else if (constrained?.url) {
-                attrs.type = "url"
+                attrs.type = 'url'
             } else {
-                attrs.type = "text"
+                attrs.type = 'text'
             }
         }
 
@@ -805,10 +805,10 @@ class FormFieldsTagLib {
 
         if (!attrs.type && constrained?.inList) {
             attrs.from = constrained.inList
-            if (!model.required) attrs.noSelection = ["": ""]
+            if (!model.required) attrs.noSelection = ['': '']
             return g.select(attrs)
         } else if (constrained?.range) {
-            attrs.type = attrs.type ?: "range"
+            attrs.type = attrs.type ?: 'range'
             attrs.min = constrained.range.from
             attrs.max = constrained.range.to
         } else {
@@ -849,9 +849,9 @@ class FormFieldsTagLib {
 
         def typeName = modelType.simpleName.toLowerCase()
         if (typeName in DECIMAL_TYPES) {
-            return "number decimal"
+            return 'number decimal'
         } else {
-            return "number"
+            return 'number'
         }
 
     }
@@ -861,7 +861,7 @@ class FormFieldsTagLib {
 
         if (attrs.value instanceof Enum)
             attrs.value = attrs.value.name()
-        if (!model.required) attrs.noSelection = ["": ""]
+        if (!model.required) attrs.noSelection = ['': '']
 
         if (constrained?.inList) {
             attrs.keys = constrained.inList*.name()
@@ -889,13 +889,13 @@ class FormFieldsTagLib {
             manyToMany = prop instanceof ManyToMany
         }
         attrs.from = null != attrs.from ? attrs.from : referencedPropertyType.list()
-        attrs.optionKey = "id" // TODO: handle alternate id names
+        attrs.optionKey = 'id' // TODO: handle alternate id names
         if (manyToMany) {
-            attrs.multiple = ""
+            attrs.multiple = ''
             attrs.value = model.value*.id
             attrs.name = "${model.prefix ?: ''}${model.property}"
         } else {
-            if (!model.required) attrs.noSelection = ["null": ""]
+            if (!model.required) attrs.noSelection = ['null': '']
             attrs.value = model.value?.id
             attrs.name = "${model.prefix ?: ''}${model.property}.id"
         }
@@ -916,14 +916,14 @@ class FormFieldsTagLib {
 
         attrs.value.each {
             buffer << '<li>'
-            buffer << g.link(controller: controllerName, action: "show", id: it.id, it.toString().encodeAsHTML())
+            buffer << g.link(controller: controllerName, action: 'show', id: it.id, it.toString().encodeAsHTML())
             buffer << '</li>'
         }
         buffer << '</ul>'
         def referencedTypeLabel = message(code: "${controllerName}.label", default: shortName)
         def addLabel = g.message(code: 'default.add.label', args: [referencedTypeLabel])
         PersistentEntity beanClass = (PersistentEntity) model.beanClass
-        buffer << g.link(controller: controllerName, action: "create", params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
+        buffer << g.link(controller: controllerName, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
         buffer.buffer
     }
 
@@ -961,7 +961,7 @@ class FormFieldsTagLib {
     private CharSequence displayEmbedded(bean, PersistentEntity domainClass, Map attrs, String templatesFolder, String theme) {
         Writer buffer = new FastStringWriter()
         def properties = domainModelService.getOutputProperties(domainClass)
-        buffer << render(template: "/templates/_fields/list", model: [domainClass: domainClass, domainProperties: properties]) { prop ->
+        buffer << render(template: '/templates/_fields/list', model: [domainClass: domainClass, domainProperties: properties]) { prop ->
             def propertyAccessor = resolveProperty(bean, prop.name)
             def model = buildModel(propertyAccessor, attrs)
             out << raw(renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme))
@@ -983,7 +983,7 @@ class FormFieldsTagLib {
 
     private CharSequence displayAssociation(value, PersistentEntity referencedDomainClass) {
         if (value && referencedDomainClass) {
-            g.link(controller: referencedDomainClass.decapitalizedName, action: "show", id: value.id, value.toString().encodeAsHTML())
+            g.link(controller: referencedDomainClass.decapitalizedName, action: 'show', id: value.id, value.toString().encodeAsHTML())
         } else if (value) {
             value.toString()
         }

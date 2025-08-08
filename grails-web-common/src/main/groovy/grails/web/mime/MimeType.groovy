@@ -33,24 +33,24 @@ class MimeType {
     /**
      * The bean name used to store the mime type definitions
      */
-    public static final String BEAN_NAME = "mimeTypes"
+    public static final String BEAN_NAME = 'mimeTypes'
 
-    public static final MimeType ALL = new MimeType("*/*", "all")
-    public static final MimeType FORM = new MimeType("application/x-www-form-urlencoded", "form")
-    public static final MimeType MULTIPART_FORM = new MimeType("multipart/form-data", "multipartForm")
-    public static final MimeType HTML = new MimeType('text/html', "html")
-    public static final MimeType XHTML = new MimeType("application/xhtml+xml", "html")
-    public static final MimeType XML = new MimeType('application/xml', "xml")
-    public static final MimeType JSON = new MimeType('application/json', "json")
-    public static final MimeType TEXT_XML = new MimeType('text/xml', "xml")
-    public static final MimeType TEXT_JSON = new MimeType('text/json', "json")
-    public static final MimeType HAL_JSON = new MimeType('application/hal+json', "json")
-    public static final MimeType HAL_XML = new MimeType('application/hal+xml', "xml")
-    public static final MimeType ATOM_XML = new MimeType('application/atom+xml', "xml")
-    public static final MimeType JSON_API = new MimeType('application/vnd.api+json', "json")
+    public static final MimeType ALL = new MimeType('*/*', 'all')
+    public static final MimeType FORM = new MimeType('application/x-www-form-urlencoded', 'form')
+    public static final MimeType MULTIPART_FORM = new MimeType('multipart/form-data', 'multipartForm')
+    public static final MimeType HTML = new MimeType('text/html', 'html')
+    public static final MimeType XHTML = new MimeType('application/xhtml+xml', 'html')
+    public static final MimeType XML = new MimeType('application/xml', 'xml')
+    public static final MimeType JSON = new MimeType('application/json', 'json')
+    public static final MimeType TEXT_XML = new MimeType('text/xml', 'xml')
+    public static final MimeType TEXT_JSON = new MimeType('text/json', 'json')
+    public static final MimeType HAL_JSON = new MimeType('application/hal+json', 'json')
+    public static final MimeType HAL_XML = new MimeType('application/hal+xml', 'xml')
+    public static final MimeType ATOM_XML = new MimeType('application/atom+xml', 'xml')
+    public static final MimeType JSON_API = new MimeType('application/vnd.api+json', 'json')
 
     private static DEFAULTS = createDefaults()
-    public static final String QUALITY_RATING = "1.0"
+    public static final String QUALITY_RATING = '1.0'
     public static final BigDecimal QUALITY_RATING_NUMBER = 1.0
 
     String name

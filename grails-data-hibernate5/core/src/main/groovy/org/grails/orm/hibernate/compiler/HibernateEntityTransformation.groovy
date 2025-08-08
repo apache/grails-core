@@ -175,7 +175,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         staticCompilationVisitor.visitMethod(getInterceptorMethod)
 
         // add method: void $$_hibernate_setInterceptor(PersistentAttributeInterceptor interceptor)
-        def p1 = param(persistentAttributeInterceptorClassNode, "interceptor")
+        def p1 = param(persistentAttributeInterceptorClassNode, 'interceptor')
         def setInterceptorMethod = new MethodNode(
                 '$$_hibernate_setInterceptor',
                 Modifier.PUBLIC,
@@ -195,7 +195,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 ClassHelper.OBJECT_TYPE,
                 AstUtils.ZERO_PARAMETERS,
                 null,
-                returnS(varX("this"))
+                returnS(varX('this'))
         )
         classNode.addMethod(getEntityInstanceMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, getEntityInstanceMethod)
@@ -216,7 +216,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         staticCompilationVisitor.visitMethod(getEntityEntryMethod)
 
         // add method: void $$_hibernate_setEntityEntry(EntityEntry entityEntry)
-        def entityEntryParam = param(entityEntryClassNode, "entityEntry")
+        def entityEntryParam = param(entityEntryClassNode, 'entityEntry')
         def setEntityEntryMethod = new MethodNode(
                 '$$_hibernate_setEntityEntry',
                 Modifier.PUBLIC,
@@ -256,7 +256,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         staticCompilationVisitor.visitMethod(getNextManagedEntityMethod)
 
         // add method: void $$_hibernate_setPreviousManagedEntity(ManagedEntity previous)
-        def previousParam = param(managedEntityClassNode, "previous")
+        def previousParam = param(managedEntityClassNode, 'previous')
         def setPreviousManagedEntityMethod = new MethodNode(
                 '$$_hibernate_setPreviousManagedEntity',
                 Modifier.PUBLIC,
@@ -270,7 +270,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         staticCompilationVisitor.visitMethod(setPreviousManagedEntityMethod)
 
         // add method: void $$_hibernate_setNextManagedEntity(ManagedEntity next)
-        def nextParam = param(managedEntityClassNode, "next")
+        def nextParam = param(managedEntityClassNode, 'next')
         def setNextManagedEntityMethod = new MethodNode(
                 '$$_hibernate_setNextManagedEntity',
                 Modifier.PUBLIC,
@@ -301,8 +301,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
 
                             def returnType = methodNode.getReturnType()
                             final boolean isPrimitive = ClassHelper.isPrimitiveType(returnType)
-                            String readMethodName = isPrimitive ? "read${NameUtils.capitalize(returnType.getName())}" : "readObject"
-                            def readObjectCall = callX(i, readMethodName, args(varX("this"), constX(propertyName), rs.getExpression()))
+                            String readMethodName = isPrimitive ? "read${NameUtils.capitalize(returnType.getName())}" : 'readObject'
+                            def readObjectCall = callX(i, readMethodName, args(varX('this'), constX(propertyName), rs.getExpression()))
                             def ternaryExpr = ternaryX(
                                     equalsNullX(varX(interceptorField)),
                                     rs.getExpression(),
@@ -322,13 +322,13 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                         Parameter parameter = methodNode.getParameters()[0]
                         ClassNode parameterType = parameter.type
                         final boolean isPrimitive = ClassHelper.isPrimitiveType(parameterType)
-                        String writeMethodName = isPrimitive ? "write${NameUtils.capitalize(parameterType.getName())}" : "writeObject"
+                        String writeMethodName = isPrimitive ? "write${NameUtils.capitalize(parameterType.getName())}" : 'writeObject'
                         String propertyName = NameUtils.getPropertyNameForGetterOrSetter(methodNode.getName())
                         def interceptorFieldExpr = fieldX(interceptorField)
                         def ifStatement = ifS( neX(interceptorFieldExpr, constX(null) ),
                             assignS(
                                 varX(parameter),
-                                callX( interceptorFieldExpr, writeMethodName, args( varX("this"), constX(propertyName), propX(varX("this"), propertyName), varX(parameter)))
+                                callX( interceptorFieldExpr, writeMethodName, args( varX('this'), constX(propertyName), propX(varX('this'), propertyName), varX(parameter)))
                             )
                         )
                         staticCompilationVisitor.visitIfElse((IfStatement)ifStatement)

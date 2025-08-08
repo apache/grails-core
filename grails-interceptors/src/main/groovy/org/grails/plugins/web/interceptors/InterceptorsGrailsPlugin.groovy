@@ -39,7 +39,7 @@ import grails.util.GrailsUtil
 class InterceptorsGrailsPlugin extends Plugin {
     def final version = GrailsUtil.getGrailsVersion()
     def final dependsOn = [controllers:version, urlMappings:version]
-    def final watchedResources = "file:./grails-app/controllers/**/*Interceptor.groovy"
+    def final watchedResources = 'file:./grails-app/controllers/**/*Interceptor.groovy'
     def final loadAfter = ['domainClass', 'hibernate']
 
     GrailsInterceptorHandlerInterceptorAdapter interceptorAdapter
@@ -67,8 +67,8 @@ class InterceptorsGrailsPlugin extends Plugin {
 
     @Override
     void doWithApplicationContext() {
-        if(applicationContext.containsBeanDefinition("grailsInterceptorMappedInterceptor")) {
-            interceptorAdapter = (GrailsInterceptorHandlerInterceptorAdapter)applicationContext.getBean("grailsInterceptorMappedInterceptor", MappedInterceptor).getInterceptor()
+        if(applicationContext.containsBeanDefinition('grailsInterceptorMappedInterceptor')) {
+            interceptorAdapter = (GrailsInterceptorHandlerInterceptorAdapter)applicationContext.getBean('grailsInterceptorMappedInterceptor', MappedInterceptor).getInterceptor()
         }
     }
 
@@ -82,7 +82,7 @@ class InterceptorsGrailsPlugin extends Plugin {
             def interceptorClass = (Class) source
             def grailsClass = grailsApplication.addArtefact(InterceptorArtefactHandler.TYPE, interceptorClass)
 
-            def interceptorAdapter = this.interceptorAdapter ?: (GrailsInterceptorHandlerInterceptorAdapter)applicationContext.getBean("grailsInterceptorMappedInterceptor", MappedInterceptor).getInterceptor()
+            def interceptorAdapter = this.interceptorAdapter ?: (GrailsInterceptorHandlerInterceptorAdapter)applicationContext.getBean('grailsInterceptorMappedInterceptor', MappedInterceptor).getInterceptor()
             defineInterceptorBean(grailsClass, interceptorClass, enableJsessionId)
             interceptorAdapter.setInterceptors(
                     applicationContext.getBeansOfType(Interceptor).values() as Interceptor[]

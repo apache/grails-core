@@ -46,13 +46,13 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
     @Override
     boolean handle() {
         if (!args) {
-            error("No domain-class specified")
+            error('No domain-class specified')
             return FAILURE
         }
 
         List<String> domainClassNames
         if (args[0] == '*') {
-            domainClassNames = resources("file:grails-app/domain/**/*.groovy")
+            domainClassNames = resources('file:grails-app/domain/**/*.groovy')
                     .collect { className(it) }
         } else {
             domainClassNames = args

@@ -103,12 +103,12 @@ class MethodSubscriber<T, R> implements Subscriber<T, R> {
                         return ReflectionUtils.invokeMethod(method, target, converted) as R
                     }
                     else {
-                        log.debug("Could not convert Event argument [{}] to required type to invoke listener [{}]. Ignoring.", arg, method)
+                        log.debug('Could not convert Event argument [{}] to required type to invoke listener [{}]. Ignoring.', arg, method)
                         break
                     }
                 }
                 else {
-                    log.debug("Could not convert Event argument [{}] to required type to invoke listener [{}]. Ignoring.", arg, method)
+                    log.debug('Could not convert Event argument [{}] to required type to invoke listener [{}]. Ignoring.', arg, method)
                     break
                 }
         }

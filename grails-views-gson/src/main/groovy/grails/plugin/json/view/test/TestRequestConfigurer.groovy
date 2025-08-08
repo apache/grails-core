@@ -42,7 +42,7 @@ class TestRequestConfigurer implements Request {
     final JsonView jsonView
 
     String contextPath
-    String method = "GET"
+    String method = 'GET'
     String uri
     String contentType = 'application/json'
     String characterEncoding = 'UTF-8'

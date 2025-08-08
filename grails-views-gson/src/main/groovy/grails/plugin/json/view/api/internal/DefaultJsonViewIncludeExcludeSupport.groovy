@@ -41,7 +41,7 @@ class DefaultJsonViewIncludeExcludeSupport extends IncludeExcludeSupport<String>
     boolean includes(List<String> includes, String object) {
         includes == null ||
                 includes.contains(object) ||
-                includes.any { object.startsWith(it + ".") } ||
-                includes.any { it.startsWith(object + ".") }
+                includes.any { object.startsWith(it + '.') } ||
+                includes.any { it.startsWith(object + '.') }
     }
 }

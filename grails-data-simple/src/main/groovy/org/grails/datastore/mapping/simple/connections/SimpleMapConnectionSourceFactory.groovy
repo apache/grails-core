@@ -45,7 +45,7 @@ class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<M
     }
     @Override
     Serializable getConnectionSourcesConfigurationKey() {
-        return PREFIX + ".connections"
+        return PREFIX + '.connections'
     }
 
     @Override

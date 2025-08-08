@@ -34,8 +34,8 @@ import grails.views.WritableScript
  */
 abstract class MarkupViewTemplate extends BaseTemplate implements WritableScript, MarkupView {
 
-    public static final String EXTENSION = "gml"
-    public static final String TYPE = "views.gml"
+    public static final String EXTENSION = 'gml'
+    public static final String TYPE = 'views.gml'
 
     File sourceFile
 

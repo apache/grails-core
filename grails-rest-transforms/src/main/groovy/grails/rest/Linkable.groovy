@@ -50,7 +50,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 @Retention(RetentionPolicy.SOURCE)
 @Target([ElementType.TYPE])
-@GroovyASTTransformationClass("org.grails.plugins.web.rest.transform.LinkableTransform")
+@GroovyASTTransformationClass('org.grails.plugins.web.rest.transform.LinkableTransform')
 @interface Linkable {
 
 }

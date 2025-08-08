@@ -67,7 +67,7 @@ class Sphere extends Shape{
      * @return A Sphere
      */
     static Sphere valueOf( List coords, Metric metric = Metric.NEUTRAL) {
-        if(coords.size() < 2) throw new IllegalArgumentException("Coordinates should contain at least 2 entries for a Sphere: The center point and the distance")
+        if(coords.size() < 2) throw new IllegalArgumentException('Coordinates should contain at least 2 entries for a Sphere: The center point and the distance')
 
         Point center = Point.getPointAtIndex(coords, 0)
         def ro = coords.get(1)

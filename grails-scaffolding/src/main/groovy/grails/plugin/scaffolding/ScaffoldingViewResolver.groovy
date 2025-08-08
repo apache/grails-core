@@ -92,7 +92,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
 
     protected String buildCacheKey(String viewName) {
         String viewCacheKey = groovyPageLocator.resolveViewFormat(viewName)
-        String currentControllerKeyPrefix = resolveCurrentControllerKeyPrefixes(viewName.startsWith("/"))
+        String currentControllerKeyPrefix = resolveCurrentControllerKeyPrefixes(viewName.startsWith('/'))
         if (currentControllerKeyPrefix != null) {
             viewCacheKey = currentControllerKeyPrefix + ':' + viewCacheKey
         }
@@ -136,7 +136,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
                 def webR = GrailsWebRequest.lookup()
                 def controllerClass = webR.controllerClass
 
-                def scaffoldValue = controllerClass?.getPropertyValue("scaffold")
+                def scaffoldValue = controllerClass?.getPropertyValue('scaffold')
                 if (!scaffoldValue) {
                     Scaffold scaffoldAnnotation = controllerClass?.clazz?.getAnnotation(Scaffold)
                     scaffoldValue = scaffoldAnnotation?.domain()

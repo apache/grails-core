@@ -76,7 +76,7 @@ abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer
                     declS(saveArgs, namedArgs(failOnError: ConstantExpression.TRUE))
             )
             body.addStatement(
-                    stmt(callX(saveArgs, "putAll", argsExpression))
+                    stmt(callX(saveArgs, 'putAll', argsExpression))
             )
         } else {
             saveArgs = namedArgs(failOnError: ConstantExpression.TRUE)
@@ -84,10 +84,10 @@ abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer
 
         Expression connectionId = findConnectionId(abstractMethodNode)
         if(connectionId != null) {
-            returnS(callX(buildInstanceApiLookup(domainClassNode, connectionId), "save", args(entityVar, saveArgs)))
+            returnS(callX(buildInstanceApiLookup(domainClassNode, connectionId), 'save', args(entityVar, saveArgs)))
         }
         else {
-            return returnS(callX(entityVar, "save", saveArgs))
+            return returnS(callX(entityVar, 'save', saveArgs))
         }
     }
 

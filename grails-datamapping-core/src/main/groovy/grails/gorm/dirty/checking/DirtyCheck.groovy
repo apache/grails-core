@@ -33,7 +33,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target([ElementType.TYPE])
-@GroovyASTTransformationClass("org.grails.compiler.gorm.DirtyCheckTransformation")
+@GroovyASTTransformationClass('org.grails.compiler.gorm.DirtyCheckTransformation')
 @interface DirtyCheck {
 
 }

@@ -77,7 +77,7 @@ class CacheTagLib {
 
             out << content
         } catch (RuntimeException e) {
-            log.error("Cache block experienced an error, ignoring cache and outputting the body content instead.", e)
+            log.error('Cache block experienced an error, ignoring cache and outputting the body content instead.', e)
             out << body()
         }
     }
@@ -127,7 +127,7 @@ class CacheTagLib {
             }
             out << content
         } catch (RuntimeException e) {
-            log.error("Cache render experienced an error, ignoring cache and outputting the template un-cached.", e)
+            log.error('Cache render experienced an error, ignoring cache and outputting the template un-cached.', e)
             out << cloneIfNecessary(g.render(attrs))
         }
     }
@@ -136,7 +136,7 @@ class CacheTagLib {
     protected String calculateFullKey(String templateName, String contextPath, String pluginName) {
         GrailsWebRequest webRequest = RequestContextHolder.currentRequestAttributes()
         String uri = webRequest.attributes.getTemplateUri(templateName, webRequest.request)
-        def artefact = grailsApplication.getArtefactByLogicalPropertyName("Controller", controllerName)
+        def artefact = grailsApplication.getArtefactByLogicalPropertyName('Controller', controllerName)
         def controller = grailsApplication.mainContext.getBean(artefact?.clazz?.name)
 
         GroovyPageTemplate t = groovyPagesTemplateRenderer.findAndCacheTemplate(
@@ -167,8 +167,8 @@ class CacheTagLib {
      * @return boolean whether we wrote the a new ttl in or not
      */
     protected Boolean honorTTL(String key, Long ttl) {
-        def cache = grailsCacheManager.getCache("TagLibTTLCache")
-        String ttlKey = key + ":ttl"
+        def cache = grailsCacheManager.getCache('TagLibTTLCache')
+        String ttlKey = key + ':ttl'
         Long ttlInMilliseconds = ttl * 1000
         Long currentTime = System.currentTimeMillis()
         Boolean expired

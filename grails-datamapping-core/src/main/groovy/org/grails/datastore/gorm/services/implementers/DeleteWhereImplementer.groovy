@@ -84,7 +84,7 @@ class DeleteWhereImplementer extends AbstractWhereImplementer {
 
     @Override
     protected String getQueryMethodToExecute(ClassNode domainClass, MethodNode newMethodNode) {
-        return "deleteAll"
+        return 'deleteAll'
     }
 
     @Override

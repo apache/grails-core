@@ -60,9 +60,9 @@ import static org.grails.compiler.injection.GrailsASTUtils.ZERO_PARAMETERS
 class LinkableTransform implements ASTTransformation, TransformWithPriority {
 
     private static final ClassNode MY_TYPE = new ClassNode(Linkable)
-    public static final String LINK_METHOD = "link"
+    public static final String LINK_METHOD = 'link'
     public static final String RESOURCE_LINKS_FIELD = '$resourceLinks'
-    public static final String LINKS_METHOD = "links"
+    public static final String LINKS_METHOD = 'links'
 
     static void addLinkingMethods(ClassNode classNode) {
         def linksField = new FieldNode(RESOURCE_LINKS_FIELD, PRIVATE | TRANSIENT, new ClassNode(Set).getPlainNodeReference(), classNode, new ListExpression())
@@ -72,14 +72,14 @@ class LinkableTransform implements ASTTransformation, TransformWithPriority {
         if (classNode.getMethods(LINK_METHOD).isEmpty()) {
             final mapParameter = new Parameter(new ClassNode(Map), LINK_METHOD)
             final linkMethodBody = new BlockStatement()
-            final linkArg = new MethodCallExpression(new ClassExpression(new ClassNode(Link)), "createLink", new VariableExpression(mapParameter))
-            linkMethodBody.addStatement(new ExpressionStatement(new MethodCallExpression(resourceLinksVariable, "add", linkArg)))
+            final linkArg = new MethodCallExpression(new ClassExpression(new ClassNode(Link)), 'createLink', new VariableExpression(mapParameter))
+            linkMethodBody.addStatement(new ExpressionStatement(new MethodCallExpression(resourceLinksVariable, 'add', linkArg)))
             def linkMethod = new MethodNode(LINK_METHOD, PUBLIC, ClassHelper.VOID_TYPE, [mapParameter] as Parameter[], null, linkMethodBody)
             classNode.addMethod(linkMethod)
             AnnotatedNodeUtils.markAsGenerated(classNode, linkMethod)
 
             def linkParameter = new Parameter(new ClassNode(Link), LINK_METHOD)
-            def linkMethod2 = new MethodNode(LINK_METHOD, PUBLIC, ClassHelper.VOID_TYPE, [linkParameter] as Parameter[], null, new ExpressionStatement(new MethodCallExpression(resourceLinksVariable, "add", new VariableExpression(linkParameter))))
+            def linkMethod2 = new MethodNode(LINK_METHOD, PUBLIC, ClassHelper.VOID_TYPE, [linkParameter] as Parameter[], null, new ExpressionStatement(new MethodCallExpression(resourceLinksVariable, 'add', new VariableExpression(linkParameter))))
             classNode.addMethod(linkMethod2)
             AnnotatedNodeUtils.markAsGenerated(classNode, linkMethod2)
         }

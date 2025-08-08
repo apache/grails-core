@@ -92,7 +92,7 @@ class GrailsMavenResolverGrapeEngineFactory {
                 repositoryConfigurations.size())
         for (GrailsRepositoryConfiguration repositoryConfiguration : repositoryConfigurations) {
             RemoteRepository.Builder builder = new RemoteRepository.Builder(
-                    repositoryConfiguration.getName(), "default",
+                    repositoryConfiguration.getName(), 'default',
                     repositoryConfiguration.getUri().toASCIIString())
             if (repositoryConfiguration.hasCredentials()) {
                 builder.authentication = new AuthenticationBuilder()

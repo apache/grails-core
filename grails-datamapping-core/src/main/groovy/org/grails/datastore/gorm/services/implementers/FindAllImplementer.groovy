@@ -79,7 +79,7 @@ class FindAllImplementer extends AbstractDetachedCriteriaServiceImplementor impl
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: newMethodNode.returnType
-        Expression methodCall = callX(detachedCriteriaVar, "list", queryArgs)
+        Expression methodCall = callX(detachedCriteriaVar, 'list', queryArgs)
         if(returnType.isArray()) {
             methodCall = castX(returnType.plainNodeReference, methodCall)
         }

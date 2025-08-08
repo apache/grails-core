@@ -44,7 +44,7 @@ import org.grails.io.support.Resource
 @CompileStatic
 class GroovyScriptCommandFactory extends ResourceResolvingCommandFactory<GroovyScriptCommand> {
 
-    final Collection<String> matchingFileExtensions = ["groovy"]
+    final Collection<String> matchingFileExtensions = ['groovy']
     final String fileNamePattern = /^.*\.(groovy)$/
 
     @Override
@@ -70,9 +70,9 @@ class GroovyScriptCommandFactory extends ResourceResolvingCommandFactory<GroovyS
 
 
         def importCustomizer = new ImportCustomizer()
-        importCustomizer.addStarImports("org.grails.cli.interactive.completers")
-        importCustomizer.addStarImports("grails.util")
-        importCustomizer.addStarImports("grails.codegen.model")
+        importCustomizer.addStarImports('org.grails.cli.interactive.completers')
+        importCustomizer.addStarImports('grails.util')
+        importCustomizer.addStarImports('grails.codegen.model')
         configuration.addCompilationCustomizers(importCustomizer,new ASTTransformationCustomizer(new GroovyScriptCommandTransform()))
         def classLoader = new GroovyClassLoader(Thread.currentThread().contextClassLoader, configuration)
         return classLoader

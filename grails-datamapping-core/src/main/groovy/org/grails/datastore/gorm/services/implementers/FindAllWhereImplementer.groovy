@@ -56,7 +56,7 @@ class FindAllWhereImplementer extends AbstractWhereImplementer implements Iterab
 
     @Override
     protected String getQueryMethodToExecute(ClassNode domainClass, MethodNode newMethodNode) {
-        return "list"
+        return 'list'
     }
 
     @Override

@@ -33,11 +33,11 @@ abstract class SettingsFile extends Script {
 
 
     void include(String[] projectPaths) {
-        binding.setVariable("projectPaths", projectPaths)
+        binding.setVariable('projectPaths', projectPaths)
     }
 
     void includeFlat(String[] projectPaths) {
-        binding.setVariable("projectPaths", projectPaths)
+        binding.setVariable('projectPaths', projectPaths)
     }
 
     def methodMissing(String name, args) {

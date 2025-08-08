@@ -44,13 +44,13 @@ class GeoWithin extends MethodExpression {
 
     @Override
     void setArguments(Object[] arguments) {
-        Assert.isTrue arguments.length == 1, "Exactly 1 argument required to GeoWithin query"
+        Assert.isTrue arguments.length == 1, 'Exactly 1 argument required to GeoWithin query'
 
 
         def value = arguments[0]
 
         Assert.isTrue( (value instanceof Map) || (( value instanceof Shape) && !((value instanceof LineString) || (value instanceof Point))),
-                        "Argument must be either a Box, Circle, Polygon or Sphere")
+                        'Argument must be either a Box, Circle, Polygon or Sphere')
 
         super.setArguments(arguments)
     }

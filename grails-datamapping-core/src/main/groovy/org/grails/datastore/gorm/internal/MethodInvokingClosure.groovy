@@ -20,7 +20,7 @@ import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 /**
  * Not public API. Used by GormEnhancer
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings('rawtypes')
 @CompileStatic
 abstract class MethodInvokingClosure extends Closure {
     protected String methodName

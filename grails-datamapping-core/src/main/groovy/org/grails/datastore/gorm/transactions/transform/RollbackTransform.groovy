@@ -35,7 +35,7 @@ class RollbackTransform extends TransactionalTransform {
 
     @Override
     protected String getTransactionTemplateMethodName() {
-        return "executeAndRollback"
+        return 'executeAndRollback'
     }
 
     @Override

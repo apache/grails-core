@@ -35,7 +35,7 @@ import org.grails.cli.profile.support.ArtefactVariableResolver
 @CompileStatic
 class MkdirStep extends AbstractStep {
 
-    public static final String NAME = "mkdir"
+    public static final String NAME = 'mkdir'
 
     String location
 
@@ -43,7 +43,7 @@ class MkdirStep extends AbstractStep {
         super(command, parameters)
         location = parameters.location
         if(!location) {
-            throw new CommandException("Location not specified for mkdir step")
+            throw new CommandException('Location not specified for mkdir step')
         }
     }
 

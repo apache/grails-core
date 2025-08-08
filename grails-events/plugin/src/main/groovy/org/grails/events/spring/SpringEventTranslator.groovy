@@ -43,8 +43,8 @@ import grails.util.GrailsNameUtils
 class SpringEventTranslator implements ApplicationListener,  ApplicationContextAware {
 
     public static final String GDM_EVENT_PACKAGE = 'org.grails.datastore'
-    public static final String EVENT_SUFFIX = "Event"
-    public static final String SPRING_PACKAGE = "org.springframework"
+    public static final String EVENT_SUFFIX = 'Event'
+    public static final String SPRING_PACKAGE = 'org.springframework'
 
     private Map<Class, String> eventClassToName = new ConcurrentHashMap<Class, String>().withDefault { Class eventClass ->
         def clsName = eventClass.name

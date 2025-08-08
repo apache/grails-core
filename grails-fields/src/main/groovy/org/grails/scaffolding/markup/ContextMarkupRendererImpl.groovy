@@ -97,7 +97,7 @@ class ContextMarkupRendererImpl implements ContextMarkupRenderer {
     @Override
     Closure inputContext(PersistentEntity domainClass, Closure content) {
         { ->
-            fieldset([class: "form"], content)
+            fieldset([class: 'form'], content)
         }
     }
 
@@ -131,8 +131,8 @@ class ContextMarkupRendererImpl implements ContextMarkupRenderer {
     Closure outputContext(DomainProperty property, Closure content) {
         { ->
             li(class: 'fieldcontain') {
-                span([id: "${property.pathFromRoot}-label", class: "property-label"], getLabelText(property))
-                div([class: "property-value", "aria-labelledby": "${property.pathFromRoot}-label"], content)
+                span([id: "${property.pathFromRoot}-label", class: 'property-label'], getLabelText(property))
+                div([class: 'property-value', 'aria-labelledby': "${property.pathFromRoot}-label"], content)
             }
         }
     }

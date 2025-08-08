@@ -62,7 +62,7 @@ trait GormAnnotatedListener extends GormAnnotatedSubscriber {
             boolean applies = types == null || types.length == 0 || types.any() { Class cls -> cls.isInstance(entity) }
             if(applies && method.parameterTypes[0].isInstance(event)) {
                 try {
-                    log.debug("Invoking method [{}] for event [{}]", method, event)
+                    log.debug('Invoking method [{}] for event [{}]', method, event)
                     ReflectionUtils.invokeMethod(method, this, event)
                 } catch (Throwable e) {
                     log.error("Error triggering event [$event] for listener [${method}]: $e.message", e)

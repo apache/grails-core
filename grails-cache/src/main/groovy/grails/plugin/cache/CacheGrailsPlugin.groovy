@@ -30,7 +30,7 @@ import org.grails.plugin.cache.GrailsCacheManager
 @Slf4j
 class CacheGrailsPlugin extends Plugin {
 
-    def grailsVersion = "7.0.0 > *"
+    def grailsVersion = '7.0.0 > *'
     def observe = ['controllers', 'services']
     def loadAfter = ['controllers', 'services']
     def authorEmail = 'brownj@objectcomputing.com'
@@ -58,7 +58,7 @@ class CacheGrailsPlugin extends Plugin {
 
             Class<? extends GrailsCacheManager> cacheClazz = GrailsConcurrentMapCacheManager
             // Selects cache manager from config
-            if (config.getProperty("grails.cache.cacheManager", String, null) == "GrailsConcurrentLinkedMapCacheManager") {
+            if (config.getProperty('grails.cache.cacheManager', String, null) == 'GrailsConcurrentLinkedMapCacheManager') {
                 cacheClazz = GrailsConcurrentLinkedMapCacheManager
             }
 

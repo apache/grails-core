@@ -154,7 +154,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                         javaExecSpec.setMaxHeapSize(compileOptions.forkOptions.memoryMaximumSize)
                         javaExecSpec.setMinHeapSize(compileOptions.forkOptions.memoryInitialSize)
 
-                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(",")
+                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')
 
                         Path path = Paths.get(tmpDirPath)
                         File tmp = Files.exists(path) ? path.toFile() : Files.createDirectories(path).toFile()

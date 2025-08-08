@@ -298,7 +298,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria "in"(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    Criteria 'in'(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
         inList propertyName, buildQueryableCriteria(subquery)
     }
 
@@ -936,7 +936,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     AbstractDetachedCriteria<T> sort(String property, String direction) {
         AbstractDetachedCriteria newCriteria = this.clone()
-        newCriteria.orders.add(new Query.Order(property, "desc".equalsIgnoreCase(direction) ? Query.Order.Direction.DESC : Query.Order.Direction.ASC))
+        newCriteria.orders.add(new Query.Order(property, 'desc'.equalsIgnoreCase(direction) ? Query.Order.Direction.DESC : Query.Order.Direction.ASC))
         return newCriteria
     }
 

@@ -46,16 +46,16 @@ class NumberInputRenderer implements DomainInputRenderer {
         Constrained constraints = property.constrained
         Range range = constraints?.range
         if (range) {
-            attributes.type = "range"
+            attributes.type = 'range'
             attributes.min = range.from
             attributes.max = range.to
         } else {
             String typeName = property.type.simpleName.toLowerCase()
 
-            attributes.type = "number"
+            attributes.type = 'number'
 
             if(typeName in ['double', 'float', 'bigdecimal']) {
-                attributes.step = "any"
+                attributes.step = 'any'
             }
             if (constraints?.scale != null) {
                 attributes.step = "0.${'0' * (constraints.scale - 1)}1"

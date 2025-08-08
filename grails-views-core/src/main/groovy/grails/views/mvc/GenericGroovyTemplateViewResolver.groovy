@@ -53,7 +53,7 @@ class GenericGroovyTemplateViewResolver implements ViewResolver {
                 def controller = webRequest.controllerClass
                 View view
                 if (controller && controller.namespace) {
-                    String namespacePrefix = "/" + controller.namespace
+                    String namespacePrefix = '/' + controller.namespace
                     if (!viewName.startsWith(namespacePrefix)) {
                         view = smartViewResolver.resolveView(namespacePrefix + viewName, currentRequest, webRequest.response)
                     }

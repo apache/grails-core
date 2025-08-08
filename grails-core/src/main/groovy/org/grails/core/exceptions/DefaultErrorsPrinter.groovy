@@ -205,7 +205,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
     }
 
     String formatCodeSnippetEnd(Resource resource, int lineNumber) {
-        ""
+        ''
     }
 
     @Deprecated

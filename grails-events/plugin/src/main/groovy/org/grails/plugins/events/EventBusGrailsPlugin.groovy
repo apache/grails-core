@@ -35,19 +35,19 @@ import org.grails.events.spring.SpringEventTranslator
  */
 class EventBusGrailsPlugin extends Plugin {
 
-    def grailsVersion = "7.0.0 > *"
+    def grailsVersion = '7.0.0 > *'
 
     /**
      * Whether to translate GORM events into reactor events
      */
-    public static final String TRANSLATE_SPRING_EVENTS = "grails.events.spring"
+    public static final String TRANSLATE_SPRING_EVENTS = 'grails.events.spring'
 
     @Override
     Closure doWithSpring() {
         {->
             Config config = grailsApplication.config
             grailsEventBus(EventBusFactoryBean)
-            gormDispatchEventRegistrar(GormDispatcherRegistrar, ref("grailsEventBus"))
+            gormDispatchEventRegistrar(GormDispatcherRegistrar, ref('grailsEventBus'))
 
             // the legacy reactor EventBus, here for backwards compatibility
             eventBus(EventBus, ref('grailsEventBus'))

@@ -88,14 +88,14 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
             MethodNode methodNode = (MethodNode)annotatedNode
             ClassNode declaringClass = methodNode.getDeclaringClass()
             if ( shouldWeave(annotationNode, declaringClass) ) {
-                if(declaringClass.getField("lazyInit") == null) {
-                    declaringClass.addField("lazyInit", Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL, ClassHelper.Boolean_TYPE, ConstantExpression.FALSE)
+                if(declaringClass.getField('lazyInit') == null) {
+                    declaringClass.addField('lazyInit', Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL, ClassHelper.Boolean_TYPE, ConstantExpression.FALSE)
                 }
                 Parameter[] parameters = methodNode.parameters
                 boolean isGormEvent = parameters.length == 1 && AstUtils.isSubclassOf(parameters[0].type, AbstractPersistenceEvent.name)
                 boolean isGormListener = annotationNode.classNode.name == Listener.name
                 if(!isGormEvent && isGormListener) {
-                    addError("A GORM @Listener must accept a GORM event as an argument", annotationNode)
+                    addError('A GORM @Listener must accept a GORM event as an argument', annotationNode)
                     return
                 }
                 if(isGormEvent) {
@@ -106,7 +106,7 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
                     else {
                         weaveTrait(declaringClass, source, GormAnnotatedSubscriber)
                     }
-                    MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod("getSubscribedEvents")
+                    MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod('getSubscribedEvents')
                     ListExpression listExpression
                     if(getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
                         def currentCode = getSubscribersMethod.code
@@ -140,13 +140,13 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
                 }
             }
 
-            MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod("getSubscribedMethods")
+            MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod('getSubscribedMethods')
             ListExpression listExpression
             if(getSubscribersMethod == null) {
                 def listOfMethodType = GenericsUtils.makeClassSafeWithGenerics(List, ClassHelper.make(Method))
                 listExpression = new ListExpression()
                 ExpressionStatement body = new ExpressionStatement(listExpression)
-                declaringClass.addMethod("getSubscribedMethods", Modifier.PUBLIC, listOfMethodType, ZERO_PARAMETERS, null, body)
+                declaringClass.addMethod('getSubscribedMethods', Modifier.PUBLIC, listOfMethodType, ZERO_PARAMETERS, null, body)
             }
             else if(getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
                 def currentCode = getSubscribersMethod.code
@@ -179,7 +179,7 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
                 methodArgs.addExpression( classX(param.type) )
             }
             listExpression.addExpression(callX(
-                    callThisX("getClass"), "getMethod", methodArgs)
+                    callThisX('getClass'), 'getMethod', methodArgs)
             )
         }
     }

@@ -111,7 +111,7 @@ class AstMethodDispatchUtils extends GeneralUtils {
      * @return The expression
      */
     static MethodCallExpression callThisD(ClassNode thisType, String methodName, Expression arguments) {
-        MethodCallExpression methodCall = callX(varX("this", thisType), methodName, arguments)
+        MethodCallExpression methodCall = callX(varX('this', thisType), methodName, arguments)
         Parameter[] params = paramsForArgs(arguments)
         MethodNode mn = thisType.getDeclaredMethod(methodName, params)
         if(mn != null) {
@@ -133,7 +133,7 @@ class AstMethodDispatchUtils extends GeneralUtils {
         }
         else {
             def type = expression instanceof ClassExpression ? ClassHelper.CLASS_Type : expression.type
-            return params( param(type, "p"))
+            return params( param(type, 'p'))
         }
     }
 }

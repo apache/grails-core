@@ -80,7 +80,7 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
     }
 
     private Database createGormDatabase(ConfigurableApplicationContext applicationContext, String dataSource) {
-        String sessionFactoryName = "sessionFactory"
+        String sessionFactoryName = 'sessionFactory'
         if (!isDefaultDataSource(dataSource)) {
             sessionFactoryName = sessionFactoryName + '_' + dataSource
         }
@@ -89,7 +89,7 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
 
         Dialect dialect = serviceRegistry.getService(JdbcServices.class).dialect
 
-        HibernateDatastore hibernateDatastore = applicationContext.getBean("hibernateDatastore", HibernateDatastore)
+        HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSource)
 
         Database database = new GormDatabase(dialect, serviceRegistry, hibernateDatastore)

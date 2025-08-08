@@ -35,8 +35,8 @@ import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
  */
 class DomainClassGrailsPlugin extends Plugin {
 
-    def watchedResources = ["file:./grails-app/domain/**/*.groovy",
-                            "file:./plugins/*/grails-app/domain/**/*.groovy"]
+    def watchedResources = ['file:./grails-app/domain/**/*.groovy',
+                            'file:./plugins/*/grails-app/domain/**/*.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
     def dependsOn = [i18n:version]
@@ -47,7 +47,7 @@ class DomainClassGrailsPlugin extends Plugin {
         validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
             bean.lazyInit = true
         }
-        "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref("validateableConstraintsEvaluator"))  { bean ->
+        "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref('validateableConstraintsEvaluator'))  { bean ->
             bean.lazyInit = true
         }
         grailsDomainClassMappingContext(DefaultMappingContextFactoryBean, application, applicationContext)  { bean ->

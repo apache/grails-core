@@ -40,15 +40,15 @@ import grails.web.mime.MimeType
  */
 @CompileStatic
 class VndErrorJsonRenderer extends AbstractVndErrorRenderer {
-    public static final MimeType MIME_TYPE = new MimeType("application/vnd.error+json", "json")
-    public static final String LINKS_ATTRIBUTE = "_links"
+    public static final MimeType MIME_TYPE = new MimeType('application/vnd.error+json', 'json')
+    public static final String LINKS_ATTRIBUTE = '_links'
     public static final String FOUR_SPACES = '    '
 
     MimeType[] mimeTypes = [MIME_TYPE, MimeType.HAL_JSON, MimeType.JSON, MimeType.TEXT_JSON] as MimeType[]
 
     @Override
     void render(Errors object, RenderContext context) {
-        if (messageSource == null) throw new IllegalStateException("messageSource property null")
+        if (messageSource == null) throw new IllegalStateException('messageSource property null')
         if (object instanceof BeanPropertyBindingResult) {
 
             def errors = object as BeanPropertyBindingResult

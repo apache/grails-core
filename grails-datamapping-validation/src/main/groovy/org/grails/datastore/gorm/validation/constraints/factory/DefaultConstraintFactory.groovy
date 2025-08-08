@@ -49,7 +49,7 @@ class DefaultConstraintFactory implements ConstraintFactory {
 
     DefaultConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource, List<Class> targetTypes = [Object]) {
         this.type = constraintClass
-        this.name = Introspector.decapitalize(constraintClass.simpleName) - "Constraint"
+        this.name = Introspector.decapitalize(constraintClass.simpleName) - 'Constraint'
         this.messageSource = messageSource
         this.targetTypes = targetTypes
 

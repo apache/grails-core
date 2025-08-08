@@ -53,6 +53,6 @@ class RuntimeSupport {
         if(datastores) {
             return datastores[0]
         }
-        throw new DatastoreConfigurationException("No default datastore configured")
+        throw new DatastoreConfigurationException('No default datastore configured')
     }
 }

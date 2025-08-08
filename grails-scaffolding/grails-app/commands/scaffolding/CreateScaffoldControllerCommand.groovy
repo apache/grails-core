@@ -57,7 +57,7 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
         render(template: template('scaffolding/ScaffoldedController.groovy'),
-                destination: file("grails-app/controllers/${model.packagePath}/${model.convention("Controller")}.groovy"),
+                destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
                 model: model,
                 overwrite: overwrite)
         verbose('Scaffold controller created for class domain-class')

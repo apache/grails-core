@@ -84,7 +84,7 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
     public  static final ClassNode WITHOUT_TENANT_ANNOTATION_TYPE = WITHOUT_TENANT_ANNOTATION_TYPE_EXPR.getType()
 
     public static final String RENAMED_METHOD_PREFIX = '$mt__'
-    public static final String VAR_TENANT_ID = "tenantId"
+    public static final String VAR_TENANT_ID = 'tenantId'
 
     private static final Parameter[] N0_PARAMETER = null
 
@@ -100,18 +100,18 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         VariableExpression tenantServiceVar = varX('$tenantService', tenantServiceClassNode)
         variableScope.putDeclaredVariable( tenantServiceVar )
         newMethodBody.addStatement(
-            declS(tenantServiceVar, callD(ServiceRegistry, "targetDatastore", "getService", classX(tenantServiceClassNode) ) )
+            declS(tenantServiceVar, callD(ServiceRegistry, 'targetDatastore', 'getService', classX(tenantServiceClassNode) ) )
         )
 
         ClassNode serializableClassNode = make(Serializable)
         ClassNode annotationClassNode = annotationNode.classNode
         if (CURRENT_TENANT_ANNOTATION_TYPE.equals(annotationClassNode)) {
-            return makeDelegatingClosureCall(tenantServiceVar, "withCurrent", params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+            return makeDelegatingClosureCall(tenantServiceVar, 'withCurrent', params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
         } else if (WITHOUT_TENANT_ANNOTATION_TYPE.equals(annotationClassNode)) {
-            return makeDelegatingClosureCall(tenantServiceVar, "withoutId", N0_PARAMETER, originalMethodCallExpr, variableScope)
+            return makeDelegatingClosureCall(tenantServiceVar, 'withoutId', N0_PARAMETER, originalMethodCallExpr, variableScope)
         } else {
             // must be @Tenant
-            Expression annValue = annotationNode.getMember("value")
+            Expression annValue = annotationNode.getMember('value')
             if(annValue instanceof ClosureExpression) {
                 VariableExpression closureVar = varX('$tenantResolver', CLOSURE_TYPE)
                 VariableExpression tenantIdVar = varX('$tenantId', serializableClassNode)
@@ -126,17 +126,17 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
                 // Serializable $tenantId = (Serializable)$tenantResolver.call()
                 // if($tenantId == null) throw new TenantNotFoundException(..)
                 newMethodBody.addStatement  declS( closureVar, annValue)
-                newMethodBody.addStatement  assignS( closureVar, callD( closureVar, "clone"))
-                newMethodBody.addStatement  stmt( callD( closureVar, "setDelegate", varThis() ) )
-                newMethodBody.addStatement  declS( tenantIdVar, castX( serializableClassNode, callD( closureVar, "call") ))
+                newMethodBody.addStatement  assignS( closureVar, callD( closureVar, 'clone'))
+                newMethodBody.addStatement  stmt( callD( closureVar, 'setDelegate', varThis() ) )
+                newMethodBody.addStatement  declS( tenantIdVar, castX( serializableClassNode, callD( closureVar, 'call') ))
                 newMethodBody.addStatement ifS( equalsNullX(tenantIdVar),
-                    throwS( ctorX( make(TenantNotFoundException), constX("Tenant id resolved from @Tenant is null")) )
+                    throwS( ctorX( make(TenantNotFoundException), constX('Tenant id resolved from @Tenant is null')) )
                 )
-                return makeDelegatingClosureCall( tenantServiceVar, "withId", args(tenantIdVar), params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+                return makeDelegatingClosureCall( tenantServiceVar, 'withId', args(tenantIdVar), params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
             else {
-                addError("@Tenant value should be a closure", annotationNode)
-                return makeDelegatingClosureCall( tenantServiceVar, "withCurrent", params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+                addError('@Tenant value should be a closure', annotationNode)
+                return makeDelegatingClosureCall( tenantServiceVar, 'withCurrent', params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
         }
     }

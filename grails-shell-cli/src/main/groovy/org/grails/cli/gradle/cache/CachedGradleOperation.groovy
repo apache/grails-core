@@ -57,7 +57,7 @@ abstract class CachedGradleOperation<T> implements Callable<T> {
     T call() throws Exception {
         def depsFile = new File(BuildSettings.TARGET_DIR, fileName)
         try {
-            if(depsFile.exists() && depsFile.lastModified() > new File(projectContext.baseDir, "build.gradle").lastModified()) {
+            if(depsFile.exists() && depsFile.lastModified() > new File(projectContext.baseDir, 'build.gradle').lastModified()) {
                 T cached = readFromCached(depsFile)
                 if(cached) {
                     return cached

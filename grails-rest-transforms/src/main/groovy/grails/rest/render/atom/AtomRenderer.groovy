@@ -44,16 +44,16 @@ import org.grails.datastore.mapping.model.types.ToOne
 class AtomRenderer<T> extends HalXmlRenderer<T> {
 
     public static final MimeType MIME_TYPE = MimeType.ATOM_XML
-    public static final SimpleDateFormat ATOM_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz")
+    public static final SimpleDateFormat ATOM_DATE_FORMAT = new SimpleDateFormat(/yyyy-MM-dd'T'HH:mm:ssz/)
     public static final String FEED_TAG = 'feed'
     public static final String ENTRY_TAG = 'entry'
-    public static final String XMLNS_ATTRIBUTE = "xmlns"
+    public static final String XMLNS_ATTRIBUTE = 'xmlns'
     public static final String PUBLISHED_TAG = 'published'
     public static final String UPDATED_TAG = 'updated'
     public static final String ID_TAG = 'id'
-    public static final String ATOM_NAMESPACE = "http://www.w3.org/2005/Atom"
+    public static final String ATOM_NAMESPACE = 'http://www.w3.org/2005/Atom'
     public static final SimpleDateFormat ID_DATE_FORMAT = new SimpleDateFormat('yyyy-MM-dd')
-    public static final String RELATIONSHIP_ALTERNATE = "alternate"
+    public static final String RELATIONSHIP_ALTERNATE = 'alternate'
     public static final MimeType[] DEFAULT_ATOM_MIME_TYPES = [MIME_TYPE] as MimeType[]
 
     AtomRenderer(Class<T> targetType) {

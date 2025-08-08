@@ -30,6 +30,6 @@ class SHA1CodecExtensionMethods {
     }
 
     static decodeSHA1(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode SHA-1 hashes")
+        throw new UnsupportedOperationException('Cannot decode SHA-1 hashes')
     }
 }

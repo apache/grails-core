@@ -50,7 +50,7 @@ abstract class AbstractGroovyTemplateCompiler {
 
     @Delegate CompilerConfiguration configuration = new CompilerConfiguration()
 
-    String packageName = ""
+    String packageName = ''
     File sourceDir
     ViewConfiguration viewConfiguration
 

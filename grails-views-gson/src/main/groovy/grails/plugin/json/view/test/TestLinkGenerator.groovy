@@ -47,7 +47,7 @@ class TestLinkGenerator implements LinkGenerator{
     }
 
     @Override
-    String link(Map params, String encoding = "UTF-8") {
+    String link(Map params, String encoding = 'UTF-8') {
         final boolean absolute = params.absolute ? true : false
         final String base = absolute ? "${serverBaseURL}${contextPath}" : contextPath
         StringBuilder url = new StringBuilder(base)
@@ -108,6 +108,6 @@ class TestLinkGenerator implements LinkGenerator{
 
     @Override
     String getServerBaseURL() {
-        return "http://localhost:8080"
+        return 'http://localhost:8080'
     }
 }

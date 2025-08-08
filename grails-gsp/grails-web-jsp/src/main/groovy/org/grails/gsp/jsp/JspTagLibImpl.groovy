@@ -34,7 +34,7 @@ class JspTagLibImpl implements JspTagLib {
     private Map<String, JspTagImpl> tags = [:]
 
     JspTagLibImpl(String uri, Map<String, String> tagClasses, ClassLoader classLoader) {
-        Assert.notNull uri, "The URI of the tag library must be specified!"
+        Assert.notNull uri, 'The URI of the tag library must be specified!'
         this.uri = uri
         tagClasses.each { String tagName, String className ->
             tags[tagName] = new JspTagImpl(className, classLoader)

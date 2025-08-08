@@ -48,6 +48,6 @@ class CountByImplementer extends FindAllByImplementer implements SingleResultSer
 
     @Override
     protected String getDynamicFinderPrefix() {
-        return "countBy"
+        return 'countBy'
     }
 }

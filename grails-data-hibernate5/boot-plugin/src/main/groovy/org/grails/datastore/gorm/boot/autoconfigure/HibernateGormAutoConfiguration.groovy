@@ -57,7 +57,7 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
 @Configuration
 @ConditionalOnClass(HibernateMappingContextConfiguration)
 @ConditionalOnBean(DataSource)
-@ConditionalOnMissingBean(type = "grails.orm.bootstrap.HibernateDatastoreSpringInitializer")
+@ConditionalOnMissingBean(type = 'grails.orm.bootstrap.HibernateDatastoreSpringInitializer')
 @AutoConfigureAfter(DataSourceAutoConfiguration)
 @AutoConfigureBefore([HibernateJpaAutoConfiguration])
 class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFactoryAware {
@@ -88,7 +88,7 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
                     new ConfigurableApplicationContextEventPublisher(applicationContext),
                     packages as Package[]
             )
-            beanFactory.registerSingleton("dataSource", datastore.getDataSource())
+            beanFactory.registerSingleton('dataSource', datastore.getDataSource())
         }
         else {
             datastore = new HibernateDatastore(
@@ -129,7 +129,7 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         if(!(applicationContext instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException("Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext")
+            throw new IllegalArgumentException('Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         this.applicationContext = (ConfigurableApplicationContext)applicationContext
     }

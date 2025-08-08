@@ -57,7 +57,7 @@ class StaticConnectionSources<T, S extends ConnectionSourceSettings> extends Abs
 
     @Override
     ConnectionSource<T, S> addConnectionSource(String name, PropertyResolver configuration) {
-        throw new UnsupportedOperationException("Cannot add a connection source it a SingletonConnectionSources")
+        throw new UnsupportedOperationException('Cannot add a connection source it a SingletonConnectionSources')
     }
 
     @Override

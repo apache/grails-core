@@ -65,13 +65,13 @@ import org.grails.datastore.mapping.reflect.EntityReflector
 @CompileStatic
 class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelper {
 
-    public static final String LINKS_ATTRIBUTE = "_links"
-    public static final String SELF_ATTRIBUTE = "self"
-    public static final String HREF_ATTRIBUTE = "href"
-    public static final String HREFLANG_ATTRIBUTE = "hreflang"
-    public static final String TYPE_ATTRIBUTE = "type"
-    public static final String EMBEDDED_ATTRIBUTE = "_embedded"
-    public static final String EMBEDDED_PARAMETER = "embedded"
+    public static final String LINKS_ATTRIBUTE = '_links'
+    public static final String SELF_ATTRIBUTE = 'self'
+    public static final String HREF_ATTRIBUTE = 'href'
+    public static final String HREFLANG_ATTRIBUTE = 'hreflang'
+    public static final String TYPE_ATTRIBUTE = 'type'
+    public static final String EMBEDDED_ATTRIBUTE = '_embedded'
+    public static final String EMBEDDED_PARAMETER = 'embedded'
 
 
     private StreamingJsonDelegate jsonDelegate
@@ -94,8 +94,8 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
             arguments = new LinkedHashMap()
         }
 
-        if(!arguments.containsKey("beforeClosure")) {
-            arguments.put("beforeClosure", createlinksRenderingClosure(arguments))
+        if(!arguments.containsKey('beforeClosure')) {
+            arguments.put('beforeClosure', createlinksRenderingClosure(arguments))
         }
 
         JsonOutput.JsonWritable jsonWritable = viewHelper.render(object, arguments, customizer)
@@ -117,7 +117,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         call(EMBEDDED_ATTRIBUTE, jsonWritable)
 
                         if(iterable instanceof PagedResultList) {
-                            call("totalCount", ((PagedResultList)iterable).getTotalCount())
+                            call('totalCount', ((PagedResultList)iterable).getTotalCount())
                         }
                     }
                     return out
@@ -537,7 +537,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
     @CompileDynamic
     private Set<Link> getLinks(Object o) {
-        if(o.respondsTo("links")) {
+        if(o.respondsTo('links')) {
             return o.links()
         }
         else {
@@ -613,7 +613,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
         @Override
         void call(String name, Iterable coll, Closure c) throws IOException {
-            Field field = delegate.getClass().getDeclaredField("first")
+            Field field = delegate.getClass().getDeclaredField('first')
             field.setAccessible(true)
             field.set(delegate, false)
             writeName(name)

@@ -42,15 +42,15 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
         manager.session.datastore.applicationContext.addApplicationListener(listener)
     }
 
-    void "test event for new session"() {
-        when:"Using existing session"
+    void 'test event for new session'() {
+        when: 'Using existing session'
         TestEntity.withSession { s ->
             s.flush()
         }
         then:
         listener.events.empty
 
-        when:"Creating new session"
+        when: 'Creating new session'
         def newSession = null
         def isDatastoreSession = false
         TestEntity.withNewSession { s ->

@@ -55,7 +55,7 @@ class CountWhereImplementer extends AbstractWhereImplementer implements Annotate
 
     @Override
     protected String getQueryMethodToExecute(ClassNode domainClass, MethodNode newMethodNode) {
-        return "count"
+        return 'count'
     }
 
     @Override

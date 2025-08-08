@@ -43,26 +43,26 @@ class EnvironmentBlockEvaluator extends GroovyObjectSupport {
         current = e
     }
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings('unused')
     void environments(Closure<?> c) {
         if (c != null) {
             c.setDelegate(this)
             c.call()
         }
     }
-    @SuppressWarnings("unused")
+    @SuppressWarnings('unused')
     void production(Closure<?> c) {
         if (current == Environment.PRODUCTION) {
             callable = c
         }
     }
-    @SuppressWarnings("unused")
+    @SuppressWarnings('unused')
     void development(Closure<?> c) {
         if (current == Environment.DEVELOPMENT) {
             callable = c
         }
     }
-    @SuppressWarnings("unused")
+    @SuppressWarnings('unused')
     void test(Closure<?> c) {
         if (current == Environment.TEST) {
             callable = c

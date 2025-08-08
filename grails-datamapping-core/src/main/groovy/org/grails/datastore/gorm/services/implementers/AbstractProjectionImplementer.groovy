@@ -93,10 +93,10 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
     }
 
     protected String getProjectionName() {
-        "property"
+        'property'
     }
 
     protected String getQueryMethodToInvoke(ClassNode domainClassNode, MethodNode newMethodNode) {
-        "find"
+        'find'
     }
 }

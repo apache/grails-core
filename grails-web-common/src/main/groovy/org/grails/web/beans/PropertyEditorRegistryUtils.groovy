@@ -45,8 +45,8 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 @CompileStatic
 class PropertyEditorRegistryUtils {
 
-    private static final String PROPERTY_EDITOR_REGISTRARS = "org.codehaus.groovy.grails.PROPERTY_EDITOR_REGISTRARS"
-    private static final String JSON_DATE_FORMAT = "yyyy-MM-dd'T'hh:mm:ss'Z'"
+    private static final String PROPERTY_EDITOR_REGISTRARS = 'org.codehaus.groovy.grails.PROPERTY_EDITOR_REGISTRARS'
+    private static final String JSON_DATE_FORMAT = /yyyy-MM-dd'T'hh:mm:ss'Z'/
 
     /**
      * Registers all known

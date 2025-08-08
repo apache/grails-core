@@ -44,7 +44,7 @@ class GradleStep extends AbstractStep {
             'verbose' : '-d'
     ]
     protected List<String> tasks = []
-    protected String baseArguments = ""
+    protected String baseArguments = ''
     protected boolean passArguments = true
 
     GradleStep(ProfileCommand command, Map<String, Object> parameters) {
@@ -54,7 +54,7 @@ class GradleStep extends AbstractStep {
 
 
     @Override
-    String getName() { "gradle" }
+    String getName() { 'gradle' }
 
     @Override
     boolean handle(ExecutionContext context) {

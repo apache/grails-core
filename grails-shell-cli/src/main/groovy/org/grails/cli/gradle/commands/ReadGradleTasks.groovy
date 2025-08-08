@@ -44,7 +44,7 @@ class ReadGradleTasks extends ListReadingCachedGradleOperation<String> {
     }
 
     ReadGradleTasks(ProjectContext projectContext) {
-        super(projectContext, ".gradle-tasks")
+        super(projectContext, '.gradle-tasks')
     }
 
     @Override

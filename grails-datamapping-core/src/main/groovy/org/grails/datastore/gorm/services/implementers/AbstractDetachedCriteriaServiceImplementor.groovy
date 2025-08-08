@@ -65,7 +65,7 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
         AnnotationNode joinAnnotation = AstUtils.findAnnotation(abstractMethodNode, Join)
         if(lookupById() && joinAnnotation == null && parameterCount == 1 && parameters[0].name == GormProperties.IDENTITY) {
             // optimize query by id
-            Expression byId = callX( classX(domainClassNode), "get", varX(parameters[0]))
+            Expression byId = callX( classX(domainClassNode), 'get', varX(parameters[0]))
             implementById(domainClassNode,abstractMethodNode,newMethodNode, targetClassNode, body, byId)
         }
         else {
@@ -79,7 +79,7 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
 
             if(connectionId != null) {
                 body.addStatement(
-                    assignS(queryVar, callX(queryVar, "withConnection", connectionId))
+                    assignS(queryVar, callX(queryVar, 'withConnection', connectionId))
                 )
             }
             handleJoinAnnotation(joinAnnotation, body, queryVar)
@@ -90,14 +90,14 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
                     if(parameterName == GormProperties.IDENTITY) {
                         body.addStatement(
                             stmt(
-                                callX(queryVar, "idEq", varX(parameter))
+                                callX(queryVar, 'idEq', varX(parameter))
                             )
                         )
                     }
                     else if (isValidParameter(domainClassNode, parameter, parameterName)) {
                         body.addStatement(
                             stmt(
-                                callX(queryVar, "eq", args( constX(parameterName), varX(parameter) ))
+                                callX(queryVar, 'eq', args( constX(parameterName), varX(parameter) ))
                             )
                         )
                     } else if (parameter.type == ClassHelper.MAP_TYPE && parameterName == 'args') {
@@ -123,16 +123,16 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
     @PackageScope
     static void handleJoinAnnotation(AnnotationNode joinAnnotation, BlockStatement body, VariableExpression queryVar) {
         if (joinAnnotation != null) {
-            Expression joinValue = joinAnnotation.getMember("value")
+            Expression joinValue = joinAnnotation.getMember('value')
             if (joinValue != null) {
-                Expression joinType = joinAnnotation.getMember("type")
+                Expression joinType = joinAnnotation.getMember('type')
                 if (joinType instanceof PropertyExpression) {
                     body.addStatement(
-                            stmt(callX(queryVar, "join", args(joinValue, joinType)))
+                            stmt(callX(queryVar, 'join', args(joinValue, joinType)))
                     )
                 } else {
                     body.addStatement(
-                            stmt(callX(queryVar, "join", joinValue))
+                            stmt(callX(queryVar, 'join', joinValue))
                     )
                 }
             }

@@ -87,7 +87,7 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration)
         ConnectionSourceSettings settings = builder.build()
 
-        this.mappingContext = new KeyValueMappingContext("default", settings)
+        this.mappingContext = new KeyValueMappingContext('default', settings)
         DefaultValidatorRegistry validatorRegistry = new DefaultValidatorRegistry(mappingContext, settings, messageSource)
         for(factory in constraintFactories) {
             validatorRegistry.addConstraintFactory(factory)

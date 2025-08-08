@@ -40,7 +40,7 @@ class LinkGeneratorFactory implements ApplicationContextAware {
 
     UrlMappingsFactory urlMappingsFactory = new UrlMappingsFactory()
     UrlConverter urlConverter = new CamelCaseUrlConverter()
-    String baseURL = "http://localhost"
+    String baseURL = 'http://localhost'
     String contextPath = null
 
     LinkGenerator create(Class mappingsClass) {

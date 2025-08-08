@@ -142,7 +142,7 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
             if (parameters.length > 0) {
                 if (parameters[-1].name == 'args' && parameters[-1].type == MAP_TYPE) {
                     body.addStatement(
-                            stmt(callX(varX(parameters[-1]), "put", args(constX("fetch"), joinMap)))
+                            stmt(callX(varX(parameters[-1]), 'put', args(constX('fetch'), joinMap)))
                     )
                 }
                 else {
@@ -164,6 +164,6 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
 
 
     protected String getDynamicFinderPrefix() {
-        return "findAllBy"
+        return 'findAllBy'
     }
 }

@@ -153,7 +153,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
     private static Iterable<ServiceImplementer> LOADED_IMPLEMENTORS = null
     public static
-    final String NO_IMPLEMENTATIONS_MESSAGE = "No implementations possible for method. Please use an abstract class instead and provide an implementation."
+    final String NO_IMPLEMENTATIONS_MESSAGE = 'No implementations possible for method. Please use an abstract class instead and provide an implementation.'
 
     @Override
     protected Class getTraitClass() {
@@ -195,7 +195,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     pn.setGetterBlock(
                         block(
                             ifS( equalsNullX(fieldVar),
-                                assignX(fieldVar, callX( varX("datastore"), "getService", classX(propertyType.plainNodeReference)))
+                                assignX(fieldVar, callX( varX('datastore'), 'getService', classX(propertyType.plainNodeReference)))
                             ),
                             returnS(fieldVar)
                         )
@@ -205,14 +205,14 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
             List<ConstructorNode> constructors = classNode.getDeclaredConstructors()
             if(!constructors.isEmpty()) {
-                error(sourceUnit, classNode, "Abstract data Services should not define constructors")
+                error(sourceUnit, classNode, 'Abstract data Services should not define constructors')
             }
 
         }
 
         if (isInterface || isAbstractClass) {
             // create a new class to represent the implementation
-            String packageName = classNode.packageName ? "${classNode.packageName}." : ""
+            String packageName = classNode.packageName ? "${classNode.packageName}." : ''
             ClassNode[] interfaces = isInterface ? ([classNode.plainNodeReference] as ClassNode[]) : new ClassNode[0]
             ClassNode superClass = isInterface ? ClassHelper.OBJECT_TYPE : classNode.plainNodeReference
             String serviceClassName = classNode.nameWithoutPackage
@@ -224,38 +224,38 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             if(!propertiesFields.isEmpty()) {
 
                 ClassNode datastoreType = ClassHelper.make(Datastore)
-                FieldNode datastoreField = impl.addField("datastore", Modifier.PRIVATE, datastoreType, null)
+                FieldNode datastoreField = impl.addField('datastore', Modifier.PRIVATE, datastoreType, null)
                 VariableExpression datastoreFieldVar = varX(datastoreField)
 
 
                 BlockStatement body = block()
-                Parameter datastoreParam = param(datastoreType, "d")
-                impl.addMethod("setDatastore", Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
+                Parameter datastoreParam = param(datastoreType, 'd')
+                impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
                         datastoreParam
                 ), null, body )
                 body.addStatement(
                         assignS(datastoreFieldVar, varX(datastoreParam))
                 )
-                impl.addMethod("getDatastore", Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
                         returnS( datastoreFieldVar )
                 )
                 for(FieldNode fn in propertiesFields) {
                     body.addStatement(
-                            assignS(varX(fn), callX(datastoreFieldVar, "getService", classX(fn.type.plainNodeReference)))
+                            assignS(varX(fn), callX(datastoreFieldVar, 'getService', classX(fn.type.plainNodeReference)))
                     )
                 }
             }
 
             copyAnnotations(classNode, impl)
             AnnotationNode serviceAnnotation = findAnnotation(impl, Service)
-            if(serviceAnnotation.getMember("name") == null) {
+            if(serviceAnnotation.getMember('name') == null) {
                 serviceAnnotation
-                        .setMember("name", new ConstantExpression(Introspector.decapitalize(serviceClassName)))
+                        .setMember('name', new ConstantExpression(Introspector.decapitalize(serviceClassName)))
             }
             // add compile static by default
             impl.addAnnotation(new AnnotationNode(COMPILE_STATIC_TYPE))
             // weave the trait class
-            ClassExpression ce = (ClassExpression) annotationNode.getMember("value")
+            ClassExpression ce = (ClassExpression) annotationNode.getMember('value')
             ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
             // weave with generic argument
             weaveTraitWithGenerics(impl, getTraitClass(), targetDomainClass)
@@ -307,7 +307,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         if(implementer instanceof AdaptedImplementer) {
                             implementedClass = ((AdaptedImplementer)implementer).getAdapted().getClass()
                         }
-                        implementedAnn.setMember("by", classX(implementedClass))
+                        implementedAnn.setMember('by', classX(implementedClass))
                         methodImpl.addAnnotation(implementedAnn)
                         impl.addMethod(methodImpl)
                         break
@@ -335,14 +335,14 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             }
 
 
-            Expression exposeExpr = annotationNode.getMember("expose")
+            Expression exposeExpr = annotationNode.getMember('expose')
             if (exposeExpr == null || (exposeExpr instanceof ConstantExpression && exposeExpr == ConstantExpression.TRUE)) {
                 generateServiceDescriptor(sourceUnit, impl)
             }
 
             sourceUnit.getAST().addClass(impl)
         } else {
-            Expression exposeExpr = annotationNode.getMember("expose")
+            Expression exposeExpr = annotationNode.getMember('expose')
             if (exposeExpr == null || (exposeExpr instanceof ConstantExpression && exposeExpr == ConstantExpression.TRUE)) {
                 generateServiceDescriptor(sourceUnit, classNode)
             }
@@ -372,11 +372,11 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             List<ServiceImplementer> finalImplementers = []
             finalImplementers.addAll(implementers)
 
-            loadAnnotationDefined(annotationNode, "implementers", finalImplementers, ServiceImplementer)
+            loadAnnotationDefined(annotationNode, 'implementers', finalImplementers, ServiceImplementer)
 
             Iterable<ServiceImplementerAdapter> adapters = load(ServiceImplementerAdapter)
             List<ServiceImplementerAdapter> finalAdapters = adapters.toList()
-            loadAnnotationDefined(annotationNode, "adapters", finalAdapters, ServiceImplementerAdapter)
+            loadAnnotationDefined(annotationNode, 'adapters', finalAdapters, ServiceImplementerAdapter)
 
             if(!finalAdapters.isEmpty()) {
                 finalAdapters = finalAdapters.unique { ServiceImplementerAdapter o1 ->
@@ -424,10 +424,10 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
             File targetDirectory = sourceUnit.configuration.targetDirectory
             if (targetDirectory == null) {
-                targetDirectory = new File("build/resources/main")
+                targetDirectory = new File('build/resources/main')
             }
 
-            File servicesDir = new File(targetDirectory, "META-INF/services")
+            File servicesDir = new File(targetDirectory, 'META-INF/services')
             servicesDir.mkdirs()
 
             String className = classNode.name

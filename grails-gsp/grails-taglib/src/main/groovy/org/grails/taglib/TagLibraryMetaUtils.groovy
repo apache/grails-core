@@ -96,7 +96,7 @@ class TagLibraryMetaUtils {
 
     static registerMethodMissingForTags(MetaClass mc, ApplicationContext ctx,
                                         GrailsTagLibClass tagLibraryClass, String name) {
-        TagLibraryLookup gspTagLibraryLookup = ctx.getBean("gspTagLibraryLookup")
+        TagLibraryLookup gspTagLibraryLookup = ctx.getBean('gspTagLibraryLookup')
         String namespace = tagLibraryClass.namespace ?: TagOutput.DEFAULT_NAMESPACE
         registerMethodMissingForTags(mc, gspTagLibraryLookup, namespace, name)
     }

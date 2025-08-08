@@ -336,8 +336,8 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
                     currentVersion = entityAccess.getProperty('version')?.toLong()
                     if (currentVersion == null && oldVersion == null) {
                         currentVersion = 0L
-                        entityAccess.setProperty("version", currentVersion)
-                        entry["version"] = currentVersion
+                        entityAccess.setProperty('version', currentVersion)
+                        entry['version'] = currentVersion
                     }
                 }
                 if (oldVersion != null && currentVersion != null && !oldVersion.equals(currentVersion)) {

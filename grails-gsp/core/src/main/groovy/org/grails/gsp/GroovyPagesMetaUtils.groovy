@@ -38,7 +38,7 @@ class GroovyPagesMetaUtils {
 
         GroovyObject mc = (GroovyObject)emc
         synchronized(emc) {
-            mc.setProperty("methodMissing", { String name, Object args ->
+            mc.setProperty('methodMissing', { String name, Object args ->
                 TagLibraryMetaUtils.methodMissingForTagLib(emc, emc.getTheClass(), gspTagLibraryLookup, GroovyPage.DEFAULT_NAMESPACE, name, args, addMethodsToMetaClass)
             })
         }

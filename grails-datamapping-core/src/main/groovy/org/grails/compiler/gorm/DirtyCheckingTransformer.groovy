@@ -83,21 +83,21 @@ import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
  */
 @CompileStatic
 class DirtyCheckingTransformer implements CompilationUnitAware {
-    private static final String VOID = "void"
+    private static final String VOID = 'void'
     private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
     private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
 
     private static final ClassNode VALIDATION_CONSTRAINT_NODE
-    public static final String METHOD_NAME_MARK_DIRTY = "markDirty"
+    public static final String METHOD_NAME_MARK_DIRTY = 'markDirty'
     public static final ConstantExpression CONSTANT_NULL = new ConstantExpression(null)
     public static final ClassNode DIRTY_CHECKED_PROPERTY_CLASS_NODE = ClassHelper.make(DirtyCheckedProperty)
     public static final ClassNode DIRTY_CHECK_CLASS_NODE = ClassHelper.make(DirtyCheck)
     public static final AnnotationNode DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE = new AnnotationNode(DIRTY_CHECKED_PROPERTY_CLASS_NODE)
 
     static {
-        if(ClassUtils.isPresent("jakarta.validation.Constraint")) {
+        if(ClassUtils.isPresent('jakarta.validation.Constraint')) {
             try {
-                VALIDATION_CONSTRAINT_NODE = ClassHelper.make(Class.forName("jakarta.validation.Constraint"))
+                VALIDATION_CONSTRAINT_NODE = ClassHelper.make(Class.forName('jakarta.validation.Constraint'))
             } catch (Throwable e) {
                 VALIDATION_CONSTRAINT_NODE = null
             }
@@ -121,7 +121,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         if (traitToInject != DirtyCheckable) {
             changeTrackableClassNode.setSuperClass(new ClassNode(DirtyCheckable).getPlainNodeReference())
         }
-        final MethodNode markDirtyMethodNode = changeTrackableClassNode.getMethod(METHOD_NAME_MARK_DIRTY, new Parameter(ClassHelper.STRING_TYPE, "propertyName"), new Parameter(ClassHelper.OBJECT_TYPE, "newValue"))
+        final MethodNode markDirtyMethodNode = changeTrackableClassNode.getMethod(METHOD_NAME_MARK_DIRTY, new Parameter(ClassHelper.STRING_TYPE, 'propertyName'), new Parameter(ClassHelper.OBJECT_TYPE, 'newValue'))
 
 
         ClassNode superClass = classNode.getSuperClass()
@@ -152,7 +152,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
         }
 
-        PropertyNode transientPropertyNode = classNode.getProperty("transients")
+        PropertyNode transientPropertyNode = classNode.getProperty('transients')
 
         // Now we go through all the properties, if the property is a persistent property and change tracking has been initiated then we add to the setter of the property
         // code that will mark the property as dirty. Note that if the property has no getter we have to add one, since only adding the setter results in a read-only property
@@ -212,7 +212,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                         // if the property is a JPA @Id but the property name is not id add a transient getter to retrieve the id called getId
                         if(classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
                             def getIdMethod = new MethodNode(
-                                    "getId",
+                                    'getId',
                                     Modifier.PUBLIC,
                                     pn.type.plainNodeReference,
                                     ZERO_PARAMETERS,
@@ -232,7 +232,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     // if the property is a JPA @Version but the property name is not version add a transient getter to retrieve the version called getVersion
                     if(classNode.getField(GormProperties.VERSION) == null && gettersAndSetters[GormProperties.VERSION] == null) {
                         def getVersionMethod = new MethodNode(
-                                "getVersion",
+                                'getVersion',
                                 Modifier.PUBLIC,
                                 pn.type.plainNodeReference,
                                 ZERO_PARAMETERS,
@@ -302,10 +302,10 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             }
         }
 
-        if(!hasVersion && ClassUtils.isPresent("grails.artefact.Artefact") && !classNode.getAnnotations(GormEntityTransformation.JPA_ENTITY_CLASS_NODE).isEmpty()) {
+        if(!hasVersion && ClassUtils.isPresent('grails.artefact.Artefact') && !classNode.getAnnotations(GormEntityTransformation.JPA_ENTITY_CLASS_NODE).isEmpty()) {
             // if the entity is a JPA and has no version property then add a transient one as a stub, this is more to satisfy Grails
             def getVersionMethod = new MethodNode(
-                    "getVersion",
+                    'getVersion',
                     Modifier.PUBLIC,
                     ClassHelper.make(Long),
                     ZERO_PARAMETERS,
@@ -362,7 +362,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             final BlockStatement setterBody = new BlockStatement()
             MethodCallExpression markDirtyMethodCall = createMarkDirtyMethodCall(markDirtyMethodNode, propertyName, setterParameter)
             setterBody.addStatement(stmt(markDirtyMethodCall))
-            setterBody.addStatement(assignS(propX(varX("this"), fieldName), varX(setterParameter)))
+            setterBody.addStatement(assignS(propX(varX('this'), fieldName), varX(setterParameter)))
 
             setter = classNode.addMethod(setterName, PUBLIC, ClassHelper.VOID_TYPE, params(setterParameter), null, setterBody)
             setter.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
@@ -448,7 +448,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
     protected MethodCallExpression createMarkDirtyMethodCall(MethodNode markDirtyMethodNode, String propertyName, Variable value) {
         def args = args(constX(propertyName), varX(value))
-        final markDirtyMethodCall = callX(varX("this"), markDirtyMethodNode.name, args)
+        final markDirtyMethodCall = callX(varX('this'), markDirtyMethodNode.name, args)
         markDirtyMethodCall.methodTarget = markDirtyMethodNode
         return markDirtyMethodCall
     }
@@ -473,7 +473,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
 
     String[] getArtefactTypes() {
-        return ["Domain"] as String[]
+        return ['Domain'] as String[]
     }
 
     @CompileStatic

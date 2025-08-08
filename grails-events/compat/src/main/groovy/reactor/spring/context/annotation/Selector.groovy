@@ -35,7 +35,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.events.transform.SubscriberTransform")
+@GroovyASTTransformationClass('org.grails.events.transform.SubscriberTransform')
 @interface Selector {
     /**
      * @return The id of the event

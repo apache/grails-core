@@ -53,7 +53,7 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
             }
             if(bindingSource instanceof InputStream) {
                 def is = (InputStream)bindingSource
-                return createBindingSource(is, "UTF-8")
+                return createBindingSource(is, 'UTF-8')
             }
             if(bindingSource instanceof Reader) {
                 def is = (Reader)bindingSource
@@ -85,7 +85,7 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
             }
             if(bindingSource instanceof InputStream) {
                 def is = (InputStream)bindingSource
-                return createCollectionBindingSource(is, "UTF-8")
+                return createCollectionBindingSource(is, 'UTF-8')
             }
             if(bindingSource instanceof Reader) {
                 def is = (Reader)bindingSource

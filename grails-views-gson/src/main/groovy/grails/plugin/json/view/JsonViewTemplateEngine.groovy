@@ -129,7 +129,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         super.prepareCustomizers(compilerConfiguration)
         if(compileStatic) {
             compilerConfiguration.addCompilationCustomizers(
-                    new ASTTransformationCustomizer(Collections.singletonMap("extensions", JsonTemplateTypeCheckingExtension.name), CompileStatic.class))
+                    new ASTTransformationCustomizer(Collections.singletonMap('extensions', JsonTemplateTypeCheckingExtension.name), CompileStatic.class))
         }
 
     }
@@ -141,7 +141,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
     @Override
     String getDynamicTemplatePrefix() {
-        "JsonView".intern()
+        'JsonView'.intern()
     }
 
     protected WritableScriptTemplate createTemplate(Class<? extends Template> cls, File sourceFile) {

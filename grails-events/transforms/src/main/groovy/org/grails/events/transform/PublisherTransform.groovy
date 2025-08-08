@@ -127,20 +127,20 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
 
         AnnotationNode eventsAnn = AstUtils.findAnnotation(classNode, Events)
 
-        Expression eventId = annotationNode.getMember("value")
+        Expression eventId = annotationNode.getMember('value')
         if(!eventId?.text) {
             eventId = constX(methodNode.name)
         }
 
-        Expression namespace = eventsAnn?.getMember("namespace")
+        Expression namespace = eventsAnn?.getMember('namespace')
         boolean hasNamespace = namespace instanceof ConstantExpression
         if(hasNamespace) {
             eventId = new ConstantExpression(namespace.text + ':' + eventId.text )
         }
 
-        Expression errorEventId = annotationNode.getMember("error")
+        Expression errorEventId = annotationNode.getMember('error')
         if(errorEventId == null) {
-            errorEventId = eventsAnn?.getMember("error")
+            errorEventId = eventsAnn?.getMember('error')
         }
         if(!errorEventId?.text) {
             errorEventId = eventId
@@ -149,9 +149,9 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
             errorEventId = new ConstantExpression(namespace.text + ':' + errorEventId.text )
         }
 
-        Expression phase = annotationNode.getMember("phase")
+        Expression phase = annotationNode.getMember('phase')
         if(phase == null) {
-            phase = eventsAnn?.getMember("phase")
+            phase = eventsAnn?.getMember('phase')
         }
         MapExpression params = new MapExpression()
         for(param in methodNode.parameters) {
@@ -167,7 +167,7 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         }
         else {
             if( AstUtils.hasAnnotation(methodNode, Transactional) ) {
-                eventArgs.addExpression(propX(classX(TransactionPhase), "AFTER_COMMIT"))
+                eventArgs.addExpression(propX(classX(TransactionPhase), 'AFTER_COMMIT'))
             }
         }
 
@@ -179,18 +179,18 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         }
         else {
             if( AstUtils.hasAnnotation(methodNode, Transactional) ) {
-                errorArgs.addExpression(propX(classX(TransactionPhase), "AFTER_ROLLBACK"))
+                errorArgs.addExpression(propX(classX(TransactionPhase), 'AFTER_ROLLBACK'))
             }
         }
 
         Statement catchBody = block(
-            stmt(callThisX("publish", errorArgs)),
+            stmt(callThisX('publish', errorArgs)),
             throwS(varX(exceptionParam))
         )
         CatchStatement catchStatement = new CatchStatement(exceptionParam, catchBody)
         tryCatch.addCatch(catchStatement)
         tryBody.addStatement(
-            stmt( callThisX("publish", eventArgs) )
+            stmt( callThisX('publish', eventArgs) )
         )
         return result
     }

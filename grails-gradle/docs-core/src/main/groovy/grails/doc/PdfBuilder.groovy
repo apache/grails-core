@@ -54,9 +54,9 @@ class PdfBuilder {
     static void build(Map<String, String> options) {
         File baseDir = new File(options.basedir).canonicalFile
 
-        File guideDir = new File(baseDir, "guide")
-        File htmlFile = new File(guideDir, "single.html")
-        File outputFile = new File(guideDir, "single.pdf")
+        File guideDir = new File(baseDir, 'guide')
+        File htmlFile = new File(guideDir, 'single.html')
+        File outputFile = new File(guideDir, 'single.pdf')
 
         String xml = createXml(htmlFile, baseDir.absolutePath)
         createPdf xml, outputFile, guideDir
@@ -75,11 +75,11 @@ class PdfBuilder {
         cleanupHtml(htmlFile, xml)
     }
 
-    static boolean cleanHtml = System.getProperty('grails.docs.clean.html') == null ? true : Boolean.getBoolean("grails.docs.clean.html")
-    static boolean debugPdf = Boolean.getBoolean("grails.docs.debug.pdf")
+    static boolean cleanHtml = System.getProperty('grails.docs.clean.html') == null ? true : Boolean.getBoolean('grails.docs.clean.html')
+    static boolean debugPdf = Boolean.getBoolean('grails.docs.debug.pdf')
 
     private static String cleanupHtml(File htmlFile, String xml) {
-        String result = cleanHtml ? Jsoup.parse(xml, "", Parser.xmlParser()).outerHtml() : xml
+        String result = cleanHtml ? Jsoup.parse(xml, '', Parser.xmlParser()).outerHtml() : xml
         result = removeCssLinks(result)
         result = result.replaceAll('</head>', pdfCss() + '</head>')
         if(debugPdf) {
@@ -118,7 +118,7 @@ class PdfBuilder {
     }
 
     static String pdfCss() {
-        """<style type="text/css">
+        '''<style type="text/css">
          pre, code {
           font-size: 10px;
          }
@@ -129,14 +129,14 @@ class PdfBuilder {
             width: 595px;
         }
         </style>
-        """
+        '''
     }
 
     static Document createDocument(String xml) {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance()
         dbf.validating = false
-        dbf.setFeature "http://apache.org/xml/features/nonvalidating/load-external-dtd", false
-        dbf.setFeature "http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false
+        dbf.setFeature 'http://apache.org/xml/features/nonvalidating/load-external-dtd', false
+        dbf.setFeature 'http://apache.org/xml/features/nonvalidating/load-dtd-grammar', false
 
         DocumentBuilder builder = dbf.newDocumentBuilder()
         builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))

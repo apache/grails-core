@@ -54,7 +54,7 @@ class PropertyResolverMap implements Map<String, Object>, PropertyResolver {
 
     @Override
     boolean containsValue(Object value) {
-        throw new UnsupportedOperationException("Method containsValue not supported")
+        throw new UnsupportedOperationException('Method containsValue not supported')
     }
 
     @Override
@@ -64,36 +64,36 @@ class PropertyResolverMap implements Map<String, Object>, PropertyResolver {
 
     @Override
     Object put(String key, Object value) {
-        throw new UnsupportedOperationException("Map cannot be modified")
+        throw new UnsupportedOperationException('Map cannot be modified')
     }
 
     @Override
     String remove(Object key) {
-        throw new UnsupportedOperationException("Map cannot be modified")
+        throw new UnsupportedOperationException('Map cannot be modified')
     }
 
     @Override
     void putAll(Map<? extends String, ? extends Object> m) {
-        throw new UnsupportedOperationException("Map cannot be modified")
+        throw new UnsupportedOperationException('Map cannot be modified')
     }
 
     @Override
     void clear() {
-        throw new UnsupportedOperationException("Map cannot be modified")
+        throw new UnsupportedOperationException('Map cannot be modified')
     }
 
     @Override
     Set<String> keySet() {
-        throw new UnsupportedOperationException("Method keySet() not supported")
+        throw new UnsupportedOperationException('Method keySet() not supported')
     }
 
     @Override
     Collection<Object> values() {
-        throw new UnsupportedOperationException("Method values() not supported")
+        throw new UnsupportedOperationException('Method values() not supported')
     }
 
     @Override
     Set<Map.Entry<String, Object>> entrySet() {
-        throw new UnsupportedOperationException("Method entrySet() not supported")
+        throw new UnsupportedOperationException('Method entrySet() not supported')
     }
 }

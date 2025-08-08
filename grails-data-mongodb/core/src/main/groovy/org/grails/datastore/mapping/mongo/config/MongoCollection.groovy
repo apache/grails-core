@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.query.Query
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings('rawtypes')
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class MongoCollection extends Collection {
@@ -73,7 +73,7 @@ class MongoCollection extends Collection {
             if (!m.isEmpty()) {
                 Map.Entry entry = (Map.Entry) m.entrySet().iterator().next()
                 Object key = entry.getKey()
-                if ("desc".equalsIgnoreCase(entry.getValue().toString())) {
+                if ('desc'.equalsIgnoreCase(entry.getValue().toString())) {
                     super.setSort( Query.Order.desc(key.toString()) )
                 }
                 else {

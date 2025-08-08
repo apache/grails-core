@@ -69,7 +69,7 @@ class CountImplementer extends AbstractDetachedCriteriaServiceImplementor implem
 
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
-        Expression callCount = callX(detachedCriteriaVar, "count", queryArgs)
+        Expression callCount = callX(detachedCriteriaVar, 'count', queryArgs)
         body.addStatement(
             returnS( castX(newMethodNode.returnType, callCount) )
         )

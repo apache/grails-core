@@ -48,9 +48,9 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 class HibernateRuntimeUtils {
     private static ProxyHandler proxyHandler = new HibernateProxyHandler()
 
-    private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler"
+    private static final String DYNAMIC_FILTER_ENABLER = 'dynamicFilterEnabler'
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
         if (sessionFactory != null && session != null) {
             final Set definedFilterNames = sessionFactory.getDefinedFilterNames()

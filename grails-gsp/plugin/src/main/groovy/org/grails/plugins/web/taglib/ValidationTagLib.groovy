@@ -72,7 +72,7 @@ class ValidationTagLib implements TagLibrary {
 
         if (bean && field) {
             if (bean.metaClass.hasProperty(bean, 'errors')) {
-                return messageImpl(error: bean.errors?.getFieldError(field), encodeAs: encodeAs ?: "HTML")
+                return messageImpl(error: bean.errors?.getFieldError(field), encodeAs: encodeAs ?: 'HTML')
             }
         }
 
@@ -124,7 +124,7 @@ class ValidationTagLib implements TagLibrary {
 
     private Object parseForRejectedValue(bean, field) {
         def rejectedValue = bean
-        for (String fieldPart in field.split("\\.")) {
+        for (String fieldPart in field.split('\\.')) {
             rejectedValue = rejectedValue?."$fieldPart"
         }
         return rejectedValue
@@ -258,13 +258,13 @@ class ValidationTagLib implements TagLibrary {
 
             def errorsList = extractErrors(attrs)
             if (errorsList) {
-                out << "<ul>"
+                out << '<ul>'
                 out << eachErrorInternalForList(attrs, errorsList, {
                     out << "<li>${message(error: it, encodeAs: codec)}</li>"
                 })
-                out << "</ul>"
+                out << '</ul>'
             }
-        } else if (renderAs.equalsIgnoreCase("xml")) {
+        } else if (renderAs.equalsIgnoreCase('xml')) {
             def mkp = new MarkupBuilder(out)
             mkp.errors() {
                 eachErrorInternal(attrs, {
@@ -386,7 +386,7 @@ class ValidationTagLib implements TagLibrary {
     Closure validate = { attrs, body ->
         def form = attrs.form
         if (!form) {
-            throwTagError("Tag [validate] is missing required attribute [form]")
+            throwTagError('Tag [validate] is missing required attribute [form]')
         }
 
         def againstClass = attrs.against ?: form.substring(0, 1).toUpperCase() + form.substring(1)
@@ -418,13 +418,13 @@ class ValidationTagLib implements TagLibrary {
             def validateType = k
             if (validateType) {
                 def validateTypes = [validateType]
-                if (validateType.contains(",")) {
-                    validateTypes = validateType.split(",")
+                if (validateType.contains(',')) {
+                    validateTypes = validateType.split(',')
                 }
 
                 for (vt in validateTypes) {
                     // import required script
-                    def scriptName = "org/apache/commons/validator/javascript/validate" + vt.substring(0, 1).toUpperCase() + vt.substring(1) + ".js"
+                    def scriptName = 'org/apache/commons/validator/javascript/validate' + vt.substring(0, 1).toUpperCase() + vt.substring(1) + '.js'
                     def inStream = getClass().classLoader.getResourceAsStream(scriptName)
                     if (inStream) {
                         out << inStream.getText('UTF-8')
@@ -444,7 +444,7 @@ class ValidationTagLib implements TagLibrary {
                         }
                         out << ');\n'
                     }
-                    out << "}\n"
+                    out << '}\n'
                 }
             }
         }
@@ -475,9 +475,9 @@ class ValidationTagLib implements TagLibrary {
         }
 
         if (value instanceof Number) {
-            def pattern = "0"
+            def pattern = '0'
             if (value instanceof Double || value instanceof Float || value instanceof BigDecimal) {
-                pattern = "0.00#####"
+                pattern = '0.00#####'
             }
 
             def locale = webRequest.getLocale()

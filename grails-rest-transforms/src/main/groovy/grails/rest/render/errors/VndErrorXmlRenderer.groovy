@@ -41,10 +41,10 @@ import org.grails.web.xml.XMLStreamWriter
  */
 @CompileStatic
 class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
-    public static final MimeType MIME_TYPE = new MimeType("application/vnd.error+xml", "xml")
-    public static final String ERRORS_TAG = "errors"
-    public static final String ERROR_TAG = "error"
-    public static final String LINK_TAG = "link"
+    public static final MimeType MIME_TYPE = new MimeType('application/vnd.error+xml', 'xml')
+    public static final String ERRORS_TAG = 'errors'
+    public static final String ERROR_TAG = 'error'
+    public static final String LINK_TAG = 'link'
 
     MimeType[] mimeTypes = [MIME_TYPE, MimeType.HAL_XML, MimeType.XML, MimeType.TEXT_XML] as MimeType[]
 
@@ -60,7 +60,7 @@ class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
 
             final streamingWriter = new StreamingMarkupWriter(context.writer, encoding)
             XMLStreamWriter w = prettyPrint ? new PrettyPrintXMLStreamWriter(streamingWriter) : new XMLStreamWriter(streamingWriter)
-            w.startDocument(encoding, "1.0")
+            w.startDocument(encoding, '1.0')
             w.startNode(ERRORS_TAG)
                 .attribute('xml:lang', language)
             for (ObjectError oe in errors.allErrors) {
@@ -71,8 +71,8 @@ class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
                         .characters(messageSource.getMessage(oe, locale))
                     .end()
                     .startNode(LINK_TAG)
-                        .attribute("rel", "resource")
-                        .attribute("href", linkGenerator.link(resource: target, method: "GET", absolute: true))
+                        .attribute('rel', 'resource')
+                        .attribute('href', linkGenerator.link(resource: target, method: 'GET', absolute: true))
                     .end()
                 .end()
             }

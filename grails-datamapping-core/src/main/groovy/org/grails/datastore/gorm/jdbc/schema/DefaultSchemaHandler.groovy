@@ -42,9 +42,9 @@ class DefaultSchemaHandler implements SchemaHandler {
     final String defaultSchemaName
 
     DefaultSchemaHandler() {
-        useSchemaStatement = "SET SCHEMA %s"
-        createSchemaStatement = "CREATE SCHEMA %s"
-        defaultSchemaName = "PUBLIC"
+        useSchemaStatement = 'SET SCHEMA %s'
+        createSchemaStatement = 'CREATE SCHEMA %s'
+        defaultSchemaName = 'PUBLIC'
     }
 
     DefaultSchemaHandler(String useSchemaStatement, String createSchemaStatement, String defaultSchemaName) {
@@ -84,7 +84,7 @@ class DefaultSchemaHandler implements SchemaHandler {
             connection = dataSource.getConnection()
             ResultSet schemas = connection.getMetaData().getSchemas()
             while(schemas.next()) {
-                schemaNames.add(schemas.getString("TABLE_SCHEM"))
+                schemaNames.add(schemas.getString('TABLE_SCHEM'))
             }
         } finally {
             try {

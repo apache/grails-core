@@ -75,7 +75,7 @@ class FindOneImplementer extends AbstractDetachedCriteriaServiceImplementor impl
     }
 
     protected String findMethodToInvoke(ClassNode domainClassNode, MethodNode newMethodNode) {
-        "find"
+        'find'
     }
 
     protected Statement buildReturnStatement(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {

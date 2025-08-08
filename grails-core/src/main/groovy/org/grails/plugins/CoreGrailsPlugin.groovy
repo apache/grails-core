@@ -56,12 +56,12 @@ import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 class CoreGrailsPlugin extends Plugin {
 
     def version = GrailsUtil.getGrailsVersion()
-    def watchedResources = [    "file:./grails-app/conf/spring/resources.xml",
-                                "file:./grails-app/conf/spring/resources.groovy",
-                                "file:./grails-app/conf/application.groovy",
-                                "file:./grails-app/conf/application.yml"]
+    def watchedResources = [    'file:./grails-app/conf/spring/resources.xml',
+                                'file:./grails-app/conf/spring/resources.groovy',
+                                'file:./grails-app/conf/application.groovy',
+                                'file:./grails-app/conf/application.yml']
 
-    private static final SPRING_PROXY_TARGET_CLASS_CONFIG = "spring.aop.proxy-target-class"
+    private static final SPRING_PROXY_TARGET_CLASS_CONFIG = 'spring.aop.proxy-target-class'
 
     @Override
     Closure doWithSpring() { {->
@@ -86,7 +86,7 @@ class CoreGrailsPlugin extends Plugin {
         }
 
         Boolean isProxyTargetClass = config.getProperty(SPRING_PROXY_TARGET_CLASS_CONFIG, Boolean)
-        "org.springframework.aop.config.internalAutoProxyCreator"(proxyCreatorClazz) {
+        'org.springframework.aop.config.internalAutoProxyCreator'(proxyCreatorClazz) {
             if (isProxyTargetClass != null) {
                 proxyTargetClass = isProxyTargetClass
             }
@@ -101,11 +101,11 @@ class CoreGrailsPlugin extends Plugin {
 
 
         if (packagesToScan) {
-            xmlns grailsContext:"http://grails.org/schema/context"
+            xmlns grailsContext: 'http://grails.org/schema/context'
             grailsContext.'component-scan'('base-package':packagesToScan.join(','))
         }
 
-        grailsApplicationAwarePostProcessor(GrailsApplicationAwareBeanPostProcessor, ref("grailsApplication"))
+        grailsApplicationAwarePostProcessor(GrailsApplicationAwareBeanPostProcessor, ref('grailsApplication'))
         pluginManagerPostProcessor(PluginManagerAwareBeanPostProcessor)
 
         // add shutdown hook if not running in war deployed mode
@@ -118,7 +118,7 @@ class CoreGrailsPlugin extends Plugin {
             searchLocations = [BuildSettings.BASE_DIR.absolutePath]
         }
         grailsResourceLocator(DefaultResourceLocator) { bean ->
-            bean.parent = "abstractGrailsResourceLocator"
+            bean.parent = 'abstractGrailsResourceLocator'
         }
 
         customEditors(CustomEditorConfigurer) {

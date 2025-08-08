@@ -80,14 +80,14 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
     boolean isPropertyDynamic(PropertyExpression propertyExpression) {
         def oe = propertyExpression.getObjectExpression()
         if(oe instanceof VariableExpression) {
-            return "params".equals(((VariableExpression)oe).name)
+            return 'params'.equals(((VariableExpression)oe).name)
         }
         return super.isPropertyDynamic(propertyExpression)
     }
 
     @Override
     void transformDynamicMethods(SourceUnit source, MethodNode mn, Set dynamicCalls) {
-        new BuilderTypeCheckingExtension.BuilderMethodReplacer(TEMPLATE_NAMESPACE_INVOKE_METHOD, TEMPLATE_NAMESPACE_INVOKE_METHOD, ":IGNORE", source, dynamicCalls)
+        new BuilderTypeCheckingExtension.BuilderMethodReplacer(TEMPLATE_NAMESPACE_INVOKE_METHOD, TEMPLATE_NAMESPACE_INVOKE_METHOD, ':IGNORE', source, dynamicCalls)
                 .visitMethod(mn)
     }
 
@@ -103,7 +103,7 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
 
     @Override
     String getBuilderVariableName() {
-        "json"
+        'json'
     }
 
     @Override

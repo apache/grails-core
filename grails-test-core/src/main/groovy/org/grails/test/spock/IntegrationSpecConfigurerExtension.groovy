@@ -71,7 +71,7 @@ class IntegrationSpecConfigurerExtension implements IAnnotationDrivenExtension<A
         void intercept(IMethodInvocation invocation) {
             final instance = invocation.instance ?: invocation.sharedInstance
             if(instance) {
-                GrailsTestInterceptor interceptor = new GrailsTestInterceptor(instance, mode, applicationContext, ["Spec", "Specification", "Tests", "Test"] as String[])
+                GrailsTestInterceptor interceptor = new GrailsTestInterceptor(instance, mode, applicationContext, ['Spec', 'Specification', 'Tests', 'Test'] as String[])
                 interceptor.wrap {
                     invocation.proceed()
                 }

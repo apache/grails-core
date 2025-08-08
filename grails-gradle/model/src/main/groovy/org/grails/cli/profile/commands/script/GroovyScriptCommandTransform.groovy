@@ -55,7 +55,7 @@ class GroovyScriptCommandTransform implements ASTTransformation {
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
         for(ClassNode cNode in source.AST.classes) {
-            if(cNode.superClass.name == "org.grails.cli.profile.commands.script.GroovyScriptCommand")
+            if(cNode.superClass.name == 'org.grails.cli.profile.commands.script.GroovyScriptCommand')
                 new CommandScriptTransformer(source, cNode).visitClass(cNode)
         }
     }
@@ -89,7 +89,7 @@ class GroovyScriptCommandTransform implements ASTTransformation {
                 def arguments = existing.expressions
                 if(arguments.size() == 2) {
                     def constructorArgs = new ArgumentListExpression()
-                    constructorArgs.addExpression(new VariableExpression("name"))
+                    constructorArgs.addExpression(new VariableExpression('name'))
                     def secondArg = arguments.get(1)
                     Expression constructDescription = new ConstructorCallExpression(ClassHelper.make(CommandDescription), constructorArgs)
                     if(secondArg instanceof ClosureExpression) {
@@ -129,7 +129,7 @@ class GroovyScriptCommandTransform implements ASTTransformation {
                         constructorArgs.expressions.addAll(arguments)
                     }
 
-                    def assignDescription = new MethodCallExpression(new VariableExpression("this"),"setDescription", constructDescription)
+                    def assignDescription = new MethodCallExpression(new VariableExpression('this'), 'setDescription', constructDescription)
                     constructorBody.addStatement(new ExpressionStatement(assignDescription))
                 }
 

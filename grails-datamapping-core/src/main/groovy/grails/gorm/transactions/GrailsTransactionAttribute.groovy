@@ -99,7 +99,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
         if (winner == null) {
-            log.trace("No relevant rollback rule found: applying default rules")
+            log.trace('No relevant rollback rule found: applying default rules')
 
             // always rollback regardless if it is a checked or unchecked exception since Groovy doesn't differentiate those
             return true

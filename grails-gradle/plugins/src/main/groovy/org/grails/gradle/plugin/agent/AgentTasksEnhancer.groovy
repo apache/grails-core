@@ -38,7 +38,7 @@ class AgentTasksEnhancer implements Action<Project> {
     @Override
     void execute(Project project) {
         try {
-            Set<ResolvedArtifact> agentJars = project.getConfigurations().getByName("agent").resolvedConfiguration.resolvedArtifacts
+            Set<ResolvedArtifact> agentJars = project.getConfigurations().getByName('agent').resolvedConfiguration.resolvedArtifacts
 
             if(agentJars) {
                 File agentJar = agentJars.iterator().next().file
@@ -70,16 +70,16 @@ class AgentTasksEnhancer implements Action<Project> {
                     inclusions: agentConfig.inclusions,
                     synchronize: String.valueOf( agentConfig.synchronize ),
                     allowSplitPackages: String.valueOf( agentConfig.allowSplitPackages ),
-                    cacheDir: agentConfig.cacheDir ? project.mkdir(agentConfig.cacheDir) : project.mkdir("build/springloaded")
+                    cacheDir: agentConfig.cacheDir ? project.mkdir(agentConfig.cacheDir) : project.mkdir('build/springloaded')
             ] as Map<String, String>
             if(agentConfig.logging != null) {
-                agentArgs.put("logging", String.valueOf(agentConfig.logging))
+                agentArgs.put('logging', String.valueOf(agentConfig.logging))
             }
             if(agentConfig.exclusions) {
                 agentArgs.put('exclusions', agentConfig.exclusions)
             }
-            agentArgs.put("profile","grails")
-            agentArgs.put("caching","true")
+            agentArgs.put('profile', 'grails')
+            agentArgs.put('caching', 'true')
             exec.systemProperty('springloaded', agentArgs.collect { entry -> "$entry.key=$entry.value"}.join(';'))
         }
 

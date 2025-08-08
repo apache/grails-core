@@ -77,7 +77,7 @@ class ErrorsViewStackTracePrinter extends DefaultErrorsPrinter {
 
     @Override
     String formatCodeSnippetEnd(Resource resource, int lineNumber) {
-        "</pre>"
+        '</pre>'
     }
 
     @Override

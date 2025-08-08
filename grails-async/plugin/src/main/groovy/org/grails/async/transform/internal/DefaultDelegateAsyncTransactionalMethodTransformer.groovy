@@ -55,18 +55,18 @@ import java.lang.reflect.Modifier
 @CompileStatic
 class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyncTransactionalMethodTransformer {
 
-    private static final String TRANSACTIONAL_FIELD = "transactional"
+    private static final String TRANSACTIONAL_FIELD = 'transactional'
     private static final ClassNode TRANSACTIONAL_CLASS_NODE = new ClassNode(Transactional)
     private static final ClassNode INTERFACE_TRANSACTION_MANAGER = new ClassNode(PlatformTransactionManager).getPlainNodeReference()
     private static final ClassNode INTERFACE_TRANSACTION_MANAGER_AWARE = new ClassNode(TransactionManagerAware).getPlainNodeReference()
-    private static final Parameter[] SET_TRANSACTION_MANAGER_METHOD_PARAMETERS = [new Parameter(INTERFACE_TRANSACTION_MANAGER, "transactionManager")] as Parameter[]
+    private static final Parameter[] SET_TRANSACTION_MANAGER_METHOD_PARAMETERS = [new Parameter(INTERFACE_TRANSACTION_MANAGER, 'transactionManager')] as Parameter[]
     private static final String FIELD_NAME_TRANSACTION_MANAGER = '$transactionManager'
     private static final String FIELD_NAME_PROMISE_DECORATORS = '$promiseDecorators'
     private static final ClassNode CLASS_NODE_MAP = new ClassNode(Map.class).getPlainNodeReference()
-    private static final String METHOD_NAME_SET_TRANSACTION_MANAGER = "setTransactionManager"
-    private static final VariableExpression EXPRESSION_THIS = new VariableExpression("this")
-    private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL,"=", -1,-1)
-    private static final String VARIABLE_TRANSACTION_MANAGER = "txMgr"
+    private static final String METHOD_NAME_SET_TRANSACTION_MANAGER = 'setTransactionManager'
+    private static final VariableExpression EXPRESSION_THIS = new VariableExpression('this')
+    private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL, '=', -1,-1)
+    private static final String VARIABLE_TRANSACTION_MANAGER = 'txMgr'
     private FieldNode transactionalField
     private boolean isTransactional = false
 
@@ -105,11 +105,11 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
                         OPERATOR_ASSIGNMENT,
                         new MethodCallExpression(
                              new ClassExpression(new ClassNode(TransactionalAsyncTransformUtils).getPlainNodeReference()),
-                            "createTransactionalPromiseDecorator",
+                            'createTransactionalPromiseDecorator',
                              new ArgumentListExpression(new VariableExpression(VARIABLE_TRANSACTION_MANAGER),
                                                         new MethodCallExpression(
                                                             new ClassExpression(delegateClassNode),
-                                                            "getDeclaredMethod", methodLookupArguments
+                                                            'getDeclaredMethod', methodLookupArguments
                                                         )
                              )
                         )
@@ -142,7 +142,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
             }
 
             final methodBody = new BlockStatement()
-            final transactionManagerParameter = new Parameter(INTERFACE_TRANSACTION_MANAGER, "transactionManager")
+            final transactionManagerParameter = new Parameter(INTERFACE_TRANSACTION_MANAGER, 'transactionManager')
             def parameters = [transactionManagerParameter] as Parameter[]
             final txMgrParam = new VariableExpression(transactionManagerParameter)
             methodBody.addStatement(

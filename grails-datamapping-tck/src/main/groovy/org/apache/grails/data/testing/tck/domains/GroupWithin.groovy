@@ -28,7 +28,7 @@ class GroupWithin implements Serializable {
     String name
     String org
     static constraints = {
-        name unique: "org", index: true
+        name unique: 'org', index: true
         org index: true
     }
 }

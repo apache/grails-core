@@ -42,7 +42,7 @@ import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources
  */
 @CompileStatic
 class MongoConnectionSources extends InMemoryConnectionSources<MongoClient, MongoConnectionSourceSettings> {
-    private static final String CONNECTION_NAME = "name"
+    private static final String CONNECTION_NAME = 'name'
 
     MongoConnectionSources(ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource, ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> connectionSourceFactory, PropertyResolver configuration) {
         super(defaultConnectionSource, connectionSourceFactory, configuration)

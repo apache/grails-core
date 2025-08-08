@@ -133,48 +133,48 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return The datastore expression
      */
     protected Expression datastore() {
-        return propX(varX("this"), "targetDatastore")
+        return propX(varX('this'), 'targetDatastore')
     }
 
     /**
      * @return The datastore expression
      */
     protected Expression transactionalDatastore() {
-        return castX( ClassHelper.make(TransactionCapableDatastore), propX(varX("this"), "targetDatastore"))
+        return castX( ClassHelper.make(TransactionCapableDatastore), propX(varX('this'), 'targetDatastore'))
     }
 
     /**
      * @return The datastore expression
      */
     protected Expression multiTenantDatastore() {
-        return castX( ClassHelper.make(MultiTenantCapableDatastore), propX(varX("this"), "targetDatastore"))
+        return castX( ClassHelper.make(MultiTenantCapableDatastore), propX(varX('this'), 'targetDatastore'))
     }
 
     /**
      * @return The tenant service
      */
     protected Expression tenantService() {
-        return callD(ServiceRegistry, "targetDatastore", "getService", classX(make(TenantService)) )
+        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TenantService)) )
     }
 
     /**
      * @return The transaction service
      */
     protected Expression transactionService() {
-        return callD(ServiceRegistry, "targetDatastore", "getService", classX(make(TransactionService)) )
+        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TransactionService)) )
     }
 
     protected Expression findConnectionId(MethodNode methodNode) {
         if(TenantTransform.hasTenantAnnotation(methodNode)) {
-            return callD(classX(ClassHelper.make(MultiTenancySettings)), "resolveConnectionForTenantId", args(
-                propX(multiTenantDatastore(), "multiTenancyMode"), callD(tenantService(), "currentId")
+            return callD(classX(ClassHelper.make(MultiTenancySettings)), 'resolveConnectionForTenantId', args(
+                propX(multiTenantDatastore(), 'multiTenancyMode'), callD(tenantService(), 'currentId')
             ))
         }
         else {
             AnnotationNode ann = TransactionalTransform.findTransactionalAnnotation(methodNode)
-            Expression connectionId = ann?.getMember("connection")
+            Expression connectionId = ann?.getMember('connection')
             if(connectionId == null) {
-                connectionId= ann?.getMember("value")
+                connectionId= ann?.getMember('value')
             }
             return connectionId
         }
@@ -182,13 +182,13 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
 
     protected Expression buildInstanceApiLookup(ClassNode domainClass, Expression connectionId) {
         return AstMethodDispatchUtils.callD(
-            classX(GormEnhancer), "findInstanceApi", args(classX(domainClass), connectionId)
+            classX(GormEnhancer), 'findInstanceApi', args(classX(domainClass), connectionId)
         )
     }
 
     protected Expression buildStaticApiLookup(ClassNode domainClass, Expression connectionId) {
         return AstMethodDispatchUtils.callD(
-                classX(GormEnhancer), "findStaticApi", args(classX(domainClass), connectionId)
+                classX(GormEnhancer), 'findStaticApi', args(classX(domainClass), connectionId)
         )
     }
 

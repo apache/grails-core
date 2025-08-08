@@ -32,7 +32,7 @@ import grails.web.mapping.UrlMappingInfo
  */
 interface Matcher {
 
-    String THROWABLE = "org.grails.interceptors.THROWABLE"
+    String THROWABLE = 'org.grails.interceptors.THROWABLE'
 
     /**
      * Checks whether the given {@link UrlMappingInfo} matches

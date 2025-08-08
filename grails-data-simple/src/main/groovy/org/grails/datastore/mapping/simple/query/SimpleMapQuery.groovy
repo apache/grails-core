@@ -753,7 +753,7 @@ class SimpleMapQuery extends Query {
                 def identity = entity.identity
                 if (identity.name == criterion.property) return identity
                 else {
-                    throw new InvalidDataAccessResourceUsageException("Cannot query [" + entity + "] on non-existent property: " + criterion.property)
+                    throw new InvalidDataAccessResourceUsageException('Cannot query [' + entity + '] on non-existent property: ' + criterion.property)
                 }
             }
             return property

@@ -44,9 +44,9 @@ import org.grails.web.xml.XMLStreamWriter
 class HalXmlRenderer<T> extends AbstractLinkingRenderer<T> {
 
     public static final MimeType MIME_TYPE = MimeType.HAL_XML
-    public static final String RESOURCE_TAG = "resource"
-    public static final String LINK_TAG = "link"
-    public static final String RELATIONSHIP_ATTRIBUTE = "rel"
+    public static final String RESOURCE_TAG = 'resource'
+    public static final String LINK_TAG = 'link'
+    public static final String RELATIONSHIP_ATTRIBUTE = 'rel'
 
     private static final MimeType[] DEFAULT_MIME_TYPES = [MIME_TYPE] as MimeType[]
 
@@ -186,10 +186,10 @@ class HalXmlRenderer<T> extends AbstractLinkingRenderer<T> {
         }
 
         if (link.templated) {
-            writer.attribute(TEMPLATED_ATTRIBUTE,"true")
+            writer.attribute(TEMPLATED_ATTRIBUTE, 'true')
         }
         if (link.deprecated) {
-            writer.attribute(DEPRECATED_ATTRIBUTE,"true")
+            writer.attribute(DEPRECATED_ATTRIBUTE, 'true')
         }
         writer.end()
     }

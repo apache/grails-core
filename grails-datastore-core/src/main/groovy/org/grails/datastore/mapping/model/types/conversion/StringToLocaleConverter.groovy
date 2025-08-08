@@ -28,7 +28,7 @@ import org.springframework.core.convert.converter.Converter
 @CompileStatic
 class StringToLocaleConverter implements Converter<String, Locale> {
     Locale convert(String source) {
-        String[] parts = source.split("_")
+        String[] parts = source.split('_')
         switch (parts.length) {
             case 1: return new Locale(parts[0])
             case 2: return new Locale(parts[0],parts[1])

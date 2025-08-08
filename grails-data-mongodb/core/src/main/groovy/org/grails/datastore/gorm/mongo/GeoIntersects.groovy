@@ -39,13 +39,13 @@ class GeoIntersects extends MethodExpression{
 
     @Override
     void setArguments(Object[] arguments) {
-        Assert.isTrue arguments.length == 1, "Exactly 1 argument required to GeoWithin query"
+        Assert.isTrue arguments.length == 1, 'Exactly 1 argument required to GeoWithin query'
 
 
         def value = arguments[0]
 
         Assert.isTrue( (value instanceof Map) || (( value instanceof GeoJSON) ),
-                "Argument must be either a Map or a GeoJSON shape (Polygon, LineString or Point)")
+                'Argument must be either a Map or a GeoJSON shape (Polygon, LineString or Point)')
 
         super.setArguments(arguments)
     }

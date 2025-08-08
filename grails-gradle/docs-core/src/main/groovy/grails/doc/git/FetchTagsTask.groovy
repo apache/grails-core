@@ -56,7 +56,7 @@ abstract class FetchTagsTask extends Exec {
         tagsFile = objectFactory.fileProperty().convention(project.layout.buildDirectory.file('git-tags.txt'))
         defaultTag = objectFactory.property(String).convention(project.provider { "v${project.version as String}" as String })
 
-        commandLine("git", "tag", "-l", "--sort=-creatordate")
+        commandLine('git', 'tag', '-l', '--sort=-creatordate')
         ignoreExitValue = !project.rootProject.layout.projectDirectory.dir('.git').asFile.exists()
 
         def output = new ByteArrayOutputStream()
@@ -69,7 +69,7 @@ abstract class FetchTagsTask extends Exec {
             }
 
             if(ignoreExitValue) {
-                logger.lifecycle("not a git repo, so assuming a default tag of {}", defaultTag.get())
+                logger.lifecycle('not a git repo, so assuming a default tag of {}', defaultTag.get())
             }
 
             file.text = ignoreExitValue ? defaultTag.get() : new String(output.toByteArray(), StandardCharsets.UTF_8).trim()

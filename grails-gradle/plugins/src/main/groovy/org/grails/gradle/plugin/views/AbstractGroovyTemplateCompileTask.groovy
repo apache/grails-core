@@ -139,7 +139,7 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
 
                         String packageImports = projectPackageNames.get().join(',') ?: packageName.get()
 
-                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(",")
+                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')
 
                         List<String> arguments = [
                                 srcDir.get().asFile.canonicalPath,

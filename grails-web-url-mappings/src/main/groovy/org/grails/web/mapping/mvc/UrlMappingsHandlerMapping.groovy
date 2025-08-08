@@ -56,7 +56,7 @@ import org.grails.web.util.WebUtils
 @CompileStatic
 class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
-    public static final String MATCHED_REQUEST = "org.grails.url.match.info"
+    public static final String MATCHED_REQUEST = 'org.grails.url.match.info'
 
     protected UrlMappingsHolder urlMappingsHolder
     protected UrlPathHelper urlHelper = new UrlPathHelper()
@@ -64,7 +64,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     protected HandlerInterceptor[] webRequestHandlerInterceptors
 
     UrlMappingsHandlerMapping(UrlMappingsHolder urlMappingsHolder) {
-        Assert.notNull(urlMappingsHolder, "Argument [urlMappingsHolder] cannot be null")
+        Assert.notNull(urlMappingsHolder, 'Argument [urlMappingsHolder] cannot be null')
         this.urlMappingsHolder = urlMappingsHolder
         setOrder(-5)
     }
@@ -132,7 +132,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         String uri = urlHelper.getPathWithinApplication(request)
         def webRequest = GrailsWebRequest.lookup(request)
 
-        Assert.notNull(webRequest, "HandlerMapping requires a Grails web request")
+        Assert.notNull(webRequest, 'HandlerMapping requires a Grails web request')
 
         String version = findRequestedVersion(webRequest)
 

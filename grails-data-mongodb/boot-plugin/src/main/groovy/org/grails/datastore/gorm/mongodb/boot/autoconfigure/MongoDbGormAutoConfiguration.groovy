@@ -71,7 +71,7 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware{
     MongoDatastore mongoDatastore() {
         ConfigurableApplicationContext context = applicationContext
         if(!(context instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException("MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext")
+            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         ConfigurableListableBeanFactory beanFactory = context.beanFactory
         List<String> packageNames = AutoConfigurationPackages.get(beanFactory)
@@ -122,7 +122,7 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware{
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         if(!(applicationContext instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException("MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext")
+            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         this.applicationContext = (ConfigurableApplicationContext)applicationContext
     }

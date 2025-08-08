@@ -50,7 +50,7 @@ class HexCodecExtensionMethods {
 
         def str = theTarget.toString().toLowerCase()
         if (str.size() % 2) {
-            throw new UnsupportedOperationException("Decode of hex strings requires strings of even length")
+            throw new UnsupportedOperationException('Decode of hex strings requires strings of even length')
         }
 
         def currentByte

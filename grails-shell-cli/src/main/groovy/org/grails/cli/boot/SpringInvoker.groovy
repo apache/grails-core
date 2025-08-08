@@ -34,7 +34,7 @@ import org.springframework.boot.cli.command.CommandRunner
 @CompileStatic
 class SpringInvoker {
 
-    CommandRunner runner = new CommandRunner("spring")
+    CommandRunner runner = new CommandRunner('spring')
 
     private SpringInvoker() {
         addServiceLoaderCommands(runner)
@@ -71,7 +71,7 @@ class SpringInvoker {
     static class Slf4jBindingAwareClassLoader extends URLClassLoader {
         @Override
         Enumeration<URL> getResources(String name) throws IOException {
-            if("org/slf4j/impl/StaticLoggerBinder.class" == name) {
+            if('org/slf4j/impl/StaticLoggerBinder.class' == name) {
                 def resources = super.getResources(name)
                 def oneRes = (URL)resources.find() { URL url -> !url.toString().contains('slf4j-simple') }
                 if(oneRes) {

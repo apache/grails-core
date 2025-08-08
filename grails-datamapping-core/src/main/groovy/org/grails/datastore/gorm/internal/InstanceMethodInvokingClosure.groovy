@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 /**
  * Not public API. Used by GormEnhancer
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings('rawtypes')
 @CompileStatic
 class InstanceMethodInvokingClosure extends MethodInvokingClosure {
     InstanceMethodInvokingClosure(apiDelegate, Class<?> persistentClass, String methodName, Class[] parameterTypes) {

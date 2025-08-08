@@ -29,11 +29,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class WithTransactionSpec extends GrailsDataTckSpec {
 
-    void "Test save() with transaction"() {
+    void 'Test save() with transaction'() {
         given:
         TestEntity.withTransaction {
-            new TestEntity(name: "Bob", age: 50, child: new ChildEntity(name: "Bob Child")).save()
-            new TestEntity(name: "Fred", age: 45, child: new ChildEntity(name: "Fred Child")).save()
+            new TestEntity(name: 'Bob', age: 50, child: new ChildEntity(name: 'Bob Child')).save()
+            new TestEntity(name: 'Fred', age: 45, child: new ChildEntity(name: 'Fred Child')).save()
         }
 
         when:
@@ -43,16 +43,16 @@ class WithTransactionSpec extends GrailsDataTckSpec {
 
         then:
         2 == count
-        "Bob" == results[0].name
-        "Fred" == results[1].name
+        'Bob' == results[0].name
+        'Fred' == results[1].name
     }
 
-    void "Test rollback transaction"() {
+    void 'Test rollback transaction'() {
         given:
         TestEntity.withNewTransaction { status ->
-            new TestEntity(name: "Bob", age: 50, child: new ChildEntity(name: "Bob Child")).save()
+            new TestEntity(name: 'Bob', age: 50, child: new ChildEntity(name: 'Bob Child')).save()
             status.setRollbackOnly()
-            new TestEntity(name: "Fred", age: 45, child: new ChildEntity(name: "Fred Child")).save()
+            new TestEntity(name: 'Fred', age: 45, child: new ChildEntity(name: 'Fred Child')).save()
         }
 
         when:
@@ -64,13 +64,13 @@ class WithTransactionSpec extends GrailsDataTckSpec {
         results.size() == 0
     }
 
-    void "Test rollback transaction with Runtime Exception"() {
+    void 'Test rollback transaction with Runtime Exception'() {
         given:
         def ex
         try {
             TestEntity.withNewTransaction { status ->
-                new TestEntity(name: "Bob", age: 50, child: new ChildEntity(name: "Bob Child")).save()
-                throw new RuntimeException("bad")
+                new TestEntity(name: 'Bob', age: 50, child: new ChildEntity(name: 'Bob Child')).save()
+                throw new RuntimeException('bad')
             }
         }
         catch (e) {
@@ -88,13 +88,13 @@ class WithTransactionSpec extends GrailsDataTckSpec {
         ex.message == 'bad'
     }
 
-    void "Test rollback transaction with Exception"() {
+    void 'Test rollback transaction with Exception'() {
         given:
         def ex
         try {
             TestEntity.withNewTransaction { status ->
-                new TestEntity(name: "Bob", age: 50, child: new ChildEntity(name: "Bob Child")).save()
-                throw new TestCheckedException("bad")
+                new TestEntity(name: 'Bob', age: 50, child: new ChildEntity(name: 'Bob Child')).save()
+                throw new TestCheckedException('bad')
             }
         }
         catch (e) {

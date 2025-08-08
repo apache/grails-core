@@ -119,10 +119,10 @@ class UrlMappingMatcher implements Matcher {
             uriPatterns << arguments.uri.toString()
         }
         else {
-            controllerRegex = regexMatch( arguments, "controller")
-            actionRegex = regexMatch( arguments, "action")
-            namespaceRegex = regexMatch( arguments, "namespace")
-            methodRegex = regexMatch( arguments, "method")
+            controllerRegex = regexMatch( arguments, 'controller')
+            actionRegex = regexMatch( arguments, 'action')
+            namespaceRegex = regexMatch( arguments, 'namespace')
+            methodRegex = regexMatch( arguments, 'method')
         }
         return this
     }
@@ -134,10 +134,10 @@ class UrlMappingMatcher implements Matcher {
         }
         else {
             def exclude = new MapExclude()
-            exclude.controllerExcludesRegex = regexMatch( arguments, "controller", null)
-            exclude.actionExcludesRegex = regexMatch( arguments, "action", null)
-            exclude.namespaceExcludesRegex = regexMatch( arguments, "namespace", null)
-            exclude.methodExcludesRegex = regexMatch( arguments, "method", null)
+            exclude.controllerExcludesRegex = regexMatch( arguments, 'controller', null)
+            exclude.actionExcludesRegex = regexMatch( arguments, 'action', null)
+            exclude.namespaceExcludesRegex = regexMatch( arguments, 'namespace', null)
+            exclude.methodExcludesRegex = regexMatch( arguments, 'method', null)
             excludes << exclude
         }
         return this

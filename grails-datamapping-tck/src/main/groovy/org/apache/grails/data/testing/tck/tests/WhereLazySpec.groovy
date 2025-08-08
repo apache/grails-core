@@ -34,12 +34,12 @@ class WhereLazySpec extends GrailsDataTckSpec {
         new Product(name: 'tshirt', color: 'blue').save(flush: true)
     }
 
-    void "test deleteAll with whereLazy"() {
+    void 'test deleteAll with whereLazy'() {
         setup:
         createProducts()
 
         when:
-        Product.removeAllByColor("orange")
+        Product.removeAllByColor('orange')
 
         then:
         Product.count() == 3
@@ -49,12 +49,12 @@ class WhereLazySpec extends GrailsDataTckSpec {
 
     }
 
-    void "test updateAll with whereLazy"() {
+    void 'test updateAll with whereLazy'() {
         setup:
         createProducts()
 
         when:
-        Product.updateAll("orange")
+        Product.updateAll('orange')
 
         then:
         Product.countByName('tshirt') == 3

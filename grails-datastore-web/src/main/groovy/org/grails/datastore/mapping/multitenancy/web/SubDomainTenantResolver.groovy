@@ -53,14 +53,14 @@ class SubDomainTenantResolver implements TenantResolver{
             if(i > 0) {
                 subdomain = subdomain.substring(0, subdomain.length()-i)
             }
-            subdomain = subdomain.substring(subdomain.indexOf("/") + 2)
-            if( subdomain.indexOf(".") > -1 ) {
-                return subdomain.substring(0, subdomain.indexOf("."))
+            subdomain = subdomain.substring(subdomain.indexOf('/') + 2)
+            if( subdomain.indexOf('.') > -1 ) {
+                return subdomain.substring(0, subdomain.indexOf('.'))
             }
             else {
                 return ConnectionSource.DEFAULT
             }
         }
-        throw new TenantNotFoundException("Tenant could not be resolved outside a web request")
+        throw new TenantNotFoundException('Tenant could not be resolved outside a web request')
     }
 }

@@ -81,8 +81,8 @@ import static org.grails.datastore.mapping.reflect.AstUtils.processVariableScope
 @CompileStatic
 abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTransformation {
 
-    private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList("afterPropertiesSet", "destroy"))
-    private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.class.getName(), PreDestroy.class.getName(), "grails.web.controllers.ControllerMethod"))
+    private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy'))
+    private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.class.getName(), PreDestroy.class.getName(), 'grails.web.controllers.ControllerMethod'))
     /**
      * Key used to store within the original method node metadata, all previous decorated methods
      */
@@ -131,7 +131,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
                 if (startsWithSpock && methodName.endsWith('proc')) continue
 
-                if (md.getAnnotations().any { AnnotationNode an -> an.classNode.name == "org.spockframework.runtime.model.DataProviderMetadata" }) {
+                if (md.getAnnotations().any { AnnotationNode an -> an.classNode.name == 'org.spockframework.runtime.model.DataProviderMetadata' }) {
                     continue
                 }
 
@@ -148,7 +148,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
                 // don't apply to methods added by traits
                 if (hasAnnotation(md, Traits.TraitBridge.class)) continue
                 // ignore methods that delegate to each other
-                if (hasAnnotation(md, "grails.compiler.DelegatingMethod")) continue
+                if (hasAnnotation(md, 'grails.compiler.DelegatingMethod')) continue
 
                 weaveNewMethod(source, annotationNode, classNode, md, genericsSpec)
             } else if (isTestSetupOrCleanup(classNode, md)) {
@@ -170,7 +170,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
     protected boolean isTestSetupOrCleanup(ClassNode classNode, MethodNode md) {
         String methodName = md.getName()
-        return (("setup".equals(methodName) || "cleanup".equals(methodName)) && isSpockTest(classNode)) ||
+        return (('setup'.equals(methodName) || 'cleanup'.equals(methodName)) && isSpockTest(classNode)) ||
                 hasJunitAnnotation(md)
     }
 
@@ -359,7 +359,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         classNode.addMethod(renamedMethodNode)
 
         // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error
-        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(new SourceUnit("dummy", "dummy", source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration())))
+        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration())))
         if (methodNode == null) {
             scopeVisitor.visitClass(classNode)
         } else {
@@ -371,7 +371,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
     }
 
     protected MethodCallExpression buildCallToOriginalMethod(ClassNode classNode, MethodNode renamedMethodNode) {
-        final MethodCallExpression originalMethodCall = callX(varX("this", classNode), renamedMethodNode.name, args(renamedMethodNode.parameters))
+        final MethodCallExpression originalMethodCall = callX(varX('this', classNode), renamedMethodNode.name, args(renamedMethodNode.parameters))
         originalMethodCall.setImplicitThis(false)
         originalMethodCall.setMethodTarget(renamedMethodNode)
 

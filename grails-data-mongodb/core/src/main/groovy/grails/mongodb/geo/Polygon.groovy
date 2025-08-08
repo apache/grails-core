@@ -41,10 +41,10 @@ class Polygon extends Shape implements GeoJSON{
      * @param others The remaining {@link Point} instances
      */
     Polygon(Point x, Point y, Point z, Point...others) {
-        Assert.notNull(x, "Point x is required")
-        Assert.notNull(y, "Point y is required")
-        Assert.notNull(z, "Point z is required")
-        Assert.notNull(others, "Point others is required")
+        Assert.notNull(x, 'Point x is required')
+        Assert.notNull(y, 'Point y is required')
+        Assert.notNull(z, 'Point z is required')
+        Assert.notNull(others, 'Point others is required')
 
         List<Point> list = []
         list.addAll Arrays.asList(x, y, z)
@@ -81,7 +81,7 @@ class Polygon extends Shape implements GeoJSON{
      * @return A Polygon
      */
     static Polygon valueOf(List coords) {
-        Assert.notNull(coords, "Argument coords cannot be null")
+        Assert.notNull(coords, 'Argument coords cannot be null')
 
 
 
@@ -115,15 +115,15 @@ class Polygon extends Shape implements GeoJSON{
                     } ) // case (4) above
                 }
                 else {
-                    throw new IllegalArgumentException("Coordinate list must be Points or number-lists")
+                    throw new IllegalArgumentException('Coordinate list must be Points or number-lists')
                 }
              }
              else {
-                throw new IllegalArgumentException("Coordinate list must be Points or number-lists")
+                throw new IllegalArgumentException('Coordinate list must be Points or number-lists')
              }
          }
          catch(IndexOutOfBoundsException ioobe){
-            throw new IllegalArgumentException("Coordinate lists cannot be empty")
+            throw new IllegalArgumentException('Coordinate lists cannot be empty')
          }
 
     }
@@ -133,9 +133,9 @@ class Polygon extends Shape implements GeoJSON{
      *   E.g. List<Point> or List<List<Number>>
      */
     private static List<Point> fromSingleCoordsList(List coords) {
-        Assert.notNull(coords, "Argument coords cannot be null")
+        Assert.notNull(coords, 'Argument coords cannot be null')
 
-        if(coords.size() < 4) throw new IllegalArgumentException("Coordinates should contain at least 4 entries for a Polygon")
+        if(coords.size() < 4) throw new IllegalArgumentException('Coordinates should contain at least 4 entries for a Polygon')
 
         return coords.collect {
             if(it instanceof Point) {

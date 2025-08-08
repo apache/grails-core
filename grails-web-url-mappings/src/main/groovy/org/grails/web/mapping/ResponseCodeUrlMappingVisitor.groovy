@@ -29,11 +29,11 @@ class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
     List<String> responseCodes = []
 
     void visitProperty(PropertyNode node){
-        if (node?.name == "mappings") {
+        if (node?.name == 'mappings') {
             insideMapping = true
         }
         super.visitProperty(node)
-        if (node?.name == "mappings") {
+        if (node?.name == 'mappings') {
             insideMapping = false
         }
     }

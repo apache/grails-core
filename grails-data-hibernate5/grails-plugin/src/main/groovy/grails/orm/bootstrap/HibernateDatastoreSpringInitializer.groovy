@@ -48,10 +48,10 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  */
 @Slf4j
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
-    public static final String SESSION_FACTORY_BEAN_NAME = "sessionFactory"
+    public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'
     public static final String DEFAULT_DATA_SOURCE_NAME = Settings.SETTING_DATASOURCE
     public static final String DATA_SOURCES = Settings.SETTING_DATASOURCES
-    public static final String TEST_DB_URL = "jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1"
+    public static final String TEST_DB_URL = 'jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1'
 
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
     String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
@@ -139,7 +139,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
         ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
         Closure beanDefinitions = {
-            def common = getCommonConfiguration(beanDefinitionRegistry, "hibernate")
+            def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
             common.delegate = delegate
             common.call()
 
@@ -159,40 +159,40 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             sessionFactory(hibernateDatastore:'getSessionFactory') { bean->
                 bean.primary = true
             }
-            transactionManager(hibernateDatastore:"getTransactionManager") { bean->
+            transactionManager(hibernateDatastore: 'getTransactionManager') { bean->
                 bean.primary = true
             }
-            autoTimestampEventListener(hibernateDatastore:"getAutoTimestampEventListener")
-            getBeanDefinition("transactionManager").beanClass = PlatformTransactionManager
+            autoTimestampEventListener(hibernateDatastore: 'getAutoTimestampEventListener')
+            getBeanDefinition('transactionManager').beanClass = PlatformTransactionManager
             hibernateDatastoreConnectionSourcesRegistrar(HibernateDatastoreConnectionSourcesRegistrar, dataSources)
             // domain model mapping context, used for configuration
-            grailsDomainClassMappingContext(hibernateDatastore:"getMappingContext")
+            grailsDomainClassMappingContext(hibernateDatastore: 'getMappingContext')
 
             loadDataServices(null)
                     .each {serviceName, serviceClass->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
-                            targetObject = ref("hibernateDatastore")
+                            targetObject = ref('hibernateDatastore')
                             targetMethod = 'getService'
                             arguments = [serviceClass]
                         }
                     }
 
             if(isGrailsPresent) {
-                if(ClassUtils.isPresent("org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor")) {
+                if(ClassUtils.isPresent('org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor')) {
                     ClassLoader cl = ClassUtils.getClassLoader()
-                    persistenceInterceptor(cl.loadClass("org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor"), ref("hibernateDatastore"))
-                    proxyHandler(cl.loadClass("org.grails.datastore.gorm.proxy.ProxyHandlerAdapter"), ref('hibernateProxyHandler'))
+                    persistenceInterceptor(cl.loadClass('org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor'), ref('hibernateDatastore'))
+                    proxyHandler(cl.loadClass('org.grails.datastore.gorm.proxy.ProxyHandlerAdapter'), ref('hibernateProxyHandler'))
                 }
 
 
-                boolean osivEnabled = config.getProperty("hibernate.osiv.enabled", Boolean, true)
-                boolean isWebApplication = beanDefinitionRegistry?.containsBeanDefinition("dispatcherServlet") ||
-                        beanDefinitionRegistry?.containsBeanDefinition("grailsControllerHelper")
+                boolean osivEnabled = config.getProperty('hibernate.osiv.enabled', Boolean, true)
+                boolean isWebApplication = beanDefinitionRegistry?.containsBeanDefinition('dispatcherServlet') ||
+                        beanDefinitionRegistry?.containsBeanDefinition('grailsControllerHelper')
 
-                if (isWebApplication && osivEnabled && ClassUtils.isPresent("org.grails.plugin.hibernate.support.GrailsOpenSessionInViewInterceptor")) {
+                if (isWebApplication && osivEnabled && ClassUtils.isPresent('org.grails.plugin.hibernate.support.GrailsOpenSessionInViewInterceptor')) {
                     ClassLoader cl = ClassUtils.getClassLoader()
-                    openSessionInViewInterceptor(cl.loadClass("org.grails.plugin.hibernate.support.GrailsOpenSessionInViewInterceptor")) {
-                        hibernateDatastore = ref("hibernateDatastore")
+                    openSessionInViewInterceptor(cl.loadClass('org.grails.plugin.hibernate.support.GrailsOpenSessionInViewInterceptor')) {
+                        hibernateDatastore = ref('hibernateDatastore')
                     }
                 }
             }

@@ -36,9 +36,9 @@ import org.grails.cli.profile.ProjectContextAware
  */
 class HelpCommand implements ProfileCommand, Completer, ProjectContextAware, ProfileRepositoryAware{
 
-    public static final String NAME = "help"
+    public static final String NAME = 'help'
 
-    final CommandDescription description = new CommandDescription(NAME, "Prints help information for a specific command", "help [COMMAND NAME]")
+    final CommandDescription description = new CommandDescription(NAME, 'Prints help information for a specific command', 'help [COMMAND NAME]')
 
     Profile profile
     ProfileRepository profileRepository
@@ -64,23 +64,23 @@ class HelpCommand implements ProfileCommand, Completer, ProjectContextAware, Pro
             for (CommandDescription desc : allCommands) {
                 if(desc.name == helpCommandName) {
                     console.addStatus("Command: $desc.name")
-                    console.addStatus("Description:")
+                    console.addStatus('Description:')
                     console.println "${desc.description?:''}"
                     if(desc.usage) {
                         console.println()
-                        console.addStatus("Usage:")
+                        console.addStatus('Usage:')
                         console.println "${desc.usage}"
                     }
                     if(desc.arguments) {
                         console.println()
-                        console.addStatus("Arguments:")
+                        console.addStatus('Arguments:')
                         for(arg in desc.arguments) {
                             console.println "* ${arg.name} - ${arg.description?:''} (${arg.required ? 'REQUIRED' : 'OPTIONAL'})"
                         }
                     }
                     if(desc.flags) {
                         console.println()
-                        console.addStatus("Flags:")
+                        console.addStatus('Flags:')
                         for(arg in desc.flags) {
                             console.println "* ${arg.name} - ${arg.description ?: ''}"
                         }
@@ -96,7 +96,7 @@ Usage (optionals marked with *):'
 grails [environment]* [target] [arguments]*'
 
 '''
-            console.addStatus("Examples:")
+            console.addStatus('Examples:')
             console.log('$ grails dev run-app')
             console.log('$ grails create-app books')
             console.log ''
@@ -107,7 +107,7 @@ grails [environment]* [target] [arguments]*'
                 console.println "${desc.name.padRight(40)}${desc.description}"
             }
             console.println()
-            console.addStatus("Detailed usage with help [command]")
+            console.addStatus('Detailed usage with help [command]')
             return true
         }
 

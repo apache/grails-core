@@ -41,13 +41,13 @@ class RenderSitemeshTagLib implements TagLibrary {
     SiteMeshFilter siteMeshFilter
 
     @Autowired
-    RenderSitemeshTagLib(@Qualifier("sitemesh") FilterRegistrationBean sitemesh) {
+    RenderSitemeshTagLib(@Qualifier('sitemesh') FilterRegistrationBean sitemesh) {
         this.siteMeshFilter = (SiteMeshFilter) sitemesh.getFilter()
     }
 
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
-        WebAppContext context = new WebAppContext("text/html", request, response,
+        WebAppContext context = new WebAppContext('text/html', request, response,
                 servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false)
         Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context)
         if (attrs.name) {
@@ -67,7 +67,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
         Content content = request.getAttribute(WebAppContext.CONTENT_KEY)
         ContentProperty currentProperty = content.getExtractedProperties()
-        for (String childPropertyName : name.split("\\.")) {
+        for (String childPropertyName : name.split('\\.')) {
             currentProperty = currentProperty.getChild(childPropertyName)
         }
         currentProperty
@@ -86,7 +86,7 @@ class RenderSitemeshTagLib implements TagLibrary {
      */
     Closure pageProperty = { attrs ->
         if (!attrs.name) {
-            throwTagError("Tag [pageProperty] is missing required attribute [name]")
+            throwTagError('Tag [pageProperty] is missing required attribute [name]')
         }
         String propertyName = attrs.name as String
         ContentProperty contentProperty = getContentProperty(propertyName)
@@ -96,9 +96,9 @@ class RenderSitemeshTagLib implements TagLibrary {
             if (attrs.writeEntireProperty) {
                 out << ' '
                 out << propertyName.substring(propertyName.lastIndexOf('.') + 1)
-                out << "=\""
+                out << '="'
                 out << propertyValue
-                out << "\""
+                out << '"'
             } else {
                 out << propertyValue
             }

@@ -51,6 +51,6 @@ class EventBus  implements Bus {
 
     @Override
     Subscription<Object, Consumer> on(Selector selector, Consumer consumer) {
-        throw new UnsupportedOperationException("Events of type [Selector] are no longer supported. Use string ids")
+        throw new UnsupportedOperationException('Events of type [Selector] are no longer supported. Use string ids')
     }
 }

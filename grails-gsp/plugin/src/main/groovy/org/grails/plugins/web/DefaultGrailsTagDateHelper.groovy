@@ -102,8 +102,8 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         } else if (date instanceof TemporalAccessor) {
             instant = date
         } else {
-            throw new IllegalArgumentException("Cannot format class as date: " +
-                    (date == null ? "<null>" : date.getClass().getName()))
+            throw new IllegalArgumentException('Cannot format class as date: ' +
+                    (date == null ? '<null>' : date.getClass().getName()))
         }
         ((DateTimeFormatter)formatter).format(instant)
     }

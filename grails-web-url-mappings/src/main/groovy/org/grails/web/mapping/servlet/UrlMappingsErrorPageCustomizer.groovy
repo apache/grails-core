@@ -53,7 +53,7 @@ class UrlMappingsErrorPageCustomizer implements WebServerFactoryCustomizer<Confi
                 ResponseCodeUrlMapping responseCodeUrlMapping = (ResponseCodeUrlMapping) urlMapping
                 ResponseCodeMappingData data = (ResponseCodeMappingData) responseCodeUrlMapping.urlData
                 final int code = data.responseCode
-                errorPages << new ErrorPage(HttpStatus.valueOf(code), "/error")
+                errorPages << new ErrorPage(HttpStatus.valueOf(code), '/error')
 
             }
         }

@@ -77,8 +77,8 @@ class DataSourceGrailsPlugin extends Plugin {
                 }
             }
             if(dataSources) {
-                "dataSourceConnectionSources"(DataSourceConnectionSourcesFactoryBean, grailsApplication.config)
-                "dataSource"(InstanceFactoryBean, "#{dataSourceConnectionSources.defaultConnectionSource.source}", DataSource)
+                'dataSourceConnectionSources'(DataSourceConnectionSourcesFactoryBean, grailsApplication.config)
+                'dataSource'(InstanceFactoryBean, '#{dataSourceConnectionSources.defaultConnectionSource.source}', DataSource)
             }
         }
 
@@ -93,7 +93,7 @@ class DataSourceGrailsPlugin extends Plugin {
                 }
             } catch(e) {
                 if(!Environment.isDevelopmentMode() && Environment.isWarDeployed()) {
-                    log.warn("Cannot locate JMX MBeanServer. Disabling autoregistering dataSource pools to JMX.", e)
+                    log.warn('Cannot locate JMX MBeanServer. Disabling autoregistering dataSource pools to JMX.', e)
                 }
             }
         }

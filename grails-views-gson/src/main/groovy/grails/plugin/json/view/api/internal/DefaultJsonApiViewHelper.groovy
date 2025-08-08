@@ -55,17 +55,17 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     /**
      * The jsonapiobject parameter
      */
-    String JSON_API_OBJECT = "jsonApiObject"
+    String JSON_API_OBJECT = 'jsonApiObject'
 
     /**
      * The meta parameter
      */
-    String META = "meta"
+    String META = 'meta'
 
     /**
      * The pagination parameter
      */
-    String PAGINATION = "pagination"
+    String PAGINATION = 'pagination'
 
     public static final JsonOutput.JsonWritable NOOP_OUTPUT = new JsonOutput.JsonWritable() {
         @Override
@@ -165,14 +165,14 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     private void renderResource(Object object, Writer out) {
-        renderResource(object, out, [:], "")
+        renderResource(object, out, [:], '')
     }
 
     private void renderResource(Object object, Writer out, Map arguments, String basePath) {
         PersistentEntity entity = findEntity(object)
 
         if (entity == null) {
-            throw new IllegalArgumentException("Rendering non persistent entities is not supported")
+            throw new IllegalArgumentException('Rendering non persistent entities is not supported')
         }
 
         List<String> includes = getIncludes(arguments)
@@ -197,7 +197,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
             if (attributes) {
                 out.write(JsonOutput.COMMA)
-                out.write(generator.toJson("attributes"))
+                out.write(generator.toJson('attributes'))
                 out.write(JsonOutput.COLON)
                 out.write(JsonOutput.OPEN_BRACE)
 
@@ -237,7 +237,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
             if (relationships && includeAssociations) {
 
                 out.write(JsonOutput.COMMA)
-                out.write(generator.toJson("relationships"))
+                out.write(generator.toJson('relationships'))
                 out.write(JsonOutput.COLON)
                 out.write(JsonOutput.OPEN_BRACE)
                 boolean firstRelationship = true
@@ -259,7 +259,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                         out.write(JsonOutput.COMMA)
                     }
 
-                    out.write(generator.toJson("data"))
+                    out.write(generator.toJson('data'))
                     out.write(JsonOutput.COLON)
                     PersistentEntity associatedEntity = association.associatedEntity
                     if (association instanceof ToMany && Iterable.isAssignableFrom(association.type)) {
@@ -287,12 +287,12 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                         if (value != null) {
                             out.write(JsonOutput.OPEN_BRACE)
 
-                            out.write(generator.toJson("type"))
+                            out.write(generator.toJson('type'))
                             out.write(JsonOutput.COLON)
                             out.write(generator.toJson(associatedEntity.decapitalizedName))
                             out.write(JsonOutput.COMMA)
 
-                            out.write(generator.toJson("id"))
+                            out.write(generator.toJson('id'))
                             out.write(JsonOutput.COLON)
                             out.write(generator.toJson(idGenerator.render(value, associatedEntity.identity)))
 
@@ -307,7 +307,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
             }
         }
 
-        if (basePath != "") {
+        if (basePath != '') {
             out.write(JsonOutput.COMMA)
             renderRelationshipLinks(object).writeTo(out)
         }
@@ -344,7 +344,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         new JsonOutput.JsonWritable() {
             @Override
             Writer writeTo(Writer out) throws IOException {
-                out.write(generator.toJson("data"))
+                out.write(generator.toJson('data'))
                 out.write(JsonOutput.COLON)
 
                 if (object instanceof Collection) {
@@ -355,11 +355,11 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                             out.write(JsonOutput.COMMA)
                         }
                         first = false
-                        renderResource(o, out, arguments, "")
+                        renderResource(o, out, arguments, '')
                     }
                     out.write(JsonOutput.CLOSE_BRACKET)
                 } else {
-                    renderResource(object, out, arguments, "")
+                    renderResource(object, out, arguments, '')
                 }
                 out
             }
@@ -372,7 +372,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
             @Override
             Writer writeTo(Writer out) throws IOException {
-                out.write(generator.toJson("errors"))
+                out.write(generator.toJson('errors'))
                 out.write(JsonOutput.COLON)
 
                 Errors errors = (Errors) object.getAt('errors')
@@ -394,21 +394,21 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
             protected writeError(Writer out, ObjectError error) {
                 out.write(JsonOutput.OPEN_BRACE)
-                out.write(generator.toJson("code"))
+                out.write(generator.toJson('code'))
                 out.write(JsonOutput.COLON)
                 out.write(generator.toJson(error.code))
                 out.write(JsonOutput.COMMA)
 
-                out.write(generator.toJson("detail"))
+                out.write(generator.toJson('detail'))
                 out.write(JsonOutput.COLON)
                 out.write(generator.toJson(message([error: error])))
                 out.write(JsonOutput.COMMA)
 
-                out.write(generator.toJson("source"))
+                out.write(generator.toJson('source'))
                 out.write(JsonOutput.COLON)
                 out.write(JsonOutput.OPEN_BRACE)
 
-                out.write(generator.toJson("object"))
+                out.write(generator.toJson('object'))
                 out.write(JsonOutput.COLON)
                 out.write(generator.toJson(error.getObjectName()))
                 out.write(JsonOutput.COMMA)
@@ -416,17 +416,17 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                 if (error instanceof FieldError) {
                     FieldError fieldError = (FieldError) error
 
-                    out.write(generator.toJson("field"))
+                    out.write(generator.toJson('field'))
                     out.write(JsonOutput.COLON)
                     out.write(generator.toJson(fieldError.getField()))
                     out.write(JsonOutput.COMMA)
 
-                    out.write(generator.toJson("rejectedValue"))
+                    out.write(generator.toJson('rejectedValue'))
                     out.write(JsonOutput.COLON)
                     out.write(generator.toJson(fieldError.getRejectedValue()))
                     out.write(JsonOutput.COMMA)
 
-                    out.write(generator.toJson("bindingError"))
+                    out.write(generator.toJson('bindingError'))
                     out.write(JsonOutput.COLON)
                     out.write(generator.toJson(fieldError.isBindingFailure()))
                 }
@@ -443,10 +443,10 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         new JsonOutput.JsonWritable() {
             @Override
             Writer writeTo(Writer out) throws IOException {
-                out.write(generator.toJson("links"))
+                out.write(generator.toJson('links'))
                 out.write(JsonOutput.COLON)
                 out.write(JsonOutput.OPEN_BRACE)
-                out.write(generator.toJson("self"))
+                out.write(generator.toJson('self'))
                 out.write(JsonOutput.COLON)
                 out.write(generator.toJson(view.linkGenerator.link(resource: object, method: HttpMethod.GET)))
                 out.write(JsonOutput.CLOSE_BRACE)
@@ -462,11 +462,11 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
             @Override
             Writer writeTo(Writer out) throws IOException {
 
-                out.write(generator.toJson("links"))
+                out.write(generator.toJson('links'))
                 out.write(JsonOutput.COLON)
 
                 out.write(JsonOutput.OPEN_BRACE)
-                out.write(generator.toJson("self"))
+                out.write(generator.toJson('self'))
                 out.write(JsonOutput.COLON)
 
                 if (object instanceof Collection) {
@@ -475,7 +475,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                     if (arguments.get(PAGINATION) instanceof Map) {
                         Map paginationArgs = (Map)arguments.get(PAGINATION)
                         if (!paginationArgs.containsKey(PAGINATION_TOTAL) || !paginationArgs.containsKey(PAGINATION_RESROUCE)) {
-                            throw new IllegalArgumentException("JSON API pagination arguments must contain resource and total")
+                            throw new IllegalArgumentException('JSON API pagination arguments must contain resource and total')
                         }
                         Integer total = (Integer)paginationArgs.get(PAGINATION_TOTAL)
                         Object resource = paginationArgs.get(PAGINATION_RESROUCE)
@@ -507,7 +507,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                 @Override
                 Writer writeTo(Writer out) throws IOException {
                     out.write(JsonOutput.COMMA)
-                    writeKey(out, "included")
+                    writeKey(out, 'included')
                     out.write(JsonOutput.OPEN_BRACKET)
                     boolean first = true
 
@@ -543,12 +543,12 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     void renderMetaObject(Writer out, Object meta) {
-        writeKey(out, "meta")
+        writeKey(out, 'meta')
         viewHelper.render(meta, [:]).writeTo(out)
     }
 
     void renderJsonApiMember(Writer out, Object meta) {
-        writeKey(out, "jsonapi")
+        writeKey(out, 'jsonapi')
         out.write(JsonOutput.OPEN_BRACE)
         writeKeyValue(out, 'version', '1.0')
         if (meta != null) {
@@ -562,7 +562,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         JsonGenerator generator = getGenerator()
 
         StackTraceUtils.sanitize(object)
-        out.write(generator.toJson("errors"))
+        out.write(generator.toJson('errors'))
         out.write(JsonOutput.COLON)
         out.write(JsonOutput.OPEN_BRACKET)
         out.write(JsonOutput.OPEN_BRACE)
@@ -572,7 +572,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         out.write(JsonOutput.COMMA)
         writeKeyValue(out, 'detail', object.localizedMessage)
         out.write(JsonOutput.COMMA)
-        out.write(generator.toJson("source"))
+        out.write(generator.toJson('source'))
         out.write(JsonOutput.COLON)
         out.write(JsonOutput.OPEN_BRACE)
         writeKeyValue(out, 'stacktrace', getJsonStackTrace(object))

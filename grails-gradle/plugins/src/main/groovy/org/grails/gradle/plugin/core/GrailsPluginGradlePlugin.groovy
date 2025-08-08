@@ -116,7 +116,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 TaskContainer allTasks = project.tasks
 
                 GroovyCompile groovyCompile = allTasks.named('compileGroovy', GroovyCompile).get()
-                ProcessResources processResources = allTasks.named("processResources", ProcessResources).get()
+                ProcessResources processResources = allTasks.named('processResources', ProcessResources).get()
 
                 runtimeConfiguration.artifacts.add(new ExplodedDir(groovyCompile.destinationDir, groovyCompile, processResources))
                 it.artifacts.add(new ExplodedDir(processResources.destinationDir, groovyCompile, processResources))
@@ -171,7 +171,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
         def copyAstClasses = project.tasks.register('copyAstClasses', Copy) {
             it.from sourceSets.ast.output
-            it.into project.layout.buildDirectory.dir("classes/groovy/main")
+            it.into project.layout.buildDirectory.dir('classes/groovy/main')
         }
 
         project.tasks.named('findMainClass', FindMainClassTask).configure {
@@ -217,7 +217,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             Task groovydocTask = taskContainer.findByName('groovydoc')
             if (groovydocTask) {
                 if (taskContainer.findByName('javadocJar') == null) {
-                    taskContainer.create("javadocJar", Jar) {
+                    taskContainer.create('javadocJar', Jar) {
                         archiveClassifier.set('javadoc')
                         from groovydocTask.outputs
                         outputs.cacheIf { true }
@@ -277,35 +277,35 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
             def processResourcesDependencies = []
 
-            processResourcesDependencies << project.task(type: Copy, "copyCommands") {
+            processResourcesDependencies << project.task(type: Copy, 'copyCommands') {
                 from "${project.projectDir}/src/main/scripts"
                 into "${processResources.destinationDir}/META-INF/commands"
             }
 
-            processResourcesDependencies << project.task(type: Copy, "copyTemplates") {
+            processResourcesDependencies << project.task(type: Copy, 'copyTemplates') {
                 from "${project.projectDir}/src/main/templates"
                 into "${processResources.destinationDir}/META-INF/templates"
             }
             processResources.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE)
             processResources.dependsOn(*processResourcesDependencies)
             project.processResources {
-                exclude "spring/resources.groovy"
-                exclude "**/*.gsp"
+                exclude 'spring/resources.groovy'
+                exclude '**/*.gsp'
             }
         }
     }
 
     protected void checkForConfigurationClash(Project project) {
-        File yamlConfig = new File(project.projectDir, "grails-app/conf/plugin.yml")
-        File groovyConfig = new File(project.projectDir, "grails-app/conf/plugin.groovy")
+        File yamlConfig = new File(project.projectDir, 'grails-app/conf/plugin.yml')
+        File groovyConfig = new File(project.projectDir, 'grails-app/conf/plugin.groovy')
         if (yamlConfig.exists() && groovyConfig.exists()) {
-            throw new RuntimeException("A plugin may define a plugin.yml or a plugin.groovy, but not both")
+            throw new RuntimeException('A plugin may define a plugin.yml or a plugin.groovy, but not both')
         }
     }
 
     static class ExplodedDir implements PublishArtifact {
-        final String extension = ""
-        final String type = "dir"
+        final String extension = ''
+        final String type = 'dir'
         final Date date = new Date()
 
         final File file
@@ -323,7 +323,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
         @Override
         String getClassifier() {
-            ""
+            ''
         }
     }
 }

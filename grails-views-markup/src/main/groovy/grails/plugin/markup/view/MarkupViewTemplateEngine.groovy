@@ -109,7 +109,7 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
             return createMarkupViewTemplate(template)
 
         } catch (CompilationFailedException e) {
-            throw new ViewCompilationException(e, "Generated")
+            throw new ViewCompilationException(e, 'Generated')
         }
 
     }
@@ -125,7 +125,7 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
     @Override
     String getDynamicTemplatePrefix() {
-        "GeneratedMarkupTemplate".intern()
+        'GeneratedMarkupTemplate'.intern()
     }
 
     @Override
@@ -144,7 +144,7 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
             if(compileStatic) {
                 newConfig.addCompilationCustomizers(
-                        new ASTTransformationCustomizer(Collections.singletonMap("extensions", "groovy.text.markup.MarkupTemplateTypeCheckingExtension"), CompileStatic.class))
+                        new ASTTransformationCustomizer(Collections.singletonMap('extensions', 'groovy.text.markup.MarkupTemplateTypeCheckingExtension'), CompileStatic.class))
             }
 
             innerEngine.compilerConfiguration.addCompilationCustomizers( newConfig.compilationCustomizers as CompilationCustomizer[])

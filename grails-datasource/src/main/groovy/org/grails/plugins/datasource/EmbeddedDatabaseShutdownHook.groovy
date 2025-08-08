@@ -90,7 +90,7 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
     }
 
     protected boolean isEmbeddedH2orHsqldb(DataSource dataSource) {
-        MetaProperty urlProperty = dataSource.hasProperty("url")
+        MetaProperty urlProperty = dataSource.hasProperty('url')
         if (urlProperty) {
             String url = urlProperty.getProperty(dataSource)
             if(url && (url.startsWith('jdbc:h2:') || url.startsWith('jdbc:hsqldb:'))) {
@@ -107,7 +107,7 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
         try {
             addShutdownOperation(dataSource.getConnection())
         } catch (e) {
-            log.error "Error shutting down datasource", e
+            log.error 'Error shutting down datasource', e
         }
     }
 

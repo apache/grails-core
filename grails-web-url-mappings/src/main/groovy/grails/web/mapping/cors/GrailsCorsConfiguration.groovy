@@ -68,7 +68,7 @@ class GrailsCorsConfiguration {
                     corsConfigurationMap[key] = corsConfiguration
                 }
             } else {
-                corsConfigurationMap["/**"] = grailsCorsMapping
+                corsConfigurationMap['/**'] = grailsCorsMapping
             }
         }
 

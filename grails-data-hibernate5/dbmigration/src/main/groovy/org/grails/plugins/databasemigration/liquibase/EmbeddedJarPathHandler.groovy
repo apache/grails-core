@@ -35,7 +35,7 @@ import java.nio.file.Paths
 class EmbeddedJarPathHandler extends ZipPathHandler {
     @Override
     int getPriority(String root) {
-        if (root.startsWith("jar:file:") && root.endsWith("!/")) { //only can handle `jar:` urls for the entire jar
+        if (root.startsWith('jar:file:') && root.endsWith('!/')) { //only can handle `jar:` urls for the entire jar
             if (parseJarPath(root).contains('!')) {
                 return PRIORITY_SPECIALIZED
             }
@@ -44,7 +44,7 @@ class EmbeddedJarPathHandler extends ZipPathHandler {
     }
 
     private String parseJarPath(String root) {
-        root.substring(9, root.lastIndexOf("!"))
+        root.substring(9, root.lastIndexOf('!'))
     }
 
     @Override
@@ -79,7 +79,7 @@ class EmbeddedJarResourceAccessor extends AbstractPathResourceAccessor {
 
     @Override
     protected Path getRootPath() {
-        return this.fileSystem.getPath("/")
+        return this.fileSystem.getPath('/')
     }
 
     @Override

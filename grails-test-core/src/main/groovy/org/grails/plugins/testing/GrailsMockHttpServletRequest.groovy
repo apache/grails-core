@@ -120,7 +120,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
         else {
             setContent(new JSON(sourceJson).toString().getBytes(StandardCharsets.UTF_8))
         }
-        getAttribute("org.codehaus.groovy.grails.WEB_REQUEST")?.informParameterCreationListeners()
+        getAttribute('org.codehaus.groovy.grails.WEB_REQUEST')?.informParameterCreationListeners()
     }
 
     /**
@@ -129,8 +129,8 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      * @param sourceXml
      */
     void setXml(Object sourceXml) {
-        setContentType("text/xml; charset=UTF-8")
-        setFormat("xml")
+        setContentType('text/xml; charset=UTF-8')
+        setFormat('xml')
 
         if (sourceXml instanceof String) {
             setContent(sourceXml.getBytes(StandardCharsets.UTF_8))
@@ -145,7 +145,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
             setContent(xml.toString().getBytes(StandardCharsets.UTF_8))
         }
 
-        getAttribute("org.codehaus.groovy.grails.WEB_REQUEST")?.informParameterCreationListeners()
+        getAttribute('org.codehaus.groovy.grails.WEB_REQUEST')?.informParameterCreationListeners()
     }
 
     void setXML(Object sourceXml) {
@@ -178,7 +178,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      * AJAX request, otherwise <code>false</code>.
      */
     boolean isXhr() {
-        return getHeader("X-Requested-With") == "XMLHttpRequest"
+        return getHeader('X-Requested-With') == 'XMLHttpRequest'
     }
 
     /**
@@ -187,7 +187,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      * will have to create a new instance.
      */
     void makeAjaxRequest() {
-        addHeader("X-Requested-With", "XMLHttpRequest")
+        addHeader('X-Requested-With', 'XMLHttpRequest')
     }
 
     /**
@@ -225,8 +225,8 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
         }
     }
 
-    boolean isGet() { method == "GET" }
-    boolean isPost() { method == "POST" }
+    boolean isGet() { method == 'GET' }
+    boolean isPost() { method == 'POST' }
 
     /**
      * Parses the request content as XML using XmlSlurper and returns
@@ -235,7 +235,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      */
     def getXML() {
         if (!cachedXml) {
-            cachedXml = GrailsMockHttpServletRequest.classLoader.loadClass("grails.converters.XML").parse(this)
+            cachedXml = GrailsMockHttpServletRequest.classLoader.loadClass('grails.converters.XML').parse(this)
         }
         return cachedXml
     }
@@ -247,7 +247,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      */
     def getJSON() {
         if (!cachedJson) {
-            cachedJson = GrailsMockHttpServletRequest.classLoader.loadClass("grails.converters.JSON").parse(this)
+            cachedJson = GrailsMockHttpServletRequest.classLoader.loadClass('grails.converters.JSON').parse(this)
         }
         return cachedJson
     }
@@ -369,10 +369,10 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      * @param file multipart file to be added
      */
     void addFile(MultipartFile file) {
-        setMethod("POST")
-        setContentType("multipart/form-data")
+        setMethod('POST')
+        setContentType('multipart/form-data')
 
-        Assert.notNull(file, "MultipartFile must not be null")
+        Assert.notNull(file, 'MultipartFile must not be null')
         multipartFiles.add(file.getName(), file)
     }
 
@@ -383,8 +383,8 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      * @param contents The bytes
      */
     void addFile(String location, byte[] contents) {
-        setMethod("POST")
-        setContentType("multipart/form-data")
+        setMethod('POST')
+        setContentType('multipart/form-data')
 
         multipartFiles.add(location, new GrailsMockMultipartFile(location, contents))
     }
@@ -476,7 +476,7 @@ class MockPart implements Part {
 
     @Override
     String getSubmittedFileName() {
-        "N/A"
+        'N/A'
     }
 
     @Override

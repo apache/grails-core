@@ -39,7 +39,7 @@ class DevelopmentGrailsApplication extends GrailsApp {
     }
 
     protected configureApplicationContextClass() {
-        if (ClassUtils.isPresent("jakarta.servlet.ServletContext", Thread.currentThread().contextClassLoader)) {
+        if (ClassUtils.isPresent('jakarta.servlet.ServletContext', Thread.currentThread().contextClassLoader)) {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(DevelopmentWebApplicationContext))
         } else {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(GenericWebApplicationContext))

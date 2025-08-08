@@ -36,7 +36,7 @@ import grails.util.GrailsStringUtils
 @CompileStatic
 class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
 
-    public static final String[] COMMAND_NAME = new String[] {"groovyDiffChangelog"}
+    public static final String[] COMMAND_NAME = new String[] {'groovyDiffChangelog'}
 
     @Override
     void run(CommandResultsBuilder resultsBuilder) {
@@ -68,7 +68,7 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
             referenceDatabase.setObjectQuotingStrategy(originalStrategy)
             outputStream.flush()
         }
-        resultsBuilder.addResult("statusCode", 0)
+        resultsBuilder.addResult('statusCode', 0)
 
     }
 

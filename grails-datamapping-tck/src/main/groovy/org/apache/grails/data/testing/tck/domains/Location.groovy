@@ -26,7 +26,7 @@ class Location implements Serializable {
 //    Long id
     Long version
     String name
-    String code = "DEFAULT"
+    String code = 'DEFAULT'
 
     def namedAndCode() {
         "$name - $code"

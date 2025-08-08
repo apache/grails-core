@@ -44,7 +44,7 @@ import org.grails.validation.ConstraintEvalUtils
 class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
     public static Boolean IS_OLD_SETUP = false
-    public static final BEAN_NAME = "validateableConstraintsEvaluator"
+    public static final BEAN_NAME = 'validateableConstraintsEvaluator'
     private static Class constraintsEvaluator = DefaultConstraintEvaluator
 
     @Override
@@ -66,8 +66,8 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
             })
             grailsDatastore SimpleMapDatastore, DatastoreUtils.createPropertyResolver(application.config), application.config?.dataSources?.keySet() ?: ([] as Set<String>), testInstance.domainClassesToMock?: [] as Class<?>[]
 
-                constraintRegistry(DefaultConstraintRegistry, ref("messageSource"))
-                grailsDomainClassMappingContext(grailsDatastore: "getMappingContext")
+                constraintRegistry(DefaultConstraintRegistry, ref('messageSource'))
+                grailsDomainClassMappingContext(grailsDatastore: 'getMappingContext')
 
                 "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext, ConstraintEvalUtils.getDefaultConstraints(application.config))
 

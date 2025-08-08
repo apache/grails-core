@@ -37,11 +37,11 @@ import org.grails.taglib.encoder.OutputEncodingStackAttributes.Builder
 class WithCodecHelper {
 
     /** all is the key to set all codecs at once */
-    public static final String ALL_CODECS_FALLBACK_KEY_NAME = "all"
+    public static final String ALL_CODECS_FALLBACK_KEY_NAME = 'all'
     /** name is the key to set out and expression codecs at once */
-    public static final String OUT_AND_EXPRESSION_CODECS_FALLBACK_KEY_NAME = "name"
+    public static final String OUT_AND_EXPRESSION_CODECS_FALLBACK_KEY_NAME = 'name'
 
-    private static final String ALREADY_CANONICAL_KEY_NAME = "_canonical_"
+    private static final String ALREADY_CANONICAL_KEY_NAME = '_canonical_'
 
 
     /**
@@ -169,7 +169,7 @@ class WithCodecHelper {
 
     private static boolean convertToBoolean(v) {
         Boolean booleanValue = v as Boolean
-        if (booleanValue && v instanceof CharSequence && (v.toString()=="false" || v.toString()=="no")) {
+        if (booleanValue && v instanceof CharSequence && (v.toString()=='false' || v.toString()=='no')) {
             booleanValue = false
         }
         return booleanValue

@@ -26,6 +26,6 @@ class MD5CodecExtensionMethods {
     }
 
     static decodeMD5(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode MD5 hashes")
+        throw new UnsupportedOperationException('Cannot decode MD5 hashes')
     }
 }

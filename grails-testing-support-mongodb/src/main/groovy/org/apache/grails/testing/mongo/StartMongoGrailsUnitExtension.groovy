@@ -53,13 +53,13 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
         }
 
         if (isIntegrationSpec(spec)) {
-            throw new IllegalStateException("An Integration Specification was found in a Unit Test run.")
+            throw new IllegalStateException('An Integration Specification was found in a Unit Test run.')
         }
 
         if (isAutoStartedMongoSpec(spec)) {
             // Unit tests will either start their own version or will need the configuration injected.
             if (isMongoSpec(spec)) {
-                throw new IllegalStateException("A Specification may be a MongoSpec or an AutoStartedMongoSpec, but not both.")
+                throw new IllegalStateException('A Specification may be a MongoSpec or an AutoStartedMongoSpec, but not both.')
             }
         } else {
             return
@@ -72,7 +72,7 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
         spec.addSetupSpecInterceptor { invocation ->
             FieldInfo dbContainerField = spec.getSpecsBottomToTop().findResult { SpecInfo s -> s.fields.find { it.shared && MongoDBContainer.isAssignableFrom(it.type) && it.name == 'dbContainer' } }
             if (!dbContainerField) {
-                throw new IllegalStateException("Unexpected State: DB Container not found.")
+                throw new IllegalStateException('Unexpected State: DB Container not found.')
             }
 
             GenericContainer container = containerHolder.getContainer()
@@ -80,13 +80,13 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
 
             FieldInfo hostField = spec.getSpecsTopToBottom().findResult { SpecInfo s -> s.fields.find { it.name == 'mongoHost' } }
             if (!hostField) {
-                throw new IllegalStateException("Unexpected State: Host field not found.")
+                throw new IllegalStateException('Unexpected State: Host field not found.')
             }
             hostField.writeValue(invocation.sharedInstance, container.getHost())
 
             FieldInfo portField = spec.getSpecsTopToBottom().findResult { SpecInfo s -> s.fields.find { it.name == 'mongoPort' } }
             if (!portField) {
-                throw new IllegalStateException("Unexpected State: Port field not found.")
+                throw new IllegalStateException('Unexpected State: Port field not found.')
             }
             portField.writeValue(invocation.sharedInstance, container.getMappedPort(DEFAULT_MONGO_PORT) as String)
 

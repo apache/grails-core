@@ -27,10 +27,10 @@ class MD5BytesCodecExtensionMethods {
         if(theTarget == null || theTarget instanceof NullObject) {
             return null
         }
-        DigestUtils.digest("MD5", theTarget)
+        DigestUtils.digest('MD5', theTarget)
     }
 
     static decodeMD5Bytes(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode MD5 hashes")
+        throw new UnsupportedOperationException('Cannot decode MD5 hashes')
     }
 }

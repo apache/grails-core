@@ -173,7 +173,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param max The max to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setMax(Comparable max) {
         String constraintName = MAX_CONSTRAINT
         if (max == null) {
@@ -187,7 +187,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
 
         Range r = getRange()
         if (r != null) {
-            log.warn("Range constraint already set ignoring constraint [" + constraintName + "] for value [" + max + "]")
+            log.warn('Range constraint already set ignoring constraint [' + constraintName + '] for value [' + max + ']')
             return
         }
 
@@ -225,7 +225,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param min The min to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setMin(Comparable min) {
         if (min == null) {
             appliedConstraints.remove(MIN_CONSTRAINT)
@@ -238,7 +238,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
 
         Range r = getRange()
         if (r != null) {
-            log.warn("Range constraint already set ignoring constraint ["+MIN_CONSTRAINT+"] for value ["+min+"]")
+            log.warn('Range constraint already set ignoring constraint [' + MIN_CONSTRAINT + '] for value [' + min + ']')
             return
         }
 
@@ -249,7 +249,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      * @return Returns the inList.
      */
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     List getInList() {
         InListConstraint c = (InListConstraint)appliedConstraints.get(IN_LIST_CONSTRAINT)
         return c == null ? null : c.getList()
@@ -258,7 +258,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param inList The inList to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setInList(List inList) {
         Constraint c = appliedConstraints.get(IN_LIST_CONSTRAINT)
         if (inList == null) {
@@ -273,7 +273,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      * @return Returns the range.
      */
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     Range getRange() {
         RangeConstraint c = (RangeConstraint)appliedConstraints.get(RANGE_CONSTRAINT)
         return c == null ? null : c.getRange()
@@ -282,14 +282,14 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param range The range to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setRange(Range range) {
         if (appliedConstraints.containsKey(MAX_CONSTRAINT)) {
-            log.warn("Setting range constraint on property ["+propertyName+"] of class ["+ this.owningClass +"] forced removal of max constraint")
+            log.warn('Setting range constraint on property [' + propertyName + '] of class [' + this.owningClass + '] forced removal of max constraint')
             appliedConstraints.remove(MAX_CONSTRAINT)
         }
         if (appliedConstraints.containsKey(MIN_CONSTRAINT)) {
-            log.warn("Setting range constraint on property ["+propertyName+"] of class ["+ this.owningClass +"] forced removal of min constraint")
+            log.warn('Setting range constraint on property [' + propertyName + '] of class [' + this.owningClass + '] forced removal of min constraint')
             appliedConstraints.remove(MIN_CONSTRAINT)
         }
         if (range == null) {
@@ -313,7 +313,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      * @return Returns the size.
      */
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     Range getSize() {
         SizeConstraint c = (SizeConstraint)appliedConstraints.get(SIZE_CONSTRAINT)
         return c == null ? null : c.getRange()
@@ -322,7 +322,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param size The size to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setSize(Range size) {
         Constraint c = appliedConstraints.get(SIZE_CONSTRAINT)
         if (size == null) {
@@ -347,7 +347,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setBlank(boolean blank) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Blank constraint can only be applied to a String property",
+            throw new MissingPropertyException('Blank constraint can only be applied to a String property',
                     BLANK_CONSTRAINT, this.owningClass)
         }
 
@@ -365,7 +365,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isEmail() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Email constraint only applies to a String property",
+            throw new MissingPropertyException('Email constraint only applies to a String property',
                     EMAIL_CONSTRAINT, this.owningClass)
         }
 
@@ -377,7 +377,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setEmail(boolean email) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Email constraint can only be applied to a String property",
+            throw new MissingPropertyException('Email constraint can only be applied to a String property',
                     EMAIL_CONSTRAINT, this.owningClass)
         }
 
@@ -402,7 +402,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isCreditCard() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("CreditCard constraint only applies to a String property",
+            throw new MissingPropertyException('CreditCard constraint only applies to a String property',
                     CREDIT_CARD_CONSTRAINT, this.owningClass)
         }
 
@@ -414,7 +414,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setCreditCard(boolean creditCard) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("CreditCard constraint only applies to a String property",
+            throw new MissingPropertyException('CreditCard constraint only applies to a String property',
                     CREDIT_CARD_CONSTRAINT, this.owningClass)
         }
 
@@ -435,7 +435,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     String getMatches() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Matches constraint only applies to a String property",
+            throw new MissingPropertyException('Matches constraint only applies to a String property',
                     MATCHES_CONSTRAINT, this.owningClass)
         }
         MatchesConstraint c = (MatchesConstraint)appliedConstraints.get(MATCHES_CONSTRAINT)
@@ -447,7 +447,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setMatches(String regex) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Matches constraint can only be applied to a String property",
+            throw new MissingPropertyException('Matches constraint can only be applied to a String property',
                     MATCHES_CONSTRAINT, this.owningClass)
         }
 
@@ -558,7 +558,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isUrl() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("URL constraint can only be applied to a String property",
+            throw new MissingPropertyException('URL constraint can only be applied to a String property',
                     URL_CONSTRAINT, this.owningClass)
         }
         return appliedConstraints.containsKey(URL_CONSTRAINT)
@@ -570,7 +570,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setUrl(boolean url) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("URL constraint can only be applied to a String property",URL_CONSTRAINT, this.owningClass)
+            throw new MissingPropertyException('URL constraint can only be applied to a String property',URL_CONSTRAINT, this.owningClass)
         }
 
         Constraint c = appliedConstraints.get(URL_CONSTRAINT)
@@ -584,13 +584,13 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         }
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     Map getAttributes() {
         return attributes
     }
 
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setAttributes(Map attributes) {
         this.attributes = attributes
     }

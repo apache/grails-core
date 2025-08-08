@@ -53,7 +53,7 @@ trait Events {
      * @see #on(reactor.bus.selector.Selector, reactor.fn.Consumer)
      */
     def <E extends Event<?> > Registration<Object, Consumer<E>> on(Selector key, Closure consumer) {
-        throw new UnsupportedOperationException("Events of type [Selector] are no longer supported. Use string ids")
+        throw new UnsupportedOperationException('Events of type [Selector] are no longer supported. Use string ids')
     }
 
     /**
@@ -100,7 +100,7 @@ trait Events {
      * @return A {@link Subscription} object that allows the caller to interact with the given mapping
      */
     def <E extends Event<?> > Registration<Object, Consumer<E>> on(Selector sel, Consumer<E> consumer) {
-        throw new UnsupportedOperationException("Events of type [Selector] are no longer supported. Use string ids")
+        throw new UnsupportedOperationException('Events of type [Selector] are no longer supported. Use string ids')
     }
 
     /**
@@ -109,7 +109,7 @@ trait Events {
     @CompileDynamic
     Bus notify(Object key, Event<?> ev) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        if(eventBus == null) throw new IllegalStateException("EventBus not present. Event notification attempted outside of application context.")
+        if(eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
         if(ev.replyTo) {
             eventBus.sendAndReceive( ev ) {
                 eventBus.notify(ev.replyTo.toString(), it)
@@ -131,7 +131,7 @@ trait Events {
     }
 
     def <E extends Event<?>> Bus notify(Object key, Closure<E> supplier) {
-        if(eventBus == null) throw new IllegalStateException("EventBus not present. Event notification attempted outside of application context.")
+        if(eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
         eventBus.notify( (CharSequence)key.toString(), supplier.call() )
         return eventBus
@@ -158,7 +158,7 @@ trait Events {
      * @return The event
      */
     def <T> Event<T> eventFor(T data) {
-        throw new UnsupportedOperationException("Use [grails.events.Event] instead")
+        throw new UnsupportedOperationException('Use [grails.events.Event] instead')
     }
 
     /**
@@ -169,7 +169,7 @@ trait Events {
      * @return The event
      */
     def <T> Event<T> eventFor(Map<String, Object> headers, T data) {
-        throw new UnsupportedOperationException("Use [grails.events.Event] instead")
+        throw new UnsupportedOperationException('Use [grails.events.Event] instead')
     }
 
     /**
@@ -181,7 +181,7 @@ trait Events {
      * @return The event
      */
     def <T> Event<T> eventFor(Map<String, Object> headers, T data, Closure<Throwable> errorConsumer) {
-        throw new UnsupportedOperationException("Use [grails.events.Event] instead")
+        throw new UnsupportedOperationException('Use [grails.events.Event] instead')
     }
 
     /**

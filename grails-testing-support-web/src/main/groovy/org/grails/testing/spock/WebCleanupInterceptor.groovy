@@ -34,8 +34,8 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 @CompileStatic
 class WebCleanupInterceptor implements IMethodInterceptor {
 
-    public static final String GROOVY_PAGES_TEMPLATE_ENGINE = "groovyPagesTemplateEngine"
-    public static final String GROOVY_PAGES_TEMPLATE_RENDERER = "groovyPagesTemplateRenderer"
+    public static final String GROOVY_PAGES_TEMPLATE_ENGINE = 'groovyPagesTemplateEngine'
+    public static final String GROOVY_PAGES_TEMPLATE_RENDERER = 'groovyPagesTemplateRenderer'
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {

@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 class GrailsTestTransactionInterceptor {
 
 
-    static final String TRANSACTIONAL = "transactional"
+    static final String TRANSACTIONAL = 'transactional'
 
     ApplicationContext applicationContext
     protected Map<String,TransactionStatus> transactionStatuses

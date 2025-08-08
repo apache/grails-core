@@ -51,7 +51,7 @@ class GormDatabase extends HibernateDatabase {
         this.metadata = hibernateDatastore.getMetadata()
         SnapshotControl snapshotControl = new SnapshotControl(this, null, null)
         GormDatabase database = this
-        OfflineConnection connection = new OfflineConnection("offline:gorm", null) {
+        OfflineConnection connection = new OfflineConnection('offline:gorm', null) {
             DatabaseSnapshot getSnapshot(DatabaseObject[] examples) {
                 new JdbcDatabaseSnapshot(examples, database, snapshotControl)
             }

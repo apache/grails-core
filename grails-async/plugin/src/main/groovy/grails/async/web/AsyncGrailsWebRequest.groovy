@@ -43,7 +43,7 @@ import java.util.function.Consumer
  */
 @CompileStatic
 class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest, AsyncListener{
-    static final String WEB_REQUEST = "org.grails.ASYNC_WEB_REQUEST"
+    static final String WEB_REQUEST = 'org.grails.ASYNC_WEB_REQUEST'
 
     Long timeout
     AsyncContext asyncContext
@@ -96,7 +96,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
 
     @Override
     void startAsync() {
-        Assert.state(request.asyncSupported, "The current request does not support Async processing")
+        Assert.state(request.asyncSupported, 'The current request does not support Async processing')
         if(!isAsyncStarted()) {
             asyncContext = request.startAsync(request, response)
             asyncContext.addListener(this)
@@ -110,7 +110,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
 
     @Override
     void dispatch() {
-       Assert.notNull this.asyncContext, "Cannot dispatch without an AsyncContext"
+       Assert.notNull this.asyncContext, 'Cannot dispatch without an AsyncContext'
        asyncContext.dispatch()
     }
 

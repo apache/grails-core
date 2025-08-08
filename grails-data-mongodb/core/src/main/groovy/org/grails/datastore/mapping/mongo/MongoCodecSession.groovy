@@ -247,7 +247,7 @@ class MongoCodecSession extends AbstractMongoSession {
                     final boolean isAcknowledged = wc.isAcknowledged()
                     if( !bulkWriteResult.wasAcknowledged() && isAcknowledged) {
                         errorOccured = true
-                        throw new DataIntegrityViolationException("Write operation was not acknowledged")
+                        throw new DataIntegrityViolationException('Write operation was not acknowledged')
                     }
                     else if(isAcknowledged) {
                         final int matchedCount = bulkWriteResult.matchedCount

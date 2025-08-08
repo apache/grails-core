@@ -45,8 +45,8 @@ import org.grails.io.support.Resource
 @CompileStatic
 class RenderStep extends AbstractStep {
 
-    public static final String NAME = "render"
-    public static final String TEMPLATES_DIR = "templates/"
+    public static final String NAME = 'render'
+    public static final String TEMPLATES_DIR = 'templates/'
 
     @Override
     @CompileStatic
@@ -104,7 +104,7 @@ class RenderStep extends AbstractStep {
         Profile profile = command.profile
         Resource templateFile = searchTemplateDepthFirst(profile, parameters.template.toString())
         if(!templateFile) {
-            throw new IOException("cannot find template " + parameters.template)
+            throw new IOException('cannot find template ' + parameters.template)
         }
         destination.setText(new SimpleTemplate(templateFile.inputStream.getText(StandardCharsets.UTF_8.name())).render(variables), StandardCharsets.UTF_8.name())
         ClassNameCompleter.refreshAll()

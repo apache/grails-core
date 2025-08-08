@@ -25,10 +25,10 @@ import org.grails.plugin.cache.GrailsCacheManagerAware
 @CompileStatic
 class GrailsCacheAdminService implements GrailsCacheManagerAware {
 
-    @CacheEvict(value="grailsBlocksCache", allEntries = true)
+    @CacheEvict(value='grailsBlocksCache', allEntries = true)
     void clearBlocksCache() {}
 
-    @CacheEvict(value="grailsTemplatesCache", allEntries = true)
+    @CacheEvict(value='grailsTemplatesCache', allEntries = true)
     void clearTemplatesCache() {}
 
     void clearCache(CharSequence cacheName) {

@@ -53,13 +53,13 @@ import grails.web.mime.MimeType
 @CompileStatic
 class SmartViewResolver implements GrailsConfigurationAware {
 
-    public static final String OBJECT_TEMPLATE_NAME = "/object/_object"
+    public static final String OBJECT_TEMPLATE_NAME = '/object/_object'
 
     ResolvableGroovyTemplateEngine templateEngine
 
     Class<? extends GenericGroovyTemplateView> viewClass = GenericGroovyTemplateView
     String contentType
-    String suffix = ""
+    String suffix = ''
 
     @Autowired
     LocaleResolver localeResolver
@@ -98,7 +98,7 @@ class SmartViewResolver implements GrailsConfigurationAware {
     }
 
     SmartViewResolver(ResolvableGroovyTemplateEngine templateEngine) {
-        this(templateEngine, "", null)
+        this(templateEngine, '', null)
     }
 
     SmartViewResolver(ResolvableGroovyTemplateEngine templateEngine, String suffix, String contentType) {

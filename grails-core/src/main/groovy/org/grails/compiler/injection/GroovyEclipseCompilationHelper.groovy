@@ -47,7 +47,7 @@ class GroovyEclipseCompilationHelper {
                 if (targetDirectory == null) {
 
                     // Resolve as before.
-                    targetDirectory = ((File) new SpelExpressionParser().parseExpression("eclipseFile.project.getFolder(T(org.eclipse.jdt.core.JavaCore).create(eclipseFile.project).outputLocation).rawLocation.makeAbsolute().toFile().absoluteFile").getValue(context))
+                    targetDirectory = ((File) new SpelExpressionParser().parseExpression('eclipseFile.project.getFolder(T(org.eclipse.jdt.core.JavaCore).create(eclipseFile.project).outputLocation).rawLocation.makeAbsolute().toFile().absoluteFile').getValue(context))
 
                 } else if (!targetDirectory.isAbsolute()) {
                     // Target directory is set and is not absolute.

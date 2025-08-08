@@ -68,7 +68,7 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
     @Override
     void doImplement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         AnnotationNode annotationNode = AstUtils.findAnnotation(abstractMethodNode, getAnnotationType())
-        Expression expr = annotationNode.getMember("value")
+        Expression expr = annotationNode.getMember('value')
         VariableScope scope = newMethodNode.variableScope
         if(expr instanceof GStringExpression) {
             GStringExpression gstring = (GStringExpression)expr
@@ -83,7 +83,7 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
             body.addStatement(
                 buildQueryReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, transformed)
             )
-            annotationNode.setMember("value", constX(IMPLEMENTED))
+            annotationNode.setMember('value', constX(IMPLEMENTED))
         }
     }
 

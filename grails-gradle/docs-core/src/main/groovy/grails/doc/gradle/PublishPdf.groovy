@@ -63,7 +63,7 @@ abstract class PublishPdf extends DefaultTask {
 
     @Inject
     PublishPdf(ObjectFactory objects) {
-        outputDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir("pdf"))
+        outputDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir('pdf'))
         guideSingleFile = objects.fileProperty().convention(project.layout.buildDirectory.file('guide/single.html'))
         pdfName = objects.property(String).convention('single.pdf')
         language = objects.property(String).convention(null as String)

@@ -36,7 +36,7 @@ import org.grails.encoder.Encoder
  */
 @CompileStatic
 class URLCodecFactory implements CodecFactory {
-    static final CodecIdentifier URL_CODEC_IDENTIFIER = new DefaultCodecIdentifier("URL")
+    static final CodecIdentifier URL_CODEC_IDENTIFIER = new DefaultCodecIdentifier('URL')
 
     Encoder encoder = new Encoder() {
         @Override

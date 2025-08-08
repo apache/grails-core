@@ -37,7 +37,7 @@ import org.springframework.util.ClassUtils
 class JavaCompiler {
 
     static boolean isAvailable() {
-        ClassUtils.isPresent("javax.tools.JavaCompiler", JavaCompiler.classLoader)
+        ClassUtils.isPresent('javax.tools.JavaCompiler', JavaCompiler.classLoader)
     }
 
     static boolean recompile(CompilerConfiguration config, File... files) {

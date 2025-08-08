@@ -170,7 +170,7 @@ class TemplateRendererImpl implements TemplateRenderer {
 
                     try {
                         def templateEngine = new GStringTemplateEngine()
-                        def reader = new InputStreamReader(template.inputStream, "UTF-8")
+                        def reader = new InputStreamReader(template.inputStream, 'UTF-8')
                         try {
                             t = templateEngine.createTemplate(reader)
                         } finally {
@@ -219,7 +219,7 @@ class TemplateRendererImpl implements TemplateRenderer {
     Resource template(Object location) {
         Resource f = resource(file("src/main/templates/$location"))
         if (!f?.exists()) {
-            return resource("classpath*:META-INF/templates/" + location)
+            return resource('classpath*:META-INF/templates/' + location)
         }
         return resource(f)
     }

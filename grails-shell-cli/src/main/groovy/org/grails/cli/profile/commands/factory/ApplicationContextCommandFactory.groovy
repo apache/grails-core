@@ -37,10 +37,10 @@ class ApplicationContextCommandFactory implements CommandFactory {
             def classLoader = Thread.currentThread().contextClassLoader
             Class registry
             try {
-                registry = classLoader.loadClass("grails.dev.commands.ApplicationContextCommandRegistry")
+                registry = classLoader.loadClass('grails.dev.commands.ApplicationContextCommandRegistry')
             } catch (ClassNotFoundException cnf) {
                 try {
-                    registry = ApplicationContextCommandFactory.classLoader.loadClass("grails.dev.commands.ApplicationContextCommandRegistry")
+                    registry = ApplicationContextCommandFactory.classLoader.loadClass('grails.dev.commands.ApplicationContextCommandRegistry')
                 } catch (ClassNotFoundException ignored) {
                     return []
                 }

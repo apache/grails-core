@@ -33,6 +33,6 @@ class ModifyPerson implements Serializable {
     }
 
     def beforeInsert() {
-        name = "Fred"
+        name = 'Fred'
     }
 }

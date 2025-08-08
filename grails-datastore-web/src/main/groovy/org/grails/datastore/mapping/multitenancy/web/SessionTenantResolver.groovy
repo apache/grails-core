@@ -36,7 +36,7 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 @CompileStatic
 class SessionTenantResolver implements TenantResolver {
 
-    public static final String ATTRIBUTE = "gorm.tenantId"
+    public static final String ATTRIBUTE = 'gorm.tenantId'
     /**
      * The attribute name to use
      */
@@ -55,6 +55,6 @@ class SessionTenantResolver implements TenantResolver {
                 throw new TenantNotFoundException()
             }
         }
-        throw new TenantNotFoundException("Tenant could not be resolved outside a web request")
+        throw new TenantNotFoundException('Tenant could not be resolved outside a web request')
     }
 }

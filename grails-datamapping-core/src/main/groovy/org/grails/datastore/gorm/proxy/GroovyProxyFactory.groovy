@@ -110,7 +110,7 @@ class GroovyProxyFactory implements ProxyFactory {
 
     @Override
     def <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
-        throw new UnsupportedOperationException("Association proxies are not currently supported by the Groovy project factory")
+        throw new UnsupportedOperationException('Association proxies are not currently supported by the Groovy project factory')
     }
 
     protected <T> MetaClass resolveTargetMetaClass(T proxy, Class<T> type) {

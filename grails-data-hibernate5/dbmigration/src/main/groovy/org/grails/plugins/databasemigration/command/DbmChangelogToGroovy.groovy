@@ -65,7 +65,7 @@ class DbmChangelogToGroovy implements ScriptDatabaseMigrationCommand {
         }
     }
 
-    private static void withFileOrSystemOutputStream(File file, @ClosureParams(value = SimpleType, options = "java.io.OutputStream") Closure closure) {
+    private static void withFileOrSystemOutputStream(File file, @ClosureParams(value = SimpleType, options = 'java.io.OutputStream') Closure closure) {
         if (!file) {
             closure.call(System.out)
             return

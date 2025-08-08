@@ -192,8 +192,8 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
                 // replace with direct call to methodMissing
                 def isImplicitThis = exp.implicitThis
                 def call = new MethodCallExpression(
-                        isImplicitThis ? new VariableExpression("delegate") : exp.objectExpression,
-                        "invokeMethod",
+                        isImplicitThis ? new VariableExpression('delegate') : exp.objectExpression,
+                        'invokeMethod',
                         new ArgumentListExpression(
                                 new ConstantExpression(exp.getMethodAsString()),
                                 new ArrayExpression(

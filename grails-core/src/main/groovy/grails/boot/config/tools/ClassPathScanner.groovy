@@ -139,10 +139,10 @@ class ClassPathScanner {
                 continue
             }
 
-            if(pkg == "") {
+            if(pkg == '') {
                 // try the default package in case of a script without recursing into subpackages
-                log.warn("The application defines a Groovy source using the default package. Please move all Groovy sources into a package.")
-                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +  "*.class"
+                log.warn('The application defines a Groovy source using the default package. Please move all Groovy sources into a package.')
+                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + '*.class'
                 scanUsingPattern(resourcePatternResolver, pattern, classLoader, annotationFilter, classes)
             }
             else {
@@ -163,7 +163,7 @@ class ClassPathScanner {
      */
     protected boolean isExcluded(Resource res) {
         String filename = res.filename
-        return filename.contains('$') || filename.startsWith("gsp_") || filename.endsWith("_gson.class")
+        return filename.contains('$') || filename.startsWith('gsp_') || filename.endsWith('_gson.class')
     }
 
     /**
@@ -240,7 +240,7 @@ class ClassPathScanner {
             this.rootResource = getURLs()[0]
             this.applicationClass = applicationClass
             String urlStr = rootResource.toString()
-            jarDeployed = urlStr.startsWith("jar:")
+            jarDeployed = urlStr.startsWith('jar:')
             try {
                 URL withoutBang = new URL("${urlStr.substring(0, urlStr.length() - 2)}/")
                 addURL(withoutBang)

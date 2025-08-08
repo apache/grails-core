@@ -26,10 +26,10 @@ class SHA1BytesCodecExtensionMethods {
         if(theTarget == null || theTarget instanceof NullObject) {
             return null
         }
-        DigestUtils.digest("SHA-1", theTarget)
+        DigestUtils.digest('SHA-1', theTarget)
     }
 
     static decodeSHA1Bytes(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode SHA-1 hashes")
+        throw new UnsupportedOperationException('Cannot decode SHA-1 hashes')
     }
 }

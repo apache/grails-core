@@ -195,7 +195,7 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
 
                     try {
                         def templateEngine = new GStringTemplateEngine()
-                        def reader = new InputStreamReader(template.inputStream, "UTF-8")
+                        def reader = new InputStreamReader(template.inputStream, 'UTF-8')
                         try {
                             t = templateEngine.createTemplate(reader)
                         } finally {
@@ -262,7 +262,7 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
                 }
             }
             if(!f?.exists()) {
-                return resource("classpath*:META-INF/templates/" + location)
+                return resource('classpath*:META-INF/templates/' + location)
             }
         }
         return resource(f)

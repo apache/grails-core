@@ -101,7 +101,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
     @Override
     void setSessionFactory(SessionFactory sessionFactory) {
-        Assert.notNull(sessionFactory, "SessionFactory cannot be null")
+        Assert.notNull(sessionFactory, 'SessionFactory cannot be null')
         super.setSessionFactory(sessionFactory)
         this.isJdbcBatchVersionedData = sessionFactory.getSessionFactoryOptions().isJdbcBatchVersionedData()
     }

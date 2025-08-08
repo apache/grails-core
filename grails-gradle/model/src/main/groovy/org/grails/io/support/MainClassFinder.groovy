@@ -43,11 +43,11 @@ class MainClassFinder {
 
     private static final Type MAIN_METHOD_TYPE = Type.getMethodType(Type.VOID_TYPE, STRING_ARRAY_TYPE)
 
-    private static final String MAIN_METHOD_NAME = "main"
+    private static final String MAIN_METHOD_NAME = 'main'
 
     static final Map<String, MainClassHolder> mainClasses = new ConcurrentHashMap<>()
 
-    public static final String ROOT_FOLDER_PATH = "build/classes/main"
+    public static final String ROOT_FOLDER_PATH = 'build/classes/main'
 
     /**
      * Searches for the main class relative to the give path that is within the project tree
@@ -90,7 +90,7 @@ class MainClassFinder {
                     searchDirs << rootClassesDir
                 }
 
-                rootClassesDir = new File(rootDir, "build/classes/groovy/main")
+                rootClassesDir = new File(rootDir, 'build/classes/groovy/main')
                 if (rootClassesDir.exists()) {
                     searchDirs << rootClassesDir
                 }
@@ -117,7 +117,7 @@ class MainClassFinder {
             def parent = file.parentFile
 
             while (parent != null) {
-                if (new File(parent, "build.gradle").exists() || new File(parent, "grails-app").exists()) {
+                if (new File(parent, 'build.gradle').exists() || new File(parent, 'grails-app').exists()) {
                     return parent
                 } else {
                     parent = parent.parentFile

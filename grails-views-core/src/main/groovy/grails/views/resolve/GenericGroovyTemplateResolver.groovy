@@ -48,7 +48,7 @@ class GenericGroovyTemplateResolver implements TemplateResolver {
     /**
      * The base package to load templates as classes in production mode
      */
-    String packageName = ""
+    String packageName = ''
 
     /**
      * The class loader to use for template loading in production mode

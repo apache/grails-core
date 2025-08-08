@@ -38,7 +38,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.events.transform.SubscriberTransform")
+@GroovyASTTransformationClass('org.grails.events.transform.SubscriberTransform')
 @interface Listener {
     /**
      * @return The types this listener listens for

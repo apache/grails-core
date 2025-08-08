@@ -104,7 +104,7 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
 
     protected String findTransformName(AnnotationNode ann) {
         AnnotationNode gormTransform = findAnnotation(ann.classNode, GormASTTransformationClass)
-        String transformName = gormTransform?.getMember("value")?.text
+        String transformName = gormTransform?.getMember('value')?.text
         transformName
     }
 

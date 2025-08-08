@@ -35,8 +35,8 @@ import org.grails.buffer.FastStringWriter
 @CompileStatic
 abstract class JsonViewWritableScript extends AbstractWritableScript implements JsonView {
 
-    public static final String EXTENSION = "gson"
-    public static final String TYPE = "view.gson"
+    public static final String EXTENSION = 'gson'
+    public static final String TYPE = 'view.gson'
 
     Object root
     boolean inline = false

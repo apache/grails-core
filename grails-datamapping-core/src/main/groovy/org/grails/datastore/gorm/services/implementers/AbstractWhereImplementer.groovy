@@ -81,7 +81,7 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
 
         AnnotationNode annotationNode = AstUtils.findAnnotation(abstractMethodNode, Where)
         abstractMethodNode.annotations.remove(annotationNode)
-        Expression expr = annotationNode.getMember("value")
+        Expression expr = annotationNode.getMember('value')
         SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
         if(expr instanceof ClosureExpression) {
             ClosureExpression originalClosureExpression = (ClosureExpression) expr
@@ -101,11 +101,11 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
 
             if(connectionId != null) {
                 body.addStatement(
-                        assignS(queryVar, callX(queryVar, "withConnection", connectionId))
+                        assignS(queryVar, callX(queryVar, 'withConnection', connectionId))
                 )
             }
             body.addStatement(
-                    assignS(queryVar, callX(queryVar, "build", closureExpression))
+                    assignS(queryVar, callX(queryVar, 'build', closureExpression))
             )
             Expression queryExpression = callX(queryVar, getQueryMethodToExecute(domainClassNode, newMethodNode), argsExpression != null ? argsExpression : AstUtils.ZERO_ARGUMENTS)
             body.addStatement(
@@ -114,7 +114,7 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
             processVariableScopes(sourceUnit, targetClassNode, newMethodNode)
         }
         else {
-            AstUtils.error(sourceUnit, annotationNode, "@Where value must be a closure")
+            AstUtils.error(sourceUnit, annotationNode, '@Where value must be a closure')
         }
     }
 
@@ -128,7 +128,7 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
     }
 
     protected String getQueryMethodToExecute(ClassNode domainClass, MethodNode newMethodNode) {
-        "find"
+        'find'
     }
 
     @Override

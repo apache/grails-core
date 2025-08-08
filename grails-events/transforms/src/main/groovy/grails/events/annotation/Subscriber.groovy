@@ -38,10 +38,10 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.events.transform.SubscriberTransform")
+@GroovyASTTransformationClass('org.grails.events.transform.SubscriberTransform')
 @interface Subscriber {
     /**
      * @return The id of the event
      */
-    String value() default ""
+    String value() default ''
 }

@@ -54,7 +54,7 @@ import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_N
  * @author Kazuki YAMAMOTO
  */
 @CompileStatic
-@DatabaseChange(name = "grailsChange", description = "Executes groovy code to apply a database change.", priority = ChangeMetaData.PRIORITY_DEFAULT)
+@DatabaseChange(name = 'grailsChange', description = 'Executes groovy code to apply a database change.', priority = ChangeMetaData.PRIORITY_DEFAULT)
 class GroovyChange extends AbstractChange {
 
     ApplicationContext ctx
@@ -93,8 +93,8 @@ class GroovyChange extends AbstractChange {
     void load(ParsedNode parsedNode, ResourceAccessor resourceAccessor) throws ParsedNodeException {
         ctx = parsedNode.getChildValue(null, 'applicationContext', ApplicationContext)
         dataSourceName = parsedNode.getChildValue(null, DATA_SOURCE_NAME_KEY, String)
-        if (dataSourceName?.startsWith("dataSource_")) {
-            dataSourceName = dataSourceName.substring("dataSource_".length())
+        if (dataSourceName?.startsWith('dataSource_')) {
+            dataSourceName = dataSourceName.substring('dataSource_'.length())
         }
 
         initClosure = parsedNode.getChildValue(null, 'init', Closure)
@@ -313,7 +313,7 @@ class GroovyChange extends AbstractChange {
      * @return Whether the database executor is instance of LoggingExecutor
      */
     protected boolean shouldRun() {
-        !(Scope.getCurrentScope().getSingleton(ExecutorService.class).getExecutor("jdbc", database) instanceof LoggingExecutor)
+        !(Scope.getCurrentScope().getSingleton(ExecutorService.class).getExecutor('jdbc', database) instanceof LoggingExecutor)
     }
 
     /**

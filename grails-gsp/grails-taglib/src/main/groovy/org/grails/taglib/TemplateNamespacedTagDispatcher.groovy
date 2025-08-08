@@ -26,7 +26,7 @@ import org.grails.taglib.encoder.OutputContextLookupHelper
 
 @CompileStatic
 class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
-    public static final String TEMPLATE_NAMESPACE = "tmpl"
+    public static final String TEMPLATE_NAMESPACE = 'tmpl'
 
     private boolean developmentMode = Environment.current.isDevelopmentMode()
 
@@ -60,7 +60,7 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
                 if (encodeAs != null) {
                     attr.put(TagOutput.ENCODE_AS_ATTRIBUTE_NAME, encodeAs)
                 }
-                attr.put("model", modelMap)
+                attr.put('model', modelMap)
             }
         }
         attr

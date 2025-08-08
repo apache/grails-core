@@ -31,11 +31,11 @@ import org.grails.buffer.FastStringWriter
  */
 @CompileStatic
 class GenericViewUriResolver implements ViewUriResolver {
-    private static final String SLASH_STR = "/"
+    private static final String SLASH_STR = '/'
     private static final char SLASH = '/'
     private static final char UNDERSCORE = '_'
-    private static final String BLANK = ""
-    private static final String SLASH_UNDR = "/_"
+    private static final String BLANK = ''
+    private static final String SLASH_UNDR = '/_'
 
     final String extension
 

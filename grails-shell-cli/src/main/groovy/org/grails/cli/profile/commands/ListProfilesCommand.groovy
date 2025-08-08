@@ -36,8 +36,8 @@ import org.grails.cli.profile.ProfileRepositoryAware
 @CompileStatic
 class ListProfilesCommand implements Command, ProfileRepositoryAware {
 
-    final String name = "list-profiles"
-    final CommandDescription description = new CommandDescription(name, "Lists the available profiles", "grails list-profiles")
+    final String name = 'list-profiles'
+    final CommandDescription description = new CommandDescription(name, 'Lists the available profiles', 'grails list-profiles')
 
     ProfileRepository profileRepository
 
@@ -45,7 +45,7 @@ class ListProfilesCommand implements Command, ProfileRepositoryAware {
     boolean handle(ExecutionContext executionContext) {
         def allProfiles = profileRepository.allProfiles
         def console = executionContext.console
-        console.addStatus("Available Profiles")
+        console.addStatus('Available Profiles')
         console.log('--------------------')
         for(Profile p in allProfiles) {
             console.log("* $p.name - ${p.description}")

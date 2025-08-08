@@ -43,12 +43,12 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
     @Override
     boolean handle() {
         if (!args) {
-            error("No domain-class specified")
+            error('No domain-class specified')
             return FAILURE
         }
         List<String> domainClassesNames
         if (args[0] == '*') {
-            domainClassesNames = resources("file:grails-app/domain/**/*.groovy")
+            domainClassesNames = resources('file:grails-app/domain/**/*.groovy')
                     .collect { className(it) }
         } else {
             domainClassesNames = args
@@ -76,10 +76,10 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
     }
 
     private List<String> resolveViewNames() {
-        List<String> viewNames = resources("file:src/main/templates/scaffolding/*.gsp")
+        List<String> viewNames = resources('file:src/main/templates/scaffolding/*.gsp')
                 .collect { it.filename }
         if (!viewNames) {
-            viewNames = resources("classpath*:META-INF/templates/scaffolding/*.gsp")
+            viewNames = resources('classpath*:META-INF/templates/scaffolding/*.gsp')
                     .collect { it.filename }
         }
         viewNames

@@ -27,13 +27,13 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class QueryByAssociationSpec extends GrailsDataTckSpec {
 
-    void "Test query entity by single-ended association"() {
+    void 'Test query entity by single-ended association'() {
         given:
         def age = 40
-        ["Bob", "Fred", "Barney", "Frank"].each { new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save() }
+        ['Bob', 'Fred', 'Barney', 'Frank'].each { new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save() }
 
         when:
-        def child = ChildEntity.findByName("Barney Child")
+        def child = ChildEntity.findByName('Barney Child')
 
         then:
         child != null
@@ -44,6 +44,6 @@ class QueryByAssociationSpec extends GrailsDataTckSpec {
 
         then:
         t != null
-        "Barney" == t.name
+        'Barney' == t.name
     }
 }

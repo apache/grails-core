@@ -84,7 +84,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     ExtractDependenciesTask() {
         doFirst {
             if(!project.pluginManager.hasPlugin('java-platform')) {
-                throw new GradleException("The 'java-platform' plugin must be applied to the project to use this task.")
+                throw new GradleException(/The 'java-platform' plugin must be applied to the project to use this task./)
             }
         }
     }
@@ -169,7 +169,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     private void populateInheritedConstraints(Configuration configuration, Map<CoordinateHolder, List<CoordinateHolder>> exclusions, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, PropertyNameCalculator propertyNameCalculator) {
         for (DependencyResult result  : configuration.incoming.resolutionResult.allDependencies) {
             if(!(result instanceof ResolvedDependencyResult)) {
-                throw new GradleException("Dependencies should be resolved prior to running this task.")
+                throw new GradleException('Dependencies should be resolved prior to running this task.')
             }
 
             ResolvedDependencyResult dep = (ResolvedDependencyResult) result
@@ -294,7 +294,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         }
 
         if ((expandedVersion =~ dynamicPattern).find()) {
-            logger.warn("Reached max iterations for {} while resolving properties in: {}", errorDescription, dynamicVersion)
+            logger.warn('Reached max iterations for {} while resolving properties in: {}', errorDescription, dynamicVersion)
         }
 
         expandedVersion

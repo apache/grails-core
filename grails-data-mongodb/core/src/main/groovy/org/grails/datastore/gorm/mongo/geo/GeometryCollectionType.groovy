@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 @CompileStatic
 class GeometryCollectionType extends AbstractMappingAwareCustomTypeMarshaller<GeometryCollection, Document, Document>{
 
-    public static final String GEOMETRIES = "geometries"
+    public static final String GEOMETRIES = 'geometries'
 
     GeometryCollectionType() {
         super(GeometryCollection)

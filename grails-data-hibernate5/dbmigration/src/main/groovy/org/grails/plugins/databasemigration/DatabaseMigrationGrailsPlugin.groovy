@@ -34,17 +34,17 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
 
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def pluginExcludes = [
-            "**/testapp/**",
-            "grails-app/views/error.gsp"
+            '**/testapp/**',
+            'grails-app/views/error.gsp'
     ]
 
-    def title = "Grails Database Migration Plugin" // Headline display name of the plugin
-    def author = "Kazuki YAMAMOTO"
-    def authorEmail = ""
+    def title = 'Grails Database Migration Plugin' // Headline display name of the plugin
+    def author = 'Kazuki YAMAMOTO'
+    def authorEmail = ''
     def description = 'Grails Database Migration Plugin'
-    def documentation = "http://grails.org/plugin/database-migration"
-    def license = "APACHE"
-    def scm = [url: "https://github.com/grails-plugins/grails-database-migration"]
+    def documentation = 'http://grails.org/plugin/database-migration'
+    def license = 'APACHE'
+    def scm = [url: 'https://github.com/grails-plugins/grails-database-migration']
 
     @Override
     Closure doWithSpring() {

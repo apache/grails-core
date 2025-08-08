@@ -116,10 +116,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      */
     Closure set = { attrs, body ->
         def var = attrs.var
-        if (!var) throw new IllegalArgumentException("[var] attribute must be specified to for <g:set>!")
+        if (!var) throw new IllegalArgumentException('[var] attribute must be specified to for <g:set>!')
 
         def scope = attrs.scope ? SCOPES[attrs.scope] : 'pageScope'
-        if (!scope) throw new IllegalArgumentException("Invalid [scope] attribute for tag <g:set>!")
+        if (!scope) throw new IllegalArgumentException('Invalid [scope] attribute for tag <g:set>!')
 
         def value
         if (attrs.bean) {
@@ -142,7 +142,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @emptyTag
      */
     Closure createLinkTo = { attrs ->
-        GrailsUtil.deprecated "Tag [createLinkTo] is deprecated please use [resource] instead"
+        GrailsUtil.deprecated 'Tag [createLinkTo] is deprecated please use [resource] instead'
         return resource(attrs)
     }
 
@@ -180,7 +180,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      */
     Closure img = { attrs ->
         if (!attrs.uri && !attrs.dir) {
-            attrs.dir = "images"
+            attrs.dir = 'images'
         }
         if (hasResourceProcessor) {
             return r.img(attrs)
@@ -228,7 +228,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         else {
             linkAttrs = [:]
         }
-        writer <<  '<a href=\"'
+        writer <<  '<a href="'
         writer << createLink(attrs).encodeAsHTML()
         writer << '"'
         if (elementId) {
@@ -236,10 +236,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         }
         def remainingKeys = attrs.keySet() - LinkGenerator.LINK_ATTRIBUTES
         for (key in remainingKeys) {
-            writer << " " << key << "=\"" << attrs[key]?.encodeAsHTML() << "\""
+            writer << ' ' << key << '="' << attrs[key]?.encodeAsHTML() << '"'
         }
         for (entry in linkAttrs) {
-            writer << " " << entry.key << "=\"" << entry.value?.encodeAsHTML() << "\""
+            writer << ' ' << entry.key << '="' << entry.value?.encodeAsHTML() << '"'
         }
         writer << '>'
         writer << body()
@@ -257,7 +257,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
                 sb.append(' ')
                 sb.append(e.key)
                 sb.append('="')
-                sb.append(InvokerHelper.invokeMethod(String.valueOf(e.value), "encodeAsHTML", null))
+                sb.append(InvokerHelper.invokeMethod(String.valueOf(e.value), 'encodeAsHTML', null))
                 sb.append('"')
             }
         }
@@ -286,7 +286,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static SUPPORTED_TYPES = [
-        css:[type:"text/css", rel:'stylesheet', media:'screen, projection'],
+        css:[type:'text/css', rel:'stylesheet', media:'screen, projection'],
         js:[type:'text/javascript', writer:'js'],
 
         gif:[rel:'shortcut icon'],
@@ -338,7 +338,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         attrs.each { typeInfo.remove(it.key) }
 
         out << writer(processedUrl(uri, request), typeInfo, attrs)
-        out << "\r\n"
+        out << '\r\n'
     }
 
     /**
@@ -382,7 +382,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
             }
         }
         if (urlAttrs.event) {
-            params."_eventId" = urlAttrs.remove('event')
+            params.'_eventId' = urlAttrs.remove('event')
             urlAttrs.params = params
         }
 

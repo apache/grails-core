@@ -259,7 +259,7 @@ class HttpServletResponseExtension {
             String header = null
 
             boolean disabledForUserAgent = !(useAcceptHeaderXhr && request.xhr) && disableForUserAgents != null && userAgent ? disableForUserAgents.matcher(userAgent).find() : false
-            if (msie) header = "*/*"
+            if (msie) header = '*/*'
             if (!header && useAcceptHeader && !disabledForUserAgent) header = request.getHeader(HttpHeaders.ACCEPT)
             result = parser.parse(header)
 

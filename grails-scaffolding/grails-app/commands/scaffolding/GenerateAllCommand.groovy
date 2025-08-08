@@ -44,7 +44,7 @@ class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper,
     @Override
     boolean handle() {
         if (!args) {
-            error("No domain-class specified")
+            error('No domain-class specified')
             return FAILURE
         }
         return new GenerateControllerCommand().handle(executionContext) &&

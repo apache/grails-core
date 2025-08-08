@@ -58,12 +58,12 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
  */
 @CompileStatic
 abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
-    private static final String ARGUMENT_VALIDATE = "validate"
-    private static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
-    private static final String ARGUMENT_FLUSH = "flush"
-    private static final String ARGUMENT_INSERT = "insert"
-    private static final String ARGUMENT_MERGE = "merge"
-    private static final String ARGUMENT_FAIL_ON_ERROR = "failOnError"
+    private static final String ARGUMENT_VALIDATE = 'validate'
+    private static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
+    private static final String ARGUMENT_FLUSH = 'flush'
+    private static final String ARGUMENT_INSERT = 'insert'
+    private static final String ARGUMENT_MERGE = 'merge'
+    private static final String ARGUMENT_FAIL_ON_ERROR = 'failOnError'
     private static final Class DEFERRED_BINDING
 
     static {
@@ -138,7 +138,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 if (errors.hasErrors()) {
                     handleValidationError(domainClass,target,errors)
                     if (shouldFail(arguments)) {
-                        throw validationException.newInstance("Validation Error(s) occurred during save()", errors)
+                        throw validationException.newInstance('Validation Error(s) occurred during save()', errors)
                     }
                     return null
                 }
@@ -304,7 +304,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      * @param entity The domain class to retrieve associations for
      * @param target The target object
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     private void autoRetrieveAssociations(Datastore datastore, PersistentEntity entity, Object target) {
         EntityReflector reflector = datastore.mappingContext.getEntityReflector(entity)
         IHibernateTemplate t = this.hibernateTemplate

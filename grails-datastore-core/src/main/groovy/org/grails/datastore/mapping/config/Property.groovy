@@ -208,9 +208,9 @@ class Property implements Cloneable {
     void setFetch(String name) {
         if (FetchType.EAGER.name().equalsIgnoreCase(name)) {
             setFetchStrategy(FetchType.EAGER)
-        } else if ("select".equalsIgnoreCase(name)) {
+        } else if ('select'.equalsIgnoreCase(name)) {
             setFetchStrategy(FetchType.LAZY)
-        } else if ("join".equalsIgnoreCase(name)) {
+        } else if ('join'.equalsIgnoreCase(name)) {
             setFetchStrategy(FetchType.EAGER)
         } else {
             setFetchStrategy(FetchType.LAZY)

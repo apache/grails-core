@@ -36,14 +36,14 @@ import org.grails.cli.profile.ProjectCommand
 @CompileStatic
 class OpenCommand implements ProjectCommand, Completer {
 
-    public static final String NAME = "open"
+    public static final String NAME = 'open'
 
     @Override
     String getName() {
         NAME
     }
 
-    CommandDescription description = new CommandDescription(NAME, "Opens a file in the project", "open [FILE PATH]")
+    CommandDescription description = new CommandDescription(NAME, 'Opens a file in the project', 'open [FILE PATH]')
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -61,7 +61,7 @@ class OpenCommand implements ProjectCommand, Completer {
                 }
             }
             else {
-                executionContext.console.error("File opening not supported by JVM, use native OS command")
+                executionContext.console.error('File opening not supported by JVM, use native OS command')
             }
         }
         else {

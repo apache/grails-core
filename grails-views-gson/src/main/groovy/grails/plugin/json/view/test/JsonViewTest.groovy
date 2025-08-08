@@ -65,7 +65,7 @@ trait JsonViewTest {
 
     @Autowired(required = false)
     MappingContext mappingContext = {
-        def ctx = new KeyValueMappingContext("test")
+        def ctx = new KeyValueMappingContext('test')
         ctx.setCanInitializeEntities(true)
         return ctx
     }()

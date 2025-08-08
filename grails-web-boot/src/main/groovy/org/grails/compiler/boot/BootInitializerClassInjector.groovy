@@ -84,7 +84,7 @@ class BootInitializerClassInjector extends GlobalClassInjectorAdapter {
 
 
         if(GrailsASTUtils.isAssignableFrom(GRAILS_CONFIGURATION_CLASS_NODE, classNode) && !GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, GrailsPluginApplication.name)) {
-            def methods = classNode.getMethods("main")
+            def methods = classNode.getMethods('main')
             for(MethodNode mn in methods) {
                 if(Modifier.isStatic(mn.modifiers) && Modifier.isPublic(mn.modifiers)) {
 
@@ -95,7 +95,7 @@ class BootInitializerClassInjector extends GlobalClassInjectorAdapter {
 
                             def methodCallExpression = new MethodCallExpression(
                                     new ClassExpression(ClassHelper.make(System)),
-                                    "setProperty",
+                                    'setProperty',
                                     new ArgumentListExpression(
                                             new ConstantExpression(Environment.STANDALONE),
                                             new ConstantExpression(Boolean.TRUE.toString())
@@ -112,11 +112,11 @@ class BootInitializerClassInjector extends GlobalClassInjectorAdapter {
 
                     def springApplicationBuilder = ClassHelper.make(SpringApplicationBuilder)
 
-                    def parameter = new Parameter(springApplicationBuilder, "application")
+                    def parameter = new Parameter(springApplicationBuilder, 'application')
                     def methodBody = new BlockStatement()
 
-                    methodBody.addStatement( new ExpressionStatement( new MethodCallExpression( new VariableExpression(parameter), "sources", new ClassExpression(classNode))))
-                    loaderClassNode.addMethod( new MethodNode("configure", Modifier.PROTECTED, springApplicationBuilder, [parameter] as Parameter[], [] as ClassNode[], methodBody))
+                    methodBody.addStatement( new ExpressionStatement( new MethodCallExpression( new VariableExpression(parameter), 'sources', new ClassExpression(classNode))))
+                    loaderClassNode.addMethod( new MethodNode('configure', Modifier.PROTECTED, springApplicationBuilder, [parameter] as Parameter[], [] as ClassNode[], methodBody))
                     source.getAST().addClass(
                             loaderClassNode
                     )

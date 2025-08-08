@@ -157,7 +157,7 @@ trait DatabaseMigrationCommand {
         return (Map<String, String>) dataSources.get(dataSourceName)
     }
 
-    void withFileOrSystemOutWriter(String filename, @ClosureParams(value = SimpleType, options = "java.io.Writer") Closure closure) {
+    void withFileOrSystemOutWriter(String filename, @ClosureParams(value = SimpleType, options = 'java.io.Writer') Closure closure) {
         if (!filename) {
             closure.call(new PrintWriter(System.out))
             return
@@ -250,7 +250,7 @@ trait DatabaseMigrationCommand {
         def compareControl = new CompareControl([] as CompareControl.SchemaComparison[], null as String)
         DiffOutputControl diffOutputControl = createDiffOutputControl()
 
-        final CommandScope command = new CommandScope("groovyGenerateChangeLog")
+        final CommandScope command = new CommandScope('groovyGenerateChangeLog')
         command
                 .addArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG, originalDatabase)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, originalDatabase)
@@ -277,7 +277,7 @@ trait DatabaseMigrationCommand {
         def compareControl = new CompareControl([] as CompareControl.SchemaComparison[], null as String)
         DiffOutputControl diffOutputControl = createDiffOutputControl()
 
-        final CommandScope command = new CommandScope("groovyDiffChangelog")
+        final CommandScope command = new CommandScope('groovyDiffChangelog')
         command
                 .addArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG, referenceDatabase)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, targetDatabase)
@@ -305,9 +305,9 @@ trait DatabaseMigrationCommand {
         liquibase.changeLogParameters.setContexts(contexts)
 
         final ExecutorService executorService = Scope.getCurrentScope().getSingleton(ExecutorService.class)
-        final Executor oldTemplate = executorService.getExecutor("jdbc", database)
+        final Executor oldTemplate = executorService.getExecutor('jdbc', database)
         final LoggingExecutor outputTemplate = new LoggingExecutor(oldTemplate, output, database)
-        executorService.setExecutor("jdbc", database, outputTemplate)
+        executorService.setExecutor('jdbc', database, outputTemplate)
 
         outputHeader(outputTemplate, (String) "Previous $count SQL Changeset(s) Skipping $skip Script", liquibase, database)
 
@@ -333,7 +333,7 @@ trait DatabaseMigrationCommand {
         } finally {
             try {
                 lockService.releaseLock()
-                executorService.setExecutor("jdbc", database, oldTemplate)
+                executorService.setExecutor('jdbc', database, oldTemplate)
             } catch (LockException e) {
                 throw new LiquibaseException(e.message, e.cause)
             }
@@ -341,23 +341,23 @@ trait DatabaseMigrationCommand {
     }
 
     void outputHeader(Executor executor, String message, Liquibase liquibase, Database database) throws DatabaseException {
-        executor.comment("*********************************************************************")
+        executor.comment('*********************************************************************')
         executor.comment(message)
-        executor.comment("*********************************************************************")
-        executor.comment("Change Log: " + liquibase.changeLogFile)
-        executor.comment("Ran at: " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date()))
+        executor.comment('*********************************************************************')
+        executor.comment('Change Log: ' + liquibase.changeLogFile)
+        executor.comment('Ran at: ' + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date()))
         DatabaseConnection connection = liquibase.getDatabase().getConnection()
         if (connection != null) {
-            executor.comment("Against: " + connection.getConnectionUserName() + "@" + connection.getURL())
+            executor.comment('Against: ' + connection.getConnectionUserName() + '@' + connection.getURL())
         }
-        executor.comment("Liquibase version: " + LiquibaseUtil.getBuildVersion())
-        executor.comment("*********************************************************************" + StreamUtil.getLineSeparator())
+        executor.comment('Liquibase version: ' + LiquibaseUtil.getBuildVersion())
+        executor.comment('*********************************************************************' + StreamUtil.getLineSeparator())
 
         if (database instanceof OracleDatabase) {
-            executor.execute(new RawSqlStatement("SET DEFINE OFF;"))
+            executor.execute(new RawSqlStatement('SET DEFINE OFF;'))
         }
         if (database instanceof MSSQLDatabase && database.getDefaultCatalogName() != null) {
-            executor.execute(new RawSqlStatement("USE " + database.escapeObjectName(database.getDefaultCatalogName(), Catalog.class) + ";"))
+            executor.execute(new RawSqlStatement('USE ' + database.escapeObjectName(database.getDefaultCatalogName(), Catalog.class) + ';'))
         }
     }
 
@@ -367,7 +367,7 @@ trait DatabaseMigrationCommand {
         String excludeObjects = config.getProperty("${configPrefix}.excludeObjects".toString(), String)
         String includeObjects = config.getProperty("${configPrefix}.includeObjects".toString(), String)
         if (excludeObjects && includeObjects) {
-            throw new DatabaseMigrationException("Cannot specify both excludeObjects and includeObjects")
+            throw new DatabaseMigrationException('Cannot specify both excludeObjects and includeObjects')
         }
         if (excludeObjects) {
             diffOutputControl.objectChangeFilter = new StandardObjectChangeFilter(StandardObjectChangeFilter.FilterType.EXCLUDE, excludeObjects)
@@ -415,7 +415,7 @@ trait DatabaseMigrationCommand {
     }
 
     private String getExtension(String fileName) {
-        String extension = ""
+        String extension = ''
 
         int i = fileName.lastIndexOf('.')
         if (i > 0) {

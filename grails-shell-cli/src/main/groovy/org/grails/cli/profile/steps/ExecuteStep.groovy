@@ -32,8 +32,8 @@ import org.grails.cli.profile.ProfileCommand
  */
 class ExecuteStep extends AbstractStep {
 
-    public static final String NAME = "execute"
-    public static final String CLASS_NAME = "class"
+    public static final String NAME = 'execute'
+    public static final String CLASS_NAME = 'class'
 
 
     Command target

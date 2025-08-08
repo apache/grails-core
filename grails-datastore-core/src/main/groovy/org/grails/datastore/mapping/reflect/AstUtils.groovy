@@ -71,14 +71,14 @@ import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecR
  */
 @CompileStatic
 class AstUtils {
-    private static final String SPEC_CLASS = "spock.lang.Specification"
+    private static final String SPEC_CLASS = 'spock.lang.Specification'
     private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
     private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
 
     public static final ClassNode COMPILE_STATIC_TYPE = ClassHelper.make(CompileStatic)
     public static final ClassNode TYPE_CHECKED_TYPE = ClassHelper.make(TypeChecked)
     public static final Object TRANSFORM_APPLIED_MARKER = new Object()
-    public static final String DOMAIN_TYPE = "Domain"
+    public static final String DOMAIN_TYPE = 'Domain'
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0]
     public static final ClassNode[] EMPTY_CLASS_ARRAY = new ClassNode[0]
     public static final Token ASSIGNMENT_OPERATOR = Token.newSymbol(Types.ASSIGNMENT_OPERATOR, 0, 0)
@@ -86,7 +86,7 @@ class AstUtils {
     public static final ClassNode OBJECT_CLASS_NODE = new ClassNode(Object.class).getPlainNodeReference()
 
     private static final Set<String> TRANSFORMED_CLASSES = new LinkedHashSet<String>()
-    private static final Set<String> ENTITY_ANNOTATIONS = ["grails.persistence.Entity", "grails.gorm.annotation.Entity", Entity.class.getName()] as Set<String>
+    private static final Set<String> ENTITY_ANNOTATIONS = ['grails.persistence.Entity', 'grails.gorm.annotation.Entity', Entity.class.getName()] as Set<String>
 
     /**
      * @return The names of the transformed entities for this context
@@ -105,14 +105,14 @@ class AstUtils {
      * The name of the Grails application directory
      */
 
-    public static final String GRAILS_APP_DIR = "grails-app"
+    public static final String GRAILS_APP_DIR = 'grails-app'
 
-    public static final String REGEX_FILE_SEPARATOR = "[\\\\/]" // backslashes need escaping in regexes
+    public static final String REGEX_FILE_SEPARATOR = '[\\\\/]' // backslashes need escaping in regexes
     /*
      Domain path is always matched against the normalized File representation of an URL and
      can therefore work with slashes as separators.
      */
-    public static Pattern DOMAIN_PATH_PATTERN = Pattern.compile(".+" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "domain" + REGEX_FILE_SEPARATOR + "(.+)\\.(groovy|java)")
+    public static Pattern DOMAIN_PATH_PATTERN = Pattern.compile('.+' + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + 'domain' + REGEX_FILE_SEPARATOR + '(.+)\\.(groovy|java)')
 
     private static final Map<String, ClassNode> emptyGenericsPlaceHoldersMap = Collections.emptyMap()
 
@@ -215,7 +215,7 @@ class AstUtils {
      * @return The method call expression
      */
     static MethodCallExpression buildGetPropertyExpression(final Expression objectExpression, final String propertyName, final ClassNode targetClassNode, final boolean useBooleanGetter) {
-        String methodName = (useBooleanGetter ? "is" : "get") + MetaClassHelper.capitalize(propertyName)
+        String methodName = (useBooleanGetter ? 'is' : 'get') + MetaClassHelper.capitalize(propertyName)
         MethodCallExpression methodCallExpression = new MethodCallExpression(objectExpression, methodName, MethodCallExpression.NO_ARGUMENTS)
         MethodNode getterMethod = targetClassNode.getGetterMethod(methodName)
         if(getterMethod != null) {
@@ -234,7 +234,7 @@ class AstUtils {
      * @return The method call expression
      */
     static MethodCallExpression buildSetPropertyExpression(final Expression objectExpression, final String propertyName, final ClassNode targetClassNode, final Expression valueExpression) {
-        String methodName = "set" + MetaClassHelper.capitalize(propertyName)
+        String methodName = 'set' + MetaClassHelper.capitalize(propertyName)
         MethodCallExpression methodCallExpression = new MethodCallExpression(objectExpression, methodName, new ArgumentListExpression(valueExpression))
         MethodNode setterMethod = targetClassNode.getSetterMethod(methodName)
         if(setterMethod != null) {
@@ -382,7 +382,7 @@ class AstUtils {
     static boolean isEnum(ClassNode classNode) {
         ClassNode parent = classNode.getSuperClass()
         while (parent != null) {
-            if (parent.getName().equals("java.lang.Enum"))
+            if (parent.getName().equals('java.lang.Enum'))
                 return true
             parent = parent.getSuperClass()
         }
@@ -422,7 +422,7 @@ class AstUtils {
     static boolean isDomainClass(ClassNode classNode) {
         if (classNode == null) return false
         if (classNode.isArray()) return false
-        if(implementsInterface(classNode, "org.grails.datastore.gorm.GormEntity")) {
+        if(implementsInterface(classNode, 'org.grails.datastore.gorm.GormEntity')) {
             return true
         }
         String filePath = classNode.getModule() != null ? classNode.getModule().getDescription() : null
@@ -451,7 +451,7 @@ class AstUtils {
         return replaceGenericsPlaceholders(type, emptyGenericsPlaceHoldersMap)
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     static ClassNode nonGeneric(ClassNode type, final ClassNode wildcardReplacement) {
         return replaceGenericsPlaceholders(type, emptyGenericsPlaceHoldersMap, wildcardReplacement)
     }
@@ -485,7 +485,7 @@ class AstUtils {
 
         final ClassNode nonGen = type.getPlainNodeReference()
 
-        if("java.lang.Object".equals(type.getName())) {
+        if('java.lang.Object'.equals(type.getName())) {
             nonGen.setGenericsPlaceHolder(false)
             nonGen.setGenericsTypes(null)
             nonGen.setUsingGenerics(false)
@@ -545,7 +545,7 @@ class AstUtils {
         }
 
         ClassNode parent = classNode.getSuperClass()
-        while (parent != null && !parent.name.equals("java.lang.Object")) {
+        while (parent != null && !parent.name.equals('java.lang.Object')) {
             if (hasProperty(parent, propertyName)) {
                 return true
             }
@@ -611,7 +611,7 @@ class AstUtils {
     static ClassNode getFurthestUnresolvedParent(ClassNode classNode) {
         ClassNode parent = classNode.getSuperClass()
 
-        while (parent != null && !parent.name.equals("java.lang.Object") && !parent.isResolved()) {
+        while (parent != null && !parent.name.equals('java.lang.Object') && !parent.isResolved()) {
             classNode = parent
             parent = parent.getSuperClass()
         }
@@ -642,7 +642,7 @@ class AstUtils {
      * @return A new this variable
      */
     static VariableExpression varThis() {
-        return new VariableExpression("this")
+        return new VariableExpression('this')
     }
 
     /**
@@ -683,14 +683,14 @@ class AstUtils {
         return method != null && (method.isPublic() || method.isProtected()) && !method.isAbstract()
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     static boolean implementsOrInheritsZeroArgMethod(ClassNode classNode, String methodName) {
         if (implementsZeroArgMethod(classNode, methodName)) {
             return true
         }
 
         ClassNode parent = classNode.getSuperClass()
-        while (parent != null && !parent.name.equals("java.lang.Object")) {
+        while (parent != null && !parent.name.equals('java.lang.Object')) {
             if (implementsZeroArgMethod(parent, methodName)) {
                 return true
             }
@@ -773,7 +773,7 @@ class AstUtils {
      * @return True if it is
      */
     static boolean isGroovyType(ClassNode type) {
-        return type.isPrimaryClassNode() || implementsInterface(type, "groovy.lang.GroovyObject")
+        return type.isPrimaryClassNode() || implementsInterface(type, 'groovy.lang.GroovyObject')
     }
 
     static ClassNode findInterface(ClassNode classNode, String interfaceName) {
@@ -807,7 +807,7 @@ class AstUtils {
 
     static void warning(final SourceUnit sourceUnit, final ASTNode node, final String warningMessage) {
         final String sample = sourceUnit.getSample(node.getLineNumber(), node.getColumnNumber(), new Janitor())
-        System.err.println("WARNING: " + warningMessage + "\n\n" + sample)
+        System.err.println('WARNING: ' + warningMessage + '\n\n' + sample)
     }
 
     static void error(SourceUnit sourceUnit, ASTNode expr, String errorMessage) {

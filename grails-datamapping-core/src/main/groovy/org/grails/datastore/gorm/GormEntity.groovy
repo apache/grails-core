@@ -326,7 +326,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
                 }
             }
             else {
-                throw new IllegalArgumentException("")
+                throw new IllegalArgumentException('')
             }
 
         }

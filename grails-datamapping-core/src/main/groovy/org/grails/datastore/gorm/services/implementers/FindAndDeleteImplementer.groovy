@@ -71,7 +71,7 @@ class FindAndDeleteImplementer extends FindOneImplementer implements SingleResul
     @Override
     protected Statement buildReturnStatement(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {
         VariableExpression var = varX('$obj', targetDomainClass)
-        MethodCallExpression deleteCall = args != null ? callX(var, "delete", args) : callX(var, "delete")
+        MethodCallExpression deleteCall = args != null ? callX(var, 'delete', args) : callX(var, 'delete')
 
         deleteCall.setSafe(true) // null safe
         block(

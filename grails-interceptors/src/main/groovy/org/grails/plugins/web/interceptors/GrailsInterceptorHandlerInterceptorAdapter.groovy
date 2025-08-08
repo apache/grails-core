@@ -49,7 +49,7 @@ import org.grails.web.util.WebUtils
 class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     private static final Log LOG = LogFactory.getLog(Interceptor)
-    private static final String ATTRIBUTE_MATCHED_INTERCEPTORS = "org.grails.web.MATCHED_INTERCEPTORS"
+    private static final String ATTRIBUTE_MATCHED_INTERCEPTORS = 'org.grails.web.MATCHED_INTERCEPTORS'
 
     static final String INTERCEPTOR_RENDERED_VIEW = 'interceptor_rendered_view'
 
@@ -65,9 +65,9 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
         this.interceptors = interceptors.sort(new OrderComparator()) as List<Interceptor>
         this.reverseInterceptors = this.interceptors.reverse()
         if(LOG.isDebugEnabled()) {
-            LOG.debug("Computed interceptor execution order:")
+            LOG.debug('Computed interceptor execution order:')
             for(Interceptor i in interceptors) {
-                LOG.debug("- ${GrailsNameUtils.getLogicalPropertyName(i.getClass().name, "Interceptor")} (order: ${i.order}) ")
+                LOG.debug("- ${GrailsNameUtils.getLogicalPropertyName(i.getClass().name, 'Interceptor')} (order: ${i.order}) ")
             }
         }
     }

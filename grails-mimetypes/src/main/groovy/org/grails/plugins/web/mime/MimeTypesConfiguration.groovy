@@ -53,14 +53,14 @@ class MimeTypesConfiguration {
         this.mimeTypeProviders = mimeTypeProviders
     }
 
-    @Bean("mimeTypesHolder")
+    @Bean('mimeTypesHolder')
     @Primary
     MimeTypesHolder mimeTypesHolder() {
-        final MimeType[] mimeTypes = grailsApplication.mainContext.getBean("mimeTypes", MimeType[].class)
+        final MimeType[] mimeTypes = grailsApplication.mainContext.getBean('mimeTypes', MimeType[].class)
         return new MimeTypesHolder(mimeTypes)
     }
 
-    @Bean("mimeTypes")
+    @Bean('mimeTypes')
     @Primary
     MimeType[] mimeTypes() {
         final Config config = grailsApplication.getConfig()
@@ -94,13 +94,13 @@ class MimeTypesConfiguration {
         return mimeTypes
     }
 
-    @Bean("grailsMimeUtility")
+    @Bean('grailsMimeUtility')
     @Primary
     protected MimeUtility mimeUtility(MimeTypesHolder mimeTypesHolder) {
         return new DefaultMimeUtility(mimeTypesHolder.mimeTypes)
     }
 
-    @Bean("mimeTypeResolver")
+    @Bean('mimeTypeResolver')
     @Primary
     protected MimeTypeResolver mimeTypeResolver() {
         return new DefaultMimeTypeResolver()

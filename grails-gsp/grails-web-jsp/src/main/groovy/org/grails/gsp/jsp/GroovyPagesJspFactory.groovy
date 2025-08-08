@@ -45,7 +45,7 @@ class GroovyPagesJspFactory extends JspFactory {
         return { getSpecificationVersion() } as JspEngineInfo
     }
 
-    protected String getSpecificationVersion() { "2.1" }
+    protected String getSpecificationVersion() { '2.1' }
 
     JspApplicationContext getJspApplicationContext(ServletContext servletContext) {
         def jspCtx = servletContext.getAttribute(GroovyPagesJspApplicationContext.getName())

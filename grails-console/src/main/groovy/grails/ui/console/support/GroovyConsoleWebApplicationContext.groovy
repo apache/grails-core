@@ -44,7 +44,7 @@ class GroovyConsoleWebApplicationContext extends DevelopmentWebApplicationContex
 
     protected void startConsole() {
         Binding binding = new Binding()
-        binding.setVariable("ctx", this)
+        binding.setVariable('ctx', this)
         binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication.class))
 
         final GroovyConsoleWebApplicationContext self = this

@@ -40,7 +40,7 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 @CompileStatic
 class CookieTenantResolver implements TenantResolver {
 
-    public static final String COOKIE_NAME = "gorm.tenantId"
+    public static final String COOKIE_NAME = 'gorm.tenantId'
 
     /**
      * The name of the cookie
@@ -64,6 +64,6 @@ class CookieTenantResolver implements TenantResolver {
             }
             throw new TenantNotFoundException()
         }
-        throw new TenantNotFoundException("Tenant could not be resolved outside a web request")
+        throw new TenantNotFoundException('Tenant could not be resolved outside a web request')
     }
 }

@@ -40,7 +40,7 @@ import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller as Xm
 class ConvertersGrailsPlugin extends Plugin {
 
     def version = GrailsUtil.getGrailsVersion()
-    def observe = ["controllers"]
+    def observe = ['controllers']
     def dependsOn = [controllers: version, domainClass: version]
     def providedArtefacts = [
         JSONCodec,

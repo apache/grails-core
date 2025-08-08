@@ -96,7 +96,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
 
     private static Object getEnumValueForOrdinal(Number value, Class type) {
         try {
-            Object values = type.getMethod("values").invoke(type)
+            Object values = type.getMethod('values').invoke(type)
             return Array.get(values, value.intValue())
         } catch (Exception e) {
             // ignore

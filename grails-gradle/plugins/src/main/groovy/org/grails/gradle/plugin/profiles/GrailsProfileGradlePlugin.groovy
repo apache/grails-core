@@ -81,10 +81,10 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             }
         }
 
-        project.configurations.named("apiElements")
+        project.configurations.named('apiElements')
                 .configure { it.extendsFrom(runtimeOnlyConfiguration.get()) }
 
-        project.configurations.named("runtimeElements")
+        project.configurations.named('runtimeElements')
                 .configure { it.extendsFrom(runtimeOnlyConfiguration.get()) }
 
         TaskProvider<Task> processProfileResourcesTask = project.tasks.register('processProfileResources')
@@ -221,7 +221,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             task.doLast {
                 def readmeFile = profileReadme.get().asFile
                 if (!readmeFile.exists()) {
-                    readmeFile.text = "Profiles are templates and do not have javadoc."
+                    readmeFile.text = 'Profiles are templates and do not have javadoc.'
                 }
             }
         }

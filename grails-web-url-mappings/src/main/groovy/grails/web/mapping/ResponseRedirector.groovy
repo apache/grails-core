@@ -44,11 +44,11 @@ import org.grails.web.util.GrailsApplicationAttributes
 @Commons
 class ResponseRedirector {
 
-    public static final String ARGUMENT_PERMANENT = "permanent"
-    public static final String ARGUMENT_ABSOLUTE = "absolute"
-    public static final String ARGUMENT_MOVED = "moved"
+    public static final String ARGUMENT_PERMANENT = 'permanent'
+    public static final String ARGUMENT_ABSOLUTE = 'absolute'
+    public static final String ARGUMENT_MOVED = 'moved'
     public static final String GRAILS_REDIRECT_ISSUED = GrailsApplicationAttributes.REDIRECT_ISSUED
-    private static final String BLANK = ""
+    private static final String BLANK = ''
     private static final String KEEP_PARAMS_WHEN_REDIRECT = 'keepParamsWhenRedirect'
 
     LinkGenerator linkGenerator
@@ -57,7 +57,7 @@ class ResponseRedirector {
     boolean useJessionId = false
 
     ResponseRedirector(LinkGenerator linkGenerator) {
-        Assert.notNull linkGenerator, "Argument [linkGenerator] cannot be null"
+        Assert.notNull linkGenerator, 'Argument [linkGenerator] cannot be null'
         this.linkGenerator = linkGenerator
     }
 
@@ -84,11 +84,11 @@ class ResponseRedirector {
 
     void redirect(HttpServletRequest request, HttpServletResponse response, Map arguments) {
         if (request.getAttribute(GRAILS_REDIRECT_ISSUED)) {
-            throw new CannotRedirectException("Cannot issue a redirect(..) here. A previous call to redirect(..) has already redirected the response.")
+            throw new CannotRedirectException('Cannot issue a redirect(..) here. A previous call to redirect(..) has already redirected the response.')
         }
 
         if (response.committed) {
-            throw new CannotRedirectException("Cannot issue a redirect(..) here. The response has already been committed either by another redirect or by directly writing to the response.")
+            throw new CannotRedirectException('Cannot issue a redirect(..) here. The response has already been committed either by another redirect or by directly writing to the response.')
         }
 
         boolean permanent = getBooleanArgument(ARGUMENT_PERMANENT, arguments)
@@ -129,7 +129,7 @@ class ResponseRedirector {
 
         String redirectURI
         if (absolute) {
-            redirectURI = processedActualUri.contains("://") ? processedActualUri : serverBaseURL + processedActualUri
+            redirectURI = processedActualUri.contains('://') ? processedActualUri : serverBaseURL + processedActualUri
         } else {
             redirectURI = linkGenerator.contextPath + processedActualUri
         }

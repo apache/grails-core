@@ -30,6 +30,6 @@ class SHA256CodecExtensionMethods extends DigestUtils {
     }
 
     static decodeSHA256(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode SHA-256 hashes")
+        throw new UnsupportedOperationException('Cannot decode SHA-256 hashes')
     }
 }

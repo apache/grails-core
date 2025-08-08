@@ -108,10 +108,10 @@ class PublishGuideTask extends DefaultTask {
         propertiesWithFilePaths = objects.mapProperty(String, File).convention([:])
         asciidoc = objects.property(Boolean).convention(true)
         propertiesFiles = objects.fileCollection()
-        sourceDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir("src"))
-        resourcesDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir("resources"))
+        sourceDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir('src'))
+        resourcesDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir('resources'))
         macros = objects.listProperty(Object).convention([])
-        targetDir = objects.directoryProperty().convention(project.layout.buildDirectory.dir("docs"))
+        targetDir = objects.directoryProperty().convention(project.layout.buildDirectory.dir('docs'))
         group = 'documentation'
     }
 

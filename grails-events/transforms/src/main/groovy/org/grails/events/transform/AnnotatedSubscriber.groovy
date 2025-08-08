@@ -70,7 +70,7 @@ trait AnnotatedSubscriber extends EventBusAware {
                 Class[] parameterTypes = m.parameterTypes
                 boolean hasArgument = parameterTypes.length == 1
                 if(hasArgument && AbstractPersistenceEvent.isAssignableFrom(parameterTypes[0])) {
-                    eventId = "gorm:${Introspector.decapitalize(parameterTypes[0].simpleName)}" - "Event"
+                    eventId = "gorm:${Introspector.decapitalize(parameterTypes[0].simpleName)}" - 'Event'
                     eventBus.subscribe(eventId, new MethodSubscriber(this, m))
                 }
                 else if(hasArgument && parameterTypes[0].isAssignableFrom(Event)) {

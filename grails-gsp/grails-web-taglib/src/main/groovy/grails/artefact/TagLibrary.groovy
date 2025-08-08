@@ -66,9 +66,9 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
     @CompileDynamic
     def raw(Object value) {
         if (rawEncoder == null) {
-            rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, "Raw")
+            rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, 'Raw')
             if(rawEncoder == null)
-                return InvokerHelper.invokeMethod(value, "encodeAsRaw", null)
+                return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
         }
         return rawEncoder.encode(value)
     }

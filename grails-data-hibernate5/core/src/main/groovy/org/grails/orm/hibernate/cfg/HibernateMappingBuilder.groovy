@@ -239,7 +239,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      * @param name The name of the property to sort by
      */
     void order(String direction) {
-        if ("desc".equalsIgnoreCase(direction) || "asc".equalsIgnoreCase(direction)) {
+        if ('desc'.equalsIgnoreCase(direction) || 'asc'.equalsIgnoreCase(direction)) {
             mapping.getSort().direction = direction
         }
     }
@@ -424,7 +424,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             }
             // still more arguments?
             if (args) {
-                handleMethodMissing("id", [args] as Object[])
+                handleMethodMissing('id', [args] as Object[])
             }
         }
     }
@@ -518,18 +518,18 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     property.columns << cc
                 }
 
-                if (namedArgs["column"]) cc.name = namedArgs["column"]
-                if (namedArgs["sqlType"]) cc.sqlType = namedArgs["sqlType"]
-                if (namedArgs["enumType"]) cc.enumType = namedArgs["enumType"]
-                if (namedArgs["index"]) cc.index = namedArgs["index"]
-                if (namedArgs["unique"]) cc.unique = namedArgs["unique"]
-                if (namedArgs["read"]) cc.read = namedArgs["read"]
-                if (namedArgs["write"]) cc.write = namedArgs["write"]
+                if (namedArgs['column']) cc.name = namedArgs['column']
+                if (namedArgs['sqlType']) cc.sqlType = namedArgs['sqlType']
+                if (namedArgs['enumType']) cc.enumType = namedArgs['enumType']
+                if (namedArgs['index']) cc.index = namedArgs['index']
+                if (namedArgs['unique']) cc.unique = namedArgs['unique']
+                if (namedArgs['read']) cc.read = namedArgs['read']
+                if (namedArgs['write']) cc.write = namedArgs['write']
                 if (namedArgs.defaultValue) cc.defaultValue = namedArgs.defaultValue
                 if (namedArgs.comment) cc.comment = namedArgs.comment
-                cc.length = namedArgs["length"] ?: cc.length
-                cc.precision = namedArgs["precision"] ?: cc.precision
-                cc.scale = namedArgs["scale"] ?: cc.scale
+                cc.length = namedArgs['length'] ?: cc.length
+                cc.precision = namedArgs['precision'] ?: cc.precision
+                cc.scale = namedArgs['scale'] ?: cc.scale
             }
 
             if (namedArgs.cache instanceof String) {

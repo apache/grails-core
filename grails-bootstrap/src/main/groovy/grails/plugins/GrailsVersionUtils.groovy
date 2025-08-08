@@ -55,7 +55,7 @@ class GrailsVersionUtils {
         pluginVersion = trimTag(pluginVersion)
 
         if (requiredVersion.indexOf('>') >- 1) {
-            def tokens = requiredVersion.split(">")*.trim()
+            def tokens = requiredVersion.split('>')*.trim()
             tokens = tokens.stream().collect({ String it -> trimTag(it) })
             tokens << pluginVersion
             tokens.sort(true, vc)
@@ -104,7 +104,7 @@ class GrailsVersionUtils {
 
     private static getPluginVersionInternal(String pluginVersion, Integer index) {
         if (pluginVersion.indexOf('>') > -1) {
-            def tokens = pluginVersion.split(">")*.trim()
+            def tokens = pluginVersion.split('>')*.trim()
             return tokens[index].trim()
         }
 
@@ -118,7 +118,7 @@ class GrailsVersionUtils {
         }
         def tokens = pluginVersion.split(/\./)
 
-        return tokens.findAll { String it -> it ==~ /\d+/ || it =='*'}.join(".")
+        return tokens.findAll { String it -> it ==~ /\d+/ || it =='*'}.join('.')
     }
 }
 

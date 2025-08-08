@@ -44,13 +44,13 @@ class StringInputRenderer implements DomainInputRenderer {
     Closure renderInput(Map standardAttributes, DomainProperty domainProperty) {
         Constrained constraints = domainProperty.constrained
         if (constraints?.password) {
-            standardAttributes.type = "password"
+            standardAttributes.type = 'password'
         } else if (constraints?.email)  {
-            standardAttributes.type = "email"
+            standardAttributes.type = 'email'
         } else if (constraints?.url) {
-            standardAttributes.type = "url"
+            standardAttributes.type = 'url'
         } else {
-            standardAttributes.type = "text"
+            standardAttributes.type = 'text'
         }
 
         if (constraints?.matches) {

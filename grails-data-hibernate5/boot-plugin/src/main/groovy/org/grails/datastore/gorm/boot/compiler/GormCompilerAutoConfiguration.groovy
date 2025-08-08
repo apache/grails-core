@@ -35,17 +35,17 @@ import org.grails.cli.compiler.DependencyCustomizer
 class GormCompilerAutoConfiguration extends CompilerAutoConfiguration{
     @Override
     boolean matches(ClassNode classNode) {
-        return AstUtils.hasAtLeastOneAnnotation(classNode, "grails.persistence.Entity", "grails.gorm.annotation.Entity" ,"Entity")
+        return AstUtils.hasAtLeastOneAnnotation(classNode, 'grails.persistence.Entity', 'grails.gorm.annotation.Entity', 'Entity')
     }
 
     @Override
     void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
-        dependencies.ifAnyMissingClasses("grails.persistence.Entity", "grails.gorm.annotation.Entity")
-                        .add("grails-data-hibernate5-core")
+        dependencies.ifAnyMissingClasses('grails.persistence.Entity', 'grails.gorm.annotation.Entity')
+                        .add('grails-data-hibernate5-core')
     }
 
     @Override
     void applyImports(ImportCustomizer imports) throws CompilationFailedException {
-        imports.addStarImports("grails.gorm", "grails.gorm.annotation")
+        imports.addStarImports('grails.gorm', 'grails.gorm.annotation')
     }
 }

@@ -40,11 +40,11 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.datastore.gorm.transform.OrderedGormTransformation")
-@GormASTTransformationClass("org.grails.datastore.gorm.transactions.transform.RollbackTransform")
+@GroovyASTTransformationClass('org.grails.datastore.gorm.transform.OrderedGormTransformation')
+@GormASTTransformationClass('org.grails.datastore.gorm.transactions.transform.RollbackTransform')
 @interface Rollback {
     /**
      * The connection to rollback for
      */
-    String value() default ""
+    String value() default ''
 }

@@ -168,7 +168,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param association An association whose isOneToMeny() method returns true
      * @param propertyName The name of the property
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     protected void cascadeValidationToMany(Object parentObject, String propertyName, Association association, Errors errors, EntityReflector entityReflector, Set validatedObjects) {
 
         Object collection = entityReflector.getProperty(parentObject, propertyName)
@@ -207,7 +207,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param propertyName The name of the property
      * @param indexOrKey
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     protected void cascadeValidationToOne(Object parentObject, String propertyName, Association association, Errors errors, EntityReflector reflector, Object associatedObject, Object indexOrKey, Set validatedObjects) {
         if (associatedObject == null) {
             return
@@ -301,7 +301,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         if (indexOrKey instanceof Integer) {
             // Component is part of a Collection. Collection access string
             // e.g. path.object[1] will be appended to the nested path.
-            return nestedPath + componentName + "[" + indexOrKey + "]"
+            return nestedPath + componentName + '[' + indexOrKey + ']'
         }
 
         // Component is part of a Map. Nested path should have a key surrounded
@@ -311,7 +311,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     private void validatePropertyWithConstraint(Object obj, String propertyName, EntityReflector reflector, Errors errors, ConstrainedProperty constrainedProperty, PersistentProperty persistentProperty) {
 
-        int i = propertyName.lastIndexOf(".")
+        int i = propertyName.lastIndexOf('.')
         String constrainedPropertyName
         if (i > -1) {
             constrainedPropertyName = propertyName.substring(i + 1, propertyName.length())

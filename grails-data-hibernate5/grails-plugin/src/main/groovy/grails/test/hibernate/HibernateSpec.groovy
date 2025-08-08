@@ -62,19 +62,19 @@ abstract class HibernateSpec extends Specification {
         List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader())
         ResourceLoader resourceLoader = new DefaultResourceLoader()
         MutablePropertySources propertySources = new MutablePropertySources()
-        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("yml") }
+        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
         if (ymlLoader) {
-            load(resourceLoader, ymlLoader, "application.yml").each {
+            load(resourceLoader, ymlLoader, 'application.yml').each {
                 propertySources.addLast(it)
             }
         }
-        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("groovy") }
+        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
         if (groovyLoader) {
-            load(resourceLoader, groovyLoader, "application.groovy").each {
+            load(resourceLoader, groovyLoader, 'application.groovy').each {
                 propertySources.addLast(it)
             }
         }
-        propertySources.addFirst(new MapPropertySource("defaults", getConfiguration()))
+        propertySources.addFirst(new MapPropertySource('defaults', getConfiguration()))
         Config config = new PropertySourcesConfig(propertySources)
         List<Class> domainClasses = getDomainClasses()
         String packageName = getPackageToScan(config)
@@ -109,7 +109,7 @@ abstract class HibernateSpec extends Specification {
      * @return The configuration
      */
     Map getConfiguration() {
-        Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop')
     }
 
     /**

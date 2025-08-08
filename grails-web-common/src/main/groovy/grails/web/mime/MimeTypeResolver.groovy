@@ -30,7 +30,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  */
 interface MimeTypeResolver {
 
-    String BEAN_NAME = "mimeTypeResolver"
+    String BEAN_NAME = 'mimeTypeResolver'
 
     /**
      * @return The response format requested by the client

@@ -43,7 +43,7 @@ class FixedTenantResolver implements TenantResolver {
 
     FixedTenantResolver(Serializable tenantId) {
         if(tenantId == null) {
-            throw new IllegalArgumentException("Argument [tenantId] cannot be null")
+            throw new IllegalArgumentException('Argument [tenantId] cannot be null')
         }
         this.tenantId = tenantId
     }

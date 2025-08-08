@@ -58,7 +58,7 @@ class AsyncActionResultTransformer implements ActionResultTransformer {
             if(asyncManager.isConcurrentHandlingStarted()) {
                 asyncWebRequest = AsyncGrailsWebRequest.lookup(request)
                 if(asyncWebRequest == null) {
-                    throw new IllegalStateException("Concurrency handling already started by another process")
+                    throw new IllegalStateException('Concurrency handling already started by another process')
                 }
             }
             else {

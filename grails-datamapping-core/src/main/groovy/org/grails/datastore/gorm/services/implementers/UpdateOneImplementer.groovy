@@ -76,7 +76,7 @@ class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResu
     @Override
     void doImplement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         Parameter[] parameters = newMethodNode.parameters
-        StaticMethodCallExpression lookupCall = callX(domainClassNode, "get", varX(parameters[0]))
+        StaticMethodCallExpression lookupCall = callX(domainClassNode, 'get', varX(parameters[0]))
         VariableExpression entityVar = varX('$entity', domainClassNode)
 
         BlockStatement body = (BlockStatement)newMethodNode.code

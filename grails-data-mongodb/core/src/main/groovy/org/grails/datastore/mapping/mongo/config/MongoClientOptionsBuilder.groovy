@@ -113,14 +113,14 @@ class MongoClientOptionsBuilder {
                 if (builderMethod != null && Modifier.isStatic(builderMethod.modifiers)) {
                     if (propertyResolver.containsProperty(propertyPath)) {
                         def newBuilder = builderMethod.invoke(argType)
-                        if (newBuilder.respondsTo("applyConnectionString")) {
+                        if (newBuilder.respondsTo('applyConnectionString')) {
                             applyConnectionString(newBuilder, connectionString)
                         }
                         method.invoke(builder, buildInternal(newBuilder, propertyPath))
                     }
                 } else {
                     if(argType.isEnum()) {
-                        def value = propertyResolver.getProperty(propertyPath, "")
+                        def value = propertyResolver.getProperty(propertyPath, '')
                         if (value) {
                             try {
                                 method.invoke(builder, Enum.valueOf((Class)argType, value))
@@ -133,7 +133,7 @@ class MongoClientOptionsBuilder {
                     def valueOfMethod = ReflectionUtils.findMethod(argType, 'valueOf')
                     if (valueOfMethod != null && Modifier.isStatic(valueOfMethod.modifiers)) {
                         try {
-                            def value = propertyResolver.getProperty(propertyPath, "")
+                            def value = propertyResolver.getProperty(propertyPath, '')
                             if(value) {
                                 def converted = valueOfMethod.invoke(argType, value)
                                 method.invoke(builder, converted)

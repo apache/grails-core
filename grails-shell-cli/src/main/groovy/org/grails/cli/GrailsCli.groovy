@@ -81,8 +81,8 @@ class GrailsCli {
     public static final String DEFAULT_PROFILE_NAME = ProfileRepository.DEFAULT_PROFILE_NAME
     private static final int KEYPRESS_CTRL_C = 3
     private static final int KEYPRESS_ESC = 27
-    private static final String USAGE_MESSAGE = "create-app [NAME] --profile=web"
-    private static final String PLUGIN_USAGE_MESSAGE = "create-plugin [NAME] --profile=web-plugin"
+    private static final String USAGE_MESSAGE = 'create-app [NAME] --profile=web'
+    private static final String PLUGIN_USAGE_MESSAGE = 'create-plugin [NAME] --profile=web-plugin'
 
     // store original System.in, System.out and System.err
     private final SystemStreamsRedirector originalStreams = SystemStreamsRedirector.original()
@@ -169,7 +169,7 @@ class GrailsCli {
             exit(cli.execute(args))
         }
         catch (BuildCancelledException e) {
-            GrailsConsole.instance.addStatus("Build stopped.")
+            GrailsConsole.instance.addStatus('Build stopped.')
             exit(0)
         }
         catch (Throwable e) {
@@ -193,7 +193,7 @@ class GrailsCli {
 
     private int getBaseUsage() {
         System.out.println "Usage: \n\t $USAGE_MESSAGE \n\t $PLUGIN_USAGE_MESSAGE \n\n"
-        this.execute "list-profiles"
+        this.execute 'list-profiles'
         System.out.println "\nType 'grails help' or 'grails -h' for more information."
 
         return 1
@@ -209,11 +209,11 @@ class GrailsCli {
         CommandLine mainCommandLine = cliParser.parse(args)
 
         if (mainCommandLine.hasOption(CommandLine.VERBOSE_ARGUMENT)) {
-            System.setProperty("grails.verbose", "true")
-            System.setProperty("grails.full.stacktrace", "true")
+            System.setProperty('grails.verbose', 'true')
+            System.setProperty('grails.full.stacktrace', 'true')
         }
         if (mainCommandLine.hasOption(CommandLine.STACKTRACE_ARGUMENT)) {
-            System.setProperty("grails.show.stacktrace", "true")
+            System.setProperty('grails.show.stacktrace', 'true')
         }
 
         if (mainCommandLine.hasOption(CommandLine.VERSION_ARGUMENT) || mainCommandLine.hasOption('v')) {
@@ -226,7 +226,7 @@ class GrailsCli {
 
         if (mainCommandLine.hasOption(CommandLine.HELP_ARGUMENT) || mainCommandLine.hasOption('h')) {
             profileRepository = createMavenProfileRepository()
-            def cmd = CommandRegistry.instance.getCommand("help", profileRepository)
+            def cmd = CommandRegistry.instance.getCommand('help', profileRepository)
             cmd.handle(createExecutionContext(mainCommandLine))
             exit(0)
         }
@@ -236,9 +236,9 @@ class GrailsCli {
             Environment.reset()
         }
 
-        File grailsAppDir = new File("grails-app")
-        File applicationGroovy = new File("Application.groovy")
-        File profileYml = new File("profile.yml")
+        File grailsAppDir = new File('grails-app')
+        File applicationGroovy = new File('Application.groovy')
+        File profileYml = new File('profile.yml')
         if (!grailsAppDir.isDirectory() && !applicationGroovy.exists() && !profileYml.exists()) {
             profileRepository = createMavenProfileRepository()
             if (!mainCommandLine || !mainCommandLine.commandName) {
@@ -296,10 +296,10 @@ class GrailsCli {
 
     protected void initializeApplication(CommandLine mainCommandLine) {
         applicationConfig = loadApplicationConfig()
-        File profileYml = new File("profile.yml")
+        File profileYml = new File('profile.yml')
         if (profileYml.exists()) {
             // use the profile for profiles
-            applicationConfig.put(BuildSettings.PROFILE, "profile")
+            applicationConfig.put(BuildSettings.PROFILE, 'profile')
         }
 
         GrailsConsole console = GrailsConsole.instance
@@ -308,7 +308,7 @@ class GrailsCli {
         if (ansiEnabled != null) {
             console.ansiEnabled = ansiEnabled
         }
-        File baseDir = new File(".").canonicalFile
+        File baseDir = new File('.').canonicalFile
         projectContext = new ProjectContextImpl(console, baseDir, applicationConfig)
         initializeProfile()
     }
@@ -357,15 +357,15 @@ class GrailsCli {
                 }
 
                 if (mainCommandLine.hasOption(CommandLine.VERBOSE_ARGUMENT)) {
-                    System.setProperty("grails.verbose", "true")
-                    System.setProperty("grails.full.stacktrace", "true")
+                    System.setProperty('grails.verbose', 'true')
+                    System.setProperty('grails.full.stacktrace', 'true')
                 } else {
-                    System.setProperty("grails.verbose", "false")
-                    System.setProperty("grails.full.stacktrace", "false")
+                    System.setProperty('grails.verbose', 'false')
+                    System.setProperty('grails.full.stacktrace', 'false')
                 }
                 if (profile.handleCommand(context)) {
                     if (tiggerAppLoad) {
-                        console.updateStatus("Initializing application. Please wait...")
+                        console.updateStatus('Initializing application. Please wait...')
                         try {
                             initializeApplication(context.commandLine)
                             setupCompleters()
@@ -393,7 +393,7 @@ class GrailsCli {
     }
 
     protected GrailsConsole setupCompleters() {
-        System.setProperty(Environment.INTERACTIVE_MODE_ENABLED, "true")
+        System.setProperty(Environment.INTERACTIVE_MODE_ENABLED, 'true')
         GrailsConsole console = projectContext.console
 
         def consoleReader = console.reader
@@ -403,7 +403,7 @@ class GrailsCli {
         console.resetCompleters()
         // add bang operator completer
         completers.add(new ArgumentCompleter(
-                new RegexCompletor("!\\w+"), new EscapingFileNameCompletor())
+                new RegexCompletor('!\\w+'), new EscapingFileNameCompletor())
         )
 
         completers.addAll((profile.getCompleters(projectContext) ?: []) as Collection<Completer>)
@@ -412,7 +412,7 @@ class GrailsCli {
     }
 
     protected void startInteractiveMode(GrailsConsole console) {
-        console.updateStatus("Starting interactive mode...")
+        console.updateStatus('Starting interactive mode...')
         ExecutorService commandExecutor = Executors.newFixedThreadPool(1)
         try {
             interactiveModeLoop(console, commandExecutor)
@@ -428,7 +428,7 @@ class GrailsCli {
         while (keepRunning) {
             try {
                 if (firstRun) {
-                    console.addStatus("Enter a command name to run. Use TAB for completion:")
+                    console.addStatus('Enter a command name to run. Use TAB for completion:')
                     firstRun = false
                 }
                 String commandLine = console.showPrompt()
@@ -443,7 +443,7 @@ class GrailsCli {
                     }
                 }
             } catch (BuildCancelledException cancelledException) {
-                console.updateStatus("Build stopped.")
+                console.updateStatus('Build stopped.')
             } catch (UserInterruptException e) {
                 exitInteractiveMode()
             } catch (Throwable e) {
@@ -468,7 +468,7 @@ class GrailsCli {
                         nonBlockingInput.read(1L)
                         if (peeked == KEYPRESS_CTRL_C || peeked == KEYPRESS_ESC) {
                             executionContext.console.log('  ')
-                            executionContext.console.updateStatus("Stopping build. Please wait...")
+                            executionContext.console.updateStatus('Stopping build. Please wait...')
                             executionContext.cancel()
                         }
                     }
@@ -493,7 +493,7 @@ class GrailsCli {
     private initializeProfile() {
         BuildSettings.TARGET_DIR?.mkdirs()
 
-        if(!new File(BuildSettings.BASE_DIR, "profile.yml").exists()) {
+        if(!new File(BuildSettings.BASE_DIR, 'profile.yml').exists()) {
             // must be inside of a grails app, so share the classpath from the grails app to find all of the necessary commands, scripts, etc
             populateContextLoader()
         }
@@ -511,12 +511,12 @@ class GrailsCli {
 
     protected void populateContextLoader() {
         try {
-            if (new File(BuildSettings.BASE_DIR, "build.gradle").exists()) {
-                def dependencyMap = new MapReadingCachedGradleOperation<List<URL>>(projectContext, ".dependencies") {
+            if (new File(BuildSettings.BASE_DIR, 'build.gradle').exists()) {
+                def dependencyMap = new MapReadingCachedGradleOperation<List<URL>>(projectContext, '.dependencies') {
 
                     @Override
                     void updateStatusMessage() {
-                        GrailsConsole.instance.updateStatus("Resolving Dependencies. Please wait...")
+                        GrailsConsole.instance.updateStatus('Resolving Dependencies. Please wait...')
                     }
 
                     @Override
@@ -536,7 +536,7 @@ class GrailsCli {
                         BuildActionExecuter buildActionExecuter = connection.action(new ClasspathBuildAction())
                         buildActionExecuter.standardOutput = System.out
                         buildActionExecuter.standardError = System.err
-                        buildActionExecuter.withArguments("-Dgrails.profile=${config.navigate("grails", "profile")}")
+                        buildActionExecuter.withArguments("-Dgrails.profile=${config.navigate('grails', 'profile')}")
 
                         def grailsClasspath = buildActionExecuter.run()
                         if (grailsClasspath.error) {
@@ -550,14 +550,14 @@ class GrailsCli {
                     }
                 }.call()
 
-                def urls = (List<URL>) dependencyMap.get("dependencies")
+                def urls = (List<URL>) dependencyMap.get('dependencies')
                 try {
                     // add tools.jar
                     urls.add(new File("${System.getenv('JAVA_HOME')}/lib/tools.jar").toURI().toURL())
                 } catch (Throwable e) {
                     // ignore
                 }
-                def profiles = (List<URL>) dependencyMap.get("profiles")
+                def profiles = (List<URL>) dependencyMap.get('profiles')
                 URLClassLoader classLoader = new URLClassLoader(urls as URL[], Thread.currentThread().contextClassLoader)
                 this.profileRepository = new StaticJarProfileRepository(classLoader, profiles as URL[])
                 Thread.currentThread().contextClassLoader = classLoader
@@ -572,8 +572,8 @@ class GrailsCli {
 
     private CodeGenConfig loadApplicationConfig() {
         CodeGenConfig config = new CodeGenConfig()
-        File applicationYml = new File("grails-app/conf/application.yml")
-        File applicationGroovy = new File("grails-app/conf/application.groovy")
+        File applicationYml = new File('grails-app/conf/application.yml')
+        File applicationGroovy = new File('grails-app/conf/application.groovy')
         if (applicationYml.exists()) {
             config.loadYml(applicationYml)
         }
@@ -635,12 +635,12 @@ class GrailsCli {
         history.previous()
 
         if (!history.previous()) {
-            console.error "! not valid. Can not repeat without history"
+            console.error '! not valid. Can not repeat without history'
         }
 
         //another step to previous command
         String historicalCommand = history.current()
-        if (historicalCommand.startsWith("!")) {
+        if (historicalCommand.startsWith('!')) {
             console.error "Can not repeat command: $historicalCommand"
         } else {
             return handleCommand(cliParser.parseString(historicalCommand))
@@ -665,7 +665,7 @@ class GrailsCli {
         GrailsConsole console = GrailsConsole.getInstance()
 
         ExecutionContextImpl(CodeGenConfig config) {
-            this(new DefaultCommandLine(), new ProjectContextImpl(GrailsConsole.instance, new File("."), config))
+            this(new DefaultCommandLine(), new ProjectContextImpl(GrailsConsole.instance, new File('.'), config))
         }
 
         ExecutionContextImpl(CommandLine commandLine, ProjectContext projectContext) {
@@ -690,14 +690,14 @@ class GrailsCli {
                 try {
                     listener.commandCancelled()
                 } catch (Exception e) {
-                    console.error("Error notifying listener about cancelling command", e)
+                    console.error('Error notifying listener about cancelling command', e)
                 }
             }
         }
 
         @Override
         File getBaseDir() {
-            this.projectContext?.baseDir ?: new File(".")
+            this.projectContext?.baseDir ?: new File('.')
         }
     }
 

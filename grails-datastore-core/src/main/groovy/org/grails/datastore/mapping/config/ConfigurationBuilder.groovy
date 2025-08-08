@@ -208,7 +208,7 @@ abstract class ConfigurationBuilder<B, C> {
                                     try {
                                         method.invoke(builder, buildMethod.invoke(newBuilder))
                                     } catch (Throwable e) {
-                                        log.error("build method threw exception", e)
+                                        log.error('build method threw exception', e)
                                     }
                                 } else {
                                     method.invoke(builder, newBuilder)
@@ -302,7 +302,7 @@ abstract class ConfigurationBuilder<B, C> {
                         }
                         continue
                     }
-                } else if (methodName.startsWith("get") && parameterTypes.length == 0) {
+                } else if (methodName.startsWith('get') && parameterTypes.length == 0) {
                     if (method.returnType.getAnnotation(Builder)) {
                         def childBuilder = method.invoke(builder)
                         if (childBuilder != null) {
@@ -349,7 +349,7 @@ abstract class ConfigurationBuilder<B, C> {
                     def valueOfMethod = ReflectionUtils.findMethod(argType, 'valueOf')
                     if (valueOfMethod != null && Modifier.isStatic(valueOfMethod.modifiers)) {
                         try {
-                            def value = propertyResolver.getProperty(propertyPathForArg, "")
+                            def value = propertyResolver.getProperty(propertyPathForArg, '')
                             if (value) {
                                 def converted = valueOfMethod.invoke(argType, value)
                                 args.add(converted)
@@ -384,7 +384,7 @@ abstract class ConfigurationBuilder<B, C> {
                             }
                         }
                         if (value != null) {
-                            log.debug("Resolved value [{}] for setting [{}]", value, propertyPathForArg)
+                            log.debug('Resolved value [{}] for setting [{}]', value, propertyPathForArg)
                             args.add(value)
                         }
 

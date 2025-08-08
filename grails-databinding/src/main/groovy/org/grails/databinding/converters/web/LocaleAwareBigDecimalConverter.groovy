@@ -38,7 +38,7 @@ class LocaleAwareBigDecimalConverter extends LocaleAwareNumberConverter {
     protected NumberFormat getNumberFormatter() {
         def nf = super.getNumberFormatter()
         if (!(nf instanceof DecimalFormat)) {
-            throw new IllegalStateException("Cannot support non-DecimalFormat: " + nf)
+            throw new IllegalStateException('Cannot support non-DecimalFormat: ' + nf)
         }
 
         ((DecimalFormat)nf).setParseBigDecimal(true)

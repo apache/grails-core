@@ -162,7 +162,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
         else if(path instanceof Resource) return ((Resource)path).file
         else {
             def baseDir = executionContext.baseDir
-            new File(baseDir ?: new File("."), path.toString())
+            new File(baseDir ?: new File('.'), path.toString())
         }
     }
 
@@ -269,7 +269,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
             def basePath = executionContext.baseDir.canonicalPath
             return (file.canonicalPath - basePath).substring(1)
         }
-        return ""
+        return ''
     }
 
     /**

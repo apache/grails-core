@@ -56,7 +56,7 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
             newWebRequest = AsyncGrailsWebRequest.lookup(currentServletRequest)
             asyncContext = newWebRequest.asyncContext
             if( newWebRequest == null || newWebRequest.isAsyncComplete() ) {
-                throw new IllegalStateException("Cannot start a task once asynchronous request processing has completed")
+                throw new IllegalStateException('Cannot start a task once asynchronous request processing has completed')
             }
         }
         else {
@@ -76,7 +76,7 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
     def <D> Closure<D> decorate(Closure<D> c) {
         return (Closure<D>) {  args ->
             if(timeoutReached) {
-                throw new TimeoutException("Asynchronous request processing timeout reached")
+                throw new TimeoutException('Asynchronous request processing timeout reached')
             }
             HttpServletRequest request = (HttpServletRequest) asyncContext.request
             if(request.isAsyncStarted()) {
@@ -90,7 +90,7 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
                 }
             }
             else {
-                throw new IllegalStateException("Asynchronous request already terminated. Likely timeout reached")
+                throw new IllegalStateException('Asynchronous request already terminated. Likely timeout reached')
             }
         }
     }

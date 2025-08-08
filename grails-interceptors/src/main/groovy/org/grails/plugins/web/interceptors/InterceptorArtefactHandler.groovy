@@ -31,10 +31,10 @@ import grails.core.GrailsClass
  */
 class InterceptorArtefactHandler extends ArtefactHandlerAdapter {
 
-    public static final String MATCH_SUFFIX = ".INTERCEPTOR_MATCHED"
+    public static final String MATCH_SUFFIX = '.INTERCEPTOR_MATCHED'
 
     public static final String TYPE = Interceptor.class.getSimpleName()
-    public static final String PLUGIN_NAME = "interceptors"
+    public static final String PLUGIN_NAME = 'interceptors'
 
     InterceptorArtefactHandler() {
         super(TYPE, GrailsClass.class, DefaultGrailsClass.class, TYPE)

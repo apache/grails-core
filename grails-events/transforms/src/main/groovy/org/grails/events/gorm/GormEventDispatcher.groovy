@@ -41,7 +41,7 @@ import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListene
 @CompileStatic
 class GormEventDispatcher extends AbstractPersistenceEventListener {
 
-    private static final String GORM_NAMESPACE = "gorm:"
+    private static final String GORM_NAMESPACE = 'gorm:'
     protected final EventBus eventBus
     protected final Map<Class<? extends AbstractPersistenceEvent>, String> subscribedEvents
     protected final Set<Class<? extends AbstractPersistenceEvent>> listenedForEvents = []
@@ -54,7 +54,7 @@ class GormEventDispatcher extends AbstractPersistenceEventListener {
         this.eventBus = eventBus
         Map<Class<? extends AbstractPersistenceEvent>, String> subscribedEventMap = [:]
         for(event in subscribedEvents) {
-            subscribedEventMap.put(event, GORM_NAMESPACE + (Introspector.decapitalize(event.simpleName) - "Event"))
+            subscribedEventMap.put(event, GORM_NAMESPACE + (Introspector.decapitalize(event.simpleName) - 'Event'))
         }
         this.subscribedEvents = Collections.unmodifiableMap(subscribedEventMap)
         this.listeners = Collections.unmodifiableList(listeners)

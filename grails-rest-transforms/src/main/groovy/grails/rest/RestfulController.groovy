@@ -37,10 +37,10 @@ import static org.springframework.http.HttpStatus.OK
  * @author Graeme Rocher
  * @since 2.3
  */
-@Artefact("Controller")
+@Artefact('Controller')
 @ReadOnly
 class RestfulController<T> {
-    static allowedMethods = [save: "POST", update: ["PUT", "POST"], patch: "PATCH", delete: "DELETE"]
+    static allowedMethods = [save: 'POST', update: ['PUT', 'POST'], patch: 'PATCH', delete: 'DELETE']
 
     Class<T> resource
     String resourceName
@@ -201,7 +201,7 @@ class RestfulController<T> {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.deleted.message', args: [classMessageArg, instance.id])
-                redirect action:"index", method:"GET"
+                redirect action: 'index', method: 'GET'
             }
             '*'{ render status: NO_CONTENT } // NO CONTENT STATUS CODE
         }
@@ -288,7 +288,7 @@ class RestfulController<T> {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.not.found.message', args: [classMessageArg, params.id])
-                redirect action: "index", method: "GET"
+                redirect action: 'index', method: 'GET'
             }
             '*'{ render status: NOT_FOUND }
         }

@@ -38,10 +38,10 @@ import grails.util.GrailsStringUtils
 @CompileStatic
 class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
 
-    public static final String[] COMMAND_NAME = new String[] {"groovyGenerateChangeLog"}
+    public static final String[] COMMAND_NAME = new String[] {'groovyGenerateChangeLog'}
 
     private static final String INFO_MESSAGE =
-            "When generating formatted SQL changelogs, it is important to decide if batched statements\n" +
+            'When generating formatted SQL changelogs, it is important to decide if batched statements\n' +
                     "should be split or not.  For storedlogic objects, the default behavior is 'splitStatements:false'\n." +
                     "All other objects default to 'splitStatements:true'.  See https://docs.liquibase.org for additional information."
 
@@ -50,9 +50,9 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
         CommandScope commandScope = resultsBuilder.getCommandScope()
 
         String changeLogFile = GrailsStringUtils.trimToNull(commandScope.getArgumentValue(CHANGELOG_FILE_ARG))
-        if (changeLogFile != null && changeLogFile.toLowerCase().endsWith(".sql")) {
-            Scope.getCurrentScope().getUI().sendMessage("\n" + INFO_MESSAGE + "\n")
-            Scope.getCurrentScope().getLog(getClass()).info("\n" + INFO_MESSAGE + "\n")
+        if (changeLogFile != null && changeLogFile.toLowerCase().endsWith('.sql')) {
+            Scope.getCurrentScope().getUI().sendMessage('\n' + INFO_MESSAGE + '\n')
+            Scope.getCurrentScope().getLog(getClass()).info('\n' + INFO_MESSAGE + '\n')
         }
 
         final Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG)
@@ -86,7 +86,7 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
 
             }
             if (GrailsStringUtils.trimToNull(changeLogFile) != null) {
-                Scope.getCurrentScope().getUI().sendMessage("Generated changelog written to " + new File(changeLogFile).getAbsolutePath())
+                Scope.getCurrentScope().getUI().sendMessage('Generated changelog written to ' + new File(changeLogFile).getAbsolutePath())
             }
         } finally {
             referenceDatabase.setObjectQuotingStrategy(originalStrategy)

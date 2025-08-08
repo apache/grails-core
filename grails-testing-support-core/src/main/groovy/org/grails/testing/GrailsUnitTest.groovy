@@ -94,13 +94,13 @@ trait GrailsUnitTest {
      * @return the MessageSource bean from the application context
      */
     MessageSource getMessageSource() {
-        applicationContext.getBean("messageSource", MessageSource)
+        applicationContext.getBean('messageSource', MessageSource)
     }
 
     void defineBeans(Closure closure) {
         def binding = new Binding()
         def bb = new BeanBuilder(null, null, grailsApplication.getClassLoader())
-        binding.setVariable "application", grailsApplication
+        binding.setVariable 'application', grailsApplication
         bb.setBinding binding
         bb.beans(closure)
         bb.registerBeans((BeanDefinitionRegistry)applicationContext)
@@ -172,8 +172,8 @@ trait GrailsUnitTest {
     @CompileDynamic
     private void cleanupPromiseFactory() {
         ClassLoader classLoader = getClass().classLoader
-        if (ClassUtils.isPresent("grails.async.Promises", classLoader)) {
-            getClass().classLoader.loadClass("grails.async.Promises")['promiseFactory'] = null
+        if (ClassUtils.isPresent('grails.async.Promises', classLoader)) {
+            getClass().classLoader.loadClass('grails.async.Promises')['promiseFactory'] = null
         }
     }
 }

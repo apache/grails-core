@@ -47,10 +47,10 @@ import org.springframework.transaction.event.TransactionPhase
     /**
      * @return The namespace of the events
      */
-    String namespace() default ""
+    String namespace() default ''
 
     /**
      * @return The id of the event to notify in the case of an error
      */
-    String error() default ""
+    String error() default ''
 }

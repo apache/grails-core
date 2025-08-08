@@ -37,8 +37,8 @@ import org.grails.datastore.mapping.query.Query
 @CompileStatic
 abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTypeMarshaller<T, Document, Document> {
 
-    public static final String COORDINATES = "coordinates"
-    public static final String GEO_TYPE = "type"
+    public static final String COORDINATES = 'coordinates'
+    public static final String GEO_TYPE = 'type'
 
     GeoJSONType(Class<T> targetType) {
         super(targetType)

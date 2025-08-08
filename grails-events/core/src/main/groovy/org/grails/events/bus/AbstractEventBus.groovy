@@ -129,8 +129,8 @@ abstract class AbstractEventBus implements EventBus {
 
     @Override
     EventEmitter sendAndReceive(Event event, Closure reply) {
-        if(event == null) throw new IllegalArgumentException("Argument [event] cannot be null")
-        if(event == null) throw new IllegalArgumentException("Argument [reply] cannot be null")
+        if(event == null) throw new IllegalArgumentException('Argument [event] cannot be null')
+        if(event == null) throw new IllegalArgumentException('Argument [reply] cannot be null')
         String eventId = event.id
         if(subscriptions.containsKey(eventId))  {
             Collection<Subscription> eventSubscriptions = subscriptions.get(eventId)

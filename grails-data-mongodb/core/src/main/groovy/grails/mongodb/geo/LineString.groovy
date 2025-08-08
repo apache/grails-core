@@ -38,7 +38,7 @@ class LineString extends Shape implements GeoJSON{
      */
     LineString(Point...points) {
         if(points.size() < 2)
-            throw new IllegalArgumentException("At least 2 points required for a LineString")
+            throw new IllegalArgumentException('At least 2 points required for a LineString')
         this.coordinates = points.toList()
     }
 
@@ -63,7 +63,7 @@ class LineString extends Shape implements GeoJSON{
      * @return A LineString
      */
     static LineString valueOf(List coords) {
-        if(coords.size() < 2) throw new IllegalArgumentException("Coordinates should contain at least 2 entries for a LineString")
+        if(coords.size() < 2) throw new IllegalArgumentException('Coordinates should contain at least 2 entries for a LineString')
 
         List<Point> points = (List<Point>) coords.collect() {
             if(it instanceof Point) {

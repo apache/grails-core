@@ -41,13 +41,13 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.datastore.gorm.transform.OrderedGormTransformation")
-@GormASTTransformationClass("org.grails.events.transform.PublisherTransform")
+@GroovyASTTransformationClass('org.grails.datastore.gorm.transform.OrderedGormTransformation')
+@GormASTTransformationClass('org.grails.events.transform.PublisherTransform')
 @interface Publisher {
     /**
      * @return The id of the event
      */
-    String value() default ""
+    String value() default ''
 
     /**
      * @return The transaction phase to subscribe on
@@ -57,6 +57,6 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass
     /**
      * @return The id of the event to notify in the case of an error
      */
-    String error() default ""
+    String error() default ''
 
 }

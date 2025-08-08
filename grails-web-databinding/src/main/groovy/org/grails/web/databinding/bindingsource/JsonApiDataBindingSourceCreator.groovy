@@ -35,10 +35,10 @@ import grails.web.mime.MimeType
 @CompileStatic
 class JsonApiDataBindingSourceCreator extends JsonDataBindingSourceCreator {
 
-    protected static final String DATA = "data"
-    protected static final String RELATIONSHIPS = "relationships"
-    protected static final String ID = "id"
-    protected static final String ATTRIBUTES = "attributes"
+    protected static final String DATA = 'data'
+    protected static final String RELATIONSHIPS = 'relationships'
+    protected static final String ID = 'id'
+    protected static final String ATTRIBUTES = 'attributes'
 
     @Override
     MimeType[] getMimeTypes() {

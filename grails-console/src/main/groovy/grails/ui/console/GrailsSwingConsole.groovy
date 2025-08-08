@@ -39,7 +39,7 @@ import grails.ui.console.support.GroovyConsoleWebApplicationContext
 class GrailsSwingConsole extends GrailsApp {
 
     static {
-        System.setProperty("java.awt.headless", "false")
+        System.setProperty('java.awt.headless', 'false')
     }
 
     GrailsSwingConsole(Class<?>... sources) {
@@ -53,7 +53,7 @@ class GrailsSwingConsole extends GrailsApp {
     }
 
     void configureApplicationContextClass() {
-        if (ClassUtils.isPresent("jakarta.servlet.ServletContext", Thread.currentThread().contextClassLoader)) {
+        if (ClassUtils.isPresent('jakarta.servlet.ServletContext', Thread.currentThread().contextClassLoader)) {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(GroovyConsoleWebApplicationContext))
         } else {
             setApplicationContextFactory(ApplicationContextFactory.ofContextClass(GroovyConsoleApplicationContext))
@@ -94,7 +94,7 @@ class GrailsSwingConsole extends GrailsApp {
             new GrailsSwingConsole(applicationClass).run(args)
         }
         else {
-            System.err.println("Missing application class name argument")
+            System.err.println('Missing application class name argument')
         }
     }
 }

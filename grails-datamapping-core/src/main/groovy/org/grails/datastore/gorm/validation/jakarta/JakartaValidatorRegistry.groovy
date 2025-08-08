@@ -177,6 +177,6 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
      * @return Whether jakarta.validation is available
      */
     static boolean isAvailable() {
-        ClassUtils.isPresent("jakarta.validation.Validation")
+        ClassUtils.isPresent('jakarta.validation.Validation')
     }
 }

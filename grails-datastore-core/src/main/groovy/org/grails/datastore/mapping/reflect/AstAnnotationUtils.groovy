@@ -38,7 +38,7 @@ import org.codehaus.groovy.ast.expr.Expression
  */
 @CompileStatic
 class AstAnnotationUtils {
-    private static final Set<String> JUNIT_ANNOTATION_NAMES = new HashSet<String>(Arrays.asList("org.junit.jupiter.api.BeforeEach", "org.junit.jupiter.api.AfterEach"))
+    private static final Set<String> JUNIT_ANNOTATION_NAMES = new HashSet<String>(Arrays.asList('org.junit.jupiter.api.BeforeEach', 'org.junit.jupiter.api.AfterEach'))
 
     static AnnotationNode findAnnotation(AnnotatedNode classNode, Class<?> type) {
         List<AnnotationNode> annotations = classNode.getAnnotations()
