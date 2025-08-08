@@ -42,6 +42,8 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaExpression;
 import org.hibernate.transform.ResultTransformer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -63,9 +65,9 @@ import java.util.function.Predicate;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-@Slf4j
+//@Slf4j
 public abstract class AbstractHibernateQuery extends Query {
-
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractHibernateQuery.class);
     public static final String SIZE_CONSTRAINT_PREFIX = "Size";
 
     protected static final String ALIAS = "_alias";
@@ -166,6 +168,10 @@ public abstract class AbstractHibernateQuery extends Query {
         detachedCriteria.add(criterion);
     }
 
+    public void add(DetachedCriteria<?> detachedCriteria) {
+        detachedCriteria.add(new Conjunction(detachedCriteria.getCriteria()));
+    }
+
 
     /**
      * This is called for ORS and is only used by DymamicFinder
@@ -196,11 +202,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query gt(String property, Object value) {
-        if(value instanceof Number number) {
-            detachedCriteria.gt(property, number);
-        } else{
-            throw new ConfigurationException("gte only uses numbers");
-        }
+        detachedCriteria.gt(property, value);
         return this;
     }
 
@@ -276,52 +278,31 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query ge(String property, Object value) {
-        if(value instanceof Number number) {
-            detachedCriteria.ge(property, number);
-        } else{
-            throw new ConfigurationException("gte only uses numbers");
-        }
+        detachedCriteria.ge(property, value);
         return this;
     }
 
     @Override
     public Query le(String property, Object value) {
-        if(value instanceof Number number) {
-            detachedCriteria.le(property, number);
-        } else{
-            throw new ConfigurationException("gte only uses numbers");
-        }
+        detachedCriteria.le(property, value);
         return this;
     }
 
     @Override
     public Query gte(String property, Object value) {
-        if(value instanceof Number number) {
-            detachedCriteria.gte(property, number);
-        } else{
-            throw new ConfigurationException("gte only uses numbers");
-        }
-
+        detachedCriteria.gte(property, value);
         return this;
     }
 
     @Override
     public Query lte(String property, Object value) {
-        if(value instanceof Number number) {
-            detachedCriteria.lte(property, number);
-        } else{
-            throw new ConfigurationException("gte only uses numbers");
-        }
+        detachedCriteria.lte(property, value);
         return this;
     }
 
     @Override
     public Query lt(String property, Object value) {
-        if(value instanceof Number number) {
-            detachedCriteria.lt(property, number);
-        } else{
-            throw new ConfigurationException("gte only uses numbers");
-        }
+        detachedCriteria.lt(property, value);
         return this;
     }
 

@@ -42,6 +42,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
             ["many-to-many (inverse side)"  , Tag_BT            , "posts"   , Post            , NONE.getValue()],
             ["many-to-many (circular superclass)", Mammal, "dogs", Dog, NONE.getValue()],
             ["many-to-one (belongsTo)"      , Book_BT_Default   , "author"  , AW_Default_Bi   , NONE.getValue()],
+            ["many-to-one (unidirectional)" , A                 , "manyToOne", ManyToOne      , SAVE_UPDATE.getValue()],
             ["many-to-one (bidirectional but superclass)"      , Bird   , "canary"  , Canary   , NONE.getValue()],
 
 //             --- Additional Hibernate 6+ specific scenarios ---
@@ -141,6 +142,13 @@ class Buffalo{}
 @Entity class Book_BT_Default { String title; static belongsTo = [author: AW_Default_Bi] }
 @Entity class AW_Default_Bi { static hasMany = [books: Book_BT_Default] }
 
+@Entity
+class A {
+    ManyToOne manyToOne
+}
+@Entity
+class ManyToOne {
+}
 
 
 

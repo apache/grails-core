@@ -11,17 +11,15 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaInPredicate;
-import org.hibernate.query.criteria.JpaJoin;
-import org.hibernate.query.criteria.JpaPath;
 import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.sqm.tree.domain.SqmPath;
-import org.hibernate.query.sqm.tree.domain.SqmSetJoin;
 import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,25 +102,25 @@ public class PredicateGenerator {
                     } else if (criterion instanceof Query.IdEquals c) {
                         return cb.equal(root_.get("id"), c.getValue());
                     } else if (criterion instanceof Query.GreaterThan c) {
-                        return cb.gt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Number) c.getValue());
+                        return cb.gt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
                     } else if (criterion instanceof Query.GreaterThanEquals c) {
-                        return cb.ge(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Number) c.getValue());
+                        return cb.ge(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
                     } else if (criterion instanceof Query.LessThan c) {
-                        return cb.lt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Number) c.getValue());
+                        return cb.lt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
                     } else if (criterion instanceof Query.LessThanEquals c) {
-                        return cb.le(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Number) c.getValue());
+                        return cb.le(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeEquals c) {
                         return cb.equal(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
                     } else if (criterion instanceof Query.SizeNotEquals c) {
                         return cb.notEqual(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
                     } else if (criterion instanceof Query.SizeGreaterThan c) {
-                        return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
-                        return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeLessThan c) {
-                        return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeLessThanEquals c) {
-                        return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.Between c) {
                         if (c.getFrom() instanceof String && c.getTo() instanceof String) {
                             return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (String) c.getFrom(), (String) c.getTo());
@@ -154,13 +152,13 @@ public class PredicateGenerator {
                     } else if (criterion instanceof Query.SizeEquals c) {
                         return cb.equal(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
                     } else if (criterion instanceof Query.SizeGreaterThan c) {
-                        return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
-                        return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeLessThan c) {
-                        return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if (criterion instanceof Query.SizeLessThanEquals c) {
-                        return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), (Number) c.getValue());
+                        return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
                     } else if(criterion instanceof Query.In || criterion instanceof Query.NotIn) {
                         var queryableCriteria = getQueryableCriteriaFromInCriteria(criterion);
                         if (Objects.nonNull(queryableCriteria)) {
@@ -332,4 +330,16 @@ public class PredicateGenerator {
                 .map(expressible ->  expressible.getExpressibleJavaType().getJavaTypeClass())
                 .orElse(null);
     }
+
+    private static Number getNumericValue(Query.PropertyCriterion criterion) {
+        Object value = criterion.getValue();
+        if (value instanceof Number) {
+            return (Number) value;
+        }
+        String operationName = criterion.getClass().getSimpleName();
+        throw new ConfigurationException(
+                String.format("Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
+                        operationName, criterion.getProperty(), (value == null ? "null" : value.getClass().getName())));
+    }
+
 }
