@@ -18,7 +18,6 @@ import org.grails.datastore.gorm.finders.FinderMethod
 import org.hibernate.FlushMode
 import org.hibernate.NonUniqueResultException
 import org.hibernate.Session
-import org.hibernate.jpa.QueryHints
 import org.hibernate.query.NativeQuery
 import org.hibernate.query.Query
 import org.hibernate.query.criteria.JpaPredicate
@@ -27,8 +26,6 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
-import jakarta.persistence.criteria.Expression
-import jakarta.persistence.criteria.Root
 
 /**
  * Abstract implementation of the Hibernate static API for GORM, providing String-based method implementations
@@ -86,6 +83,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D get(Serializable id) {
+
         if (id == null) {
             return null
         }
@@ -151,6 +149,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
                     hibernateSession, persistentEntity, criteria)
             return hibernateHqlQuery.list()
         })
+    }
+
+    protected HibernateQuery createHibernateQuery() {
+        new HibernateQuery(hibernateSession, persistentEntity)
     }
 
     @Override

@@ -94,7 +94,7 @@ class Publication {
 
 @Entity
 class Book {
-
+    static belongsTo = [publication: Publication]
     String title
 }
 

@@ -27,7 +27,6 @@ import spock.lang.Issue
 @Issue('https://github.com/grails/grails-data-mapping/issues/617')
 class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
     void setupSpec() {
-        manager.domainClasses.clear()
         manager.addAllDomainClasses([DomainOne, Task1, TaskLink])
     }
 

@@ -55,13 +55,13 @@ public abstract class Query implements Cloneable{
 
     protected Junction criteria = new Conjunction();
     protected ProjectionList projections = new ProjectionList();
-    protected int max = -1;
-    protected int offset = 0;
+    protected Integer max;
+    protected Integer offset;
     protected List<Order> orderBy = new ArrayList<>();
     protected boolean uniqueResult;
     protected Map<String, FetchType> fetchStrategies = new HashMap<>();
     protected Map<String, JoinType> joinTypes = new HashMap<>();
-    protected Boolean queryCache;
+    protected boolean queryCache;
     protected LockModeType lockResult;
 
     protected Query(Session session, PersistentEntity entity) {

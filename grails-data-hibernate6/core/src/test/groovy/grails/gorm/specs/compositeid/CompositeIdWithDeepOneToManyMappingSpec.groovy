@@ -29,12 +29,10 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 26/01/2017.
  */
-//TODO: CompositeId not working
 class CompositeIdWithDeepOneToManyMappingSpec extends HibernateGormDatastoreSpec {
 
     @Override
     def setupSpec() {
-        manager.domainClasses.clear()
         manager.addAllDomainClasses([GrandParent, Parent, Child])
     }
 

@@ -16,7 +16,6 @@ package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
 import groovy.lang.Closure;
-import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -24,7 +23,6 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -35,7 +33,7 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
-import org.hibernate.MappingException;
+import org.hibernate.FlushMode;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -48,12 +46,12 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -86,6 +84,10 @@ public abstract class AbstractHibernateQuery extends Query {
     protected DetachedCriteria detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
     protected ResultTransformer resultTransformer;
+    private Integer fetchSize;
+    private Integer timeout;
+    private FlushMode flushMode;
+    private Boolean readOnly;
 
     protected AbstractHibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
@@ -411,6 +413,7 @@ public abstract class AbstractHibernateQuery extends Query {
         return super.lock(lock);
     }
 
+
     @Override
     public Query order(Order order) {
         detachedCriteria.order(order);
@@ -441,6 +444,10 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
 
+    public void setFetchSize(int fetchSize) {
+        this.fetchSize = fetchSize;
+    }
+
 
     @Override
     protected void flushBeforeQuery() {
@@ -463,35 +470,6 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
-    private final Predicate<Projection> idProjectionPredicate = projection -> projection instanceof IdProjection;
-    private final Predicate<Projection> distinctProjectionPredicate = projection -> projection instanceof DistinctProjection;
-    private final Predicate<Projection> countProjectionPredicate = projection -> projection instanceof CountProjection;
-    private final Predicate<Projection> countDistinctProjection = projection -> projection instanceof CountDistinctProjection;
-    private final Predicate<Projection> maxProjectionPredicate = projection -> projection instanceof MaxProjection;
-    private final Predicate<Projection> minProjectionPredicate = projection -> projection instanceof MinProjection;
-    private final Predicate<Projection> sumProjectionPredicate = projection -> projection instanceof SumProjection;
-    private final Predicate<Projection> avgProjectionPredicate = projection -> projection instanceof AvgProjection;
-    private final Predicate<Projection> propertyProjectionPredicate = projection -> projection instanceof PropertyProjection;
-
-    @SuppressWarnings("unchecked")
-    Predicate<Projection>[] projectionPredicates = new Predicate[] {
-            idProjectionPredicate
-            , propertyProjectionPredicate
-            , countProjectionPredicate
-            , countDistinctProjection
-            , maxProjectionPredicate
-            , minProjectionPredicate
-            , sumProjectionPredicate
-            , avgProjectionPredicate
-            , distinctProjectionPredicate
-    } ;
-
-    @SafeVarargs
-    private static <T> Predicate<T> combinePredicates(Predicate<T>... predicates) {
-        return Arrays.stream(predicates)
-                .reduce(Predicate::or)
-                .orElse(x -> true);
-    }
 
     protected org.hibernate.query.Query createQuery() {
 
@@ -509,20 +487,16 @@ public abstract class AbstractHibernateQuery extends Query {
         assignOrderBy(cq, tablesByName);
         assignCriteria(cq, cb, root,tablesByName);
 
-        org.hibernate.query.Query query = createQuery(cq);
-        if (this.offset > 0) {
-            query.setFirstResult(this.offset);
-        }
-        query.setHint("org.hibernate.cacheable", queryCache);;
-        if (this.max > -1) {
-            query.setMaxResults(this.max);
-        }
-        if (Objects.nonNull(lockResult)) {
-            query.setLockMode(lockResult);
-        }
-        if (Objects.nonNull(resultTransformer)) {
-            query.setResultTransformer(resultTransformer);
-        }
+        var query = createQuery(cq);
+        Optional.ofNullable(offset).ifPresent(query::setFirstResult);
+        query.setHint("org.hibernate.cacheable", queryCache);
+        Optional.ofNullable(max).ifPresent(query::setMaxResults);
+        Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
+        Optional.ofNullable(resultTransformer).ifPresent(query::setResultTransformer);
+        Optional.ofNullable(fetchSize).ifPresent(query::setFetchSize);
+        Optional.ofNullable(timeout).ifPresent(query::setTimeout);
+        Optional.ofNullable(flushMode).map(mode -> mode.toJpaFlushMode()).ifPresent(query::setFlushMode);
+        Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
         return query;
     }
 
@@ -532,11 +506,6 @@ public abstract class AbstractHibernateQuery extends Query {
                 .createQuery(cq);
     }
 
-
-    @SuppressWarnings("unchecked")
-    private Map<String, JoinType> getDetachedCriteriaJoinTypes() {
-        return detachedCriteria.getJoinTypes();
-    }
 
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Projection> projections) {
         var cb = getCriteriaBuilder();
@@ -557,23 +526,7 @@ public abstract class AbstractHibernateQuery extends Query {
         return detachedCriteria.getCriteria();
     }
 
-    private List<DetachedAssociationCriteria> getDetachedAssociationCriteria() {
-        return getDetachedCriteria()
-                .stream()
-                .map(new DetachedAssociationFunction())
-                .flatMap(List::stream)
-                .toList();
-    }
 
-    private List<String> collectJoinColumns() {
-        List<String> joinColumns = ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
-                .entrySet()
-                .stream()
-                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
-                .map(Map.Entry::getKey)
-                .toList();
-        return joinColumns;
-    }
 
     private List<GroupPropertyProjection> collectGroupProjections() {
         List<GroupPropertyProjection> groupProjections = projections().getProjectionList()
@@ -642,7 +595,7 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     private void assignProjections(List<Projection> projections, CriteriaQuery cq, JpaFromProvider tablesByName) {
-        List<Expression> projectionExpressions = projections
+         var projectionExpressions = projections
                 .stream()
                 .map(projectionToJpaExpression(tablesByName))
                 .filter(Objects::nonNull)
@@ -661,31 +614,30 @@ public abstract class AbstractHibernateQuery extends Query {
             JpaFromProvider tablesByName) {
         var cb = getCriteriaBuilder();
         return projection -> {
-            if (countProjectionPredicate.test(projection)) {
+            if (projection instanceof CountProjection) {
                 return cb.count(tablesByName.getFullyQualifiedPath("root"));
-            } else if (countDistinctProjection.test(projection)) {
-                String propertyName = ((PropertyProjection) projection).getPropertyName();
+            } else if (projection instanceof CountDistinctProjection countDistinctProjection) {
+                var propertyName = countDistinctProjection.getPropertyName();
                 return cb.countDistinct(tablesByName.getFullyQualifiedPath("root." + propertyName));
-            } else if (idProjectionPredicate.test(projection)) {
+            } else if (projection instanceof IdProjection) {
                 return (JpaExpression) tablesByName.getFullyQualifiedPath("root.id");
-            } else if (distinctProjectionPredicate.test(projection)) {
+            } else if (projection instanceof DistinctProjection) {
                 return null;
             } else {
-                String propertyName = ((PropertyProjection) projection).getPropertyName();
+                var propertyName = ((PropertyProjection) projection).getPropertyName();
                 Path path = tablesByName.getFullyQualifiedPath(propertyName);
-                if (maxProjectionPredicate.test(projection)) {
+                if (projection instanceof MaxProjection) {
                     return cb.max(path);
-                } else if (minProjectionPredicate.test(projection)) {
+                } else if (projection instanceof MinProjection) {
                     return cb.min(path);
-                } else if (avgProjectionPredicate.test(projection)) {
+                } else if (projection instanceof AvgProjection) {
                     return cb.avg(path);
-                } else if (sumProjectionPredicate.test(projection)) {
+                } else if (projection instanceof SumProjection) {
                     return cb.sum(path);
-                } else if (propertyProjectionPredicate.test(projection)) { // keep this last!!!
+                } else { // keep this last!!!
                     return (JpaExpression)path;
                 }
             }
-            return null;
         };
     }
 
@@ -720,150 +672,17 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
 
-    protected class HibernateAssociationQuery extends AssociationQuery {
-
-        protected String alias;
-        protected CriteriaQuery assocationCriteria;
-
-        public HibernateAssociationQuery(CriteriaQuery criteria, AbstractHibernateSession session, PersistentEntity associatedEntity, Association association, String alias) {
-            super(session, associatedEntity, association);
-            this.alias = alias;
-            assocationCriteria = criteria;
-        }
-
-
-
-        @Override
-        public Query order(Order order) {
-            return this;
-        }
-
-        @Override
-        public Query isEmpty(String property) {
-            return this;
-        }
-
-
-        @Override
-        public Query isNotEmpty(String property) {
-            return this;
-        }
-
-        @Override
-        public Query isNull(String property) {
-            return this;
-        }
-
-        @Override
-        public Query isNotNull(String property) {
-            return this;
-        }
-
-        @Override
-        public void add(Criterion criterion) {
-        }
-
-        @Override
-        public Junction disjunction() {
-            return null;
-        }
-
-        @Override
-        public Junction negation() {
-            return null;
-        }
-
-        @Override
-        public Query eq(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query idEq(Object value) {
-            return this;
-        }
-
-        @Override
-        public Query gt(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query and(Criterion a, Criterion b) {
-              return this;
-        }
-
-        @Override
-        public Query or(Criterion a, Criterion b) {
-            return this;
-        }
-
-        @Override
-        public Query allEq(Map<String, Object> values) {
-            return this;
-        }
-
-        @Override
-        public Query ge(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query le(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query gte(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query lte(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query lt(String property, Object value) {
-            return this;
-        }
-
-        @Override
-        public Query in(String property, List values) {
-            return this;
-        }
-
-        @Override
-        public Query between(String property, Object start, Object end) {
-            return this;
-        }
-
-        @Override
-        public Query like(String property, String expr) {
-            return this;
-        }
-
-        @Override
-        public Query ilike(String property, String expr) {
-            return this;
-        }
-
-        @Override
-        public Query rlike(String property, String expr) {
-            return this;
-        }
+    public void setTimeout(Integer timeout) {
+        this.timeout = timeout;
     }
 
-    protected class CriteriaAndAlias {
-        protected CriteriaQuery criteria;
-        protected String alias;
-        protected String associationPath;
-
-
-        public CriteriaAndAlias(CriteriaQuery criteria, String alias, String associationPath) {
-            this.criteria = criteria;
-            this.alias = alias;
-            this.associationPath = associationPath;
-        }
+    public void setHibernateFlushMode(FlushMode flushMode) {
+        this.flushMode = flushMode;
     }
+
+    public void setReadOnly(Boolean readOnly) {
+        this.readOnly = readOnly;
+    }
+
+
 }
