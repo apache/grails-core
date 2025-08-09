@@ -197,9 +197,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
     }
 
 
-    public Object scroll() {
-        return createQuery().scroll();
-    }
+
 
     public Query distinct() {
         projections.add(Projections.distinct());

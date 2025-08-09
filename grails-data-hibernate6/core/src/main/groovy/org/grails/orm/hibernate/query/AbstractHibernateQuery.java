@@ -16,13 +16,8 @@ package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
 import groovy.lang.Closure;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Path;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -34,14 +29,11 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.FlushMode;
-import org.hibernate.NonUniqueResultException;
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
-import org.hibernate.query.criteria.JpaExpression;
 import org.hibernate.transform.ResultTransformer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -50,11 +42,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -65,7 +53,6 @@ import java.util.function.Predicate;
 @SuppressWarnings("rawtypes")
 //@Slf4j
 public abstract class AbstractHibernateQuery extends Query {
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractHibernateQuery.class);
     public static final String SIZE_CONSTRAINT_PREFIX = "Size";
 
     protected static final String ALIAS = "_alias";
@@ -440,7 +427,19 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public List list() {
-        return createQuery().getResultList();
+        return getHibernateQueryExecutor().list(getCurrentSession(), getJpaCriteriaQuery());
+    }
+
+    public List list(Session session) {
+        return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
+    }
+
+    private HibernateQueryExecutor getHibernateQueryExecutor() {
+        return new HibernateQueryExecutor(offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, resultTransformer, proxyHandler);
+    }
+
+    public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
+        return new JpaCriteriaQueryCreator(projections, getCriteriaBuilder(), entity, detachedCriteria).createQuery();
     }
 
 
@@ -456,190 +455,26 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Object singleResult() {
-        org.hibernate.query.Query query = createQuery();
-        try {
+        return getHibernateQueryExecutor().singleResult(getCurrentSession(), getJpaCriteriaQuery());
+    }
 
-            Object singleResult = query.getSingleResult();
-            return proxyHandler.unwrap(singleResult);
-        }
-        catch (NonUniqueResultException e) {
-            return proxyHandler.unwrap(query.getResultList().get(0));
-        }
-        catch (jakarta.persistence.NoResultException e) {
-            return null;
-        }
+    public Object singleResult(Session session) {
+        return getHibernateQueryExecutor().singleResult(session, getJpaCriteriaQuery());
+    }
+
+    public Object scroll() {
+        return getHibernateQueryExecutor().scroll(getCurrentSession(), getJpaCriteriaQuery());
+    }
+
+    public Object scroll(Session session) {
+        return getHibernateQueryExecutor().scroll(session, getJpaCriteriaQuery());
     }
 
 
-    protected org.hibernate.query.Query createQuery() {
-
-        var projectionList = collectProjections();
-        var cq = createCriteriaQuery(projectionList);
-        From root = cq.from(entity.getJavaClass());
-        var tablesByName = new JpaFromProvider(detachedCriteria,cq,root);
-
-
-        assignProjections(projectionList, cq, tablesByName);
-
-        List<GroupPropertyProjection> groupProjections = collectGroupProjections();
-        assignGroupBy(groupProjections, root, cq, tablesByName);
-        var cb = getCriteriaBuilder();
-        assignOrderBy(cq, tablesByName);
-        assignCriteria(cq, cb, root,tablesByName);
-
-        var query = createQuery(cq);
-        Optional.ofNullable(offset).ifPresent(query::setFirstResult);
-        query.setHint("org.hibernate.cacheable", queryCache);
-        Optional.ofNullable(max).ifPresent(query::setMaxResults);
-        Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
-        Optional.ofNullable(resultTransformer).ifPresent(query::setResultTransformer);
-        Optional.ofNullable(fetchSize).ifPresent(query::setFetchSize);
-        Optional.ofNullable(timeout).ifPresent(query::setTimeout);
-        Optional.ofNullable(flushMode).map(mode -> mode.toJpaFlushMode()).ifPresent(query::setFlushMode);
-        Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
-        return query;
+    private Session getCurrentSession() {
+        return getSessionFactory().getCurrentSession();
     }
 
-    public org.hibernate.query.Query<?> createQuery(JpaCriteriaQuery<?> cq) {
-        return getSessionFactory()
-                .getCurrentSession()
-                .createQuery(cq);
-    }
-
-
-    private JpaCriteriaQuery<?> createCriteriaQuery(List<Projection> projections) {
-        var cb = getCriteriaBuilder();
-        var cq = projections.stream()
-                .filter( it -> !(it instanceof DistinctProjection || it instanceof DistinctPropertyProjection))
-                .toList().size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
-        projections.stream()
-                .filter( it -> it instanceof DistinctProjection || it instanceof DistinctPropertyProjection)
-                .findFirst()
-                .ifPresent(projection -> {
-                    cq.distinct(true);
-                });
-        return cq;
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Query.Criterion> getDetachedCriteria() {
-        return detachedCriteria.getCriteria();
-    }
-
-
-
-    private List<GroupPropertyProjection> collectGroupProjections() {
-        List<GroupPropertyProjection> groupProjections = projections().getProjectionList()
-                .stream()
-                .filter(GroupPropertyProjection.class::isInstance)
-                .map(GroupPropertyProjection.class::cast)
-                .toList();
-        return groupProjections;
-    }
-
-    private List<Projection> collectProjections() {
-        return projections().getProjectionList()
-                .stream()
-                .filter(new ProjectionPredicate())
-                .toList();
-    }
-
-    private void assignCriteria(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root, JpaFromProvider tablesByName) {
-        List<Criterion>  criteriaList = getDetachedCriteria();
-        if (!criteriaList.isEmpty()) {
-            jakarta.persistence.criteria.Predicate[] predicates = PredicateGenerator.getPredicates(cb, cq, root, criteriaList, tablesByName);
-            cq.where(cb.and(predicates));
-        }
-    }
-
-    private void assignOrderBy(CriteriaQuery cq, JpaFromProvider tablesByName) {
-        var cb = getCriteriaBuilder();
-        List<Order> orders = detachedCriteria.getOrders();
-        if (!orders.isEmpty()) {
-            cq.orderBy(orders
-                    .stream()
-                    .map(order -> {
-                        Path expression = tablesByName.getFullyQualifiedPath(order.getProperty());
-                        if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            if (order.getDirection().equals(Order.Direction.ASC)) {
-                                return cb.asc(cb.lower(expression));
-                            }  else {
-                                return cb.desc(cb.lower(expression));
-                            }
-                        } else {
-                            if (order.getDirection().equals(Order.Direction.ASC)) {
-                                return cb.asc(expression);
-                            }  else {
-                                return cb.desc(expression);
-                            }
-                        }
-
-                    })
-                    .toList()
-            );
-        }
-    }
-
-    private void assignGroupBy(List<GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq, JpaFromProvider tablesByName) {
-        if (!groupProjections.isEmpty()) {
-            List<Expression> groupByPaths = groupProjections
-                    .stream()
-                    .map(groupPropertyProjection -> {
-                        String propertyName = groupPropertyProjection.getPropertyName();
-                        return tablesByName.getFullyQualifiedPath(propertyName);
-                    })
-                    .map(Expression.class::cast)
-                    .toList();
-            cq.groupBy(groupByPaths);
-        }
-    }
-
-    private void assignProjections(List<Projection> projections, CriteriaQuery cq, JpaFromProvider tablesByName) {
-         var projectionExpressions = projections
-                .stream()
-                .map(projectionToJpaExpression(tablesByName))
-                .filter(Objects::nonNull)
-                .map(Expression.class::cast)
-                .toList();
-        if (projectionExpressions.size() == 1) {
-            cq.select(projectionExpressions.get(0));
-        } else if (projectionExpressions.size() > 1){
-            cq.multiselect(projectionExpressions);
-        } else {
-            cq.select(tablesByName.getFullyQualifiedPath("root"));
-        }
-    }
-
-    private Function<Projection, JpaExpression> projectionToJpaExpression(
-            JpaFromProvider tablesByName) {
-        var cb = getCriteriaBuilder();
-        return projection -> {
-            if (projection instanceof CountProjection) {
-                return cb.count(tablesByName.getFullyQualifiedPath("root"));
-            } else if (projection instanceof CountDistinctProjection countDistinctProjection) {
-                var propertyName = countDistinctProjection.getPropertyName();
-                return cb.countDistinct(tablesByName.getFullyQualifiedPath("root." + propertyName));
-            } else if (projection instanceof IdProjection) {
-                return (JpaExpression) tablesByName.getFullyQualifiedPath("root.id");
-            } else if (projection instanceof DistinctProjection) {
-                return null;
-            } else {
-                var propertyName = ((PropertyProjection) projection).getPropertyName();
-                Path path = tablesByName.getFullyQualifiedPath(propertyName);
-                if (projection instanceof MaxProjection) {
-                    return cb.max(path);
-                } else if (projection instanceof MinProjection) {
-                    return cb.min(path);
-                } else if (projection instanceof AvgProjection) {
-                    return cb.avg(path);
-                } else if (projection instanceof SumProjection) {
-                    return cb.sum(path);
-                } else { // keep this last!!!
-                    return (JpaExpression)path;
-                }
-            }
-        };
-    }
 
     private SessionFactory getSessionFactory() {
         return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
@@ -651,6 +486,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
 
     @Override
+    //TODO replace this
     protected List executeQuery(PersistentEntity entity, Junction criteria) {
         return list();
     }

@@ -4,6 +4,9 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import jakarta.persistence.NoResultException
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.Root
+import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
 import org.grails.orm.hibernate.cfg.CompositeIdentity
@@ -18,6 +21,7 @@ import org.grails.datastore.gorm.finders.FinderMethod
 import org.hibernate.FlushMode
 import org.hibernate.NonUniqueResultException
 import org.hibernate.Session
+import org.hibernate.jpa.QueryHints
 import org.hibernate.query.NativeQuery
 import org.hibernate.query.Query
 import org.hibernate.query.criteria.JpaPredicate
@@ -41,6 +45,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected GrailsHibernateTemplate hibernateTemplate
     protected ConversionService conversionService
     protected final HibernateSession hibernateSession
+    ProxyHandler proxyHandler
 
 //    AbstractHibernateGormStaticApi(
 //            Class<D> persistentClass,
@@ -57,6 +62,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         super(persistentClass, datastore, finders, transactionManager)
         this.hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
         this.conversionService = datastore.mappingContext.conversionService
+        this.proxyHandler = datastore.mappingContext.proxyHandler
         this.hibernateSession = new HibernateSession(
                 (HibernateDatastore)datastore,
                 hibernateTemplate.getSessionFactory(),
@@ -121,9 +127,22 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (id == null) {
             return null
         }
+
         
         (D)hibernateTemplate.execute(  { Session session ->
-            return new HibernateQuery(hibernateSession,persistentEntity ).idEq(id).singleResult()
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
+            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
+
+            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+            criteriaQuery = criteriaQuery.where (
+                    //TODO: Remove explicit type cast once GROOVY-9460
+                    criteriaBuilder.equal((Expression<?>)  queryRoot.get(persistentEntity.identity.name), id)
+            )
+            Query criteria = session.createQuery(criteriaQuery)
+                    .setHint(QueryHints.HINT_READONLY, true)
+            HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
+                    hibernateSession, persistentEntity, criteria)
+            return proxyHandler.unwrap( hibernateHqlQuery.singleResult() )
 
         } )
     }

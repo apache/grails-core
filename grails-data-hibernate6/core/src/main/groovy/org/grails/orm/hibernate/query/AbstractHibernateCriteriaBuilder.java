@@ -1176,9 +1176,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 if (distinct) {
                     hibernateQuery.distinct();
                     result = hibernateQuery.list();
-                } else if (scroll) {
-                    result = hibernateQuery.scroll();
                 }
+
+//                else if (scroll) {
+//                    result = hibernateQuery.scroll();
+//                }
                 else if (count) {
                     hibernateQuery.projections().count();
                     result = hibernateQuery.singleResult();
