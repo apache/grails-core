@@ -35,7 +35,7 @@ jobs:
       - name: "🔨 Build"
         working-directory: grails-forge
         run: ./gradlew build
-        with:
+        env:
           TEST_BUILD_REPRODUCIBLE: "true"
   deploy:
     name: "Deploy to Google Cloud Run"
@@ -72,7 +72,7 @@ jobs:
           ./gradlew
           grails-forge-api:test
           grails-forge-web-netty:test
-        with:
+        env:
           TEST_BUILD_REPRODUCIBLE: "true"
       - name: "🔨 Build Docker native image"
         working-directory: grails-forge
@@ -80,7 +80,7 @@ jobs:
           ./gradlew
           grails-forge-web-netty:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-        with:
+        env:
           TEST_BUILD_REPRODUCIBLE: "true"
       - name: "📤 Push Container to Google Cloud Artifact Registry"
         run: |
@@ -126,7 +126,7 @@ jobs:
       - name: "🏃 Run tests"
         working-directory: grails-forge
         run: ./gradlew grails-forge-analytics-postgres:test
-        with:
+        env:
           TEST_BUILD_REPRODUCIBLE: "true"
       - name: "🔨 Build Docker native image"
         working-directory: grails-forge
@@ -134,7 +134,7 @@ jobs:
           ./gradlew
           grails-forge-analytics-postgres:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-        with:
+        env:
           TEST_BUILD_REPRODUCIBLE: "true"
       - name: "📤 Push Container to Google Cloud Artifact Registry"
         run: |
