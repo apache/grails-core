@@ -101,7 +101,7 @@ class QueryEventsSpec extends GrailsDataTckSpec {
         List<AbstractQueryEvent> events = []
 
         int PreExecution,
-            PostExecution
+        PostExecution
 
         @Override
         void onApplicationEvent(ApplicationEvent event) {

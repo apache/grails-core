@@ -300,10 +300,10 @@ public abstract class Query implements Cloneable{
     public Query eq(String property, Object value) {
         Object resolved = resolvePropertyValue(entity, property, value);
         if (resolved == value) {
-           criteria.add(Restrictions.eq(property, value));
+            criteria.add(Restrictions.eq(property, value));
         }
         else {
-           criteria.add(Restrictions.eq(property,resolved));
+            criteria.add(Restrictions.eq(property,resolved));
         }
         return this;
     }

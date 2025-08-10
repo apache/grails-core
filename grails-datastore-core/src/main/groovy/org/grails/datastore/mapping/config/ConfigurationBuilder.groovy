@@ -135,7 +135,7 @@ abstract class ConfigurationBuilder<B, C> {
      * @deprecated use {@link ConfigurationBuilder#buildRecurse(Object, List, Object, String)} instead
      */
     protected void buildRecurse(Object builder, Object fallBackConfig, String startingPrefix) {
-       buildRecurse(builder, new ArrayList<Class>(), fallBackConfig, startingPrefix)
+        buildRecurse(builder, new ArrayList<Class>(), fallBackConfig, startingPrefix)
     }
 
     protected void buildRecurse(Object builder, List<Class> builderQueue, Object fallBackConfig, String startingPrefix) {

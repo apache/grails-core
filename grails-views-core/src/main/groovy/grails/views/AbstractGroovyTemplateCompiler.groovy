@@ -134,7 +134,7 @@ abstract class AbstractGroovyTemplateCompiler {
             }
         }
         finally {
-                threadPool.shutdown()
+            threadPool.shutdown()
         }
 
 

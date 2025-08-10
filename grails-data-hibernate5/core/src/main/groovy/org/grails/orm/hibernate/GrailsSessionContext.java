@@ -126,28 +126,28 @@ public class GrailsSessionContext implements CurrentSessionContext {
         // Use same Session for further Hibernate actions within the transaction.
         // Thread object will get removed by synchronization at transaction completion.
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
-           // We're within a Spring-managed transaction, possibly from JtaTransactionManager.
-           LOG.debug("Registering Spring transaction synchronization for new Hibernate Session");
-           SessionHolder holderToUse = sessionHolder;
-           if (holderToUse == null) {
-              holderToUse = new SessionHolder(session);
-           }
-           else {
-               // it's up to the caller to manage concurrent sessions
-               // holderToUse.addSession(session);
-           }
-           if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
-              session.setHibernateFlushMode(FlushMode.MANUAL);
-           }
-           TransactionSynchronizationManager.registerSynchronization(createSpringSessionSynchronization(holderToUse));
-           holderToUse.setSynchronizedWithTransaction(true);
-           if (holderToUse != sessionHolder) {
-              TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
-           }
+            // We're within a Spring-managed transaction, possibly from JtaTransactionManager.
+            LOG.debug("Registering Spring transaction synchronization for new Hibernate Session");
+            SessionHolder holderToUse = sessionHolder;
+            if (holderToUse == null) {
+                holderToUse = new SessionHolder(session);
+            }
+            else {
+                // it's up to the caller to manage concurrent sessions
+                // holderToUse.addSession(session);
+            }
+            if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+            }
+            TransactionSynchronizationManager.registerSynchronization(createSpringSessionSynchronization(holderToUse));
+            holderToUse.setSynchronizedWithTransaction(true);
+            if (holderToUse != sessionHolder) {
+                TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
+            }
         }
         else {
-           // No Spring transaction management active -> try JTA transaction synchronization.
-           registerJtaSynchronization(session, sessionHolder);
+            // No Spring transaction management active -> try JTA transaction synchronization.
+            registerJtaSynchronization(session, sessionHolder);
         }
 
 /*        // Check whether we are allowed to return the Session.

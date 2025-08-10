@@ -208,13 +208,13 @@ public class CommandLineParser {
                         cl.setEnvironment(ENV_ARGS.get(trimmed));
                     }
                     else {
-                       if (firstArgumentIsCommand) {
-                           cl.setCommandName(trimmed);
-                           firstArgumentIsCommand = false;
-                       }
-                       else {
-                           cl.addRemainingArg(trimmed);
-                       }
+                        if (firstArgumentIsCommand) {
+                            cl.setCommandName(trimmed);
+                            firstArgumentIsCommand = false;
+                        }
+                        else {
+                            cl.addRemainingArg(trimmed);
+                        }
                     }
                 }
             }

@@ -274,8 +274,7 @@ public class CompositeConfig implements Config {
     }
 
     @Override
-    public String
-    getProperty(String key) {
+    public String getProperty(String key) {
         return getProperty(key, String.class);
     }
 }

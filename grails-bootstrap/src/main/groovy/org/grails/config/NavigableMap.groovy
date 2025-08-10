@@ -236,65 +236,65 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         int subscriptStart = sourceKey.indexOf('[')
         int subscriptEnd = sourceKey.indexOf(']')
         if (subscriptEnd > subscriptStart) {
-           if(subscriptStart > -1) {
-               String k = sourceKey[0..<subscriptStart]
-               String index = sourceKey[subscriptStart+1..<subscriptEnd]
-               String remainder = subscriptEnd != sourceKey.length() -1 ? sourceKey[subscriptEnd+2..-1] : null
-               if (remainder) {
+            if(subscriptStart > -1) {
+                String k = sourceKey[0..<subscriptStart]
+                String index = sourceKey[subscriptStart+1..<subscriptEnd]
+                String remainder = subscriptEnd != sourceKey.length() -1 ? sourceKey[subscriptEnd+2..-1] : null
+                if (remainder) {
 
-                   boolean isNumber = index.isNumber()
-                   if (isNumber) {
-                       int i = index.toInteger()
-                       def currentValue = targetMap.get(k)
-                       List list = currentValue instanceof List ? currentValue : []
-                       if (list.size() > i) {
-                           def v = list.get(i)
-                           if (v instanceof Map) {
-                               ((Map)v).put(remainder, sourceValue)
-                           } else {
-                               Map newMap = [:]
-                               newMap.put(remainder, sourceValue)
-                               fill(list, i, null)
-                               list.set(i, newMap)
-                           }
-                       } else {
-                           Map newMap = [:]
-                           newMap.put(remainder, sourceValue)
-                           fill(list, i, null)
-                           list.set(i, newMap)
-                       }
-                       targetMap.put(k, list)
-                   } else {
-                       def currentValue = targetMap.get(k)
-                       Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                       targetMap.put(k, nestedMap)
+                    boolean isNumber = index.isNumber()
+                    if (isNumber) {
+                        int i = index.toInteger()
+                        def currentValue = targetMap.get(k)
+                        List list = currentValue instanceof List ? currentValue : []
+                        if (list.size() > i) {
+                            def v = list.get(i)
+                            if (v instanceof Map) {
+                                ((Map)v).put(remainder, sourceValue)
+                            } else {
+                                Map newMap = [:]
+                                newMap.put(remainder, sourceValue)
+                                fill(list, i, null)
+                                list.set(i, newMap)
+                            }
+                        } else {
+                            Map newMap = [:]
+                            newMap.put(remainder, sourceValue)
+                            fill(list, i, null)
+                            list.set(i, newMap)
+                        }
+                        targetMap.put(k, list)
+                    } else {
+                        def currentValue = targetMap.get(k)
+                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
+                        targetMap.put(k, nestedMap)
 
-                       def v = nestedMap.get(index)
-                       if (v instanceof Map) {
-                           ((Map)v).put(remainder, sourceValue)
-                       } else {
-                           Map newMap = [:]
-                           newMap.put(remainder, sourceValue)
-                           nestedMap.put(index, newMap)
-                       }
-                   }
-               } else {
-                   def currentValue = targetMap.get(k)
-                   if (index.isNumber()) {
-                       List list = currentValue instanceof List ? currentValue : []
-                       int i = index.toInteger()
-                       fill(list, i, null)
-                       list.set(i, sourceValue)
-                       targetMap.put(k, list)
-                   } else {
-                       Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                       targetMap.put(k, nestedMap)
-                       nestedMap.put(index, sourceValue)
-                   }
-                   targetMap.put(sourceKey, sourceValue)
-               }
+                        def v = nestedMap.get(index)
+                        if (v instanceof Map) {
+                            ((Map)v).put(remainder, sourceValue)
+                        } else {
+                            Map newMap = [:]
+                            newMap.put(remainder, sourceValue)
+                            nestedMap.put(index, newMap)
+                        }
+                    }
+                } else {
+                    def currentValue = targetMap.get(k)
+                    if (index.isNumber()) {
+                        List list = currentValue instanceof List ? currentValue : []
+                        int i = index.toInteger()
+                        fill(list, i, null)
+                        list.set(i, sourceValue)
+                        targetMap.put(k, list)
+                    } else {
+                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
+                        targetMap.put(k, nestedMap)
+                        nestedMap.put(index, sourceValue)
+                    }
+                    targetMap.put(sourceKey, sourceValue)
+                }
 
-           }
+            }
         } else {
             Object currentValue = targetMap.containsKey(sourceKey) ? targetMap.get(sourceKey) : null
             Object newValue

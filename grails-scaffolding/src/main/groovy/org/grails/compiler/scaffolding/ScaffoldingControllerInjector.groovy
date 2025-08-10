@@ -90,7 +90,7 @@ class ScaffoldingControllerInjector implements GrailsArtefactClassInjector {
                 def readOnlyExpression = (ConstantExpression) annotationNode?.getMember('readOnly')
                 new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean()?:false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {
-               GrailsASTUtils.error(source, classNode, "Scaffolded controllers (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
+                GrailsASTUtils.error(source, classNode, "Scaffolded controllers (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
             }
         } else if (propertyNode != null) {
             GrailsASTUtils.error(source, propertyNode, /The 'scaffold' property must refer to a domain class./, true)

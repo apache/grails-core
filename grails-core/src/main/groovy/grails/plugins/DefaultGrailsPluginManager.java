@@ -101,9 +101,10 @@ import org.grails.spring.RuntimeSpringConfiguration;
 public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
 
     protected static final Class<?>[] COMMON_CLASSES = {
-            Boolean.class, Byte.class, Character.class, Class.class, Double.class, Float.class,
-            Integer.class, Long.class, Number.class, Short.class, String.class, BigInteger.class,
-            BigDecimal.class, URL.class, URI.class};
+        Boolean.class, Byte.class, Character.class, Class.class, Double.class, Float.class,
+        Integer.class, Long.class, Number.class, Short.class, String.class, BigInteger.class,
+        BigDecimal.class, URL.class, URI.class
+    };
     private static final Log LOG = LogFactory.getLog(DefaultGrailsPluginManager.class);
     private static final String GRAILS_VERSION = "grailsVersion";
     private static final String GRAILS_PLUGIN_SUFFIX = "GrailsPlugin";

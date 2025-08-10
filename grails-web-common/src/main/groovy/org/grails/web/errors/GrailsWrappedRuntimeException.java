@@ -223,14 +223,14 @@ public class GrailsWrappedRuntimeException extends GrailsException {
                         if ((lineNumber > 0 && currentLineNumber == lineNumber - 1) ||
                                 (currentLineNumber == lineNumber)) {
                             buf.append(currentLineNumber)
-                               .append(": ")
-                               .append(currentLine)
-                               .append("\n");
+                                .append(": ")
+                                .append(currentLine)
+                                .append("\n");
                         }
                         else if (currentLineNumber == lineNumber + 1) {
                             buf.append(currentLineNumber)
-                               .append(": ")
-                               .append(currentLine);
+                                .append(": ")
+                                .append(currentLine);
                             break;
                         }
                         currentLine = reader.readLine();

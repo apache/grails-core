@@ -302,7 +302,7 @@ trait PageDelegate implements Navigable, AlertAndConfirmSupport, WaitingSupport,
 
     @Override
     Object withAlert(Map params, Closure actions) {
-         page.withAlert(params, actions)
+        page.withAlert(params, actions)
     }
 
     @Override

@@ -181,7 +181,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
                 sb.append(attrs.get(ATTRIBUTE_BASE));
             } else {
                 GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-            if(webRequest != null) {
+                if(webRequest != null) {
                     sb.append(webRequest.getBaseUrl());
                 }
             }

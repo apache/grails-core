@@ -60,8 +60,8 @@ class LinkTestFilter extends RegexTokenFilter {
         String original = name
 
         if (name == null) {
-           buffer.append(Encoder.escape(result.group(0)))
-           return
+            buffer.append(Encoder.escape(result.group(0)))
+            return
         }
 
         // trim the name and unescape it

@@ -48,21 +48,23 @@ class ConvertersGrailsPlugin extends Plugin {
     ]
 
     @Override
-    Closure doWithSpring() {{->
-        jsonErrorsMarshaller(JsonErrorsMarshaller)
+    Closure doWithSpring() {
+        {->
+            jsonErrorsMarshaller(JsonErrorsMarshaller)
 
-        xmlErrorsMarshaller(XmlErrorsMarshaller)
+            xmlErrorsMarshaller(XmlErrorsMarshaller)
 
-        convertersConfigurationInitializer(ConvertersConfigurationInitializer)
+            convertersConfigurationInitializer(ConvertersConfigurationInitializer)
 
-        errorsXmlMarshallerRegisterer(ObjectMarshallerRegisterer) {
-            marshaller = { XmlErrorsMarshaller om -> }
-            converterClass = XML
+            errorsXmlMarshallerRegisterer(ObjectMarshallerRegisterer) {
+                marshaller = { XmlErrorsMarshaller om -> }
+                converterClass = XML
+            }
+
+            errorsJsonMarshallerRegisterer(ObjectMarshallerRegisterer) {
+                marshaller = { JsonErrorsMarshaller om -> }
+                converterClass = JSON
+            }
         }
-
-        errorsJsonMarshallerRegisterer(ObjectMarshallerRegisterer) {
-            marshaller = { JsonErrorsMarshaller om -> }
-            converterClass = JSON
-        }
-    }}
+    }
 }

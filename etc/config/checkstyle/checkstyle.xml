@@ -48,6 +48,7 @@
             <property name="separated" value="true"/>
             <property name="sortStaticImportsAlphabetically" value="true"/>
         </module>
+        <module name="Indentation"/>
     </module>
 
 </module>

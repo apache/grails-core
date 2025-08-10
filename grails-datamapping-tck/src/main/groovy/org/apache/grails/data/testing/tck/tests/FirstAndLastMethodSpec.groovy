@@ -163,9 +163,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf(
-            value = {
-                System.getProperty('hibernate5.gorm.suite')
-            },
+            value = { System.getProperty('hibernate5.gorm.suite') },
             reason = 'Was previously @Ignore'
     )
     void "Test first and last method with composite key"() {

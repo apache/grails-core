@@ -1065,15 +1065,15 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         protected void addToCriteria(org.hibernate.criterion.Criterion criterion) {
-           if (hibernateJunction != null) {
-               hibernateJunction.add(criterion);
-           }
-           else if(assocationCriteria != null) {
-               assocationCriteria.add(criterion);
-           }
-           else if(detachedAssocationCriteria != null) {
-               detachedAssocationCriteria.add(criterion);
-           }
+            if (hibernateJunction != null) {
+                hibernateJunction.add(criterion);
+            }
+            else if(assocationCriteria != null) {
+                assocationCriteria.add(criterion);
+            }
+            else if(detachedAssocationCriteria != null) {
+                detachedAssocationCriteria.add(criterion);
+            }
         }
 
         @Override

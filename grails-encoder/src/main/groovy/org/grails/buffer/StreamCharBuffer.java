@@ -632,13 +632,13 @@ public class StreamCharBuffer extends GroovyObjectSupport implements Writable, C
 
                 source.encodeTo(appender, encoder);
                 if(flush) {
-                appender.flush();
+                    appender.flush();
                 }
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     private void writeToImpl(Writer target, boolean flushTarget, boolean emptyAfter) throws IOException {
         AbstractChunk current = firstChunk;

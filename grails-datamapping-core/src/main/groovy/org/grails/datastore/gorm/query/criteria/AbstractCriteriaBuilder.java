@@ -98,35 +98,35 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     public void setUniqueResult(boolean uniqueResult) {
         this.uniqueResult = uniqueResult;
-   }
+    }
 
     @Override
-   public Criteria cache(boolean cache) {
-       query.cache(cache);
-       return this;
-   }
+    public Criteria cache(boolean cache) {
+        query.cache(cache);
+        return this;
+    }
 
     @Override
-   public Criteria readOnly(boolean readOnly) {
-       this.readOnly = readOnly;
-       return this;
-   }
+    public Criteria readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+        return this;
+    }
 
     public Criteria join(String property) {
-      query.join(property);
-      return this;
-  }
+        query.join(property);
+        return this;
+    }
 
     public Criteria select(String property) {
-      query.select(property);
-      return this;
-  }
+        query.select(property);
+        return this;
+    }
 
     public Query.ProjectionList id() {
-       if (projectionList != null) {
-           projectionList.id();
-       }
-       return projectionList;
+        if (projectionList != null) {
+            projectionList.id();
+        }
+        return projectionList;
     }
 
     /**
@@ -260,10 +260,10 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @return The PropertyProjection instance
      */
     public ProjectionList avg(String name) {
-       if (projectionList != null) {
-           projectionList.avg(name);
-       }
-       return projectionList;
+        if (projectionList != null) {
+            projectionList.avg(name);
+        }
+        return projectionList;
     }
 
     @Override

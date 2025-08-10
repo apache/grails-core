@@ -363,7 +363,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr event Webflow _eventId parameter
      */
     Closure createLink = { attrs ->
-       return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
+        return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
     }
 
     @CompileStatic

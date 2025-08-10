@@ -57,15 +57,17 @@ Plugin that generates scaffolded controllers and views for a Grails application.
     def loadAfter = ['groovyPages']
 
     @Override
-    Closure doWithSpring() { {->
-        Environment env = Environment.current
-        boolean reloadEnabled = env.isReloadEnabled() || (Metadata.getCurrent().isDevelopmentEnvironmentAvailable() && env == Environment.DEVELOPMENT)
+    Closure doWithSpring() {
+        {->
+            Environment env = Environment.current
+            boolean reloadEnabled = env.isReloadEnabled() || (Metadata.getCurrent().isDevelopmentEnvironmentAvailable() && env == Environment.DEVELOPMENT)
 
-        // Configure a Spring MVC view resolver
-        jspViewResolver(ScaffoldingViewResolver) { bean ->
-            bean.lazyInit = true
-            bean.parent = 'abstractViewResolver'
-            enableReload = reloadEnabled
+            // Configure a Spring MVC view resolver
+            jspViewResolver(ScaffoldingViewResolver) { bean ->
+                bean.lazyInit = true
+                bean.parent = 'abstractViewResolver'
+                enableReload = reloadEnabled
+            }
         }
-    }}
+    }
 }

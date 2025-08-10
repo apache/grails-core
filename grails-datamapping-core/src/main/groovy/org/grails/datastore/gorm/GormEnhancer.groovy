@@ -606,9 +606,9 @@ class GormEnhancer implements Closeable {
         def pt = parameterTypes
         // Hack to workaround http://jira.codehaus.org/browse/GROOVY-4720
         final closureMethod = new ClosureStaticMetaMethod(methodName, cls, tooCall, pt) {
-                    @Override
-                    int getModifiers() { Modifier.PUBLIC }
-                }
+            @Override
+            int getModifiers() { Modifier.PUBLIC }
+        }
         mc.registerInstanceMethod(closureMethod)
     }
 

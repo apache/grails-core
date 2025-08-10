@@ -81,7 +81,7 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
                 def readOnlyExpression = (ConstantExpression) annotationNode.getMember('readOnly')
                 new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean()?:false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {
-               GrailsASTUtils.error(source, classNode, "Scaffolded services (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
+                GrailsASTUtils.error(source, classNode, "Scaffolded services (${classNode.name}) cannot extend other classes: ${currentSuperClass.getName()}", true)
             }
         }
     }

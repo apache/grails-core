@@ -253,11 +253,11 @@ public class JpaQueryBuilder {
     static public int appendCriteriaForOperator(StringBuilder q,
                                                 String logicalName, final String name, int position, String operator, boolean hibernateCompatible) {
         q.append(logicalName)
-         .append(DOT)
-         .append(name)
-         .append(operator)
-         .append(PARAMETER_PREFIX)
-         .append(++position);
+            .append(DOT)
+            .append(name)
+            .append(operator)
+            .append(PARAMETER_PREFIX)
+            .append(++position);
         return position;
     }
 
@@ -336,7 +336,7 @@ public class JpaQueryBuilder {
             }
         });
 
-       queryHandlers.put(Query.EqualsProperty.class, new QueryHandler() {
+        queryHandlers.put(Query.EqualsProperty.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.EqualsProperty eq = (Query.EqualsProperty) criterion;
                 final String propertyName = eq.getProperty();
@@ -349,7 +349,7 @@ public class JpaQueryBuilder {
             }
         });
 
-       queryHandlers.put(Query.NotEqualsProperty.class, new QueryHandler() {
+        queryHandlers.put(Query.NotEqualsProperty.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.PropertyComparisonCriterion eq = (Query.PropertyComparisonCriterion) criterion;
                 final String propertyName = eq.getProperty();
@@ -362,7 +362,7 @@ public class JpaQueryBuilder {
             }
         });
 
-       queryHandlers.put(Query.GreaterThanProperty.class, new QueryHandler() {
+        queryHandlers.put(Query.GreaterThanProperty.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.PropertyComparisonCriterion eq = (Query.PropertyComparisonCriterion) criterion;
                 final String propertyName = eq.getProperty();
@@ -375,7 +375,7 @@ public class JpaQueryBuilder {
             }
         });
 
-       queryHandlers.put(Query.GreaterThanEqualsProperty.class, new QueryHandler() {
+        queryHandlers.put(Query.GreaterThanEqualsProperty.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.PropertyComparisonCriterion eq = (Query.PropertyComparisonCriterion) criterion;
                 final String propertyName = eq.getProperty();
@@ -388,7 +388,7 @@ public class JpaQueryBuilder {
             }
         });
 
-       queryHandlers.put(Query.LessThanProperty.class, new QueryHandler() {
+        queryHandlers.put(Query.LessThanProperty.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.PropertyComparisonCriterion eq = (Query.PropertyComparisonCriterion) criterion;
                 final String propertyName = eq.getProperty();
@@ -401,7 +401,7 @@ public class JpaQueryBuilder {
             }
         });
 
-       queryHandlers.put(Query.LessThanEqualsProperty.class, new QueryHandler() {
+        queryHandlers.put(Query.LessThanEqualsProperty.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.PropertyComparisonCriterion eq = (Query.PropertyComparisonCriterion) criterion;
                 final String propertyName = eq.getProperty();
@@ -602,14 +602,14 @@ public class JpaQueryBuilder {
                 PersistentProperty prop = validateProperty(entity, name, Query.ILike.class);
                 Class propType = prop.getType();
                 whereClause.append("lower(")
-                 .append(logicalName)
-                 .append(DOT)
-                 .append(name)
-                 .append(")")
-                 .append(" like lower(")
-                 .append(PARAMETER_PREFIX)
-                 .append(++position)
-                 .append(")");
+                    .append(logicalName)
+                    .append(DOT)
+                    .append(name)
+                    .append(")")
+                    .append(" like lower(")
+                    .append(PARAMETER_PREFIX)
+                    .append(++position)
+                    .append(")");
                 parameters.add(conversionService.convert( eq.getValue(), propType ));
                 return position;
             }
@@ -779,11 +779,11 @@ public class JpaQueryBuilder {
             // TODO: Allow customization of join strategy!
             String joinType = " INNER JOIN ";
             query.append(joinType)
-             .append(logicalName)
-             .append(DOT)
-             .append(associationName)
-             .append(SPACE)
-             .append(associationName);
+                .append(logicalName)
+                .append(DOT)
+                .append(associationName)
+                .append(SPACE)
+                .append(associationName);
 
             return buildWhereClauseForCriterion(association.getAssociatedEntity(), associationCriteria, query, whereClause, associationName, associationCriteriaList, position, parameters, conversionService, allowJoins, hibernateCompatible);
         }
@@ -814,12 +814,12 @@ public class JpaQueryBuilder {
 
     private static void appendPropertyComparison(StringBuilder q, String logicalName, String propertyName, String otherProperty, String operator) {
         q.append(logicalName)
-         .append(DOT)
-         .append(propertyName)
-         .append(operator)
-         .append(logicalName)
-         .append(DOT)
-         .append(otherProperty);
+            .append(DOT)
+            .append(propertyName)
+            .append(operator)
+            .append(logicalName)
+            .append(DOT)
+            .append(otherProperty);
     }
 
     private static PersistentProperty validateProperty(PersistentEntity entity, String name, Class criterionType) {

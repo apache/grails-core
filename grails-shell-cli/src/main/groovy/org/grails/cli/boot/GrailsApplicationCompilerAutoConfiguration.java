@@ -57,13 +57,14 @@ import org.grails.cli.compiler.grape.DependencyResolutionContext;
  */
 public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-    public static final String[] DEFAULT_IMPORTS = new String[]{
-                                                        "grails.persistence",
-                                                        "grails.gorm",
-                                                        "grails.rest",
-                                                        "grails.artefact",
-                                                        "grails.web",
-                                                        "grails.boot.config" };
+    public static final String[] DEFAULT_IMPORTS = new String[] {
+        "grails.persistence",
+        "grails.gorm",
+        "grails.rest",
+        "grails.artefact",
+        "grails.web",
+        "grails.boot.config"
+    };
     public static final String ENABLE_AUTO_CONFIGURATION = "org.springframework.boot.autoconfigure.EnableAutoConfiguration";
     public static final ClassNode ENABLE_AUTO_CONFIGURATION_CLASS_NODE = ClassHelper.make(ENABLE_AUTO_CONFIGURATION);
     ClassNode lastMatch = null;

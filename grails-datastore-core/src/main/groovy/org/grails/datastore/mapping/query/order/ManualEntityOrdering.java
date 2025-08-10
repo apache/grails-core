@@ -85,7 +85,7 @@ public class ManualEntityOrdering {
     }
 
     public List applyOrder(List results, Query.Order order) {
-       final String name = order.getProperty();
+        final String name = order.getProperty();
 
         final PersistentEntity entity = getEntity();
         PersistentProperty property = entity.getPropertyByName(name);

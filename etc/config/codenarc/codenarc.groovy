@@ -24,6 +24,7 @@ ruleset {
     NoTabCharacter
     DuplicateImport
     ImportFromSamePackage
+    Indentation
     MisorderedStaticImports {
         comesBefore = false
     }

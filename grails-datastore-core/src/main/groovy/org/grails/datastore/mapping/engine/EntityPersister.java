@@ -299,10 +299,10 @@ public abstract class EntityPersister implements Persister {
     * @return true if the operation should be cancelled
     */
     public boolean cancelInsert(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
-       PreInsertEvent event = new PreInsertEvent(session.getDatastore(), persistentEntity, entityAccess);
-       publisher.publishEvent(event);
-       return event.isCancelled();
-   }
+        PreInsertEvent event = new PreInsertEvent(session.getDatastore(), persistentEntity, entityAccess);
+        publisher.publishEvent(event);
+        return event.isCancelled();
+    }
 
     public void firePostInsertEvent(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
         publisher.publishEvent(new PostInsertEvent(
@@ -316,10 +316,10 @@ public abstract class EntityPersister implements Persister {
     * @return true if the operation should be cancelled
     */
     public boolean cancelUpdate(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
-       PreUpdateEvent event = new PreUpdateEvent(session.getDatastore(), persistentEntity, entityAccess);
-       publisher.publishEvent(event);
-       return event.isCancelled();
-   }
+        PreUpdateEvent event = new PreUpdateEvent(session.getDatastore(), persistentEntity, entityAccess);
+        publisher.publishEvent(event);
+        return event.isCancelled();
+    }
 
     /**
      * Fire the beforeDelete event on an entityAccess object and return true if the operation should be cancelled

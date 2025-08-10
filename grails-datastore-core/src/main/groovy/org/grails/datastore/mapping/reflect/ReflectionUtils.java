@@ -76,12 +76,12 @@ public class ReflectionUtils {
     * @param field the field to make accessible
     * @see java.lang.reflect.Field#setAccessible
     */
-   public static void makeAccessible(Field field) {
-       if (!Modifier.isPublic(field.getModifiers()) ||
-               !Modifier.isPublic(field.getDeclaringClass().getModifiers())) {
-           field.setAccessible(true);
-       }
-   }
+    public static void makeAccessible(Field field) {
+        if (!Modifier.isPublic(field.getModifiers()) ||
+                !Modifier.isPublic(field.getDeclaringClass().getModifiers())) {
+            field.setAccessible(true);
+        }
+    }
 
     /**
      * Make the given method accessible, explicitly setting it accessible if necessary.

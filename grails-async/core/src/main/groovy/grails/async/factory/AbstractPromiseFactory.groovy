@@ -133,7 +133,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     protected <T> Promise<T> createPromiseInternal(Closure<T> closure) {
-       return createPromise(closure)
+        return createPromise(closure)
     }
 
     /**

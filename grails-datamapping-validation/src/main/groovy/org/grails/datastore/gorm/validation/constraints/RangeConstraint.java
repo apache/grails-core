@@ -78,8 +78,13 @@ public class RangeConstraint extends AbstractConstraint {
             return;
         }
 
-        Object[] args = new Object[] { constraintPropertyName, constraintOwningClass,
-                propertyValue, range.getFrom(), range.getTo()};
+        Object[] args = new Object[] {
+            constraintPropertyName,
+            constraintOwningClass,
+            propertyValue,
+            range.getFrom(),
+            range.getTo()
+        };
 
         Comparable from = range.getFrom();
         Comparable to = range.getTo();

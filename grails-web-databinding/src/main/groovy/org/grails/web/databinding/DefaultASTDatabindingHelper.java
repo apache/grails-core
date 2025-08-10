@@ -55,28 +55,30 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<ClassNode, Set<String>>();
 
     @SuppressWarnings("serial")
-    private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<ClassNode>() {{
-       add(new ClassNode(Boolean.class));
-       add(new ClassNode(Boolean.TYPE));
-       add(new ClassNode(Byte.class));
-       add(new ClassNode(Byte.TYPE));
-       add(new ClassNode(Character.class));
-       add(new ClassNode(Character.TYPE));
-       add(new ClassNode(Short.class));
-       add(new ClassNode(Short.TYPE));
-       add(new ClassNode(Integer.class));
-       add(new ClassNode(Integer.TYPE));
-       add(new ClassNode(Long.class));
-       add(new ClassNode(Long.TYPE));
-       add(new ClassNode(Float.class));
-       add(new ClassNode(Float.TYPE));
-       add(new ClassNode(Double.class));
-       add(new ClassNode(Double.TYPE));
-       add(new ClassNode(BigInteger.class));
-       add(new ClassNode(BigDecimal.class));
-       add(new ClassNode(String.class));
-       add(new ClassNode(URL.class));
-    }};
+    private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<ClassNode>() {
+        {
+            add(new ClassNode(Boolean.class));
+            add(new ClassNode(Boolean.TYPE));
+            add(new ClassNode(Byte.class));
+            add(new ClassNode(Byte.TYPE));
+            add(new ClassNode(Character.class));
+            add(new ClassNode(Character.TYPE));
+            add(new ClassNode(Short.class));
+            add(new ClassNode(Short.TYPE));
+            add(new ClassNode(Integer.class));
+            add(new ClassNode(Integer.TYPE));
+            add(new ClassNode(Long.class));
+            add(new ClassNode(Long.TYPE));
+            add(new ClassNode(Float.class));
+            add(new ClassNode(Float.TYPE));
+            add(new ClassNode(Double.class));
+            add(new ClassNode(Double.TYPE));
+            add(new ClassNode(BigInteger.class));
+            add(new ClassNode(BigDecimal.class));
+            add(new ClassNode(String.class));
+            add(new ClassNode(URL.class));
+        }
+    };
 
     private static final Set<String> DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT = CollectionUtils.newSet("id", "version", "dateCreated", "lastUpdated");
 

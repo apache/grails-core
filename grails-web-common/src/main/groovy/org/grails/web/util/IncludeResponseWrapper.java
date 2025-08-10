@@ -183,14 +183,14 @@ public class IncludeResponseWrapper extends HttpServletResponseWrapper {
 
     @Override
     public void resetBuffer() {
-       if(isCommitted()) throw new IllegalStateException("Response already committed");
-       if (usingWriter) {
-          charBuffer.reset();
-       }
+        if(isCommitted()) throw new IllegalStateException("Response already committed");
+        if (usingWriter) {
+            charBuffer.reset();
+        }
 
-       if (usingStream) {
-          byteBuffer.reset();
-       }
+        if (usingStream) {
+            byteBuffer.reset();
+        }
     }
 
     @Override

@@ -263,7 +263,7 @@ abstract class AbstractProfile implements Profile {
     @Override
     List<String> getBuildMergeProfileNames() {
         if(buildMerge != null) {
-             return this.buildMerge
+            return this.buildMerge
         }
         else {
             List<String> mergeNames = []
@@ -313,7 +313,7 @@ abstract class AbstractProfile implements Profile {
     }
 
     List<Dependency> getDependencies() {
-            List<Dependency> calculatedDependencies = []
+        List<Dependency> calculatedDependencies = []
         def parents = getExtends()
         for(profile in parents) {
             def dependencies = profile.dependencies
@@ -368,32 +368,32 @@ abstract class AbstractProfile implements Profile {
         Collection<Completer> completers = []
 
         for(Command cmd in commands) {
-           def description = cmd.description
+            def description = cmd.description
 
             def commandNameCompleter = new StringsCompleter(cmd.name)
             if(cmd instanceof Completer) {
-               completers << new ArgumentCompleter(commandNameCompleter, (Completer)cmd)
-           }else {
-               if(description.completer) {
-                   if(description.flags) {
-                       completers  << new ArgumentCompleter(commandNameCompleter,
+                completers << new ArgumentCompleter(commandNameCompleter, (Completer)cmd)
+            }else {
+                if(description.completer) {
+                    if(description.flags) {
+                        completers  << new ArgumentCompleter(commandNameCompleter,
                                                             description.completer,
                                                             new StringsCompleter(description.flags.collect() { CommandArgument arg -> "-$arg.name".toString() }))
-                   }
-                   else {
-                       completers  << new ArgumentCompleter(commandNameCompleter, description.completer)
-                   }
+                    }
+                    else {
+                        completers  << new ArgumentCompleter(commandNameCompleter, description.completer)
+                    }
 
-               }
-               else {
-                   if(description.flags) {
-                       completers  << new ArgumentCompleter(commandNameCompleter, new StringsCompleter(description.flags.collect() { CommandArgument arg -> "-$arg.name".toString() }))
-                   }
-                   else {
-                       completers  << commandNameCompleter
-                   }
-               }
-           }
+                }
+                else {
+                    if(description.flags) {
+                        completers  << new ArgumentCompleter(commandNameCompleter, new StringsCompleter(description.flags.collect() { CommandArgument arg -> "-$arg.name".toString() }))
+                    }
+                    else {
+                        completers  << commandNameCompleter
+                    }
+                }
+            }
         }
 
         return completers

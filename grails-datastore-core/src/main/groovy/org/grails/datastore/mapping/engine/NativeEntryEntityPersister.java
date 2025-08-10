@@ -1030,16 +1030,16 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                                 }
                             }
 
-                                if (association.isBidirectional()) {
-                                    Association inverseSide = association.getInverseSide();
-                                    if (inverseSide != null) {
-                                        EntityAccess inverseAccess = createEntityAccess(inverseSide.getOwner(), associatedObject);
-                                        inverseAccess.setProperty(inverseSide.getName(), obj);
-                                    }
+                            if (association.isBidirectional()) {
+                                Association inverseSide = association.getInverseSide();
+                                if (inverseSide != null) {
+                                    EntityAccess inverseAccess = createEntityAccess(inverseSide.getOwner(), associatedObject);
+                                    inverseAccess.setProperty(inverseSide.getName(), obj);
                                 }
-                                if( association.doesCascade(CascadeType.PERSIST) ) {
-                                    associationPersister.persist(associatedObject);
-                                }
+                            }
+                            if( association.doesCascade(CascadeType.PERSIST) ) {
+                                associationPersister.persist(associatedObject);
+                            }
                         }
                         // handle of standard many-to-one
                         else {

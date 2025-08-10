@@ -253,15 +253,15 @@ class SpecPersistenceListener extends AbstractPersistenceEventListener {
     List<AbstractPersistenceEvent> events = []
 
     int PreDeleteCount,
-        PreInsertCount,
-        PreUpdateCount,
-        PostUpdateCount,
-        PostDeleteCount,
-        PostInsertCount,
-        PreLoadCount,
-        PostLoadCount,
-        SaveOrUpdateCount,
-        ValidationCount
+    PreInsertCount,
+    PreUpdateCount,
+    PostUpdateCount,
+    PostDeleteCount,
+    PostInsertCount,
+    PreLoadCount,
+    PostLoadCount,
+    SaveOrUpdateCount,
+    ValidationCount
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {

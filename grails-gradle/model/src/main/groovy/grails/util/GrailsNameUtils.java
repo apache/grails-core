@@ -170,7 +170,7 @@ public class GrailsNameUtils {
         for (String token : tokens) {
             if (token == null || token.length() == 0) continue;
             buf.append(token.substring(0, 1).toUpperCase())
-               .append(token.substring(1));
+                .append(token.substring(1));
         }
         return buf.toString();
     }

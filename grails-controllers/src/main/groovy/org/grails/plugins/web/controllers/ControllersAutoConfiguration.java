@@ -157,8 +157,8 @@ public class ControllersAutoConfiguration {
         private static final String[] SERVLET_RESOURCE_LOCATIONS = new String[] { "/" };
 
         private static final String[] CLASSPATH_RESOURCE_LOCATIONS = new String[] {
-                "classpath:/META-INF/resources/", "classpath:/resources/",
-                "classpath:/static/", "classpath:/public/"
+            "classpath:/META-INF/resources/", "classpath:/resources/",
+            "classpath:/static/", "classpath:/public/"
         };
 
         private static final String[] RESOURCE_LOCATIONS;

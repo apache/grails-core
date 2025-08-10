@@ -182,12 +182,14 @@ class WebDriverContainerHolder {
     private GebTestManager createTestManager() {
         new SpockGebTestManagerBuilder()
                 .withReportingEnabled(currentConfiguration.reporting)
-                .withBrowserCreator(new Supplier<Browser>() {
-                    @Override
-                    Browser get() {
-                        currentBrowser
-                    }
-                })
+                .withBrowserCreator(
+                        new Supplier<Browser>() {
+                            @Override
+                            Browser get() {
+                                currentBrowser
+                            }
+                        }
+                )
                 .build()
     }
 

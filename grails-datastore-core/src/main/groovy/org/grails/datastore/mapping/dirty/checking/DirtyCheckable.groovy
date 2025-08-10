@@ -62,7 +62,7 @@ trait DirtyCheckable {
      *
      * @param changedProperties The changes.
      */
-     void trackChanges(Map<String, Object> changedProperties) {
+    void trackChanges(Map<String, Object> changedProperties) {
         $changedProperties = changedProperties
     }
 

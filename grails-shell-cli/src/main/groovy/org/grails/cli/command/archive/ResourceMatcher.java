@@ -43,11 +43,23 @@ import org.springframework.util.StringUtils;
  */
 class ResourceMatcher {
 
-    private static final String[] DEFAULT_INCLUDES = { "public/**", "resources/**", "static/**", "templates/**",
-            "META-INF/**", "*" };
+    private static final String[] DEFAULT_INCLUDES = {
+        "public/**",
+        "resources/**",
+        "static/**",
+        "templates/**",
+        "META-INF/**",
+        "*"
+    };
 
-    private static final String[] DEFAULT_EXCLUDES = { ".*", "repository/**", "build/**", "target/**", "**/*.jar",
-            "**/*.groovy" };
+    private static final String[] DEFAULT_EXCLUDES = {
+        ".*",
+        "repository/**",
+        "build/**",
+        "target/**",
+        "**/*.jar",
+        "**/*.groovy"
+    };
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 

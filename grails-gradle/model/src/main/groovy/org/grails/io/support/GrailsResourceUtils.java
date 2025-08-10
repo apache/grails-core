@@ -184,12 +184,12 @@ public class GrailsResourceUtils {
     };
 
     public static final Pattern[] grailsAppResourcePatterns = new Pattern[]{
-            GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
-            GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
-            GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
-            GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
-            GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
-            GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
+        GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
+        GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
+        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
+        GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
+        GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
+        GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
     };
 
     private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<String, Boolean>() {
@@ -285,7 +285,7 @@ public class GrailsResourceUtils {
             return getClassName(resource.getFile().getAbsolutePath());
         }
         catch (IOException e) {
-             return null;
+            return null;
         }
     }
 

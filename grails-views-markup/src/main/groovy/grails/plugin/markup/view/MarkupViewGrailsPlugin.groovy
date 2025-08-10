@@ -61,12 +61,14 @@ class MarkupViewGrailsPlugin extends Plugin {
     // Online location of the plugin's browseable source code.
     def scm = [ url: 'https://github.com/grails/grails-views']
 
-    Closure doWithSpring() { {->
-        markupViewConfiguration(MarkupViewConfiguration)
-        markupTemplateEngine(MarkupViewTemplateEngine, markupViewConfiguration, applicationContext.classLoader)
-        smartMarkupViewResolver(MarkupViewResolver, markupTemplateEngine) {
-            templateResolver = bean(PluginAwareTemplateResolver, markupViewConfiguration)
+    Closure doWithSpring() {
+        {->
+            markupViewConfiguration(MarkupViewConfiguration)
+            markupTemplateEngine(MarkupViewTemplateEngine, markupViewConfiguration, applicationContext.classLoader)
+            smartMarkupViewResolver(MarkupViewResolver, markupTemplateEngine) {
+                templateResolver = bean(PluginAwareTemplateResolver, markupViewConfiguration)
+            }
+            markupViewResolver(GenericGroovyTemplateViewResolver, smartMarkupViewResolver)
         }
-        markupViewResolver(GenericGroovyTemplateViewResolver, smartMarkupViewResolver)
-    } }
+    }
 }

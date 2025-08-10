@@ -48,7 +48,7 @@ class ClasspathCommandResourceResolver implements CommandResourceResolver {
         PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver(classLoader)
 
         try {
-           resources = []
+            resources = []
             for(String ext in matchingFileExtensions) {
                 resources.addAll resourcePatternResolver.getResources("classpath*:META-INF/commands/*.$ext").toList()
             }

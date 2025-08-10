@@ -58,7 +58,7 @@ class JspTagLibImpl implements JspTagLib {
         if (tag) {
             Object[] args = (Object[])argsParam
             if(args == null || args.length==0) {
-                 args = [[:]] as Object[]
+                args = [[:]] as Object[]
             }
 
             Map<String, Object> attrs = args[0] instanceof Map ? (Map)args[0] : [:]

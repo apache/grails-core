@@ -113,10 +113,11 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         // populate the default method expressions
         try {
             Class[] classes = {
-                      Equal.class, NotEqual.class, NotInList.class, InList.class, InRange.class, Between.class, Like.class, Ilike.class, Rlike.class,
-                      GreaterThanEquals.class, LessThanEquals.class, GreaterThan.class,
-                      LessThan.class, IsNull.class, IsNotNull.class, IsEmpty.class,
-                      IsEmpty.class, IsNotEmpty.class };
+                Equal.class, NotEqual.class, NotInList.class, InList.class, InRange.class, Between.class, Like.class, Ilike.class, Rlike.class,
+                GreaterThanEquals.class, LessThanEquals.class, GreaterThan.class,
+                LessThan.class, IsNull.class, IsNotNull.class, IsEmpty.class,
+                IsEmpty.class, IsNotEmpty.class
+            };
             Class[] constructorParamTypes = { Class.class, String.class };
             for (Class c : classes) {
                 methodExpressions.put(c.getSimpleName(), c.getConstructor(constructorParamTypes));

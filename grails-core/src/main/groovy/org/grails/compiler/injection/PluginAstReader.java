@@ -154,7 +154,7 @@ class PluginAstReader {
         }
 
         public Object getProperty(String property) {
-           return attributes.get(property);
+            return attributes.get(property);
         }
 
         public String getFullName() {

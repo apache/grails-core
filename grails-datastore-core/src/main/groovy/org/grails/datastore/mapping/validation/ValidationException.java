@@ -82,9 +82,9 @@ public class ValidationException extends DataIntegrityViolationException {
 
         for (ObjectError error : errors.getAllErrors()) {
             b.append(ls)
-             .append(" - ")
-             .append(error)
-             .append(ls);
+                .append(" - ")
+                .append(error)
+                .append(ls);
         }
         return b.toString();
     }

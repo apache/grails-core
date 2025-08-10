@@ -274,7 +274,7 @@ public class GrailsASTUtils {
      * @return The added method node or null if it couldn't be added
      */
     public static MethodNode addDelegateInstanceMethod(ClassNode classNode, Expression delegate, MethodNode declaredMethod) {
-       return addDelegateInstanceMethod(classNode, delegate, declaredMethod, null, true);
+        return addDelegateInstanceMethod(classNode, delegate, declaredMethod, null, true);
     }
     public static MethodNode addDelegateInstanceMethod(ClassNode classNode, Expression delegate, MethodNode declaredMethod, AnnotationNode markerAnnotation) {
         return addDelegateInstanceMethod(classNode, delegate, declaredMethod, markerAnnotation, true);
@@ -1451,7 +1451,7 @@ public class GrailsASTUtils {
         for(final AnnotationNode node : annotationsToCopy) {
             String annotationClassName = node.getClassNode().getName();
             if((excluded==null || !excluded.contains(annotationClassName)) &&
-               (included==null || included.contains(annotationClassName))) {
+                (included==null || included.contains(annotationClassName))) {
                 final AnnotationNode copyOfAnnotationNode = cloneAnnotation(node);
                 to.addAnnotation(copyOfAnnotationNode);
             }
@@ -1472,7 +1472,7 @@ public class GrailsASTUtils {
             final AnnotationNode node = iterator.next();
             String annotationClassName = node.getClassNode().getName();
             if((classNamesToRemove==null || classNamesToRemove.contains(annotationClassName)) &&
-               (classNamesToRetain==null || !classNamesToRetain.contains(annotationClassName))) {
+                (classNamesToRetain==null || !classNamesToRetain.contains(annotationClassName))) {
                 iterator.remove();
             }
         }

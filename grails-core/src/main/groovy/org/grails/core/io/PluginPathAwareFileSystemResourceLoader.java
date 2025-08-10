@@ -49,7 +49,7 @@ public class PluginPathAwareFileSystemResourceLoader extends FileSystemResourceL
 
         String resourcePath = path;
         if (resourcePath.startsWith(WEB_APP_DIRECTORY)) {
-             resourcePath = resourcePath.substring("web-app".length(),resourcePath.length());
+            resourcePath = resourcePath.substring("web-app".length(),resourcePath.length());
         }
         Resource res = resourceLocator.findResourceForURI(resourcePath);
         if (res != null) {

@@ -208,7 +208,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
     private void setNullable(ConstrainedProperty constraint) {
         ConstrainedProperty constrainedProperty = constraint;
         if(!constrainedProperty.isNullable()) {
-               constrainedProperty.applyConstraint(ConstrainedProperty.NULLABLE_CONSTRAINT, true);
+            constrainedProperty.applyConstraint(ConstrainedProperty.NULLABLE_CONSTRAINT, true);
         }
     }
 

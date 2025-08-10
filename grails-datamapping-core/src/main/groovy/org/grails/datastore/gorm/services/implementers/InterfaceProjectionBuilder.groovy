@@ -77,8 +77,8 @@ trait InterfaceProjectionBuilder {
     MethodNode buildInterfaceImpl(ClassNode interfaceNode, ClassNode declaringClass, ClassNode targetDomainClass, MethodNode abstractMethodNode) {
         List<Expression> getterNames = (List<Expression>) AstPropertyResolveUtils.getPropertyNames(interfaceNode)
                 .collect() {
-            new ConstantExpression(NameUtils.getGetterName(it))
-        }
+                    new ConstantExpression(NameUtils.getGetterName(it))
+                }
         String innerClassName = "${declaringClass.name}\$${interfaceNode.nameWithoutPackage}"
         InnerClassNode innerClassNode = (InnerClassNode) declaringClass.innerClasses.find { InnerClassNode inner -> inner.name == innerClassName }
 

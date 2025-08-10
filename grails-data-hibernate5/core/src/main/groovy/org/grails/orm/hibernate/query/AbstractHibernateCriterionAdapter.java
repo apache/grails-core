@@ -542,7 +542,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             else if (subCriterion instanceof FunctionCallingCriterion) {
                 Criterion sqlRestriction = hibernateCriteria.getRestrictionForFunctionCall((FunctionCallingCriterion) subCriterion, entity);
                 if (sqlRestriction != null) {
-                   conjunction.add(sqlRestriction);
+                    conjunction.add(sqlRestriction);
                 }
             }
         }

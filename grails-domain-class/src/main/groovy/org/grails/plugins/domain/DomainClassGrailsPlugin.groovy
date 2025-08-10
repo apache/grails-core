@@ -42,19 +42,21 @@ class DomainClassGrailsPlugin extends Plugin {
     def dependsOn = [i18n:version]
     def loadAfter = ['controllers', 'dataSource']
 
-    Closure doWithSpring() {{->
-        GrailsApplication application = grailsApplication
-        validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
-            bean.lazyInit = true
+    Closure doWithSpring() {
+        {->
+            GrailsApplication application = grailsApplication
+            validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
+                bean.lazyInit = true
+            }
+            "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref('validateableConstraintsEvaluator'))  { bean ->
+                bean.lazyInit = true
+            }
+            grailsDomainClassMappingContext(DefaultMappingContextFactoryBean, application, applicationContext)  { bean ->
+                bean.lazyInit = true
+            }
+            gormValidatorRegistry(ValidatorRegistryFactoryBean)  { bean ->
+                bean.lazyInit = true
+            }
         }
-        "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref('validateableConstraintsEvaluator'))  { bean ->
-            bean.lazyInit = true
-        }
-        grailsDomainClassMappingContext(DefaultMappingContextFactoryBean, application, applicationContext)  { bean ->
-            bean.lazyInit = true
-        }
-        gormValidatorRegistry(ValidatorRegistryFactoryBean)  { bean ->
-            bean.lazyInit = true
-        }
-    }}
+    }
 }

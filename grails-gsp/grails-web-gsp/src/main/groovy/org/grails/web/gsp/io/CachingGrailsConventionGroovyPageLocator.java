@@ -81,19 +81,19 @@ public class CachingGrailsConventionGroovyPageLocator extends GrailsConventionGr
 
     @Override
     public GroovyPageScriptSource findPage(final String uri) {
-       if (uri == null) return null;
+        if (uri == null) return null;
 
-       Callable<GroovyPageScriptSource> updater = new Callable<GroovyPageScriptSource>() {
-           public GroovyPageScriptSource call() {
-               GroovyPageScriptSource scriptSource = CachingGrailsConventionGroovyPageLocator.super.findPage(uri);
-               if (scriptSource == null) {
-                   scriptSource = NULL_SCRIPT;
-               }
-               return scriptSource;
-           }
-       };
+        Callable<GroovyPageScriptSource> updater = new Callable<GroovyPageScriptSource>() {
+            public GroovyPageScriptSource call() {
+                GroovyPageScriptSource scriptSource = CachingGrailsConventionGroovyPageLocator.super.findPage(uri);
+                if (scriptSource == null) {
+                    scriptSource = NULL_SCRIPT;
+                }
+                return scriptSource;
+            }
+        };
 
-       return lookupCache(GroovyPageLocatorCacheKey.build(uri, null, null), updater);
+        return lookupCache(GroovyPageLocatorCacheKey.build(uri, null, null), updater);
     }
 
     @SuppressWarnings("rawtypes")

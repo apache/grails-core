@@ -63,7 +63,7 @@ class Polygon extends Shape implements GeoJSON{
      * @return The list
      */
     List<List<List<Double>>> asList() {
-         points.collect() { List<Point> ring ->
+        points.collect() { List<Point> ring ->
             ring.collect { Point p ->
                 p.asList()
             }
@@ -92,13 +92,13 @@ class Polygon extends Shape implements GeoJSON{
          * (3) List<List<Point> - a multi-ring polygon
          * (4) List<List<List<Double> - a multi-ring polygon with list as long/lat/alt
          */
-         try
-         {
+        try
+        {
             if(coords[0] instanceof Point){
                 return new Polygon( [fromSingleCoordsList(coords)] ) // case (1) above
-             }
-             else if(coords[0] instanceof List )
-             {
+            }
+            else if(coords[0] instanceof List )
+            {
                 if( ((List)coords[0])[0] instanceof Number) {
                     return new Polygon( [fromSingleCoordsList(coords)] ) // case (2) above
                 }
@@ -117,14 +117,14 @@ class Polygon extends Shape implements GeoJSON{
                 else {
                     throw new IllegalArgumentException('Coordinate list must be Points or number-lists')
                 }
-             }
-             else {
+            }
+            else {
                 throw new IllegalArgumentException('Coordinate list must be Points or number-lists')
-             }
-         }
-         catch(IndexOutOfBoundsException ioobe){
+            }
+        }
+        catch(IndexOutOfBoundsException ioobe){
             throw new IllegalArgumentException('Coordinate lists cannot be empty')
-         }
+        }
 
     }
 

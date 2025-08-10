@@ -266,7 +266,7 @@ public class JsonWriter extends AbstractBsonWriter {
                     writer.write(escaped);
                     writer.write(JsonToken.FORWARD_SLASH);
                     writer.write(regularExpression.getOptions());
-                break;
+                    break;
             }
         } catch (IOException e) {
             throwBsonException(e);

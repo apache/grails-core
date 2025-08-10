@@ -60,14 +60,12 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
         int hashCode() {
             final int prime = 31
             int result = 1
-            result = prime * result
-                    + ((simpleKey == null) ? 0 : simpleKey.hashCode())
-            result = prime * result
-                    + ((targetClassName == null) ? 0 : targetClassName
-                            .hashCode())
-            result = prime * result
-                    + ((targetMethodName == null) ? 0 : targetMethodName
-                            .hashCode())
+            result = prime * result +
+                    ((simpleKey == null) ? 0 : simpleKey.hashCode())
+            result = prime * result +
+                    ((targetClassName == null) ? 0 : targetClassName.hashCode())
+            result = prime * result +
+                    ((targetMethodName == null) ? 0 : targetMethodName.hashCode())
             result = prime * result + targetObjectHashCode
             return result
         }

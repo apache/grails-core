@@ -96,9 +96,9 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
 
     private void initializeDomainClassFetchers() {
         this.domainClassFetchers = new ArrayList<DomainClassFetcher>() {{
-            add(new ByGrailsApplicationDomainClassFetcher(application));
-            add(new ByDatasourceDomainClassFetcher());
-        }};
+                add(new ByGrailsApplicationDomainClassFetcher(application));
+                add(new ByDatasourceDomainClassFetcher());
+            }};
     }
 
     public boolean isIncludeVersion() {

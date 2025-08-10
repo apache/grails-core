@@ -422,7 +422,7 @@ public abstract class DatastoreUtils {
             sessionHolder.removeSession(session);
         }
         else {
-          TransactionSynchronizationManager.unbindResource(session.getDatastore());
+            TransactionSynchronizationManager.unbindResource(session.getDatastore());
         }
 
         closeSessionOrRegisterDeferredClose(session, session.getDatastore());

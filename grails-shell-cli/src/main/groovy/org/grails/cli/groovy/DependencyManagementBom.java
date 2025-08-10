@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
  * @since 1.3.0
  */
 @Target({ ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.LOCAL_VARIABLE, ElementType.METHOD,
-        ElementType.PARAMETER, ElementType.TYPE })
+            ElementType.PARAMETER, ElementType.TYPE })
 @Retention(RetentionPolicy.SOURCE)
 @Documented
 public @interface DependencyManagementBom {

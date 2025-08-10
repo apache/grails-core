@@ -576,8 +576,8 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      */
     public void clearCache() {
         logger.debug("Clearing entire resource bundle cache");
-            this.cachedProperties.clear();
-            this.cachedMergedProperties.clear();
+        this.cachedProperties.clear();
+        this.cachedMergedProperties.clear();
         this.cachedFilenames.clear();
         this.cachedResources.clear();
     }

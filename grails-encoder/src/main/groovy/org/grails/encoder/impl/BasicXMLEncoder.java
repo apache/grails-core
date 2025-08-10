@@ -69,23 +69,23 @@ public class BasicXMLEncoder extends AbstractCharReplacementEncoder {
      */
     @Override
     protected String escapeCharacter(char ch, char previousChar) {
-      if(ch < ' ' && ch != '\t' && ch != '\n' && ch != '\r') {
-          return "";
-      }
-      switch(ch) {
-          case '&': return ESCAPED_AMP;
-          case '<': return ESCAPED_LT;
-          case '>': return ESCAPED_GT;
-          case '"': return ESCAPED_QUOTE;
-          case '\'': return  ESCAPED_APOS;
-          case '\\': return  ESCAPED_BACKSLASH;
-          case '@': return ESCAPED_AT;
-          case '`': return ESCAPED_BACKTICK;
-          case NBSP: return ESCAPED_NON_BREAKING_SPACE;
-          case LINE_SEPARATOR: return ESCAPED_LINE_SEPARATOR;
-          case PARAGRAPH_SEPARATOR: return ESCAPED_PARAGRAPH_SEPARATOR;
-      }
-      return null;
+        if(ch < ' ' && ch != '\t' && ch != '\n' && ch != '\r') {
+            return "";
+        }
+        switch(ch) {
+            case '&': return ESCAPED_AMP;
+            case '<': return ESCAPED_LT;
+            case '>': return ESCAPED_GT;
+            case '"': return ESCAPED_QUOTE;
+            case '\'': return  ESCAPED_APOS;
+            case '\\': return  ESCAPED_BACKSLASH;
+            case '@': return ESCAPED_AT;
+            case '`': return ESCAPED_BACKTICK;
+            case NBSP: return ESCAPED_NON_BREAKING_SPACE;
+            case LINE_SEPARATOR: return ESCAPED_LINE_SEPARATOR;
+            case PARAGRAPH_SEPARATOR: return ESCAPED_PARAGRAPH_SEPARATOR;
+        }
+        return null;
     }
 
     @Override

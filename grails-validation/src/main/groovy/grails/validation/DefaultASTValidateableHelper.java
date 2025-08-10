@@ -185,10 +185,10 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
         final List<FieldNode> allFields = classNode.getFields();
         for (final FieldNode field : allFields) {
             if (!field.isStatic()) {
-                    final PropertyNode property = classNode.getProperty(field.getName());
-                    if(property != null) {
-                        fieldsToConstrain.put(field.getName(), field.getType());
-                    }
+                final PropertyNode property = classNode.getProperty(field.getName());
+                if(property != null) {
+                    fieldsToConstrain.put(field.getName(), field.getType());
+                }
             }
         }
         final Map<String, MethodNode> declaredMethodsMap = classNode.getDeclaredMethodsMap();

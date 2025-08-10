@@ -114,7 +114,7 @@ trait TagLibraryInvoker extends WebAttributes{
      * @param propertyName The property name
      * @return The namespace or a MissingPropertyException
      */
-     Object propertyMissing(String propertyName) {
+    Object propertyMissing(String propertyName) {
         TagLibraryLookup lookup = getTagLibraryLookup()
         NamespacedTagDispatcher namespacedTagDispatcher = lookup?.lookupNamespaceDispatcher(propertyName)
         if (namespacedTagDispatcher) {

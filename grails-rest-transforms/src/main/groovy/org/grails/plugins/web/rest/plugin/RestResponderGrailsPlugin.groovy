@@ -47,16 +47,18 @@ class RestResponderGrailsPlugin extends Plugin {
     GrailsApplication grailsApplication
 
     @Override
-    Closure doWithSpring() {{->
+    Closure doWithSpring() {
+        {->
 
-        def application = grailsApplication
-        RestResponderGrailsPlugin.registryResourceControllers(application)
+            def application = grailsApplication
+            RestResponderGrailsPlugin.registryResourceControllers(application)
 
-        rendererRegistry(DefaultRendererRegistry) { bean ->
-            bean.lazyInit = true
-            modelSuffix = application.config.getProperty(Settings.SCAFFOLDING_DOMAIN_SUFFIX, '')
+            rendererRegistry(DefaultRendererRegistry) { bean ->
+                bean.lazyInit = true
+                modelSuffix = application.config.getProperty(Settings.SCAFFOLDING_DOMAIN_SUFFIX, '')
+            }
         }
-    }}
+    }
 
     @Override
     void onChange(Map<String, Object> event) {

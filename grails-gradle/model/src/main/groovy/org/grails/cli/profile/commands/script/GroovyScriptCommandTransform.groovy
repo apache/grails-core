@@ -116,7 +116,7 @@ class GroovyScriptCommandTransform implements ASTTransformation {
                                                 break
                                             default:
                                                 constructDescription = new MethodCallExpression(constructDescription, mce.methodAsString, methodCallArgs)
-                                            break
+                                                break
 
                                         }
                                     }

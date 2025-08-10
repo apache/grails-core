@@ -279,7 +279,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             return type == String ? key.toString() : key
         }
         else if (UUID.isAssignableFrom(type)) {
-          return UUID.randomUUID()
+            return UUID.randomUUID()
         }
         else {
             try {

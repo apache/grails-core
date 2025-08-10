@@ -85,7 +85,7 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
     }
 
     protected Object handleInvocationFallback(Object self, Method thisMethod, Object[] args) {
-       return INVOKE_IMPLEMENTATION;
+        return INVOKE_IMPLEMENTATION;
     }
 
     protected Object invokeEntityProxyMethods(Object self, String methodName, Object[] args) {

@@ -243,7 +243,7 @@ class GroovyPageCompiler {
             }
         }
         else {
-           compileGSPResults[viewuri] = fullClassName
+            compileGSPResults[viewuri] = fullClassName
         }
 
         return compileGSPResults

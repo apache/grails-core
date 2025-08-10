@@ -119,10 +119,10 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
                 hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
             }
 
-           if (!StringUtils.hasText(hibernateDialectClassName)) {
+            if (!StringUtils.hasText(hibernateDialectClassName)) {
                 throw new CouldNotDetermineHibernateDialectException(
                         "Could not determine Hibernate dialect for database name [" + dbName + "]!");
-           }
+            }
         } finally {
             DataSourceUtils.releaseConnection(connection,dataSource);
         }

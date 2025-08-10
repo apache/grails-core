@@ -164,6 +164,6 @@ class Promises {
      * @see PromiseFactory#createBoundPromise(java.lang.Object)
      */
     static<T> Promise<T> createBoundPromise(T value) {
-       return getPromiseFactory().createBoundPromise(value)
+        return getPromiseFactory().createBoundPromise(value)
     }
 }

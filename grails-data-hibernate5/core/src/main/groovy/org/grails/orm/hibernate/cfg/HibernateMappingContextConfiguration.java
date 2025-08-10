@@ -92,9 +92,10 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     private static final String RESOURCE_PATTERN = "/**/*.class";
 
     private static final TypeFilter[] ENTITY_TYPE_FILTERS = new TypeFilter[] {
-            new AnnotationTypeFilter(Entity.class, false),
-            new AnnotationTypeFilter(Embeddable.class, false),
-            new AnnotationTypeFilter(MappedSuperclass.class, false)};
+        new AnnotationTypeFilter(Entity.class, false),
+        new AnnotationTypeFilter(Embeddable.class, false),
+        new AnnotationTypeFilter(MappedSuperclass.class, false)
+    };
 
     protected String sessionFactoryBeanName = "sessionFactory";
     protected String dataSourceName = ConnectionSource.DEFAULT;

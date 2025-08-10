@@ -259,8 +259,8 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
                 int j = tagContent.indexOf(replaceFlag);
                 if (j > -1) {
                     buf.append(tagContent.substring(0,j))
-                       .append(body)
-                       .append(tagContent.substring(j + replaceFlag.length(), tagContent.length()));
+                        .append(body)
+                        .append(tagContent.substring(j + replaceFlag.length(), tagContent.length()));
                     tagContent = buf.toString();
                     if (tagContent != null) {
                         try {

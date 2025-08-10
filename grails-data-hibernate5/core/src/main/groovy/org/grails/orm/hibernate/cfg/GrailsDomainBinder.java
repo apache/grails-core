@@ -209,7 +209,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 metadataCollector
         );
 
-            java.util.Collection<PersistentEntity> persistentEntities = hibernateMappingContext.getPersistentEntities();
+        java.util.Collection<PersistentEntity> persistentEntities = hibernateMappingContext.getPersistentEntities();
         for (PersistentEntity persistentEntity : persistentEntities) {
             if(!persistentEntity.getJavaClass().isAnnotationPresent(Entity.class)) {
                 if(ConnectionSourcesSupport.usesConnectionSource(persistentEntity, dataSourceName) && persistentEntity.isRoot()) {
