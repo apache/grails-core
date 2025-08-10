@@ -52,3 +52,12 @@ tasks.named('codenarcTest') {
     group = 'verification'
     enabled = false // Do not check test sources at this time
 }
+
+gradle.taskGraph.whenReady {
+    if (tasks.findByName('codenarcIntegrationTest')) {
+        tasks.named('codenarcIntegrationTest') {
+            group = 'verification'
+            enabled = false // Do not check test sources at this time
+        }
+    }
+}
