@@ -23,24 +23,18 @@
 version = projectVersion
 group = 'this.will.be.overridden'
 
-if (isReleaseVersion) {
-    apply plugin: 'io.github.gradle-nexus.publish-plugin'
+def publishedProjects = [
+        'grails-gradle-bom',
+        'grails-docs-core',
+        'grails-gradle-model',
+        'grails-gradle-plugins',
+        'grails-gradle-tasks',
+]
 
-    nexusPublishing {
-        String projectDescription = System.getenv('NEXUS_PUBLISH_DESCRIPTION')
-        if (projectDescription) {
-            repositoryDescription = "${projectDescription}"
-        }
-        repositories {
-            sonatype {
-                if (System.getenv('NEXUS_PUBLISH_URL')) {
-                    nexusUrl = uri(System.getenv('NEXUS_PUBLISH_URL'))
-                }
-                username = System.getenv('NEXUS_PUBLISH_USERNAME')
-                password = System.getenv('NEXUS_PUBLISH_PASSWORD')
-                stagingProfileId = System.getenv('NEXUS_PUBLISH_STAGING_PROFILE_ID')
-            }
-        }
+subprojects {
+    if (name in publishedProjects) {
+        // This has to be applied here in the root project due to the nexus plugin requirements
+        apply plugin: 'org.apache.grails.gradle.grails-publish'
     }
 }
 

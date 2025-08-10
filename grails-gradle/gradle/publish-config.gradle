@@ -16,9 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 import org.gradle.crypto.checksum.Checksum
+import org.apache.grails.gradle.publish.GrailsPublishExtension
 
 apply plugin: 'org.gradle.crypto.checksum'
+
+extensions.configure(GrailsPublishExtension) {
+    // Explicit `it` is required here
+    it.artifactId = findProperty('pomArtifactId') ?: project.name
+    it.githubSlug = findProperty('githubSlug')
+    it.license.name = 'Apache-2.0'
+    it.title = findProperty('pomTitle') ?: 'Grails® framework'
+    it.desc = findProperty('pomDescription') ?: 'Grails Web Application Framework'
+    it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher', jeffscottbrown: 'Jeff Scott Brown', puneetbehl: 'Puneet Behl']
+    it.pomCustomization = findProperty('pomCustomization') as Closure
+    it.publishTestSources = findProperty('pomPublishTestSources') ?: false
+    it.testRepositoryPath = rootProject.layout.projectDirectory.dir('../build/local-maven')
+    it.publicationName = findProperty('pomMavenPublicationName') ?: 'maven'
+    it.addComponents = project.name != 'grails-gradle-plugins'
+}
 
 afterEvaluate {
     if (plugins.hasPlugin('signing')) {

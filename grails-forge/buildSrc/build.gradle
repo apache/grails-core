@@ -73,6 +73,7 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation "org.apache.grails.gradle:grails-publish:$grailsPublishGradleVersion"
     implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:${rootProperties.gradleLicensePluginVersion}", {
         // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
         exclude group: 'org.springframework', module: 'spring-core'

@@ -25,7 +25,6 @@ buildscript {
         classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.apache.grails.gradle:grails-gson:$viewsJsonVersion"
         classpath "org.apache.grails:grails-docs-core:${project.ext.properties.grailsDocsVersion ?: grailsVersion}"
-        classpath "io.github.gradle-nexus:publish-plugin:1.3.0"
     }
 }
 
