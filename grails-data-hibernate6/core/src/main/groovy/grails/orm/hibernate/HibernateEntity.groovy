@@ -1,10 +1,10 @@
-package grails.gorm.hibernate
+package grails.orm.hibernate
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
-import org.grails.orm.hibernate.AbstractHibernateGormStaticApi
+import org.grails.orm.hibernate.HibernateGormStaticApi
 
 /**
  * Extends the {@link GormEntity} trait adding additional Hibernate specific methods
@@ -62,7 +62,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
     }
 
     @Generated
-    private static AbstractHibernateGormStaticApi currentHibernateStaticApi() {
-        (AbstractHibernateGormStaticApi)GormEnhancer.findStaticApi(this)
+    private static HibernateGormStaticApi currentHibernateStaticApi() {
+        (HibernateGormStaticApi)GormEnhancer.findStaticApi(this)
     }
 }
