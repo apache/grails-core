@@ -68,6 +68,11 @@ public class HibernateQuery extends Query {
 
     protected String alias;
     protected int aliasCount;
+
+    public DetachedCriteria getDetachedCriteria() {
+        return detachedCriteria;
+    }
+
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<String, CriteriaAndAlias>();
     protected LinkedList<String> aliasStack = new LinkedList<String>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<PersistentEntity>();

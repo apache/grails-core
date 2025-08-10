@@ -158,6 +158,8 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
+
+
     @Override
     List<D> getAll() {
         (List<D>)hibernateTemplate.execute({ Session session ->
