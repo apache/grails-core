@@ -35,7 +35,7 @@ abstract class GradleSpecification extends Specification {
     private static GradleRunner gradleRunner
 
     void setupSpec() {
-        basePath = Files.createTempDirectory("gradle-projects")
+        basePath = Files.createTempDirectory('gradle-projects')
         Path testKitDirectory = Files.createDirectories(basePath.resolve('.gradle'))
         gradleRunner = GradleRunner.create()
                 .withPluginClasspath()
@@ -45,20 +45,20 @@ abstract class GradleSpecification extends Specification {
     void setup() {
         gradleRunner.environment?.clear()
         gradleRunner = addEnvironmentVariable(
-                "LOCAL_MAVEN_PATH",
-                System.getProperty("localMavenPath"),
+                'LOCAL_MAVEN_PATH',
+                System.getProperty('localMavenPath'),
                 gradleRunner
         )
 
         gradleRunner = setGradleProperty(
-                "grailsGradlePluginVersion",
-                System.getProperty("grailsGradlePluginVersion"),
+                'grailsGradlePluginVersion',
+                System.getProperty('grailsGradlePluginVersion'),
                 gradleRunner
         )
 
         gradleRunner = setGradleProperty(
-                "groovyVersion",
-                System.getProperty("groovyVersion"),
+                'groovyVersion',
+                System.getProperty('groovyVersion'),
                 gradleRunner
         )
     }
@@ -81,7 +81,7 @@ abstract class GradleSpecification extends Specification {
     void cleanup() {
         basePath.toFile().listFiles().each {
             // Reuse the gradle cache from previous tests
-            if (it.name == ".gradle") {
+            if (it.name == '.gradle') {
                 return
             }
 
@@ -94,7 +94,7 @@ abstract class GradleSpecification extends Specification {
     }
 
     protected GradleRunner setupTestResourceProject(String type, String projectName, String nestedProject = null) {
-        Objects.requireNonNull(projectName, "projectName must not be null")
+        Objects.requireNonNull(projectName, 'projectName must not be null')
 
         Path destinationDir = basePath.resolve(type)
         Files.createDirectories(destinationDir)
@@ -110,7 +110,7 @@ abstract class GradleSpecification extends Specification {
     }
 
     protected Path createProjectDir(String projectName) {
-        Objects.requireNonNull(projectName, "projectName must not be null")
+        Objects.requireNonNull(projectName, 'projectName must not be null')
 
         Path destinationDir = basePath.resolve(projectName)
         Files.createDirectories(destinationDir)
@@ -119,7 +119,7 @@ abstract class GradleSpecification extends Specification {
     }
 
     protected BuildResult executeTask(String taskName, List<String> otherArguments = [], GradleRunner gradleRunner) {
-        List arguments = [taskName, "--stacktrace"]
+        List arguments = [taskName, '--stacktrace']
         arguments.addAll(otherArguments)
 
         gradleRunner.withArguments(arguments).forwardOutput().build()
