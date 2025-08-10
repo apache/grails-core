@@ -1,4 +1,4 @@
-package grails.orm.hibernate
+package grails.gorm.hibernate
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
